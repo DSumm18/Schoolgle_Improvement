@@ -215,3 +215,43 @@ alter table organizations enable row level security;
 alter table organization_members enable row level security;
 alter table invitations enable row level security;
 alter table users enable row level security;
+
+-- RLS Policies for users table
+create policy "Users can view own profile" on users for select using (auth.uid()::text = id);
+create policy "Service role full access to users" on users for all using (true);
+
+-- RLS Policies for organizations
+create policy "Members can view their organizations" on organizations for select 
+  using (id in (select organization_id from organization_members where user_id = auth.uid()::text));
+create policy "Service role full access to organizations" on organizations for all using (true);
+
+-- RLS Policies for organization_members
+create policy "Members can view org members" on organization_members for select 
+  using (organization_id in (select organization_id from organization_members where user_id = auth.uid()::text));
+create policy "Admins can manage members" on organization_members for all 
+  using (organization_id in (
+    select organization_id from organization_members 
+    where user_id = auth.uid()::text and role = 'admin'
+  ));
+create policy "Service role full access to members" on organization_members for all using (true);
+
+-- RLS Policies for invitations
+create policy "Admins can manage invitations" on invitations for all 
+  using (organization_id in (
+    select organization_id from organization_members 
+    where user_id = auth.uid()::text and role = 'admin'
+  ));
+create policy "Service role full access to invitations" on invitations for all using (true);
+
+-- RLS Policies for documents
+create policy "Users can view own documents" on documents for select using (user_id = auth.uid()::text);
+create policy "Users can insert own documents" on documents for insert with check (user_id = auth.uid()::text);
+create policy "Service role full access to documents" on documents for all using (true);
+
+-- RLS Policies for evidence_matches
+create policy "Users can view own evidence" on evidence_matches for select using (user_id = auth.uid()::text);
+create policy "Service role full access to evidence" on evidence_matches for all using (true);
+
+-- RLS Policies for scan_jobs
+create policy "Users can view own scan jobs" on scan_jobs for select using (user_id = auth.uid()::text);
+create policy "Service role full access to scan_jobs" on scan_jobs for all using (true);
