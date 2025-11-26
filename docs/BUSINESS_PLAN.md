@@ -61,66 +61,126 @@
 
 ## Pricing Strategy
 
-### Tiered Model
+### Premium Pricing Model
+
+**Philosophy:** Schools pay £500-2000/day for consultants. We deliver MORE value, 24/7, for the cost of ONE consultant day per year.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                     SCHOOLGLE PRICING                            │
+│                  SCHOOLGLE PREMIUM PRICING                       │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
-│  🆓 FREE TIER - "Starter"                                       │
-│     • Dashboard overview                                         │
-│     • Basic framework tracking (3 areas)                         │
-│     • Ed chatbot (10 questions/month)                           │
-│     • 1 user                                                     │
-│     Purpose: Lead generation, prove value                        │
+│  🆓 FREE TRIAL - 14 Days                                        │
+│     • Full access to try everything                             │
+│     • No credit card required                                    │
+│     • Purpose: Let them feel the value                          │
 │                                                                  │
-│  💙 ESSENTIAL - £49/month (£499/year)                           │
-│     • Full Ofsted framework (all 6 areas)                       │
-│     • Unlimited self-assessments                                │
-│     • Action planning                                            │
-│     • Basic reports (SEF outline)                               │
-│     • Ed chatbot (100 questions/month)                          │
-│     • Up to 5 users                                              │
-│     Target: Small primaries on tight budgets                    │
+│  ══════════════════════════════════════════════════════════════ │
 │                                                                  │
-│  💜 PROFESSIONAL - £99/month (£999/year) ⭐ MOST POPULAR        │
-│     Everything in Essential, plus:                               │
-│     • SIAMS framework (church schools)                          │
-│     • One-click reports (SEF, PP, Sports)                       │
-│     • Voice-to-observation (50/month)                           │
-│     • Mock Inspector (10 sessions/month)                        │
-│     • Evidence scanning                                          │
+│  💙 CORE PLATFORM - £149/month (£1,499/year)                    │
+│     THE FOUNDATION - Everything schools need:                    │
+│     • Full Ofsted 2025 Framework (all 6 areas)                  │
+│     • Self-assessment & action planning                         │
+│     • Evidence management                                        │
+│     • Monday Dashboard                                           │
+│     • Ed AI Coach (unlimited)                                   │
+│     • Basic report generation                                    │
+│     • Up to 10 users                                             │
+│     • Email support                                              │
+│     Target: Schools wanting core inspection readiness           │
+│                                                                  │
+│  💜 PROFESSIONAL - £249/month (£2,499/year) ⭐ BEST VALUE       │
+│     Everything in Core, PLUS:                                    │
+│     • SIAMS Framework (church schools)                          │
+│     • One-Click Reports (SEF, PP, Sports, SDP)                  │
+│     • Voice-to-Observation (100/month)                          │
+│     • Mock Inspector AI (unlimited)                             │
+│     • Document scanning & analysis                               │
 │     • Unlimited users                                            │
-│     Target: Most primaries, small secondaries                   │
-│                                                                  │
-│  🖤 ENTERPRISE - £199/month (£1,999/year)                       │
-│     Everything in Professional, plus:                            │
-│     • Unlimited AI features                                      │
-│     • MAT dashboard (multi-school view)                         │
-│     • Custom branding                                            │
-│     • API access                                                 │
 │     • Priority support                                           │
-│     • Dedicated success manager                                  │
-│     Target: Large secondaries, MATs                              │
+│     • Quarterly review call                                      │
+│     Target: Most schools - this is the sweet spot               │
 │                                                                  │
-│  🏢 MAT PRICING - Custom                                        │
-│     • Volume discounts (20-40% off)                             │
-│     • Centralised billing                                        │
-│     • Cross-school analytics                                     │
-│     • MAT-level reporting                                        │
-│     Target: Multi-Academy Trusts                                 │
+│  🖤 ENTERPRISE - £399/month (£3,999/year)                       │
+│     Everything in Professional, PLUS:                            │
+│     • MAT/Group dashboard                                        │
+│     • Cross-school benchmarking                                  │
+│     • Custom integrations                                        │
+│     • White-label option                                         │
+│     • Dedicated success manager                                  │
+│     • Monthly strategy calls                                     │
+│     • On-site training (1 day/year)                             │
+│     Target: Large secondaries, ambitious primaries              │
+│                                                                  │
+│  ══════════════════════════════════════════════════════════════ │
+│                                                                  │
+│  🔌 BOLT-ON MODULES (Add to any plan)                           │
+│                                                                  │
+│     📊 INSIGHTS PRO - £49/month                                 │
+│        • Advanced analytics                                      │
+│        • Trend tracking                                          │
+│        • Predictive readiness                                    │
+│        • Comparison to similar schools                           │
+│                                                                  │
+│     🎤 VOICE UNLIMITED - £79/month                              │
+│        • Unlimited voice observations                            │
+│        • Team observation dashboard                              │
+│        • CPD recommendations                                     │
+│        • Observation analytics                                   │
+│                                                                  │
+│     📝 DOCUMENT VAULT - £39/month                               │
+│        • Unlimited document storage                              │
+│        • Version history                                         │
+│        • Auto-organisation                                       │
+│        • Ofsted-ready folders                                    │
+│                                                                  │
+│     🎓 GOVERNOR PORTAL - £29/month                              │
+│        • Governor-specific dashboards                            │
+│        • Meeting pack generator                                  │
+│        • Compliance tracking                                     │
+│        • Training resources                                      │
+│                                                                  │
+│     🏫 PARENT VIEW - £49/month (Coming Soon)                    │
+│        • Parent survey tools                                     │
+│        • Communication templates                                 │
+│        • Parent engagement tracking                              │
+│                                                                  │
+│  ══════════════════════════════════════════════════════════════ │
+│                                                                  │
+│  🏢 MAT / TRUST PRICING                                         │
+│                                                                  │
+│     3-5 schools:    15% discount                                │
+│     6-10 schools:   20% discount                                │
+│     11-20 schools:  25% discount                                │
+│     21+ schools:    30% discount + dedicated account manager    │
+│                                                                  │
+│     Example: 10 schools × Professional (£2,499) = £24,990       │
+│              With 20% discount = £19,992/year                   │
+│              = £1,999 per school (still premium value)          │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### Why These Prices?
+### Price Anchoring & Value Comparison
 
-| Tier | Monthly | Annual | vs Competition | Value Proposition |
-|------|---------|--------|----------------|-------------------|
-| Essential | £49 | £499 | 50% cheaper than The Key | Affordable entry point |
-| Professional | £99 | £999 | Same as basic tools, 10x features | Best value |
-| Enterprise | £199 | £1,999 | Cheaper than 1 day of consultants | Premium for premium schools |
+| What Schools Pay Now | Cost | What Schoolgle Replaces |
+|---------------------|------|------------------------|
+| External consultant (1 day) | £500-2000 | Mock Inspector = unlimited practice |
+| SEF writing support | £1,500-3,000 | One-Click Reports = 45 seconds |
+| Inspection preparation course | £300-500/person | Ed AI Coach = 24/7 expert |
+| Observation write-up time | 120+ hours/year | Voice = 90% time saved |
+| Framework tracking tools | £500-1,500/year | Dashboard = real-time |
+| **TOTAL schools spend** | **£5,000-10,000/year** | **Schoolgle = £2,499** |
+
+**We're not cheap. We're incredible value.**
+
+### Why These Prices Work
+
+| Tier | Annual | vs Competition | ROI for School |
+|------|--------|----------------|----------------|
+| Core | £1,499 | Same as basic tools | Saves 50+ hours = £2,500+ |
+| Professional | £2,499 | Less than 2 consultant days | Saves 120+ hours = £6,000+ |
+| Enterprise | £3,999 | Less than mock inspection | Saves 200+ hours = £10,000+ |
 
 ### Annual vs Monthly
 
@@ -131,48 +191,61 @@
 
 ---
 
-## Revenue Model to £1M
+## Revenue Model to £1M+
 
-### Scenario A: Conservative
+### NEW Premium Pricing Model
 
-| Tier | Schools | Annual Rev/School | Total |
-|------|---------|-------------------|-------|
-| Essential | 400 | £499 | £199,600 |
-| Professional | 500 | £999 | £499,500 |
-| Enterprise | 100 | £1,999 | £199,900 |
-| MAT deals | 10 | £10,000 | £100,000 |
-| **TOTAL** | **1,010** | | **£999,000** |
+| Tier | Schools Needed | Annual Rev/School | Total |
+|------|----------------|-------------------|-------|
+| Core | 150 | £1,499 | £224,850 |
+| Professional | 250 | £2,499 | £624,750 |
+| Enterprise | 50 | £3,999 | £199,950 |
+| Bolt-ons (avg) | 200 | £500 | £100,000 |
+| **TOTAL** | **450** | **~£2,500 avg** | **£1,149,550** |
 
-**Required:** ~1,000 paying schools (4% of primary market)
+**Only need ~450 schools to hit £1M+** (vs 1,000 at old pricing)
 
-### Scenario B: Optimistic
+That's just **1.8% of the market!**
 
-| Tier | Schools | Annual Rev/School | Total |
-|------|---------|-------------------|-------|
-| Essential | 300 | £499 | £149,700 |
-| Professional | 600 | £999 | £599,400 |
-| Enterprise | 150 | £1,999 | £299,850 |
-| MAT deals | 15 | £15,000 | £225,000 |
-| **TOTAL** | **1,065** | | **£1,273,950** |
+### With MAT Deals
 
-### Monthly Target Breakdown
+| Deal Type | Number | Schools Each | Revenue |
+|-----------|--------|--------------|---------|
+| Individual schools | 300 | 1 | £750,000 |
+| Small MATs (3-5) | 10 | 4 avg | £80,000 |
+| Medium MATs (6-15) | 5 | 10 avg | £100,000 |
+| Large MATs (20+) | 2 | 25 avg | £100,000 |
+| **TOTAL** | | **~450 schools** | **£1,030,000** |
 
-| Month | New Schools | Total Schools | MRR | Cumulative ARR |
-|-------|-------------|---------------|-----|----------------|
-| 1 | 20 | 20 | £1,600 | £19,200 |
-| 2 | 30 | 50 | £4,000 | £48,000 |
-| 3 | 50 | 100 | £8,000 | £96,000 |
-| 4 | 70 | 170 | £13,600 | £163,200 |
-| 5 | 80 | 250 | £20,000 | £240,000 |
-| 6 | 100 | 350 | £28,000 | £336,000 |
-| 7 | 100 | 450 | £36,000 | £432,000 |
-| 8 | 100 | 550 | £44,000 | £528,000 |
-| 9 | 100 | 650 | £52,000 | £624,000 |
-| 10 | 100 | 750 | £60,000 | £720,000 |
-| 11 | 100 | 850 | £68,000 | £816,000 |
-| 12 | 100 | 950 | £76,000 | £912,000 |
+### Monthly Target Breakdown (Premium)
 
-**Requires:** ~80 new schools per month average
+| Month | New Schools | Total | Avg Rev | MRR | ARR Run Rate |
+|-------|-------------|-------|---------|-----|--------------|
+| 1 | 15 | 15 | £2,200 | £2,750 | £33,000 |
+| 2 | 20 | 35 | £2,200 | £6,417 | £77,000 |
+| 3 | 30 | 65 | £2,200 | £11,917 | £143,000 |
+| 4 | 35 | 100 | £2,200 | £18,333 | £220,000 |
+| 5 | 40 | 140 | £2,300 | £26,833 | £322,000 |
+| 6 | 45 | 185 | £2,300 | £35,458 | £425,500 |
+| 7 | 45 | 230 | £2,400 | £46,000 | £552,000 |
+| 8 | 50 | 280 | £2,400 | £56,000 | £672,000 |
+| 9 | 50 | 330 | £2,400 | £66,000 | £792,000 |
+| 10 | 50 | 380 | £2,500 | £79,167 | £950,000 |
+| 11 | 40 | 420 | £2,500 | £87,500 | £1,050,000 |
+| 12 | 30 | 450 | £2,500 | £93,750 | **£1,125,000** |
+
+**Requires:** ~38 new schools per month average (HALF of old model!)
+
+### Upsell Potential (Year 2+)
+
+| Upsell Path | % of Base | Additional Rev |
+|-------------|-----------|----------------|
+| Core → Professional | 40% | £1,000/school |
+| Add Voice Unlimited | 30% | £948/school |
+| Add Insights Pro | 25% | £588/school |
+| Add Governor Portal | 20% | £348/school |
+
+**Year 2 target with upsells:** £1.8M - £2.2M
 
 ---
 
@@ -258,10 +331,22 @@
 
 ### Lifetime Value (LTV)
 
-- Average subscription: £999/year (Professional)
-- Average retention: 3 years (schools sticky once embedded)
-- **LTV = £2,997**
-- **LTV:CAC ratio = 30:1** (excellent - target is 3:1)
+- Average subscription: £2,499/year (Professional)
+- Average bolt-ons: £500/year
+- Total ARPU: £2,999/year
+- Average retention: 4 years (schools VERY sticky once embedded)
+- **LTV = £11,996**
+- **LTV:CAC ratio = 120:1** (exceptional!)
+
+### Why Schools Stay
+
+| Factor | Impact |
+|--------|--------|
+| Data investment | Years of assessments, actions, evidence |
+| Staff training | Team knows the system |
+| Workflow embedded | Part of daily operations |
+| Switching cost | Would need to rebuild everything |
+| Continuous value | Updates with framework changes |
 
 ---
 
