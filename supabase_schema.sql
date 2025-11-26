@@ -480,38 +480,322 @@ create index observations_teacher_idx on lesson_observations (teacher_name);
 create index observations_date_idx on lesson_observations (date desc);
 
 -- ============================================================================
--- SEF (Self-Evaluation Form) DOCUMENTS
+-- STATUTORY DOCUMENTS (SEF, SDP, PP Strategy, Sports Premium, etc.)
 -- ============================================================================
 
-drop table if exists sef_documents cascade;
-create table sef_documents (
+drop table if exists statutory_documents cascade;
+create table statutory_documents (
   id uuid primary key default gen_random_uuid(),
   organization_id uuid references organizations(id) on delete cascade,
   
   -- Document type
-  document_type text check (document_type in ('sef', 'sip', 'other')) default 'sef',
-  title text not null,
+  document_type text not null check (document_type in (
+    'sef',              -- Self-Evaluation Form (Ofsted)
+    'siams_sef',        -- SIAMS Self-Evaluation
+    'sdp',              -- School Development Plan
+    'pp_strategy',      -- Pupil Premium Strategy Statement
+    'sports_premium',   -- PE and Sport Premium Report
+    'accessibility',    -- Accessibility Plan
+    'behaviour_policy', -- Behaviour Policy
+    'other'
+  )),
   
-  -- Content (generated)
-  content jsonb, -- Structured SEF content
+  title text not null,
+  academic_year text, -- e.g., '2024-25'
+  
+  -- Content (structured JSON for each document type)
+  content jsonb not null default '{}',
   
   -- Version control
   version integer default 1,
   is_current boolean default true,
+  previous_version_id uuid references statutory_documents(id),
   
-  -- Status
-  status text check (status in ('draft', 'review', 'approved', 'archived')) default 'draft',
+  -- Status workflow
+  status text check (status in ('draft', 'review', 'approved', 'published', 'archived')) default 'draft',
   
+  -- Publishing (some docs must be on website)
+  is_published_to_website boolean default false,
+  website_publish_date timestamp with time zone,
+  
+  -- Approval workflow
   created_by text references users(id),
+  reviewed_by text references users(id),
+  reviewed_at timestamp with time zone,
   approved_by text references users(id),
   approved_at timestamp with time zone,
+  
+  -- Deadline tracking
+  deadline_date date,
+  reminder_sent boolean default false,
   
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
-create index sef_organization_idx on sef_documents (organization_id);
-create index sef_current_idx on sef_documents (organization_id, is_current) where is_current = true;
+create index statutory_docs_organization_idx on statutory_documents (organization_id);
+create index statutory_docs_type_idx on statutory_documents (document_type);
+create index statutory_docs_current_idx on statutory_documents (organization_id, document_type, is_current) where is_current = true;
+create index statutory_docs_deadline_idx on statutory_documents (deadline_date) where status != 'archived';
+
+-- ============================================================================
+-- PUPIL PREMIUM DATA (for PP Strategy generation)
+-- ============================================================================
+
+drop table if exists pupil_premium_data cascade;
+create table pupil_premium_data (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade,
+  academic_year text not null, -- e.g., '2024-25'
+  
+  -- Pupil numbers
+  total_pupils integer,
+  pp_pupils integer,
+  pp_percentage decimal(5,2),
+  
+  -- Funding
+  pp_allocation decimal(12,2),
+  recovery_premium decimal(12,2),
+  total_funding decimal(12,2),
+  
+  -- Barriers identified
+  barriers jsonb, -- Array of {id, description, category: 'academic'|'social'|'attendance'}
+  
+  -- Outcomes data
+  outcomes jsonb, -- {reading: {pp: 65, non_pp: 78, national: 72}, ...}
+  
+  -- Attendance data
+  pp_attendance decimal(5,2),
+  non_pp_attendance decimal(5,2),
+  pp_persistent_absence decimal(5,2),
+  
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  
+  unique(organization_id, academic_year)
+);
+
+create index pp_data_organization_idx on pupil_premium_data (organization_id);
+
+-- ============================================================================
+-- PUPIL PREMIUM SPENDING (Tier 1, 2, 3)
+-- ============================================================================
+
+drop table if exists pp_spending cascade;
+create table pp_spending (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade,
+  academic_year text not null,
+  
+  -- Tier (EEF tiered approach)
+  tier integer not null check (tier in (1, 2, 3)),
+  -- 1 = Quality of Teaching (for all)
+  -- 2 = Targeted Academic Support
+  -- 3 = Wider Strategies
+  
+  -- Activity details
+  activity_name text not null,
+  description text,
+  
+  -- EEF evidence
+  eef_strategy_id text, -- Links to EEF toolkit
+  eef_impact_months decimal(3,1),
+  
+  -- Cost
+  allocated_amount decimal(10,2),
+  actual_spent decimal(10,2),
+  
+  -- Barriers addressed
+  barrier_ids text[], -- Which barriers this addresses
+  
+  -- Impact measurement
+  intended_outcomes text,
+  success_criteria text,
+  actual_impact text,
+  impact_rating text check (impact_rating in ('high', 'moderate', 'low', 'not_measured')),
+  
+  -- Staff/resources
+  staff_lead text,
+  
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+create index pp_spending_organization_idx on pp_spending (organization_id);
+create index pp_spending_year_idx on pp_spending (academic_year);
+create index pp_spending_tier_idx on pp_spending (tier);
+
+-- ============================================================================
+-- SPORTS PREMIUM DATA
+-- ============================================================================
+
+drop table if exists sports_premium_data cascade;
+create table sports_premium_data (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade,
+  academic_year text not null,
+  
+  -- Funding
+  allocation decimal(10,2),
+  carried_forward decimal(10,2),
+  total_available decimal(10,2),
+  
+  -- Swimming data (Year 6)
+  swimming_25m_percentage decimal(5,2),
+  swimming_strokes_percentage decimal(5,2),
+  swimming_rescue_percentage decimal(5,2),
+  
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  
+  unique(organization_id, academic_year)
+);
+
+-- ============================================================================
+-- SPORTS PREMIUM SPENDING (5 Key Indicators)
+-- ============================================================================
+
+drop table if exists sports_premium_spending cascade;
+create table sports_premium_spending (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade,
+  academic_year text not null,
+  
+  -- Key indicator (1-5)
+  key_indicator integer not null check (key_indicator in (1, 2, 3, 4, 5)),
+  -- 1 = Engagement of all pupils in regular physical activity
+  -- 2 = Profile of PESSPA raised across school
+  -- 3 = Increased confidence, knowledge and skills of staff
+  -- 4 = Broader experience of sports and activities
+  -- 5 = Increased participation in competitive sport
+  
+  -- Activity
+  activity_name text not null,
+  description text,
+  
+  -- Cost
+  allocated_amount decimal(10,2),
+  actual_spent decimal(10,2),
+  
+  -- Impact
+  intended_impact text,
+  actual_impact text,
+  
+  -- Sustainability
+  is_sustainable boolean default false,
+  sustainability_plan text,
+  
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+create index sports_spending_organization_idx on sports_premium_spending (organization_id);
+create index sports_spending_year_idx on sports_premium_spending (academic_year);
+
+-- ============================================================================
+-- SCHOOL DEVELOPMENT PLAN
+-- ============================================================================
+
+drop table if exists sdp_priorities cascade;
+create table sdp_priorities (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade,
+  academic_year text not null,
+  
+  -- Priority details
+  priority_number integer not null,
+  title text not null,
+  description text,
+  rationale text,
+  
+  -- Links to frameworks
+  ofsted_category_id text,
+  siams_strand_id text,
+  
+  -- Lead
+  lead_person text,
+  lead_user_id text references users(id),
+  
+  -- Success criteria
+  success_criteria text[],
+  
+  -- Budget
+  allocated_budget decimal(10,2),
+  
+  -- Status
+  status text check (status in ('not_started', 'in_progress', 'on_track', 'at_risk', 'completed')) default 'not_started',
+  progress_percentage integer default 0 check (progress_percentage between 0 and 100),
+  
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+create index sdp_priorities_organization_idx on sdp_priorities (organization_id);
+create index sdp_priorities_year_idx on sdp_priorities (academic_year);
+
+-- ============================================================================
+-- SDP MILESTONES (linked to priorities)
+-- ============================================================================
+
+drop table if exists sdp_milestones cascade;
+create table sdp_milestones (
+  id uuid primary key default gen_random_uuid(),
+  priority_id uuid references sdp_priorities(id) on delete cascade,
+  
+  -- Milestone details
+  title text not null,
+  description text,
+  
+  -- Timing
+  target_term text check (target_term in ('autumn1', 'autumn2', 'spring1', 'spring2', 'summer1', 'summer2')),
+  target_date date,
+  
+  -- Status
+  status text check (status in ('pending', 'in_progress', 'completed', 'missed')) default 'pending',
+  completion_date date,
+  completion_evidence text,
+  
+  -- RAG rating
+  rag_status text check (rag_status in ('green', 'amber', 'red')) default 'green',
+  
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+create index sdp_milestones_priority_idx on sdp_milestones (priority_id);
+
+-- ============================================================================
+-- FRAMEWORK UPDATE TRACKING (for Ed's knowledge)
+-- ============================================================================
+
+drop table if exists framework_updates cascade;
+create table framework_updates (
+  id text primary key,
+  framework text not null check (framework in ('ofsted', 'siams', 'eef', 'dfe', 'other')),
+  title text not null,
+  effective_date date,
+  summary text,
+  impact_areas text[],
+  source_url text,
+  is_acknowledged boolean default false, -- Has user reviewed this update?
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- Seed initial framework updates
+insert into framework_updates (id, framework, title, effective_date, summary, impact_areas, source_url) values
+  ('ofsted-nov-2025', 'ofsted', 'New Education Inspection Framework', '2025-11-10',
+   'Major overhaul introducing 6 evaluation areas, 5-point grading scale, report card format.',
+   ARRAY['All inspection areas renamed', '5-point grading scale', 'Safeguarding separate', 'Report card format'],
+   'https://www.gov.uk/government/publications/education-inspection-framework'),
+  ('siams-2023', 'siams', 'SIAMS Evaluation Schedule 2023', '2023-09-01',
+   'Updated SIAMS framework with 7 strands focusing on Christian vision.',
+   ARRAY['7 strands', 'Vision-focused', 'Flourishing emphasis'],
+   'https://www.churchofengland.org/about/education-and-schools/church-schools-and-academies/siams-inspections'),
+  ('eef-toolkit-2024', 'eef', 'EEF Toolkit Update 2024', '2024-01-01',
+   'Revised impact estimates and new strategies based on latest research.',
+   ARRAY['Updated effect sizes', 'New tutoring evidence', 'Revised metacognition guidance'],
+   'https://educationendowmentfoundation.org.uk/education-evidence/teaching-learning-toolkit')
+on conflict (id) do nothing;
 
 -- ============================================================================
 -- SCAN JOBS (for tracking document scans)
@@ -560,7 +844,13 @@ alter table actions enable row level security;
 alter table documents enable row level security;
 alter table evidence_matches enable row level security;
 alter table lesson_observations enable row level security;
-alter table sef_documents enable row level security;
+alter table statutory_documents enable row level security;
+alter table pupil_premium_data enable row level security;
+alter table pp_spending enable row level security;
+alter table sports_premium_data enable row level security;
+alter table sports_premium_spending enable row level security;
+alter table sdp_priorities enable row level security;
+alter table sdp_milestones enable row level security;
 alter table scan_jobs enable row level security;
 
 -- Service role has full access to all tables
@@ -575,7 +865,13 @@ create policy "Service role full access" on actions for all using (true);
 create policy "Service role full access" on documents for all using (true);
 create policy "Service role full access" on evidence_matches for all using (true);
 create policy "Service role full access" on lesson_observations for all using (true);
-create policy "Service role full access" on sef_documents for all using (true);
+create policy "Service role full access" on statutory_documents for all using (true);
+create policy "Service role full access" on pupil_premium_data for all using (true);
+create policy "Service role full access" on pp_spending for all using (true);
+create policy "Service role full access" on sports_premium_data for all using (true);
+create policy "Service role full access" on sports_premium_spending for all using (true);
+create policy "Service role full access" on sdp_priorities for all using (true);
+create policy "Service role full access" on sdp_milestones for all using (true);
 create policy "Service role full access" on scan_jobs for all using (true);
 
 -- ============================================================================
