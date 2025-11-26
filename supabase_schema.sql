@@ -1,5 +1,3 @@
--- NOTE: This schema assumes user_id is text (Firebase UID). If you have existing tables with UUID, you must migrate or drop them.
-
 -- Enable the pgvector extension to work with embedding vectors
 create extension if not exists vector;
 

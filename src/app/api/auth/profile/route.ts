@@ -1,13 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 export async function POST(req: NextRequest) {
     try {
+        // Check env vars
+        if (!supabaseUrl || !supabaseServiceKey) {
+            console.error('Missing env vars:', { 
+                hasUrl: !!supabaseUrl, 
+                hasKey: !!supabaseServiceKey 
+            });
+            return NextResponse.json({ 
+                error: 'Server configuration error - missing Supabase credentials' 
+            }, { status: 500 });
+        }
+
+        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
         const { userId, email, displayName } = await req.json();
 
         if (!userId || !email) {

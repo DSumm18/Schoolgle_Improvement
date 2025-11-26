@@ -1,17 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 export async function POST(req: NextRequest) {
     try {
+        // Check env vars
+        if (!supabaseUrl || !supabaseServiceKey) {
+            console.error('Missing env vars:', { 
+                hasUrl: !!supabaseUrl, 
+                hasKey: !!supabaseServiceKey 
+            });
+            return NextResponse.json({ 
+                error: 'Server configuration error - missing Supabase credentials' 
+            }, { status: 500 });
+        }
+
+        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
         const { name, userId } = await req.json();
 
         if (!name || !userId) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+        }
+
+        // First ensure the user exists in the users table
+        const { error: userError } = await supabase
+            .from('users')
+            .upsert({ id: userId }, { onConflict: 'id' });
+
+        if (userError) {
+            console.error('Error ensuring user exists:', userError);
+            return NextResponse.json({ error: `User sync failed: ${userError.message}` }, { status: 500 });
         }
 
         // 1. Create Organization
