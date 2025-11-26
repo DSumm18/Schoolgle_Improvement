@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
 import { OFSTED_FRAMEWORK, calculateAIRating, calculateCategoryReadiness, calculateOverallReadiness, ActionItem } from '@/lib/ofsted-framework';
 import { ChevronDown, ChevronRight, AlertTriangle, CheckCircle, FileText, RefreshCw, Plus, Edit2, Calendar, User, AlertCircle, TrendingUp, Brain, Info, ExternalLink, X } from 'lucide-react';
 import ActionModal from './ActionModal';
+import EvidenceModal from './EvidenceModal';
 
 interface OfstedFrameworkViewProps {
     assessments: Record<string, any>;
@@ -20,6 +22,37 @@ const HEADER_COLOR_MAP: Record<string, string> = {
 };
 
 export default function OfstedFrameworkView({ assessments, setAssessments }: OfstedFrameworkViewProps) {
+    const { user, accessToken, providerId, signInWithGoogle, signInWithMicrosoft } = useAuth();
+    const [scanProgress, setScanProgress] = useState<{
+        status: 'idle' | 'scanning' | 'complete' | 'error';
+        message?: string;
+        stats?: {
+            processedFiles: number;
+            evidenceMatches: number;
+            skippedFiles: number;
+            failedFiles: number;
+        };
+    }>({ status: 'idle' });
+
+    // Evidence Modal State
+    const [evidenceModalData, setEvidenceModalData] = useState<{
+        isOpen: boolean;
+        categoryName: string;
+        subcategoryName: string;
+        evidenceItem: string;
+        matches: any[];
+    }>({
+        isOpen: false,
+        categoryName: '',
+        subcategoryName: '',
+        evidenceItem: '',
+        matches: []
+    });
+
+    // Scan Configuration
+    const [selectedFolderId, setSelectedFolderId] = useState<string>('root'); // Default to root
+    const [showScanConfig, setShowScanConfig] = useState(false);
+
     const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
     const [activeInfo, setActiveInfo] = useState<string | null>(null);
     const [showBanner, setShowBanner] = useState(true);
@@ -99,34 +132,129 @@ export default function OfstedFrameworkView({ assessments, setAssessments }: Ofs
         setIsModalOpen(false);
     };
 
-    const simulateScan = () => {
+    const handleScanEvidence = async () => {
+        if (!accessToken || !providerId) {
+            setScanProgress({ status: 'error', message: 'Please reconnect your account to enable scanning.' });
+            return;
+        }
+
         setIsScanning(true);
-        setTimeout(() => {
-            const newAssessments = { ...assessments };
+        setScanProgress({ status: 'scanning', message: 'Initializing scan...' });
+        setShowScanConfig(false);
 
-            OFSTED_FRAMEWORK.forEach(cat => {
-                cat.subcategories.forEach(sub => {
-                    const foundEvidence = Math.floor(Math.random() * (sub.evidenceRequired.length + 1));
-                    const aiRating = calculateAIRating(foundEvidence, sub.evidenceRequired.length);
-
-                    let aiRationale = "Insufficient evidence found to form a judgement.";
-                    if (aiRating === 'good') aiRationale = "Sufficient evidence found to meet baseline requirements.";
-                    if (aiRating === 'requires_improvement') aiRationale = "Some evidence found, but gaps remain.";
-                    if (aiRating === 'inadequate') aiRationale = "Significant evidence gaps detected.";
-
-                    newAssessments[sub.id] = {
-                        ...newAssessments[sub.id],
-                        evidenceCount: foundEvidence,
-                        aiRating: aiRating,
-                        aiRationale: aiRationale
-                    };
-                });
+        try {
+            const response = await fetch('/api/scan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    provider: providerId,
+                    accessToken: accessToken,
+                    folderId: selectedFolderId,
+                    userId: user?.uid,
+                    recursive: true,
+                    useAI: true
+                })
             });
 
-            setAssessments(newAssessments);
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Scan failed');
+            }
+
+            // Update assessments with new data
+            if (data.assessmentUpdates) {
+                const newAssessments = { ...assessments };
+
+                Object.entries(data.assessmentUpdates).forEach(([subId, update]: [string, any]) => {
+                    newAssessments[subId] = {
+                        ...newAssessments[subId],
+                        ...update,
+                        // Merge actions if needed, or keep existing
+                    };
+                });
+
+                setAssessments(newAssessments);
+            }
+
+            setScanProgress({
+                status: 'complete',
+                message: 'Scan complete!',
+                stats: data.stats
+            });
+
+            // Auto-expand categories with updates
+            if (data.assessmentUpdates) {
+                const updatedSubIds = Object.keys(data.assessmentUpdates);
+                const categoriesToExpand = new Set(expandedCategories);
+
+                OFSTED_FRAMEWORK.forEach(cat => {
+                    if (cat.subcategories.some(sub => updatedSubIds.includes(sub.id))) {
+                        categoriesToExpand.add(cat.id);
+                    }
+                });
+
+                setExpandedCategories(categoriesToExpand);
+            }
+
+        } catch (error: any) {
+            console.error('Scan error:', error);
+            setScanProgress({ status: 'error', message: error.message });
+        } finally {
             setIsScanning(false);
-            setExpandedCategories(new Set([OFSTED_FRAMEWORK[0].id]));
-        }, 2000);
+        }
+    };
+
+    const handleViewEvidence = (subId: string, evidenceItem: string, categoryName: string, subName: string) => {
+        // Fetch evidence matches from API or local state
+        // For now, we'll assume we need to fetch them or they are stored in the assessment
+        // Since we don't store individual matches in the assessment object in this view (only counts),
+        // we might need to fetch them.
+        // However, for this implementation, let's assume we can fetch them or we stored them in a separate state.
+
+        // Actually, let's fetch them from the database via a new API endpoint or just show a placeholder if not implemented.
+        // But wait, I added `get_evidence_summary` to Supabase. I can call that.
+
+        // For now, let's fetch from a new helper function or just show the modal with a loading state.
+        fetchEvidenceMatches(subId, evidenceItem).then(matches => {
+            setEvidenceModalData({
+                isOpen: true,
+                categoryName,
+                subcategoryName: subName,
+                evidenceItem,
+                matches
+            });
+        });
+    };
+
+    const fetchEvidenceMatches = async (subId: string, evidenceItem: string) => {
+        if (!user?.uid) return [];
+
+        try {
+            // We need to call Supabase to get the matches
+            // Since we can't use Supabase client directly here easily without setup, 
+            // let's create a small API route for fetching evidence or use the existing one if modified.
+            // For now, I'll create a simple POST to /api/evidence
+
+            const response = await fetch('/api/evidence', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: user.uid,
+                    subcategoryId: subId,
+                    evidenceItem
+                })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                return data.matches || [];
+            }
+            return [];
+        } catch (error) {
+            console.error('Error fetching evidence:', error);
+            return [];
+        }
     };
 
     const getGradeColor = (grade: string) => {
@@ -170,6 +298,7 @@ export default function OfstedFrameworkView({ assessments, setAssessments }: Ofs
             {/* Top-Level Guidance Banner */}
             {showBanner && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6 relative">
+                    {/* ... banner content ... */}
                     <button
                         onClick={() => setShowBanner(false)}
                         className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 transition-colors"
@@ -208,14 +337,68 @@ export default function OfstedFrameworkView({ assessments, setAssessments }: Ofs
                         </p>
                     </div>
                     <div className="flex items-center gap-6">
-                        <button
-                            onClick={simulateScan}
-                            disabled={isScanning}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-white transition-colors ${isScanning ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
-                        >
-                            <RefreshCw size={18} className={isScanning ? 'animate-spin' : ''} />
-                            {isScanning ? 'Scanning Drive...' : 'Scan Evidence'}
-                        </button>
+                        {/* Scan Controls */}
+                        <div className="flex items-center gap-2">
+                            {!accessToken ? (
+                                <button
+                                    onClick={() => providerId === 'microsoft.com' ? signInWithMicrosoft() : signInWithGoogle()}
+                                    className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-white bg-amber-600 hover:bg-amber-700 transition-colors"
+                                >
+                                    <RefreshCw size={18} />
+                                    Reconnect to Scan
+                                </button>
+                            ) : (
+                                <div className="relative">
+                                    <button
+                                        onClick={() => setShowScanConfig(!showScanConfig)}
+                                        disabled={isScanning}
+                                        className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-white transition-colors ${isScanning ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
+                                    >
+                                        <RefreshCw size={18} className={isScanning ? 'animate-spin' : ''} />
+                                        {isScanning ? 'Scanning...' : 'Scan Evidence'}
+                                        <ChevronDown size={16} className="ml-1" />
+                                    </button>
+
+                                    {/* Scan Config Dropdown */}
+                                    {showScanConfig && (
+                                        <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-xl border border-gray-200 z-20 p-4 animate-in fade-in slide-in-from-top-2">
+                                            <h3 className="font-semibold text-gray-900 mb-3">Scan Settings</h3>
+
+                                            <div className="mb-4">
+                                                <label className="block text-xs font-medium text-gray-500 mb-1">Source</label>
+                                                <div className="flex items-center gap-2 text-sm text-gray-700 bg-gray-50 p-2 rounded border border-gray-200">
+                                                    {providerId === 'microsoft.com' ? (
+                                                        <><span className="text-blue-600">OneDrive</span> Connected</>
+                                                    ) : (
+                                                        <><span className="text-green-600">Google Drive</span> Connected</>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            <div className="mb-4">
+                                                <label className="block text-xs font-medium text-gray-500 mb-1">Folder ID (Optional)</label>
+                                                <input
+                                                    type="text"
+                                                    value={selectedFolderId}
+                                                    onChange={(e) => setSelectedFolderId(e.target.value)}
+                                                    placeholder="root"
+                                                    className="w-full p-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none"
+                                                />
+                                                <p className="text-[10px] text-gray-400 mt-1">Leave as "root" to scan everything</p>
+                                            </div>
+
+                                            <button
+                                                onClick={handleScanEvidence}
+                                                className="w-full py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                                            >
+                                                <Brain size={16} />
+                                                Start AI Scan
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
 
                         {/* Overall Scores */}
                         <div className="flex gap-6 border-l border-gray-200 pl-6">
@@ -238,6 +421,39 @@ export default function OfstedFrameworkView({ assessments, setAssessments }: Ofs
                         </div>
                     </div>
                 </div>
+
+                {/* Scan Progress Alert */}
+                {scanProgress.status !== 'idle' && (
+                    <div className={`mb-6 p-4 rounded-lg border flex items-start gap-3 ${scanProgress.status === 'error' ? 'bg-red-50 border-red-200 text-red-700' :
+                        scanProgress.status === 'complete' ? 'bg-green-50 border-green-200 text-green-700' :
+                            'bg-blue-50 border-blue-200 text-blue-700'
+                        }`}>
+                        {scanProgress.status === 'scanning' && <RefreshCw className="animate-spin mt-0.5" size={18} />}
+                        {scanProgress.status === 'complete' && <CheckCircle className="mt-0.5" size={18} />}
+                        {scanProgress.status === 'error' && <AlertTriangle className="mt-0.5" size={18} />}
+
+                        <div className="flex-1">
+                            <p className="font-medium">{scanProgress.message}</p>
+                            {scanProgress.stats && (
+                                <div className="mt-2 text-sm grid grid-cols-2 gap-x-8 gap-y-1">
+                                    <span>Files Processed: <b>{scanProgress.stats.processedFiles}</b></span>
+                                    <span>Evidence Matches: <b>{scanProgress.stats.evidenceMatches}</b></span>
+                                    <span>Skipped (Unchanged): <b>{scanProgress.stats.skippedFiles}</b></span>
+                                    <span>Failed: <b>{scanProgress.stats.failedFiles}</b></span>
+                                </div>
+                            )}
+                        </div>
+
+                        {scanProgress.status !== 'scanning' && (
+                            <button
+                                onClick={() => setScanProgress({ status: 'idle' })}
+                                className="text-gray-400 hover:text-gray-600"
+                            >
+                                <X size={16} />
+                            </button>
+                        )}
+                    </div>
+                )}
 
                 <div className="space-y-3">
                     {OFSTED_FRAMEWORK.map((category) => {
@@ -390,12 +606,22 @@ export default function OfstedFrameworkView({ assessments, setAssessments }: Ofs
                                                                 {sub.evidenceRequired.map((evidence, idx) => (
                                                                     <li key={idx} className="flex items-start justify-between group text-sm p-2 rounded hover:bg-gray-50">
                                                                         <span className="text-gray-600 flex-1 mr-2">• {evidence}</span>
-                                                                        <button
-                                                                            onClick={() => handleActionCreate(sub.id, evidence, category.name)}
-                                                                            className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded border border-blue-200 hover:bg-blue-100 transition-all flex items-center gap-1"
-                                                                        >
-                                                                            <Plus size={12} /> Action
-                                                                        </button>
+                                                                        <div className="flex items-center gap-1">
+                                                                            <button
+                                                                                onClick={() => handleViewEvidence(sub.id, evidence, category.name, sub.name)}
+                                                                                className="text-xs bg-white text-gray-600 px-2 py-1 rounded border border-gray-200 hover:bg-gray-50 hover:text-blue-600 transition-all flex items-center gap-1"
+                                                                                title="View found evidence"
+                                                                            >
+                                                                                <FileText size={12} /> View
+                                                                            </button>
+                                                                            <button
+                                                                                onClick={() => handleActionCreate(sub.id, evidence, category.name)}
+                                                                                className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded border border-blue-200 hover:bg-blue-100 transition-all flex items-center gap-1"
+                                                                                title="Create action"
+                                                                            >
+                                                                                <Plus size={12} /> Action
+                                                                            </button>
+                                                                        </div>
                                                                     </li>
                                                                 ))}
                                                             </ul>
@@ -455,7 +681,7 @@ export default function OfstedFrameworkView({ assessments, setAssessments }: Ofs
                                                                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                                                                     AI Rationale
                                                                 </label>
-                                                                <div className="p-3 bg-gray-50 rounded-md border border-gray-200 text-sm text-gray-700">
+                                                                <div className="p-3 bg-gray-50 rounded-md border border-gray-200 text-sm text-gray-700 whitespace-pre-wrap">
                                                                     {aiRationale}
                                                                 </div>
                                                             </div>
@@ -491,12 +717,22 @@ export default function OfstedFrameworkView({ assessments, setAssessments }: Ofs
                     isOpen={isModalOpen}
                     onClose={() => setIsModalOpen(false)}
                     onSave={handleSaveAction}
-                    categoryName={currentCategoryName}
+                    categoryName={currentCategoryName || ''}
                     subCategoryName={OFSTED_FRAMEWORK.flatMap(c => c.subcategories).find(s => s.id === currentActionSubId)?.name}
                     evidenceItem={currentActionEvidence || undefined}
                     initialData={editingAction}
                 />
             )}
+
+            {/* Evidence Modal */}
+            <EvidenceModal
+                isOpen={evidenceModalData.isOpen}
+                onClose={() => setEvidenceModalData({ ...evidenceModalData, isOpen: false })}
+                categoryName={evidenceModalData.categoryName}
+                subcategoryName={evidenceModalData.subcategoryName}
+                evidenceItem={evidenceModalData.evidenceItem}
+                matches={evidenceModalData.matches}
+            />
         </div>
     );
 }

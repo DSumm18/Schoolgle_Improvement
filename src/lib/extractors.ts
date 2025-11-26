@@ -46,21 +46,26 @@ export async function parseExcel(buffer: Buffer): Promise<string> {
 
 export async function parseImage(buffer: Buffer, mimeType: string): Promise<string> {
     try {
-        if (!process.env.OPENAI_API_KEY) {
+        if (!process.env.OPENAI_API_KEY && !process.env.VITE_OPENROUTER_API_KEY) {
             console.warn("OpenAI API Key missing for Image OCR");
             return "[Image OCR Disabled - Missing API Key]";
         }
 
         const openai = new OpenAI({
-            apiKey: process.env.OPENAI_API_KEY,
-            dangerouslyAllowBrowser: true
+            apiKey: process.env.OPENAI_API_KEY || process.env.VITE_OPENROUTER_API_KEY,
+            baseURL: "https://openrouter.ai/api/v1",
+            dangerouslyAllowBrowser: true,
+            defaultHeaders: {
+                "HTTP-Referer": "https://schoolgle.co.uk",
+                "X-Title": "Schoolgle",
+            }
         });
 
         const base64Image = buffer.toString('base64');
         const dataUrl = `data:${mimeType};base64,${base64Image}`;
 
         const response = await openai.chat.completions.create({
-            model: "gpt-4o",
+            model: "openai/gpt-4o", // OpenRouter model ID
             messages: [
                 {
                     role: "user",

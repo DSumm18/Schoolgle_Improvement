@@ -3,14 +3,15 @@
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { LayoutDashboard, FileCheck, BookOpen, CheckSquare } from "lucide-react";
+import { LayoutDashboard, FileCheck, BookOpen, CheckSquare, Settings } from "lucide-react";
 import OfstedFrameworkView from "@/components/OfstedFrameworkView";
 import SiamsFrameworkView from "@/components/SiamsFrameworkView";
 import ActionsDashboard from "@/components/ActionsDashboard";
+import SettingsView from "@/components/SettingsView";
 import SearchBar from "@/components/SearchBar";
 import SearchResults from "@/components/SearchResults";
 
-type ActiveView = 'dashboard' | 'ofsted' | 'siams' | 'actions';
+type ActiveView = 'dashboard' | 'ofsted' | 'siams' | 'actions' | 'settings';
 
 interface SearchResult {
     id: number;
@@ -148,6 +149,16 @@ export default function DashboardPage() {
                             <CheckSquare size={18} />
                             Action Plan
                         </button>
+                        <button
+                            onClick={() => setActiveView('settings')}
+                            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors ${activeView === 'settings'
+                                ? 'border-blue-500 text-blue-600'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                }`}
+                        >
+                            <Settings size={18} />
+                            Settings
+                        </button>
                     </nav>
                 </div>
 
@@ -225,6 +236,11 @@ export default function DashboardPage() {
                             console.log('Action updated:', updatedAction);
                         }}
                     />
+                )}
+
+                {/* Settings View */}
+                {activeView === 'settings' && (
+                    <SettingsView />
                 )}
             </main>
         </div>
