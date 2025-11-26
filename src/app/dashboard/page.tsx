@@ -3,7 +3,7 @@
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { LayoutDashboard, FileCheck, BookOpen, CheckSquare, Settings, FileText, Eye, FolderOpen } from "lucide-react";
+import { LayoutDashboard, FileCheck, BookOpen, CheckSquare, Settings, FileText, Eye, FolderOpen, Mic, Search, FileSpreadsheet } from "lucide-react";
 import OfstedFrameworkView from "@/components/OfstedFrameworkView";
 import SiamsFrameworkView from "@/components/SiamsFrameworkView";
 import ActionsDashboard from "@/components/ActionsDashboard";
@@ -14,8 +14,12 @@ import EdChatbot from "@/components/EdChatbot";
 import SEFGenerator from "@/components/SEFGenerator";
 import LessonObservationModal from "@/components/LessonObservationModal";
 import LocalFolderScanner from "@/components/LocalFolderScanner";
+import MondayDashboard from "@/components/MondayDashboard";
+import VoiceObservation from "@/components/VoiceObservation";
+import MockInspector from "@/components/MockInspector";
+import ReportGenerator from "@/components/ReportGenerator";
 
-type ActiveView = 'dashboard' | 'ofsted' | 'siams' | 'actions' | 'sef' | 'settings';
+type ActiveView = 'dashboard' | 'ofsted' | 'siams' | 'actions' | 'sef' | 'settings' | 'voice' | 'inspector' | 'reports';
 
 interface SearchResult {
     id: number;
@@ -51,6 +55,9 @@ export default function DashboardPage() {
     // Local Folder Scanner State
     const [showLocalScanner, setShowLocalScanner] = useState(false);
     const [scannedFiles, setScannedFiles] = useState<any[]>([]);
+    
+    // Actions State (aggregated from assessments)
+    const [actions, setActions] = useState<any[]>([]);
 
     const handleSaveObservation = (observation: any) => {
         setObservations(prev => [...prev, observation]);
@@ -183,14 +190,34 @@ export default function DashboardPage() {
                             Action Plan
                         </button>
                         <button
-                            onClick={() => setActiveView('sef')}
-                            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors ${activeView === 'sef'
-                                ? 'border-blue-500 text-blue-600'
+                            onClick={() => setActiveView('voice')}
+                            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors ${activeView === 'voice'
+                                ? 'border-violet-500 text-violet-600'
                                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                                 }`}
                         >
-                            <FileText size={18} />
-                            SEF
+                            <Mic size={18} />
+                            Voice
+                        </button>
+                        <button
+                            onClick={() => setActiveView('reports')}
+                            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors ${activeView === 'reports'
+                                ? 'border-emerald-500 text-emerald-600'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                }`}
+                        >
+                            <FileSpreadsheet size={18} />
+                            Reports
+                        </button>
+                        <button
+                            onClick={() => setActiveView('inspector')}
+                            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors ${activeView === 'inspector'
+                                ? 'border-slate-500 text-slate-600'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                }`}
+                        >
+                            <Search size={18} />
+                            Mock Inspector
                         </button>
                         <button
                             onClick={() => setActiveView('settings')}
@@ -207,167 +234,16 @@ export default function DashboardPage() {
 
                 {/* Dashboard View */}
                 {activeView === 'dashboard' && (
-                    <>
-                        {/* Search Section */}
-                        <div className="mb-8">
-                            <h1 className="text-3xl font-bold text-gray-900 mb-6 text-center">Search Your Documents</h1>
-                            <SearchBar onSearch={handleSearch} isLoading={isSearching} />
-
-                            {searchQuery && (
-                                <div className="mt-8">
-                                    <SearchResults results={searchResults} query={searchQuery} />
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Scan Status Message */}
-                        {scanStatus && (
-                            <div className={`mb-6 p-4 rounded-lg text-center ${scanStatus.includes('Error') ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'
-                                }`}>
-                                {scanStatus}
-                            </div>
-                        )}
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                            {/* Left Column: Evidence Sources */}
-                            <div className="col-span-1 space-y-6">
-                                <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-                                    <h2 className="text-lg font-semibold text-gray-900 mb-4">Evidence Sources</h2>
-                                    
-                                    {/* Scanned Files Count */}
-                                    {scannedFiles.length > 0 && (
-                                        <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                                            <div className="flex items-center gap-2">
-                                                <CheckSquare className="text-green-600" size={18} />
-                                                <span className="text-green-800 font-medium">
-                                                    {scannedFiles.length} files scanned
-                                                </span>
-                                            </div>
-                                        </div>
-                                    )}
-                                    
-                                    {/* Scan Options */}
-                                    <div className="space-y-3">
-                                        <button
-                                            onClick={() => setShowLocalScanner(true)}
-                                            className="w-full p-4 border-2 border-dashed border-blue-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-left group"
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <FolderOpen className="text-blue-500" size={24} />
-                                                <div>
-                                                    <p className="font-medium text-gray-900">Local Folder</p>
-                                                    <p className="text-xs text-gray-500">Scan from your computer</p>
-                                                </div>
-                                            </div>
-                                        </button>
-                                        
-                                        <button
-                                            disabled
-                                            className="w-full p-4 border border-gray-200 rounded-lg bg-gray-50 opacity-60 cursor-not-allowed text-left"
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <img src="https://upload.wikimedia.org/wikipedia/commons/d/da/Google_Drive_logo.png" alt="Google Drive" className="w-6 h-6" />
-                                                <div>
-                                                    <p className="font-medium text-gray-600">Google Drive</p>
-                                                    <p className="text-xs text-gray-400">Coming soon</p>
-                                                </div>
-                                            </div>
-                                        </button>
-                                        
-                                        <button
-                                            disabled
-                                            className="w-full p-4 border border-gray-200 rounded-lg bg-gray-50 opacity-60 cursor-not-allowed text-left"
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <img src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Microsoft_Office_OneDrive_%282019%E2%80%93present%29.svg" alt="OneDrive" className="w-6 h-6" />
-                                                <div>
-                                                    <p className="font-medium text-gray-600">OneDrive</p>
-                                                    <p className="text-xs text-gray-400">Coming soon</p>
-                                                </div>
-                                            </div>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Right Column: Dashboard Widgets */}
-                            <div className="col-span-2 space-y-6">
-                                <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-                                    <h2 className="text-lg font-semibold text-gray-900 mb-4">Readiness Overview</h2>
-                                    <p className="text-gray-600 mb-4">
-                                        Use the tabs above to access the Ofsted Framework, SIAMS Framework, or Action Plan views.
-                                    </p>
-                                    
-                                    {/* Quick Stats */}
-                                    <div className="grid grid-cols-3 gap-4 mt-6">
-                                        <div className="text-center p-4 bg-blue-50 rounded-lg">
-                                            <div className="text-2xl font-bold text-blue-700">{Object.keys(ofstedAssessments).length}</div>
-                                            <div className="text-xs text-blue-600">Assessments</div>
-                                        </div>
-                                        <div className="text-center p-4 bg-green-50 rounded-lg">
-                                            <div className="text-2xl font-bold text-green-700">{scannedFiles.length}</div>
-                                            <div className="text-xs text-green-600">Evidence Files</div>
-                                        </div>
-                                        <div className="text-center p-4 bg-purple-50 rounded-lg">
-                                            <div className="text-2xl font-bold text-purple-700">{observations.length}</div>
-                                            <div className="text-xs text-purple-600">Observations</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                {/* Evidence by Ofsted Area */}
-                                {Object.keys(evidenceByArea).length > 0 && (
-                                    <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-                                        <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                                            🎯 Evidence by Ofsted Area
-                                        </h2>
-                                        <div className="space-y-2">
-                                            {Object.entries(evidenceByArea).map(([area, matches]: [string, any[]]) => (
-                                                <div key={area} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                                    <div>
-                                                        <p className="text-sm font-medium text-gray-900">
-                                                            {matches[0]?.frameworkAreaLabel || area}
-                                                        </p>
-                                                        <p className="text-xs text-gray-500">
-                                                            {matches.length} document(s) matched
-                                                        </p>
-                                                    </div>
-                                                    <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium">
-                                                        {matches.length} evidence
-                                                    </span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                        <p className="text-xs text-gray-500 mt-3">
-                                            💡 Go to <strong>Ofsted Framework</strong> tab to see evidence linked to each area
-                                        </p>
-                                    </div>
-                                )}
-
-                                {/* Recent Scanned Files */}
-                                {scannedFiles.length > 0 && (
-                                    <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-                                        <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Evidence Files</h2>
-                                        <div className="space-y-2 max-h-48 overflow-y-auto">
-                                            {scannedFiles.slice(-5).reverse().map((file, i) => (
-                                                <div key={i} className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
-                                                    <span className="text-lg">
-                                                        {file.type?.includes('pdf') ? '📄' : 
-                                                         file.type?.includes('image') ? '🖼️' : 
-                                                         file.type?.includes('word') ? '📝' : '📁'}
-                                                    </span>
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="text-sm font-medium text-gray-900 truncate">{file.name}</p>
-                                                        <p className="text-xs text-gray-500 truncate">{file.path}</p>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </>
+                    <MondayDashboard
+                        organizationId={organization?.id}
+                        ofstedAssessments={ofstedAssessments}
+                        siamsAssessments={siamsAssessments}
+                        actions={Object.values({ ...ofstedAssessments, ...siamsAssessments })
+                            .flatMap((assessment: any) => assessment?.actions || [])}
+                        evidenceCount={evidenceMatches.length}
+                        isChurchSchool={true}
+                        onNavigate={(view) => setActiveView(view as ActiveView)}
+                    />
                 )}
 
                 {/* Ofsted Framework View */}
@@ -456,6 +332,46 @@ export default function DashboardPage() {
                             observations={observations}
                         />
                     </div>
+                )}
+
+                {/* Voice-to-Observation View */}
+                {activeView === 'voice' && (
+                    <VoiceObservation
+                        onSaveObservation={(observation) => {
+                            setObservations(prev => [...prev, observation]);
+                            console.log('Voice observation saved:', observation);
+                        }}
+                    />
+                )}
+
+                {/* One-Click Reports View */}
+                {activeView === 'reports' && (
+                    <ReportGenerator
+                        schoolData={{
+                            name: organization?.name || 'Your School',
+                            academicYear: '2024-2025',
+                            isChurchSchool: true
+                        }}
+                        ofstedAssessments={ofstedAssessments}
+                        siamsAssessments={siamsAssessments}
+                        actions={Object.values({ ...ofstedAssessments, ...siamsAssessments })
+                            .flatMap((assessment: any) => assessment?.actions || [])}
+                        evidenceMatches={evidenceMatches}
+                    />
+                )}
+
+                {/* Mock Inspector View */}
+                {activeView === 'inspector' && (
+                    <MockInspector
+                        schoolData={{
+                            name: organization?.name || 'Your School',
+                            phase: 'Primary'
+                        }}
+                        ofstedAssessments={ofstedAssessments}
+                        actions={Object.values({ ...ofstedAssessments, ...siamsAssessments })
+                            .flatMap((assessment: any) => assessment?.actions || [])}
+                        evidenceCount={evidenceMatches.length}
+                    />
                 )}
 
                 {/* Settings View */}
