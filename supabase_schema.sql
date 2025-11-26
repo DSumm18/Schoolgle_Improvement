@@ -1195,6 +1195,216 @@ create index risks_organization_idx on risks (organization_id);
 create index risks_score_idx on risks (risk_score desc);
 
 -- ============================================================================
+-- MODULAR SUBSCRIPTION SYSTEM
+-- ============================================================================
+
+-- Available modules/add-ons
+drop table if exists modules cascade;
+create table modules (
+  id text primary key,
+  name text not null,
+  short_name text,
+  description text,
+  category text check (category in ('core', 'inspection', 'voice', 'insights', 'operations', 'stakeholder', 'mobile')),
+  
+  -- Pricing
+  price_monthly decimal(8,2),
+  price_annual decimal(8,2),
+  
+  -- Features included
+  features jsonb,
+  
+  -- Limits for this module
+  default_limits jsonb, -- e.g., {"ed_queries": 100, "doc_scans": 50}
+  
+  is_active boolean default true,
+  display_order integer,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- Seed modules
+insert into modules (id, name, short_name, category, price_monthly, price_annual, features, default_limits, display_order) values
+  ('core', 'Core Platform', 'Core', 'core', 0, 0, 
+   '["Framework self-assessment", "Basic action tracking", "10 Ed queries/month"]',
+   '{"ed_queries": 10, "doc_scans": 0, "reports": 0}', 1),
+  ('inspection_ready', 'Inspection Ready Bundle', 'Inspection', 'inspection', 49, 499,
+   '["Evidence scanner", "SEF generator", "Statutory documents", "Inspection predictor", "100 Ed queries"]',
+   '{"ed_queries": 100, "doc_scans": 50, "reports": 10}', 2),
+  ('voice_suite', 'Voice Suite', 'Voice', 'voice', 29, 299,
+   '["Voice-to-observation", "Meeting transcription", "AI meeting minutes", "Voice notes"]',
+   '{"voice_minutes": 120, "meetings": 10}', 3),
+  ('insights_pro', 'Insights Pro', 'Insights', 'insights', 39, 399,
+   '["Advanced dashboard", "Similar schools comparison", "Trend analysis", "Custom reports"]',
+   '{"custom_reports": 20}', 4),
+  ('ai_coach', 'AI Coach', 'Coach', 'operations', 19, 199,
+   '["Mock inspector sessions", "Staff practice", "Question bank", "Answer coaching"]',
+   '{"mock_sessions": 20, "practice_minutes": 60}', 5),
+  ('quick_capture', 'Quick Capture Mobile', 'Mobile', 'mobile', 15, 149,
+   '["Photo evidence", "Voice notes", "Quick observation", "Push notifications"]',
+   '{"mobile_uploads": 100}', 6),
+  ('operations_suite', 'Operations Suite', 'Ops', 'operations', 35, 359,
+   '["Policy tracker", "CPD management", "Risk register", "Compliance calendar"]',
+   '{}', 7),
+  ('stakeholder_voice', 'Stakeholder Voice', 'Surveys', 'stakeholder', 25, 259,
+   '["Parent surveys", "Pupil voice", "Staff wellbeing", "AI sentiment analysis"]',
+   '{"surveys": 10, "responses": 500}', 8),
+  ('everything_bundle', 'Everything Bundle', 'All', 'core', 149, 1499,
+   '["All modules included", "Priority support", "Unlimited usage"]',
+   '{"ed_queries": -1, "doc_scans": -1, "reports": -1}', 9)
+on conflict (id) do nothing;
+
+-- Organization module subscriptions
+drop table if exists organization_modules cascade;
+create table organization_modules (
+  organization_id uuid references organizations(id) on delete cascade,
+  module_id text references modules(id) on delete cascade,
+  
+  enabled boolean default true,
+  enabled_at timestamp with time zone default timezone('utc'::text, now()),
+  expires_at timestamp with time zone,
+  
+  -- Custom limits (overrides default)
+  custom_limits jsonb,
+  
+  -- Current period usage
+  usage_current jsonb default '{}',
+  usage_reset_at timestamp with time zone,
+  
+  primary key (organization_id, module_id)
+);
+
+create index org_modules_org_idx on organization_modules (organization_id);
+
+-- Subscription plans
+drop table if exists subscriptions cascade;
+create table subscriptions (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade,
+  
+  -- Plan level
+  plan text check (plan in ('free', 'essential', 'professional', 'enterprise', 'custom')),
+  
+  -- Status
+  status text check (status in ('active', 'cancelled', 'past_due', 'trialing', 'paused')) default 'active',
+  
+  -- Stripe integration
+  stripe_subscription_id text,
+  stripe_customer_id text,
+  
+  -- Billing period
+  billing_cycle text check (billing_cycle in ('monthly', 'annual')) default 'monthly',
+  current_period_start timestamp with time zone,
+  current_period_end timestamp with time zone,
+  
+  -- Trial
+  trial_end timestamp with time zone,
+  
+  -- Cancellation
+  cancel_at_period_end boolean default false,
+  cancelled_at timestamp with time zone,
+  
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  
+  unique(organization_id)
+);
+
+create index subscriptions_org_idx on subscriptions (organization_id);
+create index subscriptions_status_idx on subscriptions (status);
+
+-- Usage tracking (for billing and limits)
+drop table if exists usage_logs cascade;
+create table usage_logs (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade,
+  user_id text references users(id),
+  
+  -- What action?
+  action_type text not null check (action_type in (
+    'ed_query',           -- Chat with Ed
+    'doc_scan',           -- AI document scanning
+    'report_generate',    -- One-click report
+    'voice_transcribe',   -- Voice transcription
+    'mock_session',       -- Mock inspector
+    'survey_create',      -- Create survey
+    'survey_analyze',     -- AI analyze responses
+    'mobile_upload'       -- Quick capture upload
+  )),
+  
+  -- Which module?
+  module_id text references modules(id),
+  
+  -- AI costs
+  model_used text,
+  tokens_input integer,
+  tokens_output integer,
+  cost_estimate decimal(10,6),
+  
+  -- Duration (for voice/meetings)
+  duration_seconds integer,
+  
+  -- Additional context
+  metadata jsonb,
+  
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+create index usage_logs_org_idx on usage_logs (organization_id);
+create index usage_logs_date_idx on usage_logs (created_at desc);
+create index usage_logs_action_idx on usage_logs (action_type);
+
+-- AI Model configuration (for OpenRouter)
+drop table if exists ai_models cascade;
+create table ai_models (
+  id text primary key,
+  provider text not null, -- 'openrouter', 'openai', 'anthropic'
+  model_name text not null,
+  display_name text,
+  
+  -- Pricing per million tokens
+  cost_per_m_input decimal(10,4),
+  cost_per_m_output decimal(10,4),
+  
+  -- For audio (per minute)
+  cost_per_minute decimal(10,4),
+  
+  -- Capabilities
+  capabilities text[], -- 'chat', 'vision', 'embedding', 'transcription'
+  
+  -- Recommended uses
+  recommended_for text[], -- 'simple_chat', 'document_analysis', 'report_generation', 'mock_inspector'
+  
+  -- Limits
+  max_tokens integer,
+  
+  is_active boolean default true,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- Seed AI models with current pricing
+insert into ai_models (id, provider, model_name, display_name, cost_per_m_input, cost_per_m_output, capabilities, recommended_for, max_tokens) values
+  ('gemini-flash', 'openrouter', 'google/gemini-flash-1.5', 'Gemini 1.5 Flash', 0.075, 0.30, 
+   ARRAY['chat'], ARRAY['simple_chat', 'quick_classification'], 1000000),
+  ('gemini-pro', 'openrouter', 'google/gemini-pro-1.5', 'Gemini 1.5 Pro', 1.25, 5.00,
+   ARRAY['chat', 'vision'], ARRAY['complex_analysis'], 2000000),
+  ('claude-haiku', 'openrouter', 'anthropic/claude-3.5-haiku', 'Claude 3.5 Haiku', 0.25, 1.25,
+   ARRAY['chat'], ARRAY['document_analysis', 'evidence_matching'], 200000),
+  ('claude-sonnet', 'openrouter', 'anthropic/claude-3.5-sonnet', 'Claude 3.5 Sonnet', 3.00, 15.00,
+   ARRAY['chat', 'vision'], ARRAY['report_generation', 'sef_writing'], 200000),
+  ('gpt-4o', 'openrouter', 'openai/gpt-4o', 'GPT-4o', 2.50, 10.00,
+   ARRAY['chat', 'vision'], ARRAY['mock_inspector', 'roleplay'], 128000),
+  ('gpt-4o-mini', 'openrouter', 'openai/gpt-4o-mini', 'GPT-4o Mini', 0.15, 0.60,
+   ARRAY['chat'], ARRAY['simple_chat', 'quick_tasks'], 128000),
+  ('whisper', 'openai', 'whisper-1', 'Whisper', 0, 0,
+   ARRAY['transcription'], ARRAY['voice_transcription'], null),
+  ('embedding-small', 'openai', 'text-embedding-3-small', 'Embedding Small', 0.02, 0,
+   ARRAY['embedding'], ARRAY['document_search'], 8191)
+on conflict (id) do nothing;
+
+-- Update whisper with per-minute cost
+update ai_models set cost_per_minute = 0.006 where id = 'whisper';
+
+-- ============================================================================
 -- FRAMEWORK UPDATE TRACKING (for Ed's knowledge)
 -- ============================================================================
 
@@ -1293,6 +1503,11 @@ alter table surveys enable row level security;
 alter table survey_responses enable row level security;
 alter table external_visits enable row level security;
 alter table risks enable row level security;
+alter table modules enable row level security;
+alter table organization_modules enable row level security;
+alter table subscriptions enable row level security;
+alter table usage_logs enable row level security;
+alter table ai_models enable row level security;
 alter table scan_jobs enable row level security;
 
 -- Service role has full access to all tables
@@ -1326,6 +1541,11 @@ create policy "Service role full access" on surveys for all using (true);
 create policy "Service role full access" on survey_responses for all using (true);
 create policy "Service role full access" on external_visits for all using (true);
 create policy "Service role full access" on risks for all using (true);
+create policy "Service role full access" on modules for all using (true);
+create policy "Service role full access" on organization_modules for all using (true);
+create policy "Service role full access" on subscriptions for all using (true);
+create policy "Service role full access" on usage_logs for all using (true);
+create policy "Service role full access" on ai_models for all using (true);
 create policy "Service role full access" on scan_jobs for all using (true);
 
 -- ============================================================================
