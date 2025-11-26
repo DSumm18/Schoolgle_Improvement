@@ -23,8 +23,26 @@ interface ScanResult {
     files: ScannedFile[];
 }
 
+interface EvidenceMatch {
+    fileId: string;
+    fileName: string;
+    filePath: string;
+    frameworkArea: string;
+    frameworkAreaLabel: string;
+    confidence: number;
+    matchedKeywords: string[];
+    relevantExcerpt: string;
+}
+
+interface AnalysisResult {
+    totalMatches: number;
+    matchesByArea: Record<string, EvidenceMatch[]>;
+    allMatches: EvidenceMatch[];
+}
+
 interface LocalFolderScannerProps {
     onScanComplete: (files: ScannedFile[]) => void;
+    onAnalysisComplete?: (analysis: AnalysisResult) => void;
     onClose?: () => void;
 }
 
@@ -52,12 +70,17 @@ const SUPPORTED_MIME_TYPES = [
     'image/gif'
 ];
 
-export default function LocalFolderScanner({ onScanComplete, onClose }: LocalFolderScannerProps) {
+export default function LocalFolderScanner({ onScanComplete, onAnalysisComplete, onClose }: LocalFolderScannerProps) {
     const [scanMethod, setScanMethod] = useState<'folder' | 'files' | null>(null);
     const [isScanning, setIsScanning] = useState(false);
     const [scanResult, setScanResult] = useState<ScanResult | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [progress, setProgress] = useState({ current: 0, total: 0 });
+    
+    // Analysis state
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
+    const [activeTab, setActiveTab] = useState<'files' | 'evidence'>('files');
     
     const fileInputRef = useRef<HTMLInputElement>(null);
     const folderInputRef = useRef<HTMLInputElement>(null);
@@ -284,6 +307,62 @@ export default function LocalFolderScanner({ onScanComplete, onClose }: LocalFol
         return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
     };
 
+    // Analyze files for Ofsted evidence
+    const analyzeForEvidence = async () => {
+        if (!scanResult || scanResult.files.length === 0) return;
+        
+        setIsAnalyzing(true);
+        setError(null);
+        
+        try {
+            const response = await fetch('/api/analyze-local', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ files: scanResult.files })
+            });
+            
+            if (!response.ok) {
+                throw new Error('Analysis failed');
+            }
+            
+            const data = await response.json();
+            setAnalysisResult({
+                totalMatches: data.totalMatches,
+                matchesByArea: data.matchesByArea,
+                allMatches: data.allMatches
+            });
+            setActiveTab('evidence');
+            onAnalysisComplete?.(data);
+            
+        } catch (e: any) {
+            setError(e.message || 'Analysis failed');
+        } finally {
+            setIsAnalyzing(false);
+        }
+    };
+
+    const getConfidenceColor = (confidence: number) => {
+        if (confidence >= 0.7) return 'bg-green-100 text-green-700';
+        if (confidence >= 0.5) return 'bg-yellow-100 text-yellow-700';
+        return 'bg-gray-100 text-gray-600';
+    };
+
+    const getAreaColor = (area: string) => {
+        const colors: Record<string, string> = {
+            'quality-intent': 'bg-rose-50 border-rose-200',
+            'quality-implementation': 'bg-rose-50 border-rose-200',
+            'quality-impact': 'bg-rose-50 border-rose-200',
+            'behaviour': 'bg-teal-50 border-teal-200',
+            'personal-development': 'bg-orange-50 border-orange-200',
+            'leadership': 'bg-violet-50 border-violet-200',
+            'safeguarding': 'bg-red-50 border-red-200',
+            'send': 'bg-blue-50 border-blue-200',
+            'early-years': 'bg-pink-50 border-pink-200',
+            'reading': 'bg-emerald-50 border-emerald-200'
+        };
+        return colors[area] || 'bg-gray-50 border-gray-200';
+    };
+
     const getFileIcon = (type: string) => {
         if (type.startsWith('image/')) return '🖼️';
         if (type.includes('pdf')) return '📄';
@@ -410,11 +489,32 @@ export default function LocalFolderScanner({ onScanComplete, onClose }: LocalFol
                     <div className="space-y-4">
                         {/* Summary */}
                         <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                            <div className="flex items-center gap-3 mb-3">
-                                <CheckCircle className="text-green-500" />
-                                <h4 className="font-semibold text-green-800">Scan Complete!</h4>
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-3">
+                                    <CheckCircle className="text-green-500" />
+                                    <h4 className="font-semibold text-green-800">Scan Complete!</h4>
+                                </div>
+                                {!analysisResult && (
+                                    <button
+                                        onClick={analyzeForEvidence}
+                                        disabled={isAnalyzing}
+                                        className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 flex items-center gap-2 text-sm font-medium"
+                                    >
+                                        {isAnalyzing ? (
+                                            <>
+                                                <Loader2 size={16} className="animate-spin" />
+                                                Analyzing...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <FileText size={16} />
+                                                🔍 Find Evidence
+                                            </>
+                                        )}
+                                    </button>
+                                )}
                             </div>
-                            <div className="grid grid-cols-3 gap-4 text-center">
+                            <div className="grid grid-cols-4 gap-4 text-center">
                                 <div>
                                     <div className="text-2xl font-bold text-gray-900">{scanResult.totalFiles}</div>
                                     <div className="text-xs text-gray-500">Total Found</div>
@@ -427,33 +527,121 @@ export default function LocalFolderScanner({ onScanComplete, onClose }: LocalFol
                                     <div className="text-2xl font-bold text-gray-400">{scanResult.skippedFiles}</div>
                                     <div className="text-xs text-gray-500">Skipped</div>
                                 </div>
+                                {analysisResult && (
+                                    <div>
+                                        <div className="text-2xl font-bold text-purple-600">{analysisResult.totalMatches}</div>
+                                        <div className="text-xs text-gray-500">Evidence Matches</div>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
+                        {/* Tabs */}
+                        {analysisResult && (
+                            <div className="border-b border-gray-200">
+                                <nav className="flex">
+                                    <button
+                                        onClick={() => setActiveTab('files')}
+                                        className={`flex-1 py-2 text-sm font-medium border-b-2 ${
+                                            activeTab === 'files' 
+                                                ? 'border-blue-500 text-blue-600' 
+                                                : 'border-transparent text-gray-500'
+                                        }`}
+                                    >
+                                        📁 Files ({scanResult.files.length})
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveTab('evidence')}
+                                        className={`flex-1 py-2 text-sm font-medium border-b-2 ${
+                                            activeTab === 'evidence' 
+                                                ? 'border-purple-500 text-purple-600' 
+                                                : 'border-transparent text-gray-500'
+                                        }`}
+                                    >
+                                        🎯 Evidence ({analysisResult.totalMatches})
+                                    </button>
+                                </nav>
+                            </div>
+                        )}
+
                         {/* File List */}
-                        <div className="border border-gray-200 rounded-lg overflow-hidden">
-                            <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
-                                <h4 className="font-medium text-gray-700">Scanned Files ({scanResult.files.length})</h4>
-                            </div>
-                            <div className="max-h-64 overflow-y-auto">
-                                {scanResult.files.map((file, index) => (
-                                    <div key={index} className="flex items-center gap-3 px-4 py-2 border-b border-gray-100 last:border-b-0 hover:bg-gray-50">
-                                        <span className="text-xl">{getFileIcon(file.type)}</span>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-medium text-gray-900 truncate">{file.name}</p>
-                                            <p className="text-xs text-gray-500 truncate">{file.path}</p>
+                        {activeTab === 'files' && (
+                            <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
+                                    <h4 className="font-medium text-gray-700">Scanned Files ({scanResult.files.length})</h4>
+                                </div>
+                                <div className="max-h-64 overflow-y-auto">
+                                    {scanResult.files.map((file, index) => (
+                                        <div key={index} className="flex items-center gap-3 px-4 py-2 border-b border-gray-100 last:border-b-0 hover:bg-gray-50">
+                                            <span className="text-xl">{getFileIcon(file.type)}</span>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-medium text-gray-900 truncate">{file.name}</p>
+                                                <p className="text-xs text-gray-500 truncate">{file.path}</p>
+                                            </div>
+                                            <span className="text-xs text-gray-400">{formatFileSize(file.size)}</span>
                                         </div>
-                                        <span className="text-xs text-gray-400">{formatFileSize(file.size)}</span>
-                                    </div>
-                                ))}
+                                    ))}
+                                </div>
                             </div>
-                        </div>
+                        )}
+
+                        {/* Evidence Matches */}
+                        {activeTab === 'evidence' && analysisResult && (
+                            <div className="space-y-3">
+                                {Object.entries(analysisResult.matchesByArea).length === 0 ? (
+                                    <div className="text-center py-8 text-gray-500">
+                                        <AlertTriangle size={32} className="mx-auto mb-2 opacity-50" />
+                                        <p>No evidence matches found in these files.</p>
+                                        <p className="text-sm">Try scanning folders with more school documents.</p>
+                                    </div>
+                                ) : (
+                                    Object.entries(analysisResult.matchesByArea).map(([area, matches]) => (
+                                        <div key={area} className={`border rounded-lg overflow-hidden ${getAreaColor(area)}`}>
+                                            <div className="px-4 py-2 border-b bg-white/50">
+                                                <h5 className="font-medium text-gray-900">
+                                                    {matches[0]?.frameworkAreaLabel || area}
+                                                </h5>
+                                                <p className="text-xs text-gray-500">{matches.length} match(es)</p>
+                                            </div>
+                                            <div className="divide-y divide-gray-100">
+                                                {matches.slice(0, 3).map((match, idx) => (
+                                                    <div key={idx} className="px-4 py-2 bg-white/30">
+                                                        <div className="flex items-center justify-between mb-1">
+                                                            <span className="text-sm font-medium text-gray-900 truncate flex-1">
+                                                                {match.fileName}
+                                                            </span>
+                                                            <span className={`text-xs px-2 py-0.5 rounded-full ${getConfidenceColor(match.confidence)}`}>
+                                                                {Math.round(match.confidence * 100)}% match
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex flex-wrap gap-1 mb-1">
+                                                            {match.matchedKeywords.slice(0, 4).map((kw, i) => (
+                                                                <span key={i} className="text-xs bg-white px-1.5 py-0.5 rounded border border-gray-200">
+                                                                    {kw}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                        {match.relevantExcerpt && (
+                                                            <p className="text-xs text-gray-500 italic truncate">
+                                                                {match.relevantExcerpt}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        )}
 
                         {/* Actions */}
                         <div className="flex gap-3">
                             <button
                                 onClick={() => {
                                     setScanResult(null);
+                                    setAnalysisResult(null);
+                                    setActiveTab('files');
                                     setProgress({ current: 0, total: 0 });
                                 }}
                                 className="flex-1 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 flex items-center justify-center gap-2"
