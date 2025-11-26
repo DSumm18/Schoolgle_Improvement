@@ -63,7 +63,9 @@ export default function LocalFolderScanner({ onScanComplete, onClose }: LocalFol
     const folderInputRef = useRef<HTMLInputElement>(null);
 
     // Check if File System Access API is available
-    const hasFileSystemAccess = typeof window !== 'undefined' && 'showDirectoryPicker' in window;
+    // Note: Disabled because it doesn't work well in all contexts (automated browsers, iframes, etc.)
+    // Always use the reliable input[webkitdirectory] fallback instead
+    const hasFileSystemAccess = false; // Forcing fallback for reliability
 
     const readFileContent = async (file: File): Promise<string> => {
         return new Promise((resolve, reject) => {
@@ -317,54 +319,47 @@ export default function LocalFolderScanner({ onScanComplete, onClose }: LocalFol
                 {/* Scan Method Selection */}
                 {!scanResult && !isScanning && (
                     <div className="grid grid-cols-2 gap-4">
-                        {/* Folder Option */}
-                        <button
-                            onClick={async () => {
-                                console.log('Folder button clicked');
-                                console.log('hasFileSystemAccess:', hasFileSystemAccess);
-                                
-                                if (hasFileSystemAccess) {
-                                    try {
-                                        await scanWithFolderPicker();
-                                    } catch (e) {
-                                        console.log('File System API failed, falling back to input');
-                                        folderInputRef.current?.click();
-                                    }
-                                } else {
-                                    console.log('Using fallback folder input');
-                                    folderInputRef.current?.click();
-                                }
-                            }}
-                            className="p-6 border-2 border-dashed border-gray-300 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-colors text-center group cursor-pointer"
-                        >
+                        {/* Folder Option - Using label for reliable click */}
+                        <label className="p-6 border-2 border-dashed border-gray-300 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-colors text-center group cursor-pointer block">
                             <FolderOpen size={40} className="mx-auto mb-3 text-gray-400 group-hover:text-blue-500" />
                             <h3 className="font-semibold text-gray-900">Scan Folder</h3>
                             <p className="text-sm text-gray-500 mt-1">
                                 Select an evidence folder from your computer
                             </p>
-                            <p className="text-xs text-gray-400 mt-2">
-                                {hasFileSystemAccess ? '✓ Click to open folder picker' : 'Click to select folder'}
+                            <p className="text-xs text-blue-500 mt-2 font-medium">
+                                Click here to open folder picker
                             </p>
-                        </button>
+                            <input
+                                type="file"
+                                webkitdirectory=""
+                                multiple
+                                onChange={scanWithFolderInput}
+                                className="hidden"
+                            />
+                        </label>
 
-                        {/* Files Option */}
-                        <button
-                            onClick={() => fileInputRef.current?.click()}
-                            className="p-6 border-2 border-dashed border-gray-300 rounded-xl hover:border-green-500 hover:bg-green-50 transition-colors text-center group"
-                        >
+                        {/* Files Option - Using label for reliable click */}
+                        <label className="p-6 border-2 border-dashed border-gray-300 rounded-xl hover:border-green-500 hover:bg-green-50 transition-colors text-center group cursor-pointer block">
                             <Upload size={40} className="mx-auto mb-3 text-gray-400 group-hover:text-green-500" />
                             <h3 className="font-semibold text-gray-900">Upload Files</h3>
                             <p className="text-sm text-gray-500 mt-1">
                                 Select individual files to scan
                             </p>
-                            <p className="text-xs text-gray-400 mt-2">
-                                PDF, Word, Excel, Images
+                            <p className="text-xs text-green-500 mt-2 font-medium">
+                                Click here to select files
                             </p>
-                        </button>
+                            <input
+                                type="file"
+                                multiple
+                                accept={SUPPORTED_EXTENSIONS.join(',')}
+                                onChange={handleFileUpload}
+                                className="hidden"
+                            />
+                        </label>
                     </div>
                 )}
 
-                {/* Hidden file inputs */}
+                {/* Hidden file inputs (kept for programmatic access if needed) */}
                 <input
                     ref={fileInputRef}
                     type="file"
@@ -381,39 +376,6 @@ export default function LocalFolderScanner({ onScanComplete, onClose }: LocalFol
                     onChange={scanWithFolderInput}
                     className="hidden"
                 />
-                
-                {/* Alternative: Visible browse button if clicks don't work */}
-                <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <p className="text-sm text-yellow-800 mb-3">
-                        <strong>Tip:</strong> If the buttons above don't open a folder picker, use this direct option:
-                    </p>
-                    <div className="flex gap-3">
-                        <label className="flex-1 cursor-pointer">
-                            <span className="block w-full py-2 px-4 bg-blue-600 text-white text-center rounded-lg hover:bg-blue-700 font-medium">
-                                📁 Browse for Folder
-                            </span>
-                            <input
-                                type="file"
-                                webkitdirectory=""
-                                multiple
-                                onChange={scanWithFolderInput}
-                                className="hidden"
-                            />
-                        </label>
-                        <label className="flex-1 cursor-pointer">
-                            <span className="block w-full py-2 px-4 bg-green-600 text-white text-center rounded-lg hover:bg-green-700 font-medium">
-                                📄 Browse for Files
-                            </span>
-                            <input
-                                type="file"
-                                multiple
-                                accept={SUPPORTED_EXTENSIONS.join(',')}
-                                onChange={handleFileUpload}
-                                className="hidden"
-                            />
-                        </label>
-                    </div>
-                </div>
 
                 {/* Scanning Progress */}
                 {isScanning && (
