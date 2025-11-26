@@ -8,9 +8,21 @@ import ActionModal from './ActionModal';
 import EvidenceModal from './EvidenceModal';
 import EdAnalysisPanel from './EdAnalysisPanel';
 
+interface LocalEvidenceMatch {
+    fileId: string;
+    fileName: string;
+    filePath: string;
+    frameworkArea: string;
+    frameworkAreaLabel: string;
+    confidence: number;
+    matchedKeywords: string[];
+    relevantExcerpt: string;
+}
+
 interface OfstedFrameworkViewProps {
     assessments: Record<string, any>;
     setAssessments: (assessments: Record<string, any>) => void;
+    localEvidence?: Record<string, LocalEvidenceMatch[]>;
 }
 
 const HEADER_COLOR_MAP: Record<string, string> = {
@@ -22,7 +34,7 @@ const HEADER_COLOR_MAP: Record<string, string> = {
     'gray': 'bg-white border-l-4 border-gray-500 text-gray-900 hover:bg-gray-50',
 };
 
-export default function OfstedFrameworkView({ assessments, setAssessments }: OfstedFrameworkViewProps) {
+export default function OfstedFrameworkView({ assessments, setAssessments, localEvidence = {} }: OfstedFrameworkViewProps) {
     const { user, accessToken, providerId, signInWithGoogle, signInWithMicrosoft } = useAuth();
     const [scanProgress, setScanProgress] = useState<{
         status: 'idle' | 'scanning' | 'complete' | 'error';
@@ -88,6 +100,39 @@ export default function OfstedFrameworkView({ assessments, setAssessments }: Ofs
 
     // Calculate Overall Scores
     const { userScore: overallUserScore, aiScore: overallAIScore } = calculateOverallReadiness(assessments);
+
+    // Map framework areas to category names for evidence matching
+    const AREA_TO_CATEGORY: Record<string, string[]> = {
+        'quality-of-education': ['quality-intent', 'quality-implementation', 'quality-impact'],
+        'behaviour-attitudes': ['behaviour'],
+        'personal-development': ['personal-development'],
+        'leadership-management': ['leadership', 'safeguarding'],
+        'early-years': ['early-years'],
+    };
+
+    // Get evidence count for a category
+    const getEvidenceCountForCategory = (categoryId: string): number => {
+        const areas = AREA_TO_CATEGORY[categoryId] || [categoryId];
+        let count = 0;
+        for (const area of areas) {
+            if (localEvidence[area]) {
+                count += localEvidence[area].length;
+            }
+        }
+        return count;
+    };
+
+    // Get evidence items for a category
+    const getEvidenceForCategory = (categoryId: string): LocalEvidenceMatch[] => {
+        const areas = AREA_TO_CATEGORY[categoryId] || [categoryId];
+        let evidence: LocalEvidenceMatch[] = [];
+        for (const area of areas) {
+            if (localEvidence[area]) {
+                evidence = [...evidence, ...localEvidence[area]];
+            }
+        }
+        return evidence;
+    };
 
     const toggleCategory = (categoryId: string) => {
         const newExpanded = new Set(expandedCategories);
@@ -509,6 +554,16 @@ export default function OfstedFrameworkView({ assessments, setAssessments }: Ofs
 
                                         {/* Category Scores */}
                                         <div className="flex items-center gap-4 mr-4">
+                                            {/* Local Evidence Count */}
+                                            {getEvidenceCountForCategory(category.id) > 0 && (
+                                                <div className="text-right border-r border-gray-200 pr-4">
+                                                    <div className="text-[10px] uppercase font-bold text-gray-400">Evidence</div>
+                                                    <div className="text-lg font-bold text-purple-600 flex items-center gap-1">
+                                                        <FileText size={14} />
+                                                        {getEvidenceCountForCategory(category.id)}
+                                                    </div>
+                                                </div>
+                                            )}
                                             <div className="text-right">
                                                 <div className="text-[10px] uppercase font-bold text-gray-400">Readiness</div>
                                                 <div className={`text-lg font-bold ${getScoreColor(userScore)}`}>{userScore}%</div>
@@ -568,6 +623,42 @@ export default function OfstedFrameworkView({ assessments, setAssessments }: Ofs
                                 {/* Subcategories */}
                                 {expandedCategories.has(category.id) && (
                                     <div className="p-4 bg-white space-y-6 border-t border-gray-100">
+                                        {/* Local Evidence Section */}
+                                        {getEvidenceCountForCategory(category.id) > 0 && (
+                                            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-4">
+                                                <h4 className="font-semibold text-purple-900 mb-3 flex items-center gap-2">
+                                                    <FileText size={18} className="text-purple-600" />
+                                                    Local Evidence Files ({getEvidenceCountForCategory(category.id)})
+                                                </h4>
+                                                <div className="space-y-2">
+                                                    {getEvidenceForCategory(category.id).map((evidence, idx) => (
+                                                        <div key={idx} className="flex items-center justify-between p-2 bg-white rounded border border-purple-100">
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="text-sm font-medium text-gray-900 truncate">{evidence.fileName}</p>
+                                                                <div className="flex flex-wrap gap-1 mt-1">
+                                                                    {evidence.matchedKeywords.slice(0, 3).map((kw, i) => (
+                                                                        <span key={i} className="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">
+                                                                            {kw}
+                                                                        </span>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                            <span className={`text-xs px-2 py-1 rounded-full ml-2 ${
+                                                                evidence.confidence >= 0.7 ? 'bg-green-100 text-green-700' :
+                                                                evidence.confidence >= 0.5 ? 'bg-yellow-100 text-yellow-700' :
+                                                                'bg-gray-100 text-gray-600'
+                                                            }`}>
+                                                                {Math.round(evidence.confidence * 100)}%
+                                                            </span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                <p className="text-xs text-purple-600 mt-2">
+                                                    📁 Scanned from local folder
+                                                </p>
+                                            </div>
+                                        )}
+
                                         {category.subcategories.map((sub) => {
                                             const assessment = assessments[sub.id] || {};
                                             const schoolRating = assessment.schoolRating || 'not_assessed';

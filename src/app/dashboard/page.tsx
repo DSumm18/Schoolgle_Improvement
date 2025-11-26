@@ -57,9 +57,20 @@ export default function DashboardPage() {
         console.log('Observation saved:', observation);
     };
 
+    // Evidence analysis results (shared between scanner and framework)
+    const [evidenceMatches, setEvidenceMatches] = useState<any[]>([]);
+    const [evidenceByArea, setEvidenceByArea] = useState<Record<string, any[]>>({});
+
     const handleLocalScanComplete = (files: any[]) => {
-        setScannedFiles(prev => [...prev, ...files]);
+        // REPLACE files instead of appending (fixes duplicate counting)
+        setScannedFiles(files);
         console.log('Local scan complete:', files.length, 'files');
+    };
+
+    const handleAnalysisComplete = (analysis: any) => {
+        console.log('Evidence analysis complete:', analysis);
+        setEvidenceMatches(analysis.allMatches || []);
+        setEvidenceByArea(analysis.matchesByArea || {});
     };
 
     useEffect(() => {
@@ -304,6 +315,35 @@ export default function DashboardPage() {
                                     </div>
                                 </div>
                                 
+                                {/* Evidence by Ofsted Area */}
+                                {Object.keys(evidenceByArea).length > 0 && (
+                                    <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                                        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                                            🎯 Evidence by Ofsted Area
+                                        </h2>
+                                        <div className="space-y-2">
+                                            {Object.entries(evidenceByArea).map(([area, matches]: [string, any[]]) => (
+                                                <div key={area} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                                    <div>
+                                                        <p className="text-sm font-medium text-gray-900">
+                                                            {matches[0]?.frameworkAreaLabel || area}
+                                                        </p>
+                                                        <p className="text-xs text-gray-500">
+                                                            {matches.length} document(s) matched
+                                                        </p>
+                                                    </div>
+                                                    <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium">
+                                                        {matches.length} evidence
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <p className="text-xs text-gray-500 mt-3">
+                                            💡 Go to <strong>Ofsted Framework</strong> tab to see evidence linked to each area
+                                        </p>
+                                    </div>
+                                )}
+
                                 {/* Recent Scanned Files */}
                                 {scannedFiles.length > 0 && (
                                     <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
@@ -335,6 +375,7 @@ export default function DashboardPage() {
                     <OfstedFrameworkView
                         assessments={ofstedAssessments}
                         setAssessments={setOfstedAssessments}
+                        localEvidence={evidenceByArea}
                     />
                 )}
 
@@ -433,6 +474,7 @@ export default function DashboardPage() {
                     <div className="max-w-2xl w-full">
                         <LocalFolderScanner
                             onScanComplete={handleLocalScanComplete}
+                            onAnalysisComplete={handleAnalysisComplete}
                             onClose={() => setShowLocalScanner(false)}
                         />
                     </div>
