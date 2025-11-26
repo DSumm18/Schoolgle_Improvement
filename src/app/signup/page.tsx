@@ -1,15 +1,16 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
     School, Building2, Users, CheckCircle, ArrowRight, ArrowLeft,
-    Mail, Lock, User, MapPin, Phone, Globe, Crown, Sparkles,
-    CreditCard, Shield, Zap, BarChart3
+    Mail, Lock, User, Globe, FileText, CreditCard, Receipt,
+    Shield, Zap, BarChart3, PenTool, Check, AlertCircle
 } from 'lucide-react';
 
-type Step = 'welcome' | 'account-type' | 'details' | 'schools' | 'plan' | 'payment' | 'team' | 'complete';
+type Step = 'welcome' | 'account-type' | 'details' | 'schools' | 'plan' | 'contract' | 'payment' | 'complete';
 type AccountType = 'school' | 'trust' | null;
+type PaymentMethod = 'card' | 'invoice';
 
 interface SchoolData {
     id: string;
@@ -19,45 +20,64 @@ interface SchoolData {
     isChurchSchool: boolean;
 }
 
+// Animated background shapes
+const FloatingShape = ({ delay, size, x, y }: { delay: number; size: number; x: number; y: number }) => (
+    <div 
+        className="absolute opacity-[0.03] pointer-events-none"
+        style={{
+            left: `${x}%`,
+            top: `${y}%`,
+            width: size,
+            height: size,
+            animation: `float ${8 + delay}s ease-in-out infinite`,
+            animationDelay: `${delay}s`
+        }}
+    >
+        <svg viewBox="0 0 100 100" className="w-full h-full">
+            <polygon 
+                points="50,5 95,25 95,75 50,95 5,75 5,25" 
+                fill="currentColor" 
+                className="text-gray-900"
+            />
+        </svg>
+    </div>
+);
+
 export default function SignupPage() {
     const router = useRouter();
     const [currentStep, setCurrentStep] = useState<Step>('welcome');
     const [accountType, setAccountType] = useState<AccountType>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [contractSigned, setContractSigned] = useState(false);
+    const [signatureName, setSignatureName] = useState('');
+    const [agreedToTerms, setAgreedToTerms] = useState(false);
+    const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card');
     
     // Form data
     const [formData, setFormData] = useState({
-        // User details
         firstName: '',
         lastName: '',
         email: '',
         password: '',
         jobTitle: '',
         phone: '',
-        
-        // School/Trust details
         organisationName: '',
         urn: '',
         address: '',
+        postcode: '',
         localAuthority: '',
         phase: 'primary',
         isChurchSchool: false,
         diocese: '',
-        
-        // Trust specific
         trustName: '',
         trustWebsite: '',
         numberOfSchools: '',
-        
-        // Plan
         selectedPlan: 'professional',
-        billingCycle: 'annual',
-        
-        // Schools in trust
         schools: [] as SchoolData[],
-        
-        // Team invites
-        teamInvites: [{ email: '', role: 'slt' }]
+        // Invoice details
+        invoiceEmail: '',
+        purchaseOrderNumber: '',
+        invoiceAddress: ''
     });
 
     const updateFormData = (field: string, value: any) => {
@@ -65,8 +85,8 @@ export default function SignupPage() {
     };
 
     const steps: Step[] = accountType === 'trust' 
-        ? ['welcome', 'account-type', 'details', 'schools', 'plan', 'payment', 'team', 'complete']
-        : ['welcome', 'account-type', 'details', 'plan', 'payment', 'team', 'complete'];
+        ? ['welcome', 'account-type', 'details', 'schools', 'plan', 'contract', 'payment', 'complete']
+        : ['welcome', 'account-type', 'details', 'plan', 'contract', 'payment', 'complete'];
 
     const currentStepIndex = steps.indexOf(currentStep);
     const progress = ((currentStepIndex) / (steps.length - 1)) * 100;
@@ -75,6 +95,7 @@ export default function SignupPage() {
         const nextIndex = currentStepIndex + 1;
         if (nextIndex < steps.length) {
             setCurrentStep(steps[nextIndex]);
+            window.scrollTo(0, 0);
         }
     };
 
@@ -85,353 +106,303 @@ export default function SignupPage() {
         }
     };
 
+    const getPlanPrice = () => {
+        const prices = {
+            core: { monthly: 149, annual: 1499 },
+            professional: { monthly: 249, annual: 2499 },
+            enterprise: { monthly: 399, annual: 3999 }
+        };
+        return prices[formData.selectedPlan as keyof typeof prices].annual;
+    };
+
+    const getTotalPrice = () => {
+        const basePrice = getPlanPrice();
+        if (accountType === 'trust' && formData.schools.length > 1) {
+            const discount = formData.schools.length >= 6 ? 0.20 : formData.schools.length >= 3 ? 0.15 : 0;
+            return Math.round(basePrice * formData.schools.length * (1 - discount));
+        }
+        return basePrice;
+    };
+
     const handleSubmit = async () => {
         setIsLoading(true);
-        // TODO: Implement actual signup
         await new Promise(resolve => setTimeout(resolve, 2000));
         setIsLoading(false);
         nextStep();
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+        <div className="min-h-screen bg-gray-50 relative overflow-hidden">
+            {/* Animated Background */}
+            <div className="fixed inset-0 pointer-events-none">
+                <FloatingShape delay={0} size={120} x={10} y={20} />
+                <FloatingShape delay={2} size={80} x={80} y={10} />
+                <FloatingShape delay={4} size={100} x={70} y={60} />
+                <FloatingShape delay={1} size={60} x={20} y={70} />
+                <FloatingShape delay={3} size={90} x={50} y={40} />
+                <FloatingShape delay={5} size={70} x={90} y={80} />
+            </div>
+
+            <style jsx global>{`
+                @keyframes float {
+                    0%, 100% { transform: translateY(0) rotate(0deg); }
+                    50% { transform: translateY(-20px) rotate(5deg); }
+                }
+            `}</style>
+
             {/* Progress Bar */}
             {currentStep !== 'welcome' && currentStep !== 'complete' && (
-                <div className="fixed top-0 left-0 right-0 h-1 bg-slate-800 z-50">
+                <div className="fixed top-0 left-0 right-0 h-1 bg-gray-200 z-50">
                     <div 
-                        className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-500"
+                        className="h-full bg-gray-900 transition-all duration-500"
                         style={{ width: `${progress}%` }}
                     />
                 </div>
             )}
 
-            {/* Logo */}
-            <div className="absolute top-6 left-6 flex items-center gap-2">
-                <span className="text-3xl">🏫</span>
-                <span className="text-white font-bold text-xl">Schoolgle</span>
-            </div>
+            {/* Header */}
+            <header className="relative z-10 px-6 py-4 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <span className="text-2xl">🏫</span>
+                    <span className="font-bold text-xl text-gray-900">Schoolgle</span>
+                </div>
+                {currentStep !== 'welcome' && currentStep !== 'complete' && (
+                    <div className="text-sm text-gray-500">
+                        Step {currentStepIndex} of {steps.length - 2}
+                    </div>
+                )}
+            </header>
 
             {/* Main Content */}
-            <div className="flex items-center justify-center min-h-screen p-4">
-                <div className="w-full max-w-2xl">
+            <main className="relative z-10 flex items-center justify-center min-h-[calc(100vh-80px)] p-4">
+                <div className="w-full max-w-xl">
                     
                     {/* Step: Welcome */}
                     {currentStep === 'welcome' && (
                         <div className="text-center space-y-8 animate-in fade-in duration-500">
-                            <div className="space-y-4">
-                                <h1 className="text-5xl font-bold text-white">
-                                    Welcome to <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">Schoolgle</span>
+                            <div className="space-y-3">
+                                <h1 className="text-4xl font-bold text-gray-900">
+                                    Inspection readiness,<br />simplified.
                                 </h1>
-                                <p className="text-xl text-slate-300">
-                                    AI-powered inspection readiness for UK schools
+                                <p className="text-lg text-gray-600">
+                                    Join hundreds of UK schools preparing smarter for Ofsted.
                                 </p>
                             </div>
                             
-                            <div className="grid grid-cols-3 gap-4 py-8">
-                                <div className="bg-white/5 backdrop-blur rounded-xl p-4 border border-white/10">
-                                    <Zap className="w-8 h-8 text-yellow-400 mx-auto mb-2" />
-                                    <p className="text-white font-medium">Save 120+ hours</p>
-                                    <p className="text-sm text-slate-400">on inspection prep</p>
+                            <div className="grid grid-cols-3 gap-3 py-6">
+                                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                                    <Zap className="w-6 h-6 text-gray-700 mx-auto mb-2" />
+                                    <p className="text-sm font-medium text-gray-900">Save 120+ hours</p>
                                 </div>
-                                <div className="bg-white/5 backdrop-blur rounded-xl p-4 border border-white/10">
-                                    <Shield className="w-8 h-8 text-green-400 mx-auto mb-2" />
-                                    <p className="text-white font-medium">Ofsted 2025</p>
-                                    <p className="text-sm text-slate-400">framework aligned</p>
+                                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                                    <Shield className="w-6 h-6 text-gray-700 mx-auto mb-2" />
+                                    <p className="text-sm font-medium text-gray-900">Ofsted 2025</p>
                                 </div>
-                                <div className="bg-white/5 backdrop-blur rounded-xl p-4 border border-white/10">
-                                    <BarChart3 className="w-8 h-8 text-blue-400 mx-auto mb-2" />
-                                    <p className="text-white font-medium">Real-time</p>
-                                    <p className="text-sm text-slate-400">readiness tracking</p>
+                                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                                    <BarChart3 className="w-6 h-6 text-gray-700 mx-auto mb-2" />
+                                    <p className="text-sm font-medium text-gray-900">Real-time tracking</p>
                                 </div>
                             </div>
 
                             <button
                                 onClick={nextStep}
-                                className="px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg shadow-purple-500/25 flex items-center gap-2 mx-auto"
+                                className="w-full py-4 bg-gray-900 text-white font-medium rounded-xl hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
                             >
-                                Get Started Free <ArrowRight className="w-5 h-5" />
+                                Get Started <ArrowRight className="w-5 h-5" />
                             </button>
-                            <p className="text-slate-400 text-sm">14-day free trial • No credit card required</p>
+                            
+                            <p className="text-sm text-gray-500">
+                                Already have an account? <a href="/login" className="text-gray-900 font-medium hover:underline">Sign in</a>
+                            </p>
                         </div>
                     )}
 
                     {/* Step: Account Type */}
                     {currentStep === 'account-type' && (
-                        <div className="space-y-8 animate-in fade-in duration-500">
+                        <div className="space-y-6 animate-in fade-in duration-500">
                             <div className="text-center space-y-2">
-                                <h2 className="text-3xl font-bold text-white">How will you use Schoolgle?</h2>
-                                <p className="text-slate-300">Choose the option that best describes your organisation</p>
+                                <h2 className="text-2xl font-bold text-gray-900">How will you use Schoolgle?</h2>
+                                <p className="text-gray-600">Select your organisation type</p>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {/* Individual School */}
+                            <div className="space-y-3">
                                 <button
                                     onClick={() => { setAccountType('school'); nextStep(); }}
-                                    className={`p-6 rounded-2xl border-2 text-left transition-all hover:scale-[1.02] ${
-                                        accountType === 'school' 
-                                            ? 'border-purple-500 bg-purple-500/10' 
-                                            : 'border-white/20 bg-white/5 hover:border-white/40'
-                                    }`}
+                                    className="w-full p-5 bg-white rounded-xl border-2 border-gray-200 hover:border-gray-900 transition-colors text-left group"
                                 >
-                                    <School className="w-12 h-12 text-purple-400 mb-4" />
-                                    <h3 className="text-xl font-bold text-white mb-2">Individual School</h3>
-                                    <p className="text-slate-300 text-sm mb-4">
-                                        Perfect for standalone schools, academies, or schools not part of a trust
-                                    </p>
-                                    <ul className="space-y-2 text-sm text-slate-400">
-                                        <li className="flex items-center gap-2">
-                                            <CheckCircle className="w-4 h-4 text-green-400" />
-                                            Single school dashboard
-                                        </li>
-                                        <li className="flex items-center gap-2">
-                                            <CheckCircle className="w-4 h-4 text-green-400" />
-                                            Full Ofsted & SIAMS tracking
-                                        </li>
-                                        <li className="flex items-center gap-2">
-                                            <CheckCircle className="w-4 h-4 text-green-400" />
-                                            Invite your team
-                                        </li>
-                                    </ul>
+                                    <div className="flex items-start gap-4">
+                                        <div className="p-2 bg-gray-100 rounded-lg group-hover:bg-gray-900 transition-colors">
+                                            <School className="w-6 h-6 text-gray-700 group-hover:text-white transition-colors" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <h3 className="font-semibold text-gray-900">Individual School</h3>
+                                            <p className="text-sm text-gray-500 mt-1">
+                                                Standalone school, academy, or maintained school
+                                            </p>
+                                        </div>
+                                        <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-gray-900 transition-colors" />
+                                    </div>
                                 </button>
 
-                                {/* Trust/MAT */}
                                 <button
                                     onClick={() => { setAccountType('trust'); nextStep(); }}
-                                    className={`p-6 rounded-2xl border-2 text-left transition-all hover:scale-[1.02] ${
-                                        accountType === 'trust' 
-                                            ? 'border-pink-500 bg-pink-500/10' 
-                                            : 'border-white/20 bg-white/5 hover:border-white/40'
-                                    }`}
+                                    className="w-full p-5 bg-white rounded-xl border-2 border-gray-200 hover:border-gray-900 transition-colors text-left group"
                                 >
-                                    <div className="flex items-center gap-2 mb-4">
-                                        <Building2 className="w-12 h-12 text-pink-400" />
-                                        <span className="px-2 py-1 bg-pink-500/20 text-pink-300 text-xs font-medium rounded">MAT/TRUST</span>
+                                    <div className="flex items-start gap-4">
+                                        <div className="p-2 bg-gray-100 rounded-lg group-hover:bg-gray-900 transition-colors">
+                                            <Building2 className="w-6 h-6 text-gray-700 group-hover:text-white transition-colors" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <h3 className="font-semibold text-gray-900">Multi-Academy Trust</h3>
+                                            <p className="text-sm text-gray-500 mt-1">
+                                                Trust managing multiple schools with central oversight
+                                            </p>
+                                            <span className="inline-block mt-2 text-xs font-medium text-gray-700 bg-gray-100 px-2 py-1 rounded">
+                                                Volume discounts available
+                                            </span>
+                                        </div>
+                                        <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-gray-900 transition-colors" />
                                     </div>
-                                    <h3 className="text-xl font-bold text-white mb-2">Multi-Academy Trust</h3>
-                                    <p className="text-slate-300 text-sm mb-4">
-                                        For trusts managing multiple schools with centralised oversight
-                                    </p>
-                                    <ul className="space-y-2 text-sm text-slate-400">
-                                        <li className="flex items-center gap-2">
-                                            <CheckCircle className="w-4 h-4 text-green-400" />
-                                            Trust-wide dashboard
-                                        </li>
-                                        <li className="flex items-center gap-2">
-                                            <CheckCircle className="w-4 h-4 text-green-400" />
-                                            Cross-school comparison
-                                        </li>
-                                        <li className="flex items-center gap-2">
-                                            <CheckCircle className="w-4 h-4 text-green-400" />
-                                            Volume discounts
-                                        </li>
-                                        <li className="flex items-center gap-2">
-                                            <CheckCircle className="w-4 h-4 text-green-400" />
-                                            Centralised billing
-                                        </li>
-                                    </ul>
                                 </button>
                             </div>
 
-                            <button onClick={prevStep} className="text-slate-400 hover:text-white flex items-center gap-2 mx-auto">
-                                <ArrowLeft className="w-4 h-4" /> Back
+                            <button onClick={prevStep} className="w-full text-center text-gray-500 hover:text-gray-900 text-sm">
+                                ← Back
                             </button>
                         </div>
                     )}
 
-                    {/* Step: Details (School or Trust) */}
+                    {/* Step: Details */}
                     {currentStep === 'details' && (
                         <div className="space-y-6 animate-in fade-in duration-500">
                             <div className="text-center space-y-2">
-                                <h2 className="text-3xl font-bold text-white">
-                                    {accountType === 'trust' ? 'Trust Details' : 'School Details'}
-                                </h2>
-                                <p className="text-slate-300">Tell us about your organisation</p>
+                                <h2 className="text-2xl font-bold text-gray-900">Your details</h2>
+                                <p className="text-gray-600">We'll use this to set up your account</p>
                             </div>
 
-                            <div className="bg-white/5 backdrop-blur rounded-2xl p-6 border border-white/10 space-y-4">
-                                {/* Personal Details */}
+                            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 space-y-4">
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-slate-300 mb-1">First Name</label>
-                                        <div className="relative">
-                                            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                                            <input
-                                                type="text"
-                                                value={formData.firstName}
-                                                onChange={(e) => updateFormData('firstName', e.target.value)}
-                                                className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
-                                                placeholder="Jane"
-                                            />
-                                        </div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">First name</label>
+                                        <input
+                                            type="text"
+                                            value={formData.firstName}
+                                            onChange={(e) => updateFormData('firstName', e.target.value)}
+                                            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                                            placeholder="Jane"
+                                        />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-slate-300 mb-1">Last Name</label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Last name</label>
                                         <input
                                             type="text"
                                             value={formData.lastName}
                                             onChange={(e) => updateFormData('lastName', e.target.value)}
-                                            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                                            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
                                             placeholder="Smith"
                                         />
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-300 mb-1">Work Email</label>
-                                    <div className="relative">
-                                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                                        <input
-                                            type="email"
-                                            value={formData.email}
-                                            onChange={(e) => updateFormData('email', e.target.value)}
-                                            className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
-                                            placeholder="jane.smith@school.ac.uk"
-                                        />
-                                    </div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Work email</label>
+                                    <input
+                                        type="email"
+                                        value={formData.email}
+                                        onChange={(e) => updateFormData('email', e.target.value)}
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                                        placeholder="jane.smith@school.ac.uk"
+                                    />
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-300 mb-1">Password</label>
-                                    <div className="relative">
-                                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                                        <input
-                                            type="password"
-                                            value={formData.password}
-                                            onChange={(e) => updateFormData('password', e.target.value)}
-                                            className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
-                                            placeholder="••••••••"
-                                        />
-                                    </div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                                    <input
+                                        type="password"
+                                        value={formData.password}
+                                        onChange={(e) => updateFormData('password', e.target.value)}
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                                        placeholder="Min 8 characters"
+                                    />
                                 </div>
 
-                                <div className="border-t border-white/10 pt-4 mt-4">
-                                    <h3 className="text-white font-medium mb-4">
-                                        {accountType === 'trust' ? 'Trust Information' : 'School Information'}
-                                    </h3>
-                                    
-                                    <div className="space-y-4">
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-300 mb-1">
-                                                {accountType === 'trust' ? 'Trust Name' : 'School Name'}
-                                            </label>
-                                            <div className="relative">
-                                                {accountType === 'trust' ? (
-                                                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                                                ) : (
-                                                    <School className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                                                )}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Job title</label>
+                                    <input
+                                        type="text"
+                                        value={formData.jobTitle}
+                                        onChange={(e) => updateFormData('jobTitle', e.target.value)}
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                                        placeholder="Headteacher"
+                                    />
+                                </div>
+
+                                <hr className="my-4" />
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        {accountType === 'trust' ? 'Trust name' : 'School name'}
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={accountType === 'trust' ? formData.trustName : formData.organisationName}
+                                        onChange={(e) => updateFormData(accountType === 'trust' ? 'trustName' : 'organisationName', e.target.value)}
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                                        placeholder={accountType === 'trust' ? 'Inspire Academy Trust' : 'Oakwood Primary School'}
+                                    />
+                                </div>
+
+                                {accountType === 'school' && (
+                                    <>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">URN</label>
                                                 <input
                                                     type="text"
-                                                    value={accountType === 'trust' ? formData.trustName : formData.organisationName}
-                                                    onChange={(e) => updateFormData(accountType === 'trust' ? 'trustName' : 'organisationName', e.target.value)}
-                                                    className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
-                                                    placeholder={accountType === 'trust' ? 'Inspire Academy Trust' : 'Oakwood Primary School'}
+                                                    value={formData.urn}
+                                                    onChange={(e) => updateFormData('urn', e.target.value)}
+                                                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                                                    placeholder="123456"
                                                 />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Phase</label>
+                                                <select
+                                                    value={formData.phase}
+                                                    onChange={(e) => updateFormData('phase', e.target.value)}
+                                                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                                                >
+                                                    <option value="primary">Primary</option>
+                                                    <option value="secondary">Secondary</option>
+                                                    <option value="special">Special</option>
+                                                    <option value="all-through">All-through</option>
+                                                </select>
                                             </div>
                                         </div>
 
-                                        {accountType === 'school' && (
-                                            <>
-                                                <div className="grid grid-cols-2 gap-4">
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-slate-300 mb-1">URN (School Number)</label>
-                                                        <input
-                                                            type="text"
-                                                            value={formData.urn}
-                                                            onChange={(e) => updateFormData('urn', e.target.value)}
-                                                            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
-                                                            placeholder="123456"
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-slate-300 mb-1">School Phase</label>
-                                                        <select
-                                                            value={formData.phase}
-                                                            onChange={(e) => updateFormData('phase', e.target.value)}
-                                                            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
-                                                        >
-                                                            <option value="nursery">Nursery</option>
-                                                            <option value="primary">Primary</option>
-                                                            <option value="secondary">Secondary</option>
-                                                            <option value="all-through">All-Through</option>
-                                                            <option value="special">Special</option>
-                                                            <option value="pru">PRU</option>
-                                                        </select>
-                                                    </div>
-                                                </div>
-
-                                                <div className="flex items-center gap-3 p-3 bg-purple-500/10 rounded-xl border border-purple-500/20">
-                                                    <input
-                                                        type="checkbox"
-                                                        id="churchSchool"
-                                                        checked={formData.isChurchSchool}
-                                                        onChange={(e) => updateFormData('isChurchSchool', e.target.checked)}
-                                                        className="w-5 h-5 rounded border-white/20 bg-white/5 text-purple-500 focus:ring-purple-500"
-                                                    />
-                                                    <label htmlFor="churchSchool" className="text-white">
-                                                        This is a Church of England or Catholic school
-                                                        <span className="block text-sm text-slate-400">Enables SIAMS framework tracking</span>
-                                                    </label>
-                                                </div>
-
-                                                {formData.isChurchSchool && (
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-slate-300 mb-1">Diocese</label>
-                                                        <input
-                                                            type="text"
-                                                            value={formData.diocese}
-                                                            onChange={(e) => updateFormData('diocese', e.target.value)}
-                                                            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
-                                                            placeholder="Diocese of Manchester"
-                                                        />
-                                                    </div>
-                                                )}
-                                            </>
-                                        )}
-
-                                        {accountType === 'trust' && (
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div>
-                                                    <label className="block text-sm font-medium text-slate-300 mb-1">Number of Schools</label>
-                                                    <select
-                                                        value={formData.numberOfSchools}
-                                                        onChange={(e) => updateFormData('numberOfSchools', e.target.value)}
-                                                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
-                                                    >
-                                                        <option value="">Select...</option>
-                                                        <option value="2-5">2-5 schools</option>
-                                                        <option value="6-10">6-10 schools</option>
-                                                        <option value="11-20">11-20 schools</option>
-                                                        <option value="21-50">21-50 schools</option>
-                                                        <option value="50+">50+ schools</option>
-                                                    </select>
-                                                </div>
-                                                <div>
-                                                    <label className="block text-sm font-medium text-slate-300 mb-1">Trust Website</label>
-                                                    <div className="relative">
-                                                        <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                                                        <input
-                                                            type="url"
-                                                            value={formData.trustWebsite}
-                                                            onChange={(e) => updateFormData('trustWebsite', e.target.value)}
-                                                            className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
-                                                            placeholder="https://trust.org.uk"
-                                                        />
-                                                    </div>
-                                                </div>
+                                        <label className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors">
+                                            <input
+                                                type="checkbox"
+                                                checked={formData.isChurchSchool}
+                                                onChange={(e) => updateFormData('isChurchSchool', e.target.checked)}
+                                                className="w-5 h-5 rounded border-gray-300 text-gray-900 focus:ring-gray-900"
+                                            />
+                                            <div>
+                                                <span className="font-medium text-gray-900">Church school</span>
+                                                <span className="block text-sm text-gray-500">Enables SIAMS framework</span>
                                             </div>
-                                        )}
-                                    </div>
-                                </div>
+                                        </label>
+                                    </>
+                                )}
                             </div>
 
-                            <div className="flex justify-between">
-                                <button onClick={prevStep} className="text-slate-400 hover:text-white flex items-center gap-2">
-                                    <ArrowLeft className="w-4 h-4" /> Back
+                            <div className="flex gap-3">
+                                <button onClick={prevStep} className="px-6 py-3 text-gray-700 font-medium rounded-xl hover:bg-gray-100 transition-colors">
+                                    Back
                                 </button>
                                 <button
                                     onClick={nextStep}
-                                    className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all flex items-center gap-2"
+                                    className="flex-1 py-3 bg-gray-900 text-white font-medium rounded-xl hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
                                 >
                                     Continue <ArrowRight className="w-5 h-5" />
                                 </button>
@@ -443,99 +414,70 @@ export default function SignupPage() {
                     {currentStep === 'schools' && accountType === 'trust' && (
                         <div className="space-y-6 animate-in fade-in duration-500">
                             <div className="text-center space-y-2">
-                                <h2 className="text-3xl font-bold text-white">Add Your Schools</h2>
-                                <p className="text-slate-300">Add the schools in your trust (you can add more later)</p>
+                                <h2 className="text-2xl font-bold text-gray-900">Add your schools</h2>
+                                <p className="text-gray-600">You can add more schools later</p>
                             </div>
 
-                            <div className="bg-white/5 backdrop-blur rounded-2xl p-6 border border-white/10 space-y-4">
+                            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 space-y-4">
                                 {formData.schools.map((school, index) => (
-                                    <div key={school.id} className="p-4 bg-white/5 rounded-xl border border-white/10">
-                                        <div className="flex justify-between items-start">
-                                            <div>
-                                                <p className="text-white font-medium">{school.name}</p>
-                                                <p className="text-sm text-slate-400">URN: {school.urn} • {school.phase}</p>
-                                            </div>
-                                            <button
-                                                onClick={() => {
-                                                    const newSchools = formData.schools.filter((_, i) => i !== index);
-                                                    updateFormData('schools', newSchools);
-                                                }}
-                                                className="text-red-400 hover:text-red-300 text-sm"
-                                            >
-                                                Remove
-                                            </button>
+                                    <div key={school.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                        <div>
+                                            <p className="font-medium text-gray-900">{school.name}</p>
+                                            <p className="text-sm text-gray-500">URN: {school.urn}</p>
                                         </div>
+                                        <button
+                                            onClick={() => {
+                                                updateFormData('schools', formData.schools.filter((_, i) => i !== index));
+                                            }}
+                                            className="text-gray-400 hover:text-red-500"
+                                        >
+                                            ×
+                                        </button>
                                     </div>
                                 ))}
 
-                                <div className="border-2 border-dashed border-white/20 rounded-xl p-4">
-                                    <h4 className="text-white font-medium mb-3">Add a School</h4>
-                                    <div className="grid grid-cols-2 gap-3 mb-3">
-                                        <input
-                                            type="text"
-                                            placeholder="School name"
-                                            id="newSchoolName"
-                                            className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-slate-500 text-sm"
-                                        />
-                                        <input
-                                            type="text"
-                                            placeholder="URN"
-                                            id="newSchoolUrn"
-                                            className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-slate-500 text-sm"
-                                        />
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-3 mb-3">
-                                        <select
-                                            id="newSchoolPhase"
-                                            className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm"
-                                        >
+                                <div className="border-2 border-dashed border-gray-200 rounded-lg p-4 space-y-3">
+                                    <input id="schoolName" type="text" placeholder="School name" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <input id="schoolUrn" type="text" placeholder="URN" className="px-3 py-2 border border-gray-200 rounded-lg text-sm" />
+                                        <select id="schoolPhase" className="px-3 py-2 border border-gray-200 rounded-lg text-sm">
                                             <option value="primary">Primary</option>
                                             <option value="secondary">Secondary</option>
-                                            <option value="special">Special</option>
                                         </select>
-                                        <label className="flex items-center gap-2 text-sm text-slate-300">
-                                            <input type="checkbox" id="newSchoolChurch" className="rounded" />
-                                            Church School
-                                        </label>
                                     </div>
                                     <button
                                         onClick={() => {
-                                            const name = (document.getElementById('newSchoolName') as HTMLInputElement).value;
-                                            const urn = (document.getElementById('newSchoolUrn') as HTMLInputElement).value;
-                                            const phase = (document.getElementById('newSchoolPhase') as HTMLSelectElement).value;
-                                            const isChurch = (document.getElementById('newSchoolChurch') as HTMLInputElement).checked;
+                                            const name = (document.getElementById('schoolName') as HTMLInputElement).value;
+                                            const urn = (document.getElementById('schoolUrn') as HTMLInputElement).value;
+                                            const phase = (document.getElementById('schoolPhase') as HTMLSelectElement).value;
                                             if (name && urn) {
-                                                updateFormData('schools', [...formData.schools, {
-                                                    id: `school-${Date.now()}`,
-                                                    name,
-                                                    urn,
-                                                    phase,
-                                                    isChurchSchool: isChurch
-                                                }]);
-                                                (document.getElementById('newSchoolName') as HTMLInputElement).value = '';
-                                                (document.getElementById('newSchoolUrn') as HTMLInputElement).value = '';
+                                                updateFormData('schools', [...formData.schools, { id: `s-${Date.now()}`, name, urn, phase, isChurchSchool: false }]);
+                                                (document.getElementById('schoolName') as HTMLInputElement).value = '';
+                                                (document.getElementById('schoolUrn') as HTMLInputElement).value = '';
                                             }
                                         }}
-                                        className="w-full py-2 bg-purple-500/20 text-purple-300 rounded-lg hover:bg-purple-500/30 transition-colors text-sm font-medium"
+                                        className="w-full py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
                                     >
-                                        + Add School
+                                        + Add school
                                     </button>
                                 </div>
 
-                                <p className="text-sm text-slate-400 text-center">
-                                    Added {formData.schools.length} school(s) • You can add more schools after signup
-                                </p>
+                                {formData.schools.length >= 3 && (
+                                    <div className="p-3 bg-green-50 rounded-lg text-sm text-green-700">
+                                        ✓ {formData.schools.length >= 6 ? '20%' : '15%'} volume discount will be applied
+                                    </div>
+                                )}
                             </div>
 
-                            <div className="flex justify-between">
-                                <button onClick={prevStep} className="text-slate-400 hover:text-white flex items-center gap-2">
-                                    <ArrowLeft className="w-4 h-4" /> Back
+                            <div className="flex gap-3">
+                                <button onClick={prevStep} className="px-6 py-3 text-gray-700 font-medium rounded-xl hover:bg-gray-100 transition-colors">
+                                    Back
                                 </button>
                                 <button
                                     onClick={nextStep}
-                                    className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all flex items-center gap-2"
+                                    className="flex-1 py-3 bg-gray-900 text-white font-medium rounded-xl hover:bg-gray-800 transition-colors"
                                 >
-                                    Continue <ArrowRight className="w-5 h-5" />
+                                    Continue
                                 </button>
                             </div>
                         </div>
@@ -545,122 +487,175 @@ export default function SignupPage() {
                     {currentStep === 'plan' && (
                         <div className="space-y-6 animate-in fade-in duration-500">
                             <div className="text-center space-y-2">
-                                <h2 className="text-3xl font-bold text-white">Choose Your Plan</h2>
-                                <p className="text-slate-300">Start with a 14-day free trial, cancel anytime</p>
+                                <h2 className="text-2xl font-bold text-gray-900">Choose your plan</h2>
+                                <p className="text-gray-600">12-month subscription, auto-renews annually</p>
                             </div>
 
-                            {/* Billing Toggle */}
-                            <div className="flex items-center justify-center gap-3">
-                                <span className={formData.billingCycle === 'monthly' ? 'text-white' : 'text-slate-400'}>Monthly</span>
-                                <button
-                                    onClick={() => updateFormData('billingCycle', formData.billingCycle === 'monthly' ? 'annual' : 'monthly')}
-                                    className={`w-14 h-7 rounded-full transition-colors ${formData.billingCycle === 'annual' ? 'bg-purple-500' : 'bg-slate-600'}`}
-                                >
-                                    <div className={`w-5 h-5 bg-white rounded-full transition-transform ${formData.billingCycle === 'annual' ? 'translate-x-8' : 'translate-x-1'}`} />
-                                </button>
-                                <span className={formData.billingCycle === 'annual' ? 'text-white' : 'text-slate-400'}>
-                                    Annual <span className="text-green-400 text-sm">(Save 20%)</span>
-                                </span>
+                            <div className="space-y-3">
+                                {[
+                                    { id: 'core', name: 'Core', price: 1499, features: ['Full Ofsted Framework', 'Action Planning', 'Ed AI Coach', 'Basic Reports', '10 Users'] },
+                                    { id: 'professional', name: 'Professional', price: 2499, popular: true, features: ['Everything in Core', 'SIAMS Framework', 'One-Click Reports', 'Voice Observations', 'Mock Inspector AI', 'Unlimited Users'] },
+                                    { id: 'enterprise', name: 'Enterprise', price: 3999, features: ['Everything in Professional', 'Trust Dashboard', 'Cross-school Analytics', 'Dedicated Support', 'On-site Training'] }
+                                ].map(plan => (
+                                    <button
+                                        key={plan.id}
+                                        onClick={() => updateFormData('selectedPlan', plan.id)}
+                                        className={`w-full p-5 rounded-xl border-2 text-left transition-all ${
+                                            formData.selectedPlan === plan.id 
+                                                ? 'border-gray-900 bg-gray-50' 
+                                                : 'border-gray-200 bg-white hover:border-gray-400'
+                                        }`}
+                                    >
+                                        <div className="flex items-start justify-between">
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <h3 className="font-semibold text-gray-900">{plan.name}</h3>
+                                                    {plan.popular && (
+                                                        <span className="text-xs font-medium bg-gray-900 text-white px-2 py-0.5 rounded">
+                                                            Most popular
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <ul className="mt-2 space-y-1">
+                                                    {plan.features.slice(0, 3).map((f, i) => (
+                                                        <li key={i} className="text-sm text-gray-500 flex items-center gap-1">
+                                                            <Check className="w-3 h-3" /> {f}
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-2xl font-bold text-gray-900">£{plan.price.toLocaleString()}</p>
+                                                <p className="text-sm text-gray-500">/year</p>
+                                            </div>
+                                        </div>
+                                    </button>
+                                ))}
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                {/* Core */}
-                                <button
-                                    onClick={() => updateFormData('selectedPlan', 'core')}
-                                    className={`p-5 rounded-2xl border-2 text-left transition-all ${
-                                        formData.selectedPlan === 'core' 
-                                            ? 'border-blue-500 bg-blue-500/10' 
-                                            : 'border-white/20 bg-white/5 hover:border-white/40'
-                                    }`}
-                                >
-                                    <h3 className="text-lg font-bold text-white mb-1">Core</h3>
-                                    <div className="mb-3">
-                                        <span className="text-3xl font-bold text-white">
-                                            £{formData.billingCycle === 'annual' ? '1,499' : '149'}
-                                        </span>
-                                        <span className="text-slate-400">/{formData.billingCycle === 'annual' ? 'year' : 'month'}</span>
+                            {accountType === 'trust' && formData.schools.length > 1 && (
+                                <div className="bg-white rounded-xl p-4 border border-gray-200">
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-600">{formData.schools.length} schools × £{getPlanPrice().toLocaleString()}</span>
+                                        <span className="text-gray-900">£{(getPlanPrice() * formData.schools.length).toLocaleString()}</span>
                                     </div>
-                                    <ul className="space-y-2 text-sm text-slate-300">
-                                        <li>✓ Full Ofsted Framework</li>
-                                        <li>✓ Action Planning</li>
-                                        <li>✓ Ed AI Coach</li>
-                                        <li>✓ Basic Reports</li>
-                                        <li>✓ 10 Users</li>
-                                    </ul>
-                                </button>
-
-                                {/* Professional */}
-                                <button
-                                    onClick={() => updateFormData('selectedPlan', 'professional')}
-                                    className={`p-5 rounded-2xl border-2 text-left transition-all relative ${
-                                        formData.selectedPlan === 'professional' 
-                                            ? 'border-purple-500 bg-purple-500/10' 
-                                            : 'border-white/20 bg-white/5 hover:border-white/40'
-                                    }`}
-                                >
-                                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full text-xs font-bold text-white">
-                                        MOST POPULAR
+                                    {formData.schools.length >= 3 && (
+                                        <div className="flex justify-between text-sm text-green-600 mt-1">
+                                            <span>Volume discount ({formData.schools.length >= 6 ? '20%' : '15%'})</span>
+                                            <span>-£{((getPlanPrice() * formData.schools.length) - getTotalPrice()).toLocaleString()}</span>
+                                        </div>
+                                    )}
+                                    <hr className="my-2" />
+                                    <div className="flex justify-between font-semibold">
+                                        <span>Annual total</span>
+                                        <span>£{getTotalPrice().toLocaleString()}</span>
                                     </div>
-                                    <h3 className="text-lg font-bold text-white mb-1">Professional</h3>
-                                    <div className="mb-3">
-                                        <span className="text-3xl font-bold text-white">
-                                            £{formData.billingCycle === 'annual' ? '2,499' : '249'}
-                                        </span>
-                                        <span className="text-slate-400">/{formData.billingCycle === 'annual' ? 'year' : 'month'}</span>
-                                    </div>
-                                    <ul className="space-y-2 text-sm text-slate-300">
-                                        <li>✓ Everything in Core</li>
-                                        <li>✓ SIAMS Framework</li>
-                                        <li>✓ One-Click Reports</li>
-                                        <li>✓ Voice Observations</li>
-                                        <li>✓ Mock Inspector AI</li>
-                                        <li>✓ Unlimited Users</li>
-                                    </ul>
-                                </button>
-
-                                {/* Enterprise */}
-                                <button
-                                    onClick={() => updateFormData('selectedPlan', 'enterprise')}
-                                    className={`p-5 rounded-2xl border-2 text-left transition-all ${
-                                        formData.selectedPlan === 'enterprise' 
-                                            ? 'border-pink-500 bg-pink-500/10' 
-                                            : 'border-white/20 bg-white/5 hover:border-white/40'
-                                    }`}
-                                >
-                                    <h3 className="text-lg font-bold text-white mb-1">Enterprise</h3>
-                                    <div className="mb-3">
-                                        <span className="text-3xl font-bold text-white">
-                                            £{formData.billingCycle === 'annual' ? '3,999' : '399'}
-                                        </span>
-                                        <span className="text-slate-400">/{formData.billingCycle === 'annual' ? 'year' : 'month'}</span>
-                                    </div>
-                                    <ul className="space-y-2 text-sm text-slate-300">
-                                        <li>✓ Everything in Pro</li>
-                                        <li>✓ MAT Dashboard</li>
-                                        <li>✓ Cross-school Analytics</li>
-                                        <li>✓ Dedicated Support</li>
-                                        <li>✓ On-site Training</li>
-                                    </ul>
-                                </button>
-                            </div>
-
-                            {accountType === 'trust' && formData.schools.length > 2 && (
-                                <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 text-center">
-                                    <p className="text-green-300">
-                                        🎉 Volume discount applied: <strong>{formData.schools.length >= 6 ? '20%' : '15%'} off</strong> for {formData.schools.length} schools
-                                    </p>
                                 </div>
                             )}
 
-                            <div className="flex justify-between">
-                                <button onClick={prevStep} className="text-slate-400 hover:text-white flex items-center gap-2">
-                                    <ArrowLeft className="w-4 h-4" /> Back
+                            <div className="flex gap-3">
+                                <button onClick={prevStep} className="px-6 py-3 text-gray-700 font-medium rounded-xl hover:bg-gray-100 transition-colors">
+                                    Back
                                 </button>
                                 <button
                                     onClick={nextStep}
-                                    className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all flex items-center gap-2"
+                                    className="flex-1 py-3 bg-gray-900 text-white font-medium rounded-xl hover:bg-gray-800 transition-colors"
                                 >
-                                    Continue <ArrowRight className="w-5 h-5" />
+                                    Continue
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Step: Contract */}
+                    {currentStep === 'contract' && (
+                        <div className="space-y-6 animate-in fade-in duration-500">
+                            <div className="text-center space-y-2">
+                                <h2 className="text-2xl font-bold text-gray-900">Service Agreement</h2>
+                                <p className="text-gray-600">Please review and sign to continue</p>
+                            </div>
+
+                            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                                <div className="p-4 bg-gray-50 border-b border-gray-200 flex items-center gap-2">
+                                    <FileText className="w-5 h-5 text-gray-700" />
+                                    <span className="font-medium text-gray-900">Schoolgle Service Agreement</span>
+                                </div>
+                                
+                                <div className="p-4 h-64 overflow-y-auto text-sm text-gray-600 space-y-4">
+                                    <p><strong>SCHOOLGLE SERVICE AGREEMENT</strong></p>
+                                    <p>This Agreement is entered into between Schoolgle Ltd ("Provider") and the subscribing organisation ("Customer").</p>
+                                    
+                                    <p><strong>1. SUBSCRIPTION TERM</strong></p>
+                                    <p>1.1 The initial subscription term is 12 months from the date of activation.</p>
+                                    <p>1.2 The subscription will automatically renew for successive 12-month periods unless cancelled in writing at least 30 days before the renewal date.</p>
+                                    
+                                    <p><strong>2. FEES AND PAYMENT</strong></p>
+                                    <p>2.1 Annual subscription fee: £{getTotalPrice().toLocaleString()}</p>
+                                    <p>2.2 Payment is due within 30 days of invoice date.</p>
+                                    <p>2.3 Fees are non-refundable except as required by law.</p>
+                                    <p>2.4 Price may increase by up to 5% upon renewal with 60 days notice.</p>
+                                    
+                                    <p><strong>3. AUTO-RENEWAL</strong></p>
+                                    <p>3.1 This agreement will automatically renew at the end of each subscription period.</p>
+                                    <p>3.2 An invoice will be issued 30 days before renewal date.</p>
+                                    <p>3.3 To cancel, written notice must be received 30 days before renewal.</p>
+                                    
+                                    <p><strong>4. DATA PROTECTION</strong></p>
+                                    <p>4.1 The Provider will process personal data in accordance with UK GDPR.</p>
+                                    <p>4.2 A Data Processing Agreement is incorporated by reference.</p>
+                                    
+                                    <p><strong>5. SERVICE LEVEL</strong></p>
+                                    <p>5.1 The Provider aims for 99.5% uptime availability.</p>
+                                    <p>5.2 Support is provided via email during UK business hours.</p>
+                                    
+                                    <p><strong>6. LIMITATION OF LIABILITY</strong></p>
+                                    <p>6.1 The Provider's total liability shall not exceed the fees paid in the preceding 12 months.</p>
+                                </div>
+                            </div>
+
+                            <div className="bg-white rounded-xl p-4 border border-gray-200 space-y-4">
+                                <label className="flex items-start gap-3 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={agreedToTerms}
+                                        onChange={(e) => setAgreedToTerms(e.target.checked)}
+                                        className="mt-1 w-5 h-5 rounded border-gray-300 text-gray-900 focus:ring-gray-900"
+                                    />
+                                    <span className="text-sm text-gray-600">
+                                        I have read and agree to the Service Agreement, <a href="/privacy" className="underline">Privacy Policy</a>, and <a href="/terms" className="underline">Terms of Service</a>
+                                    </span>
+                                </label>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Electronic Signature (type your full name)
+                                    </label>
+                                    <div className="relative">
+                                        <PenTool className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                        <input
+                                            type="text"
+                                            value={signatureName}
+                                            onChange={(e) => setSignatureName(e.target.value)}
+                                            className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent font-serif italic"
+                                            placeholder="Jane Smith"
+                                        />
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        By typing your name, you are signing this agreement electronically
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3">
+                                <button onClick={prevStep} className="px-6 py-3 text-gray-700 font-medium rounded-xl hover:bg-gray-100 transition-colors">
+                                    Back
+                                </button>
+                                <button
+                                    onClick={() => { setContractSigned(true); nextStep(); }}
+                                    disabled={!agreedToTerms || !signatureName.trim()}
+                                    className="flex-1 py-3 bg-gray-900 text-white font-medium rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                >
+                                    Sign & Continue <ArrowRight className="w-5 h-5" />
                                 </button>
                             </div>
                         </div>
@@ -670,214 +665,193 @@ export default function SignupPage() {
                     {currentStep === 'payment' && (
                         <div className="space-y-6 animate-in fade-in duration-500">
                             <div className="text-center space-y-2">
-                                <h2 className="text-3xl font-bold text-white">Start Your Free Trial</h2>
-                                <p className="text-slate-300">14 days free, then £{formData.selectedPlan === 'core' ? '1,499' : formData.selectedPlan === 'professional' ? '2,499' : '3,999'}/year</p>
+                                <h2 className="text-2xl font-bold text-gray-900">Payment</h2>
+                                <p className="text-gray-600">Choose how you'd like to pay</p>
                             </div>
 
-                            <div className="bg-white/5 backdrop-blur rounded-2xl p-6 border border-white/10 space-y-4">
-                                <div className="flex items-center gap-3 p-4 bg-green-500/10 rounded-xl border border-green-500/20">
-                                    <Shield className="w-6 h-6 text-green-400" />
-                                    <div>
-                                        <p className="text-white font-medium">No payment required today</p>
-                                        <p className="text-sm text-slate-400">You won't be charged until your trial ends</p>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-300 mb-1">Card Number</label>
-                                    <div className="relative">
-                                        <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                                        <input
-                                            type="text"
-                                            placeholder="4242 4242 4242 4242"
-                                            className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-300 mb-1">Expiry</label>
-                                        <input
-                                            type="text"
-                                            placeholder="MM/YY"
-                                            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-300 mb-1">CVC</label>
-                                        <input
-                                            type="text"
-                                            placeholder="123"
-                                            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="border-t border-white/10 pt-4 space-y-2">
-                                    <div className="flex justify-between text-sm">
-                                        <span className="text-slate-400">Plan</span>
-                                        <span className="text-white">{formData.selectedPlan.charAt(0).toUpperCase() + formData.selectedPlan.slice(1)}</span>
-                                    </div>
-                                    {accountType === 'trust' && (
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-slate-400">Schools</span>
-                                            <span className="text-white">{formData.schools.length || 1}</span>
-                                        </div>
-                                    )}
-                                    <div className="flex justify-between text-sm">
-                                        <span className="text-slate-400">Due today</span>
-                                        <span className="text-green-400 font-bold">£0.00</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-slate-400">After trial</span>
-                                        <span className="text-white font-bold">£{formData.selectedPlan === 'core' ? '1,499' : formData.selectedPlan === 'professional' ? '2,499' : '3,999'}/year</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="flex justify-between">
-                                <button onClick={prevStep} className="text-slate-400 hover:text-white flex items-center gap-2">
-                                    <ArrowLeft className="w-4 h-4" /> Back
+                            {/* Payment Method Toggle */}
+                            <div className="flex bg-gray-100 rounded-xl p-1">
+                                <button
+                                    onClick={() => setPaymentMethod('card')}
+                                    className={`flex-1 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
+                                        paymentMethod === 'card' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'
+                                    }`}
+                                >
+                                    <CreditCard className="w-5 h-5" /> Pay by Card
                                 </button>
                                 <button
-                                    onClick={nextStep}
-                                    className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all flex items-center gap-2"
+                                    onClick={() => setPaymentMethod('invoice')}
+                                    className={`flex-1 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
+                                        paymentMethod === 'invoice' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'
+                                    }`}
                                 >
-                                    Start Free Trial <ArrowRight className="w-5 h-5" />
+                                    <Receipt className="w-5 h-5" /> Pay by Invoice
                                 </button>
                             </div>
-                        </div>
-                    )}
 
-                    {/* Step: Team Invites */}
-                    {currentStep === 'team' && (
-                        <div className="space-y-6 animate-in fade-in duration-500">
-                            <div className="text-center space-y-2">
-                                <h2 className="text-3xl font-bold text-white">Invite Your Team</h2>
-                                <p className="text-slate-300">Get your colleagues on board (you can skip this for now)</p>
-                            </div>
-
-                            <div className="bg-white/5 backdrop-blur rounded-2xl p-6 border border-white/10 space-y-4">
-                                {formData.teamInvites.map((invite, index) => (
-                                    <div key={index} className="flex gap-3">
-                                        <div className="flex-1">
+                            <div className="bg-white rounded-xl p-6 border border-gray-200 space-y-4">
+                                {paymentMethod === 'card' ? (
+                                    <>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Card number</label>
                                             <input
-                                                type="email"
-                                                value={invite.email}
-                                                onChange={(e) => {
-                                                    const newInvites = [...formData.teamInvites];
-                                                    newInvites[index].email = e.target.value;
-                                                    updateFormData('teamInvites', newInvites);
-                                                }}
-                                                placeholder="colleague@school.ac.uk"
-                                                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                                                type="text"
+                                                placeholder="1234 5678 9012 3456"
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
                                             />
                                         </div>
-                                        <select
-                                            value={invite.role}
-                                            onChange={(e) => {
-                                                const newInvites = [...formData.teamInvites];
-                                                newInvites[index].role = e.target.value;
-                                                updateFormData('teamInvites', newInvites);
-                                            }}
-                                            className="px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
-                                        >
-                                            <option value="admin">Admin</option>
-                                            <option value="slt">SLT</option>
-                                            <option value="teacher">Teacher</option>
-                                            <option value="governor">Governor</option>
-                                        </select>
-                                        {formData.teamInvites.length > 1 && (
-                                            <button
-                                                onClick={() => {
-                                                    const newInvites = formData.teamInvites.filter((_, i) => i !== index);
-                                                    updateFormData('teamInvites', newInvites);
-                                                }}
-                                                className="px-3 text-red-400 hover:text-red-300"
-                                            >
-                                                ×
-                                            </button>
-                                        )}
-                                    </div>
-                                ))}
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Expiry</label>
+                                                <input
+                                                    type="text"
+                                                    placeholder="MM/YY"
+                                                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">CVC</label>
+                                                <input
+                                                    type="text"
+                                                    placeholder="123"
+                                                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                                                />
+                                            </div>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="p-4 bg-blue-50 rounded-lg text-sm text-blue-800">
+                                            <p className="font-medium">Invoice Payment</p>
+                                            <p>An invoice will be sent to your finance team. Payment is due within 30 days.</p>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Invoice email</label>
+                                            <input
+                                                type="email"
+                                                value={formData.invoiceEmail || formData.email}
+                                                onChange={(e) => updateFormData('invoiceEmail', e.target.value)}
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                                                placeholder="finance@school.ac.uk"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Purchase Order Number (optional)</label>
+                                            <input
+                                                type="text"
+                                                value={formData.purchaseOrderNumber}
+                                                onChange={(e) => updateFormData('purchaseOrderNumber', e.target.value)}
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                                                placeholder="PO-12345"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Invoice address</label>
+                                            <textarea
+                                                value={formData.invoiceAddress}
+                                                onChange={(e) => updateFormData('invoiceAddress', e.target.value)}
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                                                rows={3}
+                                                placeholder="School address for invoice"
+                                            />
+                                        </div>
+                                    </>
+                                )}
 
-                                <button
-                                    onClick={() => updateFormData('teamInvites', [...formData.teamInvites, { email: '', role: 'teacher' }])}
-                                    className="w-full py-3 border-2 border-dashed border-white/20 rounded-xl text-slate-400 hover:text-white hover:border-white/40 transition-colors"
-                                >
-                                    + Add Another
-                                </button>
+                                <hr />
+
+                                <div className="space-y-2">
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-600">{formData.selectedPlan.charAt(0).toUpperCase() + formData.selectedPlan.slice(1)} Plan</span>
+                                        <span className="text-gray-900">£{getPlanPrice().toLocaleString()}</span>
+                                    </div>
+                                    {accountType === 'trust' && formData.schools.length > 1 && (
+                                        <>
+                                            <div className="flex justify-between text-sm text-gray-600">
+                                                <span>× {formData.schools.length} schools</span>
+                                            </div>
+                                            {formData.schools.length >= 3 && (
+                                                <div className="flex justify-between text-sm text-green-600">
+                                                    <span>Volume discount</span>
+                                                    <span>-{formData.schools.length >= 6 ? '20%' : '15%'}</span>
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
+                                    <hr />
+                                    <div className="flex justify-between font-semibold text-lg">
+                                        <span>Total (annual)</span>
+                                        <span>£{getTotalPrice().toLocaleString()}</span>
+                                    </div>
+                                </div>
                             </div>
 
-                            <div className="flex justify-between">
-                                <button onClick={prevStep} className="text-slate-400 hover:text-white flex items-center gap-2">
-                                    <ArrowLeft className="w-4 h-4" /> Back
+                            <div className="flex gap-3">
+                                <button onClick={prevStep} className="px-6 py-3 text-gray-700 font-medium rounded-xl hover:bg-gray-100 transition-colors">
+                                    Back
                                 </button>
-                                <div className="flex gap-3">
-                                    <button
-                                        onClick={handleSubmit}
-                                        className="px-6 py-3 bg-white/10 text-white font-semibold rounded-xl hover:bg-white/20 transition-all"
-                                    >
-                                        Skip for now
-                                    </button>
-                                    <button
-                                        onClick={handleSubmit}
-                                        disabled={isLoading}
-                                        className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all flex items-center gap-2 disabled:opacity-50"
-                                    >
-                                        {isLoading ? 'Creating account...' : 'Complete Setup'} 
-                                        {!isLoading && <ArrowRight className="w-5 h-5" />}
-                                    </button>
-                                </div>
+                                <button
+                                    onClick={handleSubmit}
+                                    disabled={isLoading}
+                                    className="flex-1 py-3 bg-gray-900 text-white font-medium rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                                >
+                                    {isLoading ? 'Processing...' : paymentMethod === 'card' ? 'Pay & Subscribe' : 'Request Invoice'}
+                                </button>
                             </div>
                         </div>
                     )}
 
                     {/* Step: Complete */}
                     {currentStep === 'complete' && (
-                        <div className="text-center space-y-8 animate-in fade-in duration-500">
-                            <div className="w-20 h-20 bg-gradient-to-r from-green-400 to-emerald-400 rounded-full flex items-center justify-center mx-auto">
-                                <CheckCircle className="w-10 h-10 text-white" />
+                        <div className="text-center space-y-6 animate-in fade-in duration-500">
+                            <div className="w-16 h-16 bg-gray-900 rounded-full flex items-center justify-center mx-auto">
+                                <CheckCircle className="w-8 h-8 text-white" />
                             </div>
                             
                             <div className="space-y-2">
-                                <h2 className="text-4xl font-bold text-white">You're all set! 🎉</h2>
-                                <p className="text-xl text-slate-300">
-                                    Welcome to Schoolgle, {formData.firstName}!
+                                <h2 className="text-3xl font-bold text-gray-900">Welcome to Schoolgle!</h2>
+                                <p className="text-gray-600">
+                                    {paymentMethod === 'invoice' 
+                                        ? 'Your invoice has been sent. Your account is active.'
+                                        : 'Your subscription is active.'}
                                 </p>
                             </div>
 
-                            <div className="bg-white/5 backdrop-blur rounded-2xl p-6 border border-white/10 text-left max-w-md mx-auto">
-                                <h3 className="text-white font-semibold mb-4">What's next?</h3>
-                                <ul className="space-y-3">
-                                    <li className="flex items-start gap-3">
-                                        <span className="w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0">1</span>
-                                        <span className="text-slate-300">Complete your first self-assessment</span>
+                            <div className="bg-white rounded-xl p-5 border border-gray-200 text-left space-y-3">
+                                <h3 className="font-medium text-gray-900">Next steps:</h3>
+                                <ul className="space-y-2">
+                                    <li className="flex items-center gap-3 text-sm text-gray-600">
+                                        <span className="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center text-xs font-medium">1</span>
+                                        Complete your first self-assessment
                                     </li>
-                                    <li className="flex items-start gap-3">
-                                        <span className="w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0">2</span>
-                                        <span className="text-slate-300">Upload some evidence documents</span>
+                                    <li className="flex items-center gap-3 text-sm text-gray-600">
+                                        <span className="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center text-xs font-medium">2</span>
+                                        Upload evidence documents
                                     </li>
-                                    <li className="flex items-start gap-3">
-                                        <span className="w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0">3</span>
-                                        <span className="text-slate-300">Ask Ed a question about Ofsted</span>
+                                    <li className="flex items-center gap-3 text-sm text-gray-600">
+                                        <span className="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center text-xs font-medium">3</span>
+                                        Invite your team
                                     </li>
                                 </ul>
                             </div>
 
                             <button
                                 onClick={() => router.push('/dashboard')}
-                                className="px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg shadow-purple-500/25 flex items-center gap-2 mx-auto"
+                                className="w-full py-4 bg-gray-900 text-white font-medium rounded-xl hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
                             >
                                 Go to Dashboard <ArrowRight className="w-5 h-5" />
                             </button>
+
+                            {paymentMethod === 'invoice' && (
+                                <p className="text-sm text-gray-500">
+                                    Invoice sent to {formData.invoiceEmail || formData.email}
+                                </p>
+                            )}
                         </div>
                     )}
 
                 </div>
-            </div>
+            </main>
         </div>
     );
 }
-
