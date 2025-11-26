@@ -3,7 +3,7 @@
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { LayoutDashboard, FileCheck, BookOpen, CheckSquare, Settings, FileText, Eye } from "lucide-react";
+import { LayoutDashboard, FileCheck, BookOpen, CheckSquare, Settings, FileText, Eye, FolderOpen } from "lucide-react";
 import OfstedFrameworkView from "@/components/OfstedFrameworkView";
 import SiamsFrameworkView from "@/components/SiamsFrameworkView";
 import ActionsDashboard from "@/components/ActionsDashboard";
@@ -13,6 +13,7 @@ import SearchResults from "@/components/SearchResults";
 import EdChatbot from "@/components/EdChatbot";
 import SEFGenerator from "@/components/SEFGenerator";
 import LessonObservationModal from "@/components/LessonObservationModal";
+import LocalFolderScanner from "@/components/LocalFolderScanner";
 
 type ActiveView = 'dashboard' | 'ofsted' | 'siams' | 'actions' | 'sef' | 'settings';
 
@@ -47,9 +48,18 @@ export default function DashboardPage() {
     const [observations, setObservations] = useState<any[]>([]);
     const [showObservationModal, setShowObservationModal] = useState(false);
 
+    // Local Folder Scanner State
+    const [showLocalScanner, setShowLocalScanner] = useState(false);
+    const [scannedFiles, setScannedFiles] = useState<any[]>([]);
+
     const handleSaveObservation = (observation: any) => {
         setObservations(prev => [...prev, observation]);
         console.log('Observation saved:', observation);
+    };
+
+    const handleLocalScanComplete = (files: any[]) => {
+        setScannedFiles(prev => [...prev, ...files]);
+        console.log('Local scan complete:', files.length, 'files');
     };
 
     useEffect(() => {
@@ -212,12 +222,60 @@ export default function DashboardPage() {
                             <div className="col-span-1 space-y-6">
                                 <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
                                     <h2 className="text-lg font-semibold text-gray-900 mb-4">Evidence Sources</h2>
-                                    <p className="text-sm text-gray-600">
-                                        Connect your Google Drive or OneDrive to scan for evidence.
-                                    </p>
-                                    <p className="text-xs text-gray-500 mt-4">
-                                        Evidence scanning features coming soon.
-                                    </p>
+                                    
+                                    {/* Scanned Files Count */}
+                                    {scannedFiles.length > 0 && (
+                                        <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                                            <div className="flex items-center gap-2">
+                                                <CheckSquare className="text-green-600" size={18} />
+                                                <span className="text-green-800 font-medium">
+                                                    {scannedFiles.length} files scanned
+                                                </span>
+                                            </div>
+                                        </div>
+                                    )}
+                                    
+                                    {/* Scan Options */}
+                                    <div className="space-y-3">
+                                        <button
+                                            onClick={() => setShowLocalScanner(true)}
+                                            className="w-full p-4 border-2 border-dashed border-blue-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-left group"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <FolderOpen className="text-blue-500" size={24} />
+                                                <div>
+                                                    <p className="font-medium text-gray-900">Local Folder</p>
+                                                    <p className="text-xs text-gray-500">Scan from your computer</p>
+                                                </div>
+                                            </div>
+                                        </button>
+                                        
+                                        <button
+                                            disabled
+                                            className="w-full p-4 border border-gray-200 rounded-lg bg-gray-50 opacity-60 cursor-not-allowed text-left"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <img src="https://upload.wikimedia.org/wikipedia/commons/d/da/Google_Drive_logo.png" alt="Google Drive" className="w-6 h-6" />
+                                                <div>
+                                                    <p className="font-medium text-gray-600">Google Drive</p>
+                                                    <p className="text-xs text-gray-400">Coming soon</p>
+                                                </div>
+                                            </div>
+                                        </button>
+                                        
+                                        <button
+                                            disabled
+                                            className="w-full p-4 border border-gray-200 rounded-lg bg-gray-50 opacity-60 cursor-not-allowed text-left"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <img src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Microsoft_Office_OneDrive_%282019%E2%80%93present%29.svg" alt="OneDrive" className="w-6 h-6" />
+                                                <div>
+                                                    <p className="font-medium text-gray-600">OneDrive</p>
+                                                    <p className="text-xs text-gray-400">Coming soon</p>
+                                                </div>
+                                            </div>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -225,10 +283,48 @@ export default function DashboardPage() {
                             <div className="col-span-2 space-y-6">
                                 <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
                                     <h2 className="text-lg font-semibold text-gray-900 mb-4">Readiness Overview</h2>
-                                    <p className="text-gray-600">
+                                    <p className="text-gray-600 mb-4">
                                         Use the tabs above to access the Ofsted Framework, SIAMS Framework, or Action Plan views.
                                     </p>
+                                    
+                                    {/* Quick Stats */}
+                                    <div className="grid grid-cols-3 gap-4 mt-6">
+                                        <div className="text-center p-4 bg-blue-50 rounded-lg">
+                                            <div className="text-2xl font-bold text-blue-700">{Object.keys(ofstedAssessments).length}</div>
+                                            <div className="text-xs text-blue-600">Assessments</div>
+                                        </div>
+                                        <div className="text-center p-4 bg-green-50 rounded-lg">
+                                            <div className="text-2xl font-bold text-green-700">{scannedFiles.length}</div>
+                                            <div className="text-xs text-green-600">Evidence Files</div>
+                                        </div>
+                                        <div className="text-center p-4 bg-purple-50 rounded-lg">
+                                            <div className="text-2xl font-bold text-purple-700">{observations.length}</div>
+                                            <div className="text-xs text-purple-600">Observations</div>
+                                        </div>
+                                    </div>
                                 </div>
+                                
+                                {/* Recent Scanned Files */}
+                                {scannedFiles.length > 0 && (
+                                    <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                                        <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Evidence Files</h2>
+                                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                                            {scannedFiles.slice(-5).reverse().map((file, i) => (
+                                                <div key={i} className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
+                                                    <span className="text-lg">
+                                                        {file.type?.includes('pdf') ? '📄' : 
+                                                         file.type?.includes('image') ? '🖼️' : 
+                                                         file.type?.includes('word') ? '📝' : '📁'}
+                                                    </span>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm font-medium text-gray-900 truncate">{file.name}</p>
+                                                        <p className="text-xs text-gray-500 truncate">{file.path}</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </>
@@ -330,6 +426,18 @@ export default function DashboardPage() {
                 onSave={handleSaveObservation}
                 currentUser={{ id: user?.uid || '', name: user?.displayName || user?.email || '' }}
             />
+
+            {/* Local Folder Scanner Modal */}
+            {showLocalScanner && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="max-w-2xl w-full">
+                        <LocalFolderScanner
+                            onScanComplete={handleLocalScanComplete}
+                            onClose={() => setShowLocalScanner(false)}
+                        />
+                    </div>
+                </div>
+            )}
 
             {/* Ed Chatbot - Always visible */}
             <EdChatbot 
