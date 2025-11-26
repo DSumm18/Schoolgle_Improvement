@@ -11,9 +11,10 @@ import {
     ChevronDown, ChevronRight, AlertTriangle, CheckCircle, FileText, 
     Plus, Edit2, Calendar, User, Info, ExternalLink, X, 
     GraduationCap, Sparkles, Church, BookOpen, Heart, Users,
-    Star, Cross
+    Star, Cross, AlertCircle
 } from 'lucide-react';
 import EdAnalysisPanel from './EdAnalysisPanel';
+import ActionModal from './ActionModal';
 
 interface LocalEvidenceMatch {
     fileId: string;
@@ -67,6 +68,13 @@ export default function SiamsFrameworkView({
     const [edSelectedStrand, setEdSelectedStrand] = useState<string>('');
     const [edSelectedRating, setEdSelectedRating] = useState<string>('');
 
+    // Action Modal State
+    const [isActionModalOpen, setIsActionModalOpen] = useState(false);
+    const [currentActionQuestionId, setCurrentActionQuestionId] = useState<string | null>(null);
+    const [currentActionEvidence, setCurrentActionEvidence] = useState<string | null>(null);
+    const [currentStrandName, setCurrentStrandName] = useState<string | undefined>(undefined);
+    const [editingAction, setEditingAction] = useState<SiamsActionItem | undefined>(undefined);
+
     // Calculate Overall Scores
     const { userScore: overallUserScore, totalEvidence } = calculateOverallSiamsReadiness(assessments);
 
@@ -111,6 +119,53 @@ export default function SiamsFrameworkView({
             newExpanded.add(strandId);
         }
         setExpandedStrands(newExpanded);
+    };
+
+    // Action Handlers
+    const handleActionCreate = (questionId: string, evidenceItem: string, strandName: string) => {
+        setCurrentActionQuestionId(questionId);
+        setCurrentActionEvidence(evidenceItem);
+        setCurrentStrandName(strandName);
+        setEditingAction(undefined);
+        setIsActionModalOpen(true);
+    };
+
+    const handleActionEdit = (questionId: string, action: SiamsActionItem) => {
+        setCurrentActionQuestionId(questionId);
+        setCurrentActionEvidence(null);
+        setEditingAction(action as any);
+        setIsActionModalOpen(true);
+    };
+
+    const handleSaveAction = (action: any) => {
+        if (!currentActionQuestionId) return;
+
+        const questionAssessment = assessments[currentActionQuestionId] || {};
+        const currentActions = questionAssessment.actions || [];
+
+        let newActions;
+        if (editingAction) {
+            newActions = currentActions.map((a: any) => a.id === action.id ? action : a);
+        } else {
+            newActions = [...currentActions, action];
+        }
+
+        setAssessments({
+            ...assessments,
+            [currentActionQuestionId]: { ...questionAssessment, actions: newActions }
+        });
+
+        setIsActionModalOpen(false);
+        setEditingAction(undefined);
+    };
+
+    const getPriorityColor = (priority: string) => {
+        switch (priority) {
+            case 'high': return 'bg-red-50 text-red-700 border-red-200';
+            case 'medium': return 'bg-yellow-50 text-yellow-700 border-yellow-200';
+            case 'low': return 'bg-green-50 text-green-700 border-green-200';
+            default: return 'bg-gray-50 text-gray-700 border-gray-200';
+        }
     };
 
     const toggleInfo = (e: React.MouseEvent, id: string) => {
@@ -398,14 +453,69 @@ export default function SiamsFrameworkView({
                                                     {/* Evidence Required */}
                                                     <div className="bg-gray-50 rounded-lg p-3">
                                                         <h5 className="text-sm font-medium text-gray-700 mb-2">Evidence Required:</h5>
-                                                        <div className="flex flex-wrap gap-2">
+                                                        <ul className="space-y-2">
                                                             {question.evidenceRequired.map((evidence, idx) => (
-                                                                <span key={idx} className="text-xs bg-white px-2 py-1 rounded border border-gray-200 text-gray-600">
-                                                                    {evidence}
-                                                                </span>
+                                                                <li key={idx} className="flex items-start justify-between group text-sm p-2 rounded hover:bg-white">
+                                                                    <span className="text-gray-600 flex-1 mr-2">• {evidence}</span>
+                                                                    <button
+                                                                        onClick={() => handleActionCreate(question.id, evidence, strand.name)}
+                                                                        className="text-xs bg-purple-50 text-purple-600 px-2 py-1 rounded border border-purple-200 hover:bg-purple-100 transition-all flex items-center gap-1 opacity-0 group-hover:opacity-100"
+                                                                        title="Create action"
+                                                                    >
+                                                                        <Plus size={12} /> Action
+                                                                    </button>
+                                                                </li>
                                                             ))}
-                                                        </div>
+                                                        </ul>
                                                     </div>
+
+                                                    {/* Actions List */}
+                                                    {(assessments[question.id]?.actions || []).length > 0 && (
+                                                        <div className="mt-4 border-t border-gray-100 pt-4">
+                                                            <h5 className="font-semibold text-gray-700 text-sm mb-3 flex items-center gap-2">
+                                                                <AlertCircle size={16} />
+                                                                Action Plan ({(assessments[question.id]?.actions || []).length})
+                                                            </h5>
+                                                            <div className="space-y-2">
+                                                                {(assessments[question.id]?.actions || []).map((action: any) => (
+                                                                    <div key={action.id} className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow">
+                                                                        <div className="flex justify-between items-start mb-1">
+                                                                            <div className="flex items-center gap-2">
+                                                                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${getPriorityColor(action.priority)}`}>
+                                                                                    {action.priority}
+                                                                                </span>
+                                                                                <span className="text-sm font-medium text-gray-900">{action.description}</span>
+                                                                            </div>
+                                                                            <button
+                                                                                onClick={() => handleActionEdit(question.id, action)}
+                                                                                className="text-gray-400 hover:text-purple-600"
+                                                                            >
+                                                                                <Edit2 size={14} />
+                                                                            </button>
+                                                                        </div>
+                                                                        {action.rationale && (
+                                                                            <p className="text-xs text-gray-500 mb-2 italic">"{action.rationale}"</p>
+                                                                        )}
+                                                                        <div className="flex items-center gap-4 text-xs text-gray-500">
+                                                                            {action.assignee && (
+                                                                                <span className="flex items-center gap-1">
+                                                                                    <User size={12} /> {action.assignee}
+                                                                                </span>
+                                                                            )}
+                                                                            {action.dueDate && (
+                                                                                <span className="flex items-center gap-1">
+                                                                                    <Calendar size={12} /> {new Date(action.dueDate).toLocaleDateString()}
+                                                                                </span>
+                                                                            )}
+                                                                            <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${action.status === 'completed' ? 'bg-green-100 text-green-700' : action.status === 'in_progress' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'}`}>
+                                                                                {action.status?.replace('_', ' ') || 'not started'}
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             );
                                         })}
@@ -438,6 +548,19 @@ export default function SiamsFrameworkView({
                     <span className="font-medium">Analyze with Ed</span>
                     <Sparkles size={16} className="text-yellow-300" />
                 </button>
+            )}
+
+            {/* Action Modal */}
+            {isActionModalOpen && (
+                <ActionModal
+                    isOpen={isActionModalOpen}
+                    onClose={() => setIsActionModalOpen(false)}
+                    onSave={handleSaveAction}
+                    categoryName={currentStrandName || ''}
+                    subCategoryName={SIAMS_FRAMEWORK.flatMap(s => s.inspectionQuestions).find(q => q.id === currentActionQuestionId)?.question?.substring(0, 50)}
+                    evidenceItem={currentActionEvidence || undefined}
+                    initialData={editingAction as any}
+                />
             )}
         </div>
     );
