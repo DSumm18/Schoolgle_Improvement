@@ -765,6 +765,436 @@ create table sdp_milestones (
 create index sdp_milestones_priority_idx on sdp_milestones (priority_id);
 
 -- ============================================================================
+-- NOTES & COMMENTS (attach to any item)
+-- ============================================================================
+
+drop table if exists notes cascade;
+create table notes (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade,
+  
+  -- What is this note attached to?
+  entity_type text not null check (entity_type in (
+    'action', 'assessment', 'observation', 'document', 'priority', 'milestone', 'meeting', 'general'
+  )),
+  entity_id text not null, -- UUID of the related item
+  
+  -- Note content
+  content text not null,
+  is_private boolean default false, -- Only visible to author
+  
+  -- Author
+  author_id text references users(id),
+  author_name text,
+  
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+create index notes_entity_idx on notes (entity_type, entity_id);
+create index notes_organization_idx on notes (organization_id);
+
+-- ============================================================================
+-- ACTIVITY LOG (audit trail)
+-- ============================================================================
+
+drop table if exists activity_log cascade;
+create table activity_log (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade,
+  
+  -- What happened?
+  action_type text not null check (action_type in (
+    'create', 'update', 'delete', 'approve', 'complete', 'assign', 'comment', 'upload', 'scan', 'generate'
+  )),
+  
+  -- What was affected?
+  entity_type text not null,
+  entity_id text,
+  entity_name text,
+  
+  -- Details
+  description text,
+  changes jsonb, -- Before/after for updates
+  
+  -- Who did it?
+  user_id text references users(id),
+  user_name text,
+  
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+create index activity_log_organization_idx on activity_log (organization_id);
+create index activity_log_date_idx on activity_log (created_at desc);
+create index activity_log_user_idx on activity_log (user_id);
+
+-- ============================================================================
+-- MEETINGS & MINUTES
+-- ============================================================================
+
+drop table if exists meetings cascade;
+create table meetings (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade,
+  
+  -- Meeting details
+  title text not null,
+  meeting_type text check (meeting_type in ('governors', 'slt', 'staff', 'department', 'phase', 'other')),
+  date date not null,
+  start_time time,
+  end_time time,
+  location text,
+  
+  -- Attendees
+  attendees text[], -- Array of names
+  apologies text[],
+  
+  -- Agenda and minutes
+  agenda text,
+  minutes text, -- Full minutes (can be AI-generated from transcript)
+  
+  -- AI Features
+  transcript text, -- Voice recording transcript
+  ai_summary text, -- AI-generated summary
+  
+  -- Status
+  status text check (status in ('scheduled', 'in_progress', 'completed', 'cancelled')) default 'scheduled',
+  
+  created_by text references users(id),
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+create index meetings_organization_idx on meetings (organization_id);
+create index meetings_date_idx on meetings (date desc);
+
+-- Meeting Action Points (linked to main actions table)
+drop table if exists meeting_actions cascade;
+create table meeting_actions (
+  id uuid primary key default gen_random_uuid(),
+  meeting_id uuid references meetings(id) on delete cascade,
+  action_id uuid references actions(id) on delete cascade,
+  
+  -- From minutes
+  minute_reference text, -- e.g., "Item 5.2"
+  
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- ============================================================================
+-- MONITORING VISITS (Learning walks, book looks, etc.)
+-- ============================================================================
+
+drop table if exists monitoring_visits cascade;
+create table monitoring_visits (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade,
+  
+  -- Visit details
+  visit_type text not null check (visit_type in (
+    'learning_walk', 'book_look', 'pupil_voice', 'deep_dive', 'environment_walk', 'other'
+  )),
+  title text not null,
+  date date not null,
+  
+  -- Focus
+  focus_area text, -- What was being monitored
+  framework_link text, -- ofsted subcategory or siams strand
+  subject text,
+  year_groups text[],
+  
+  -- Findings
+  strengths text[],
+  areas_for_development text[],
+  key_observations text,
+  
+  -- Follow-up
+  follow_up_actions text[],
+  follow_up_date date,
+  
+  -- Who conducted
+  conducted_by text[],
+  
+  created_by text references users(id),
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+create index monitoring_visits_organization_idx on monitoring_visits (organization_id);
+create index monitoring_visits_date_idx on monitoring_visits (date desc);
+create index monitoring_visits_type_idx on monitoring_visits (visit_type);
+
+-- ============================================================================
+-- CPD RECORDS (Staff training linked to improvement)
+-- ============================================================================
+
+drop table if exists cpd_records cascade;
+create table cpd_records (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade,
+  
+  -- What training?
+  title text not null,
+  provider text,
+  cpd_type text check (cpd_type in ('course', 'webinar', 'inset', 'coaching', 'reading', 'peer_observation', 'other')),
+  date date,
+  duration_hours decimal(4,1),
+  
+  -- Who attended?
+  attendee_ids text[],
+  attendee_names text[],
+  
+  -- Cost
+  cost decimal(10,2),
+  funded_by text, -- e.g., 'school', 'pp', 'sports_premium', 'external'
+  
+  -- Link to improvement
+  framework_link text, -- Which Ofsted/SIAMS area this supports
+  eef_strategy text, -- Which EEF strategy this relates to
+  sdp_priority_id uuid references sdp_priorities(id),
+  
+  -- Impact
+  intended_impact text,
+  actual_impact text,
+  impact_rating text check (impact_rating in ('high', 'medium', 'low', 'not_measured')),
+  
+  -- Evidence
+  certificate_url text,
+  notes text,
+  
+  created_by text references users(id),
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+create index cpd_records_organization_idx on cpd_records (organization_id);
+create index cpd_records_date_idx on cpd_records (date desc);
+
+-- ============================================================================
+-- REMINDERS & CALENDAR
+-- ============================================================================
+
+drop table if exists reminders cascade;
+create table reminders (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade,
+  
+  -- What's the reminder for?
+  title text not null,
+  description text,
+  
+  -- Link to entity
+  entity_type text, -- 'action', 'document', 'meeting', 'policy', etc.
+  entity_id text,
+  
+  -- When?
+  due_date date not null,
+  reminder_date date, -- When to send reminder
+  
+  -- Who?
+  assigned_to text references users(id),
+  assigned_to_name text,
+  
+  -- Status
+  is_recurring boolean default false,
+  recurrence_pattern text, -- 'daily', 'weekly', 'monthly', 'annually'
+  
+  status text check (status in ('pending', 'sent', 'acknowledged', 'completed', 'snoozed')) default 'pending',
+  
+  created_by text references users(id),
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+create index reminders_organization_idx on reminders (organization_id);
+create index reminders_due_date_idx on reminders (due_date);
+create index reminders_status_idx on reminders (status);
+
+-- ============================================================================
+-- POLICY TRACKING
+-- ============================================================================
+
+drop table if exists policies cascade;
+create table policies (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade,
+  
+  -- Policy details
+  name text not null,
+  category text check (category in (
+    'safeguarding', 'curriculum', 'behaviour', 'hr', 'health_safety', 
+    'governance', 'finance', 'admissions', 'send', 'other'
+  )),
+  
+  -- Version control
+  version text,
+  document_url text,
+  
+  -- Review cycle
+  last_reviewed date,
+  next_review date,
+  review_frequency_months integer default 12,
+  
+  -- Approval
+  approved_by text,
+  approved_date date,
+  
+  -- Statutory requirement
+  is_statutory boolean default false,
+  statutory_reference text,
+  
+  -- Status
+  status text check (status in ('current', 'under_review', 'expired', 'archived')) default 'current',
+  
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+create index policies_organization_idx on policies (organization_id);
+create index policies_review_idx on policies (next_review);
+
+-- ============================================================================
+-- PUPIL & PARENT VOICE
+-- ============================================================================
+
+drop table if exists surveys cascade;
+create table surveys (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade,
+  
+  -- Survey details
+  title text not null,
+  survey_type text check (survey_type in ('pupil_voice', 'parent_survey', 'staff_survey', 'governor_survey', 'other')),
+  
+  -- Dates
+  start_date date,
+  end_date date,
+  
+  -- Questions (stored as JSON)
+  questions jsonb,
+  
+  -- Response summary (AI-analyzed)
+  response_count integer default 0,
+  ai_summary text,
+  sentiment_score decimal(3,2), -- -1 to +1
+  key_themes text[],
+  
+  -- Framework links
+  framework_links text[], -- Which Ofsted/SIAMS areas this relates to
+  
+  status text check (status in ('draft', 'active', 'closed', 'analyzed')) default 'draft',
+  
+  created_by text references users(id),
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+create index surveys_organization_idx on surveys (organization_id);
+
+-- Survey responses (anonymized)
+drop table if exists survey_responses cascade;
+create table survey_responses (
+  id uuid primary key default gen_random_uuid(),
+  survey_id uuid references surveys(id) on delete cascade,
+  
+  -- Response data (anonymized)
+  responses jsonb not null,
+  
+  -- Metadata
+  respondent_type text, -- 'pupil', 'parent', 'staff'
+  year_group text, -- For pupil surveys
+  
+  submitted_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+create index survey_responses_survey_idx on survey_responses (survey_id);
+
+-- ============================================================================
+-- EXTERNAL VALIDATION
+-- ============================================================================
+
+drop table if exists external_visits cascade;
+create table external_visits (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade,
+  
+  -- Visit details
+  visitor_type text check (visitor_type in (
+    'la_advisor', 'diocese', 'mat_visit', 'consultant', 'ofsted', 'siams', 'peer_review', 'other'
+  )),
+  visitor_name text,
+  visitor_organization text,
+  date date not null,
+  
+  -- Focus
+  focus_areas text[],
+  framework_links text[],
+  
+  -- Findings
+  report_summary text,
+  strengths text[],
+  areas_for_development text[],
+  recommendations text[],
+  
+  -- Document
+  report_url text,
+  
+  -- Follow-up
+  follow_up_required boolean default false,
+  follow_up_date date,
+  
+  created_by text references users(id),
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+create index external_visits_organization_idx on external_visits (organization_id);
+create index external_visits_date_idx on external_visits (date desc);
+
+-- ============================================================================
+-- RISK REGISTER
+-- ============================================================================
+
+drop table if exists risks cascade;
+create table risks (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references organizations(id) on delete cascade,
+  
+  -- Risk details
+  title text not null,
+  description text,
+  category text check (category in (
+    'safeguarding', 'financial', 'operational', 'reputational', 
+    'compliance', 'staffing', 'educational', 'health_safety', 'other'
+  )),
+  
+  -- Assessment
+  likelihood integer check (likelihood between 1 and 5), -- 1=rare, 5=almost certain
+  impact integer check (impact between 1 and 5), -- 1=negligible, 5=catastrophic
+  risk_score integer generated always as (likelihood * impact) stored,
+  
+  -- Mitigation
+  current_controls text,
+  additional_actions text,
+  
+  -- Ownership
+  risk_owner text,
+  risk_owner_id text references users(id),
+  
+  -- Status
+  status text check (status in ('open', 'mitigated', 'closed', 'accepted')) default 'open',
+  
+  -- Review
+  last_reviewed date,
+  next_review date,
+  
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+create index risks_organization_idx on risks (organization_id);
+create index risks_score_idx on risks (risk_score desc);
+
+-- ============================================================================
 -- FRAMEWORK UPDATE TRACKING (for Ed's knowledge)
 -- ============================================================================
 
@@ -851,6 +1281,18 @@ alter table sports_premium_data enable row level security;
 alter table sports_premium_spending enable row level security;
 alter table sdp_priorities enable row level security;
 alter table sdp_milestones enable row level security;
+alter table notes enable row level security;
+alter table activity_log enable row level security;
+alter table meetings enable row level security;
+alter table meeting_actions enable row level security;
+alter table monitoring_visits enable row level security;
+alter table cpd_records enable row level security;
+alter table reminders enable row level security;
+alter table policies enable row level security;
+alter table surveys enable row level security;
+alter table survey_responses enable row level security;
+alter table external_visits enable row level security;
+alter table risks enable row level security;
 alter table scan_jobs enable row level security;
 
 -- Service role has full access to all tables
@@ -872,6 +1314,18 @@ create policy "Service role full access" on sports_premium_data for all using (t
 create policy "Service role full access" on sports_premium_spending for all using (true);
 create policy "Service role full access" on sdp_priorities for all using (true);
 create policy "Service role full access" on sdp_milestones for all using (true);
+create policy "Service role full access" on notes for all using (true);
+create policy "Service role full access" on activity_log for all using (true);
+create policy "Service role full access" on meetings for all using (true);
+create policy "Service role full access" on meeting_actions for all using (true);
+create policy "Service role full access" on monitoring_visits for all using (true);
+create policy "Service role full access" on cpd_records for all using (true);
+create policy "Service role full access" on reminders for all using (true);
+create policy "Service role full access" on policies for all using (true);
+create policy "Service role full access" on surveys for all using (true);
+create policy "Service role full access" on survey_responses for all using (true);
+create policy "Service role full access" on external_visits for all using (true);
+create policy "Service role full access" on risks for all using (true);
 create policy "Service role full access" on scan_jobs for all using (true);
 
 -- ============================================================================
@@ -941,7 +1395,7 @@ returns table (
 )
 language sql
 as $$
-  select 
+  select
     d.name,
     coalesce(em.document_link, d.web_view_link, d.file_path),
     em.confidence,
