@@ -3,7 +3,7 @@
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { LayoutDashboard, FileCheck, BookOpen, CheckSquare, Settings } from "lucide-react";
+import { LayoutDashboard, FileCheck, BookOpen, CheckSquare, Settings, FileText, Eye } from "lucide-react";
 import OfstedFrameworkView from "@/components/OfstedFrameworkView";
 import SiamsFrameworkView from "@/components/SiamsFrameworkView";
 import ActionsDashboard from "@/components/ActionsDashboard";
@@ -11,8 +11,10 @@ import SettingsView from "@/components/SettingsView";
 import SearchBar from "@/components/SearchBar";
 import SearchResults from "@/components/SearchResults";
 import EdChatbot from "@/components/EdChatbot";
+import SEFGenerator from "@/components/SEFGenerator";
+import LessonObservationModal from "@/components/LessonObservationModal";
 
-type ActiveView = 'dashboard' | 'ofsted' | 'siams' | 'actions' | 'settings';
+type ActiveView = 'dashboard' | 'ofsted' | 'siams' | 'actions' | 'sef' | 'settings';
 
 interface SearchResult {
     id: number;
@@ -40,6 +42,15 @@ export default function DashboardPage() {
 
     // SIAMS Assessments State  
     const [siamsAssessments, setSiamsAssessments] = useState<Record<string, any>>({});
+
+    // Observations State
+    const [observations, setObservations] = useState<any[]>([]);
+    const [showObservationModal, setShowObservationModal] = useState(false);
+
+    const handleSaveObservation = (observation: any) => {
+        setObservations(prev => [...prev, observation]);
+        console.log('Observation saved:', observation);
+    };
 
     useEffect(() => {
         if (!loading && !user) {
@@ -151,6 +162,16 @@ export default function DashboardPage() {
                             Action Plan
                         </button>
                         <button
+                            onClick={() => setActiveView('sef')}
+                            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors ${activeView === 'sef'
+                                ? 'border-blue-500 text-blue-600'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                }`}
+                        >
+                            <FileText size={18} />
+                            SEF
+                        </button>
+                        <button
                             onClick={() => setActiveView('settings')}
                             className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors ${activeView === 'settings'
                                 ? 'border-blue-500 text-blue-600'
@@ -239,11 +260,76 @@ export default function DashboardPage() {
                     />
                 )}
 
+                {/* SEF View */}
+                {activeView === 'sef' && (
+                    <div className="space-y-6">
+                        {/* Quick Actions */}
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h2 className="text-2xl font-bold text-gray-900">Self-Evaluation Form</h2>
+                                <p className="text-gray-600">Generate inspection-ready documentation</p>
+                            </div>
+                            <button
+                                onClick={() => setShowObservationModal(true)}
+                                className="px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 flex items-center gap-2"
+                            >
+                                <Eye size={18} />
+                                New Observation
+                            </button>
+                        </div>
+
+                        {/* Recent Observations */}
+                        {observations.length > 0 && (
+                            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                                <h3 className="font-semibold text-gray-900 mb-3">Recent Observations ({observations.length})</h3>
+                                <div className="space-y-2">
+                                    {observations.slice(0, 5).map((obs, i) => (
+                                        <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                            <div>
+                                                <span className="font-medium text-gray-900">{obs.teacher}</span>
+                                                <span className="text-gray-500 mx-2">•</span>
+                                                <span className="text-gray-600">{obs.subject}</span>
+                                                <span className="text-gray-500 mx-2">•</span>
+                                                <span className="text-gray-500 text-sm">{obs.date}</span>
+                                            </div>
+                                            <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                                obs.overallJudgement === 'outstanding' ? 'bg-green-100 text-green-700' :
+                                                obs.overallJudgement === 'good' ? 'bg-blue-100 text-blue-700' :
+                                                obs.overallJudgement === 'requires_improvement' ? 'bg-yellow-100 text-yellow-700' :
+                                                'bg-red-100 text-red-700'
+                                            }`}>
+                                                {obs.overallJudgement?.replace('_', ' ')}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* SEF Generator */}
+                        <SEFGenerator
+                            schoolName={organization?.name || 'Your School'}
+                            assessments={ofstedAssessments}
+                            actions={Object.values({ ...ofstedAssessments, ...siamsAssessments })
+                                .flatMap((assessment: any) => assessment?.actions || [])}
+                            observations={observations}
+                        />
+                    </div>
+                )}
+
                 {/* Settings View */}
                 {activeView === 'settings' && (
                     <SettingsView />
                 )}
             </main>
+
+            {/* Lesson Observation Modal */}
+            <LessonObservationModal
+                isOpen={showObservationModal}
+                onClose={() => setShowObservationModal(false)}
+                onSave={handleSaveObservation}
+                currentUser={{ id: user?.uid || '', name: user?.displayName || user?.email || '' }}
+            />
 
             {/* Ed Chatbot - Always visible */}
             <EdChatbot 
