@@ -3,9 +3,10 @@
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { OFSTED_FRAMEWORK, calculateAIRating, calculateCategoryReadiness, calculateOverallReadiness, ActionItem } from '@/lib/ofsted-framework';
-import { ChevronDown, ChevronRight, AlertTriangle, CheckCircle, FileText, RefreshCw, Plus, Edit2, Calendar, User, AlertCircle, TrendingUp, Brain, Info, ExternalLink, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, AlertTriangle, CheckCircle, FileText, RefreshCw, Plus, Edit2, Calendar, User, AlertCircle, TrendingUp, Brain, Info, ExternalLink, X, GraduationCap, Sparkles } from 'lucide-react';
 import ActionModal from './ActionModal';
 import EvidenceModal from './EvidenceModal';
+import EdAnalysisPanel from './EdAnalysisPanel';
 
 interface OfstedFrameworkViewProps {
     assessments: Record<string, any>;
@@ -64,6 +65,26 @@ export default function OfstedFrameworkView({ assessments, setAssessments }: Ofs
     const [currentActionEvidence, setCurrentActionEvidence] = useState<string | null>(null);
     const [currentCategoryName, setCurrentCategoryName] = useState<string | undefined>(undefined);
     const [editingAction, setEditingAction] = useState<ActionItem | undefined>(undefined);
+
+    // Ed Analysis Panel State
+    const [showEdPanel, setShowEdPanel] = useState(false);
+    const [edSelectedCategory, setEdSelectedCategory] = useState<string>('');
+    const [edSelectedRating, setEdSelectedRating] = useState<string>('');
+    const [edEvidenceCount, setEdEvidenceCount] = useState<number>(0);
+
+    // Open Ed Panel for analysis
+    const openEdAnalysis = (categoryName: string, rating?: string, evidenceCount?: number) => {
+        setEdSelectedCategory(categoryName);
+        setEdSelectedRating(rating || 'Not Assessed');
+        setEdEvidenceCount(evidenceCount || 0);
+        setShowEdPanel(true);
+    };
+
+    // Handle action creation from Ed
+    const handleEdAction = (action: any) => {
+        console.log('Ed created action:', action);
+        // TODO: Add to assessments/actions
+    };
 
     // Calculate Overall Scores
     const { userScore: overallUserScore, aiScore: overallAIScore } = calculateOverallReadiness(assessments);
@@ -497,6 +518,25 @@ export default function OfstedFrameworkView({ assessments, setAssessments }: Ofs
                                                 <div className={`text-lg font-bold ${getScoreColor(aiScore)}`}>{aiScore}%</div>
                                             </div>
                                         </div>
+                                        
+                                        {/* Analyze with Ed Button */}
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                openEdAnalysis(
+                                                    category.name,
+                                                    userScore >= 90 ? 'Outstanding' : userScore >= 70 ? 'Good' : userScore >= 40 ? 'Requires Improvement' : 'Inadequate',
+                                                    category.subcategories.reduce((acc, sub) => 
+                                                        acc + (assessments[sub.id]?.evidenceCount || 0), 0
+                                                    )
+                                                );
+                                            }}
+                                            className="flex items-center gap-2 px-3 py-2 bg-emerald-500 text-white text-sm font-medium rounded-lg hover:bg-emerald-600 transition-colors shadow-sm"
+                                            title="Get Ed's analysis and recommendations"
+                                        >
+                                            <GraduationCap size={16} />
+                                            <span className="hidden lg:inline">Ask Ed</span>
+                                        </button>
                                     </div>
 
                                     {/* Category Guidance Info Box */}
@@ -733,6 +773,31 @@ export default function OfstedFrameworkView({ assessments, setAssessments }: Ofs
                 evidenceItem={evidenceModalData.evidenceItem}
                 matches={evidenceModalData.matches}
             />
+
+            {/* Ed Analysis Panel - Fixed Right Sidebar */}
+            {showEdPanel && (
+                <div className="fixed right-6 top-32 w-96 z-40 animate-in slide-in-from-right">
+                    <EdAnalysisPanel
+                        selectedCategory={edSelectedCategory}
+                        currentRating={edSelectedRating}
+                        evidenceCount={edEvidenceCount}
+                        onCreateAction={handleEdAction}
+                        onClose={() => setShowEdPanel(false)}
+                    />
+                </div>
+            )}
+
+            {/* Ed Quick Access Button */}
+            {!showEdPanel && (
+                <button
+                    onClick={() => setShowEdPanel(true)}
+                    className="fixed right-6 top-32 bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-4 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center gap-2 z-40"
+                >
+                    <GraduationCap size={20} />
+                    <span className="font-medium">Analyze with Ed</span>
+                    <Sparkles size={16} className="text-yellow-300" />
+                </button>
+            )}
         </div>
     );
 }
