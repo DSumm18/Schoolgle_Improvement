@@ -735,18 +735,18 @@ export default function OfstedFrameworkView({ assessments, setAssessments, local
                                                             </div>
                                                             <ul className="space-y-2">
                                                                 {sub.evidenceRequired.map((evidence, idx) => (
-                                                                    <li key={idx} className="flex items-start justify-between group text-sm p-2 rounded hover:bg-gray-50">
-                                                                        <span className="text-gray-600 flex-1 mr-2">• {evidence}</span>
+                                                                    <li key={evidence.id || idx} className="flex items-start justify-between group text-sm p-2 rounded hover:bg-gray-50">
+                                                                        <span className="text-gray-600 flex-1 mr-2">• {evidence.name}</span>
                                                                         <div className="flex items-center gap-1">
                                                                             <button
-                                                                                onClick={() => handleViewEvidence(sub.id, evidence, category.name, sub.name)}
+                                                                                onClick={() => handleViewEvidence(sub.id, evidence.name, category.name, sub.name)}
                                                                                 className="text-xs bg-white text-gray-600 px-2 py-1 rounded border border-gray-200 hover:bg-gray-50 hover:text-blue-600 transition-all flex items-center gap-1"
                                                                                 title="View found evidence"
                                                                             >
                                                                                 <FileText size={12} /> View
                                                                             </button>
                                                                             <button
-                                                                                onClick={() => handleActionCreate(sub.id, evidence, category.name)}
+                                                                                onClick={() => handleActionCreate(sub.id, evidence.name, category.name)}
                                                                                 className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded border border-blue-200 hover:bg-blue-100 transition-all flex items-center gap-1"
                                                                                 title="Create action"
                                                                             >
