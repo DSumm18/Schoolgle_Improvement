@@ -381,7 +381,11 @@ export default function DashboardPage() {
 
                 {/* SIAMS Framework View */}
                 {activeView === 'siams' && (
-                    <SiamsFrameworkView />
+                    <SiamsFrameworkView
+                        assessments={siamsAssessments}
+                        setAssessments={setSiamsAssessments}
+                        localEvidence={evidenceByArea}
+                    />
                 )}
 
                 {/* Actions Dashboard View */}
