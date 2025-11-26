@@ -10,6 +10,7 @@ import ActionsDashboard from "@/components/ActionsDashboard";
 import SettingsView from "@/components/SettingsView";
 import SearchBar from "@/components/SearchBar";
 import SearchResults from "@/components/SearchResults";
+import EdChatbot from "@/components/EdChatbot";
 
 type ActiveView = 'dashboard' | 'ofsted' | 'siams' | 'actions' | 'settings';
 
@@ -26,7 +27,7 @@ interface SearchResult {
 }
 
 export default function DashboardPage() {
-    const { user, loading, signOut } = useAuth();
+    const { user, loading, signOut, organization } = useAuth();
     const router = useRouter();
     const [activeView, setActiveView] = useState<ActiveView>('dashboard');
     const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -243,6 +244,17 @@ export default function DashboardPage() {
                     <SettingsView />
                 )}
             </main>
+
+            {/* Ed Chatbot - Always visible */}
+            <EdChatbot 
+                context={{
+                    schoolName: organization?.name,
+                    currentView: activeView,
+                    topic: activeView === 'ofsted' ? 'ofsted framework inspection' : 
+                           activeView === 'siams' ? 'siams church school inspection' :
+                           activeView === 'actions' ? 'school improvement actions' : undefined
+                }}
+            />
         </div>
     );
 }
