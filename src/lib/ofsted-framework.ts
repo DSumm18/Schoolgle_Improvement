@@ -294,3 +294,39 @@ export const calculateOverallReadiness = (assessments: Record<string, any>) => {
         aiScore: count > 0 ? Math.round(totalAIScore / count) : 0
     };
 };
+
+/**
+ * Simple keyword-based matching (legacy - will be replaced by AI matcher)
+ * For backward compatibility with existing scan route
+ */
+export function matchDocumentToCategories(text: string): {
+    categoryId: string;
+    subcategoryId: string;
+    evidenceItem: string;
+    confidence: number;
+}[] {
+    const matches: any[] = [];
+
+    // Simple keyword matching as fallback
+    OFSTED_FRAMEWORK.forEach(category => {
+        category.subcategories.forEach(sub => {
+            sub.evidenceRequired.forEach(evidence => {
+                const keywords = evidence.toLowerCase().split(' ').filter(w => w.length > 3);
+                const matchCount = keywords.filter(kw =>
+                    text.toLowerCase().includes(kw)
+                ).length;
+
+                if (matchCount > 2) {
+                    matches.push({
+                        categoryId: category.id,
+                        subcategoryId: sub.id,
+                        evidenceItem: evidence,
+                        confidence: Math.min(matchCount / keywords.length, 1)
+                    });
+                }
+            });
+        });
+    });
+
+    return matches;
+}
