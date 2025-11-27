@@ -1,0 +1,11 @@
+
+<svg width="800" height="800" viewBox="0 0 800 800" xmlns="http://www.w3.org/2000/svg">
+<rect width="800" height="800" fill="black"/>
+<circle cx="400" cy="400" r="8" fill="#ADD8E6"/>
+<circle cx="500" cy="320" r="8" fill="#FFAA4C"/>
+<circle cx="620" cy="430" r="8" fill="#00D4D4"/>
+<circle cx="300" cy="540" r="8" fill="#E6C3FF"/>
+<circle cx="450" cy="600" r="8" fill="#98FF98"/>
+<circle cx="280" cy="260" r="8" fill="#FFD700"/>
+<text x="400" y="420" text-anchor="middle" fill="white" font-size="64" font-family="Arial">Schoolgle</text>
+</svg>

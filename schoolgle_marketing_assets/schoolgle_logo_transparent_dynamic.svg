@@ -1,0 +1,25 @@
+
+<svg width="1200" height="500" viewBox="0 0 1200 500" xmlns="http://www.w3.org/2000/svg">
+  <!-- TRANSPARENT BACKGROUND -->
+  
+  <!-- PLANETS (FIXED COLOURS) -->
+  <circle cx="180" cy="120" r="12" fill="#ADD8E6"/>
+  <circle cx="300" cy="90" r="14" fill="#FFAA4C"/>
+  <circle cx="460" cy="140" r="16" fill="#00D4D4"/>
+  <circle cx="720" cy="110" r="14" fill="#E6C3FF"/>
+  <circle cx="900" cy="160" r="16" fill="#FFB6C1"/>
+  <circle cx="1040" cy="210" r="18" fill="#FFD700"/>
+  <circle cx="600" cy="360" r="14" fill="#98FF98"/>
+
+  <!-- WORDMARK USING currentColor FOR AUTO LIGHT/DARK MODE -->
+  <text 
+    x="600" 
+    y="285" 
+    text-anchor="middle" 
+    font-size="110" 
+    font-family="Inter, Arial, sans-serif" 
+    font-weight="600"
+    fill="currentColor">
+    Schoolgle
+  </text>
+</svg>

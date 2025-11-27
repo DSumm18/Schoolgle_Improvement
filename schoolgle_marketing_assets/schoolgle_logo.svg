@@ -1,0 +1,6 @@
+
+<svg width="800" height="300" viewBox="0 0 800 300" xmlns="http://www.w3.org/2000/svg">
+  <rect width="300" height="300" rx="40" fill="#111827"/>
+  <text x="150" y="195" text-anchor="middle" font-size="200" fill="white" font-family="Arial">S</text>
+  <text x="340" y="190" font-size="120" fill="#111827" font-family="Arial">Schoolgle</text>
+</svg>
