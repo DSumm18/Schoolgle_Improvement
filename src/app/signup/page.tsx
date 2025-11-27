@@ -8,6 +8,7 @@ import {
     Shield, Zap, BarChart3, PenTool, Check, AlertCircle
 } from 'lucide-react';
 import OrigamiParticles from '@/components/OrigamiParticles';
+import Logo from '@/components/Logo';
 
 type Step = 'welcome' | 'account-type' | 'details' | 'schools' | 'plan' | 'contract' | 'payment' | 'complete';
 type AccountType = 'school' | 'trust' | null;
@@ -125,11 +126,8 @@ export default function SignupPage() {
             )}
 
             {/* Header */}
-            <header className="relative z-10 px-6 py-4 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <span className="text-2xl">🏫</span>
-                    <span className="font-bold text-xl text-gray-900">Schoolgle</span>
-                </div>
+            <header className="relative z-10 px-6 py-4 flex items-center justify-between bg-white/95 backdrop-blur-sm">
+                <Logo size="md" />
                 {currentStep !== 'welcome' && currentStep !== 'complete' && (
                     <div className="text-sm text-gray-500">
                         Step {currentStepIndex} of {steps.length - 2}

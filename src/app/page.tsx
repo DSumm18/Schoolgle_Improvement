@@ -7,6 +7,7 @@ import {
     ChevronRight, Check, ArrowRight, Zap, Globe, Clock
 } from 'lucide-react';
 import OrigamiParticles from '@/components/OrigamiParticles';
+import Logo from '@/components/Logo';
 
 // Product suites with clean styling
 const productSuites = [
@@ -113,19 +114,14 @@ export default function HomePage() {
 
     return (
         <div className="min-h-screen bg-white relative">
-            {/* Origami Background */}
-            <OrigamiParticles text="Schoolgle" opacity={0.15} shape="crane" />
+            {/* Origami Background - Logo in top-left */}
+            <OrigamiParticles text="Schoolgle" opacity={0.2} shape="crane" position="top-left" size="medium" />
             
             {/* Header */}
-            <header className="relative z-10 border-b border-gray-100">
+            <header className="relative z-10 border-b border-gray-100 bg-white/80 backdrop-blur-sm">
                 <div className="max-w-6xl mx-auto px-6 py-4">
                     <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-gray-900 flex items-center justify-center">
-                                <span className="text-white font-bold">S</span>
-                            </div>
-                            <span className="font-semibold text-gray-900 text-lg">Schoolgle</span>
-                        </div>
+                        <Logo size="md" />
                         <div className="flex items-center gap-4">
                             <a href="/login" className="text-sm text-gray-500 hover:text-gray-900 font-medium">
                                 Sign In
@@ -138,7 +134,7 @@ export default function HomePage() {
                 </div>
             </header>
 
-            <main className="relative z-10">
+            <main className="relative z-10 bg-white">
                 {/* Hero */}
                 <section className="py-20">
                     <div className="max-w-4xl mx-auto px-6 text-center">
@@ -364,12 +360,7 @@ export default function HomePage() {
             <footer className="relative z-10 bg-white border-t border-gray-100 py-8">
                 <div className="max-w-6xl mx-auto px-6">
                     <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-lg bg-gray-900 flex items-center justify-center">
-                                <span className="text-white font-bold text-sm">S</span>
-                            </div>
-                            <span className="font-medium text-gray-900">Schoolgle</span>
-                        </div>
+                        <Logo size="sm" />
                         <p className="text-sm text-gray-400">
                             © 2025 Schoolgle Ltd. All rights reserved.
                         </p>

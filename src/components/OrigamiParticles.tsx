@@ -8,12 +8,16 @@ interface OrigamiParticlesProps {
     text?: string;
     opacity?: number;
     shape?: ShapeType;
+    position?: 'center' | 'top-left' | 'top-center' | 'bottom-center';
+    size?: 'small' | 'medium' | 'large';
 }
 
 const OrigamiParticles = ({ 
     text = "Schoolgle", 
     opacity = 0.25,
-    shape = 'crane'
+    shape = 'crane',
+    position = 'center',
+    size = 'medium'
 }: OrigamiParticlesProps) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -42,12 +46,42 @@ const OrigamiParticles = ({
             tempCanvas.width = canvas.width;
             tempCanvas.height = canvas.height;
 
-            const fontSize = Math.min(canvas.width / 6, 180);
+            // Size-based font scaling
+            const sizeMultiplier = {
+                small: 0.08,
+                medium: 0.12,
+                large: 0.16
+            };
+            const fontSize = Math.min(canvas.width * sizeMultiplier[size], size === 'large' ? 250 : size === 'medium' ? 180 : 120);
+            
             tempCtx.font = `700 ${fontSize}px system-ui, -apple-system, sans-serif`;
             tempCtx.fillStyle = 'white';
             tempCtx.textAlign = 'center';
             tempCtx.textBaseline = 'middle';
-            tempCtx.fillText(text, canvas.width / 2, canvas.height / 2);
+            
+            // Position-based text placement
+            let textX: number, textY: number;
+            switch (position) {
+                case 'top-left':
+                    tempCtx.textAlign = 'left';
+                    tempCtx.textBaseline = 'top';
+                    textX = canvas.width * 0.08;
+                    textY = canvas.height * 0.12;
+                    break;
+                case 'top-center':
+                    textX = canvas.width / 2;
+                    textY = canvas.height * 0.15;
+                    break;
+                case 'bottom-center':
+                    textX = canvas.width / 2;
+                    textY = canvas.height * 0.85;
+                    break;
+                default: // center
+                    textX = canvas.width / 2;
+                    textY = canvas.height / 2;
+            }
+            
+            tempCtx.fillText(text, textX, textY);
 
             const imageData = tempCtx.getImageData(0, 0, canvas.width, canvas.height).data;
             targets = [];
@@ -178,8 +212,8 @@ const OrigamiParticles = ({
                 this.size = Math.random() * 2.5 + 1.5;
                 this.color = `rgba(25, 25, 45, ${Math.random() * opacity + opacity * 0.8})`;
                 this.target = targets.length > 0 ? targets[Math.floor(Math.random() * targets.length)] : null;
-                this.maxSpeed = 2;
-                this.maxForce = 0.05;
+            this.maxSpeed = 2.5; // Slightly faster for more dynamic movement
+            this.maxForce = 0.08; // Stronger force for more active formation
                 this.rotation = Math.random() * Math.PI * 2;
             }
 
@@ -307,7 +341,8 @@ const OrigamiParticles = ({
     return (
         <canvas
             ref={canvasRef}
-            className="fixed inset-0 z-0 pointer-events-none"
+            className="fixed inset-0 z-[1] pointer-events-none"
+            style={{ mixBlendMode: 'multiply' }}
         />
     );
 };

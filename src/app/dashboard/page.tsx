@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { LayoutDashboard, FileCheck, BookOpen, CheckSquare, Settings, FileText, Eye, FolderOpen, Mic, Search, FileSpreadsheet } from "lucide-react";
 import OrigamiParticles from "@/components/OrigamiParticles";
+import Logo from "@/components/Logo";
 import OfstedFrameworkView from "@/components/OfstedFrameworkView";
 import SiamsFrameworkView from "@/components/SiamsFrameworkView";
 import ActionsDashboard from "@/components/ActionsDashboard";
@@ -126,15 +127,10 @@ export default function DashboardPage() {
             {/* Origami Particle Background */}
             <OrigamiParticles text="Improve" opacity={0.25} shape="crane" />
             
-            <nav className="relative z-10 border-b border-gray-100">
+            <nav className="relative z-10 border-b border-gray-100 bg-white/95 backdrop-blur-sm">
                 <div className="max-w-6xl mx-auto px-6">
                     <div className="flex justify-between h-16 items-center">
-                        <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-gray-800 to-black flex items-center justify-center">
-                                <span className="text-white font-bold text-sm">S</span>
-                            </div>
-                            <span className="font-semibold text-gray-900">Schoolgle</span>
-                        </div>
+                        <Logo size="md" />
                         <div className="flex items-center gap-4">
                             <span className="text-sm text-gray-500">{user.email}</span>
                             <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-700 font-medium text-sm">

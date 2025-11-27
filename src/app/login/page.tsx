@@ -5,6 +5,7 @@ import MicrosoftLoginButton from "@/components/MicrosoftLoginButton";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import Logo from "@/components/Logo";
 
 export default function LoginPage() {
     const { user, loading } = useAuth();
@@ -33,9 +34,7 @@ export default function LoginPage() {
                 </div>
 
                 <div className="flex justify-center py-8">
-                    <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center">
-                        <span className="text-4xl">🏫</span>
-                    </div>
+                    <Logo size="lg" />
                 </div>
 
                 <div className="space-y-4">
