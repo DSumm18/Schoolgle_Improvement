@@ -1,13 +1,31 @@
 "use client";
 
+import SchoolgleAnimatedLogo from './SchoolgleAnimatedLogo';
+
 interface LogoProps {
     size?: 'sm' | 'md' | 'lg';
     showText?: boolean;
     className?: string;
-    variant?: 'full' | 'icon-only';
+    variant?: 'full' | 'icon-only' | 'animated';
 }
 
 const Logo = ({ size = 'md', showText = true, className = '', variant = 'icon-only' }: LogoProps) => {
+    // Animated variant (for hero sections, landing pages)
+    if (variant === 'animated') {
+        const animatedSizes = {
+            sm: 300,
+            md: 400,
+            lg: 520
+        };
+        return (
+            <SchoolgleAnimatedLogo 
+                size={animatedSizes[size]} 
+                className={className}
+                showText={showText}
+            />
+        );
+    }
+
     // Size mappings for the full logo
     const logoSizes = {
         sm: { width: 120, height: 50 },
