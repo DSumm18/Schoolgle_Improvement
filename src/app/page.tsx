@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import OrigamiParticles from '@/components/OrigamiParticles';
 import Logo from '@/components/Logo';
+import SchoolgleAnimatedLogo from '@/components/SchoolgleAnimatedLogo';
 
 // Product suites with clean styling
 const productSuites = [
@@ -118,10 +119,27 @@ export default function HomePage() {
             <OrigamiParticles text="Schoolgle" opacity={0.2} shape="crane" position="top-left" size="medium" />
             
             {/* Header */}
-            <header className="relative z-10 border-b border-gray-100 bg-white/80 backdrop-blur-sm">
-                <div className="max-w-6xl mx-auto px-6 py-4">
-                    <div className="flex items-center justify-between">
-                        <Logo size="md" />
+            <header className="relative z-10 border-b border-gray-100 bg-white/95 backdrop-blur-sm overflow-visible">
+                <div className="max-w-6xl mx-auto px-6">
+                    <div className="flex items-center justify-between h-24">
+                        <div className="flex items-center relative" style={{ minHeight: '96px' }}>
+                            {/* Container for logo text - center point for orbits */}
+                            <a href="/dashboard" className="relative z-10 flex items-center justify-center" style={{ width: '140px', position: 'relative' }}>
+                                <span className="text-2xl font-semibold text-gray-900 whitespace-nowrap">
+                                    Schoolgle
+                                </span>
+                                {/* Animated planets orbiting around the center of "Schoolgle" text */}
+                                <div 
+                                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 overflow-visible pointer-events-none" 
+                                    style={{ 
+                                        width: 300, 
+                                        height: 300
+                                    }}
+                                >
+                                    <SchoolgleAnimatedLogo size={300} showText={false} />
+                                </div>
+                            </a>
+                        </div>
                         <div className="flex items-center gap-4">
                             <a href="/login" className="text-sm text-gray-500 hover:text-gray-900 font-medium">
                                 Sign In
