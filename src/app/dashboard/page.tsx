@@ -128,14 +128,16 @@ export default function DashboardPage() {
             {/* Origami Particle Background */}
             <OrigamiParticles text="Improve" opacity={0.25} shape="crane" />
             
-            <nav className="relative z-10 border-b border-gray-100 bg-white/95 backdrop-blur-sm">
+            <nav className="relative z-10 border-b border-gray-100 bg-white/95 backdrop-blur-sm overflow-visible">
                 <div className="max-w-6xl mx-auto px-6">
                     <div className="flex justify-between h-24 items-center">
-                        <div className="flex items-center gap-3 -ml-2">
-                            <div className="relative flex items-center justify-center" style={{ width: 180, height: 180 }}>
-                                <SchoolgleAnimatedLogo size={180} showText={false} />
+                        <div className="flex items-center relative" style={{ minHeight: '96px' }}>
+                            {/* Animated planets orbiting around logo - can extend beyond container */}
+                            <div className="absolute left-0 top-1/2 -translate-y-1/2 overflow-visible" style={{ width: 220, height: 220, marginLeft: -110 }}>
+                                <SchoolgleAnimatedLogo size={220} showText={false} />
                             </div>
-                            <span className="text-lg font-semibold text-gray-900 ml-2">Schoolgle</span>
+                            {/* Logo text positioned to the left like standard website logos */}
+                            <span className="text-lg font-semibold text-gray-900 relative z-10 ml-6">Schoolgle</span>
                         </div>
                         <div className="flex items-center gap-4">
                             <span className="text-sm text-gray-500">{user.email}</span>
