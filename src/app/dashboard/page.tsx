@@ -4,6 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { LayoutDashboard, FileCheck, BookOpen, CheckSquare, Settings, FileText, Eye, FolderOpen, Mic, Search, FileSpreadsheet } from "lucide-react";
+import OrigamiParticles from "@/components/OrigamiParticles";
 import OfstedFrameworkView from "@/components/OfstedFrameworkView";
 import SiamsFrameworkView from "@/components/SiamsFrameworkView";
 import ActionsDashboard from "@/components/ActionsDashboard";
@@ -121,22 +122,27 @@ export default function DashboardPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            <nav className="bg-white shadow-sm">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="min-h-screen bg-white relative">
+            {/* Origami Particle Background */}
+            <OrigamiParticles text="Improve" opacity={0.2} />
+            
+            <nav className="relative z-10 border-b border-gray-100">
+                <div className="max-w-6xl mx-auto px-6">
                     <div className="flex justify-between h-16 items-center">
-                        <div className="flex items-center gap-2">
-                            <span className="text-2xl">🏫</span>
-                            <span className="font-bold text-xl text-gray-900">Schoolgle</span>
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-gray-800 to-black flex items-center justify-center">
+                                <span className="text-white font-bold text-sm">S</span>
+                            </div>
+                            <span className="font-semibold text-gray-900">Schoolgle</span>
                         </div>
                         <div className="flex items-center gap-4">
-                            <span className="text-sm text-gray-600">{user.email}</span>
-                            <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
+                            <span className="text-sm text-gray-500">{user.email}</span>
+                            <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-700 font-medium text-sm">
                                 {user.email?.[0].toUpperCase()}
                             </div>
                             <button
                                 onClick={() => signOut()}
-                                className="text-sm text-red-600 hover:text-red-800 font-medium"
+                                className="text-sm text-gray-500 hover:text-gray-900 font-medium transition-colors"
                             >
                                 Sign Out
                             </button>
@@ -145,88 +151,88 @@ export default function DashboardPage() {
                 </div>
             </nav>
 
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <main className="relative z-10 max-w-6xl mx-auto px-6 py-8">
                 {/* Tab Navigation */}
-                <div className="mb-8 border-b border-gray-200">
-                    <nav className="-mb-px flex space-x-8">
+                <div className="mb-8 border-b border-gray-100">
+                    <nav className="-mb-px flex space-x-6 overflow-x-auto">
                         <button
                             onClick={() => setActiveView('dashboard')}
-                            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors ${activeView === 'dashboard'
-                                ? 'border-blue-500 text-blue-600'
-                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors whitespace-nowrap ${activeView === 'dashboard'
+                                ? 'border-gray-900 text-gray-900'
+                                : 'border-transparent text-gray-400 hover:text-gray-600'
                                 }`}
                         >
-                            <LayoutDashboard size={18} />
+                            <LayoutDashboard size={16} />
                             Dashboard
                         </button>
                         <button
                             onClick={() => setActiveView('ofsted')}
-                            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors ${activeView === 'ofsted'
-                                ? 'border-blue-500 text-blue-600'
-                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors whitespace-nowrap ${activeView === 'ofsted'
+                                ? 'border-gray-900 text-gray-900'
+                                : 'border-transparent text-gray-400 hover:text-gray-600'
                                 }`}
                         >
-                            <FileCheck size={18} />
+                            <FileCheck size={16} />
                             Ofsted Framework
                         </button>
                         <button
                             onClick={() => setActiveView('siams')}
-                            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors ${activeView === 'siams'
-                                ? 'border-blue-500 text-blue-600'
-                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors whitespace-nowrap ${activeView === 'siams'
+                                ? 'border-gray-900 text-gray-900'
+                                : 'border-transparent text-gray-400 hover:text-gray-600'
                                 }`}
                         >
-                            <BookOpen size={18} />
+                            <BookOpen size={16} />
                             SIAMS Framework
                         </button>
                         <button
                             onClick={() => setActiveView('actions')}
-                            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors ${activeView === 'actions'
-                                ? 'border-blue-500 text-blue-600'
-                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors whitespace-nowrap ${activeView === 'actions'
+                                ? 'border-gray-900 text-gray-900'
+                                : 'border-transparent text-gray-400 hover:text-gray-600'
                                 }`}
                         >
-                            <CheckSquare size={18} />
+                            <CheckSquare size={16} />
                             Action Plan
                         </button>
                         <button
                             onClick={() => setActiveView('voice')}
-                            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors ${activeView === 'voice'
-                                ? 'border-violet-500 text-violet-600'
-                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors whitespace-nowrap ${activeView === 'voice'
+                                ? 'border-gray-900 text-gray-900'
+                                : 'border-transparent text-gray-400 hover:text-gray-600'
                                 }`}
                         >
-                            <Mic size={18} />
+                            <Mic size={16} />
                             Voice
                         </button>
                         <button
                             onClick={() => setActiveView('reports')}
-                            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors ${activeView === 'reports'
-                                ? 'border-emerald-500 text-emerald-600'
-                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors whitespace-nowrap ${activeView === 'reports'
+                                ? 'border-gray-900 text-gray-900'
+                                : 'border-transparent text-gray-400 hover:text-gray-600'
                                 }`}
                         >
-                            <FileSpreadsheet size={18} />
+                            <FileSpreadsheet size={16} />
                             Reports
                         </button>
                         <button
                             onClick={() => setActiveView('inspector')}
-                            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors ${activeView === 'inspector'
-                                ? 'border-slate-500 text-slate-600'
-                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors whitespace-nowrap ${activeView === 'inspector'
+                                ? 'border-gray-900 text-gray-900'
+                                : 'border-transparent text-gray-400 hover:text-gray-600'
                                 }`}
                         >
-                            <Search size={18} />
+                            <Search size={16} />
                             Mock Inspector
                         </button>
                         <button
                             onClick={() => setActiveView('settings')}
-                            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors ${activeView === 'settings'
-                                ? 'border-blue-500 text-blue-600'
-                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors whitespace-nowrap ${activeView === 'settings'
+                                ? 'border-gray-900 text-gray-900'
+                                : 'border-transparent text-gray-400 hover:text-gray-600'
                                 }`}
                         >
-                            <Settings size={18} />
+                            <Settings size={16} />
                             Settings
                         </button>
                     </nav>

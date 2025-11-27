@@ -5,20 +5,17 @@ import {
     AlertTriangle, 
     CheckCircle, 
     Clock, 
-    TrendingUp, 
-    TrendingDown,
     FileText, 
-    Users, 
     Calendar,
     AlertCircle,
     Award,
     Target,
     ArrowRight,
-    RefreshCw,
     Shield,
     BookOpen,
     ClipboardCheck,
-    Zap
+    Zap,
+    TrendingUp
 } from 'lucide-react';
 
 interface MondayDashboardProps {
@@ -42,14 +39,6 @@ interface UrgentItem {
     link: string;
 }
 
-interface WinItem {
-    id: string;
-    title: string;
-    description: string;
-    date: string;
-    category: string;
-}
-
 const MondayDashboard: React.FC<MondayDashboardProps> = ({
     organizationId,
     ofstedAssessments,
@@ -59,10 +48,8 @@ const MondayDashboard: React.FC<MondayDashboardProps> = ({
     isChurchSchool = false,
     onNavigate
 }) => {
-    const [isLoading, setIsLoading] = useState(false);
     const [currentTime, setCurrentTime] = useState(new Date());
     
-    // Update time every minute
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 60000);
         return () => clearInterval(timer);
@@ -87,7 +74,6 @@ const MondayDashboard: React.FC<MondayDashboardProps> = ({
         return Math.round(ratings.reduce((a, b) => a + b, 0) / ratings.length);
     };
 
-    // Calculate SIAMS readiness (if church school)
     const calculateSiamsReadiness = () => {
         const ratings = Object.values(siamsAssessments)
             .filter((a: any) => a.rating && a.rating !== 'not_assessed')
@@ -105,12 +91,10 @@ const MondayDashboard: React.FC<MondayDashboardProps> = ({
         return Math.round(ratings.reduce((a, b) => a + b, 0) / ratings.length);
     };
 
-    // Get urgent items
     const getUrgentItems = (): UrgentItem[] => {
         const urgent: UrgentItem[] = [];
         const today = new Date();
         
-        // Check overdue actions
         actions.forEach(action => {
             if (action.status !== 'completed' && action.dueDate) {
                 const dueDate = new Date(action.dueDate);
@@ -142,7 +126,6 @@ const MondayDashboard: React.FC<MondayDashboardProps> = ({
             }
         });
 
-        // Check for assessment gaps
         const assessedCount = Object.values(ofstedAssessments)
             .filter((a: any) => a.schoolRating && a.schoolRating !== 'not_assessed').length;
         
@@ -158,7 +141,6 @@ const MondayDashboard: React.FC<MondayDashboardProps> = ({
             });
         }
 
-        // Check for low evidence
         if (evidenceCount < 10) {
             urgent.push({
                 id: 'evidence-gap',
@@ -171,68 +153,18 @@ const MondayDashboard: React.FC<MondayDashboardProps> = ({
             });
         }
 
-        // Check for urgent improvement areas
-        Object.entries(ofstedAssessments).forEach(([key, assessment]: [string, any]) => {
-            if (assessment.schoolRating === 'urgent_improvement') {
-                urgent.push({
-                    id: `urgent-${key}`,
-                    type: 'compliance',
-                    title: 'Urgent Improvement Needed',
-                    description: key.replace(/-/g, ' ').replace(/^\w/, c => c.toUpperCase()),
-                    priority: 'critical',
-                    action: 'Create Action Plan',
-                    link: 'ofsted'
-                });
-            }
-        });
-
         return urgent.sort((a, b) => {
             const priorityOrder = { critical: 0, high: 1, medium: 2 };
             return priorityOrder[a.priority] - priorityOrder[b.priority];
         });
     };
 
-    // Get recent wins
-    const getWins = (): WinItem[] => {
-        const wins: WinItem[] = [];
-        
-        // Check completed actions
-        const recentCompleted = actions
-            .filter(a => a.status === 'completed')
-            .slice(0, 3);
-        
-        recentCompleted.forEach(action => {
-            wins.push({
-                id: action.id,
-                title: action.title,
-                description: 'Action completed',
-                date: action.completedDate || 'Recently',
-                category: 'Action'
-            });
-        });
-
-        // Check for strong ratings
-        Object.entries(ofstedAssessments).forEach(([key, assessment]: [string, any]) => {
-            if (assessment.schoolRating === 'exceptional' || assessment.schoolRating === 'strong_standard') {
-                wins.push({
-                    id: `rating-${key}`,
-                    title: key.replace(/-/g, ' ').replace(/^\w/, c => c.toUpperCase()),
-                    description: `Rated ${assessment.schoolRating.replace('_', ' ')}`,
-                    date: 'Current',
-                    category: 'Assessment'
-                });
-            }
-        });
-
-        return wins.slice(0, 5);
-    };
-
     const ofstedReadiness = calculateOfstedReadiness();
     const siamsReadiness = calculateSiamsReadiness();
     const urgentItems = getUrgentItems();
-    const wins = getWins();
+    const completedActions = actions.filter(a => a.status === 'completed').length;
+    const inProgressActions = actions.filter(a => a.status === 'in_progress').length;
 
-    // Get greeting based on time
     const getGreeting = () => {
         const hour = currentTime.getHours();
         if (hour < 12) return 'Good morning';
@@ -240,291 +172,257 @@ const MondayDashboard: React.FC<MondayDashboardProps> = ({
         return 'Good evening';
     };
 
-    // Get day of week
     const getDayOfWeek = () => {
         return currentTime.toLocaleDateString('en-GB', { weekday: 'long' });
     };
 
-    const getPriorityColor = (priority: string) => {
-        switch (priority) {
-            case 'critical': return 'bg-red-100 text-red-800 border-red-300';
-            case 'high': return 'bg-orange-100 text-orange-800 border-orange-300';
-            case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-300';
-            default: return 'bg-gray-100 text-gray-800 border-gray-300';
-        }
-    };
-
-    const getReadinessColor = (score: number) => {
-        if (score >= 80) return 'text-green-600';
-        if (score >= 60) return 'text-blue-600';
-        if (score >= 40) return 'text-yellow-600';
-        return 'text-red-600';
-    };
-
-    const getReadinessGradient = (score: number) => {
-        if (score >= 80) return 'from-green-500 to-emerald-500';
-        if (score >= 60) return 'from-blue-500 to-cyan-500';
-        if (score >= 40) return 'from-yellow-500 to-amber-500';
-        return 'from-red-500 to-rose-500';
-    };
-
     return (
-        <div className="space-y-6">
-            {/* Header with Greeting */}
-            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-6 text-white shadow-lg">
-                <div className="flex justify-between items-start">
-                    <div>
-                        <h1 className="text-2xl font-bold mb-1">{getGreeting()}! 👋</h1>
-                        <p className="text-indigo-100">
-                            Happy {getDayOfWeek()} - Here's your school improvement snapshot
-                        </p>
-                    </div>
-                    <div className="text-right">
-                        <p className="text-sm text-indigo-200">
-                            {currentTime.toLocaleDateString('en-GB', { 
-                                day: 'numeric', 
-                                month: 'long', 
-                                year: 'numeric' 
-                            })}
-                        </p>
-                        <p className="text-2xl font-bold">
-                            {currentTime.toLocaleTimeString('en-GB', { 
-                                hour: '2-digit', 
-                                minute: '2-digit' 
-                            })}
-                        </p>
-                    </div>
+        <div className="space-y-8">
+            {/* Clean Header */}
+            <div className="flex items-start justify-between">
+                <div>
+                    <h1 className="text-3xl font-medium text-gray-900 tracking-tight">
+                        {getGreeting()}
+                    </h1>
+                    <p className="text-gray-500 mt-1">
+                        Happy {getDayOfWeek()} · Here's your school improvement snapshot
+                    </p>
+                </div>
+                <div className="text-right">
+                    <p className="text-sm text-gray-400">
+                        {currentTime.toLocaleDateString('en-GB', { 
+                            day: 'numeric', 
+                            month: 'long', 
+                            year: 'numeric' 
+                        })}
+                    </p>
+                    <p className="text-3xl font-light text-gray-900 tabular-nums">
+                        {currentTime.toLocaleTimeString('en-GB', { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                        })}
+                    </p>
                 </div>
             </div>
 
-            {/* Key Metrics Row */}
+            {/* Key Metrics */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {/* Ofsted Readiness */}
-                <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-                    <div className="flex items-center justify-between mb-3">
-                        <div className="p-2 bg-blue-100 rounded-lg">
-                            <Target className="w-5 h-5 text-blue-600" />
+                <div className="bg-gray-50 rounded-2xl p-6 hover:bg-gray-100 transition-colors cursor-pointer"
+                     onClick={() => onNavigate('ofsted')}>
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="w-10 h-10 rounded-xl bg-gray-200 flex items-center justify-center">
+                            <Target className="w-5 h-5 text-gray-700" />
                         </div>
-                        <span className={`text-2xl font-bold ${getReadinessColor(ofstedReadiness)}`}>
+                        <span className="text-3xl font-medium text-gray-900">
                             {ofstedReadiness}%
                         </span>
                     </div>
-                    <h3 className="font-semibold text-gray-900">Ofsted Readiness</h3>
-                    <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+                    <h3 className="font-medium text-gray-900">Ofsted Readiness</h3>
+                    <div className="mt-3 w-full bg-gray-200 rounded-full h-1.5">
                         <div 
-                            className={`h-2 rounded-full bg-gradient-to-r ${getReadinessGradient(ofstedReadiness)}`}
+                            className="h-1.5 rounded-full bg-gray-900 transition-all"
                             style={{ width: `${ofstedReadiness}%` }}
                         />
                     </div>
-                    <button 
-                        onClick={() => onNavigate('ofsted')}
-                        className="mt-3 text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
-                    >
-                        View Framework <ArrowRight size={14} />
-                    </button>
+                    <p className="mt-3 text-sm text-gray-500 flex items-center gap-1">
+                        View Framework <ArrowRight className="w-3 h-3" />
+                    </p>
                 </div>
 
-                {/* SIAMS Readiness (if church school) */}
+                {/* SIAMS Readiness */}
                 {isChurchSchool && (
-                    <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-                        <div className="flex items-center justify-between mb-3">
-                            <div className="p-2 bg-purple-100 rounded-lg">
-                                <BookOpen className="w-5 h-5 text-purple-600" />
+                    <div className="bg-gray-50 rounded-2xl p-6 hover:bg-gray-100 transition-colors cursor-pointer"
+                         onClick={() => onNavigate('siams')}>
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="w-10 h-10 rounded-xl bg-gray-200 flex items-center justify-center">
+                                <BookOpen className="w-5 h-5 text-gray-700" />
                             </div>
-                            <span className={`text-2xl font-bold ${getReadinessColor(siamsReadiness)}`}>
+                            <span className="text-3xl font-medium text-gray-900">
                                 {siamsReadiness}%
                             </span>
                         </div>
-                        <h3 className="font-semibold text-gray-900">SIAMS Readiness</h3>
-                        <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+                        <h3 className="font-medium text-gray-900">SIAMS Readiness</h3>
+                        <div className="mt-3 w-full bg-gray-200 rounded-full h-1.5">
                             <div 
-                                className={`h-2 rounded-full bg-gradient-to-r ${getReadinessGradient(siamsReadiness)}`}
+                                className="h-1.5 rounded-full bg-gray-900 transition-all"
                                 style={{ width: `${siamsReadiness}%` }}
                             />
                         </div>
-                        <button 
-                            onClick={() => onNavigate('siams')}
-                            className="mt-3 text-sm text-purple-600 hover:text-purple-800 flex items-center gap-1"
-                        >
-                            View Framework <ArrowRight size={14} />
-                        </button>
+                        <p className="mt-3 text-sm text-gray-500 flex items-center gap-1">
+                            View Framework <ArrowRight className="w-3 h-3" />
+                        </p>
                     </div>
                 )}
 
-                {/* Actions Status */}
-                <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-                    <div className="flex items-center justify-between mb-3">
-                        <div className="p-2 bg-green-100 rounded-lg">
-                            <ClipboardCheck className="w-5 h-5 text-green-600" />
+                {/* Actions */}
+                <div className="bg-gray-50 rounded-2xl p-6 hover:bg-gray-100 transition-colors cursor-pointer"
+                     onClick={() => onNavigate('actions')}>
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="w-10 h-10 rounded-xl bg-gray-200 flex items-center justify-center">
+                            <ClipboardCheck className="w-5 h-5 text-gray-700" />
                         </div>
-                        <span className="text-2xl font-bold text-gray-900">
-                            {actions.filter(a => a.status === 'completed').length}/{actions.length}
+                        <span className="text-3xl font-medium text-gray-900">
+                            {completedActions}/{actions.length}
                         </span>
                     </div>
-                    <h3 className="font-semibold text-gray-900">Actions Complete</h3>
-                    <div className="mt-2 flex gap-1">
-                        <span className="text-xs px-2 py-1 bg-yellow-100 text-yellow-700 rounded">
-                            {actions.filter(a => a.status === 'in_progress').length} In Progress
+                    <h3 className="font-medium text-gray-900">Actions Complete</h3>
+                    <div className="mt-3 flex gap-2">
+                        <span className="px-2 py-1 bg-gray-200 text-gray-700 text-xs rounded-md">
+                            {inProgressActions} In Progress
                         </span>
-                        <span className="text-xs px-2 py-1 bg-red-100 text-red-700 rounded">
-                            {actions.filter(a => a.status === 'draft').length} Draft
+                        <span className="px-2 py-1 bg-gray-200 text-gray-700 text-xs rounded-md">
+                            {actions.length - completedActions - inProgressActions} Draft
                         </span>
                     </div>
-                    <button 
-                        onClick={() => onNavigate('actions')}
-                        className="mt-3 text-sm text-green-600 hover:text-green-800 flex items-center gap-1"
-                    >
-                        View Actions <ArrowRight size={14} />
-                    </button>
-                </div>
-
-                {/* Evidence Count */}
-                <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-                    <div className="flex items-center justify-between mb-3">
-                        <div className="p-2 bg-amber-100 rounded-lg">
-                            <FileText className="w-5 h-5 text-amber-600" />
-                        </div>
-                        <span className="text-2xl font-bold text-gray-900">{evidenceCount}</span>
-                    </div>
-                    <h3 className="font-semibold text-gray-900">Evidence Items</h3>
-                    <p className="text-xs text-gray-500 mt-1">
-                        Documents matched to framework
+                    <p className="mt-3 text-sm text-gray-500 flex items-center gap-1">
+                        View Actions <ArrowRight className="w-3 h-3" />
                     </p>
-                    <button 
-                        onClick={() => onNavigate('dashboard')}
-                        className="mt-3 text-sm text-amber-600 hover:text-amber-800 flex items-center gap-1"
-                    >
-                        Scan More <ArrowRight size={14} />
-                    </button>
+                </div>
+
+                {/* Evidence */}
+                <div className="bg-gray-50 rounded-2xl p-6">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="w-10 h-10 rounded-xl bg-gray-200 flex items-center justify-center">
+                            <FileText className="w-5 h-5 text-gray-700" />
+                        </div>
+                        <span className="text-3xl font-medium text-gray-900">
+                            {evidenceCount}
+                        </span>
+                    </div>
+                    <h3 className="font-medium text-gray-900">Evidence Items</h3>
+                    <p className="text-sm text-gray-500 mt-1">Documents matched to framework</p>
+                    <p className="mt-3 text-sm text-gray-500 flex items-center gap-1">
+                        Scan More <ArrowRight className="w-3 h-3" />
+                    </p>
                 </div>
             </div>
 
-            {/* Two Column Layout: Urgent Items + Wins */}
+            {/* Two Column Layout */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Urgent Items */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-                    <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+                {/* Needs Attention */}
+                <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                    <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                            <AlertTriangle className="w-5 h-5 text-red-500" />
-                            <h2 className="font-semibold text-gray-900">Needs Attention</h2>
-                            {urgentItems.length > 0 && (
-                                <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-medium rounded-full">
-                                    {urgentItems.length}
-                                </span>
-                            )}
+                            <AlertTriangle className="w-4 h-4 text-amber-500" />
+                            <h2 className="font-medium text-gray-900">Needs Attention</h2>
                         </div>
+                        {urgentItems.length > 0 && (
+                            <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-medium rounded-full">
+                                {urgentItems.length}
+                            </span>
+                        )}
                     </div>
-                    <div className="p-4 space-y-3 max-h-80 overflow-y-auto">
+                    <div className="divide-y divide-gray-50">
                         {urgentItems.length === 0 ? (
-                            <div className="text-center py-8">
-                                <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-2" />
-                                <p className="text-gray-600">All caught up! No urgent items.</p>
+                            <div className="p-8 text-center">
+                                <CheckCircle className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                                <p className="text-gray-500">All caught up! No urgent items.</p>
                             </div>
                         ) : (
-                            urgentItems.map(item => (
+                            urgentItems.slice(0, 5).map((item) => (
                                 <div 
-                                    key={item.id}
-                                    className={`p-3 rounded-lg border ${getPriorityColor(item.priority)} flex items-start justify-between`}
+                                    key={item.id} 
+                                    className="px-6 py-4 hover:bg-gray-50 transition-colors cursor-pointer"
+                                    onClick={() => onNavigate(item.link)}
                                 >
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            {item.type === 'overdue' && <Clock className="w-4 h-4" />}
-                                            {item.type === 'deadline' && <Calendar className="w-4 h-4" />}
-                                            {item.type === 'compliance' && <Shield className="w-4 h-4" />}
-                                            {item.type === 'gap' && <AlertCircle className="w-4 h-4" />}
-                                            <span className="font-medium text-sm">{item.title}</span>
+                                    <div className="flex items-start justify-between">
+                                        <div className="flex items-start gap-3">
+                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                                                item.priority === 'critical' ? 'bg-red-50' :
+                                                item.priority === 'high' ? 'bg-amber-50' : 'bg-gray-100'
+                                            }`}>
+                                                <AlertCircle className={`w-4 h-4 ${
+                                                    item.priority === 'critical' ? 'text-red-500' :
+                                                    item.priority === 'high' ? 'text-amber-500' : 'text-gray-500'
+                                                }`} />
+                                            </div>
+                                            <div>
+                                                <p className="font-medium text-gray-900">{item.title}</p>
+                                                <p className="text-sm text-gray-500">{item.description}</p>
+                                            </div>
                                         </div>
-                                        <p className="text-xs opacity-80">{item.description}</p>
+                                        <button className="px-3 py-1.5 text-xs font-medium bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors">
+                                            {item.action}
+                                        </button>
                                     </div>
-                                    <button 
-                                        onClick={() => onNavigate(item.link)}
-                                        className="ml-3 px-3 py-1 bg-white rounded text-xs font-medium hover:bg-gray-50 border border-current/20"
-                                    >
-                                        {item.action}
-                                    </button>
                                 </div>
                             ))
                         )}
                     </div>
                 </div>
 
-                {/* Wins / Achievements */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-                    <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <Award className="w-5 h-5 text-amber-500" />
-                            <h2 className="font-semibold text-gray-900">Recent Wins</h2>
-                        </div>
+                {/* Quick Actions / Recent Activity */}
+                <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                    <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
+                        <Zap className="w-4 h-4 text-gray-400" />
+                        <h2 className="font-medium text-gray-900">Quick Actions</h2>
                     </div>
-                    <div className="p-4 space-y-3 max-h-80 overflow-y-auto">
-                        {wins.length === 0 ? (
-                            <div className="text-center py-8">
-                                <Zap className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-                                <p className="text-gray-500">Complete actions and assessments to see your wins!</p>
+                    <div className="p-4 space-y-2">
+                        <button 
+                            onClick={() => onNavigate('ofsted')}
+                            className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-xl text-left transition-colors flex items-center justify-between group"
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-lg bg-white border border-gray-200 flex items-center justify-center">
+                                    <Target className="w-5 h-5 text-gray-600" />
+                                </div>
+                                <div>
+                                    <p className="font-medium text-gray-900">Complete Self-Assessment</p>
+                                    <p className="text-sm text-gray-500">Review Ofsted judgement areas</p>
+                                </div>
                             </div>
-                        ) : (
-                            wins.map(win => (
-                                <div 
-                                    key={win.id}
-                                    className="p-3 rounded-lg bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 flex items-start gap-3"
-                                >
-                                    <div className="p-1.5 bg-green-100 rounded-full">
-                                        <CheckCircle className="w-4 h-4 text-green-600" />
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className="font-medium text-green-900 text-sm">{win.title}</p>
-                                        <p className="text-xs text-green-700">{win.description}</p>
-                                    </div>
-                                    <span className="text-xs text-green-600 bg-green-100 px-2 py-0.5 rounded">
-                                        {win.category}
-                                    </span>
+                            <ArrowRight className="w-4 h-4 text-gray-400 group-hover:translate-x-1 transition-transform" />
+                        </button>
+                        
+                        <button 
+                            onClick={() => onNavigate('actions')}
+                            className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-xl text-left transition-colors flex items-center justify-between group"
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-lg bg-white border border-gray-200 flex items-center justify-center">
+                                    <ClipboardCheck className="w-5 h-5 text-gray-600" />
                                 </div>
-                            ))
-                        )}
-                    </div>
-                </div>
-            </div>
+                                <div>
+                                    <p className="font-medium text-gray-900">Manage Actions</p>
+                                    <p className="text-sm text-gray-500">Track improvement priorities</p>
+                                </div>
+                            </div>
+                            <ArrowRight className="w-4 h-4 text-gray-400 group-hover:translate-x-1 transition-transform" />
+                        </button>
 
-            {/* Quick Actions */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-                <h2 className="font-semibold text-gray-900 mb-4">Quick Actions</h2>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <button 
-                        onClick={() => onNavigate('ofsted')}
-                        className="p-4 rounded-lg border-2 border-dashed border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors text-center group"
-                    >
-                        <Target className="w-6 h-6 mx-auto mb-2 text-gray-400 group-hover:text-blue-500" />
-                        <span className="text-sm font-medium text-gray-700 group-hover:text-blue-700">
-                            Update Assessment
-                        </span>
-                    </button>
-                    <button 
-                        onClick={() => onNavigate('actions')}
-                        className="p-4 rounded-lg border-2 border-dashed border-gray-200 hover:border-green-300 hover:bg-green-50 transition-colors text-center group"
-                    >
-                        <ClipboardCheck className="w-6 h-6 mx-auto mb-2 text-gray-400 group-hover:text-green-500" />
-                        <span className="text-sm font-medium text-gray-700 group-hover:text-green-700">
-                            Add Action
-                        </span>
-                    </button>
-                    <button 
-                        onClick={() => onNavigate('sef')}
-                        className="p-4 rounded-lg border-2 border-dashed border-gray-200 hover:border-purple-300 hover:bg-purple-50 transition-colors text-center group"
-                    >
-                        <FileText className="w-6 h-6 mx-auto mb-2 text-gray-400 group-hover:text-purple-500" />
-                        <span className="text-sm font-medium text-gray-700 group-hover:text-purple-700">
-                            Generate SEF
-                        </span>
-                    </button>
-                    <button 
-                        onClick={() => onNavigate('dashboard')}
-                        className="p-4 rounded-lg border-2 border-dashed border-gray-200 hover:border-amber-300 hover:bg-amber-50 transition-colors text-center group"
-                    >
-                        <RefreshCw className="w-6 h-6 mx-auto mb-2 text-gray-400 group-hover:text-amber-500" />
-                        <span className="text-sm font-medium text-gray-700 group-hover:text-amber-700">
-                            Scan Evidence
-                        </span>
-                    </button>
+                        <button 
+                            onClick={() => onNavigate('reports')}
+                            className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-xl text-left transition-colors flex items-center justify-between group"
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-lg bg-white border border-gray-200 flex items-center justify-center">
+                                    <FileText className="w-5 h-5 text-gray-600" />
+                                </div>
+                                <div>
+                                    <p className="font-medium text-gray-900">Generate Reports</p>
+                                    <p className="text-sm text-gray-500">SEF, SDP, Pupil Premium</p>
+                                </div>
+                            </div>
+                            <ArrowRight className="w-4 h-4 text-gray-400 group-hover:translate-x-1 transition-transform" />
+                        </button>
+
+                        <button 
+                            onClick={() => onNavigate('voice')}
+                            className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-xl text-left transition-colors flex items-center justify-between group"
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-lg bg-white border border-gray-200 flex items-center justify-center">
+                                    <TrendingUp className="w-5 h-5 text-gray-600" />
+                                </div>
+                                <div>
+                                    <p className="font-medium text-gray-900">Voice Observation</p>
+                                    <p className="text-sm text-gray-500">Record lesson observations</p>
+                                </div>
+                            </div>
+                            <ArrowRight className="w-4 h-4 text-gray-400 group-hover:translate-x-1 transition-transform" />
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -532,4 +430,3 @@ const MondayDashboard: React.FC<MondayDashboardProps> = ({
 };
 
 export default MondayDashboard;
-
