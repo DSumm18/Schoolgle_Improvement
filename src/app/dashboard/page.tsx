@@ -130,12 +130,12 @@ export default function DashboardPage() {
             
             <nav className="relative z-10 border-b border-gray-100 bg-white/95 backdrop-blur-sm">
                 <div className="max-w-6xl mx-auto px-6">
-                    <div className="flex justify-between h-20 items-center">
-                        <div className="flex items-center gap-3">
-                            <div className="relative" style={{ width: 140, height: 140 }}>
-                                <SchoolgleAnimatedLogo size={140} showText={false} />
+                    <div className="flex justify-between h-24 items-center">
+                        <div className="flex items-center gap-3 -ml-2">
+                            <div className="relative flex items-center justify-center" style={{ width: 180, height: 180 }}>
+                                <SchoolgleAnimatedLogo size={180} showText={false} />
                             </div>
-                            <span className="text-lg font-semibold text-gray-900">Schoolgle</span>
+                            <span className="text-lg font-semibold text-gray-900 ml-2">Schoolgle</span>
                         </div>
                         <div className="flex items-center gap-4">
                             <span className="text-sm text-gray-500">{user.email}</span>

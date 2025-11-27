@@ -13,14 +13,15 @@ import { motion } from "framer-motion";
 
 // ✅ TIGHTENED ORBITS — matches the compact look you approved
 // All 7 planets remain visible and close to the wordmark
+// Planets orbit around center like solar system
 const planets = [
-  { name: "HR",         color: "#ADD8E6", size: 11, duration: 18, radius: 70,  start: 35 },
-  { name: "Finance",    color: "#FFAA4C", size: 12, duration: 24, radius: 90,  start: 120 },
-  { name: "Estates",    color: "#00D4D4", size: 14, duration: 30, radius: 110, start: 210 },
-  { name: "Compliance", color: "#E6C3FF", size: 12, duration: 36, radius: 130, start: 300 },
-  { name: "Teaching",   color: "#FFB6C1", size: 14, duration: 44, radius: 150, start: 20 },
-  { name: "SEND",       color: "#98FF98", size: 12, duration: 60, radius: 170, start: 95 },
-  { name: "Governance", color: "#FFD700", size: 16, duration: 75, radius: 190, start: 335 }
+  { name: "HR",         color: "#ADD8E6", size: 14, duration: 18, radius: 70,  start: 35 },
+  { name: "Finance",    color: "#FFAA4C", size: 15, duration: 24, radius: 90,  start: 120 },
+  { name: "Estates",    color: "#00D4D4", size: 16, duration: 30, radius: 110, start: 210 },
+  { name: "Compliance", color: "#E6C3FF", size: 15, duration: 36, radius: 130, start: 300 },
+  { name: "Teaching",   color: "#FFB6C1", size: 16, duration: 44, radius: 150, start: 20 },
+  { name: "SEND",       color: "#98FF98", size: 15, duration: 60, radius: 170, start: 95 },
+  { name: "Governance", color: "#FFD700", size: 18, duration: 75, radius: 190, start: 335 }
 ];
 
 interface SchoolgleAnimatedLogoProps {
@@ -55,8 +56,16 @@ export default function SchoolgleAnimatedLogo({
       {planets.map((planet) => (
         <motion.div
           key={planet.name}
-          className="absolute inset-0 m-auto will-change-transform"
-          style={{ width: planet.radius * 2, height: planet.radius * 2 }}
+          className="absolute will-change-transform"
+          style={{ 
+            width: planet.radius * 2, 
+            height: planet.radius * 2,
+            left: '50%',
+            top: '50%',
+            marginLeft: -planet.radius,
+            marginTop: -planet.radius,
+            transformOrigin: 'center center'
+          }}
           initial={{ rotate: planet.start }}
           animate={{ rotate: planet.start + 360 }}
           transition={{
@@ -66,13 +75,14 @@ export default function SchoolgleAnimatedLogo({
           }}
         >
           <motion.div
-            className="absolute top-0 left-1/2 -translate-x-1/2 rounded-full"
+            className="absolute top-0 left-1/2 -translate-x-1/2 rounded-full shadow-sm"
             style={{
               width: planet.size,
               height: planet.size,
-              backgroundColor: planet.color
+              backgroundColor: planet.color,
+              boxShadow: `0 0 ${planet.size}px ${planet.color}40`
             }}
-            whileHover={{ scale: 1.15 }}
+            whileHover={{ scale: 1.2 }}
             transition={{ type: "spring", stiffness: 300, damping: 18 }}
             title={planet.name}
           />
