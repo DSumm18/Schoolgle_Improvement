@@ -8,6 +8,7 @@ import {
     ChevronRight, ArrowRight, Check, Sparkles
 } from 'lucide-react';
 import OrigamiParticles from '@/components/OrigamiParticles';
+import Logo from '@/components/Logo';
 
 // Module definitions
 const modules = [
@@ -113,13 +114,10 @@ export default function ModulesPage() {
             <OrigamiParticles text="Modules" opacity={0.3} shape="crane" />
             
             {/* Header */}
-            <header className="relative z-10 border-b border-gray-100">
+            <header className="relative z-10 border-b border-gray-100 bg-white/95 backdrop-blur-sm">
                 <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-                    <Link href="/dashboard" className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-gray-800 to-black flex items-center justify-center">
-                            <span className="text-white font-bold text-sm">S</span>
-                        </div>
-                        <span className="font-semibold text-gray-900">Schoolgle</span>
+                    <Link href="/dashboard">
+                        <Logo size="md" />
                     </Link>
                     <Link 
                         href="/dashboard"

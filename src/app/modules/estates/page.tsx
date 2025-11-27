@@ -9,6 +9,7 @@ import {
     Ticket, BarChart3, ArrowLeft, ChevronRight
 } from 'lucide-react';
 import OrigamiParticles from '@/components/OrigamiParticles';
+import Logo from '@/components/Logo';
 
 // Types
 interface MaintenanceTicket {
@@ -114,9 +115,13 @@ export default function EstatesModulePage() {
             <OrigamiParticles text="Estates" opacity={0.3} shape="house" />
             
             {/* Header */}
-            <header className="relative z-10 border-b border-gray-100">
+            <header className="relative z-10 border-b border-gray-100 bg-white/95 backdrop-blur-sm">
                 <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
                     <div className="flex items-center gap-4">
+                        <Link href="/dashboard">
+                            <Logo size="sm" />
+                        </Link>
+                        <div className="w-px h-6 bg-gray-200" />
                         <Link href="/modules" className="flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors">
                             <ArrowLeft className="w-4 h-4" />
                             <span className="text-sm">Modules</span>
