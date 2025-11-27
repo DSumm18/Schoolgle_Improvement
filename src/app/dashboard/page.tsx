@@ -132,12 +132,22 @@ export default function DashboardPage() {
                 <div className="max-w-6xl mx-auto px-6">
                     <div className="flex justify-between h-24 items-center">
                         <div className="flex items-center relative" style={{ minHeight: '96px' }}>
-                            {/* Animated planets orbiting around logo - can extend beyond container */}
-                            <div className="absolute left-0 top-1/2 -translate-y-1/2 overflow-visible" style={{ width: 220, height: 220, marginLeft: -110 }}>
-                                <SchoolgleAnimatedLogo size={220} showText={false} />
+                            {/* Container for logo text - center point for orbits */}
+                            <div className="relative z-10 flex items-center justify-center" style={{ width: '140px', position: 'relative' }}>
+                                <span className="text-2xl font-semibold text-gray-900 whitespace-nowrap">
+                                    Schoolgle
+                                </span>
+                                {/* Animated planets orbiting around the center of "Schoolgle" text */}
+                                <div 
+                                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 overflow-visible pointer-events-none" 
+                                    style={{ 
+                                        width: 300, 
+                                        height: 300
+                                    }}
+                                >
+                                    <SchoolgleAnimatedLogo size={300} showText={false} />
+                                </div>
                             </div>
-                            {/* Logo text positioned to the left like standard website logos */}
-                            <span className="text-lg font-semibold text-gray-900 relative z-10 ml-6">Schoolgle</span>
                         </div>
                         <div className="flex items-center gap-4">
                             <span className="text-sm text-gray-500">{user.email}</span>
