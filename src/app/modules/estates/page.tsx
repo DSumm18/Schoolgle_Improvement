@@ -111,7 +111,7 @@ export default function EstatesModulePage() {
 
     return (
         <div className="min-h-screen bg-white relative">
-            <OrigamiParticles text="Estates" opacity={0.35} />
+            <OrigamiParticles text="Estates" opacity={0.3} shape="house" />
             
             {/* Header */}
             <header className="relative z-10 border-b border-gray-100">

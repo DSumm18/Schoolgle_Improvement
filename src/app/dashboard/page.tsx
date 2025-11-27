@@ -124,7 +124,7 @@ export default function DashboardPage() {
     return (
         <div className="min-h-screen bg-white relative">
             {/* Origami Particle Background */}
-            <OrigamiParticles text="Improve" opacity={0.2} />
+            <OrigamiParticles text="Improve" opacity={0.25} shape="crane" />
             
             <nav className="relative z-10 border-b border-gray-100">
                 <div className="max-w-6xl mx-auto px-6">

@@ -126,7 +126,7 @@ export default function ComplianceModulePage() {
     return (
         <div className="min-h-screen bg-white relative">
             {/* Origami Particle Background */}
-            <OrigamiParticles text="Policies" opacity={0.35} />
+            <OrigamiParticles text="Policies" opacity={0.3} shape="shield" />
             
             {/* Header */}
             <header className="relative z-10 border-b border-gray-100">

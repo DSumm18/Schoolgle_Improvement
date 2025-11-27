@@ -110,7 +110,7 @@ export default function ModulesPage() {
     return (
         <div className="min-h-screen bg-white relative">
             {/* Origami Particle Background */}
-            <OrigamiParticles text="Modules" opacity={0.35} />
+            <OrigamiParticles text="Modules" opacity={0.3} shape="crane" />
             
             {/* Header */}
             <header className="relative z-10 border-b border-gray-100">

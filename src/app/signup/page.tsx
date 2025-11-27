@@ -7,6 +7,7 @@ import {
     Mail, Lock, User, Globe, FileText, CreditCard, Receipt,
     Shield, Zap, BarChart3, PenTool, Check, AlertCircle
 } from 'lucide-react';
+import OrigamiParticles from '@/components/OrigamiParticles';
 
 type Step = 'welcome' | 'account-type' | 'details' | 'schools' | 'plan' | 'contract' | 'payment' | 'complete';
 type AccountType = 'school' | 'trust' | null;
@@ -19,29 +20,6 @@ interface SchoolData {
     phase: string;
     isChurchSchool: boolean;
 }
-
-// Animated background shapes
-const FloatingShape = ({ delay, size, x, y }: { delay: number; size: number; x: number; y: number }) => (
-    <div 
-        className="absolute opacity-[0.03] pointer-events-none"
-        style={{
-            left: `${x}%`,
-            top: `${y}%`,
-            width: size,
-            height: size,
-            animation: `float ${8 + delay}s ease-in-out infinite`,
-            animationDelay: `${delay}s`
-        }}
-    >
-        <svg viewBox="0 0 100 100" className="w-full h-full">
-            <polygon 
-                points="50,5 95,25 95,75 50,95 5,75 5,25" 
-                fill="currentColor" 
-                className="text-gray-900"
-            />
-        </svg>
-    </div>
-);
 
 export default function SignupPage() {
     const router = useRouter();
@@ -133,22 +111,8 @@ export default function SignupPage() {
 
     return (
         <div className="min-h-screen bg-gray-50 relative overflow-hidden">
-            {/* Animated Background */}
-            <div className="fixed inset-0 pointer-events-none">
-                <FloatingShape delay={0} size={120} x={10} y={20} />
-                <FloatingShape delay={2} size={80} x={80} y={10} />
-                <FloatingShape delay={4} size={100} x={70} y={60} />
-                <FloatingShape delay={1} size={60} x={20} y={70} />
-                <FloatingShape delay={3} size={90} x={50} y={40} />
-                <FloatingShape delay={5} size={70} x={90} y={80} />
-            </div>
-
-            <style jsx global>{`
-                @keyframes float {
-                    0%, 100% { transform: translateY(0) rotate(0deg); }
-                    50% { transform: translateY(-20px) rotate(5deg); }
-                }
-            `}</style>
+            {/* Origami Particle Background */}
+            <OrigamiParticles text="Welcome" opacity={0.25} shape="hexagon" />
 
             {/* Progress Bar */}
             {currentStep !== 'welcome' && currentStep !== 'complete' && (
@@ -288,7 +252,7 @@ export default function SignupPage() {
                                             type="text"
                                             value={formData.firstName}
                                             onChange={(e) => updateFormData('firstName', e.target.value)}
-                                            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                                            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-gray-900 placeholder:text-gray-400"
                                             placeholder="Jane"
                                         />
                                     </div>
@@ -298,7 +262,7 @@ export default function SignupPage() {
                                             type="text"
                                             value={formData.lastName}
                                             onChange={(e) => updateFormData('lastName', e.target.value)}
-                                            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                                            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-gray-900 placeholder:text-gray-400"
                                             placeholder="Smith"
                                         />
                                     </div>
@@ -310,7 +274,7 @@ export default function SignupPage() {
                                         type="email"
                                         value={formData.email}
                                         onChange={(e) => updateFormData('email', e.target.value)}
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-gray-900 placeholder:text-gray-400"
                                         placeholder="jane.smith@school.ac.uk"
                                     />
                                 </div>
@@ -321,7 +285,7 @@ export default function SignupPage() {
                                         type="password"
                                         value={formData.password}
                                         onChange={(e) => updateFormData('password', e.target.value)}
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-gray-900 placeholder:text-gray-400"
                                         placeholder="Min 8 characters"
                                     />
                                 </div>
@@ -332,7 +296,7 @@ export default function SignupPage() {
                                         type="text"
                                         value={formData.jobTitle}
                                         onChange={(e) => updateFormData('jobTitle', e.target.value)}
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-gray-900 placeholder:text-gray-400"
                                         placeholder="Headteacher"
                                     />
                                 </div>
@@ -347,7 +311,7 @@ export default function SignupPage() {
                                         type="text"
                                         value={accountType === 'trust' ? formData.trustName : formData.organisationName}
                                         onChange={(e) => updateFormData(accountType === 'trust' ? 'trustName' : 'organisationName', e.target.value)}
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-gray-900 placeholder:text-gray-400"
                                         placeholder={accountType === 'trust' ? 'Inspire Academy Trust' : 'Oakwood Primary School'}
                                     />
                                 </div>
@@ -361,7 +325,7 @@ export default function SignupPage() {
                                                     type="text"
                                                     value={formData.urn}
                                                     onChange={(e) => updateFormData('urn', e.target.value)}
-                                                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                                                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-gray-900 placeholder:text-gray-400"
                                                     placeholder="123456"
                                                 />
                                             </div>
@@ -370,7 +334,7 @@ export default function SignupPage() {
                                                 <select
                                                     value={formData.phase}
                                                     onChange={(e) => updateFormData('phase', e.target.value)}
-                                                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                                                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-gray-900 placeholder:text-gray-400"
                                                 >
                                                     <option value="primary">Primary</option>
                                                     <option value="secondary">Secondary</option>
@@ -697,7 +661,7 @@ export default function SignupPage() {
                                             <input
                                                 type="text"
                                                 placeholder="1234 5678 9012 3456"
-                                                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-gray-900 placeholder:text-gray-400"
                                             />
                                         </div>
                                         <div className="grid grid-cols-2 gap-4">
@@ -706,7 +670,7 @@ export default function SignupPage() {
                                                 <input
                                                     type="text"
                                                     placeholder="MM/YY"
-                                                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                                                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-gray-900 placeholder:text-gray-400"
                                                 />
                                             </div>
                                             <div>
@@ -714,7 +678,7 @@ export default function SignupPage() {
                                                 <input
                                                     type="text"
                                                     placeholder="123"
-                                                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                                                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-gray-900 placeholder:text-gray-400"
                                                 />
                                             </div>
                                         </div>
@@ -731,7 +695,7 @@ export default function SignupPage() {
                                                 type="email"
                                                 value={formData.invoiceEmail || formData.email}
                                                 onChange={(e) => updateFormData('invoiceEmail', e.target.value)}
-                                                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-gray-900 placeholder:text-gray-400"
                                                 placeholder="finance@school.ac.uk"
                                             />
                                         </div>
@@ -741,7 +705,7 @@ export default function SignupPage() {
                                                 type="text"
                                                 value={formData.purchaseOrderNumber}
                                                 onChange={(e) => updateFormData('purchaseOrderNumber', e.target.value)}
-                                                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-gray-900 placeholder:text-gray-400"
                                                 placeholder="PO-12345"
                                             />
                                         </div>
@@ -750,7 +714,7 @@ export default function SignupPage() {
                                             <textarea
                                                 value={formData.invoiceAddress}
                                                 onChange={(e) => updateFormData('invoiceAddress', e.target.value)}
-                                                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-gray-900 placeholder:text-gray-400"
                                                 rows={3}
                                                 placeholder="School address for invoice"
                                             />
