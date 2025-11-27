@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { motion } from 'framer-motion';
 import {
     BarChart3, Shield, Building2, Users, PoundSterling, Heart,
-    ChevronRight, Lock, Check, Zap, ArrowRight, ExternalLink,
-    FileText, AlertTriangle, Wrench, Lightbulb
+    ChevronRight, ArrowRight, Check, Sparkles
 } from 'lucide-react';
+import OrigamiParticles from '@/components/OrigamiParticles';
 
 // Module definitions
 const modules = [
@@ -15,298 +16,290 @@ const modules = [
         name: 'School Improvement',
         description: 'Ofsted & SIAMS inspection readiness with Ed AI',
         icon: BarChart3,
-        color: 'blue',
-        gradient: 'from-blue-500 to-indigo-600',
         status: 'active',
         href: '/dashboard',
         isPrimary: true,
-        valueProps: [
+        features: [
             'Self-assessment against EIF 2025',
             'Action planning with deadlines',
             'Evidence mapping to judgement areas',
             'Ed AI coach for inspection prep'
-        ]
+        ],
+        ofstedLink: 'Your central hub for inspection readiness'
     },
     {
         id: 'compliance',
         name: 'Compliance',
         description: 'Policies, statutory compliance & governance',
         icon: Shield,
-        color: 'red',
-        gradient: 'from-red-500 to-rose-600',
         status: 'available',
         href: '/modules/compliance',
-        feedsInto: 'improvement',
-        valueProps: [
+        features: [
             'Policy management with version control',
             'Staff acknowledgment tracking',
             'Auto-feeds into Ofsted evidence',
             'Never miss a review deadline'
         ],
-        ofstedLink: 'Policies in our system = instant evidence for Leadership & Management'
+        ofstedLink: 'Policies in system = instant Leadership & Management evidence'
     },
     {
         id: 'estates',
         name: 'Estates',
         description: 'Facilities, energy & statutory compliance',
         icon: Building2,
-        color: 'cyan',
-        gradient: 'from-cyan-500 to-teal-600',
         status: 'available',
         href: '/modules/estates',
-        feedsInto: 'improvement',
-        valueProps: [
-            'DfE GEMS aligned compliance tracking',
+        features: [
+            'DfE GEMS aligned compliance',
             'Energy monitoring & carbon reporting',
             'Helpdesk for staff requests',
-            'Auto-feeds H&S evidence to Ofsted'
+            'Auto-feeds H&S evidence'
         ],
-        ofstedLink: 'Statutory compliance evidence feeds directly to Safeguarding judgement'
+        ofstedLink: 'Statutory compliance feeds directly to Safeguarding'
     },
     {
         id: 'hr',
         name: 'HR & People',
         description: 'Staff management, CPD & wellbeing',
         icon: Users,
-        color: 'purple',
-        gradient: 'from-purple-500 to-violet-600',
         status: 'coming-soon',
         href: '/modules/hr',
-        feedsInto: 'improvement',
-        valueProps: [
-            'CPD tracking linked to school priorities',
+        features: [
+            'CPD tracking linked to priorities',
             'Staff wellbeing monitoring',
             'Performance management',
             'Recruitment & onboarding'
         ],
-        ofstedLink: 'CPD evidence feeds into Quality of Education & Leadership'
+        ofstedLink: 'CPD evidence feeds into Quality of Education'
     },
     {
         id: 'finance',
         name: 'Finance',
         description: 'Budgets, Pupil Premium & sports premium',
         icon: PoundSterling,
-        color: 'green',
-        gradient: 'from-green-500 to-emerald-600',
         status: 'coming-soon',
         href: '/modules/finance',
-        feedsInto: 'improvement',
-        valueProps: [
+        features: [
             'Pupil Premium impact tracking',
             'Sports Premium reporting',
             'Budget planning & forecasting',
             'Auto-generate statutory reports'
         ],
-        ofstedLink: 'PP & Sports Premium impact feeds directly to judgement evidence'
+        ofstedLink: 'PP & Sports Premium impact feeds to judgement evidence'
     },
     {
         id: 'send',
         name: 'SEND',
         description: 'Special needs tracking & provision mapping',
         icon: Heart,
-        color: 'pink',
-        gradient: 'from-pink-500 to-rose-600',
         status: 'coming-soon',
         href: '/modules/send',
-        feedsInto: 'improvement',
-        valueProps: [
+        features: [
             'EHCP management',
             'Provision mapping',
             'Progress tracking',
             'Funding allocation'
         ],
-        ofstedLink: 'SEND provision evidence feeds into all judgement areas'
+        ofstedLink: 'SEND provision feeds into all judgement areas'
     }
 ];
 
 export default function ModulesPage() {
-    const router = useRouter();
     const [hoveredModule, setHoveredModule] = useState<string | null>(null);
 
-    const getStatusBadge = (status: string) => {
-        switch (status) {
-            case 'active':
-                return <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">Active</span>;
-            case 'available':
-                return <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">Available</span>;
-            case 'coming-soon':
-                return <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">Coming Soon</span>;
-            default:
-                return null;
-        }
-    };
-
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-white relative">
+            {/* Origami Particle Background */}
+            <OrigamiParticles text="Modules" opacity={0.06} />
+            
             {/* Header */}
-            <header className="bg-white border-b border-gray-200">
-                <div className="max-w-7xl mx-auto px-6 py-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <span className="text-2xl">🏫</span>
-                            <div>
-                                <h1 className="text-xl font-bold text-gray-900">Schoolgle Modules</h1>
-                                <p className="text-sm text-gray-500">Your connected ecosystem</p>
-                            </div>
+            <header className="relative z-10 border-b border-gray-100">
+                <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+                    <Link href="/dashboard" className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-gray-800 to-black flex items-center justify-center">
+                            <span className="text-white font-bold text-sm">S</span>
                         </div>
-                        <a href="/dashboard" className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800">
-                            Back to Dashboard
-                        </a>
-                    </div>
+                        <span className="font-semibold text-gray-900">Schoolgle</span>
+                    </Link>
+                    <Link 
+                        href="/dashboard"
+                        className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+                    >
+                        Back to Dashboard
+                    </Link>
                 </div>
             </header>
 
-            <main className="max-w-7xl mx-auto px-6 py-8">
-                {/* Value Proposition */}
-                <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-8 text-white mb-8">
-                    <h2 className="text-2xl font-bold mb-3">The Schoolgle Ecosystem Advantage</h2>
-                    <p className="text-blue-100 mb-6 max-w-3xl">
-                        Every module feeds data into your School Improvement dashboard. Policies, compliance records, 
-                        CPD logs, PP spend — it's all connected. When Ofsted arrives, your evidence is already organised. 
-                        Staff can articulate <strong>what you have, why you have it, and the impact</strong>.
+            <main className="relative z-10 max-w-6xl mx-auto px-6 py-16">
+                {/* Hero Section */}
+                <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6 }}
+                    className="text-center mb-20"
+                >
+                    <span className="inline-block px-3 py-1 rounded-full bg-gray-100 text-gray-600 text-sm font-medium mb-6">
+                        Your connected ecosystem
+                    </span>
+                    <h1 className="text-5xl md:text-6xl font-medium tracking-tight text-gray-900 mb-6">
+                        Everything feeds into<br />
+                        <span className="text-gray-400">School Improvement</span>
+                    </h1>
+                    <p className="text-xl text-gray-500 max-w-2xl mx-auto leading-relaxed">
+                        Policies, compliance records, CPD logs, PP spend — it's all connected. 
+                        When Ofsted arrives, your evidence is already organised.
                     </p>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="bg-white/10 rounded-xl p-4">
-                            <FileText className="w-6 h-6 mb-2" />
-                            <p className="font-medium">No More Folder Scanning</p>
-                            <p className="text-sm text-blue-200">Data in Schoolgle = instant evidence</p>
-                        </div>
-                        <div className="bg-white/10 rounded-xl p-4">
-                            <AlertTriangle className="w-6 h-6 mb-2" />
-                            <p className="font-medium">Never Non-Compliant</p>
-                            <p className="text-sm text-blue-200">Auto-reminders before deadlines</p>
-                        </div>
-                        <div className="bg-white/10 rounded-xl p-4">
-                            <Check className="w-6 h-6 mb-2" />
-                            <p className="font-medium">Staff Are Prepared</p>
-                            <p className="text-sm text-blue-200">They know what's in the system</p>
-                        </div>
-                    </div>
-                </div>
+                </motion.div>
 
-                {/* Ecosystem Diagram */}
-                <div className="bg-white rounded-2xl p-6 border border-gray-200 mb-8">
-                    <h3 className="font-semibold text-gray-900 mb-4 text-center">How It All Connects</h3>
-                    <div className="flex items-center justify-center gap-2 flex-wrap">
-                        {modules.filter(m => m.id !== 'improvement').map((module, i) => (
-                            <div key={module.id} className="flex items-center">
-                                <div className={`px-3 py-2 rounded-lg bg-gradient-to-r ${module.gradient} text-white text-sm font-medium`}>
-                                    {module.name}
-                                </div>
-                                <ArrowRight className="w-4 h-4 text-gray-400 mx-1" />
-                            </div>
-                        ))}
-                        <div className="px-4 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold">
-                            School Improvement → Ofsted Ready
+                {/* Flow Diagram */}
+                <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.1 }}
+                    className="flex items-center justify-center gap-2 mb-20 flex-wrap"
+                >
+                    {['Compliance', 'Estates', 'HR', 'Finance', 'SEND'].map((name, i) => (
+                        <div key={name} className="flex items-center">
+                            <span className="px-3 py-1.5 rounded-full bg-gray-100 text-gray-700 text-sm font-medium">
+                                {name}
+                            </span>
+                            <ArrowRight className="w-4 h-4 text-gray-300 mx-1" />
                         </div>
-                    </div>
-                </div>
+                    ))}
+                    <span className="px-4 py-2 rounded-full bg-gray-900 text-white text-sm font-medium">
+                        School Improvement → Ofsted Ready
+                    </span>
+                </motion.div>
+
+                {/* Primary Module */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.2 }}
+                    className="mb-8"
+                >
+                    <Link href="/dashboard">
+                        <div className="bg-gray-50 rounded-3xl p-8 hover:bg-gray-100 transition-colors cursor-pointer border border-gray-100">
+                            <div className="flex items-start justify-between mb-6">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-14 h-14 rounded-2xl bg-gray-900 flex items-center justify-center">
+                                        <BarChart3 className="w-7 h-7 text-white" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-2xl font-semibold text-gray-900">School Improvement</h2>
+                                        <p className="text-gray-500">Ofsted & SIAMS inspection readiness with Ed AI</p>
+                                    </div>
+                                </div>
+                                <span className="px-3 py-1 rounded-full bg-gray-900 text-white text-xs font-medium">
+                                    Active
+                                </span>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                                {modules[0].features.map((feature, i) => (
+                                    <div key={i} className="flex items-start gap-2">
+                                        <Check className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                                        <span className="text-sm text-gray-600">{feature}</span>
+                                    </div>
+                                ))}
+                            </div>
+                            
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm text-gray-400">Your central hub for inspection readiness</span>
+                                <span className="flex items-center gap-2 text-gray-900 font-medium">
+                                    Open Module <ChevronRight className="w-4 h-4" />
+                                </span>
+                            </div>
+                        </div>
+                    </Link>
+                </motion.div>
 
                 {/* Module Grid */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {modules.map(module => (
-                        <div
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {modules.slice(1).map((module, index) => (
+                        <motion.div
                             key={module.id}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.6, delay: 0.3 + (index * 0.05) }}
                             onMouseEnter={() => setHoveredModule(module.id)}
                             onMouseLeave={() => setHoveredModule(null)}
-                            className={`bg-white rounded-2xl border-2 transition-all overflow-hidden ${
-                                module.isPrimary 
-                                    ? 'border-blue-300 shadow-lg shadow-blue-100' 
-                                    : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
-                            }`}
                         >
-                            {module.isPrimary && (
-                                <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-center py-2 text-sm font-medium">
-                                    ⭐ Core Module — Your Central Hub
-                                </div>
-                            )}
-                            
-                            <div className="p-6">
-                                <div className="flex items-start justify-between mb-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${module.gradient} flex items-center justify-center`}>
-                                            <module.icon className="w-6 h-6 text-white" />
+                            <Link href={module.status !== 'coming-soon' ? module.href : '#'}>
+                                <div className={`
+                                    bg-white rounded-2xl p-6 border border-gray-100 
+                                    transition-all duration-300 h-full
+                                    ${module.status !== 'coming-soon' ? 'hover:border-gray-200 hover:shadow-lg cursor-pointer' : 'opacity-60 cursor-not-allowed'}
+                                `}>
+                                    <div className="flex items-start justify-between mb-4">
+                                        <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center">
+                                            <module.icon className="w-6 h-6 text-gray-700" />
                                         </div>
-                                        <div>
-                                            <h3 className="font-bold text-gray-900">{module.name}</h3>
-                                            <p className="text-sm text-gray-500">{module.description}</p>
-                                        </div>
-                                    </div>
-                                    {getStatusBadge(module.status)}
-                                </div>
-
-                                {/* Value Props */}
-                                <ul className="space-y-2 mb-4">
-                                    {module.valueProps.map((prop, i) => (
-                                        <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
-                                            <Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                                            {prop}
-                                        </li>
-                                    ))}
-                                </ul>
-
-                                {/* Ofsted Link */}
-                                {module.ofstedLink && (
-                                    <div className="bg-blue-50 rounded-lg p-3 mb-4">
-                                        <p className="text-sm text-blue-800">
-                                            <strong>Ofsted Impact:</strong> {module.ofstedLink}
-                                        </p>
-                                    </div>
-                                )}
-
-                                {/* CTA */}
-                                <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                                    {module.feedsInto && (
-                                        <span className="text-xs text-gray-500 flex items-center gap-1">
-                                            <ArrowRight className="w-3 h-3" />
-                                            Feeds into School Improvement
+                                        <span className={`
+                                            px-2 py-1 rounded-full text-xs font-medium
+                                            ${module.status === 'available' ? 'bg-gray-100 text-gray-700' : 'bg-gray-50 text-gray-400'}
+                                        `}>
+                                            {module.status === 'available' ? 'Available' : 'Coming Soon'}
                                         </span>
-                                    )}
-                                    {module.status === 'active' ? (
-                                        <a 
-                                            href={module.href}
-                                            className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 ml-auto"
-                                        >
-                                            Open Module
-                                        </a>
-                                    ) : module.status === 'available' ? (
-                                        <a 
-                                            href={module.href}
-                                            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 ml-auto flex items-center gap-1"
-                                        >
-                                            <Zap className="w-4 h-4" /> Add Module
-                                        </a>
-                                    ) : (
-                                        <button 
-                                            disabled
-                                            className="px-4 py-2 bg-gray-100 text-gray-400 text-sm font-medium rounded-lg cursor-not-allowed ml-auto"
-                                        >
-                                            Coming Soon
-                                        </button>
+                                    </div>
+                                    
+                                    <h3 className="text-lg font-semibold text-gray-900 mb-1">{module.name}</h3>
+                                    <p className="text-sm text-gray-500 mb-4">{module.description}</p>
+                                    
+                                    <ul className="space-y-2 mb-4">
+                                        {module.features.slice(0, 3).map((feature, i) => (
+                                            <li key={i} className="flex items-start gap-2">
+                                                <Check className="w-3.5 h-3.5 text-gray-300 mt-0.5 flex-shrink-0" />
+                                                <span className="text-xs text-gray-500">{feature}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                    
+                                    {module.status === 'available' && (
+                                        <div className="pt-4 border-t border-gray-50">
+                                            <span className="flex items-center gap-1 text-sm text-gray-700 font-medium">
+                                                <Sparkles className="w-4 h-4" />
+                                                Add Module
+                                            </span>
+                                        </div>
                                     )}
                                 </div>
-                            </div>
-                        </div>
+                            </Link>
+                        </motion.div>
                     ))}
                 </div>
 
-                {/* Bottom Sales Message */}
-                <div className="mt-8 bg-gray-900 rounded-2xl p-8 text-white text-center">
-                    <h3 className="text-xl font-bold mb-2">Start with School Improvement. Add modules as you need them.</h3>
-                    <p className="text-gray-300 mb-4">
-                        Each module is £199-499/year. Average school saves £3,000+ in consultant fees annually.
-                    </p>
-                    <div className="flex items-center justify-center gap-4">
-                        <a href="/signup" className="px-6 py-3 bg-white text-gray-900 font-semibold rounded-xl hover:bg-gray-100">
-                            Get Started
-                        </a>
-                        <a href="/contact-sales" className="px-6 py-3 border border-white/30 text-white font-semibold rounded-xl hover:bg-white/10">
-                            Talk to Sales
-                        </a>
+                {/* Bottom CTA */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.6 }}
+                    className="mt-20 text-center"
+                >
+                    <div className="bg-gray-900 rounded-3xl p-12 text-center">
+                        <h2 className="text-2xl font-medium text-white mb-3">
+                            Start with School Improvement. Add modules as you need them.
+                        </h2>
+                        <p className="text-gray-400 mb-8">
+                            Each module is £199-499/year. Average school saves £3,000+ in consultant fees annually.
+                        </p>
+                        <div className="flex items-center justify-center gap-4">
+                            <Link 
+                                href="/signup"
+                                className="px-8 py-4 bg-white text-gray-900 rounded-full font-medium hover:bg-gray-100 transition-colors"
+                            >
+                                Get Started
+                            </Link>
+                            <Link 
+                                href="/contact"
+                                className="px-8 py-4 bg-white/10 text-white rounded-full font-medium hover:bg-white/20 transition-colors"
+                            >
+                                Talk to Sales
+                            </Link>
+                        </div>
                     </div>
-                </div>
+                </motion.div>
             </main>
         </div>
     );
 }
-
