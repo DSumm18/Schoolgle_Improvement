@@ -7,7 +7,7 @@ interface OrigamiParticlesProps {
     opacity?: number;
 }
 
-const OrigamiParticles = ({ text = "Schoolgle", opacity = 0.08 }: OrigamiParticlesProps) => {
+const OrigamiParticles = ({ text = "Schoolgle", opacity = 0.25 }: OrigamiParticlesProps) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
     useEffect(() => {
@@ -76,7 +76,7 @@ const OrigamiParticles = ({ text = "Schoolgle", opacity = 0.08 }: OrigamiParticl
                 this.vx = (Math.random() - 0.5) * 1;
                 this.vy = (Math.random() - 0.5) * 1;
                 this.size = Math.random() * 2 + 1;
-                this.color = `rgba(30, 30, 30, ${Math.random() * opacity + (opacity / 2)})`;
+                this.color = `rgba(20, 20, 40, ${Math.random() * opacity + opacity})`;
                 this.target = targets.length > 0 ? targets[Math.floor(Math.random() * targets.length)] : null;
                 this.maxSpeed = 2;
                 this.maxForce = 0.05;
