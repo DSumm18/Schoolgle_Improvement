@@ -145,9 +145,10 @@ export default function EstatesModulePage() {
                                 <span className="font-semibold text-gray-900">Estates</span>
                             </div>
                         </div>
-                    <Link href="/dashboard" className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 transition-colors">
-                        Dashboard
-                    </Link>
+                        <Link href="/dashboard" className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 transition-colors">
+                            Dashboard
+                        </Link>
+                    </div>
                 </div>
             </header>
 
