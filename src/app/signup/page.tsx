@@ -8,7 +8,7 @@ import {
     Shield, Zap, BarChart3, PenTool, Check, AlertCircle
 } from 'lucide-react';
 import OrigamiParticles from '@/components/OrigamiParticles';
-import Logo from '@/components/Logo';
+import SchoolgleAnimatedLogo from '@/components/SchoolgleAnimatedLogo';
 
 type Step = 'welcome' | 'account-type' | 'details' | 'schools' | 'plan' | 'contract' | 'payment' | 'complete';
 type AccountType = 'school' | 'trust' | null;
@@ -126,8 +126,25 @@ export default function SignupPage() {
             )}
 
             {/* Header */}
-            <header className="relative z-10 px-6 py-4 flex items-center justify-between bg-white/95 backdrop-blur-sm">
-                <Logo size="md" />
+            <header className="relative z-10 px-6 py-4 flex items-center justify-between bg-white/95 backdrop-blur-sm overflow-visible">
+                <div className="flex items-center relative" style={{ minHeight: '96px' }}>
+                    {/* Container for logo text - center point for orbits */}
+                    <a href="/" className="relative z-10 flex items-center justify-center" style={{ width: '140px', position: 'relative' }}>
+                        <span className="text-xl font-semibold text-gray-900 whitespace-nowrap">
+                            Schoolgle
+                        </span>
+                        {/* Animated planets orbiting around the center of "Schoolgle" text */}
+                        <div 
+                            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 overflow-visible pointer-events-none" 
+                            style={{ 
+                                width: 200, 
+                                height: 200
+                            }}
+                        >
+                            <SchoolgleAnimatedLogo size={200} showText={false} />
+                        </div>
+                    </a>
+                </div>
                 {currentStep !== 'welcome' && currentStep !== 'complete' && (
                     <div className="text-sm text-gray-500">
                         Step {currentStepIndex} of {steps.length - 2}

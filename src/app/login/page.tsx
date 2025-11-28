@@ -5,7 +5,7 @@ import MicrosoftLoginButton from "@/components/MicrosoftLoginButton";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import Logo from "@/components/Logo";
+import SchoolgleAnimatedLogo from "@/components/SchoolgleAnimatedLogo";
 
 export default function LoginPage() {
     const { user, loading } = useAuth();
@@ -33,8 +33,10 @@ export default function LoginPage() {
                     <p className="text-gray-500">Always-On Inspection Readiness</p>
                 </div>
 
-                <div className="flex justify-center py-8">
-                    <Logo size="lg" />
+                <div className="flex justify-center py-8 relative" style={{ minHeight: '200px' }}>
+                    <div className="relative" style={{ width: '200px', height: '200px' }}>
+                        <SchoolgleAnimatedLogo size={200} showText={true} />
+                    </div>
                 </div>
 
                 <div className="space-y-4">

@@ -9,6 +9,16 @@ import {
 import OrigamiParticles from '@/components/OrigamiParticles';
 import Logo from '@/components/Logo';
 import SchoolgleAnimatedLogo from '@/components/SchoolgleAnimatedLogo';
+import Navbar from '@/components/website/Navbar';
+import Hero from '@/components/website/Hero';
+import WhatSchoolgleDoes from '@/components/website/WhatSchoolgleDoes';
+import CoreProducts from '@/components/website/CoreProducts';
+import WhySchoolgle from '@/components/website/WhySchoolgle';
+import Testimonials from '@/components/website/Testimonials';
+import AudienceSection from '@/components/website/AudienceSection';
+import BlogSection from '@/components/website/BlogSection';
+import DownloadSection from '@/components/website/DownloadSection';
+import Footer from '@/components/website/Footer';
 
 // Product suites with clean styling
 const productSuites = [
@@ -24,11 +34,15 @@ const productSuites = [
         apps: [
             { name: 'Ofsted Framework', status: 'live', included: true },
             { name: 'SIAMS Framework', status: 'live', included: true },
+            { name: 'SEF Generator', status: 'live', included: true },
+            { name: 'One-Click Reports', status: 'live', included: true },
+            { name: 'Action Planning & Gantt', status: 'live', included: true },
+            { name: 'Evidence Scanner', status: 'live', included: true },
             { name: 'Ed AI Coach', status: 'live', included: true },
-            { name: 'Action Planning', status: 'live', included: true },
-            { name: 'Mock Inspector', status: 'live', addon: true },
-            { name: 'Voice Observation', status: 'live', addon: true },
-            { name: 'One-Click Reports', status: 'live', addon: true },
+            { name: 'Mock Inspector', status: 'live', included: true },
+            { name: 'Voice Observations', status: 'live', included: true },
+            { name: 'Lesson Observations', status: 'live', included: true },
+            { name: 'Improvement Dashboard', status: 'live', included: true },
         ],
         price: 'From £2,499/year'
     },
@@ -118,74 +132,35 @@ export default function HomePage() {
             {/* Origami Background - Logo in top-left */}
             <OrigamiParticles text="Schoolgle" opacity={0.2} shape="crane" position="top-left" size="medium" />
             
-            {/* Header */}
-            <header className="relative z-10 border-b border-gray-100 bg-white/95 backdrop-blur-sm overflow-visible">
-                <div className="max-w-6xl mx-auto px-6">
-                    <div className="flex items-center justify-between h-24">
-                        <div className="flex items-center relative" style={{ minHeight: '96px' }}>
-                            {/* Container for logo text - center point for orbits */}
-                            <a href="/dashboard" className="relative z-10 flex items-center justify-center" style={{ width: '140px', position: 'relative' }}>
-                                <span className="text-2xl font-semibold text-gray-900 whitespace-nowrap">
-                                    Schoolgle
-                                </span>
-                                {/* Animated planets orbiting around the center of "Schoolgle" text */}
-                                <div 
-                                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 overflow-visible pointer-events-none" 
-                                    style={{ 
-                                        width: 300, 
-                                        height: 300
-                                    }}
-                                >
-                                    <SchoolgleAnimatedLogo size={300} showText={false} />
-                                </div>
-                            </a>
-                        </div>
-                        <div className="flex items-center gap-4">
-                            <a href="/login" className="text-sm text-gray-500 hover:text-gray-900 font-medium">
-                                Sign In
-                            </a>
-                            <a href="/signup" className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800">
-                                Get Started
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </header>
+            {/* Website Navbar */}
+            <Navbar />
 
             <main className="relative z-10 bg-white">
-                {/* Hero */}
-                <section className="py-20">
-                    <div className="max-w-4xl mx-auto px-6 text-center">
-                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full text-gray-700 text-sm font-medium mb-8">
-                            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                            Now Live: Ofsted Framework with Ed AI Coach
-                        </div>
-                        <h1 className="text-5xl md:text-6xl font-medium text-gray-900 tracking-tight mb-6">
-                            Everything your school needs.
-                            <br />
-                            <span className="text-gray-400">One platform.</span>
-                        </h1>
-                        <p className="text-xl text-gray-500 max-w-2xl mx-auto mb-10">
-                            From inspection readiness to compliance, estates to HR — Schoolgle brings it all together with AI-powered tools built for UK schools.
-                        </p>
-                        <div className="flex items-center justify-center gap-4">
-                            <a 
-                                href="/signup" 
-                                className="px-8 py-4 bg-gray-900 text-white font-medium rounded-xl hover:bg-gray-800 flex items-center gap-2 transition-colors"
-                            >
-                                Start with Improvement <ArrowRight className="w-5 h-5" />
-                            </a>
-                            <a 
-                                href="/demo"
-                                className="px-8 py-4 text-gray-600 font-medium hover:text-gray-900 transition-colors"
-                            >
-                                Book a Demo
-                            </a>
-                        </div>
-                    </div>
-                </section>
+                {/* Website Hero Section */}
+                <Hero />
 
-                {/* Product Suites */}
+                {/* Website WhatSchoolgleDoes Section */}
+                <WhatSchoolgleDoes />
+
+                {/* Website CoreProducts Section */}
+                <CoreProducts />
+
+                {/* Website WhySchoolgle Section */}
+                <WhySchoolgle />
+
+                {/* Website Testimonials Section */}
+                <Testimonials />
+
+                {/* Website AudienceSection */}
+                <AudienceSection />
+
+                {/* Website BlogSection */}
+                <BlogSection />
+
+                {/* Website DownloadSection */}
+                <DownloadSection />
+
+                {/* Product Suites - Keep existing detailed view */}
                 <section className="py-16 bg-gray-50">
                     <div className="max-w-6xl mx-auto px-6">
                         <div className="text-center mb-12">
@@ -374,17 +349,8 @@ export default function HomePage() {
                 </section>
             </main>
 
-            {/* Footer */}
-            <footer className="relative z-10 bg-white border-t border-gray-100 py-8">
-                <div className="max-w-6xl mx-auto px-6">
-                    <div className="flex items-center justify-between">
-                        <Logo size="sm" />
-                        <p className="text-sm text-gray-400">
-                            © 2025 Schoolgle Ltd. All rights reserved.
-                        </p>
-                    </div>
-                </div>
-            </footer>
+            {/* Website Footer */}
+            <Footer />
         </div>
     );
 }
