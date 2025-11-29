@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { EdChatHandler } from '@schoolgle/ed-backend';
+import { EdChatHandler, getSchoolgleContext } from '@schoolgle/ed-backend';
 import type { EdContext, Message } from '@schoolgle/shared';
+import { supabase } from '@/lib/supabase';
 
 /**
  * Ed Chat API Route - Updated to use Ed Backend Package
@@ -32,9 +33,44 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Fetch actual Schoolgle context from database
+    let schoolgleContext;
+    const orgId = context.organizationId;
+
+    if (orgId && orgId !== 'demo' && supabase) {
+      try {
+        schoolgleContext = await getSchoolgleContext(supabase, orgId);
+        console.log('[Ed API] Fetched Schoolgle context:', {
+          assessments: schoolgleContext.assessments.length,
+          gaps: schoolgleContext.gaps.length,
+          activities: schoolgleContext.recentActivity.length,
+          healthScore: schoolgleContext.healthScore
+        });
+      } catch (error) {
+        console.error('[Ed API] Error fetching Schoolgle context:', error);
+        // Continue with empty context on error
+        schoolgleContext = {
+          assessments: [],
+          gaps: [],
+          recentActivity: [],
+          healthScore: undefined,
+          evidenceSummary: undefined
+        };
+      }
+    } else {
+      // Demo mode or no Supabase
+      schoolgleContext = context.schoolgleContext || {
+        assessments: [],
+        gaps: [],
+        recentActivity: [],
+        healthScore: undefined,
+        evidenceSummary: undefined
+      };
+    }
+
     // Build full context
     const fullContext: EdContext = {
-      organizationId: context.organizationId || 'demo',
+      organizationId: orgId || 'demo',
       schoolName: context.schoolName || 'Demo School',
       product: 'schoolgle-platform',
       page: context.page,
@@ -42,16 +78,7 @@ export async function POST(request: NextRequest) {
       userId: context.userId,
       userRole: context.userRole,
       conversationId: context.conversationId,
-
-      // TODO: Fetch actual Schoolgle context from database
-      // For now, pass through what's provided
-      schoolgleContext: context.schoolgleContext || {
-        assessments: [],
-        gaps: [],
-        recentActivity: [],
-        healthScore: undefined,
-        evidenceSummary: undefined
-      }
+      schoolgleContext
     };
 
     // Initialize Ed chat handler with OpenRouter
@@ -77,7 +104,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('[Ed API] Error:', error);
-    
+
     // Return fallback response on error
     return NextResponse.json({
       response: `I'm having a bit of trouble connecting right now. Let me give you a quick answer based on what I know...\n\nI'm Ed, your AI School Improvement Partner. I can help you with:\n\n📚 **Understanding Ofsted** - What inspectors look for\n🔬 **EEF Research** - Evidence-based strategies\n📊 **Data Analysis** - Making sense of patterns\n🎯 **Action Planning** - Creating improvement actions\n\nWhat would you like to explore?`,
