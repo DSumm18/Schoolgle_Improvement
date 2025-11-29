@@ -1,0 +1,31 @@
+/**
+ * Cool Theme - Calming blue tones
+ */
+
+.ed-theme-cool {
+  --ed-primary: #3b82f6;
+  --ed-primary-dark: #2563eb;
+  --ed-primary-light: #60a5fa;
+  --ed-background: #0c1929;
+  --ed-surface: rgba(15, 23, 42, 0.95);
+  --ed-surface-light: rgba(30, 58, 95, 0.9);
+  --ed-text: #e0f2fe;
+  --ed-text-muted: #7dd3fc;
+  --ed-success: #22d3ee;
+  --ed-error: #f472b6;
+  --ed-warning: #fbbf24;
+}
+
+.ed-theme-cool .ed-trigger-button {
+  background: linear-gradient(135deg, var(--ed-primary) 0%, var(--ed-primary-dark) 100%);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(59, 130, 246, 0.3);
+}
+
+.ed-theme-cool .ed-avatar-container {
+  background: radial-gradient(circle at center, rgba(59, 130, 246, 0.15) 0%, transparent 70%);
+}
+
+.ed-theme-cool .ed-dock-mic {
+  background: var(--ed-primary);
+}
+
