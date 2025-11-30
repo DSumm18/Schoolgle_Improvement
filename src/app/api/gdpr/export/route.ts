@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
                 export_date: new Date().toISOString(),
                 export_type: 'GDPR Subject Access Request',
                 format_version: '1.0',
-                data_controller: membershipData?.[0]?.organization?.name || 'Unknown',
+                data_controller: (membershipData?.[0]?.organization as any)?.name || 'Unknown',
                 data_processor: 'Schoolgle Ltd'
             },
             data_subject: {
@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
                 account_updated: userData.updated_at
             },
             organisation_memberships: membershipData?.map(m => ({
-                organisation_name: m.organization?.name,
+                organisation_name: (m.organization as any)?.name,
                 role: m.role,
                 job_title: m.job_title,
                 joined_date: m.created_at
@@ -144,7 +144,7 @@ export async function POST(req: NextRequest) {
 
         // Log the export for audit purposes
         await supabase.from('activity_log').insert({
-            organization_id: membershipData?.[0]?.organization?.id,
+            organization_id: (membershipData?.[0]?.organization as any)?.id,
             user_id: userId,
             event_type: 'gdpr_data_export',
             event_data: { export_date: new Date().toISOString() }

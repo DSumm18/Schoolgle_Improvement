@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { eefStrategies, getRelevantStrategies, getHighImpactStrategies } from '@/lib/eef-toolkit';
-import { ofstedFramework } from '@/lib/ofsted-framework';
+import { OFSTED_FRAMEWORK } from '@/lib/ofsted-framework';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 

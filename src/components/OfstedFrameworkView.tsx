@@ -849,7 +849,7 @@ export default function OfstedFrameworkView({ assessments, setAssessments, local
                     onClose={() => setIsModalOpen(false)}
                     onSave={handleSaveAction}
                     categoryName={currentCategoryName || ''}
-                    subCategoryName={OFSTED_FRAMEWORK.flatMap(c => c.subcategories).find(s => s.id === currentActionSubId)?.name}
+                    subCategoryName={OFSTED_FRAMEWORK.flatMap(c => c.subcategories).find(s => s.id === currentActionSubId)?.name || ''}
                     evidenceItem={currentActionEvidence || undefined}
                     initialData={editingAction}
                 />

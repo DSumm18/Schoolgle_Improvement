@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import { OFSTED_FRAMEWORK, type OfstedCategory } from './ofsted-framework';
+import { OFSTED_FRAMEWORK, type Category } from './ofsted-framework';
 
 // --- Configuration ---
 
@@ -391,7 +391,7 @@ export function matchDocumentToCategories(text: string): {
     OFSTED_FRAMEWORK.forEach(category => {
         category.subcategories.forEach(sub => {
             sub.evidenceRequired.forEach(evidence => {
-                const keywords = evidence.toLowerCase().split(' ').filter(w => w.length > 3);
+                const keywords = evidence.name.toLowerCase().split(' ').filter(w => w.length > 3);
                 const matchCount = keywords.filter(kw =>
                     text.toLowerCase().includes(kw)
                 ).length;
@@ -400,7 +400,7 @@ export function matchDocumentToCategories(text: string): {
                     matches.push({
                         categoryId: category.id,
                         subcategoryId: sub.id,
-                        evidenceItem: evidence,
+                        evidenceItem: evidence.name,
                         confidence: Math.min(matchCount / keywords.length, 1)
                     });
                 }

@@ -410,7 +410,7 @@ export default function LocalFolderScanner({ onScanComplete, onAnalysisComplete,
                             </p>
                             <input
                                 type="file"
-                                webkitdirectory=""
+                                {...({ webkitdirectory: "" } as any)}
                                 multiple
                                 onChange={scanWithFolderInput}
                                 className="hidden"
@@ -450,7 +450,7 @@ export default function LocalFolderScanner({ onScanComplete, onAnalysisComplete,
                 <input
                     ref={folderInputRef}
                     type="file"
-                    webkitdirectory=""
+                    {...({ webkitdirectory: "" } as any)}
                     multiple
                     onChange={scanWithFolderInput}
                     className="hidden"

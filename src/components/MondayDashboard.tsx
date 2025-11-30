@@ -71,7 +71,7 @@ const MondayDashboard: React.FC<MondayDashboardProps> = ({
             });
         
         if (ratings.length === 0) return 0;
-        return Math.round(ratings.reduce((a, b) => a + b, 0) / ratings.length);
+        return Math.round(ratings.reduce((a: number, b: number) => a + b, 0) / ratings.length);
     };
 
     const calculateSiamsReadiness = () => {
@@ -88,7 +88,7 @@ const MondayDashboard: React.FC<MondayDashboardProps> = ({
             });
         
         if (ratings.length === 0) return 0;
-        return Math.round(ratings.reduce((a, b) => a + b, 0) / ratings.length);
+        return Math.round(ratings.reduce((a: number, b: number) => a + b, 0) / ratings.length);
     };
 
     const getUrgentItems = (): UrgentItem[] => {
