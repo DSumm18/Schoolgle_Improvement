@@ -77,20 +77,85 @@ export default function EdChatbot({ context }: EdChatbotProps) {
                     })),
                     context: {
                         ...context,
-                        topic: text // Add the current query as topic for EEF matching
-                    }
+                        topic: text
+                    },
+                    stream: true // Enable streaming
                 })
             });
 
-            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(`API error: ${response.status}`);
+            }
 
-            const assistantMessage: Message = {
+            // Handle streaming response
+            const reader = response.body?.getReader();
+            if (!reader) {
+                throw new Error('No response body reader');
+            }
+
+            const decoder = new TextDecoder();
+            let streamedContent = '';
+
+            // Create placeholder assistant message
+            const assistantMessageIndex = messages.length + 1;
+            setMessages(prev => [...prev, {
                 role: 'assistant',
-                content: data.response || "I'm sorry, I couldn't process that. Could you try again?",
+                content: '',
                 timestamp: new Date()
-            };
+            }]);
 
-            setMessages(prev => [...prev, assistantMessage]);
+            try {
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.slice(6);
+                            if (data === '[DONE]') continue;
+
+                            try {
+                                const parsed = JSON.parse(data);
+                                if (parsed.content) {
+                                    streamedContent += parsed.content;
+
+                                    // Update the assistant message with new content
+                                    setMessages(prev => {
+                                        const newMessages = [...prev];
+                                        newMessages[assistantMessageIndex] = {
+                                            role: 'assistant',
+                                            content: streamedContent,
+                                            timestamp: new Date()
+                                        };
+                                        return newMessages;
+                                    });
+                                }
+                            } catch (e) {
+                                // Skip invalid JSON
+                            }
+                        }
+                    }
+                }
+            } finally {
+                reader.releaseLock();
+            }
+
+            // If no content was streamed, show fallback
+            if (!streamedContent) {
+                setMessages(prev => {
+                    const newMessages = [...prev];
+                    newMessages[assistantMessageIndex] = {
+                        role: 'assistant',
+                        content: "I'm sorry, I couldn't process that. Could you try again?",
+                        timestamp: new Date()
+                    };
+                    return newMessages;
+                });
+            }
+
         } catch (error) {
             console.error('Chat error:', error);
             setMessages(prev => [...prev, {
