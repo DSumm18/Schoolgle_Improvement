@@ -92,6 +92,22 @@ export async function POST(request: NextRequest) {
       const customReadable = new ReadableStream({
         async start(controller) {
           try {
+            // Detect language from the last user message
+            const lastUserMessage = messages.filter(m => m.role === 'user').pop();
+            let detectedLanguage = null;
+
+            if (lastUserMessage) {
+              // Simple language detection - will be enhanced by backend
+              const { detectLanguage } = await import('@schoolgle/ed-backend/lib/language-detector');
+              detectedLanguage = detectLanguage(lastUserMessage.content);
+
+              // Send language info first
+              if (detectedLanguage && detectedLanguage.code !== 'en') {
+                const langData = `data: ${JSON.stringify({ language: detectedLanguage })}\n\n`;
+                controller.enqueue(encoder.encode(langData));
+              }
+            }
+
             for await (const chunk of chatHandler.handleChatStream({
               messages,
               context: fullContext

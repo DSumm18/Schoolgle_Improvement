@@ -2,6 +2,7 @@ import type { Message, EdContext } from '@schoolgle/shared';
 import { OpenRouterClient } from './openrouter-client';
 import { modelRouter } from './model-router';
 import { buildSystemPrompt } from './prompt-builder';
+import { detectLanguage, buildBilingualSystemPrompt, type LanguageInfo } from './language-detector';
 
 export interface EdChatRequest {
   messages: Message[];
@@ -16,6 +17,7 @@ export interface EdChatResponse {
     tokens: number;
     cost: number;
   };
+  detectedLanguage?: LanguageInfo;
 }
 
 export class EdChatHandler {
@@ -27,17 +29,25 @@ export class EdChatHandler {
 
   async *handleChatStream(request: EdChatRequest): AsyncGenerator<string> {
     try {
+      // Detect language from the latest user message
+      const lastUserMessage = request.messages.filter(m => m.role === 'user').pop();
+      const detectedLanguage = lastUserMessage ? detectLanguage(lastUserMessage.content) : undefined;
+
       // Route to optimal model
       const routing = modelRouter.route(request.messages, request.context);
 
       console.log(`[Ed] Streaming - Routing decision:`, {
         taskType: routing.taskType,
         model: routing.selectedModel.model,
-        reason: routing.reason
+        reason: routing.reason,
+        detectedLanguage: detectedLanguage?.name
       });
 
-      // Build system prompt with context
-      const systemPrompt = buildSystemPrompt(request.context);
+      // Build system prompt with context and language support
+      let systemPrompt = buildSystemPrompt(request.context);
+      if (detectedLanguage && detectedLanguage.code !== 'en') {
+        systemPrompt = buildBilingualSystemPrompt(detectedLanguage, systemPrompt);
+      }
 
       // Prepare messages with system context
       const messagesWithSystem: Message[] = [
@@ -67,17 +77,25 @@ export class EdChatHandler {
 
   async handleChat(request: EdChatRequest): Promise<EdChatResponse> {
     try {
+      // Detect language from the latest user message
+      const lastUserMessage = request.messages.filter(m => m.role === 'user').pop();
+      const detectedLanguage = lastUserMessage ? detectLanguage(lastUserMessage.content) : undefined;
+
       // Route to optimal model
       const routing = modelRouter.route(request.messages, request.context);
 
       console.log(`[Ed] Routing decision:`, {
         taskType: routing.taskType,
         model: routing.selectedModel.model,
-        reason: routing.reason
+        reason: routing.reason,
+        detectedLanguage: detectedLanguage?.name
       });
 
-      // Build system prompt with context
-      const systemPrompt = buildSystemPrompt(request.context);
+      // Build system prompt with context and language support
+      let systemPrompt = buildSystemPrompt(request.context);
+      if (detectedLanguage && detectedLanguage.code !== 'en') {
+        systemPrompt = buildBilingualSystemPrompt(detectedLanguage, systemPrompt);
+      }
 
       // Prepare messages with system context
       const messagesWithSystem: Message[] = [
@@ -106,7 +124,8 @@ export class EdChatHandler {
         usage: {
           tokens: response.usage.totalTokens,
           cost: routing.estimatedCost
-        }
+        },
+        detectedLanguage
       };
 
     } catch (error) {
