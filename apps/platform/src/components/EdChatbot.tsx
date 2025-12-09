@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
-import { 
-    MessageCircle, X, Send, Loader2, Sparkles, 
+import {
+    MessageCircle, X, Send, Loader2, Sparkles,
     BookOpen, GraduationCap, BarChart3, Target,
     Lightbulb, ChevronDown, Minimize2, Maximize2
 } from 'lucide-react';
+import { EdShapeParticles } from './EdShapeParticles';
 
 interface Message {
     role: 'user' | 'assistant';
@@ -16,7 +17,7 @@ interface Message {
 interface LanguageInfo {
     code: string;
     name: string;
-    flag: string;
+    countryCode: string; // ISO country code for flag integration
     prompt: string;
 }
 
@@ -205,14 +206,16 @@ export default function EdChatbot({ context }: EdChatbotProps) {
         return (
             <button
                 onClick={() => setIsOpen(true)}
-                className="fixed bottom-6 right-6 w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center group z-50"
+                className="fixed bottom-6 right-6 group z-50 hover:scale-110 transition-transform duration-300"
                 title="Chat with Ed"
             >
-                <div className="relative">
-                    <GraduationCap size={28} className="group-hover:scale-110 transition-transform" />
-                    <Sparkles size={14} className="absolute -top-1 -right-1 text-yellow-300 animate-pulse" />
-                </div>
-                <span className="absolute -top-2 -left-2 bg-yellow-400 text-gray-900 text-xs font-bold px-2 py-0.5 rounded-full">
+                <EdShapeParticles
+                    type={detectedLanguage && detectedLanguage.code !== 'en' ? 'flag' : 'orb'}
+                    countryCode={detectedLanguage?.countryCode}
+                    size={64}
+                    animated={true}
+                />
+                <span className="absolute -top-2 -left-2 bg-yellow-400 text-gray-900 text-xs font-bold px-2 py-0.5 rounded-full shadow-lg">
                     Ed
                 </span>
             </button>
@@ -228,23 +231,19 @@ export default function EdChatbot({ context }: EdChatbotProps) {
                 isMinimized ? 'h-14' : 'h-[32rem]'
             }`}>
                 {/* Header */}
-                <div 
+                <div
                     className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white p-4 flex items-center justify-between cursor-pointer"
                     onClick={() => isMinimized && setIsMinimized(false)}
                 >
                     <div className="flex items-center gap-3">
-                        <div className="relative">
-                            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-2xl">
-                                {detectedLanguage && detectedLanguage.code !== 'en' ? (
-                                    <span>{detectedLanguage.flag}</span>
-                                ) : (
-                                    <GraduationCap size={22} />
-                                )}
-                            </div>
-                            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full border-2 border-white"></div>
-                        </div>
+                        <EdShapeParticles
+                            type={detectedLanguage && detectedLanguage.code !== 'en' ? 'flag' : 'orb'}
+                            countryCode={detectedLanguage?.countryCode}
+                            size={40}
+                            animated={true}
+                        />
                         <div>
-                            <h3 className="font-bold text-lg">Ed {detectedLanguage && detectedLanguage.code !== 'en' && detectedLanguage.flag}</h3>
+                            <h3 className="font-bold text-lg">Ed</h3>
                             <p className="text-xs text-white/80">
                                 {detectedLanguage && detectedLanguage.code !== 'en'
                                     ? `Speaking ${detectedLanguage.name}`
@@ -275,12 +274,12 @@ export default function EdChatbot({ context }: EdChatbotProps) {
                             {messages.length === 0 ? (
                                 // Welcome Screen
                                 <div className="text-center py-4">
-                                    <div className="w-16 h-16 bg-gradient-to-br from-emerald-100 to-teal-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                        <GraduationCap className="text-emerald-600" size={32} />
+                                    <div className="mx-auto mb-4 flex justify-center">
+                                        <EdShapeParticles type="orb" size={64} animated={true} />
                                     </div>
-                                    <h4 className="font-bold text-gray-900 mb-2">Hello! I'm Ed 👋</h4>
+                                    <h4 className="font-bold text-gray-900 mb-2">Hello! I'm Ed</h4>
                                     <p className="text-sm text-gray-600 mb-4">
-                                        I can help you understand Ofsted expectations, explain EEF research, 
+                                        I can help you understand Ofsted expectations, explain EEF research,
                                         and suggest evidence-based improvements.
                                     </p>
                                     <div className="grid grid-cols-2 gap-2">
@@ -310,7 +309,12 @@ export default function EdChatbot({ context }: EdChatbotProps) {
                                         } px-4 py-3`}>
                                             {message.role === 'assistant' && (
                                                 <div className="flex items-center gap-2 mb-2 pb-2 border-b border-gray-100">
-                                                    <GraduationCap size={16} className="text-emerald-600" />
+                                                    <EdShapeParticles
+                                                        type={detectedLanguage && detectedLanguage.code !== 'en' ? 'flag' : 'orb'}
+                                                        countryCode={detectedLanguage?.countryCode}
+                                                        size={20}
+                                                        animated={false}
+                                                    />
                                                     <span className="text-xs font-semibold text-emerald-600">Ed</span>
                                                 </div>
                                             )}
@@ -325,8 +329,8 @@ export default function EdChatbot({ context }: EdChatbotProps) {
                             {isLoading && (
                                 <div className="flex justify-start">
                                     <div className="bg-white text-gray-800 rounded-2xl rounded-bl-md shadow-sm border border-gray-100 px-4 py-3">
-                                        <div className="flex items-center gap-2">
-                                            <Loader2 size={16} className="animate-spin text-emerald-600" />
+                                        <div className="flex items-center gap-3">
+                                            <EdShapeParticles type="thinking" size={32} animated={true} />
                                             <span className="text-sm text-gray-500">Ed is thinking...</span>
                                         </div>
                                     </div>

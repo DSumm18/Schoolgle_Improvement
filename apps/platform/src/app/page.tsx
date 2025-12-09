@@ -19,6 +19,7 @@ import AudienceSection from '@/components/website/AudienceSection';
 import BlogSection from '@/components/website/BlogSection';
 import DownloadSection from '@/components/website/DownloadSection';
 import Footer from '@/components/website/Footer';
+import EdWidget from '@/components/EdWidget';
 
 // Product suites with clean styling
 const productSuites = [
@@ -351,6 +352,9 @@ export default function HomePage() {
 
             {/* Website Footer */}
             <Footer />
+
+            {/* Ed Widget - Complete widget with voice, morphing, and all features */}
+            <EdWidget />
         </div>
     );
 }
