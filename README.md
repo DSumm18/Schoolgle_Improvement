@@ -159,7 +159,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 
 # OpenRouter (AI Models)
-VITE_OPENROUTER_API_KEY=your_openrouter_key
+OPENROUTER_API_KEY=your_openrouter_key
 # Alternative: OPENAI_API_KEY if using OpenAI directly
 
 # Google OAuth (Drive Access)

@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { evidenceRequestSchema, validateRequest } from '@/lib/validations';
+import { standardLimiter } from '@/lib/rateLimit';
+import { logger, createOperationLogger } from '@/lib/logger';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -7,12 +10,28 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 export async function POST(req: NextRequest) {
-    try {
-        const { userId, subcategoryId, evidenceItem } = await req.json();
+    const evidenceLogger = createOperationLogger('evidence-api', { endpoint: '/api/evidence' });
 
-        if (!userId || !subcategoryId) {
-            return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    try {
+        // Rate limiting check
+        const rateLimitResult = await standardLimiter.check(req);
+        if (!rateLimitResult.allowed) {
+            evidenceLogger.warn('Rate limit exceeded');
+            return rateLimitResult.response!;
         }
+
+        // Parse and validate request body
+        const body = await req.json();
+        const validation = validateRequest(evidenceRequestSchema, body);
+
+        if (!validation.success) {
+            evidenceLogger.warn('Invalid request', undefined, undefined, { validationError: validation.error });
+            return NextResponse.json({ error: validation.error }, { status: 400 });
+        }
+
+        const { userId, subcategoryId, evidenceItem } = validation.data;
+
+        evidenceLogger.info('Fetching evidence matches', { userId, subcategoryId }, { evidenceItem });
 
         // We need to filter by user_id on the joined document, but Supabase join filtering is tricky.
         // However, RLS is enabled. But we are using service role key here, so we bypass RLS.
@@ -45,8 +64,11 @@ export async function POST(req: NextRequest) {
         const { data, error } = await query;
 
         if (error) {
-            console.error('Supabase error:', error);
-            return NextResponse.json({ error: error.message }, { status: 500 });
+            evidenceLogger.error('Supabase query failed', { userId, subcategoryId }, error);
+            return NextResponse.json({
+                error: 'Failed to fetch evidence matches',
+                details: error.message
+            }, { status: 500 });
         }
 
         // Transform data for frontend
@@ -59,10 +81,15 @@ export async function POST(req: NextRequest) {
             folderPath: match.document?.folder_path
         }));
 
+        evidenceLogger.info('Successfully fetched evidence matches', { userId, subcategoryId }, { matchCount: matches.length });
+
         return NextResponse.json({ matches });
 
     } catch (error: any) {
-        console.error('API error:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        evidenceLogger.error('Unexpected error in evidence API', undefined, error);
+        return NextResponse.json({
+            error: 'An unexpected error occurred',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        }, { status: 500 });
     }
 }

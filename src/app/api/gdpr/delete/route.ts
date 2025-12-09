@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { gdprDeleteSchema, validateRequest } from '@/lib/validations';
+import { gdprLimiter } from '@/lib/rateLimit';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -13,18 +15,21 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
  */
 export async function POST(req: NextRequest) {
     try {
-        const { userId, confirmDeletion } = await req.json();
-
-        if (!userId) {
-            return NextResponse.json({ error: 'User ID required' }, { status: 400 });
+        // Rate limiting check - very strict for GDPR operations
+        const rateLimitResult = await gdprLimiter.check(req);
+        if (!rateLimitResult.allowed) {
+            return rateLimitResult.response!;
         }
 
-        if (!confirmDeletion) {
-            return NextResponse.json({ 
-                error: 'Deletion not confirmed',
-                message: 'Please set confirmDeletion: true to proceed'
-            }, { status: 400 });
+        // Parse and validate request body
+        const body = await req.json();
+        const validation = validateRequest(gdprDeleteSchema, body);
+
+        if (!validation.success) {
+            return NextResponse.json({ error: validation.error }, { status: 400 });
         }
+
+        const { userId, confirmDeletion } = validation.data;
 
         // Verify user exists
         const { data: userData, error: userError } = await supabase
@@ -125,20 +130,21 @@ export async function POST(req: NextRequest) {
  */
 export async function DELETE(req: NextRequest) {
     try {
-        const { organizationId, adminUserId, confirmDeletion } = await req.json();
-
-        if (!organizationId || !adminUserId) {
-            return NextResponse.json({ 
-                error: 'Organisation ID and Admin User ID required' 
-            }, { status: 400 });
+        // Rate limiting check - very strict for GDPR operations
+        const rateLimitResult = await gdprLimiter.check(req);
+        if (!rateLimitResult.allowed) {
+            return rateLimitResult.response!;
         }
 
-        if (!confirmDeletion) {
-            return NextResponse.json({ 
-                error: 'Deletion not confirmed',
-                message: 'Please set confirmDeletion: true to proceed. This action is irreversible.'
-            }, { status: 400 });
+        // Parse and validate request body
+        const body = await req.json();
+        const validation = validateRequest(gdprDeleteSchema, body);
+
+        if (!validation.success) {
+            return NextResponse.json({ error: validation.error }, { status: 400 });
         }
+
+        const { organizationId, adminUserId, confirmDeletion } = body;
 
         // Verify admin permissions
         const { data: adminCheck } = await supabase

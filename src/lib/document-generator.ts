@@ -9,31 +9,54 @@ import { SIAMS_FRAMEWORK, SIAMS_RATINGS } from './siams-framework';
 // TYPES
 // ============================================================================
 
+export interface Assessment {
+    schoolRating?: string;
+    schoolRationale?: string;
+    aiRating?: string;
+    aiRationale?: string;
+    evidenceCount?: number;
+}
+
+export interface ActionItem {
+    id: string;
+    categoryId?: string;
+    title: string;
+    status: string;
+    priority: string;
+    dueDate?: string;
+}
+
+export interface EvidenceMatch {
+    categoryId: string;
+    documentName: string;
+    confidence: number;
+}
+
 export interface SchoolData {
     name: string;
     urn?: string;
     academicYear: string;
     isChurchSchool: boolean;
-    
+
     // Pupil numbers
     totalPupils?: number;
     ppPupils?: number;
     sendPupils?: number;
-    
+
     // Funding
     ppAllocation?: number;
     recoveryPremium?: number;
     sportsPremiumAllocation?: number;
-    
+
     // Assessments
-    ofstedAssessments?: Record<string, any>;
-    siamsAssessments?: Record<string, any>;
-    
+    ofstedAssessments?: Record<string, Assessment>;
+    siamsAssessments?: Record<string, Assessment>;
+
     // Actions
-    actions?: any[];
-    
+    actions?: ActionItem[];
+
     // Evidence
-    evidenceMatches?: any[];
+    evidenceMatches?: EvidenceMatch[];
 }
 
 export interface GeneratedDocument {
@@ -64,9 +87,9 @@ export interface GeneratedSection {
 
 export function generateSEF(
     schoolData: SchoolData,
-    assessments: Record<string, any>,
-    evidenceMatches: any[],
-    actions: any[]
+    assessments: Record<string, Assessment>,
+    evidenceMatches: EvidenceMatch[],
+    actions: ActionItem[]
 ): GeneratedDocument {
     const sections: GeneratedSection[] = [];
     
@@ -581,7 +604,7 @@ export interface SDPPriority {
 export function generateSDP(
     schoolData: SchoolData,
     priorities: SDPPriority[],
-    assessments: Record<string, any>
+    assessments: Record<string, Assessment>
 ): GeneratedDocument {
     const sections: GeneratedSection[] = [];
     

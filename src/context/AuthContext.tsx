@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { User, GoogleAuthProvider, OAuthProvider, signInWithPopup, signOut as firebaseSignOut, onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { logger } from "@/lib/logger";
 
 export interface Organization {
     id: string;
@@ -32,7 +33,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [organization, setOrganization] = useState<Organization | null>(null);
 
     const fetchProfile = async (currentUser: User) => {
+        const context = { userId: currentUser.uid, function: 'fetchProfile' };
+
         try {
+            logger.debug('Fetching user profile', context);
+
             const response = await fetch('/api/auth/profile', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -43,12 +48,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 })
             });
 
-            if (response.ok) {
-                const data = await response.json();
-                setOrganization(data.organization);
+            if (!response.ok) {
+                throw new Error(`Profile fetch failed with status: ${response.status}`);
             }
+
+            const data = await response.json();
+            setOrganization(data.organization);
+            logger.info('User profile fetched successfully', context);
         } catch (error) {
-            console.error("Error fetching profile:", error);
+            logger.error('Error fetching user profile', context, error);
+            // Don't throw - allow user to continue without organization data
         }
     };
 
@@ -83,6 +92,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         provider.addScope('https://www.googleapis.com/auth/drive.readonly');
 
         try {
+            logger.info('Initiating Google sign-in', { provider: 'google.com' });
             const result = await signInWithPopup(auth, provider);
             const credential = GoogleAuthProvider.credentialFromResult(result);
             const token = credential?.accessToken;
@@ -90,8 +100,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 setAccessToken(token);
             }
             setProviderId('google.com');
-        } catch (error) {
-            console.error("Error signing in with Google", error);
+            logger.info('Google sign-in successful', { userId: result.user.uid });
+        } catch (error: any) {
+            logger.error('Error signing in with Google', { provider: 'google.com' }, error);
+
+            // Provide user-friendly error messages
+            if (error.code === 'auth/popup-closed-by-user') {
+                throw new Error('Sign-in cancelled. Please try again.');
+            } else if (error.code === 'auth/popup-blocked') {
+                throw new Error('Pop-up blocked. Please allow pop-ups and try again.');
+            } else if (error.code === 'auth/network-request-failed') {
+                throw new Error('Network error. Please check your connection and try again.');
+            }
+            throw error;
         }
     };
 
@@ -100,6 +121,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         provider.addScope('Files.Read.All');
 
         try {
+            logger.info('Initiating Microsoft sign-in', { provider: 'microsoft.com' });
             const result = await signInWithPopup(auth, provider);
             const credential = OAuthProvider.credentialFromResult(result);
             const token = credential?.accessToken;
@@ -107,19 +129,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 setAccessToken(token);
             }
             setProviderId('microsoft.com');
-        } catch (error) {
-            console.error("Error signing in with Microsoft", error);
+            logger.info('Microsoft sign-in successful', { userId: result.user.uid });
+        } catch (error: any) {
+            logger.error('Error signing in with Microsoft', { provider: 'microsoft.com' }, error);
+
+            // Provide user-friendly error messages
+            if (error.code === 'auth/popup-closed-by-user') {
+                throw new Error('Sign-in cancelled. Please try again.');
+            } else if (error.code === 'auth/popup-blocked') {
+                throw new Error('Pop-up blocked. Please allow pop-ups and try again.');
+            } else if (error.code === 'auth/network-request-failed') {
+                throw new Error('Network error. Please check your connection and try again.');
+            }
+            throw error;
         }
     };
 
     const signOut = async () => {
         try {
+            logger.info('User signing out', { userId: user?.uid });
             await firebaseSignOut(auth);
             setAccessToken(null);
             setProviderId(null);
             setOrganization(null);
+            logger.info('User signed out successfully');
         } catch (error) {
-            console.error("Error signing out", error);
+            logger.error('Error signing out', { userId: user?.uid }, error);
+            throw error;
         }
     };
 

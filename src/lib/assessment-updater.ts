@@ -241,13 +241,23 @@ export function generateCategorySummaries(
     return summaries;
 }
 
+export interface FormattedAssessment {
+    aiRating: 'outstanding' | 'good' | 'requires_improvement' | 'inadequate';
+    aiRationale: string;
+    evidenceCount: number;
+    requiredCount: number;
+    evidencePercentage: number;
+    schoolRating?: string;
+    schoolRationale?: string;
+}
+
 /**
  * Format assessment updates for frontend consumption
  */
 export function formatAssessmentUpdatesForFrontend(
     assessmentUpdates: AssessmentUpdates
-): Record<string, any> {
-    const formatted: Record<string, any> = {};
+): Record<string, FormattedAssessment> {
+    const formatted: Record<string, FormattedAssessment> = {};
 
     Object.entries(assessmentUpdates).forEach(([subcategoryId, update]) => {
         formatted[subcategoryId] = {

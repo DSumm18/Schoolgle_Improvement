@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { eefStrategies, getRelevantStrategies, getHighImpactStrategies } from '@/lib/eef-toolkit';
 import { ofstedFramework } from '@/lib/ofsted-framework';
+import { edChatRequestSchema, validateRequest } from '@/lib/validations';
+import { aiLimiter } from '@/lib/rateLimit';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
@@ -50,7 +52,21 @@ interface Message {
 
 export async function POST(req: NextRequest) {
     try {
-        const { messages, context } = await req.json();
+        // Rate limiting check
+        const rateLimitResult = await aiLimiter.check(req);
+        if (!rateLimitResult.allowed) {
+            return rateLimitResult.response!;
+        }
+
+        // Parse and validate request body
+        const body = await req.json();
+        const validation = validateRequest(edChatRequestSchema, body);
+
+        if (!validation.success) {
+            return NextResponse.json({ error: validation.error }, { status: 400 });
+        }
+
+        const { messages, context } = validation.data;
 
         if (!OPENAI_API_KEY) {
             // Fallback response without OpenAI

@@ -11,28 +11,9 @@ const firebaseConfig = {
     appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-let app: FirebaseApp;
-let auth: Auth;
-let db: Firestore;
-
-if (typeof window === 'undefined' && !process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
-    // We are on the server during build and no keys are present.
-    // Create a dummy app or just don't initialize to avoid errors.
-    // However, getAuth() needs an app.
-    // We can mock it or just let it fail at runtime if used, but build shouldn't use it.
-    // But AuthProvider uses it. 
-
-    // Strategy: Check if apps are initialized.
-    // If not, and no keys, we might be in build.
-    // But create-next-app build might try to render pages.
-
-    // Safest bet for build without keys:
-    // If keys are missing, don't initialize, but export typed nulls/dummies?
-    // No, that breaks TS.
-
-    // Better: Initialize with dummy values if missing, just to pass build?
-    // Or just wrap in try/catch.
-}
+let app: FirebaseApp | undefined;
+let auth: Auth | undefined;
+let db: Firestore | undefined;
 
 try {
     app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
@@ -40,9 +21,10 @@ try {
     db = getFirestore(app);
 } catch (error) {
     console.warn("Firebase initialization failed (expected during build without keys):", error);
-    // If we are here, exports will be undefined, which might crash importing modules.
-    // We need to ensure exports are defined.
+    // Exports will be undefined if init fails. Components should check for undefined before use.
+    app = undefined;
+    auth = undefined;
+    db = undefined;
 }
 
-// @ts-ignore - we know these might be undefined if init fails, but we handle it in components
 export { app, auth, db };
