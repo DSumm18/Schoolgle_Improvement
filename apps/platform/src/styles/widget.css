@@ -1,0 +1,635 @@
+/**
+ * Original Layout Styles - Matching the provided HTML code
+ * These styles recreate the exact visual design from the original code
+ */
+
+/* ========================================
+   Container & Launcher
+   ======================================== */
+
+/* WIDGET WRAPPER (Matching Gemini) */
+#ed-widget-container {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  width: 400px;
+  height: 600px;
+  z-index: 9999; /* High Z-index to sit above website */
+  pointer-events: none; /* Allow clicking through the empty space */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: flex-end;
+  padding: 2rem;
+  overflow: visible;
+}
+
+#launcher-group {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+  position: absolute;
+  bottom: 2rem;
+  right: 2rem;
+  z-index: 100;
+}
+
+body.widget-active #launcher-group {
+  opacity: 0;
+  transform: scale(0.8);
+  pointer-events: none;
+}
+
+#launcher-btn {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #0f172a;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  overflow: hidden;
+  border: 2px solid rgba(45, 212, 191, 0.3);
+}
+
+#launcher-btn:hover {
+  transform: scale(1.1);
+}
+
+.launcher-icon {
+  width: 32px;
+  height: 32px;
+  background-image: radial-gradient(circle, #2dd4bf 1.5px, transparent 2px);
+  background-size: 6px 6px;
+  border-radius: 50%;
+  animation: spin-slow 10s linear infinite;
+}
+
+@keyframes spin-slow {
+  to { transform: rotate(360deg); }
+}
+
+.launcher-label {
+  background: #0f172a;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+/* ========================================
+   App Panel
+   ======================================== */
+
+/* --- ACTIVE PANEL (Matching Gemini) --- */
+#app-panel {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  background: transparent;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+/* Visible State (Matching Gemini) */
+body.widget-active #app-panel {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+/* ========================================
+   Canvas Container (3D Avatar) - Matching Gemini
+   ======================================== */
+
+/* Canvas Positioning (Matching Gemini exactly) */
+#canvas-container {
+  position: absolute;
+  bottom: 60px;
+  right: 0;
+  width: 300px;
+  height: 300px;
+  z-index: 10; /* Behind chat (15), above base (0) */
+  pointer-events: none; /* Allows clicks to pass through to chat */
+  overflow: hidden;
+}
+
+#canvas-container canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+/* ========================================
+   Status Pill
+   ======================================== */
+
+.status-pill {
+  position: absolute;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: #2dd4bf;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.3s;
+  border: 1px solid rgba(255,255,255,0.1);
+  z-index: 20;
+}
+
+/* ========================================
+   Chat Container
+   ======================================== */
+
+.chat-container {
+  position: absolute;
+  bottom: 110px;
+  right: 0;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding-bottom: 20px;
+  opacity: 1;
+  transform: translateY(0);
+  transition: all 0.3s ease;
+  z-index: 15;
+}
+
+body.view-chat .chat-container {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+  visibility: visible;
+}
+
+/* Hidden state (when keyboard button toggles chat off) */
+.chat-container.chat-hidden {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+.chat-scroll {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 10px;
+  max-height: 100%;
+  mask-image: linear-gradient(to bottom, transparent, black 10%);
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* ========================================
+   Messages
+   ======================================== */
+
+.msg {
+  pointer-events: auto;
+  padding: 10px 16px;
+  border-radius: 18px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  max-width: 90%;
+  animation: popIn 0.3s;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.msg-divider {
+  height: 1px;
+  background: rgba(255,255,255,0.2);
+  margin: 6px 0;
+}
+
+.msg-sub {
+  font-size: 0.8em;
+  opacity: 0.8;
+  font-style: italic;
+  display: block;
+}
+
+/* Theme-specific message colors */
+.theme-standard .msg-ai {
+  background: rgba(15, 23, 42, 0.85);
+  color: white;
+  border-bottom-right-radius: 4px;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.theme-standard .msg-user {
+  background: rgba(255, 255, 255, 0.9);
+  color: #0f172a;
+  border-bottom-right-radius: 4px;
+  margin-right: 12px;
+  font-weight: 500;
+}
+
+.theme-warm .msg-ai {
+  background: #422006;
+  color: #fef08a;
+  border-bottom-right-radius: 4px;
+  border: 1px solid #fde047;
+}
+
+.theme-warm .msg-user {
+  background: #fef08a;
+  color: #422006;
+  border-bottom-right-radius: 4px;
+  margin-right: 12px;
+  font-weight: 600;
+}
+
+.theme-cool .msg-ai {
+  background: #0c4a6e;
+  color: #e0f2fe;
+  border-bottom-right-radius: 4px;
+  border: 1px solid #38bdf8;
+}
+
+.theme-cool .msg-user {
+  background: #e0f2fe;
+  color: #0c4a6e;
+  border-bottom-right-radius: 4px;
+  margin-right: 12px;
+  font-weight: 600;
+}
+
+.theme-contrast .msg-ai {
+  background: black;
+  color: #ffff00;
+  border: 2px solid #ffff00;
+  border-radius: 8px;
+  font-weight: 700;
+}
+
+.theme-contrast .msg-user {
+  background: #ffff00;
+  color: black;
+  border: 2px solid black;
+  border-radius: 8px;
+  margin-right: 12px;
+  font-weight: 700;
+}
+
+/* ========================================
+   Input Bar
+   ======================================== */
+
+.input-bar {
+  pointer-events: auto;
+  margin: 0 10px;
+  background: rgba(15, 23, 42, 0.9);
+  border-radius: 30px;
+  padding: 6px 6px 6px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2);
+}
+
+.input-bar input {
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 0.875rem;
+  flex-grow: 1;
+  outline: none;
+}
+
+.input-bar input::placeholder {
+  color: rgba(148, 163, 184, 0.6);
+}
+
+.input-bar button {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.help-link {
+  color: #38bdf8;
+  text-decoration: underline;
+  font-weight: 600;
+}
+
+/* ========================================
+   Dock
+   ======================================== */
+
+#app-dock {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20000;
+  pointer-events: auto;
+  display: flex !important;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 12px 20px;
+  background: rgba(15, 23, 42, 0.9) !important;
+  backdrop-filter: blur(20px);
+  border-radius: 24px;
+  border: 1px solid rgba(255,255,255,0.2);
+  box-shadow: 0 10px 40px -10px rgba(0,0,0,0.5);
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.dock-item {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.15) !important;
+  color: white !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  border: 1px solid rgba(255,255,255,0.1);
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.dock-item:hover {
+  transform: scale(1.15) translateY(-5px);
+  background: rgba(255,255,255,0.2);
+  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+.dock-item svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2;
+}
+
+#dock-mic-btn {
+  width: 56px;
+  height: 56px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #2dd4bf, #0d9488);
+  box-shadow: 0 4px 15px rgba(45, 212, 191, 0.4);
+  margin: 0 8px;
+}
+
+#dock-mic-btn:hover {
+  transform: scale(1.1) translateY(-5px);
+}
+
+#dock-mic-btn svg {
+  width: 24px;
+  height: 24px;
+  stroke: white;
+}
+
+.mic-active {
+  animation: pulse-mic 1.5s infinite;
+  background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+  border-color: transparent !important;
+}
+
+@keyframes pulse-mic {
+  0% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+  }
+  100% {
+    box-shadow: 0 0 0 15px rgba(239, 68, 68, 0);
+  }
+}
+
+/* ========================================
+   Dock Menus
+   ======================================== */
+
+.dock-menu {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%) translateY(10px) scale(0.9);
+  margin-bottom: 15px;
+  background: rgba(15, 23, 42, 0.95) !important;
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.2) !important;
+  border-radius: 16px;
+  padding: 8px;
+  display: flex !important;
+  flex-direction: column;
+  gap: 4px;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  width: 180px;
+  min-width: 180px;
+  transform-origin: bottom center;
+  box-shadow: 0 10px 40px -10px rgba(0,0,0,0.5);
+  z-index: 20001 !important;
+  visibility: hidden;
+}
+
+.dock-menu.dock-menu-visible,
+.dock-menu.active {
+  opacity: 1 !important;
+  transform: translateX(-50%) translateY(0) scale(1) !important;
+  pointer-events: auto !important;
+  visibility: visible !important;
+}
+
+.dock-menu::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -6px;
+  border-width: 6px;
+  border-style: solid;
+  border-color: rgba(15, 23, 42, 0.9) transparent transparent transparent;
+}
+
+.carousel-scroll {
+  max-height: 160px;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+
+.carousel-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.carousel-scroll::-webkit-scrollbar-track {
+  background: rgba(255,255,255,0.05);
+}
+
+.carousel-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.2);
+  border-radius: 2px;
+}
+
+.menu-opt,
+.dock-menu-item {
+  background: transparent;
+  color: #cbd5e1;
+  border: none;
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 0.85rem;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.menu-opt:hover,
+.dock-menu-item:hover {
+  background: rgba(255,255,255,0.1);
+  color: white;
+}
+
+.menu-opt.selected,
+.dock-menu-item.selected {
+  background: rgba(45, 212, 191, 0.15);
+  color: #2dd4bf;
+}
+
+.dock-menu-icon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+
+.dock-menu-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dock-menu-section-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 6px 12px 4px;
+  margin-top: 4px;
+}
+
+.dock-menu-section:first-child .dock-menu-section-title {
+  margin-top: 0;
+}
+
+.dock-menu-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 8px 0;
+}
+
+.menu-opt .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+/* ========================================
+   Quick Reply Buttons
+   ======================================== */
+
+.quick-replies {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 0 4px;
+}
+
+.quick-reply-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.quick-reply-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.theme-warm .quick-reply-btn {
+  background: rgba(254, 240, 138, 0.2);
+  border-color: #fde047;
+  color: #fef08a;
+}
+
+.theme-cool .quick-reply-btn {
+  background: rgba(224, 242, 254, 0.2);
+  border-color: #38bdf8;
+  color: #e0f2fe;
+}
+
+.theme-contrast .quick-reply-btn {
+  background: rgba(255, 255, 0, 0.2);
+  border-color: #ffff00;
+  color: #ffff00;
+  font-weight: 700;
+}

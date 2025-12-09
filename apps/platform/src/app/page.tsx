@@ -19,7 +19,7 @@ import AudienceSection from '@/components/website/AudienceSection';
 import BlogSection from '@/components/website/BlogSection';
 import DownloadSection from '@/components/website/DownloadSection';
 import Footer from '@/components/website/Footer';
-import EdWidget from '@/components/EdWidget';
+import EdWidget from '@/components/EdChatbot';
 
 // Product suites with clean styling
 const productSuites = [
@@ -132,7 +132,7 @@ export default function HomePage() {
         <div className="min-h-screen bg-white relative">
             {/* Origami Background - Logo in top-left */}
             <OrigamiParticles text="Schoolgle" opacity={0.2} shape="crane" position="top-left" size="medium" />
-            
+
             {/* Website Navbar */}
             <Navbar />
 
@@ -173,22 +173,21 @@ export default function HomePage() {
                             {productSuites.map(suite => {
                                 const isExpanded = expandedSuite === suite.id;
                                 const isLive = suite.status === 'live';
-                                
+
                                 return (
-                                    <div 
+                                    <div
                                         key={suite.id}
-                                        className={`bg-white rounded-2xl border transition-all overflow-hidden ${
-                                            suite.featured 
-                                                ? 'border-gray-900 shadow-sm' 
+                                        className={`bg-white rounded-2xl border transition-all overflow-hidden ${suite.featured
+                                                ? 'border-gray-900 shadow-sm'
                                                 : 'border-gray-200 hover:border-gray-300'
-                                        }`}
+                                            }`}
                                     >
                                         {suite.featured && (
                                             <div className="bg-gray-900 text-white text-center py-2 text-sm font-medium">
                                                 Available Now
                                             </div>
                                         )}
-                                        
+
                                         <div className="p-6">
                                             {/* Header */}
                                             <div className="flex items-start gap-4 mb-4">
@@ -198,11 +197,10 @@ export default function HomePage() {
                                                 <div className="flex-1">
                                                     <div className="flex items-center gap-2 mb-1">
                                                         <h3 className="text-lg font-semibold text-gray-900">{suite.name}</h3>
-                                                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                                                            isLive ? 'bg-green-100 text-green-700' :
-                                                            suite.status === 'coming-soon' ? 'bg-amber-100 text-amber-700' :
-                                                            'bg-gray-100 text-gray-600'
-                                                        }`}>
+                                                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${isLive ? 'bg-green-100 text-green-700' :
+                                                                suite.status === 'coming-soon' ? 'bg-amber-100 text-amber-700' :
+                                                                    'bg-gray-100 text-gray-600'
+                                                            }`}>
                                                             {isLive ? 'Live' : suite.status === 'coming-soon' ? 'Coming Soon' : 'Planned'}
                                                         </span>
                                                     </div>
@@ -213,7 +211,7 @@ export default function HomePage() {
                                             <p className="text-gray-600 text-sm mb-4">{suite.description}</p>
 
                                             {/* Apps List Toggle */}
-                                            <button 
+                                            <button
                                                 onClick={() => setExpandedSuite(isExpanded ? null : suite.id)}
                                                 className="w-full text-left"
                                             >
@@ -247,11 +245,10 @@ export default function HomePage() {
                                                                     <span className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">Add-on</span>
                                                                 ) : null}
                                                             </div>
-                                                            <span className={`text-xs ${
-                                                                app.status === 'live' ? 'text-green-600' :
-                                                                app.status === 'beta' ? 'text-gray-500' :
-                                                                'text-gray-400'
-                                                            }`}>
+                                                            <span className={`text-xs ${app.status === 'live' ? 'text-green-600' :
+                                                                    app.status === 'beta' ? 'text-gray-500' :
+                                                                        'text-gray-400'
+                                                                }`}>
                                                                 {app.status === 'live' ? '●' : app.status === 'beta' ? 'Beta' : ''}
                                                             </span>
                                                         </div>
@@ -263,7 +260,7 @@ export default function HomePage() {
                                             <div className="flex items-center justify-between pt-4 mt-4 border-t border-gray-100">
                                                 <span className="font-medium text-gray-900">{suite.price}</span>
                                                 {isLive ? (
-                                                    <a 
+                                                    <a
                                                         href={suite.href}
                                                         className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors"
                                                     >
@@ -333,13 +330,13 @@ export default function HomePage() {
                             Join schools across the UK who are saving hours every week.
                         </p>
                         <div className="flex items-center justify-center gap-4">
-                            <a 
+                            <a
                                 href="/signup"
                                 className="px-8 py-4 bg-white text-gray-900 font-medium rounded-xl hover:bg-gray-100 transition-colors"
                             >
                                 Get Started Free
                             </a>
-                            <a 
+                            <a
                                 href="/contact"
                                 className="px-8 py-4 text-white font-medium border border-gray-700 rounded-xl hover:bg-gray-800 transition-colors"
                             >

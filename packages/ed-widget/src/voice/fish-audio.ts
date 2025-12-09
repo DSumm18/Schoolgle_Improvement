@@ -78,10 +78,9 @@ const LANGUAGE_MAP: Record<string, string> = {
 
 export class FishAudioVoice {
   private apiKey: string;
-  // Use proxy in development to avoid CORS, direct API in production
-  private baseUrl = import.meta.env.DEV 
-    ? '/api/fish-audio' 
-    : 'https://api.fish.audio/v1';
+  // Use proxy to avoid CORS issues when calling from browser
+  // Don't add /tts here - it's added in the speak() method
+  private baseUrl = '/api/fish-audio';
   private audioCache: Map<string, string> = new Map();
   private activeAudio: HTMLAudioElement | null = null; // Track active audio to stop it
 
@@ -121,7 +120,7 @@ export class FishAudioVoice {
     // Remove ALL emotion tags and pause tags - Fish Audio doesn't support them
     // Fish Audio uses voice cloning for emotion, not text-based tags
     const cleanedText = this.cleanTextForTTS(text, false); // false = remove all tags
-    
+
     // Check cache first
     const cacheKey = `${persona}-${languageCode}-${cleanedText}`;
     if (this.audioCache.has(cacheKey)) {
@@ -142,7 +141,7 @@ export class FishAudioVoice {
     } else {
       console.log(`[Fish Audio] Using cloned voice for ${persona}: ${voiceId}`);
     }
-    
+
     if (!this.apiKey || this.apiKey.trim() === '') {
       throw new Error('Fish Audio API key is required');
     }
@@ -167,7 +166,7 @@ export class FishAudioVoice {
       // Debug logging (mask API key for security)
       const maskedKey = this.apiKey ? `${this.apiKey.substring(0, 8)}...${this.apiKey.substring(this.apiKey.length - 4)}` : 'MISSING';
       console.log('[Fish Audio] Request Details:', {
-        url: `${this.baseUrl}/tts`,
+        url: `${this.baseUrl}`,
         method: 'POST',
         apiKeyMasked: maskedKey,
         apiKeyLength: this.apiKey?.length || 0,
@@ -175,7 +174,7 @@ export class FishAudioVoice {
         requestBody: requestBody,
       });
 
-      const response = await fetch(`${this.baseUrl}/tts`, {
+      const response = await fetch(this.baseUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
@@ -190,7 +189,7 @@ export class FishAudioVoice {
         try {
           const errorText = await response.text();
           console.error('[Fish Audio] API Error Response (raw):', errorText);
-          
+
           // Try to parse as JSON
           try {
             errorDetails = JSON.parse(errorText);
@@ -201,7 +200,7 @@ export class FishAudioVoice {
             errorMessage = errorText || errorMessage;
             console.error('[Fish Audio] API Error Response (text):', errorText);
           }
-          
+
           // Provide helpful error messages
           if (response.status === 402) {
             console.error('[Fish Audio] ❌ 402 Payment Required - Possible causes:');
@@ -313,17 +312,17 @@ export class FishAudioVoice {
       // Wait a brief moment for pause to complete
       await new Promise(resolve => setTimeout(resolve, 50));
     }
-    
+
     return new Promise((resolve, reject) => {
       const audio = new Audio(audioUrl);
       this.activeAudio = audio;
-      
+
       // Set volume
       audio.volume = 1.0;
-      
+
       // Preload audio
       audio.load();
-      
+
       audio.onended = () => {
         this.activeAudio = null;
         resolve();
@@ -333,7 +332,7 @@ export class FishAudioVoice {
         this.activeAudio = null;
         reject(new Error('Audio playback failed'));
       };
-      
+
       // Try to play with better error handling
       const playPromise = audio.play();
       if (playPromise !== undefined) {
@@ -512,7 +511,7 @@ export class FishAudioVoice {
     // First, temporarily preserve Fish Audio tags if needed
     const fishAudioTagPlaceholders: Map<string, string> = new Map();
     let cleaned = text;
-    
+
     if (preserveFishAudioTags) {
       // Extract and preserve Fish Audio emotion/pause tags
       // Match: (happy), (excited), (pause:500ms), etc.
@@ -527,7 +526,7 @@ export class FishAudioVoice {
         placeholderIndex++;
       }
     }
-    
+
     // Remove emojis (keep text only)
     cleaned = cleaned
       .replace(/[\u{1F300}-\u{1F9FF}]/gu, '')
@@ -544,7 +543,7 @@ export class FishAudioVoice {
       .replace(/<[^>]+>/g, '')
       // Remove instructional text patterns
       .replace(/\[Translated to [^\]]+\]:\s*/gi, '');
-    
+
     // Remove any remaining tags (non-placeholder tags)
     // If preserving, we've already replaced Fish Audio tags with placeholders
     // So any remaining (tags) are non-Fish-Audio tags and should be removed
@@ -557,17 +556,17 @@ export class FishAudioVoice {
       // Remove all tags including Fish Audio tags
       cleaned = cleaned.replace(/\([^)]+\)/g, '');
     }
-    
+
     // Clean up extra whitespace
     cleaned = cleaned.replace(/\s+/g, ' ').trim();
-    
+
     // Restore Fish Audio tags if preserving
     if (preserveFishAudioTags) {
       fishAudioTagPlaceholders.forEach((tag, placeholder) => {
         cleaned = cleaned.replace(placeholder, tag);
       });
     }
-    
+
     return cleaned.trim();
   }
 

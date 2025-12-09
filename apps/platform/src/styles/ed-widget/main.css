@@ -1,0 +1,682 @@
+/**
+ * Ed Widget - Main Styles
+ * Beautiful, accessible styling for the Ed chatbot widget
+ */
+
+/* Import original layout styles */
+@import './original-layout.css';
+
+/* ========================================
+   CSS Variables & Themes
+   ======================================== */
+
+:root {
+  --ed-primary: #2dd4bf;
+  --ed-primary-dark: #14b8a6;
+  --ed-primary-light: #5eead4;
+  --ed-background: #0f172a;
+  --ed-surface: rgba(15, 23, 42, 0.95);
+  --ed-surface-light: rgba(30, 41, 59, 0.9);
+  --ed-text: #ffffff;
+  --ed-text-muted: #94a3b8;
+  --ed-success: #22c55e;
+  --ed-error: #ef4444;
+  --ed-warning: #f59e0b;
+  
+  --ed-radius: 16px;
+  --ed-radius-sm: 8px;
+  --ed-radius-lg: 24px;
+  --ed-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  --ed-shadow-glow: 0 0 40px rgba(45, 212, 191, 0.3);
+  
+  --ed-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --ed-transition: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --ed-transition-spring: 400ms cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* Standard (Dark) Theme */
+.ed-theme-standard {
+  --ed-primary: #2dd4bf;
+  --ed-background: #0f172a;
+  --ed-surface: rgba(15, 23, 42, 0.95);
+  --ed-text: #ffffff;
+}
+
+/* Warm Theme (Dyslexia-friendly) */
+.ed-theme-warm {
+  --ed-primary: #f59e0b;
+  --ed-background: #1c1917;
+  --ed-surface: rgba(41, 37, 36, 0.95);
+  --ed-text: #fef3c7;
+  --ed-text-muted: #d6d3d1;
+}
+
+/* Cool Theme (Calming) */
+.ed-theme-cool {
+  --ed-primary: #3b82f6;
+  --ed-background: #0c1929;
+  --ed-surface: rgba(15, 23, 42, 0.95);
+  --ed-text: #e0f2fe;
+  --ed-text-muted: #7dd3fc;
+}
+
+/* High Contrast Theme */
+.ed-theme-contrast {
+  --ed-primary: #facc15;
+  --ed-background: #000000;
+  --ed-surface: rgba(0, 0, 0, 0.98);
+  --ed-text: #ffffff;
+  --ed-text-muted: #fef08a;
+}
+
+/* ========================================
+   Container & Positioning
+   ======================================== */
+
+.ed-widget-container {
+  position: fixed;
+  z-index: 999999;
+  font-family: var(--ed-font);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.ed-position-bottom-right {
+  bottom: 20px;
+  right: 20px;
+}
+
+.ed-position-bottom-left {
+  bottom: 20px;
+  left: 20px;
+}
+
+.ed-position-top-right {
+  top: 20px;
+  right: 20px;
+}
+
+.ed-position-top-left {
+  top: 20px;
+  left: 20px;
+}
+
+/* ========================================
+   Trigger Button
+   ======================================== */
+
+.ed-trigger-button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, var(--ed-primary) 0%, var(--ed-primary-dark) 100%);
+  border: none;
+  border-radius: 50px;
+  color: var(--ed-background);
+  font-family: var(--ed-font);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--ed-shadow), var(--ed-shadow-glow);
+  transition: all var(--ed-transition);
+  transform-origin: center;
+}
+
+.ed-trigger-button:hover {
+  transform: scale(1.05);
+  box-shadow: var(--ed-shadow), 0 0 60px rgba(45, 212, 191, 0.5);
+}
+
+.ed-trigger-button:active {
+  transform: scale(0.98);
+}
+
+.ed-trigger-avatar {
+  width: 28px;
+  height: 28px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ed-trigger-avatar svg {
+  width: 18px;
+  height: 18px;
+}
+
+.ed-open .ed-trigger-button {
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.8);
+}
+
+/* ========================================
+   Widget Panel
+   ======================================== */
+
+.ed-widget {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 400px;
+  height: 600px;
+  background: var(--ed-surface);
+  border-radius: var(--ed-radius-lg);
+  box-shadow: var(--ed-shadow);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  transform: translateY(20px) scale(0.95);
+  pointer-events: none;
+  transition: all var(--ed-transition-spring);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.ed-widget.ed-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: all;
+}
+
+.ed-widget-inner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  position: relative;
+}
+
+/* ========================================
+   3D Avatar Container
+   ======================================== */
+
+.ed-avatar-container {
+  height: 200px;
+  position: relative;
+  background: radial-gradient(circle at center, rgba(45, 212, 191, 0.1) 0%, transparent 70%);
+}
+
+.ed-avatar-container canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ========================================
+   Chat Container
+   ======================================== */
+
+.ed-chat {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+.ed-chat-messages {
+  height: 100%;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar */
+.ed-chat-messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+.ed-chat-messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ed-chat-messages::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.ed-chat-messages::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* ========================================
+   Messages
+   ======================================== */
+
+.ed-message {
+  display: flex;
+  animation: ed-pop-in var(--ed-transition-spring) forwards;
+}
+
+@keyframes ed-pop-in {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.ed-message-content {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  max-width: 85%;
+}
+
+.ed-message-user .ed-message-content {
+  margin-left: auto;
+  flex-direction: row-reverse;
+}
+
+.ed-message-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--ed-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ed-message-avatar svg {
+  width: 18px;
+  height: 18px;
+  color: var(--ed-background);
+}
+
+.ed-message-user .ed-message-avatar {
+  background: var(--ed-surface-light);
+}
+
+.ed-message-user .ed-message-avatar svg {
+  color: var(--ed-text-muted);
+}
+
+.ed-message-bubble {
+  padding: 12px 16px;
+  border-radius: var(--ed-radius);
+  color: var(--ed-text);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.ed-message-assistant .ed-message-bubble {
+  background: var(--ed-surface-light);
+  border-bottom-left-radius: 4px;
+}
+
+.ed-message-user .ed-message-bubble {
+  background: var(--ed-primary);
+  color: var(--ed-background);
+  border-bottom-right-radius: 4px;
+}
+
+.ed-message-time {
+  font-size: 10px;
+  color: var(--ed-text-muted);
+  margin-top: 4px;
+  width: 100%;
+  text-align: center;
+  opacity: 0.7;
+}
+
+.ed-message-user .ed-message-time {
+  text-align: right;
+}
+
+/* System messages */
+.ed-message-system {
+  font-size: 12px;
+  color: var(--ed-text-muted);
+  text-align: center;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  margin: 0 auto;
+}
+
+/* Typing indicator */
+.ed-typing-dots {
+  display: flex;
+  gap: 4px;
+  padding: 4px 0;
+}
+
+.ed-typing-dots span {
+  width: 8px;
+  height: 8px;
+  background: var(--ed-text-muted);
+  border-radius: 50%;
+  animation: ed-typing 1.4s infinite;
+}
+
+.ed-typing-dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.ed-typing-dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes ed-typing {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+
+/* ========================================
+   Input Container
+   ======================================== */
+
+.ed-input-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: rgba(0, 0, 0, 0.2);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.ed-text-input {
+  flex: 1;
+  padding: 12px 16px;
+  background: var(--ed-surface-light);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--ed-radius);
+  color: var(--ed-text);
+  font-family: var(--ed-font);
+  font-size: 14px;
+  outline: none;
+  transition: all var(--ed-transition);
+}
+
+.ed-text-input::placeholder {
+  color: var(--ed-text-muted);
+}
+
+.ed-text-input:focus {
+  border-color: var(--ed-primary);
+  box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.2);
+}
+
+.ed-send-button {
+  width: 44px;
+  height: 44px;
+  background: var(--ed-primary);
+  border: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--ed-transition);
+}
+
+.ed-send-button:hover {
+  transform: scale(1.1);
+  background: var(--ed-primary-light);
+}
+
+.ed-send-button:active {
+  transform: scale(0.95);
+}
+
+.ed-send-button svg {
+  width: 20px;
+  height: 20px;
+  color: var(--ed-background);
+}
+
+/* ========================================
+   Dock (macOS-style)
+   ======================================== */
+
+.ed-dock {
+  padding: 12px 16px 16px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.3) 0%, transparent 100%);
+}
+
+.ed-dock-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  backdrop-filter: blur(10px);
+}
+
+.ed-dock-item {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 200ms ease;
+}
+
+.ed-dock-item:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-4px) scale(1.1);
+}
+
+.ed-dock-item.ed-dock-hover {
+  transform: translateY(-8px) scale(1.15);
+}
+
+.ed-dock-item.ed-dock-clicked {
+  transform: scale(0.9);
+}
+
+.ed-dock-icon {
+  width: 24px;
+  height: 24px;
+  color: var(--ed-text);
+  opacity: 0.8;
+  transition: opacity 200ms;
+}
+
+.ed-dock-item:hover .ed-dock-icon {
+  opacity: 1;
+}
+
+.ed-dock-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Microphone button - special styling */
+.ed-dock-mic {
+  width: 56px;
+  height: 56px;
+  background: var(--ed-primary);
+  border-radius: 50%;
+  margin: 0 8px;
+}
+
+.ed-dock-mic .ed-dock-icon {
+  color: var(--ed-background);
+  opacity: 1;
+  width: 28px;
+  height: 28px;
+}
+
+.ed-dock-mic:hover {
+  background: var(--ed-primary-light);
+  transform: translateY(-4px) scale(1.05);
+}
+
+/* Listening state */
+.ed-dock-listening {
+  animation: ed-pulse 1.5s infinite;
+  background: var(--ed-error) !important;
+}
+
+.ed-dock-listening::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: var(--ed-error);
+  animation: ed-pulse-ring 1.5s infinite;
+  z-index: -1;
+}
+
+@keyframes ed-pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+@keyframes ed-pulse-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+/* Tooltip */
+.ed-dock-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-8px);
+  padding: 6px 10px;
+  background: var(--ed-background);
+  color: var(--ed-text);
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  border-radius: 6px;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 200ms;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.ed-dock-item:hover .ed-dock-tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-12px);
+}
+
+/* Highlight state */
+.ed-dock-highlight {
+  animation: ed-bounce 500ms ease;
+}
+
+@keyframes ed-bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+/* ========================================
+   Responsive Design
+   ======================================== */
+
+@media (max-width: 480px) {
+  .ed-widget {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+  }
+  
+  .ed-widget-container.ed-position-bottom-right,
+  .ed-widget-container.ed-position-bottom-left,
+  .ed-widget-container.ed-position-top-right,
+  .ed-widget-container.ed-position-top-left {
+    inset: 0;
+  }
+  
+  .ed-trigger-button {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+  }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+  .ed-widget {
+    width: 350px;
+    height: 500px;
+  }
+}
+
+/* ========================================
+   Accessibility
+   ======================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Focus visible for keyboard navigation */
+.ed-dock-item:focus-visible,
+.ed-trigger-button:focus-visible,
+.ed-send-button:focus-visible {
+  outline: 2px solid var(--ed-primary);
+  outline-offset: 2px;
+}
+
+.ed-text-input:focus-visible {
+  outline: none;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .ed-widget {
+    border: 2px solid var(--ed-text);
+  }
+  
+  .ed-dock-item,
+  .ed-trigger-button {
+    border: 1px solid currentColor;
+  }
+}
+
