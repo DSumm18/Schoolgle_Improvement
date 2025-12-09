@@ -92,10 +92,21 @@ export default function EdChatbot({ context }: EdChatbotProps) {
 
             setMessages(prev => [...prev, assistantMessage]);
         } catch (error) {
-            console.error('Chat error:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error('Chat error:', errorMessage, error);
+
+            let userFriendlyMessage = "I'm having trouble connecting right now. Please try again in a moment.";
+
+            // Provide more specific error messages when possible
+            if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
+                userFriendlyMessage = "I'm having trouble connecting to the server. Please check your internet connection and try again.";
+            } else if (errorMessage.includes('timeout')) {
+                userFriendlyMessage = "The request is taking longer than expected. Please try again.";
+            }
+
             setMessages(prev => [...prev, {
                 role: 'assistant',
-                content: "I'm having trouble connecting right now. Please try again in a moment.",
+                content: userFriendlyMessage,
                 timestamp: new Date()
             }]);
         } finally {

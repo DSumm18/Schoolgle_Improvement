@@ -77,7 +77,16 @@ export async function listGoogleFilesRecursive(
     const folders: FileMetadataExtended[] = [];
     const files: FileMetadataExtended[] = [];
 
-    items.forEach((item: any) => {
+    interface GoogleDriveItem {
+        id: string;
+        name: string;
+        mimeType: string;
+        modifiedTime?: string;
+        size?: string;
+        webViewLink?: string;
+    }
+
+    items.forEach((item: GoogleDriveItem) => {
         const metadata: FileMetadataExtended = {
             id: item.id,
             name: item.name,
@@ -247,9 +256,17 @@ export async function listOneDriveFiles(accessToken: string, folderId: string): 
         throw new Error(`Microsoft Graph API error: ${response.statusText}`);
     }
 
-    const data = await response.json();
+    interface OneDriveItem {
+        id: string;
+        name: string;
+        file?: {
+            mimeType?: string;
+        };
+    }
+
+    const data: { value: OneDriveItem[] } = await response.json();
     // Map OneDrive items to common metadata
-    return data.value.map((item: any) => ({
+    return data.value.map((item: OneDriveItem) => ({
         id: item.id,
         name: item.name,
         mimeType: item.file?.mimeType || 'application/octet-stream'
@@ -286,7 +303,19 @@ export async function listOneDriveFilesRecursive(
     const folders: FileMetadataExtended[] = [];
     const files: FileMetadataExtended[] = [];
 
-    items.forEach((item: any) => {
+    interface OneDriveItemExtended {
+        id: string;
+        name: string;
+        file?: {
+            mimeType?: string;
+        };
+        folder?: object;
+        lastModifiedDateTime?: string;
+        size?: number;
+        webUrl?: string;
+    }
+
+    items.forEach((item: OneDriveItemExtended) => {
         const metadata: FileMetadataExtended = {
             id: item.id,
             name: item.name,

@@ -14,6 +14,9 @@ import { parseDocx, parseExcel, parseImage } from "@/lib/extractors";
 import { matchDocumentToEvidenceRequirements } from "@/lib/ai-evidence-matcher";
 import { updateAssessmentsFromEvidence, generateCategorySummaries } from "@/lib/assessment-updater";
 import { generateEmbedding } from "@/lib/embeddings";
+import { scanRequestSchema, validateRequest } from "@/lib/validations";
+import { scanLimiter } from "@/lib/rateLimit";
+import { logger, createOperationLogger } from "@/lib/logger";
 
 // --- Types ---
 
@@ -53,33 +56,39 @@ async function extractTextFromFile(
     accessToken: string,
     provider: string
 ): Promise<string> {
+    const extractLogger = createOperationLogger('extractTextFromFile', { fileId, mimeType, provider });
+
     try {
         // Handle Google Workspace files (export as text)
         if (provider === 'google.com' && mimeType.includes('vnd.google-apps')) {
-            console.log(`[Extract] Exporting Google Workspace file: ${mimeType}`);
+            extractLogger.debug('Exporting Google Workspace file');
             return await exportGoogleDoc(accessToken, fileId, mimeType);
         }
 
         // Handle DOCX
         if (mimeType.includes('wordprocessingml') || mimeType.includes('docx')) {
+            extractLogger.debug('Parsing DOCX file');
             return await parseDocx(buffer);
         }
 
         // Handle XLSX
         if (mimeType.includes('spreadsheetml') || mimeType.includes('xlsx')) {
+            extractLogger.debug('Parsing Excel file');
             return await parseExcel(buffer);
         }
 
         // Handle images (OCR)
         if (mimeType.includes('image')) {
+            extractLogger.debug('Parsing image with OCR');
             return await parseImage(buffer, mimeType);
         }
 
         // Fallback: Try as plain text
+        extractLogger.debug('Attempting plain text extraction');
         return buffer.toString('utf-8').substring(0, 10000);
 
     } catch (error) {
-        console.error(`[Extract] Failed to extract text:`, error);
+        extractLogger.error('Text extraction failed', undefined, error);
         return '';
     }
 }
@@ -96,6 +105,8 @@ async function shouldProcessFile(
         return true; // Process if we can't check
     }
 
+    const dedupLogger = createOperationLogger('shouldProcessFile', { fileId: file.id, userId });
+
     try {
         // Check if file exists in database and hasn't been modified
         const { data, error } = await supabase
@@ -106,14 +117,23 @@ async function shouldProcessFile(
             .single();
 
         if (error || !data) {
+            dedupLogger.debug('File not found in database, will process');
             return true; // File not in DB, process it
         }
 
         const lastScannedTime = data.metadata?.scannedAt;
-        return shouldRescanFile(file.modifiedTime, lastScannedTime);
+        const shouldRescan = shouldRescanFile(file.modifiedTime, lastScannedTime);
+
+        dedupLogger.debug('Deduplication check complete', undefined, {
+            shouldRescan,
+            lastScannedTime,
+            modifiedTime: file.modifiedTime
+        });
+
+        return shouldRescan;
 
     } catch (error) {
-        console.error('[Dedup] Error checking file:', error);
+        dedupLogger.error('Error checking file for deduplication', undefined, error);
         return true; // On error, process the file
     }
 }
@@ -121,27 +141,39 @@ async function shouldProcessFile(
 // --- Main Handler ---
 
 export async function POST(req: NextRequest) {
+    const scanLogger = createOperationLogger('scan-api', { endpoint: '/api/scan' });
+
     try {
-        const body: ScanRequest = await req.json();
+        // Rate limiting check
+        const rateLimitResult = await scanLimiter.check(req);
+        if (!rateLimitResult.allowed) {
+            scanLogger.warn('Rate limit exceeded');
+            return rateLimitResult.response!;
+        }
+
+        // Parse and validate request body
+        const body = await req.json();
+        const validation = validateRequest(scanRequestSchema, body);
+
+        if (!validation.success) {
+            scanLogger.warn('Invalid request', undefined, undefined, { validationError: validation.error });
+            return new Response(JSON.stringify({ error: validation.error }), {
+                status: 400,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+
         const {
             provider,
             accessToken,
             folderId,
             userId,
-            recursive = true,
-            maxFiles = 50,
-            useAI = true
-        } = body;
+            recursive,
+            maxFiles,
+            useAI
+        } = validation.data;
 
-        console.log(`[Scan] Starting scan - Provider: ${provider}, Recursive: ${recursive}, AI: ${useAI}`);
-
-        // Validate inputs
-        if (!provider || !accessToken || !folderId) {
-            return new Response(JSON.stringify({ error: "Missing required parameters" }), {
-                status: 400,
-                headers: { 'Content-Type': 'application/json' }
-            });
-        }
+        scanLogger.info('Starting scan', { provider, userId, folderId }, { recursive, maxFiles, useAI });
 
         // Initialize Supabase
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;

@@ -361,8 +361,14 @@ export const SIAMS_EVIDENCE_KEYWORDS: Record<string, string[]> = {
     ]
 };
 
+export interface SiamsAssessment {
+    rating?: string;
+    rationale?: string;
+    evidenceCount?: number;
+}
+
 // Calculate strand readiness
-export function calculateStrandReadiness(strandId: string, assessments: Record<string, any>): { userScore: number; evidenceCount: number } {
+export function calculateStrandReadiness(strandId: string, assessments: Record<string, SiamsAssessment>): { userScore: number; evidenceCount: number } {
     const strand = SIAMS_FRAMEWORK.find(s => s.id === strandId);
     if (!strand) return { userScore: 0, evidenceCount: 0 };
     
@@ -389,7 +395,7 @@ export function calculateStrandReadiness(strandId: string, assessments: Record<s
 }
 
 // Calculate overall SIAMS readiness
-export function calculateOverallSiamsReadiness(assessments: Record<string, any>): { userScore: number; totalEvidence: number } {
+export function calculateOverallSiamsReadiness(assessments: Record<string, SiamsAssessment>): { userScore: number; totalEvidence: number } {
     let totalScore = 0;
     let totalEvidence = 0;
     let strandCount = 0;

@@ -649,7 +649,14 @@ export function calculateAIRating(evidenceCount: number, requiredCount: number):
     return 'urgent_improvement';
 }
 
-export function calculateCategoryReadiness(categoryId: string, assessments: Record<string, any>): { userScore: number; aiScore: number } {
+export interface OfstedAssessment {
+    schoolRating?: string;
+    schoolRationale?: string;
+    aiRating?: string;
+    aiRationale?: string;
+}
+
+export function calculateCategoryReadiness(categoryId: string, assessments: Record<string, OfstedAssessment>): { userScore: number; aiScore: number } {
     const category = OFSTED_FRAMEWORK.find(c => c.id === categoryId);
     if (!category) return { userScore: 0, aiScore: 0 };
     
@@ -672,7 +679,7 @@ export function calculateCategoryReadiness(categoryId: string, assessments: Reco
     return { userScore, aiScore };
 }
 
-export function calculateOverallReadiness(assessments: Record<string, any>): { userScore: number; aiScore: number } {
+export function calculateOverallReadiness(assessments: Record<string, OfstedAssessment>): { userScore: number; aiScore: number } {
     let totalUserScore = 0;
     let totalAIScore = 0;
     let categoryCount = 0;

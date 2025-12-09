@@ -1,12 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { processObservationSchema, validateRequest } from '@/lib/validations';
+import { aiLimiter } from '@/lib/rateLimit';
 
 export async function POST(req: NextRequest) {
     try {
-        const { transcript, teacherName, subject, yearGroup } = await req.json();
-
-        if (!transcript) {
-            return NextResponse.json({ error: 'No transcript provided' }, { status: 400 });
+        // Rate limiting check
+        const rateLimitResult = await aiLimiter.check(req);
+        if (!rateLimitResult.allowed) {
+            return rateLimitResult.response!;
         }
+
+        // Parse and validate request body
+        const body = await req.json();
+        const validation = validateRequest(processObservationSchema, body);
+
+        if (!validation.success) {
+            return NextResponse.json({ error: validation.error }, { status: 400 });
+        }
+
+        const { transcript, teacherName, subject, yearGroup } = validation.data;
 
         // Use OpenRouter/OpenAI for processing
         const apiKey = process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY;

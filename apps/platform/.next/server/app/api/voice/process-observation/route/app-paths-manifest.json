@@ -1,0 +1,3 @@
+{
+  "/api/voice/process-observation/route": "app/api/voice/process-observation/route.js"
+}

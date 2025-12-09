@@ -93,9 +93,31 @@ export default function OfstedFrameworkView({ assessments, setAssessments, local
     };
 
     // Handle action creation from Ed
-    const handleEdAction = (action: any) => {
+    const handleEdAction = (action: ActionItem) => {
         console.log('Ed created action:', action);
-        // TODO: Add to assessments/actions
+
+        // Find the subcategory ID from the action's category name
+        const matchingSubcategory = OFSTED_FRAMEWORK.flatMap(c => c.subcategories).find(
+            sub => sub.name.toLowerCase().includes(action.category.toLowerCase()) ||
+                   action.category.toLowerCase().includes(sub.name.toLowerCase())
+        );
+
+        if (!matchingSubcategory) {
+            console.warn('Could not find matching subcategory for action:', action.category);
+            return;
+        }
+
+        const subId = matchingSubcategory.id;
+        const subAssessment = assessments[subId] || {};
+        const currentActions = subAssessment.actions || [];
+
+        // Add the new action to the subcategory's actions
+        const newActions = [...currentActions, action];
+
+        setAssessments({
+            ...assessments,
+            [subId]: { ...subAssessment, actions: newActions }
+        });
     };
 
     // Calculate Overall Scores

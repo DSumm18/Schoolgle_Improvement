@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { inviteUserSchema, validateRequest } from '@/lib/validations';
+import { standardLimiter } from '@/lib/rateLimit';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -8,11 +10,21 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 export async function POST(req: NextRequest) {
     try {
-        const { email, role, organizationId, invitedBy } = await req.json();
-
-        if (!email || !role || !organizationId || !invitedBy) {
-            return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+        // Rate limiting check
+        const rateLimitResult = await standardLimiter.check(req);
+        if (!rateLimitResult.allowed) {
+            return rateLimitResult.response!;
         }
+
+        // Parse and validate request body
+        const body = await req.json();
+        const validation = validateRequest(inviteUserSchema, body);
+
+        if (!validation.success) {
+            return NextResponse.json({ error: validation.error }, { status: 400 });
+        }
+
+        const { email, role, organizationId, invitedBy } = validation.data;
 
         // Check if user is already a member
         // (Optional check, but good UX)

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { trackUsageSchema, validateRequest } from '@/lib/validations';
+import { standardLimiter } from '@/lib/rateLimit';
 
 const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -8,26 +10,32 @@ const supabase = createClient(
 
 export async function POST(req: NextRequest) {
     try {
+        // Rate limiting check
+        const rateLimitResult = await standardLimiter.check(req);
+        if (!rateLimitResult.allowed) {
+            return rateLimitResult.response!;
+        }
+
+        // Parse and validate request body
+        const body = await req.json();
+        const validation = validateRequest(trackUsageSchema, body);
+
+        if (!validation.success) {
+            return NextResponse.json({ error: validation.error }, { status: 400 });
+        }
+
         const {
             organizationId,
             userId,
             eventType,
             eventCategory,
-            metadata = {},
+            metadata,
             sessionId,
-            // AI specific
             aiModel,
             aiTokensInput,
             aiTokensOutput,
             aiCostUsd
-        } = await req.json();
-
-        if (!organizationId || !eventType) {
-            return NextResponse.json(
-                { error: 'organizationId and eventType are required' },
-                { status: 400 }
-            );
-        }
+        } = validation.data;
 
         // Insert usage event
         const { data, error } = await supabase
