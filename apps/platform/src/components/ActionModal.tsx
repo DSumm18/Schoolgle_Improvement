@@ -1,8 +1,15 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { ActionItem, ActionNote, OFSTED_FRAMEWORK } from '@/lib/ofsted-framework';
+import { ActionItem, OFSTED_FRAMEWORK } from '@/lib/ofsted-framework';
 import { X, Calendar, User, AlignLeft, CheckCircle, AlertCircle, Clock, Save, MessageSquare, Trash2, Plus, ArrowRight } from 'lucide-react';
+
+interface ActionNote {
+    id: string;
+    author: string;
+    timestamp: string;
+    content: string;
+}
 
 interface ActionModalProps {
     isOpen: boolean;
@@ -38,7 +45,7 @@ export default function ActionModal({
     const [startDate, setStartDate] = useState('');
     const [dueDate, setDueDate] = useState('');
     const [priority, setPriority] = useState<'high' | 'medium' | 'low'>('medium');
-    const [status, setStatus] = useState<'open' | 'in_progress' | 'completed'>('open');
+    const [status, setStatus] = useState<'open' | 'in_progress' | 'completed' | 'not_started'>('open');
 
     // Notes State
     const [notes, setNotes] = useState<ActionNote[]>([]);
@@ -78,11 +85,9 @@ export default function ActionModal({
         if (newNote.trim()) {
             finalNotes.push({
                 id: crypto.randomUUID(),
-                userId: 'current-user',
-                userName: 'You',
-                message: newNote,
-                timestamp: new Date(),
-                type: 'user_note'
+                author: 'You',
+                timestamp: new Date().toISOString(),
+                content: newNote
             });
         }
 
@@ -110,11 +115,9 @@ export default function ActionModal({
             ...notes,
             {
                 id: crypto.randomUUID(),
-                userId: 'current-user',
-                userName: 'You',
-                message: newNote,
-                timestamp: new Date(),
-                type: 'user_note'
+                author: 'You',
+                timestamp: new Date().toISOString(),
+                content: newNote
             }
         ]);
         setNewNote('');
@@ -220,10 +223,10 @@ export default function ActionModal({
                                         {notes.map(note => (
                                             <div key={note.id} className="text-sm bg-white p-3 rounded border border-gray-200 shadow-sm">
                                                 <div className="flex justify-between text-xs text-gray-500 mb-1">
-                                                    <span className="font-medium text-gray-900">{note.userName}</span>
+                                                    <span className="font-medium text-gray-900">{note.author}</span>
                                                     <span>{new Date(note.timestamp).toLocaleDateString()} {new Date(note.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                                 </div>
-                                                <p className="text-gray-700">{note.message}</p>
+                                                <p className="text-gray-700">{note.content}</p>
                                             </div>
                                         ))}
                                     </div>

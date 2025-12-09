@@ -19,6 +19,7 @@ import AudienceSection from '@/components/website/AudienceSection';
 import BlogSection from '@/components/website/BlogSection';
 import DownloadSection from '@/components/website/DownloadSection';
 import Footer from '@/components/website/Footer';
+import EdWidget from '@/components/EdWidget';
 
 // Product suites with clean styling
 const productSuites = [
@@ -239,12 +240,12 @@ export default function HomePage() {
                                                                 <span className={`text-sm ${app.status === 'live' ? 'text-gray-900' : 'text-gray-500'}`}>
                                                                     {app.name}
                                                                 </span>
-                                                                {app.included && (
+                                                                {('included' in app && app.included) ? (
                                                                     <span className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">Core</span>
-                                                                )}
-                                                                {app.addon && (
+                                                                ) : null}
+                                                                {('addon' in app && app.addon) ? (
                                                                     <span className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">Add-on</span>
-                                                                )}
+                                                                ) : null}
                                                             </div>
                                                             <span className={`text-xs ${
                                                                 app.status === 'live' ? 'text-green-600' :
@@ -351,6 +352,9 @@ export default function HomePage() {
 
             {/* Website Footer */}
             <Footer />
+
+            {/* Ed Widget - Complete widget with voice, morphing, and all features */}
+            <EdWidget />
         </div>
     );
 }

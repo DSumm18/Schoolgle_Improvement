@@ -10,10 +10,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@schoolgle/ed-widget": "*",
     "@schoolgle/ed-backend": "*",
+    "@schoolgle/ed-widget": "*",
     "@schoolgle/shared": "*",
     "@supabase/supabase-js": "^2.84.0",
+    "country-flag-icons": "^1.6.4",
     "dotenv": "^17.2.3",
     "firebase": "^12.6.0",
     "framer-motion": "^12.23.24",

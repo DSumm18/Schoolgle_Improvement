@@ -557,7 +557,7 @@ export default function SiamsFrameworkView({
                     onClose={() => setIsActionModalOpen(false)}
                     onSave={handleSaveAction}
                     categoryName={currentStrandName || ''}
-                    subCategoryName={SIAMS_FRAMEWORK.flatMap(s => s.inspectionQuestions).find(q => q.id === currentActionQuestionId)?.question?.substring(0, 50)}
+                    subCategoryName={SIAMS_FRAMEWORK.flatMap(s => s.inspectionQuestions).find(q => q.id === currentActionQuestionId)?.question?.substring(0, 50) || ''}
                     evidenceItem={currentActionEvidence || undefined}
                     initialData={editingAction as any}
                 />

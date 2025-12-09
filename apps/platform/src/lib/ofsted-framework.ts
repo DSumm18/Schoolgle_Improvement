@@ -15,6 +15,8 @@ export interface SubCategory {
     evidenceRequired: EvidenceItem[];
     keyIndicators: string[];
     inspectionFocus: string[];
+    guidanceSummary?: string;
+    guidanceLink?: string;
 }
 
 export interface Category {
@@ -29,17 +31,21 @@ export interface Category {
 
 export interface ActionItem {
     id: string;
-    title: string;
+    title?: string;
     description: string;
-    category: string;
-    subCategory: string;
+    rationale?: string;
+    category?: string;
+    subCategory?: string;
     evidenceItem?: string;
     priority: 'high' | 'medium' | 'low';
     dueDate: string;
-    owner: string;
-    status: 'not_started' | 'in_progress' | 'completed';
-    createdAt: string;
-    updatedAt: string;
+    startDate?: string;
+    owner?: string;
+    assignee?: string;
+    status: 'not_started' | 'in_progress' | 'completed' | 'open';
+    notes?: any[];
+    createdAt?: string;
+    updatedAt?: string;
 }
 
 // NEW 5-Point Grading Scale (November 2025)

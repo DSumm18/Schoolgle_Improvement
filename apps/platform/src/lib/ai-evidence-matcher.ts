@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import { OFSTED_FRAMEWORK, type OfstedCategory } from './ofsted-framework';
+import { OFSTED_FRAMEWORK, type Category } from './ofsted-framework';
 
 // --- Configuration ---
 
@@ -266,7 +266,7 @@ export async function matchDocumentToEvidenceRequirements(
 
         // Initialize OpenRouter client
         const openai = new OpenAI({
-            apiKey: process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY,
+            apiKey: process.env.VITE_OPENROUTER_API_KEY || process.env.OPENAI_API_KEY,
             baseURL: 'https://openrouter.ai/api/v1',
             defaultHeaders: {
                 'HTTP-Referer': 'https://schoolgle.co.uk',
@@ -312,8 +312,7 @@ export async function matchDocumentToEvidenceRequirements(
             modelUsed: modelId
         };
 
-    } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    } catch (error: any) {
         console.error(`[AI Matcher] Error processing ${documentMetadata.filename}:`, error);
 
         // Try fallback model if primary failed
@@ -332,7 +331,7 @@ export async function matchDocumentToEvidenceRequirements(
             matches: [],
             processingTime: Date.now() - startTime,
             modelUsed: useModel || 'unknown',
-            error: errorMessage
+            error: error.message
         };
     }
 }
@@ -386,19 +385,13 @@ export function matchDocumentToCategories(text: string): {
     evidenceItem: string;
     confidence: number;
 }[] {
-    const matches: {
-        categoryId: string;
-        subcategoryId: string;
-        evidenceItem: string;
-        confidence: number;
-    }[] = [];
+    const matches: any[] = [];
 
     // Simple keyword matching as fallback
     OFSTED_FRAMEWORK.forEach(category => {
         category.subcategories.forEach(sub => {
             sub.evidenceRequired.forEach(evidence => {
-                const evidenceName = typeof evidence === 'string' ? evidence : evidence.name;
-                const keywords = evidenceName.toLowerCase().split(' ').filter(w => w.length > 3);
+                const keywords = evidence.name.toLowerCase().split(' ').filter(w => w.length > 3);
                 const matchCount = keywords.filter(kw =>
                     text.toLowerCase().includes(kw)
                 ).length;
@@ -407,7 +400,7 @@ export function matchDocumentToCategories(text: string): {
                     matches.push({
                         categoryId: category.id,
                         subcategoryId: sub.id,
-                        evidenceItem: evidenceName,
+                        evidenceItem: evidence.name,
                         confidence: Math.min(matchCount / keywords.length, 1)
                     });
                 }
