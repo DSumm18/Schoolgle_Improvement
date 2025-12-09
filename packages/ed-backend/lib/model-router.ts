@@ -127,13 +127,13 @@ export class ModelRouter {
       case 'chat_simple':
       default:
         selectedModel = {
-          model: 'google/gemini-2.0-flash-lite:free',
+          model: 'deepseek/deepseek-chat',
           provider: 'openrouter',
           maxTokens: 1000,
           temperature: 0.7
         };
-        reason = 'Simple query, using fast & cheap model';
-        estimatedCost = 0.00015;
+        reason = 'Simple query, using DeepSeek (cost-effective & reliable)';
+        estimatedCost = 0.0012;
         break;
     }
     

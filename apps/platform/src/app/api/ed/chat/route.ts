@@ -21,9 +21,10 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body = await request.json();
-    const { messages, context } = body as {
+    const { messages, context, stream } = body as {
       messages: Message[];
       context: Partial<EdContext>;
+      stream?: boolean;
     };
 
     if (!messages || !Array.isArray(messages)) {
@@ -84,7 +85,57 @@ export async function POST(request: NextRequest) {
     // Initialize Ed chat handler with OpenRouter
     const chatHandler = new EdChatHandler(apiKey);
 
-    // Handle chat
+    // If streaming is requested, return SSE response
+    if (stream) {
+      const encoder = new TextEncoder();
+
+      const customReadable = new ReadableStream({
+        async start(controller) {
+          try {
+            // Detect language from the last user message
+            const lastUserMessage = messages.filter(m => m.role === 'user').pop();
+            let detectedLanguage = null;
+
+            if (lastUserMessage) {
+              // Simple language detection - will be enhanced by backend
+              const { detectLanguage } = await import('@schoolgle/ed-backend/lib/language-detector');
+              detectedLanguage = detectLanguage(lastUserMessage.content);
+
+              // Send language info first
+              if (detectedLanguage && detectedLanguage.code !== 'en') {
+                const langData = `data: ${JSON.stringify({ language: detectedLanguage })}\n\n`;
+                controller.enqueue(encoder.encode(langData));
+              }
+            }
+
+            for await (const chunk of chatHandler.handleChatStream({
+              messages,
+              context: fullContext
+            })) {
+              const data = `data: ${JSON.stringify({ content: chunk })}\n\n`;
+              controller.enqueue(encoder.encode(data));
+            }
+
+            // Send done message
+            controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+            controller.close();
+          } catch (error) {
+            console.error('[Ed API] Streaming error:', error);
+            controller.error(error);
+          }
+        }
+      });
+
+      return new Response(customReadable, {
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive'
+        }
+      });
+    }
+
+    // Handle non-streaming chat (backward compatibility)
     const response = await chatHandler.handleChat({
       messages,
       context: fullContext

@@ -164,7 +164,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
             switch (reportId) {
                 case 'sef':
                     report = generateSEF(
-                        schoolData,
+                        { ...schoolData, isChurchSchool: schoolData.isChurchSchool || false },
                         ofstedAssessments,
                         evidenceMatches,
                         actions
@@ -173,7 +173,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
                 
                 case 'pp_strategy':
                     report = generatePupilPremiumStrategy(
-                        schoolData,
+                        { ...schoolData, isChurchSchool: schoolData.isChurchSchool || false },
                         ppData || {
                             totalPupils: 200,
                             ppPupils: 40,
@@ -196,7 +196,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
                 
                 case 'sports_premium':
                     report = generateSportsPremiumReport(
-                        schoolData,
+                        { ...schoolData, isChurchSchool: schoolData.isChurchSchool || false },
                         sportsData || {
                             allocation: 19000,
                             carriedForward: 2000,
@@ -212,7 +212,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
                 
                 case 'sdp':
                     report = generateSDP(
-                        schoolData,
+                        { ...schoolData, isChurchSchool: schoolData.isChurchSchool || false },
                         sdpPriorities || [
                             {
                                 number: 1,
@@ -238,7 +238,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
                 
                 default:
                     // Generate a placeholder for other report types
-                    report = generateSEF(schoolData, ofstedAssessments, evidenceMatches, actions);
+                    report = generateSEF({ ...schoolData, isChurchSchool: schoolData.isChurchSchool || false }, ofstedAssessments, evidenceMatches, actions);
                     report.title = `${reportTypes.find(r => r.id === reportId)?.name || 'Report'} - ${schoolData.name}`;
                     report.type = reportId;
             }

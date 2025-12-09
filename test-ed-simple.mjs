@@ -25,7 +25,7 @@ const testConnection = async () => {
         'X-Title': 'Schoolgle Ed AI Test'
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.0-flash-lite:free',
+        model: 'deepseek/deepseek-chat',
         messages: [
           { role: 'user', content: 'Say "Hello from Ed!"' }
         ],
@@ -42,7 +42,7 @@ const testConnection = async () => {
     const message = data.choices[0]?.message?.content;
 
     console.log('✅ OpenRouter API connection successful!\n');
-    console.log('Response from Gemini 2.0 Flash Lite:');
+    console.log('Response from DeepSeek Chat:');
     console.log('─'.repeat(60));
     console.log(message);
     console.log('─'.repeat(60));

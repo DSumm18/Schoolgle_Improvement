@@ -205,8 +205,8 @@ const OrigamiParticles = ({
             rotation: number;
 
             constructor() {
-                this.x = Math.random() * canvas.width;
-                this.y = Math.random() * canvas.height;
+                this.x = Math.random() * (canvas?.width || 800);
+                this.y = Math.random() * (canvas?.height || 600);
                 this.vx = (Math.random() - 0.5) * 1;
                 this.vy = (Math.random() - 0.5) * 1;
                 this.size = Math.random() * 2.5 + 1.5;

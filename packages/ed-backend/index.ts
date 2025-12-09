@@ -3,3 +3,4 @@ export * from './lib/model-router';
 export * from './lib/prompt-builder';
 export * from './lib/chat';
 export * from './lib/schoolgle-context';
+export * from './lib/language-detector';

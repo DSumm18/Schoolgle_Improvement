@@ -359,7 +359,7 @@ export async function POST(req: NextRequest) {
 
         // Generate assessment updates from evidence
         let assessmentUpdates = {};
-        let categorySummaries = [];
+        let categorySummaries: any[] = [];
 
         if (useAI && allEvidenceMatches.length > 0) {
             try {

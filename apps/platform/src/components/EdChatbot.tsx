@@ -1,16 +1,24 @@
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
-import { 
-    MessageCircle, X, Send, Loader2, Sparkles, 
+import {
+    MessageCircle, X, Send, Loader2, Sparkles,
     BookOpen, GraduationCap, BarChart3, Target,
     Lightbulb, ChevronDown, Minimize2, Maximize2
 } from 'lucide-react';
+import { EdShapeParticles } from './EdShapeParticles';
 
 interface Message {
     role: 'user' | 'assistant';
     content: string;
     timestamp: Date;
+}
+
+interface LanguageInfo {
+    code: string;
+    name: string;
+    countryCode: string; // ISO country code for flag integration
+    prompt: string;
 }
 
 interface EdChatbotProps {
@@ -37,6 +45,7 @@ export default function EdChatbot({ context }: EdChatbotProps) {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [detectedLanguage, setDetectedLanguage] = useState<LanguageInfo | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
@@ -77,20 +86,92 @@ export default function EdChatbot({ context }: EdChatbotProps) {
                     })),
                     context: {
                         ...context,
-                        topic: text // Add the current query as topic for EEF matching
-                    }
+                        topic: text
+                    },
+                    stream: true // Enable streaming
                 })
             });
 
-            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(`API error: ${response.status}`);
+            }
 
-            const assistantMessage: Message = {
+            // Handle streaming response
+            const reader = response.body?.getReader();
+            if (!reader) {
+                throw new Error('No response body reader');
+            }
+
+            const decoder = new TextDecoder();
+            let streamedContent = '';
+
+            // Create placeholder assistant message
+            const assistantMessageIndex = messages.length + 1;
+            setMessages(prev => [...prev, {
                 role: 'assistant',
-                content: data.response || "I'm sorry, I couldn't process that. Could you try again?",
+                content: '',
                 timestamp: new Date()
-            };
+            }]);
 
-            setMessages(prev => [...prev, assistantMessage]);
+            try {
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.slice(6);
+                            if (data === '[DONE]') continue;
+
+                            try {
+                                const parsed = JSON.parse(data);
+
+                                // Handle language detection
+                                if (parsed.language) {
+                                    setDetectedLanguage(parsed.language);
+                                }
+
+                                // Handle content chunks
+                                if (parsed.content) {
+                                    streamedContent += parsed.content;
+
+                                    // Update the assistant message with new content
+                                    setMessages(prev => {
+                                        const newMessages = [...prev];
+                                        newMessages[assistantMessageIndex] = {
+                                            role: 'assistant',
+                                            content: streamedContent,
+                                            timestamp: new Date()
+                                        };
+                                        return newMessages;
+                                    });
+                                }
+                            } catch (e) {
+                                // Skip invalid JSON
+                            }
+                        }
+                    }
+                }
+            } finally {
+                reader.releaseLock();
+            }
+
+            // If no content was streamed, show fallback
+            if (!streamedContent) {
+                setMessages(prev => {
+                    const newMessages = [...prev];
+                    newMessages[assistantMessageIndex] = {
+                        role: 'assistant',
+                        content: "I'm sorry, I couldn't process that. Could you try again?",
+                        timestamp: new Date()
+                    };
+                    return newMessages;
+                });
+            }
+
         } catch (error) {
             console.error('Chat error:', error);
             setMessages(prev => [...prev, {
@@ -125,14 +206,16 @@ export default function EdChatbot({ context }: EdChatbotProps) {
         return (
             <button
                 onClick={() => setIsOpen(true)}
-                className="fixed bottom-6 right-6 w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center group z-50"
+                className="fixed bottom-6 right-6 group z-50 hover:scale-110 transition-transform duration-300"
                 title="Chat with Ed"
             >
-                <div className="relative">
-                    <GraduationCap size={28} className="group-hover:scale-110 transition-transform" />
-                    <Sparkles size={14} className="absolute -top-1 -right-1 text-yellow-300 animate-pulse" />
-                </div>
-                <span className="absolute -top-2 -left-2 bg-yellow-400 text-gray-900 text-xs font-bold px-2 py-0.5 rounded-full">
+                <EdShapeParticles
+                    type={detectedLanguage && detectedLanguage.code !== 'en' ? 'flag' : 'orb'}
+                    countryCode={detectedLanguage?.countryCode}
+                    size={64}
+                    animated={true}
+                />
+                <span className="absolute -top-2 -left-2 bg-yellow-400 text-gray-900 text-xs font-bold px-2 py-0.5 rounded-full shadow-lg">
                     Ed
                 </span>
             </button>
@@ -148,20 +231,24 @@ export default function EdChatbot({ context }: EdChatbotProps) {
                 isMinimized ? 'h-14' : 'h-[32rem]'
             }`}>
                 {/* Header */}
-                <div 
+                <div
                     className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white p-4 flex items-center justify-between cursor-pointer"
                     onClick={() => isMinimized && setIsMinimized(false)}
                 >
                     <div className="flex items-center gap-3">
-                        <div className="relative">
-                            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                                <GraduationCap size={22} />
-                            </div>
-                            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full border-2 border-white"></div>
-                        </div>
+                        <EdShapeParticles
+                            type={detectedLanguage && detectedLanguage.code !== 'en' ? 'flag' : 'orb'}
+                            countryCode={detectedLanguage?.countryCode}
+                            size={40}
+                            animated={true}
+                        />
                         <div>
                             <h3 className="font-bold text-lg">Ed</h3>
-                            <p className="text-xs text-white/80">Your AI School Improvement Partner</p>
+                            <p className="text-xs text-white/80">
+                                {detectedLanguage && detectedLanguage.code !== 'en'
+                                    ? `Speaking ${detectedLanguage.name}`
+                                    : 'Your AI School Improvement Partner'}
+                            </p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -187,12 +274,12 @@ export default function EdChatbot({ context }: EdChatbotProps) {
                             {messages.length === 0 ? (
                                 // Welcome Screen
                                 <div className="text-center py-4">
-                                    <div className="w-16 h-16 bg-gradient-to-br from-emerald-100 to-teal-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                        <GraduationCap className="text-emerald-600" size={32} />
+                                    <div className="mx-auto mb-4 flex justify-center">
+                                        <EdShapeParticles type="orb" size={64} animated={true} />
                                     </div>
-                                    <h4 className="font-bold text-gray-900 mb-2">Hello! I'm Ed 👋</h4>
+                                    <h4 className="font-bold text-gray-900 mb-2">Hello! I'm Ed</h4>
                                     <p className="text-sm text-gray-600 mb-4">
-                                        I can help you understand Ofsted expectations, explain EEF research, 
+                                        I can help you understand Ofsted expectations, explain EEF research,
                                         and suggest evidence-based improvements.
                                     </p>
                                     <div className="grid grid-cols-2 gap-2">
@@ -222,7 +309,12 @@ export default function EdChatbot({ context }: EdChatbotProps) {
                                         } px-4 py-3`}>
                                             {message.role === 'assistant' && (
                                                 <div className="flex items-center gap-2 mb-2 pb-2 border-b border-gray-100">
-                                                    <GraduationCap size={16} className="text-emerald-600" />
+                                                    <EdShapeParticles
+                                                        type={detectedLanguage && detectedLanguage.code !== 'en' ? 'flag' : 'orb'}
+                                                        countryCode={detectedLanguage?.countryCode}
+                                                        size={20}
+                                                        animated={false}
+                                                    />
                                                     <span className="text-xs font-semibold text-emerald-600">Ed</span>
                                                 </div>
                                             )}
@@ -237,8 +329,8 @@ export default function EdChatbot({ context }: EdChatbotProps) {
                             {isLoading && (
                                 <div className="flex justify-start">
                                     <div className="bg-white text-gray-800 rounded-2xl rounded-bl-md shadow-sm border border-gray-100 px-4 py-3">
-                                        <div className="flex items-center gap-2">
-                                            <Loader2 size={16} className="animate-spin text-emerald-600" />
+                                        <div className="flex items-center gap-3">
+                                            <EdShapeParticles type="thinking" size={32} animated={true} />
                                             <span className="text-sm text-gray-500">Ed is thinking...</span>
                                         </div>
                                     </div>
