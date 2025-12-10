@@ -1,0 +1,30 @@
+{
+  "name": "@schoolgle/mcp-server",
+  "version": "1.0.0",
+  "description": "Model Context Protocol Server for Schoolgle - Secure Multi-Tenant MCP Implementation",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js",
+    "lint": "eslint . --ext .ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.5.0",
+    "@schoolgle/core": "*",
+    "@supabase/supabase-js": "^2.84.0",
+    "zod": "^4.1.13"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "typescript": "^5",
+    "eslint": "^9"
+  },
+  "files": [
+    "dist"
+  ]
+}
+

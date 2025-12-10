@@ -1,233 +1,197 @@
-# Schoolgle - Quick Start Guide
+# Quick Start Guide
 
-## Current Status ✅
-
-Your development environment is set up and running:
-
-- ✅ **Dev Server**: http://localhost:3000
-- ✅ **Firebase Auth**: Configured
-- ✅ **Environment**: `.env.local` created with real credentials
-- ✅ **Dependencies**: Installed (517 packages)
-
-## ⚠️ Database Setup Required
-
-**You cannot sign in yet because the database tables haven't been created in Supabase.**
-
-### Step 1: Create Database Tables
-
-1. **Open Supabase Dashboard**
-   - Go to: https://app.supabase.com/
-   - Login and select your project
-
-2. **Go to SQL Editor**
-   - Click "SQL Editor" in the left sidebar
-   - Click "New query"
-
-3. **Run the Schema**
-   - Open `supabase_schema.sql` in this directory
-   - Copy ALL contents (it's a large file)
-   - Paste into the SQL Editor
-   - Click "Run" button
-   - Wait for "Success" message (may take 30-60 seconds)
-
-4. **Verify Tables Created**
-   - Go to "Table Editor" in left sidebar
-   - You should see 20+ tables including:
-     - users
-     - organizations
-     - organization_members
-     - ofsted_assessments
-     - evidence_items
-     - actions
-     - etc.
-
-### Step 2: Configure Firebase Authentication
-
-Your Firebase is already configured, but you need to enable the auth providers:
-
-1. **Go to Firebase Console**
-   - Visit: https://console.firebase.google.com/
-   - Select project: `schoolgle`
-
-2. **Enable Google Sign-In**
-   - Go to "Authentication" → "Sign-in method"
-   - Click "Google"
-   - Enable it
-   - Save
-
-3. **Enable Microsoft Sign-In (Optional)**
-   - Click "Microsoft"
-   - You'll need to set up Azure AD app
-   - Add Client ID and Secret
-   - Save
-
-### Step 3: First Sign-In
-
-1. **Open Application**
-   - Go to: http://localhost:3000
-   - Click "Sign In" or go to http://localhost:3000/login
-
-2. **Sign In with Google**
-   - Click "Sign in with Google"
-   - Choose your Google account
-   - Authorize the app
-
-3. **Create Organization**
-   - After first sign-in, you'll need to create/join an organization
-   - Fill in school details
-   - You'll be set as admin
-
-## Authentication Flow
-
-```
-User → Google/Microsoft → Firebase Auth → Your App
-                                            ↓
-                                      Supabase Database
-                                            ↓
-                                  Creates user record
-                                  + organization link
-```
-
-## Troubleshooting
-
-### Can't Sign In
-- ✅ Check Firebase Console → Authentication is enabled
-- ✅ Verify `.env.local` has correct Firebase keys
-- ✅ Make sure dev server is running
-
-### Database Errors
-- ✅ Run `supabase_schema.sql` in Supabase SQL Editor
-- ✅ Check Supabase Dashboard → Logs for errors
-- ✅ Verify tables exist in Table Editor
-
-### "User not found" After Sign-In
-- This is normal on first sign-in
-- The app will create user record automatically
-- Check `users` table in Supabase
-
-### Firebase Errors
-```
-Error: auth/invalid-api-key
-```
-- Check `.env.local` has correct `NEXT_PUBLIC_FIREBASE_API_KEY`
-- Restart dev server after changing `.env.local`
-
-```
-Error: auth/unauthorized-domain
-```
-- Go to Firebase Console → Authentication → Settings
-- Add `localhost` to authorized domains
-
-## What Each Service Does
-
-### Firebase Authentication
-- Handles user login/signup
-- Supports Google and Microsoft OAuth
-- Manages user sessions
-- Returns user ID (UID) used everywhere
-
-### Supabase Database
-- Stores all application data
-- User profiles, organizations, assessments
-- Evidence, actions, documents
-- Uses Firebase UID as primary key
-
-### OpenRouter AI
-- Powers evidence matching
-- Analyzes documents
-- Generates reports
-- Uses DeepSeek V3 model (cost-effective)
-
-## Available Features After Setup
-
-Once signed in, you can access:
-
-### 🎯 Ofsted Dashboard
-- `/dashboard` - Main inspection readiness dashboard
-- Self-assessment ratings
-- Evidence mapping
-- Action planning
-- Gantt charts
-
-### 📊 SIAMS Framework (Church Schools)
-- `/dashboard` - Toggle to SIAMS view
-- 7 inspection strands
-- Evidence requirements
-
-### 📄 Document Scanning
-- Upload documents (Word, PDF, Excel, images)
-- AI-powered evidence extraction
-- Automatic framework mapping
-
-### ✅ Action Management
-- Create improvement actions
-- Assign to staff
-- Track progress
-- Timeline view
-
-### 📝 Reports
-- SEF Generator
-- Pupil Premium Strategy
-- Sports Premium
-- School Development Plan
-
-## Next Steps
-
-1. ✅ **Set up database** (run SQL schema)
-2. ✅ **Enable Firebase auth providers**
-3. ✅ **Sign in with Google**
-4. ✅ **Create your organization**
-5. ✅ **Start using the dashboard!**
-
-## Need Help?
-
-- Check `SUPABASE_SETUP.md` for detailed database setup
-- Check browser console (F12) for errors
-- Check dev server terminal for backend errors
-- Review Firebase Console for auth issues
-
-## Development Server Commands
-
-```bash
-# Start dev server
-npm run dev
-
-# Build for production
-npm run build
-
-# Run production build
-npm start
-```
-
-## File Structure
-
-```
-src/
-├── app/
-│   ├── page.tsx              # Homepage/landing
-│   ├── login/page.tsx        # Login page
-│   ├── dashboard/page.tsx    # Main dashboard
-│   └── api/                  # API routes
-├── components/
-│   ├── OfstedFrameworkView.tsx
-│   ├── ActionsDashboard.tsx
-│   └── ...
-├── lib/
-│   ├── firebase.ts           # Firebase config
-│   ├── ofsted-framework.ts   # Framework data
-│   └── ...
-└── context/
-    └── AuthContext.tsx       # Auth state
-```
-
-## Important URLs
-
-- **Application**: http://localhost:3000
-- **Login**: http://localhost:3000/login
-- **Dashboard**: http://localhost:3000/dashboard
-- **Firebase Console**: https://console.firebase.google.com/
-- **Supabase Dashboard**: https://app.supabase.com/
+**Schoolgle MCP Server - Getting Started in 5 Minutes**
 
 ---
 
-**Remember**: The database MUST be set up before you can sign in!
+## Prerequisites
+
+- Node.js 20+
+- Supabase project in EU region (`eu-west-2` recommended)
+- Supabase CLI (optional, for migrations)
+
+---
+
+## Step 1: Install Dependencies
+
+```bash
+# Install root dependencies
+npm install
+
+# Install package dependencies
+cd packages/core && npm install
+cd ../mcp-server && npm install
+```
+
+---
+
+## Step 2: Set Environment Variables
+
+```bash
+# .env file
+NEXT_PUBLIC_SUPABASE_URL=https://[your-project].supabase.co
+SUPABASE_ANON_KEY=eyJ...
+SUPABASE_SERVICE_ROLE_KEY=eyJ...
+MCP_TRANSPORT=stdio
+```
+
+**⚠️ IMPORTANT:** Verify your Supabase URL is in EU region (see `WARNINGS.md`)
+
+---
+
+## Step 3: Run Migrations
+
+### Option A: Supabase Dashboard
+
+1. Go to Supabase Dashboard → SQL Editor
+2. Run `supabase/migrations/20240101_security_core.sql`
+3. Run `supabase/migrations/20240102_entitlements_and_safety.sql`
+
+### Option B: Supabase CLI
+
+```bash
+supabase db push
+```
+
+### Verify Migrations
+
+```sql
+-- Check RLS is enabled
+SELECT COUNT(*) FROM pg_policies WHERE schemaname = 'public';
+-- Should return 100+ policies
+
+-- Check functions exist
+SELECT routine_name FROM information_schema.routines 
+WHERE routine_name IN ('is_organization_member', 'get_available_tools');
+-- Should return 2 rows
+```
+
+---
+
+## Step 4: Configure Auth
+
+### Set Organization ID in JWT Claims
+
+**Option A: Auth Hook (Recommended)**
+
+1. Go to Supabase Dashboard → Database → Functions → Auth Hooks
+2. Create hook to set `organization_id` in user metadata
+
+**Option B: During Signup**
+
+```typescript
+await supabase.auth.signUp({
+  email: 'user@school.com',
+  password: 'secure-password',
+  options: {
+    data: {
+      organization_id: 'org-uuid-here'
+    }
+  }
+});
+```
+
+---
+
+## Step 5: Build & Start
+
+```bash
+# Build packages
+cd packages/core && npm run build
+cd ../mcp-server && npm run build
+
+# Start MCP server
+cd packages/mcp-server && npm start
+```
+
+---
+
+## Step 6: Test Authentication
+
+```typescript
+import { authenticateUserJWT } from '@schoolgle/core/auth';
+
+const context = await authenticateUserJWT(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  jwtToken
+);
+
+console.log('Authenticated:', {
+  userId: context.userId,
+  organizationId: context.organizationId,
+  role: context.userRole
+});
+```
+
+---
+
+## Step 7: Test Tool Execution
+
+```typescript
+import { createMCPServer } from '@schoolgle/mcp-server';
+
+// Create server
+const server = await createMCPServer('stdio');
+
+// Authenticate (custom MCP extension)
+await server.request({
+  method: 'auth/authenticate',
+  params: {
+    authHeader: `Bearer ${jwtToken}`
+  }
+});
+
+// List available tools (filtered by entitlements)
+const { tools } = await server.listTools();
+console.log('Available tools:', tools.map(t => t.name));
+
+// Call a tool
+const result = await server.callTool({
+  name: 'get_financial_records',
+  arguments: {
+    fiscalYear: '2024-25',
+    category: 'pupil_premium'
+  }
+});
+
+console.log('Result:', result);
+```
+
+---
+
+## Common Issues
+
+### "Not authenticated" Error
+
+**Solution:** Call `auth/authenticate` before listing/calling tools
+
+### "Tool not found" Error
+
+**Solution:** Organization doesn't have module. Assign module:
+```sql
+INSERT INTO organization_modules (organization_id, module_id, module_key)
+VALUES ('org-uuid', 'finance_suite', 'finance_bot');
+```
+
+### "Requires approval" Error
+
+**Solution:** High-risk tool needs admin approval. Approve via dashboard or:
+```typescript
+await safety.approveRequest(auditLogId, adminUserId, context);
+```
+
+### RLS Policy Not Working
+
+**Solution:** JWT doesn't contain `organization_id`. Set via Auth hook or user metadata.
+
+---
+
+## Next Steps
+
+1. **Read Architecture:** See `README_ARCHITECTURE.md`
+2. **Deploy:** Follow `DEPLOYMENT_CHECKLIST.md`
+3. **Monitor:** Check `tool_audit_logs` table
+
+---
+
+**Ready to go!** 🚀
