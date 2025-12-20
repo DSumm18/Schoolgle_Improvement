@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Typeahead Form - Form Fill Lab</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+    }
+    input, select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    .typeahead-container {
+      position: relative;
+    }
+    .typeahead-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: white;
+      border: 1px solid #ddd;
+      border-top: none;
+      border-radius: 0 0 4px 4px;
+      max-height: 200px;
+      overflow-y: auto;
+      display: none;
+      z-index: 1000;
+    }
+    .typeahead-dropdown.show {
+      display: block;
+    }
+    .typeahead-option {
+      padding: 8px;
+      cursor: pointer;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .typeahead-option:hover {
+      background: #f5f5f5;
+    }
+    .typeahead-option.selected {
+      background: #e0f2fe;
+    }
+    button {
+      padding: 10px 20px;
+      background: #059669;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>Typeahead Form Test</h1>
+  <p>Form with async typeahead that renders options with delay and debounce</p>
+  
+  <form id="test-form">
+    <div class="form-group">
+      <label for="name">Name</label>
+      <input type="text" id="name" name="name" required>
+    </div>
+    
+    <div class="form-group">
+      <label for="school">School (Typeahead)</label>
+      <div class="typeahead-container">
+        <input 
+          type="text" 
+          id="school" 
+          name="school" 
+          autocomplete="off"
+          role="combobox"
+          aria-expanded="false"
+          aria-controls="school-options"
+          required
+        >
+        <div id="school-options" class="typeahead-dropdown" role="listbox"></div>
+      </div>
+      <small style="color: #666;">Type to search schools (async, debounced)</small>
+    </div>
+    
+    <div class="form-group">
+      <label for="subject">Subject (Typeahead)</label>
+      <div class="typeahead-container">
+        <input 
+          type="text" 
+          id="subject" 
+          name="subject" 
+          autocomplete="off"
+          role="combobox"
+          aria-expanded="false"
+          aria-controls="subject-options"
+        >
+        <div id="subject-options" class="typeahead-dropdown" role="listbox"></div>
+      </div>
+    </div>
+    
+    <button type="submit">Submit</button>
+  </form>
+  
+  <div id="result" style="margin-top: 20px; padding: 10px; background: #f0f0f0; display: none;"></div>
+  
+  <script>
+    const schools = [
+      'Acme High School',
+      'Brighton Academy',
+      'Cambridge Primary',
+      'Derby Secondary',
+      'Edinburgh College',
+      'Farnham School',
+      'Greenwich Academy',
+      'Hampton High',
+      'Ipswich School',
+      'Jersey College'
+    ];
+    
+    const subjects = [
+      'Mathematics',
+      'English',
+      'Science',
+      'History',
+      'Geography',
+      'Art',
+      'Music',
+      'Physical Education',
+      'Computer Science',
+      'Languages'
+    ];
+    
+    function createTypeahead(inputId, optionsId, data, delay = 300) {
+      const input = document.getElementById(inputId);
+      const dropdown = document.getElementById(optionsId);
+      let debounceTimer;
+      let selectedIndex = -1;
+      
+      input.addEventListener('input', (e) => {
+        clearTimeout(debounceTimer);
+        const query = e.target.value.toLowerCase();
+        
+        if (query.length < 2) {
+          dropdown.classList.remove('show');
+          input.setAttribute('aria-expanded', 'false');
+          return;
+        }
+        
+        // Debounce
+        debounceTimer = setTimeout(() => {
+          // Simulate async API call
+          setTimeout(() => {
+            const filtered = data.filter(item => 
+              item.toLowerCase().includes(query)
+            );
+            
+            dropdown.innerHTML = '';
+            selectedIndex = -1;
+            
+            if (filtered.length === 0) {
+              dropdown.classList.remove('show');
+              input.setAttribute('aria-expanded', 'false');
+              return;
+            }
+            
+            filtered.forEach((item, index) => {
+              const option = document.createElement('div');
+              option.className = 'typeahead-option';
+              option.setAttribute('role', 'option');
+              option.textContent = item;
+              option.addEventListener('click', () => {
+                input.value = item;
+                dropdown.classList.remove('show');
+                input.setAttribute('aria-expanded', 'false');
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+              });
+              dropdown.appendChild(option);
+            });
+            
+            dropdown.classList.add('show');
+            input.setAttribute('aria-expanded', 'true');
+          }, delay); // Simulate network delay
+        }, 200); // Debounce delay
+      });
+      
+      input.addEventListener('blur', () => {
+        // Delay to allow option click
+        setTimeout(() => {
+          dropdown.classList.remove('show');
+          input.setAttribute('aria-expanded', 'false');
+        }, 200);
+      });
+      
+      input.addEventListener('keydown', (e) => {
+        const options = dropdown.querySelectorAll('.typeahead-option');
+        
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          selectedIndex = Math.min(selectedIndex + 1, options.length - 1);
+          updateSelection(options);
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          selectedIndex = Math.max(selectedIndex - 1, -1);
+          updateSelection(options);
+        } else if (e.key === 'Enter' && selectedIndex >= 0) {
+          e.preventDefault();
+          options[selectedIndex].click();
+        }
+      });
+      
+      function updateSelection(options) {
+        options.forEach((opt, idx) => {
+          opt.classList.toggle('selected', idx === selectedIndex);
+        });
+      }
+    }
+    
+    // Initialize typeaheads
+    createTypeahead('school', 'school-options', schools, 500); // Longer delay
+    createTypeahead('subject', 'subject-options', subjects, 300);
+    
+    document.getElementById('test-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const result = document.getElementById('result');
+      result.style.display = 'block';
+      result.textContent = 'Form submitted (test only)';
+    });
+  </script>
+</body>
+</html>
+

@@ -42,16 +42,12 @@ export const urlSchema = z.string().url('Invalid URL format').max(2048);
 /**
  * Provider validation
  */
-export const cloudProviderSchema = z.enum(['google.com', 'microsoft.com'], {
-  errorMap: () => ({ message: 'Provider must be google.com or microsoft.com' })
-});
+export const cloudProviderSchema = z.enum(['google.com', 'microsoft.com'] as [string, ...string[]]);
 
 /**
  * Role validation
  */
-export const roleSchema = z.enum(['admin', 'member', 'viewer'], {
-  errorMap: () => ({ message: 'Role must be admin, member, or viewer' })
-});
+export const roleSchema = z.enum(['admin', 'member', 'viewer'] as [string, ...string[]]);
 
 /**
  * Confidence score validation (0-1)
@@ -168,7 +164,7 @@ export const trackUsageSchema = z.object({
     'mock_inspection'
   ]),
   eventCategory: sanitizedString(100).optional(),
-  metadata: z.record(z.any()).default({}),
+  metadata: z.record(z.string(), z.any()).default({}),
   sessionId: sanitizedString(100).optional(),
   aiModel: sanitizedString(100).optional(),
   aiTokensInput: z.number().int().min(0).optional(),
@@ -188,7 +184,7 @@ export const edChatRequestSchema = z.object({
       content: sanitizedString(10000)
     })
   ).min(1, 'At least one message is required').max(50, 'Maximum 50 messages allowed'),
-  context: z.record(z.any()).optional()
+  context: z.record(z.string(), z.any()).optional()
 });
 
 export type EdChatRequest = z.infer<typeof edChatRequestSchema>;
@@ -198,8 +194,8 @@ export type EdChatRequest = z.infer<typeof edChatRequestSchema>;
  */
 export const gdprDeleteSchema = z.object({
   userId: uuidSchema,
-  confirmDeletion: z.literal(true, {
-    errorMap: () => ({ message: 'You must confirm deletion by setting confirmDeletion to true' })
+  confirmDeletion: z.literal(true).refine(val => val === true, {
+    message: 'You must confirm deletion by setting confirmDeletion to true'
   })
 });
 
@@ -211,8 +207,8 @@ export type GdprDeleteRequest = z.infer<typeof gdprDeleteSchema>;
 export const gdprDeleteOrgSchema = z.object({
   organizationId: uuidSchema,
   adminUserId: uuidSchema,
-  confirmDeletion: z.literal(true, {
-    errorMap: () => ({ message: 'You must confirm deletion by setting confirmDeletion to true' })
+  confirmDeletion: z.literal(true).refine(val => val === true, {
+    message: 'You must confirm deletion by setting confirmDeletion to true'
   })
 });
 
@@ -236,7 +232,7 @@ export function validateRequest<T>(
   }
 
   // Format validation errors
-  const errorMessages = result.error.errors.map(err =>
+  const errorMessages = result.error.issues.map((err: any) =>
     `${err.path.join('.')}: ${err.message}`
   ).join(', ');
 

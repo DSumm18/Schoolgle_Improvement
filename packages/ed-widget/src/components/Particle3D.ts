@@ -1,139 +1,80 @@
 /**
- * Particle3D - Three.js Particle Avatar System (Gemini Implementation)
- * Matches the exact implementation from Gemini
+ * Particle3D - Solar System → Chaser Formation Animation
+ * 
+ * Idle (chat closed): 8 planets orbit around central sun (Ed's head) in solar system formation
+ * Active (chat open): Planets spiral inward, then form tight chaser formation
+ * 
+ * Replaces shape morphing system for better performance on older devices.
+ * Original shape morphing code archived in: archive/Particle3D-shape-morphing-ARCHIVED.ts
  */
 
 import * as THREE from 'three';
-import type { ParticleShape } from '../types';
-import { 
-  generateSpherePoints, 
-  generatePencilPoints, 
-  generateLightbulbPoints, 
-  generateFlagPoints, 
-  generateHeartPoints, 
-  generateStarPoints, 
-  generateThumbsUpPoints, 
-  generateCheckmarkPoints, 
-  generateSmileyPoints,
-  generateBookPoints,
-  generateClockPoints,
-  generateWarningPoints,
-  generateQuestionPoints,
-  generateLoadingPoints,
-  generateCalendarPoints,
-  generateSearchPoints,
-  generatePhonePoints,
-  generateLocationPoints,
-  generateFireworksPoints,
-  generatePartyPoints,
-  generateConfettiPoints,
-  generateTrophyPoints,
-  generateExcitedPoints,
-  generateThinkingPoints,
-  generateConfusedPoints,
-  generateErrorPoints,
-  generateSpeechPoints,
-  generateDocumentPoints,
-  generateCalculatorPoints,
-  generateBellPoints,
-  generateGraduationPoints
-} from '../utils/shapes';
-import { getEmojiReference } from '../utils/emoji-references';
-import { generateFromSVGPath } from '../utils/shapes';
-import { FLAG_PATTERNS, generateFlagPatternPoints, generateFlagPatternColors } from '../utils/flag-patterns';
 
-const PARTICLE_COUNT = 2500; // Reduced for more spaced-out, comet-like effect
-
-// Reaction modes
-enum ReactionMode {
-  BASE = 0,
-  REACTION = 1,
+// Planet definitions (in order from sun)
+// Logo reference: 520px container, planets 12-18px, orbital radii 70-190px
+interface PlanetDef {
+  name: string;
+  radius: number;         // Orbital radius in pixels (from logo: 70, 90, 110, 130, 150, 170, 190)
+  speed: number;          // Orbital speed multiplier (inner fastest, outer slowest)
+  color: [number, number, number]; // RGB color (0-1 range)
+  size: number;          // Planet size in pixels (from logo: 12, 14, 16, 14, 16, 14, 18)
+  duration: number;      // Orbit duration in seconds (from logo: 12, 18, 25, 32, 40, 55, 75)
 }
+
+// Match Schoolgle logo planets exactly (7 planets, same colors, sizes, and orbital radii)
+// Logo reference: size=520px, planets: 12-18px, radii: 70-190px
+// Colors converted from hex to RGB (0-1 range)
+const PLANETS: PlanetDef[] = [
+  { name: 'HR', radius: 70, speed: 2.0, color: [0.678, 0.847, 0.902], size: 12, duration: 12 }, // #ADD8E6 - Inner, fastest
+  { name: 'Finance', radius: 90, speed: 1.33, color: [1.0, 0.667, 0.298], size: 14, duration: 18 }, // #FFAA4C
+  { name: 'Estates', radius: 110, speed: 1.0, color: [0.0, 0.831, 0.831], size: 16, duration: 25 }, // #00D4D4
+  { name: 'Compliance', radius: 130, speed: 0.75, color: [0.902, 0.765, 1.0], size: 14, duration: 32 }, // #E6C3FF
+  { name: 'Teaching', radius: 150, speed: 0.6, color: [1.0, 0.714, 0.757], size: 16, duration: 40 }, // #FFB6C1
+  { name: 'SEND', radius: 170, speed: 0.44, color: [0.596, 1.0, 0.596], size: 14, duration: 55 }, // #98FF98
+  { name: 'Governance', radius: 190, speed: 0.32, color: [1.0, 0.843, 0.0], size: 18, duration: 75 }, // #FFD700 - Outer, slowest
+];
+
+const SUN_PARTICLE_COUNT = 400;
+const SUN_COLOR: [number, number, number] = [0.17, 0.83, 0.75]; // Ed teal
+
+type AnimationState = 'solar' | 'transitioning' | 'chaser';
 
 export class Particle3D {
   private container: HTMLElement;
   private scene: THREE.Scene;
-  private camera: THREE.PerspectiveCamera;
+  private camera: THREE.OrthographicCamera;
   private renderer: THREE.WebGLRenderer;
-  private particleSystem: THREE.Points | null = null;
-  private geometry: THREE.BufferGeometry | null = null;
-  private material: THREE.ShaderMaterial | null = null;
+  
+  // Container dimensions (detected from actual container size)
+  private containerWidth: number;
+  private containerHeight: number;
+  private scaleFactor: number; // Scale from logo reference (520px) to actual container
+  
+  // Particle systems
+  private sun: THREE.Points | null = null;
+  private planets: THREE.Mesh[] = []; // Using Mesh spheres for solid circles (matching logo exactly)
   
   private animationId: number | null = null;
   private clock: THREE.Clock;
   private _isRunning = false;
   
-  private reactionMode = 0; // 0 = Base Sphere, 1 = Reaction Shape
-  private currentShape: ParticleShape = 'sphere';
-  private morphStartTime = 0;
-  private morphSpeed = 0.05; // Default morph speed
+  // Animation state
+  private state: AnimationState = 'solar';
+  private transitionProgress = 0; // 0 = solar, 1 = chaser
+  private transitionStartTime = 0;
+  private transitionDuration = 1.5; // seconds
   
-  // Uniforms
-  private uniforms = {
-    u_time: { value: 0.0 },
-    u_reaction_mix: { value: 0.0 },
-  };
+  // Planet orbital angles (for solar system state)
+  private planetAngles: number[] = [];
   
-  // Shape-specific animation speeds (higher = faster)
-  private shapeSpeeds: Record<ParticleShape, number> = {
-    // Fast (0.3s morph) - celebrations, urgent
-    fireworks: 0.15,
-    party: 0.15,
-    confetti: 0.15,
-    excited: 0.15,
-    warning: 0.12,
-    error: 0.12,
-    
-    // Medium (0.6s morph) - standard shapes
-    sphere: 0.05,
-    pencil: 0.05,
-    lightbulb: 0.05,
-    flag: 0.05,
-    book: 0.05,
-    clock: 0.05,
-    question: 0.05,
-    loading: 0.05,
-    calendar: 0.05,
-    search: 0.05,
-    phone: 0.05,
-    location: 0.05,
-    trophy: 0.05,
-    thinking: 0.05,
-    confused: 0.05,
-    speech: 0.05,
-    document: 0.05,
-    calculator: 0.05,
-    bell: 0.05,
-    graduation: 0.05,
-    
-    // Slow (1.0s morph) - calm shapes
-    heart: 0.03,
-    smiley: 0.03,
-    star: 0.04,
-    thumbsup: 0.04,
-    checkmark: 0.04,
-    
-    // Legacy
-    logo: 0.05,
-  };
-
-  // Vertex shader (matching Gemini)
+  // Shaders (simple - positions updated directly in animate loop)
   private vertexShader = `
-    uniform float u_time;
-    uniform float u_reaction_mix;
-    attribute vec3 reactionPos;
-    attribute vec3 reactionColor;
-    varying vec3 vColor;
-    
     void main() {
-      vec3 finalPos = mix(position, reactionPos, u_reaction_mix);
-      vColor = mix(vec3(0.17, 0.83, 0.75), reactionColor, u_reaction_mix);
-      gl_Position = projectionMatrix * modelViewMatrix * vec4(finalPos, 1.0);
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
       gl_PointSize = 3.0;
     }
   `;
-
-  // Fragment shader (matching Gemini)
+  
   private fragmentShader = `
     varying vec3 vColor;
     void main() {
@@ -146,33 +87,50 @@ export class Particle3D {
     this.container = container;
     this.clock = new THREE.Clock();
 
-    // Ensure container has dimensions
-    container.style.width = '300px';
-    container.style.height = '300px';
+    // Detect actual container dimensions (supports both 60px launcher and 300px widget)
+    this.containerWidth = container.clientWidth || parseInt(container.style.width) || 300;
+    this.containerHeight = container.clientHeight || parseInt(container.style.height) || 300;
+    
+    // Calculate scale factor from logo reference (520px) to actual container
+    // Logo reference: 520px container, planets 12-18px, orbital radii 70-190px
+    this.scaleFactor = this.containerWidth / 520;
+    
+    // Ensure container has proper styling (but don't override existing dimensions)
     container.style.display = 'block';
     container.style.visibility = 'visible';
     container.style.opacity = '1';
-    container.style.position = 'absolute';
-    container.style.bottom = '60px';
-    container.style.right = '0';
-    container.style.zIndex = '10';
-    container.style.pointerEvents = 'none';
+    if (!container.style.position) {
+      container.style.position = 'absolute';
+    }
+    if (!container.style.pointerEvents) {
+      container.style.pointerEvents = 'none';
+    }
 
-    // Setup Three.js (matching Gemini)
+    // Setup Three.js
     this.scene = new THREE.Scene();
     
-    const width = 300;
-    const height = 300;
-    const aspect = width / height;
-    this.camera = new THREE.PerspectiveCamera(60, aspect, 0.1, 1000);
-    this.camera.position.z = 3.5;
+    // Use OrthographicCamera for flat 2D appearance (matching logo)
+    // Orthographic camera removes perspective distortion, making planets appear as flat circles
+    const aspect = this.containerWidth / this.containerHeight;
+    const viewSize = Math.max(this.containerWidth, this.containerHeight);
+    const halfView = viewSize / 2;
+    
+    this.camera = new THREE.OrthographicCamera(
+      -halfView * aspect, // left
+      halfView * aspect,  // right
+      halfView,           // top
+      -halfView,          // bottom
+      0.1,                // near
+      1000                // far
+    );
+    this.camera.position.z = 100; // Position camera along Z axis (orthographic, so distance doesn't matter)
 
-    // Renderer (matching Gemini)
+    // Renderer
     this.renderer = new THREE.WebGLRenderer({ 
       alpha: true, 
       antialias: true 
     });
-    this.renderer.setSize(width, height);
+    this.renderer.setSize(this.containerWidth, this.containerHeight);
     this.renderer.domElement.style.width = '100%';
     this.renderer.domElement.style.height = '100%';
     this.renderer.domElement.style.display = 'block';
@@ -182,328 +140,113 @@ export class Particle3D {
     this.renderer.domElement.style.pointerEvents = 'none';
     container.appendChild(this.renderer.domElement);
 
-    // Create particles
-    this.createParticles();
+    // Initialize planet angles to match logo starting positions (in degrees, converted to radians)
+    // Logo planets start at: 35°, 120°, 210°, 300°, 20°, 95°, 335°
+    const logoStarts = [35, 120, 210, 300, 20, 95, 335];
+    this.planetAngles = PLANETS.map((_, i) => (logoStarts[i] || 0) * Math.PI / 180);
+
+    // Create particle systems
+    this.createSun();
+    this.createPlanets();
 
     // Handle resize
     window.addEventListener('resize', this.handleResize.bind(this));
     
-    console.log('[Particle3D] Initialized (Gemini style)', {
-      container,
-      width: container.clientWidth,
-      height: container.clientHeight,
+    console.log('[Particle3D] Initialized (Solar System)', {
+      containerSize: `${this.containerWidth}x${this.containerHeight}`,
+      scaleFactor: this.scaleFactor.toFixed(3),
+      sun: SUN_PARTICLE_COUNT,
+      planets: PLANETS.map(p => `${p.name}: ${p.size}px`),
     });
   }
 
-  private createParticles(): void {
-    // Create geometry
-    this.geometry = new THREE.BufferGeometry();
+  private createSun(): void {
+    const geometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(SUN_PARTICLE_COUNT * 3);
+    const colors = new Float32Array(SUN_PARTICLE_COUNT * 3);
 
-    // Create buffers for morph targets (matching Gemini structure)
-    const spherePosArray = new Float32Array(PARTICLE_COUNT * 3);
-    const reactionPosArray = new Float32Array(PARTICLE_COUNT * 3);
-    const reactionColorArray = new Float32Array(PARTICLE_COUNT * 3);
-
-    // Initialize particle positions (matching Gemini)
-    for (let i = 0; i < PARTICLE_COUNT; i++) {
-      // Default base shape (sphere)
+    // Create sphere of particles for the sun
+    for (let i = 0; i < SUN_PARTICLE_COUNT; i++) {
       const theta = Math.random() * Math.PI * 2;
       const phi = Math.acos((Math.random() * 2) - 1);
-      const r = 0.9 + Math.random() * 0.1;
+      const r = 0.3 + Math.random() * 0.1; // Small central sphere
       
-      spherePosArray[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-      spherePosArray[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-      spherePosArray[i * 3 + 2] = r * Math.cos(phi);
-
-      // Initialize reaction buffers to default sphere
-      reactionPosArray[i * 3] = spherePosArray[i * 3];
-      reactionPosArray[i * 3 + 1] = spherePosArray[i * 3 + 1];
-      reactionPosArray[i * 3 + 2] = spherePosArray[i * 3 + 2];
+      positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+      positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+      positions[i * 3 + 2] = r * Math.cos(phi);
       
-      // Default teal color
-      reactionColorArray[i * 3] = 0.17;   // R
-      reactionColorArray[i * 3 + 1] = 0.83; // G
-      reactionColorArray[i * 3 + 2] = 0.75; // B
+      colors[i * 3] = SUN_COLOR[0];
+      colors[i * 3 + 1] = SUN_COLOR[1];
+      colors[i * 3 + 2] = SUN_COLOR[2];
     }
 
-    // Add attributes to geometry (matching Gemini)
-    this.geometry.setAttribute('position', new THREE.BufferAttribute(spherePosArray, 3));
-    this.geometry.setAttribute('reactionPos', new THREE.BufferAttribute(reactionPosArray, 3));
-    this.geometry.setAttribute('reactionColor', new THREE.BufferAttribute(reactionColorArray, 3));
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
-    // Create shader material (matching Gemini)
-    this.material = new THREE.ShaderMaterial({
-      uniforms: this.uniforms,
-      vertexShader: this.vertexShader,
-      fragmentShader: this.fragmentShader,
+    const material = new THREE.PointsMaterial({
+      size: 3.0,
+      vertexColors: true,
       transparent: true,
+      opacity: 0.9,
     });
 
-    // Create particle system
-    this.particleSystem = new THREE.Points(this.geometry, this.material);
-    this.scene.add(this.particleSystem);
+    this.sun = new THREE.Points(geometry, material);
+    this.scene.add(this.sun);
   }
 
-  public morphTo(shape: ParticleShape): void {
-    if (!this.geometry) return;
-    
-    this.currentShape = shape;
-    this.reactionMode = 1; // Enable reaction mode
-    this.morphStartTime = this.clock.getElapsedTime();
-    this.morphSpeed = this.shapeSpeeds[shape] || 0.05;
-    
-    // Generate target positions based on shape
-    const reactionPosArray = this.generateShapePoints(shape);
-    const reactionColorArray = this.generateShapeColors(shape);
-    
-    // Update geometry attributes
-    this.geometry.setAttribute('reactionPos', new THREE.BufferAttribute(reactionPosArray, 3));
-    this.geometry.setAttribute('reactionColor', new THREE.BufferAttribute(reactionColorArray, 3));
-    
-    console.log('[Particle3D] Morphing to:', shape, 'speed:', this.morphSpeed);
+  private createPlanets(): void {
+    PLANETS.forEach((planetDef, index) => {
+      // Use SphereGeometry to create solid circles (matching logo style exactly)
+      // Logo planets are 12-18px actual pixels
+      // Convert pixel size to 3D space: scale by scaleFactor to match container size
+      const planetRadius = (planetDef.size * this.scaleFactor) / 2; // Radius in 3D space (half of diameter)
+      
+      // Use high segment count for smooth circles (32 segments = very smooth circle)
+      const geometry = new THREE.SphereGeometry(planetRadius, 32, 32);
+      const material = new THREE.MeshBasicMaterial({
+        color: new THREE.Color(planetDef.color[0], planetDef.color[1], planetDef.color[2]),
+        transparent: true,
+        opacity: 1.0,
+      });
+
+      const planet = new THREE.Mesh(geometry, material);
+      
+      // Calculate orbital distance: scale logo radius (70-190px) to 3D space
+      const orbitalDistance = planetDef.radius * this.scaleFactor;
+      
+      // Initial position at orbital distance (will be updated in animate)
+      planet.position.set(orbitalDistance, 0, 0);
+      
+      this.scene.add(planet);
+      this.planets.push(planet);
+    });
   }
 
-  public morphToFlag(flagColors: string[], languageCode?: string): void {
-    if (!this.geometry) return;
-    
-    this.currentShape = 'flag';
-    this.reactionMode = 1;
-    
-    // Try to use pattern-based generation if language code provided
-    if (languageCode && FLAG_PATTERNS[languageCode]) {
-      const pattern = FLAG_PATTERNS[languageCode];
-      const reactionPosArray = generateFlagPatternPoints(PARTICLE_COUNT, pattern);
-      const reactionColorArray = generateFlagPatternColors(PARTICLE_COUNT, pattern);
-      
-      this.geometry.setAttribute('reactionPos', new THREE.BufferAttribute(reactionPosArray, 3));
-      this.geometry.setAttribute('reactionColor', new THREE.BufferAttribute(reactionColorArray, 3));
-    } else {
-      // Fallback to simple stripe generation
-      const reactionPosArray = this.generateFlagPoints();
-      const reactionColorArray = this.generateFlagColors(flagColors);
-      
-      this.geometry.setAttribute('reactionPos', new THREE.BufferAttribute(reactionPosArray, 3));
-      this.geometry.setAttribute('reactionColor', new THREE.BufferAttribute(reactionColorArray, 3));
+  /**
+   * Set active state (chat open/closed)
+   * When active: planets spiral in and form chaser
+   * When inactive: planets return to solar system
+   */
+  public setActive(isActive: boolean): void {
+    if (isActive && this.state === 'solar') {
+      this.state = 'transitioning';
+      this.transitionStartTime = this.clock.getElapsedTime();
+      console.log('[Particle3D] Transitioning to chaser formation');
+    } else if (!isActive && this.state === 'chaser') {
+      this.state = 'transitioning';
+      this.transitionStartTime = this.clock.getElapsedTime();
+      console.log('[Particle3D] Transitioning to solar system');
     }
   }
 
-  private generateShapePoints(shape: ParticleShape): Float32Array {
-    switch (shape) {
-      // Core shapes - use emoji-accurate SVG paths when available
-      case 'pencil':
-        // Try emoji reference first, fallback to original
-        const pencilRef = getEmojiReference('pencil');
-        if (pencilRef) {
-          return generateFromSVGPath('pencil', PARTICLE_COUNT, 0.2);
-        }
-        return generatePencilPoints(PARTICLE_COUNT);
-      case 'lightbulb':
-        const lightbulbRef = getEmojiReference('lightbulb');
-        if (lightbulbRef) {
-          return generateFromSVGPath('lightbulb', PARTICLE_COUNT, 0.2);
-        }
-        return generateLightbulbPoints(PARTICLE_COUNT);
-      case 'heart':
-        const heartRef = getEmojiReference('heart');
-        if (heartRef) {
-          return generateFromSVGPath('heart', PARTICLE_COUNT, 0.2);
-        }
-        return generateHeartPoints(PARTICLE_COUNT);
-      case 'star':
-        const starRef = getEmojiReference('star');
-        if (starRef) {
-          return generateFromSVGPath('star', PARTICLE_COUNT, 0.2);
-        }
-        return generateStarPoints(PARTICLE_COUNT);
-      case 'thumbsup':
-        const thumbsupRef = getEmojiReference('thumbsup');
-        if (thumbsupRef) {
-          return generateFromSVGPath('thumbsup', PARTICLE_COUNT, 0.2);
-        }
-        return generateThumbsUpPoints(PARTICLE_COUNT);
-      case 'checkmark':
-        const checkmarkRef = getEmojiReference('checkmark');
-        if (checkmarkRef) {
-          return generateFromSVGPath('checkmark', PARTICLE_COUNT, 0.15);
-        }
-        return generateCheckmarkPoints(PARTICLE_COUNT);
-      case 'smiley':
-        const smileyRef = getEmojiReference('smiley');
-        if (smileyRef) {
-          return generateFromSVGPath('smiley', PARTICLE_COUNT, 0.2);
-        }
-        return generateSmileyPoints(PARTICLE_COUNT);
-      
-      // Essential new shapes
-      case 'book':
-        return generateBookPoints(PARTICLE_COUNT);
-      case 'clock':
-        return generateClockPoints(PARTICLE_COUNT);
-      case 'warning':
-        return generateWarningPoints(PARTICLE_COUNT);
-      case 'question':
-        return generateQuestionPoints(PARTICLE_COUNT);
-      case 'loading':
-        return generateLoadingPoints(PARTICLE_COUNT);
-      case 'calendar':
-        return generateCalendarPoints(PARTICLE_COUNT);
-      case 'search':
-        return generateSearchPoints(PARTICLE_COUNT);
-      case 'phone':
-        return generatePhonePoints(PARTICLE_COUNT);
-      case 'location':
-        return generateLocationPoints(PARTICLE_COUNT);
-      
-      // Celebration shapes
-      case 'fireworks':
-        return generateFireworksPoints(PARTICLE_COUNT);
-      case 'party':
-        return generatePartyPoints(PARTICLE_COUNT);
-      case 'confetti':
-        return generateConfettiPoints(PARTICLE_COUNT);
-      case 'trophy':
-        return generateTrophyPoints(PARTICLE_COUNT);
-      case 'excited':
-        return generateExcitedPoints(PARTICLE_COUNT);
-      
-      // Additional shapes
-      case 'thinking':
-        return generateThinkingPoints(PARTICLE_COUNT);
-      case 'confused':
-        return generateConfusedPoints(PARTICLE_COUNT);
-      case 'error':
-        return generateErrorPoints(PARTICLE_COUNT);
-      case 'speech':
-        return generateSpeechPoints(PARTICLE_COUNT);
-      case 'document':
-        return generateDocumentPoints(PARTICLE_COUNT);
-      case 'calculator':
-        return generateCalculatorPoints(PARTICLE_COUNT);
-      case 'bell':
-        return generateBellPoints(PARTICLE_COUNT);
-      case 'graduation':
-        return generateGraduationPoints(PARTICLE_COUNT);
-      
-      case 'sphere':
-      default:
-        return generateSpherePoints(PARTICLE_COUNT);
+  /**
+   * Legacy method for compatibility - maps to setActive
+   */
+  public morphTo(shape: string): void {
+    // For backward compatibility, ignore shape and just ensure we're in solar mode
+    if (this.state !== 'solar') {
+      this.setActive(false);
     }
-  }
-
-  private generateShapeColors(shape: ParticleShape): Float32Array {
-    const colors = new Float32Array(PARTICLE_COUNT * 3);
-    
-    // Get emoji reference for accurate colors
-    const emojiRef = getEmojiReference(shape);
-    
-    if (emojiRef && emojiRef.colors) {
-      const palette = emojiRef.colors;
-      const primary = palette.primary;
-      const secondary = palette.secondary || primary;
-      const accent = palette.accent || primary;
-      
-      // Distribute colors based on particle position
-      for (let i = 0; i < PARTICLE_COUNT; i++) {
-        const t = i / PARTICLE_COUNT;
-        let r: number, g: number, b: number;
-        
-        // Use different colors for different regions
-        if (t < 0.6) {
-          // Primary color for most particles
-          r = primary[0];
-          g = primary[1];
-          b = primary[2];
-        } else if (t < 0.85) {
-          // Secondary color
-          r = secondary[0];
-          g = secondary[1];
-          b = secondary[2];
-        } else {
-          // Accent color
-          r = accent[0];
-          g = accent[1];
-          b = accent[2];
-        }
-        
-        colors[i * 3] = r;
-        colors[i * 3 + 1] = g;
-        colors[i * 3 + 2] = b;
-      }
-    } else {
-      // Fallback to default colors for shapes without emoji reference
-      let r = 0.17, g = 0.83, b = 0.75; // Default teal
-      
-      switch (shape) {
-        case 'heart':
-          r = 1.0; g = 0.2; b = 0.3; // Red
-          break;
-        case 'star':
-          r = 1.0; g = 0.84; b = 0.0; // Gold
-          break;
-        case 'thumbsup':
-          r = 0.2; g = 0.8; b = 0.2; // Green
-          break;
-        case 'checkmark':
-          r = 0.2; g = 0.8; b = 0.2; // Green
-          break;
-      }
-      
-      for (let i = 0; i < PARTICLE_COUNT; i++) {
-        colors[i * 3] = r;
-        colors[i * 3 + 1] = g;
-        colors[i * 3 + 2] = b;
-      }
-    }
-    
-    return colors;
-  }
-
-  private generateFlagPoints(): Float32Array {
-    // Use simple rectangle for now - pattern will be in colors
-    const points = generateFlagPoints(PARTICLE_COUNT);
-    const positions = new Float32Array(PARTICLE_COUNT * 3);
-    for (let i = 0; i < points.length; i++) {
-      positions[i] = points[i];
-    }
-    return positions;
-  }
-
-  private generateFlagColors(flagColors: string[]): Float32Array {
-    const colors = new Float32Array(PARTICLE_COUNT * 3);
-    const parsedColors = flagColors.map(c => new THREE.Color(c));
-    
-    // Determine pattern type from color count and order
-    // This is a simplified version - for better results, use flag-patterns.ts
-    const isVertical = flagColors.length === 3 && flagColors[0] === '#002395'; // French flag pattern
-    const isHorizontal = flagColors.length === 2 && (flagColors[0] === '#FFFFFF' || flagColors[0] === '#006A4E');
-    
-    for (let i = 0; i < PARTICLE_COUNT; i++) {
-      let colorIndex = 0;
-      
-      if (isVertical) {
-        // Vertical stripes (left to right)
-        const x = (i / PARTICLE_COUNT) * 2 - 1; // -1 to 1
-        const normalizedX = (x + 1) / 2; // 0 to 1
-        colorIndex = Math.min(Math.floor(normalizedX * flagColors.length), flagColors.length - 1);
-      } else {
-        // Horizontal stripes (top to bottom) - default
-        const y = (i / PARTICLE_COUNT) * 2 - 1; // -1 to 1
-        const normalizedY = 1 - (y + 1) / 2; // Flip: top is 0, bottom is 1
-        colorIndex = Math.min(Math.floor(normalizedY * flagColors.length), flagColors.length - 1);
-      }
-      
-      const color = parsedColors[colorIndex];
-      colors[i * 3] = color.r;
-      colors[i * 3 + 1] = color.g;
-      colors[i * 3 + 2] = color.b;
-    }
-    
-    return colors;
-  }
-
-  public setColor(hexColor: string): void {
-    // This would update base color, but we use reaction colors now
-    console.log('[Particle3D] Color set to:', hexColor);
   }
 
   public start(): void {
@@ -531,42 +274,129 @@ export class Particle3D {
     if (!this._isRunning) return;
 
     const time = this.clock.getElapsedTime();
-    this.uniforms.u_time.value = time;
 
-    // Reaction Mix Logic with shape-specific speed
-    // If reacting OR form filling, morph to special shape
-    const tMix = (this.reactionMode !== 0) ? 1.0 : 0.0;
-    
-    // Smoothly interpolate the uniform value with shape-specific speed
-    const speed = this.morphSpeed;
-    this.uniforms.u_reaction_mix.value += (tMix - this.uniforms.u_reaction_mix.value) * speed;
-
-    // Always rotate slowly (matching Gemini)
-    if (this.particleSystem) {
-      this.particleSystem.rotation.y += 0.02;
+    // Update transition progress
+    if (this.state === 'transitioning') {
+      const elapsed = time - this.transitionStartTime;
+      const progress = Math.min(elapsed / this.transitionDuration, 1);
+      
+      // Determine target state based on current transition direction
+      const wasSolar = this.transitionProgress < 0.5;
+      this.transitionProgress = wasSolar ? progress : (1 - progress);
+      
+      // Check if transition complete
+      if (progress >= 1) {
+        this.state = wasSolar ? 'chaser' : 'solar';
+        this.transitionProgress = wasSolar ? 1 : 0;
+        console.log('[Particle3D] Transition complete, state:', this.state);
+      }
     }
+
+    // Update sun rotation
+    if (this.sun) {
+      this.sun.rotation.y += 0.01;
+      
+      // Pulse sun when active
+      if (this.state === 'chaser') {
+        const pulse = Math.sin(time * 2) * 0.1 + 1.0;
+        this.sun.scale.set(pulse, pulse, pulse);
+      } else {
+        this.sun.scale.set(1, 1, 1);
+      }
+    }
+
+    // Update planets (now using Mesh spheres - simple position updates)
+    this.planets.forEach((planet, index) => {
+      const planetDef = PLANETS[index];
+      
+      if (this.state === 'solar' || this.state === 'transitioning') {
+        // Solar system mode: planets orbit around center (like logo)
+        // Use logo duration to calculate rotation speed (faster for inner planets)
+        const rotationSpeed = (2 * Math.PI) / planetDef.duration; // Full rotation per duration
+        this.planetAngles[index] += rotationSpeed * 0.016; // ~60fps timing
+        
+        const angle = this.planetAngles[index];
+        // Calculate orbital distance: scale logo radius to 3D space
+        const baseDistance = planetDef.radius * this.scaleFactor;
+        const distance = baseDistance * (1 - this.transitionProgress * 0.7); // Spiral in during transition
+        
+        // Update planet position (simple orbit, like logo)
+        planet.position.x = distance * Math.cos(angle);
+        planet.position.y = distance * Math.sin(angle);
+        planet.position.z = 0;
+      } else if (this.state === 'chaser') {
+        // Chaser mode: planets form a circle and rotate (activation/loading indicator)
+        const baseAngle = time * 1.5; // Rotation speed
+        const planetAngle = baseAngle + (index * Math.PI * 2 / PLANETS.length);
+        // Circular formation radius: scale to container (use ~40% of container width)
+        const radius = this.containerWidth * 0.2 * this.scaleFactor;
+        
+        // Position planet on circle
+        planet.position.x = radius * Math.cos(planetAngle);
+        planet.position.y = radius * Math.sin(planetAngle);
+        planet.position.z = 0;
+        
+        // Optional: slight rotation on own axis for visual interest
+        planet.rotation.z += 0.02;
+      }
+    });
 
     this.renderer.render(this.scene, this.camera);
     this.animationId = requestAnimationFrame(this.animate);
   };
 
   private handleResize(): void {
-    const width = this.container.clientWidth || 300;
-    const height = this.container.clientHeight || 300;
-
-    this.camera.aspect = width / height;
+    const width = this.container.clientWidth || this.containerWidth;
+    const height = this.container.clientHeight || this.containerHeight;
+    
+    // Update container dimensions and scale factor
+    this.containerWidth = width;
+    this.containerHeight = height;
+    this.scaleFactor = this.containerWidth / 520;
+    
+    // Update orthographic camera bounds
+    const aspect = width / height;
+    const viewSize = Math.max(width, height);
+    const halfView = viewSize / 2;
+    
+    this.camera.left = -halfView * aspect;
+    this.camera.right = halfView * aspect;
+    this.camera.top = halfView;
+    this.camera.bottom = -halfView;
     this.camera.updateProjectionMatrix();
+    
+    // Update renderer size
     this.renderer.setSize(width, height);
+    
+    // Recreate planets with new scale (or update their positions)
+    // For now, just update positions - planets will resize on next frame
+    this.planets.forEach((planet, index) => {
+      const planetDef = PLANETS[index];
+      const orbitalDistance = planetDef.radius * this.scaleFactor;
+      const currentAngle = this.planetAngles[index];
+      planet.position.x = orbitalDistance * Math.cos(currentAngle);
+      planet.position.y = orbitalDistance * Math.sin(currentAngle);
+    });
   }
 
   public destroy(): void {
     this.stop();
     
-    if (this.particleSystem) {
-      this.scene.remove(this.particleSystem);
+    if (this.sun) {
+      this.scene.remove(this.sun);
+      this.sun.geometry.dispose();
+      (this.sun.material as THREE.Material).dispose();
     }
-    this.geometry?.dispose();
-    this.material?.dispose();
+    
+    this.planets.forEach((planet) => {
+      this.scene.remove(planet);
+      planet.geometry.dispose();
+      (planet.material as THREE.Material).dispose();
+    });
+    
+    // Clear arrays
+    this.planets = [];
+    
     this.renderer.dispose();
     
     window.removeEventListener('resize', this.handleResize);
@@ -576,4 +406,3 @@ export class Particle3D {
     }
   }
 }
-

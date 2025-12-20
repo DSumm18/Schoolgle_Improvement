@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/context/SupabaseAuthContext';
 import { 
     Building, Users, Mail, Loader2, UserPlus, Shield, GraduationCap, 
     Upload, Download, FileSpreadsheet, X, Check, AlertCircle, Trash2, 
@@ -129,7 +129,7 @@ export default function SettingsView() {
                     email: inviteEmail,
                     role: inviteRole,
                     organizationId: organization.id,
-                    invitedBy: user.uid
+                    invitedBy: user.id
                 })
             });
 
@@ -157,7 +157,7 @@ export default function SettingsView() {
                     organizationId: organization.id,
                     userId,
                     newRole,
-                    requestedBy: user.uid
+                    requestedBy: user.id
                 })
             });
 
@@ -179,7 +179,7 @@ export default function SettingsView() {
 
         try {
             const response = await fetch(
-                `/api/organization/members/update?organizationId=${organization.id}&userId=${userId}&requestedBy=${user.uid}`,
+                `/api/organization/members/update?organizationId=${organization.id}&userId=${userId}&requestedBy=${user.id}`,
                 { method: 'DELETE' }
             );
 
@@ -200,7 +200,7 @@ export default function SettingsView() {
 
         try {
             const response = await fetch(
-                `/api/organization/invitations?invitationId=${invitationId}&organizationId=${organization.id}&requestedBy=${user.uid}`,
+                `/api/organization/invitations?invitationId=${invitationId}&organizationId=${organization.id}&requestedBy=${user.id}`,
                 { method: 'DELETE' }
             );
 
@@ -223,7 +223,7 @@ export default function SettingsView() {
                 body: JSON.stringify({
                     invitationId,
                     organizationId: organization.id,
-                    requestedBy: user.uid
+                    requestedBy: user.id
                 })
             });
 
@@ -264,7 +264,7 @@ export default function SettingsView() {
                 body: JSON.stringify({
                     csvContent: content,
                     organizationId: organization.id,
-                    invitedBy: user.uid,
+                    invitedBy: user.id,
                     previewOnly: true
                 })
             });
@@ -298,7 +298,7 @@ export default function SettingsView() {
                 body: JSON.stringify({
                     csvContent,
                     organizationId: organization.id,
-                    invitedBy: user.uid,
+                    invitedBy: user.id,
                     previewOnly: false
                 })
             });
@@ -508,7 +508,7 @@ export default function SettingsView() {
                                                         {isAdmin && <ChevronDown size={14} />}
                                                     </div>
                                                 )}
-                                                {isAdmin && member.user.id !== user?.uid && (
+                                                {isAdmin && member.user.id !== user?.id && (
                                                     <button
                                                         onClick={() => handleRemoveMember(member.user.id)}
                                                         className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"

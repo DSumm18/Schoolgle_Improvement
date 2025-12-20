@@ -16,6 +16,7 @@ import { FormFiller } from './features/formFill';
 import { ProactiveService } from './features/proactive';
 import { FishAudioVoice } from './voice/fish-audio';
 import { getIntroForPersona, processAIResponse } from './voice/intro-scripts';
+import { pageScanner } from './features/pageScan';
 import type { EdConfig, Message, ParticleShape, PersonaType, Language } from './types';
 
 const DEFAULT_CONFIG: EdConfig = {
@@ -43,6 +44,7 @@ export class Ed {
 
   // Components
   private particle3D: Particle3D | null = null;
+  private launcherParticle3D: Particle3D | null = null;
   private dock: Dock | null = null;
   private chat: Chat | null = null;
   private voice: VoiceInput | null = null;
@@ -59,12 +61,46 @@ export class Ed {
   private currentPersona: PersonaType;
   private currentTheme: string;
   private showKeyboard = false;
+  private toolContext: { name: string; category: string; url?: string; expertise: string[] } | null = null;
 
   constructor(config: Partial<EdConfig> = {}) {
-    this.config = { ...DEFAULT_CONFIG, ...config };
+    // Read from window.ED_CONFIG if available (extension context)
+    const edConfig = (window as any).ED_CONFIG;
+    
+    // Merge: window.ED_CONFIG (extension) > passed config > defaults
+    const mergedConfig: Partial<EdConfig> = {
+      ...DEFAULT_CONFIG,
+      ...config,
+      ...(edConfig ? {
+        // Only override with ED_CONFIG if it exists
+        geminiApiKey: edConfig.geminiApiKey || config.geminiApiKey,
+        openRouterApiKey: edConfig.openRouterApiKey || config.openRouterApiKey,
+        fishAudioApiKey: edConfig.fishAudioApiKey || config.fishAudioApiKey,
+        provider: edConfig.provider || config.provider,
+        enableAI: edConfig.enableAI !== undefined ? edConfig.enableAI : config.enableAI,
+        enableTTS: edConfig.enableTTS !== undefined ? edConfig.enableTTS : config.enableTTS,
+        ttsProvider: edConfig.ttsProvider || config.ttsProvider,
+        schoolId: edConfig.schoolId || config.schoolId,
+        language: edConfig.language || config.language,
+        persona: edConfig.persona || config.persona,
+      } : {}),
+    };
+    
+    this.config = mergedConfig as EdConfig;
     this.currentLanguage = getLanguage(this.config.language);
     this.currentPersona = this.config.persona;
     this.currentTheme = this.config.theme;
+    
+    // Log configuration
+    if (edConfig) {
+      console.log('[Ed] Provider:', edConfig.provider || 'not set');
+      console.log('[Ed] TTS:', edConfig.enableTTS ? (edConfig.ttsProvider || 'browser') : 'disabled');
+      console.log('[Ed] Keys present:', {
+        openrouter: !!(this.config as any).openRouterApiKey,
+        gemini: !!this.config.geminiApiKey,
+        fish: !!this.config.fishAudioApiKey,
+      });
+    }
 
     // Create container
     this.container = document.createElement('div');
@@ -92,45 +128,66 @@ export class Ed {
   }
 
   private initComponents(): void {
-    // AI Client
-    if (this.config.geminiApiKey) {
-      try {
-        this.ai = new GeminiClient(this.config.geminiApiKey);
-        // Check available models (async, won't block)
-        this.ai.listAvailableModels().then(models => {
-          if (models.length > 0) {
-            console.log(`[Ed] ✅ Gemini API connected. Available models: ${models.join(', ')}`);
-          } else {
-            console.warn('[Ed] ⚠️ Gemini API connected but no models found. Check your API key permissions.');
-          }
-        }).catch(err => {
-          console.warn('[Ed] ⚠️ Could not list Gemini models:', err);
-        });
-      } catch (error) {
-        console.error('[Ed] ❌ Gemini client initialization failed:', error);
+    const provider = (this.config as any).provider || 'gemini'; // Default to gemini for backward compat
+    const enableAI = (this.config as any).enableAI !== false; // Default to true
+    const enableTTS = (this.config as any).enableTTS !== false; // Default to true
+    const ttsProvider = (this.config as any).ttsProvider || 'browser';
+    
+    // AI Client - only initialize if AI is enabled and provider is selected
+    if (enableAI) {
+      if (provider === 'gemini' && this.config.geminiApiKey) {
+        try {
+          this.ai = new GeminiClient(this.config.geminiApiKey);
+          // Check available models (async, won't block)
+          this.ai.listAvailableModels().then(models => {
+            if (models.length > 0) {
+              console.log(`[Ed] ✅ Gemini API connected. Available models: ${models.join(', ')}`);
+            } else {
+              console.warn('[Ed] ⚠️ Gemini API connected but no models found. Check your API key permissions.');
+            }
+          }).catch(err => {
+            console.warn('[Ed] ⚠️ Could not list Gemini models:', err);
+          });
+        } catch (error) {
+          console.error('[Ed] ❌ Gemini client initialization failed:', error);
+        }
+      } else if (provider === 'openrouter' && (this.config as any).openRouterApiKey) {
+        // TODO: Initialize OpenRouter client when implemented
+        console.log('[Ed] ✅ OpenRouter provider selected (client initialization pending)');
+      } else {
+        // Only warn if AI is enabled but provider/key not set
+        if (provider === 'gemini' && !this.config.geminiApiKey) {
+          console.debug('[Ed] Gemini provider selected but API key not set. AI features disabled.');
+        } else if (provider === 'openrouter' && !(this.config as any).openRouterApiKey) {
+          console.debug('[Ed] OpenRouter provider selected but API key not set. AI features disabled.');
+        }
       }
     } else {
-      console.warn('[Ed] ⚠️ Gemini API key not set. AI features will be limited.');
+      console.log('[Ed] AI disabled in configuration');
     }
 
-    // Fish Audio Voice (preferred if available)
-    if (this.config.fishAudioApiKey && this.config.fishAudioApiKey.trim() !== '') {
-      try {
-        this.fishVoice = new FishAudioVoice(
-          this.config.fishAudioApiKey,
-          this.config.fishAudioVoiceIds
-        );
-        console.log('[Ed] ✅ Fish Audio voice initialized', {
-          hasApiKey: !!this.config.fishAudioApiKey,
-          voiceIds: this.config.fishAudioVoiceIds,
-        });
-      } catch (error) {
-        console.error('[Ed] ❌ Fish Audio initialization failed:', error);
+    // Fish Audio Voice - only initialize if TTS is enabled and provider is fish
+    if (enableTTS && ttsProvider === 'fish') {
+      if (this.config.fishAudioApiKey && this.config.fishAudioApiKey.trim() !== '') {
+        try {
+          this.fishVoice = new FishAudioVoice(
+            this.config.fishAudioApiKey,
+            this.config.fishAudioVoiceIds
+          );
+          console.log('[Ed] ✅ Fish Audio voice initialized', {
+            hasApiKey: !!this.config.fishAudioApiKey,
+            voiceIds: this.config.fishAudioVoiceIds,
+          });
+        } catch (error) {
+          console.error('[Ed] ❌ Fish Audio initialization failed:', error);
+        }
+      } else {
+        console.debug('[Ed] Fish Audio provider selected but API key not set. Falling back to browser TTS.');
       }
+    } else if (enableTTS && ttsProvider === 'browser') {
+      console.log('[Ed] Using browser TTS');
     } else {
-      console.warn('[Ed] ⚠️ Fish Audio API key not set. Using browser TTS fallback.');
-      console.warn('[Ed] To use Fish Audio, add your API key in index.html:');
-      console.warn('[Ed] window.ED_CONFIG.fishAudioApiKey = "YOUR_API_KEY"');
+      console.log('[Ed] TTS disabled in configuration');
     }
 
     // Voice input
@@ -156,7 +213,7 @@ export class Ed {
     launcherGroup.innerHTML = `
       <div class="launcher-label">Ask Ed</div>
       <div id="launcher-btn" title="Open Assistant">
-        <div class="launcher-icon"></div>
+        <div id="launcher-logo-container"></div>
       </div>
     `;
 
@@ -164,6 +221,39 @@ export class Ed {
     launcherBtn.addEventListener('click', () => this.toggle());
 
     this.container.appendChild(launcherGroup);
+
+    // Create Particle3D logo for launcher button (instead of CSS version)
+    this.createParticle3DLogo();
+  }
+
+  private createParticle3DLogo(): void {
+    const container = document.getElementById('launcher-logo-container');
+    if (!container) return;
+
+    // Create canvas container for Particle3D
+    const canvasContainer = document.createElement('div');
+    canvasContainer.id = 'launcher-particle3d-container';
+    canvasContainer.style.cssText = `
+      width: 60px;
+      height: 60px;
+      position: relative;
+      display: block;
+    `;
+
+    container.appendChild(canvasContainer);
+
+    // Initialize Particle3D for launcher (solar system mode, always visible)
+    try {
+      this.launcherParticle3D = new Particle3D(canvasContainer);
+      this.launcherParticle3D.start();
+      // Keep in solar system mode (not active/chaser mode)
+      this.launcherParticle3D.setActive(false);
+      console.log('[Ed] Launcher Particle3D initialized');
+    } catch (error) {
+      console.error('[Ed] Failed to initialize launcher Particle3D:', error);
+      // Fallback to simple circle if WebGL fails
+      canvasContainer.innerHTML = '<div style="width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>';
+    }
   }
 
   private renderWidget(): void {
@@ -353,15 +443,21 @@ export class Ed {
               console.log('[Ed] Fish Audio greeting playback completed');
             })
             .catch((error) => {
-              console.error('[Ed] Fish Audio error, falling back to browser TTS:', error);
+              console.error('[Ed] Fish Audio error:', error);
               console.error('[Ed] Error details:', error.message);
-              // Fallback to basic TTS (will clean text automatically)
-              this.speak(displayText);
+              // Don't fallback to browser TTS - it causes dual audio
+              // Only log the error and continue silently
+              console.warn('[Ed] Skipping browser TTS fallback to prevent dual audio');
             });
         } else {
-          console.warn('[Ed] Fish Audio not available, using browser TTS for greeting');
-          // Fallback to basic TTS (will clean text automatically)
-          this.speak(displayText);
+          // Only use browser TTS if Fish Audio is completely unavailable (not initialized)
+          // This is an emergency fallback only
+          if (!this.config.disableBrowserTTS) {
+            console.warn('[Ed] Fish Audio not available, using browser TTS for greeting (emergency fallback)');
+            this.speak(displayText);
+          } else {
+            console.warn('[Ed] Fish Audio not available and browser TTS disabled - no voice output');
+          }
         }
       });
     }
@@ -415,12 +511,15 @@ export class Ed {
                 const cleanResponse = this.cleanTextForDisplay(response);
                 this.fishVoice.speakAndPlay(cleanResponse, this.currentPersona, this.currentLanguage.code)
                   .catch((error) => {
-                    console.error('[Ed] Fish Audio error in form fill, using browser TTS fallback:', error);
-                    this.speak(response);
+                    console.error('[Ed] Fish Audio error in form fill:', error);
+                    // Don't fallback to browser TTS - it causes dual audio
+                    console.warn('[Ed] Skipping browser TTS fallback to prevent dual audio');
                   });
               } else {
-                // Only use browser TTS if Fish Audio is not available at all
-                this.speak(response);
+                // Only use browser TTS if Fish Audio is completely unavailable (not initialized)
+                if (!this.config.disableBrowserTTS) {
+                  this.speak(response);
+                }
               }
             });
           }
@@ -443,12 +542,15 @@ export class Ed {
                 const cleanResponse = this.cleanTextForDisplay(response);
                 this.fishVoice.speakAndPlay(cleanResponse, this.currentPersona, this.currentLanguage.code)
                   .catch((error) => {
-                    console.error('[Ed] Fish Audio error in form fill, using browser TTS fallback:', error);
-                    this.speak(response);
+                    console.error('[Ed] Fish Audio error in form fill:', error);
+                    // Don't fallback to browser TTS - it causes dual audio
+                    console.warn('[Ed] Skipping browser TTS fallback to prevent dual audio');
                   });
               } else {
-                // Only use browser TTS if Fish Audio is not available at all
-                this.speak(response);
+                // Only use browser TTS if Fish Audio is completely unavailable (not initialized)
+                if (!this.config.disableBrowserTTS) {
+                  this.speak(response);
+                }
               }
             });
           }
@@ -730,15 +832,21 @@ export class Ed {
               console.log('[Ed] Fish Audio playback completed');
             })
             .catch((error) => {
-              console.error('[Ed] Fish Audio error, falling back to browser TTS:', error);
+              console.error('[Ed] Fish Audio error:', error);
               console.error('[Ed] Error details:', error.message);
-              // Fallback to basic TTS (will clean text automatically)
-              this.speak(response);
+              // Don't fallback to browser TTS - it causes dual audio
+              // Only log the error and continue silently
+              console.warn('[Ed] Skipping browser TTS fallback to prevent dual audio');
             });
         } else {
-          console.warn('[Ed] Fish Audio not available, using browser TTS');
-          // Fallback to basic TTS (will clean text automatically)
-          this.speak(response);
+          // Only use browser TTS if Fish Audio is completely unavailable (not initialized)
+          // This is an emergency fallback only
+          if (!this.config.disableBrowserTTS) {
+            console.warn('[Ed] Fish Audio not available, using browser TTS (emergency fallback)');
+            this.speak(response);
+          } else {
+            console.warn('[Ed] Fish Audio not available and browser TTS disabled - no voice output');
+          }
         }
       });
     }
@@ -779,10 +887,30 @@ export class Ed {
     if (this.ai) {
       try {
         const persona = getPersona(this.currentPersona);
+        
+        // Extract page context for AI
+        let pageContext: string | undefined;
+        try {
+          const pageContent = pageScanner.scan();
+          pageContext = `Current page: ${pageContent.title}
+URL: ${window.location.href}
+Page type: ${pageContent.pageType}
+Has forms: ${pageContent.forms > 0 ? 'Yes' : 'No'}
+Key headings: ${pageContent.headings.slice(0, 5).join(', ')}
+Summary: ${pageContent.mainContent.substring(0, 300)}`;
+        } catch (error) {
+          console.debug('[Ed] Could not extract page context:', error);
+          // Fallback to basic page info
+          pageContext = `Current page: ${document.title}
+URL: ${window.location.href}`;
+        }
+        
         return await this.ai.chat(text, {
           persona,
           language: this.currentLanguage,
           schoolId: this.config.schoolId,
+          toolContext: this.toolContext, // Pass tool context for Toolbox Workspace
+          pageContext, // Pass page context so AI can see what user is viewing
         });
       } catch (error) {
         console.error('[Ed] AI error:', error);
@@ -821,11 +949,15 @@ export class Ed {
           const cleanMessage = this.cleanTextForDisplay(message);
           this.fishVoice.speakAndPlay(cleanMessage, this.currentPersona, this.currentLanguage.code)
             .catch((error) => {
-              console.error('[Ed] Fish Audio error in proactive nudge, using browser TTS fallback:', error);
-              this.speak(message);
+              console.error('[Ed] Fish Audio error in proactive nudge:', error);
+              // Don't fallback to browser TTS - it causes dual audio
+              console.warn('[Ed] Skipping browser TTS fallback to prevent dual audio');
             });
         } else {
-          this.speak(message);
+          // Only use browser TTS if Fish Audio is completely unavailable (not initialized)
+          if (!this.config.disableBrowserTTS) {
+            this.speak(message);
+          }
         }
       });
     }
@@ -863,16 +995,23 @@ export class Ed {
   }
 
   /**
-   * Browser TTS fallback - ONLY use when Fish Audio is unavailable or fails
-   * This should NEVER be called when Fish Audio is available and working
+   * Browser TTS fallback - ONLY use in emergency cases when Fish Audio is completely unavailable
+   * DISABLED by default - only use if Fish Audio is not initialized at all
    */
   private speak(text: string): void {
     if (!this.config.features.voice) return;
 
-    // If Fish Audio is available, we should NOT be using browser TTS
-    // This is a fallback only for when Fish Audio fails or isn't initialized
+    // If browser TTS is disabled, don't use it
+    if (this.config.disableBrowserTTS) {
+      console.warn('[Ed] ⚠️ Browser TTS disabled - skipping fallback');
+      return;
+    }
+
+    // Only use browser TTS if Fish Audio is completely unavailable (not initialized)
+    // NOT as a fallback for errors - that causes both voices to play simultaneously
     if (this.fishVoice) {
-      console.warn('[Ed] ⚠️ Browser TTS called but Fish Audio is available - this should only happen on error');
+      console.warn('[Ed] ⚠️ Browser TTS called but Fish Audio is available - skipping to prevent dual audio');
+      return; // Don't use browser TTS if Fish Audio exists, even if it errors
     }
 
     // Stop any ongoing speech (both Fish Audio and browser TTS)
@@ -903,6 +1042,7 @@ export class Ed {
 
   /**
    * Stop all ongoing speech (Fish Audio and browser TTS)
+   * Synchronous version - use stopAllSpeechAsync() when you need to wait
    */
   private stopAllSpeech(): void {
     // Stop browser TTS first (synchronous)
@@ -910,24 +1050,30 @@ export class Ed {
       speechSynthesis.cancel();
     }
     
-    // Stop Fish Audio (async, but don't wait)
-    this.fishVoice?.stop();
+    // Stop Fish Audio (async, but don't wait in sync version)
+    this.fishVoice?.stop().catch(() => {
+      // Ignore errors in sync version
+    });
   }
   
   /**
    * Stop speech before starting new speech (with delay to prevent conflicts)
+   * Ensures Fish Audio is fully stopped before any new audio starts
+   * This prevents the "play() interrupted by pause()" error
    */
   private async stopAllSpeechAsync(): Promise<void> {
-    // Stop browser TTS
+    // Stop browser TTS first (synchronous)
     if (speechSynthesis.speaking) {
       speechSynthesis.cancel();
+      // Small delay to ensure browser TTS is fully stopped
+      await new Promise(resolve => setTimeout(resolve, 50));
     }
     
     // Stop Fish Audio and wait for it to fully stop
     if (this.fishVoice) {
-      this.fishVoice.stop();
-      // Small delay to ensure audio is fully stopped
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await this.fishVoice.stop(); // Now returns a promise, wait for it
+      // Additional delay to ensure audio element is fully released
+      await new Promise(resolve => setTimeout(resolve, 50));
     }
   }
 
@@ -1117,11 +1263,15 @@ export class Ed {
           const cleanGreeting = this.cleanTextForDisplay(this.currentLanguage.greeting);
           this.fishVoice.speakAndPlay(cleanGreeting, this.currentPersona, this.currentLanguage.code)
             .catch((error) => {
-              console.error('[Ed] Fish Audio error in setLanguage, using browser TTS fallback:', error);
-              this.speak(this.currentLanguage.greeting);
+              console.error('[Ed] Fish Audio error in setLanguage:', error);
+              // Don't fallback to browser TTS - it causes dual audio
+              console.warn('[Ed] Skipping browser TTS fallback to prevent dual audio');
             });
         } else {
-          this.speak(this.currentLanguage.greeting);
+          // Only use browser TTS if Fish Audio is completely unavailable (not initialized)
+          if (!this.config.disableBrowserTTS) {
+            this.speak(this.currentLanguage.greeting);
+          }
         }
       });
     }
@@ -1172,6 +1322,51 @@ export class Ed {
     // Update theme class on app-panel (matching original)
     this.widget?.classList.remove('theme-standard', 'theme-warm', 'theme-cool', 'theme-contrast');
     this.widget?.classList.add(`theme-${theme}`);
+  }
+
+  /**
+   * Set tool context for Toolbox Workspace integration
+   * When a user selects a tool, Ed becomes aware of it and can provide contextual help
+   */
+  public setToolContext(tool: { name: string; category: string; url?: string; expertise: string[] } | null): void {
+    this.toolContext = tool;
+    
+    if (tool) {
+      // Show shape relevant to tool category
+      const shapeMap: Record<string, ParticleShape> = {
+        'Finance': 'calculator',
+        'Teaching': 'book',
+        'SEND': 'heart',
+        'Compliance': 'document',
+        'HR': 'phone',
+        'Data': 'search',
+        'Admin': 'calendar',
+        'Estates': 'location',
+      };
+      const shape = shapeMap[tool.category] || 'lightbulb';
+      this.particle3D?.morphTo(shape);
+      
+      // Add contextual greeting message
+      this.addMessage({
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: `I see you're using ${tool.name}. I can help you with ${tool.expertise.slice(0, 3).join(', ')}. What would you like to know?`,
+        timestamp: new Date(),
+      });
+      
+      console.log('[Ed] Tool context set:', tool.name, '→', shape);
+    } else {
+      // Reset to default sphere
+      this.particle3D?.morphTo('sphere');
+      console.log('[Ed] Tool context cleared');
+    }
+  }
+
+  /**
+   * Get current tool context (for AI prompt building)
+   */
+  public getToolContext(): { name: string; category: string; url?: string; expertise: string[] } | null {
+    return this.toolContext;
   }
 
   private showMagicTools(): void {
@@ -1257,10 +1452,12 @@ export class Ed {
     document.body.classList.add('widget-active');
     document.body.classList.add('view-chat');
 
-    // Start particle animation immediately (Matching Gemini)
+    // Start particle animation and activate solar system → chaser transition
     if (this.particle3D) {
       // Start animation (isRunning check handled inside start method)
       this.particle3D.start();
+      // Trigger transition to chaser formation (planets spiral in)
+      this.particle3D.setActive(true);
     }
 
     // Update status
@@ -1286,6 +1483,11 @@ export class Ed {
       this.voice?.stop();
     }
 
+    // Return particles to solar system formation
+    if (this.particle3D) {
+      this.particle3D.setActive(false);
+    }
+
     // Update status
     this.statusPill?.setState('ready');
   }
@@ -1293,6 +1495,7 @@ export class Ed {
   public destroy(): void {
     this.close();
     this.particle3D?.destroy();
+    this.launcherParticle3D?.destroy();
     this.voice?.destroy();
     this.container.remove();
   }

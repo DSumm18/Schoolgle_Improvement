@@ -62,6 +62,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     useEffect(() => {
+        if (!auth) {
+            setLoading(false);
+            return;
+        }
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             setUser(currentUser);
             if (currentUser) {
@@ -91,6 +95,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const provider = new GoogleAuthProvider();
         provider.addScope('https://www.googleapis.com/auth/drive.readonly');
 
+        if (!auth) {
+            throw new Error('Firebase auth not initialized');
+        }
         try {
             logger.info('Initiating Google sign-in', { provider: 'google.com' });
             const result = await signInWithPopup(auth, provider);
@@ -120,6 +127,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const provider = new OAuthProvider('microsoft.com');
         provider.addScope('Files.Read.All');
 
+        if (!auth) {
+            throw new Error('Firebase auth not initialized');
+        }
         try {
             logger.info('Initiating Microsoft sign-in', { provider: 'microsoft.com' });
             const result = await signInWithPopup(auth, provider);
@@ -146,6 +156,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const signOut = async () => {
+        if (!auth) {
+            throw new Error('Firebase auth not initialized');
+        }
         try {
             logger.info('User signing out', { userId: user?.uid });
             await firebaseSignOut(auth);

@@ -2,20 +2,26 @@
 
 import LoginButton from "@/components/LoginButton";
 import MicrosoftLoginButton from "@/components/MicrosoftLoginButton";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context/SupabaseAuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import SchoolgleAnimatedLogo from "@/components/SchoolgleAnimatedLogo";
 
 export default function LoginPage() {
-    const { user, loading } = useAuth();
+    const { user, loading, session } = useAuth();
     const router = useRouter();
 
     useEffect(() => {
-        if (!loading && user) {
-            router.push("/");
+        // Wait for auth to finish loading, then check for user or session
+        if (!loading) {
+            if (user || session) {
+                console.log('[Login Page] User authenticated, redirecting to dashboard');
+                router.push("/dashboard");
+            } else {
+                console.log('[Login Page] No user or session found');
+            }
         }
-    }, [user, loading, router]);
+    }, [user, session, loading, router]);
 
     if (loading) {
         return (

@@ -5,11 +5,20 @@
 
 import type { Persona, Language } from '../types';
 
+interface ToolContext {
+  name: string;
+  category: string;
+  url?: string;
+  expertise: string[];
+}
+
 interface ChatContext {
   persona: Persona;
   language: Language;
   schoolId: string;
   conversationHistory?: Array<{ role: string; content: string }>;
+  toolContext?: ToolContext | null;
+  pageContext?: string; // Current page context (URL, title, headings, visible text)
 }
 
 export class GeminiClient {
@@ -213,9 +222,9 @@ export class GeminiClient {
   }
 
   private buildSystemPrompt(context: ChatContext): string {
-    const { persona, language, schoolId } = context;
+    const { persona, language, schoolId, toolContext, pageContext } = context;
 
-    return `You are ${persona.name}, a friendly AI assistant for ${schoolId} school. 
+    let prompt = `You are ${persona.name}, a friendly AI assistant for ${schoolId} school. 
 Your personality: ${persona.greeting}
 Current language: ${language.name} (${language.code})
 
@@ -238,6 +247,35 @@ You can help with:
 - General school information
 - Explaining school procedures
 - Translating between languages`;
+
+    // Add page context if available (current website/page information)
+    if (pageContext) {
+      prompt += `
+
+CURRENT PAGE CONTEXT:
+${pageContext}
+
+Use this information to provide relevant, contextual answers about what the user is currently viewing. Reference specific content from the page when helpful.`;
+    }
+
+    // Add tool context if available (Toolbox Workspace integration)
+    if (toolContext) {
+      prompt += `
+
+CURRENT TOOL CONTEXT:
+The user is currently using "${toolContext.name}" (${toolContext.category} category).
+${toolContext.url ? `Tool URL: ${toolContext.url}` : ''}
+
+Your expertise for this tool includes: ${toolContext.expertise.join(', ')}.
+
+When answering questions:
+- Provide guidance specific to ${toolContext.name}
+- Help with common tasks and workflows in this tool
+- Offer tips and best practices for school staff using this tool
+- If asked about features you're unsure of, suggest checking the tool's help documentation`;
+    }
+
+    return prompt;
   }
 
   /**

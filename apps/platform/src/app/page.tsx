@@ -1,25 +1,19 @@
 "use client";
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import {
     BarChart3, Shield, Building2, Users, PoundSterling, Heart,
-    ChevronRight, Check, ArrowRight, Zap, Globe, Clock
+    ChevronRight, Check, Zap, Clock
 } from 'lucide-react';
 import OrigamiParticles from '@/components/OrigamiParticles';
-import Logo from '@/components/Logo';
-import SchoolgleAnimatedLogo from '@/components/SchoolgleAnimatedLogo';
 import Navbar from '@/components/website/Navbar';
 import Hero from '@/components/website/Hero';
-import WhatSchoolgleDoes from '@/components/website/WhatSchoolgleDoes';
-import CoreProducts from '@/components/website/CoreProducts';
-import WhySchoolgle from '@/components/website/WhySchoolgle';
-import Testimonials from '@/components/website/Testimonials';
-import AudienceSection from '@/components/website/AudienceSection';
-import BlogSection from '@/components/website/BlogSection';
-import DownloadSection from '@/components/website/DownloadSection';
+import ProblemStatement from '@/components/website/ProblemStatement';
+import Differentiation from '@/components/website/Differentiation';
+import PreviewModules from '@/components/website/PreviewModules';
+import InsightsSection from '@/components/website/InsightsSection';
+import EarlyAccessForm from '@/components/website/EarlyAccessForm';
 import Footer from '@/components/website/Footer';
-import EdWidget from '@/components/EdChatbot';
 
 // Product suites with clean styling
 const productSuites = [
@@ -125,44 +119,39 @@ const productSuites = [
 ];
 
 export default function HomePage() {
-    const router = useRouter();
     const [expandedSuite, setExpandedSuite] = useState<string | null>('improvement');
 
     return (
         <div className="min-h-screen bg-white relative">
-            {/* Origami Background - Logo in top-left */}
-            <OrigamiParticles text="Schoolgle" opacity={0.2} shape="crane" position="top-left" size="medium" />
+            {/* Origami Background - subtle branding */}
+            <OrigamiParticles text="Schoolgle" opacity={0.15} shape="crane" position="top-left" size="medium" />
 
             {/* Website Navbar */}
             <Navbar />
 
             <main className="relative z-10 bg-white">
-                {/* Website Hero Section */}
+                {/* Hero Section */}
                 <Hero />
 
-                {/* Website WhatSchoolgleDoes Section */}
-                <WhatSchoolgleDoes />
+                {/* Problem Statement */}
+                <ProblemStatement />
 
-                {/* Website CoreProducts Section */}
-                <CoreProducts />
+                {/* What Makes Schoolgle Different */}
+                <Differentiation />
 
-                {/* Website WhySchoolgle Section */}
-                <WhySchoolgle />
+                {/* What We're Building (Preview Mode) */}
+                <section id="preview">
+                    <PreviewModules />
+                </section>
 
-                {/* Website Testimonials Section */}
-                <Testimonials />
+                {/* Insights / Thinking */}
+                <InsightsSection />
 
-                {/* Website AudienceSection */}
-                <AudienceSection />
+                {/* Early Access Waitlist */}
+                <EarlyAccessForm />
 
-                {/* Website BlogSection */}
-                <BlogSection />
-
-                {/* Website DownloadSection */}
-                <DownloadSection />
-
-                {/* Product Suites - Keep existing detailed view */}
-                <section className="py-16 bg-gray-50">
+                {/* OLD SECTIONS BELOW - Hidden but preserved for future use */}
+                <section className="hidden py-16 bg-gray-50">
                     <div className="max-w-6xl mx-auto px-6">
                         <div className="text-center mb-12">
                             <h2 className="text-3xl font-medium text-gray-900 mb-3">The Schoolgle Suite</h2>
@@ -282,76 +271,10 @@ export default function HomePage() {
                     </div>
                 </section>
 
-                {/* Why Schoolgle */}
-                <section className="py-20 bg-white">
-                    <div className="max-w-4xl mx-auto px-6">
-                        <div className="text-center mb-16">
-                            <h2 className="text-3xl font-medium text-gray-900">Why Schools Choose Schoolgle</h2>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-                            <div className="text-center">
-                                <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
-                                    <Globe className="w-6 h-6 text-gray-700" />
-                                </div>
-                                <h3 className="font-medium text-gray-900 mb-2">Built for UK Schools</h3>
-                                <p className="text-gray-500 text-sm">
-                                    Every feature designed around DfE, Ofsted, and UK education requirements.
-                                </p>
-                            </div>
-                            <div className="text-center">
-                                <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
-                                    <PoundSterling className="w-6 h-6 text-gray-700" />
-                                </div>
-                                <h3 className="font-medium text-gray-900 mb-2">Affordable for All</h3>
-                                <p className="text-gray-500 text-sm">
-                                    From single schools to large MATs. No per-user pricing. Transparent annual costs.
-                                </p>
-                            </div>
-                            <div className="text-center">
-                                <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
-                                    <Zap className="w-6 h-6 text-gray-700" />
-                                </div>
-                                <h3 className="font-medium text-gray-900 mb-2">AI That Actually Helps</h3>
-                                <p className="text-gray-500 text-sm">
-                                    Ed, your AI assistant, trained on EEF research and inspection frameworks.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                {/* CTA */}
-                <section className="py-20 bg-gray-900">
-                    <div className="max-w-3xl mx-auto px-6 text-center">
-                        <h2 className="text-3xl font-medium text-white mb-4">
-                            Ready to simplify school management?
-                        </h2>
-                        <p className="text-gray-400 mb-10">
-                            Join schools across the UK who are saving hours every week.
-                        </p>
-                        <div className="flex items-center justify-center gap-4">
-                            <a
-                                href="/signup"
-                                className="px-8 py-4 bg-white text-gray-900 font-medium rounded-xl hover:bg-gray-100 transition-colors"
-                            >
-                                Get Started Free
-                            </a>
-                            <a
-                                href="/contact"
-                                className="px-8 py-4 text-white font-medium border border-gray-700 rounded-xl hover:bg-gray-800 transition-colors"
-                            >
-                                Talk to Sales
-                            </a>
-                        </div>
-                    </div>
-                </section>
             </main>
 
             {/* Website Footer */}
             <Footer />
-
-            {/* Ed Widget - Complete widget with voice, morphing, and all features */}
-            <EdWidget />
         </div>
     );
 }

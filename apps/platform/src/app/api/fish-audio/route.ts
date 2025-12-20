@@ -10,19 +10,20 @@ export async function POST(request: NextRequest) {
         // Get the request body from the client (contains text, reference_id, language, etc.)
         const requestBody = await request.json();
 
-        // TEMPORARY WORKAROUND: Hardcode API key since env vars aren't loading
-        // TODO: Fix environment variable loading in Next.js
-        const apiKey = '979fa335474b48d8af6bbe56cc171ec6';
+        // Get API key from environment variable (server-side only)
+        // Fallback to hardcoded key for development (should be in .env.local in production)
+        const apiKey = process.env.FISH_AUDIO_API_KEY || '979fa335474b48d8af6bbe56cc171ec6';
 
-        console.log('[Fish Audio Proxy] Using hardcoded API key:', {
+        console.log('[Fish Audio Proxy] API key status:', {
             hasKey: !!apiKey,
-            keyPreview: apiKey ? `${apiKey.substring(0, 8)}...` : 'NONE',
+            keyPreview: apiKey ? `${apiKey.substring(0, 8)}...${apiKey.substring(apiKey.length - 4)}` : 'NONE',
+            source: process.env.FISH_AUDIO_API_KEY ? 'env' : 'fallback',
         });
 
         if (!apiKey) {
             console.error('[Fish Audio Proxy] API key not found');
             return NextResponse.json(
-                { error: 'Fish Audio API key not configured' },
+                { error: 'Fish Audio API key not configured. Set FISH_AUDIO_API_KEY in .env.local' },
                 { status: 500 }
             );
         }
@@ -34,7 +35,12 @@ export async function POST(request: NextRequest) {
         });
 
         // Forward the request to Fish Audio API
-        const response = await fetch('https://api.fish.audio/v1/tts', {
+        // The client calls /api/fish-audio, we forward to https://api.fish.audio/v1/tts
+        const fishAudioUrl = 'https://api.fish.audio/v1/tts';
+        
+        console.log('[Fish Audio Proxy] Forwarding to:', fishAudioUrl);
+        
+        const response = await fetch(fishAudioUrl, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${apiKey}`,

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ed - Configuration</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      width: 400px;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1e293b;
+      color: #e2e8f0;
+    }
+    h1 {
+      font-size: 18px;
+      margin-bottom: 16px;
+      color: #f1f5f9;
+    }
+    .section {
+      margin-bottom: 20px;
+      padding: 16px;
+      background: #0f172a;
+      border-radius: 8px;
+      border: 1px solid #334155;
+    }
+    .section h2 {
+      font-size: 14px;
+      margin-bottom: 12px;
+      color: #cbd5e1;
+      font-weight: 600;
+    }
+    label {
+      display: block;
+      font-size: 12px;
+      color: #94a3b8;
+      margin-bottom: 6px;
+    }
+    input {
+      width: 100%;
+      padding: 8px 12px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      color: #e2e8f0;
+      font-size: 13px;
+      font-family: 'Courier New', monospace;
+    }
+    input:focus {
+      outline: none;
+      border-color: #3b82f6;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      background: #059669;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      margin-top: 12px;
+    }
+    button:hover {
+      background: #047857;
+    }
+    button:disabled {
+      background: #475569;
+      cursor: not-allowed;
+    }
+    .status {
+      margin-top: 12px;
+      padding: 8px;
+      border-radius: 6px;
+      font-size: 12px;
+    }
+    .status.success {
+      background: #065f46;
+      color: #6ee7b7;
+    }
+    .status.error {
+      background: #7f1d1d;
+      color: #fca5a5;
+    }
+    .status.info {
+      background: #1e3a8a;
+      color: #93c5fd;
+    }
+    .help-text {
+      font-size: 11px;
+      color: #64748b;
+      margin-top: 4px;
+    }
+    .current-config {
+      font-size: 11px;
+      color: #94a3b8;
+      margin-top: 8px;
+      padding: 8px;
+      background: #1e293b;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>⚙️ Ed Configuration</h1>
+  
+  <div class="section">
+    <h2>API Keys</h2>
+    
+    <label for="gemini-key">Gemini API Key (Required for Automation)</label>
+    <input type="password" id="gemini-key" placeholder="AIza...">
+    <div class="help-text">From your .env.local: GEMINI_API_KEY - Used for Gemini 3 Flash</div>
+    
+    <label for="openrouter-key" style="margin-top: 12px;">OpenRouter API Key (Optional)</label>
+    <input type="password" id="openrouter-key" placeholder="sk-or-v1-...">
+    <div class="help-text">From your .env.local: OPENROUTER_API_KEY</div>
+    
+    <label for="fish-audio-key" style="margin-top: 12px;">Fish Audio API Key</label>
+    <input type="password" id="fish-audio-key" placeholder="979fa335...">
+    <div class="help-text">From your .env.local: NEXT_PUBLIC_FISH_AUDIO_API_KEY</div>
+    
+    <label for="edwina-voice-id" style="margin-top: 12px;">Edwina Voice ID</label>
+    <input type="text" id="edwina-voice-id" placeholder="72e3a313...">
+    <div class="help-text">From your .env.local: NEXT_PUBLIC_FISH_AUDIO_VOICE_ID_EDWINA</div>
+  </div>
+  
+  <div class="section">
+    <h2>Development Settings</h2>
+    <label for="dev-mode">
+      <input type="checkbox" id="dev-mode" style="width: auto; margin-right: 8px;">
+      Use Local Development Server (localhost:3000)
+    </label>
+    <div class="help-text">Enable this to connect to your local dev server instead of production</div>
+  </div>
+  
+  <div class="section">
+    <h2>Settings</h2>
+    <label for="persona">Persona (Voice)</label>
+    <select id="persona" style="width: 100%; padding: 8px; background: #1e293b; border: 1px solid #334155; border-radius: 6px; color: #e2e8f0; font-size: 13px;">
+      <option value="edwina">Edwina</option>
+      <option value="ed">Ed</option>
+      <option value="santa">Santa</option>
+      <option value="elf">Elf</option>
+    </select>
+    
+    <label for="tts-provider" style="margin-top: 12px;">TTS Provider</label>
+    <select id="tts-provider" style="width: 100%; padding: 8px; background: #1e293b; border: 1px solid #334155; border-radius: 6px; color: #e2e8f0; font-size: 13px;">
+      <option value="fish">Fish Audio (Better Quality)</option>
+      <option value="browser">Browser TTS (Free, Lower Quality)</option>
+    </select>
+  </div>
+  
+  <button id="save-btn">💾 Save Configuration</button>
+  
+  <div id="status"></div>
+  <div id="current-config" class="current-config"></div>
+  
+  <div class="section" style="margin-top: 20px; padding: 12px; background: #0f172a; border-radius: 6px; border: 1px solid #334155;">
+    <h2 style="font-size: 12px; margin-bottom: 8px; color: #cbd5e1;">💡 Quick Setup</h2>
+    <div style="font-size: 11px; color: #94a3b8; line-height: 1.5;">
+      <p style="margin-bottom: 6px;">1. Enter your <strong>Gemini API Key</strong> above (required for automation)</p>
+      <p style="margin-bottom: 6px;">2. Enter <strong>Fish Audio API Key</strong> for voice</p>
+      <p style="margin-bottom: 6px;">3. Enable <strong>Dev Mode</strong> to use localhost:3000</p>
+      <p>4. Click <strong>Save Configuration</strong></p>
+    </div>
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>

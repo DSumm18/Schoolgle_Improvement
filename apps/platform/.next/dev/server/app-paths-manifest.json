@@ -1,3 +1,4 @@
 {
-  "/api/ed/chat/route": "app/api/ed/chat/route.js"
+  "/api/fish-audio/route": "app/api/fish-audio/route.js",
+  "/page": "app/page.js"
 }

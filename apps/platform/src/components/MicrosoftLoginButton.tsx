@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context/SupabaseAuthContext";
 import { LogIn } from "lucide-react";
 
 export default function MicrosoftLoginButton() {

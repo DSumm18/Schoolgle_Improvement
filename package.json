@@ -14,7 +14,10 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "test:formfill": "cd packages/form-fill-lab && npm run test",
+    "test:formfill:headed": "cd packages/form-fill-lab && npm run test:headed",
+    "test:formfill:ci": "cd packages/form-fill-lab && npm run test:ci"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.84.0",

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import "../../../../packages/ed-widget/src/styles/main.css";
-import { AuthProvider } from "@/context/AuthContext";
+import { SupabaseAuthProvider } from "@/context/SupabaseAuthContext";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -22,7 +22,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className} suppressHydrationWarning>
-        <AuthProvider>{children}</AuthProvider>
+        <SupabaseAuthProvider>{children}</SupabaseAuthProvider>
       </body>
     </html>
   );

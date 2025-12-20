@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wizard Form - Form Fill Lab</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+    }
+    .wizard-step {
+      display: none;
+    }
+    .wizard-step.active {
+      display: block;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+    }
+    input, select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    .wizard-nav {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 20px;
+    }
+    button {
+      padding: 10px 20px;
+      background: #059669;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .step-indicator {
+      margin-bottom: 20px;
+      padding: 10px;
+      background: #f0f0f0;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Wizard Multi-Step Form Test</h1>
+  <p>Multi-step form with Next/Back navigation</p>
+  
+  <div class="step-indicator">
+    Step <span id="current-step">1</span> of <span id="total-steps">3</span>
+  </div>
+  
+  <form id="test-form">
+    <div class="wizard-step active" data-step="1">
+      <h2>Step 1: Personal Information</h2>
+      <div class="form-group">
+        <label for="first-name">First Name</label>
+        <input type="text" id="first-name" name="first-name" required>
+      </div>
+      <div class="form-group">
+        <label for="last-name">Last Name</label>
+        <input type="text" id="last-name" name="last-name" required>
+      </div>
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" required>
+      </div>
+    </div>
+    
+    <div class="wizard-step" data-step="2">
+      <h2>Step 2: Address</h2>
+      <div class="form-group">
+        <label for="address">Address</label>
+        <input type="text" id="address" name="address" required>
+      </div>
+      <div class="form-group">
+        <label for="city">City</label>
+        <input type="text" id="city" name="city" required>
+      </div>
+      <div class="form-group">
+        <label for="postcode">Postcode</label>
+        <input type="text" id="postcode" name="postcode" required>
+      </div>
+    </div>
+    
+    <div class="wizard-step" data-step="3">
+      <h2>Step 3: Preferences</h2>
+      <div class="form-group">
+        <label for="newsletter">Newsletter</label>
+        <select id="newsletter" name="newsletter" required>
+          <option value="">Select...</option>
+          <option value="yes">Yes, subscribe</option>
+          <option value="no">No, thanks</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="preferences">Preferences</label>
+        <input type="text" id="preferences" name="preferences">
+      </div>
+    </div>
+    
+    <div class="wizard-nav">
+      <button type="button" id="prev-btn" disabled>← Back</button>
+      <button type="button" id="next-btn">Next →</button>
+      <button type="submit" id="submit-btn" style="display: none;">Submit</button>
+    </div>
+  </form>
+  
+  <div id="result" style="margin-top: 20px; padding: 10px; background: #f0f0f0; display: none;"></div>
+  
+  <script>
+    let currentStep = 1;
+    const totalSteps = 3;
+    
+    const steps = document.querySelectorAll('.wizard-step');
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const submitBtn = document.getElementById('submit-btn');
+    const currentStepSpan = document.getElementById('current-step');
+    
+    function showStep(step) {
+      steps.forEach((s, idx) => {
+        s.classList.toggle('active', idx + 1 === step);
+      });
+      
+      currentStepSpan.textContent = step;
+      
+      prevBtn.disabled = step === 1;
+      nextBtn.style.display = step === totalSteps ? 'none' : 'inline-block';
+      submitBtn.style.display = step === totalSteps ? 'inline-block' : 'none';
+    }
+    
+    nextBtn.addEventListener('click', () => {
+      const currentStepEl = document.querySelector('.wizard-step.active');
+      const inputs = currentStepEl.querySelectorAll('input[required], select[required]');
+      let valid = true;
+      
+      inputs.forEach(input => {
+        if (!input.value) {
+          valid = false;
+          input.style.borderColor = '#ef4444';
+        } else {
+          input.style.borderColor = '#ddd';
+        }
+      });
+      
+      if (valid && currentStep < totalSteps) {
+        currentStep++;
+        showStep(currentStep);
+      }
+    });
+    
+    prevBtn.addEventListener('click', () => {
+      if (currentStep > 1) {
+        currentStep--;
+        showStep(currentStep);
+      }
+    });
+    
+    document.getElementById('test-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const result = document.getElementById('result');
+      result.style.display = 'block';
+      result.textContent = 'Form submitted (test only)';
+    });
+  </script>
+</body>
+</html>
+

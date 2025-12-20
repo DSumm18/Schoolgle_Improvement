@@ -92,14 +92,26 @@ export default function OfstedFrameworkView({ assessments, setAssessments, local
         setShowEdPanel(true);
     };
 
-    // Handle action creation from Ed
-    const handleEdAction = (action: ActionItem) => {
-        console.log('Ed created action:', action);
+    // Handle action creation from Ed (converts DraftAction to ActionItem)
+    const handleEdAction = (draftAction: any) => {
+        console.log('Ed created action:', draftAction);
+
+        // Convert DraftAction to ActionItem format
+        const action: ActionItem = {
+            id: draftAction.id || `action-${Date.now()}`,
+            description: draftAction.title || draftAction.description || '',
+            category: edSelectedCategory || '',
+            rationale: draftAction.description || '',
+            priority: draftAction.priority || 'medium',
+            status: draftAction.status === 'approved' ? 'in_progress' : 'not_started',
+            assignee: draftAction.suggestedOwner,
+            dueDate: draftAction.dueDate,
+        };
 
         // Find the subcategory ID from the action's category name
         const matchingSubcategory = OFSTED_FRAMEWORK.flatMap(c => c.subcategories).find(
-            sub => sub.name.toLowerCase().includes(action.category.toLowerCase()) ||
-                   action.category.toLowerCase().includes(sub.name.toLowerCase())
+            sub => action.category && (sub.name.toLowerCase().includes(action.category.toLowerCase()) ||
+                   action.category.toLowerCase().includes(sub.name.toLowerCase()))
         );
 
         if (!matchingSubcategory) {

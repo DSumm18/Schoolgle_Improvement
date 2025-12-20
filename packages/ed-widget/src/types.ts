@@ -19,8 +19,14 @@ export interface EdConfig {
   };
   customKnowledge?: string[];
   geminiApiKey?: string;
+  openRouterApiKey?: string; // OpenRouter API key
   fishAudioApiKey?: string;
   fishAudioVoiceIds?: Record<PersonaType, string>;
+  disableBrowserTTS?: boolean; // Disable browser TTS fallback (only use Fish Audio)
+  provider?: 'openrouter' | 'gemini'; // LLM provider selection
+  enableAI?: boolean; // Enable/disable AI features
+  enableTTS?: boolean; // Enable/disable TTS features
+  ttsProvider?: 'browser' | 'fish'; // TTS provider selection
 }
 
 export type PersonaType = 'ed' | 'edwina' | 'santa' | 'elf' | 'headteacher' | 'custom';

@@ -1,118 +1,189 @@
-'use client';
+"use client";
 
-import { useEffect, useRef } from 'react';
+import { useState, useRef, useEffect } from "react";
+import { X, Send, Bot, Minimize2, Maximize2 } from "lucide-react";
+import SchoolgleAnimatedLogo from "@/components/SchoolgleAnimatedLogo";
 
-// Import the working Ed class directly from source
-// This is the proven, working implementation from c:\Git\ED
-let Ed: any = null;
-
-// Dynamically import to avoid SSR issues
-if (typeof window !== 'undefined') {
-    // Import directly from source files (no build needed)
-    import('../../../../packages/ed-widget/src/Ed').then((module) => {
-        Ed = module.Ed;
-    }).catch((err) => {
-        console.error('[EdChatbot] Failed to load Ed widget:', err);
-    });
+interface Message {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
 }
 
-/**
- * React wrapper for the original working Ed widget
- * This component initializes the Ed class from c:\Git\ED which has all features working:
- * - Fish Audio TTS (Edwina's voice)
- * - Particle morphing (flags, pencil, lightbulb, etc.)
- * - Language detection
- * - Magic Tools animations
- * - Form fill detection
- */
-export function EdChatbot() {
-    const edInstance = useRef<any>(null);
-    const initAttempted = useRef(false);
-
-    useEffect(() => {
-        // Only run in browser
-        if (typeof window === 'undefined') return;
-
-        // Only initialize once
-        if (initAttempted.current) return;
-        initAttempted.current = true;
-
-        // Wait for Ed class to be loaded
-        const initEd = () => {
-            if (!Ed) {
-                console.log('[EdChatbot] Waiting for Ed class to load...');
-                setTimeout(initEd, 100);
-                return;
-            }
-
-            if (edInstance.current) {
-                console.warn('[EdChatbot] Ed already initialized');
-                return;
-            }
-
-            console.log('[EdChatbot] Initializing Ed widget with configuration...');
-
-            // Hardcode API keys since process.env doesn't work in dynamically imported modules
-            // These values are from .env.local
-            const fishApiKey = '979fa335474b48d8af6bbe56cc171ec6';
-            const geminiApiKey = 'AIzaSyC9MpcNpygkHG0XfT6G4sDH_8L3PczQrEc';
-
-            const config = {
-                schoolId: 'schoolgle',
-                theme: 'standard',
-                position: 'bottom-right',
-                language: 'en-GB',
-                persona: 'edwina',
-                fishAudioApiKey: fishApiKey,
-                fishAudioVoiceIds: {
-                    ed: '400b2a2c4aa44afc87b6d14adf0dd13c',
-                    edwina: '72e3a3135204461ba041df787dc5c834',
-                    santa: '2e56aeff1a7a4cc9b904971cd5bd9794',
-                    elf: 'd66de7f0c2c9468b924120fdf1a4aae7',
-                    headteacher: '',
-                    custom: '',
-                },
-                // Don't pass geminiApiKey - Ed will use fallback responses
-                // Chat API responses will come from /api/ed/chat (which uses OpenRouter/DeepSeek)
-                features: {
-                    admissions: true,
-                    policies: true,
-                    calendar: true,
-                    staffDirectory: false,
-                    formFill: true,
-                    voice: true,
-                },
-            };
-
-            console.log('[EdChatbot] Config:', {
-                ...config,
-                fishAudioApiKey: fishApiKey ? `${fishApiKey.substring(0, 8)}...` : 'MISSING',
-                geminiApiKey: geminiApiKey ? `${geminiApiKey.substring(0, 8)}...` : 'MISSING',
-            });
-
-            try {
-                edInstance.current = new Ed(config);
-                console.log('[EdChatbot] ✅ Ed widget initialized successfully');
-            } catch (error) {
-                console.error('[EdChatbot] ❌ Failed to initialize Ed:', error);
-            }
-        };
-
-        initEd();
-
-        // Cleanup on unmount
-        return () => {
-            if (edInstance.current && edInstance.current.destroy) {
-                console.log('[EdChatbot] Destroying Ed instance');
-                edInstance.current.destroy();
-                edInstance.current = null;
-            }
-        };
-    }, []);
-
-    // Ed creates its own DOM, so we don't render anything
-    return null;
+interface EdChatbotProps {
+  isOpen: boolean;
+  onToggle: () => void;
+  isMinimized: boolean;
+  onToggleMinimize: () => void;
 }
 
-// Export as default for compatibility with page.tsx
-export default EdChatbot;
+export default function EdChatbot({
+  isOpen,
+  onToggle,
+  isMinimized,
+  onToggleMinimize,
+}: EdChatbotProps) {
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: '1',
+      role: 'assistant',
+      content: "Hello! I'm Ed, your Schoolgle assistant. How can I help you today?",
+      timestamp: new Date(),
+    },
+  ]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const handleSend = async () => {
+    if (!input.trim() || isLoading) return;
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: input,
+      timestamp: new Date(),
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
+    setInput('');
+    setIsLoading(true);
+
+    // TODO: Integrate with MCP server / AI backend
+    setTimeout(() => {
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: "I'm here to help! This is a placeholder response. The full AI integration will be connected soon.",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, assistantMessage]);
+      setIsLoading(false);
+    }, 1000);
+  };
+
+  if (!isOpen) {
+    return (
+      <div className="fixed bottom-4 right-4 z-40">
+        <button
+          onClick={onToggle}
+          className="rounded-full p-2 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 active:scale-95"
+          title="Open Ed Chatbot"
+        >
+          <SchoolgleAnimatedLogo size={60} showText={false} />
+        </button>
+      </div>
+    );
+  }
+
+  if (isMinimized) {
+    return (
+      <div className="fixed bottom-4 right-4 z-40">
+        <button
+          onClick={onToggleMinimize}
+          className="rounded-full p-2 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 active:scale-95"
+          title="Restore Ed Chatbot"
+        >
+          <SchoolgleAnimatedLogo size={60} showText={false} />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-96 bg-white border-l border-gray-200 flex flex-col h-screen fixed right-0 top-0 z-30 shadow-xl">
+      {/* Header */}
+      <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-blue-600 text-white">
+        <div className="flex items-center gap-2">
+          <Bot size={20} />
+          <h3 className="font-semibold">Ed - Your Assistant</h3>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onToggleMinimize}
+            className="p-1 hover:bg-blue-700 rounded transition-colors"
+            title="Minimize"
+          >
+            <Minimize2 size={16} />
+          </button>
+          <button
+            onClick={onToggle}
+            className="p-1 hover:bg-blue-700 rounded transition-colors"
+            title="Close"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      </div>
+
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {messages.map((message) => (
+          <div
+            key={message.id}
+            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+          >
+            <div
+              className={`max-w-[80%] rounded-lg p-3 ${
+                message.role === 'user'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-900'
+              }`}
+            >
+              <p className="text-sm">{message.content}</p>
+              <p className="text-xs mt-1 opacity-70">
+                {message.timestamp.toLocaleTimeString('en-GB', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </p>
+            </div>
+          </div>
+        ))}
+        {isLoading && (
+          <div className="flex justify-start">
+            <div className="bg-gray-100 rounded-lg p-3">
+              <div className="flex gap-1">
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+              </div>
+            </div>
+          </div>
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Input */}
+      <div className="p-4 border-t border-gray-200">
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+            placeholder="Ask Ed anything..."
+            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={isLoading}
+          />
+          <button
+            onClick={handleSend}
+            disabled={!input.trim() || isLoading}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            <Send size={18} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -1,4 +1,4 @@
-import { calculateAIRating, type OfstedCategory, OFSTED_FRAMEWORK } from './ofsted-framework';
+import { calculateAIRating, OFSTED_FRAMEWORK, type Category } from './ofsted-framework';
 import type { EvidenceMatch } from './ai-evidence-matcher';
 
 // --- Types ---
@@ -159,14 +159,20 @@ export function updateAssessmentsFromEvidence(
                 // Generate rationale
                 const aiRationale = generateRationale(
                     subcategory.name,
-                    subcategory.evidenceRequired,
+                    subcategory.evidenceRequired.map(e => e.name), // Convert EvidenceItem[] to string[]
                     matchesForSubcategory
                 );
 
                 // Store update
+                // Map new 5-point scale to old 4-point scale for compatibility
+                const mappedRating = aiRating === 'exceptional' || aiRating === 'strong_standard' ? 'outstanding' :
+                                    aiRating === 'expected_standard' ? 'good' :
+                                    aiRating === 'needs_attention' ? 'requires_improvement' :
+                                    aiRating === 'urgent_improvement' ? 'inadequate' : 'not_assessed';
+                
                 updates[subcategory.id] = {
                     subcategoryId: subcategory.id,
-                    aiRating,
+                    aiRating: mappedRating as 'outstanding' | 'good' | 'requires_improvement' | 'inadequate',
                     aiRationale,
                     evidenceCount,
                     requiredCount,

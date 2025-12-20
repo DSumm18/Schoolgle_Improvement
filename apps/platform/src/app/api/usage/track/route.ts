@@ -109,8 +109,13 @@ export async function POST(req: NextRequest) {
 
         // Update AI costs if applicable
         if (aiCostUsd) {
-            updateData.ai_total_cost_usd = (parseFloat(summary?.ai_total_cost_usd) || 0) + parseFloat(aiCostUsd);
-            updateData.ai_total_tokens = (summary?.ai_total_tokens || 0) + (aiTokensInput || 0) + (aiTokensOutput || 0);
+            const currentCost = typeof summary?.ai_total_cost_usd === 'string' ? parseFloat(summary.ai_total_cost_usd) : (summary?.ai_total_cost_usd || 0);
+            const currentTokens = typeof summary?.ai_total_tokens === 'string' ? parseInt(summary.ai_total_tokens, 10) : (typeof summary?.ai_total_tokens === 'number' ? summary.ai_total_tokens : 0);
+            const inputTokens = typeof aiTokensInput === 'string' ? parseInt(aiTokensInput, 10) : (aiTokensInput || 0);
+            const outputTokens = typeof aiTokensOutput === 'string' ? parseInt(aiTokensOutput, 10) : (aiTokensOutput || 0);
+            const costUsd = typeof aiCostUsd === 'string' ? parseFloat(aiCostUsd) : (aiCostUsd || 0);
+            updateData.ai_total_cost_usd = String(currentCost + costUsd);
+            updateData.ai_total_tokens = String(Number(currentTokens) + Number(inputTokens) + Number(outputTokens));
         }
 
         await supabase

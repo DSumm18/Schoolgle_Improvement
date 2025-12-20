@@ -1,0 +1,125 @@
+{
+  "tools": [
+    {
+      "id": "canva-edu",
+      "name": "Canva for Education",
+      "url": "https://www.canva.com/education/",
+      "category": "Teaching",
+      "tags": ["design", "presentations", "posters", "social-media"],
+      "pricing": "Education free",
+      "summary": "Create professional presentations, posters, and visual resources with drag-and-drop design tools.",
+      "notes": "Free premium features for verified educators and schools."
+    },
+    {
+      "id": "google-workspace-edu",
+      "name": "Google Workspace for Education",
+      "url": "https://edu.google.com/workspace-for-education/",
+      "category": "Admin",
+      "tags": ["email", "docs", "collaboration", "storage"],
+      "pricing": "Free tier",
+      "summary": "Suite of productivity tools including Gmail, Docs, Drive, and Classroom for schools.",
+      "notes": "Free fundamentals tier available for qualifying institutions."
+    },
+    {
+      "id": "every-budget",
+      "name": "Every Budget Builder",
+      "url": "https://www.every.education/",
+      "category": "Finance",
+      "tags": ["budgeting", "forecasting", "planning"],
+      "pricing": "Free tier",
+      "summary": "School budget planning and forecasting tool with scenario modelling.",
+      "notes": "Check if your MAT or LA has a subscription."
+    },
+    {
+      "id": "schoolbus",
+      "name": "Schoolbus",
+      "url": "https://www.schoolbus.co.uk/",
+      "category": "Compliance",
+      "tags": ["safeguarding", "policies", "statutory"],
+      "pricing": "Free tier",
+      "summary": "Safeguarding and compliance resources including model policies and updates.",
+      "notes": "Free newsletter with statutory updates."
+    },
+    {
+      "id": "widgit-online",
+      "name": "Widgit Online",
+      "url": "https://www.widgit.com/products/widgit-online/",
+      "category": "SEND",
+      "tags": ["symbols", "communication", "accessibility", "visual-supports"],
+      "pricing": "Free tier",
+      "summary": "Create symbol-supported resources for learners with communication needs.",
+      "notes": "Free trial available; check for LA licensing."
+    },
+    {
+      "id": "immersive-reader",
+      "name": "Microsoft Immersive Reader",
+      "url": "https://www.microsoft.com/en-gb/education/products/immersive-reader",
+      "category": "SEND",
+      "tags": ["reading", "accessibility", "dyslexia", "text-to-speech"],
+      "pricing": "Free",
+      "summary": "Free reading tool with text-to-speech, line focus, and translation built into Microsoft products.",
+      "notes": "Built into Word, OneNote, Teams, and Edge browser."
+    },
+    {
+      "id": "teachers-pet",
+      "name": "Twinkl",
+      "url": "https://www.twinkl.co.uk/",
+      "category": "Teaching",
+      "tags": ["resources", "worksheets", "displays", "planning"],
+      "pricing": "Free tier",
+      "summary": "Thousands of curriculum-aligned teaching resources, worksheets, and display materials.",
+      "notes": "Free resources available; subscription unlocks full library."
+    },
+    {
+      "id": "smartsurvey",
+      "name": "SmartSurvey",
+      "url": "https://www.smartsurvey.co.uk/",
+      "category": "Data",
+      "tags": ["surveys", "feedback", "forms", "analytics"],
+      "pricing": "Free tier",
+      "summary": "UK-based survey tool for staff, parent, and pupil voice data collection.",
+      "notes": "GDPR-compliant; UK data hosting available."
+    },
+    {
+      "id": "tlp-templates",
+      "name": "The Key HR Templates",
+      "url": "https://schoolleaders.thekeysupport.com/",
+      "category": "HR",
+      "tags": ["policies", "templates", "contracts", "procedures"],
+      "pricing": "Free tier",
+      "summary": "HR policy templates, model contracts, and employment guidance for schools.",
+      "notes": "Some content free; full access via subscription."
+    },
+    {
+      "id": "condition-survey",
+      "name": "GOV.UK Condition Data Collection",
+      "url": "https://www.gov.uk/guidance/condition-data-collection-programme-information-for-schools",
+      "category": "Estates",
+      "tags": ["buildings", "maintenance", "surveys", "planning"],
+      "pricing": "Free",
+      "summary": "Government programme providing free building condition surveys for maintained schools.",
+      "notes": "Check eligibility based on school type and region."
+    },
+    {
+      "id": "risk-assessment-tool",
+      "name": "HSE Risk Assessment Template",
+      "url": "https://www.hse.gov.uk/simple-health-safety/risk/risk-assessment-template-and-examples.htm",
+      "category": "Compliance",
+      "tags": ["risk-assessment", "health-safety", "templates"],
+      "pricing": "Free",
+      "summary": "Official HSE risk assessment templates and worked examples for common school activities.",
+      "notes": "Covers trips, events, and general workplace hazards."
+    },
+    {
+      "id": "analyse-school-performance",
+      "name": "Analyse School Performance (ASP)",
+      "url": "https://www.gov.uk/government/collections/using-analyse-school-performance-asp",
+      "category": "Data",
+      "tags": ["performance", "attainment", "progress", "benchmarking"],
+      "pricing": "Free",
+      "summary": "DfE tool for analysing pupil attainment, progress, and absence data against national benchmarks.",
+      "notes": "Access via DfE Sign-in; essential for SEF and Ofsted prep."
+    }
+  ]
+}
+

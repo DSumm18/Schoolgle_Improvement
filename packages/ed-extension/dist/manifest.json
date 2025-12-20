@@ -1,0 +1,60 @@
+{
+  "manifest_version": 3,
+  "name": "Ed - School Tools Assistant",
+  "description": "Your AI assistant for school software. Ed watches your screen and helps you get things done.",
+  "version": "0.1.0",
+  "icons": {
+    "16": "public/icons/ed-16.svg",
+    "32": "public/icons/ed-32.svg",
+    "48": "public/icons/ed-48.svg",
+    "128": "public/icons/ed-128.svg"
+  },
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting",
+    "tabs"
+  ],
+  "optional_permissions": [],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background/service-worker.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content/inject.js"
+      ],
+      "css": [],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "public/icons/ed-16.svg",
+      "32": "public/icons/ed-32.svg",
+      "48": "public/icons/ed-48.svg"
+    },
+    "default_title": "Ed - School Tools Assistant"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "ed-widget/ed-widget.iife.js",
+        "ed-widget/ed-widget.css",
+        "content/inject-page.js"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ]
+}

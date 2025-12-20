@@ -108,8 +108,14 @@ function autoInit() {
 export { EdWidget, Ed };
 export type { EdConfig };
 
-// Make available globally
-window.EdWidget = EdWidget;
+// Make available globally (for IIFE builds)
+if (typeof window !== 'undefined') {
+  (window as any).EdWidget = EdWidget;
+  console.log('[Ed Widget] ✅ EdWidget assigned to window.EdWidget');
+} else if (typeof globalThis !== 'undefined') {
+  (globalThis as any).EdWidget = EdWidget;
+  console.log('[Ed Widget] ✅ EdWidget assigned to globalThis.EdWidget');
+}
 
 // Auto-init (only for script tag usage, not module imports)
 autoInit();

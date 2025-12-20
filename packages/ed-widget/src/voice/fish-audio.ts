@@ -174,12 +174,24 @@ export class FishAudioVoice {
         requestBody: requestBody,
       });
 
+      // When using proxy (/api/fish-audio), don't send Authorization header
+      // The proxy handles authentication server-side
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      
+      // Only send Authorization header if NOT using proxy (direct API call)
+      // Proxy baseUrl is '/api/fish-audio', direct API is 'https://api.fish.audio'
+      if (!this.baseUrl.startsWith('/api/')) {
+        headers['Authorization'] = `Bearer ${this.apiKey}`;
+      } else {
+        // Using proxy - API key is handled server-side
+        console.log('[Fish Audio] Using proxy, skipping client Authorization header');
+      }
+
       const response = await fetch(this.baseUrl, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify(requestBody),
       });
 
@@ -307,10 +319,19 @@ export class FishAudioVoice {
   public async play(audioUrl: string): Promise<void> {
     // Stop any currently playing audio, but wait for it to fully stop
     if (this.activeAudio) {
-      this.activeAudio.pause();
-      this.activeAudio.currentTime = 0;
-      // Wait a brief moment for pause to complete
-      await new Promise(resolve => setTimeout(resolve, 50));
+      try {
+        this.activeAudio.pause();
+        this.activeAudio.currentTime = 0;
+        // Wait longer for pause to complete and prevent "play() interrupted by pause()" errors
+        await new Promise(resolve => setTimeout(resolve, 100));
+        // Ensure audio is fully stopped before proceeding
+        if (this.activeAudio) {
+          this.activeAudio = null;
+        }
+      } catch (error) {
+        console.warn('[Fish Audio] Error stopping previous audio:', error);
+        this.activeAudio = null;
+      }
     }
 
     return new Promise((resolve, reject) => {
@@ -372,12 +393,20 @@ export class FishAudioVoice {
 
   /**
    * Stop any currently playing audio
+   * Returns a promise that resolves when audio is fully stopped
    */
-  public stop(): void {
+  public async stop(): Promise<void> {
     if (this.activeAudio) {
-      this.activeAudio.pause();
-      this.activeAudio.currentTime = 0;
-      this.activeAudio = null;
+      try {
+        this.activeAudio.pause();
+        this.activeAudio.currentTime = 0;
+        // Wait for pause to complete to prevent "play() interrupted by pause()" errors
+        await new Promise(resolve => setTimeout(resolve, 100));
+        this.activeAudio = null;
+      } catch (error) {
+        console.warn('[Fish Audio] Error stopping audio:', error);
+        this.activeAudio = null;
+      }
     }
   }
 

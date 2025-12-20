@@ -1,436 +1,389 @@
 "use client";
 
-import { useAuth } from "@/context/AuthContext";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { LayoutDashboard, FileCheck, BookOpen, CheckSquare, Settings, FileText, Eye, FolderOpen, Mic, Search, FileSpreadsheet } from "lucide-react";
-import OrigamiParticles from "@/components/OrigamiParticles";
-import Logo from "@/components/Logo";
-import SchoolgleAnimatedLogo from "@/components/SchoolgleAnimatedLogo";
-import OfstedFrameworkView from "@/components/OfstedFrameworkView";
-import SiamsFrameworkView from "@/components/SiamsFrameworkView";
-import ActionsDashboard from "@/components/ActionsDashboard";
-import SettingsView from "@/components/SettingsView";
-import SearchBar from "@/components/SearchBar";
-import SearchResults from "@/components/SearchResults";
-import EdChatbot from "@/components/EdChatbot";
-import SEFGenerator from "@/components/SEFGenerator";
-import LessonObservationModal from "@/components/LessonObservationModal";
-import LocalFolderScanner from "@/components/LocalFolderScanner";
-import MondayDashboard from "@/components/MondayDashboard";
-import VoiceObservation from "@/components/VoiceObservation";
-import MockInspector from "@/components/MockInspector";
-import ReportGenerator from "@/components/ReportGenerator";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/context/SupabaseAuthContext";
+import { AlertTriangle, Calendar, TrendingDown, TrendingUp, Minus } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import InterventionTimeline from "@/components/InterventionTimeline";
+import MorningBriefing from "@/components/MorningBriefing";
 
-type ActiveView = 'dashboard' | 'ofsted' | 'siams' | 'actions' | 'sef' | 'settings' | 'voice' | 'inspector' | 'reports';
-
-interface SearchResult {
-    id: number;
-    content: string;
-    metadata: {
-        filename: string;
-        fileId?: string;
-        mimeType?: string;
-        provider?: string;
-    };
-    similarity: number;
+interface RiskProfile {
+  urn: string;
+  schoolName: string;
+  riskScore: number;
+  riskLevel: 'low' | 'medium' | 'high' | 'critical';
+  predictedWindow: {
+    earliest: string;
+    latest: string;
+  };
+  lastInspection: {
+    date: string | null;
+    rating: string | null;
+    daysSince: number | null;
+  };
+  headteacher: {
+    startDate: string | null;
+    tenureMonths: number | null;
+    isNew: boolean;
+  };
+  riskFactors: Array<{
+    category: string;
+    severity: 'high' | 'medium' | 'low';
+    description: string;
+    impact: number;
+  }>;
+  recommendations: string[];
 }
 
 export default function DashboardPage() {
-    const { user, loading, signOut, organization } = useAuth();
-    const router = useRouter();
-    const [activeView, setActiveView] = useState<ActiveView>('dashboard');
-    const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
-    const [isSearching, setIsSearching] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [scanStatus, setScanStatus] = useState('');
+  const { user, organization } = useAuth();
+  const [riskProfile, setRiskProfile] = useState<RiskProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-    // Ofsted Assessments State
-    const [ofstedAssessments, setOfstedAssessments] = useState<Record<string, any>>({});
+  useEffect(() => {
+    async function fetchRiskProfile() {
+      if (!organization?.id) {
+        setLoading(false);
+        return;
+      }
 
-    // SIAMS Assessments State  
-    const [siamsAssessments, setSiamsAssessments] = useState<Record<string, any>>({});
+      try {
 
-    // Observations State
-    const [observations, setObservations] = useState<any[]>([]);
-    const [showObservationModal, setShowObservationModal] = useState(false);
+        // Get organization URN
+        const { data: org, error: orgError } = await supabase
+          .from('organizations')
+          .select('urn, name')
+          .eq('id', organization.id)
+          .single();
 
-    // Local Folder Scanner State
-    const [showLocalScanner, setShowLocalScanner] = useState(false);
-    const [scannedFiles, setScannedFiles] = useState<any[]>([]);
-    
-    // Actions State (aggregated from assessments)
-    const [actions, setActions] = useState<any[]>([]);
-
-    const handleSaveObservation = (observation: any) => {
-        setObservations(prev => [...prev, observation]);
-        console.log('Observation saved:', observation);
-    };
-
-    // Evidence analysis results (shared between scanner and framework)
-    const [evidenceMatches, setEvidenceMatches] = useState<any[]>([]);
-    const [evidenceByArea, setEvidenceByArea] = useState<Record<string, any[]>>({});
-
-    const handleLocalScanComplete = (files: any[]) => {
-        // REPLACE files instead of appending (fixes duplicate counting)
-        setScannedFiles(files);
-        console.log('Local scan complete:', files.length, 'files');
-    };
-
-    const handleAnalysisComplete = (analysis: any) => {
-        console.log('Evidence analysis complete:', analysis);
-        setEvidenceMatches(analysis.allMatches || []);
-        setEvidenceByArea(analysis.matchesByArea || {});
-    };
-
-    useEffect(() => {
-        if (!loading && !user) {
-            router.push("/login");
+        if (orgError || !org) {
+          throw new Error('Organization not found');
         }
-    }, [user, loading, router]);
 
-    if (loading || !user) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-            </div>
-        );
+        if (!org.urn) {
+          setError('Organization URN not set. Please add URN to organization record.');
+          setLoading(false);
+          return;
+        }
+
+        // Call the risk profile API endpoint (which uses the MCP tool)
+        const response = await fetch('/api/risk/profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ urn: org.urn }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch risk profile');
+        }
+
+        const data = await response.json();
+        setRiskProfile(data);
+      } catch (err) {
+        console.error('Error fetching risk profile:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load risk profile');
+      } finally {
+        setLoading(false);
+      }
     }
 
-    const handleSearch = async (query: string) => {
-        setSearchQuery(query);
-        setIsSearching(true);
+    fetchRiskProfile();
+  }, [organization?.id]);
 
-        try {
-            const response = await fetch('/api/search', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ query, userId: user.uid }),
-            });
+  const getRiskColor = (score: number) => {
+    if (score >= 70) return 'text-red-600 bg-red-50 border-red-200';
+    if (score >= 40) return 'text-yellow-600 bg-yellow-50 border-yellow-200';
+    return 'text-green-600 bg-green-50 border-green-200';
+  };
 
-            if (response.ok) {
-                const data = await response.json();
-                setSearchResults(data.results || []);
-            } else {
-                console.error('Search failed');
-                setSearchResults([]);
-            }
-        } catch (error) {
-            console.error('Search error:', error);
-            setSearchResults([]);
-        } finally {
-            setIsSearching(false);
-        }
-    };
+  const getRiskLabel = (score: number) => {
+    if (score >= 70) return 'High Risk';
+    if (score >= 40) return 'Medium Risk';
+    return 'Low Risk';
+  };
 
+  const getTrendIcon = (score: number) => {
+    if (score >= 70) return <TrendingUp className="text-red-600" size={20} />;
+    if (score >= 40) return <Minus className="text-yellow-600" size={20} />;
+    return <TrendingDown className="text-green-600" size={20} />;
+  };
+
+  if (loading) {
     return (
-        <div className="min-h-screen bg-white relative">
-            {/* Origami Particle Background */}
-            <OrigamiParticles text="Improve" opacity={0.25} shape="crane" />
-            
-            <nav className="relative z-10 border-b border-gray-100 bg-white/95 backdrop-blur-sm overflow-visible">
-                <div className="max-w-6xl mx-auto px-6">
-                    <div className="flex justify-between h-24 items-center">
-                        <div className="flex items-center relative" style={{ minHeight: '96px' }}>
-                            {/* Container for logo text - center point for orbits */}
-                            <div className="relative z-10 flex items-center justify-center" style={{ width: '140px', position: 'relative' }}>
-                                <span className="text-2xl font-semibold text-gray-900 whitespace-nowrap">
-                                    Schoolgle
-                                </span>
-                                {/* Animated planets orbiting around the center of "Schoolgle" text */}
-                                <div 
-                                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 overflow-visible pointer-events-none" 
-                                    style={{ 
-                                        width: 300, 
-                                        height: 300
-                                    }}
-                                >
-                                    <SchoolgleAnimatedLogo size={300} showText={false} />
-                                </div>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-4">
-                            <span className="text-sm text-gray-500">{user.email}</span>
-                            <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-700 font-medium text-sm">
-                                {user.email?.[0].toUpperCase()}
-                            </div>
-                            <button
-                                onClick={() => signOut()}
-                                className="text-sm text-gray-500 hover:text-gray-900 font-medium transition-colors"
-                            >
-                                Sign Out
-                            </button>
-                        </div>
-                    </div>
+      <div className="p-8">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
+          <div className="h-64 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-8">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
+          <AlertTriangle className="text-red-600" size={20} />
+          <span className="text-red-800">{error}</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Get greeting based on time of day
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  };
+
+  const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'there';
+  const currentTime = new Date().toLocaleTimeString('en-GB', { 
+    hour: '2-digit', 
+    minute: '2-digit' 
+  });
+
+  return (
+    <div className="p-8 space-y-8">
+      {/* Welcome Header */}
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">
+              {getGreeting()}, {userName}
+            </h1>
+            <p className="text-gray-600 mt-2">
+              {currentTime} • {riskProfile?.schoolName || organization?.name || 'Schoolgle'}
+              {riskProfile?.urn && <span className="ml-2 text-sm text-gray-500">(URN: {riskProfile.urn})</span>}
+            </p>
+          </div>
+          {organization && (
+            <div className="text-right">
+              <div className="text-sm text-gray-500">Organization</div>
+              <div className="font-semibold text-gray-900 capitalize">
+                {organization.organization_type?.replace('_', ' ')}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Risk Dashboard Header */}
+      <div>
+        <h2 className="text-2xl font-bold text-gray-900">Inspection Risk Assessment</h2>
+        <p className="text-gray-600 mt-1">
+          Real-time inspection readiness monitoring
+        </p>
+      </div>
+
+      {/* Morning Briefing */}
+      <MorningBriefing organizationId={organization?.id || null} />
+
+      {/* Risk Meter Card */}
+      {riskProfile && (
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">Inspection Risk Score</h2>
+              <p className="text-sm text-gray-500 mt-1">
+                Based on current assessment data
+              </p>
+            </div>
+            <div className={`px-4 py-2 rounded-lg border ${getRiskColor(riskProfile.riskScore)}`}>
+              <div className="flex items-center gap-2">
+                {getTrendIcon(riskProfile.riskScore)}
+                <span className="font-semibold">{getRiskLabel(riskProfile.riskScore)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Risk Meter */}
+          <div className="space-y-4">
+            <div className="relative">
+              <div className="h-8 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-500 ${
+                    riskProfile.riskScore >= 70
+                      ? 'bg-red-500'
+                      : riskProfile.riskScore >= 40
+                      ? 'bg-yellow-500'
+                      : 'bg-green-500'
+                  }`}
+                  style={{ width: `${riskProfile.riskScore}%` }}
+                />
+              </div>
+              <div className="flex justify-between mt-2 text-xs text-gray-500">
+                <span>0%</span>
+                <span className="font-semibold text-gray-900">{riskProfile.riskScore}%</span>
+                <span>100%</span>
+              </div>
+            </div>
+
+            {/* Last Inspection */}
+            {riskProfile.lastInspection.date && (
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <div className="flex items-center gap-2 mb-3">
+                  <Calendar className="text-gray-600" size={18} />
+                  <h3 className="font-semibold text-gray-900">Last Inspection</h3>
                 </div>
-            </nav>
-
-            <main className="relative z-10 max-w-6xl mx-auto px-6 py-8">
-                {/* Tab Navigation */}
-                <div className="mb-8 border-b border-gray-100">
-                    <nav className="-mb-px flex space-x-6 overflow-x-auto">
-                        <button
-                            onClick={() => setActiveView('dashboard')}
-                            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors whitespace-nowrap ${activeView === 'dashboard'
-                                ? 'border-gray-900 text-gray-900'
-                                : 'border-transparent text-gray-400 hover:text-gray-600'
-                                }`}
-                        >
-                            <LayoutDashboard size={16} />
-                            Dashboard
-                        </button>
-                        <button
-                            onClick={() => setActiveView('ofsted')}
-                            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors whitespace-nowrap ${activeView === 'ofsted'
-                                ? 'border-gray-900 text-gray-900'
-                                : 'border-transparent text-gray-400 hover:text-gray-600'
-                                }`}
-                        >
-                            <FileCheck size={16} />
-                            Ofsted Framework
-                        </button>
-                        <button
-                            onClick={() => setActiveView('siams')}
-                            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors whitespace-nowrap ${activeView === 'siams'
-                                ? 'border-gray-900 text-gray-900'
-                                : 'border-transparent text-gray-400 hover:text-gray-600'
-                                }`}
-                        >
-                            <BookOpen size={16} />
-                            SIAMS Framework
-                        </button>
-                        <button
-                            onClick={() => setActiveView('actions')}
-                            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors whitespace-nowrap ${activeView === 'actions'
-                                ? 'border-gray-900 text-gray-900'
-                                : 'border-transparent text-gray-400 hover:text-gray-600'
-                                }`}
-                        >
-                            <CheckSquare size={16} />
-                            Action Plan
-                        </button>
-                        <button
-                            onClick={() => setActiveView('voice')}
-                            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors whitespace-nowrap ${activeView === 'voice'
-                                ? 'border-gray-900 text-gray-900'
-                                : 'border-transparent text-gray-400 hover:text-gray-600'
-                                }`}
-                        >
-                            <Mic size={16} />
-                            Voice
-                        </button>
-                        <button
-                            onClick={() => setActiveView('reports')}
-                            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors whitespace-nowrap ${activeView === 'reports'
-                                ? 'border-gray-900 text-gray-900'
-                                : 'border-transparent text-gray-400 hover:text-gray-600'
-                                }`}
-                        >
-                            <FileSpreadsheet size={16} />
-                            Reports
-                        </button>
-                        <button
-                            onClick={() => setActiveView('inspector')}
-                            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors whitespace-nowrap ${activeView === 'inspector'
-                                ? 'border-gray-900 text-gray-900'
-                                : 'border-transparent text-gray-400 hover:text-gray-600'
-                                }`}
-                        >
-                            <Search size={16} />
-                            Mock Inspector
-                        </button>
-                        <button
-                            onClick={() => setActiveView('settings')}
-                            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors whitespace-nowrap ${activeView === 'settings'
-                                ? 'border-gray-900 text-gray-900'
-                                : 'border-transparent text-gray-400 hover:text-gray-600'
-                                }`}
-                        >
-                            <Settings size={16} />
-                            Settings
-                        </button>
-                    </nav>
+                <div className="flex items-center gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-500">Date:</span>
+                    <span className="ml-2 font-medium text-gray-900">
+                      {new Date(riskProfile.lastInspection.date).toLocaleDateString('en-GB', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric'
+                      })}
+                    </span>
+                  </div>
+                  {riskProfile.lastInspection.rating && (
+                    <>
+                      <span className="text-gray-300">•</span>
+                      <div>
+                        <span className="text-gray-500">Rating:</span>
+                        <span className="ml-2 font-medium text-gray-900">
+                          {riskProfile.lastInspection.rating}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                  {riskProfile.lastInspection.daysSince && (
+                    <>
+                      <span className="text-gray-300">•</span>
+                      <div>
+                        <span className="text-gray-500">Days since:</span>
+                        <span className="ml-2 font-medium text-gray-900">
+                          {Math.floor(riskProfile.lastInspection.daysSince / 365)} years, {Math.floor((riskProfile.lastInspection.daysSince % 365) / 30)} months
+                        </span>
+                      </div>
+                    </>
+                  )}
                 </div>
-
-                {/* Dashboard View */}
-                {activeView === 'dashboard' && (
-                    <MondayDashboard
-                        organizationId={organization?.id}
-                        ofstedAssessments={ofstedAssessments}
-                        siamsAssessments={siamsAssessments}
-                        actions={Object.values({ ...ofstedAssessments, ...siamsAssessments })
-                            .flatMap((assessment: any) => assessment?.actions || [])}
-                        evidenceCount={evidenceMatches.length}
-                        isChurchSchool={true}
-                        onNavigate={(view) => setActiveView(view as ActiveView)}
-                    />
-                )}
-
-                {/* Ofsted Framework View */}
-                {activeView === 'ofsted' && (
-                    <OfstedFrameworkView
-                        assessments={ofstedAssessments}
-                        setAssessments={setOfstedAssessments}
-                        localEvidence={evidenceByArea}
-                    />
-                )}
-
-                {/* SIAMS Framework View */}
-                {activeView === 'siams' && (
-                    <SiamsFrameworkView
-                        assessments={siamsAssessments}
-                        setAssessments={setSiamsAssessments}
-                        localEvidence={evidenceByArea}
-                    />
-                )}
-
-                {/* Actions Dashboard View */}
-                {activeView === 'actions' && (
-                    <ActionsDashboard
-                        actions={
-                            Object.values({ ...ofstedAssessments, ...siamsAssessments })
-                                .flatMap((assessment: any) => assessment?.actions || [])
-                        }
-                        onUpdateAction={(updatedAction) => {
-                            console.log('Action updated:', updatedAction);
-                        }}
-                    />
-                )}
-
-                {/* SEF View */}
-                {activeView === 'sef' && (
-                    <div className="space-y-6">
-                        {/* Quick Actions */}
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <h2 className="text-2xl font-bold text-gray-900">Self-Evaluation Form</h2>
-                                <p className="text-gray-600">Generate inspection-ready documentation</p>
-                            </div>
-                            <button
-                                onClick={() => setShowObservationModal(true)}
-                                className="px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 flex items-center gap-2"
-                            >
-                                <Eye size={18} />
-                                New Observation
-                            </button>
-                        </div>
-
-                        {/* Recent Observations */}
-                        {observations.length > 0 && (
-                            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                                <h3 className="font-semibold text-gray-900 mb-3">Recent Observations ({observations.length})</h3>
-                                <div className="space-y-2">
-                                    {observations.slice(0, 5).map((obs, i) => (
-                                        <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                            <div>
-                                                <span className="font-medium text-gray-900">{obs.teacher}</span>
-                                                <span className="text-gray-500 mx-2">•</span>
-                                                <span className="text-gray-600">{obs.subject}</span>
-                                                <span className="text-gray-500 mx-2">•</span>
-                                                <span className="text-gray-500 text-sm">{obs.date}</span>
-                                            </div>
-                                            <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                                obs.overallJudgement === 'outstanding' ? 'bg-green-100 text-green-700' :
-                                                obs.overallJudgement === 'good' ? 'bg-blue-100 text-blue-700' :
-                                                obs.overallJudgement === 'requires_improvement' ? 'bg-yellow-100 text-yellow-700' :
-                                                'bg-red-100 text-red-700'
-                                            }`}>
-                                                {obs.overallJudgement?.replace('_', ' ')}
-                                            </span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* SEF Generator */}
-                        <SEFGenerator
-                            schoolName={organization?.name || 'Your School'}
-                            assessments={ofstedAssessments}
-                            actions={Object.values({ ...ofstedAssessments, ...siamsAssessments })
-                                .flatMap((assessment: any) => assessment?.actions || [])}
-                            observations={observations}
-                        />
-                    </div>
-                )}
-
-                {/* Voice-to-Observation View */}
-                {activeView === 'voice' && (
-                    <VoiceObservation
-                        onSaveObservation={(observation) => {
-                            setObservations(prev => [...prev, observation]);
-                            console.log('Voice observation saved:', observation);
-                        }}
-                    />
-                )}
-
-                {/* One-Click Reports View */}
-                {activeView === 'reports' && (
-                    <ReportGenerator
-                        schoolData={{
-                            name: organization?.name || 'Your School',
-                            academicYear: '2024-2025',
-                            isChurchSchool: true
-                        }}
-                        ofstedAssessments={ofstedAssessments}
-                        siamsAssessments={siamsAssessments}
-                        actions={Object.values({ ...ofstedAssessments, ...siamsAssessments })
-                            .flatMap((assessment: any) => assessment?.actions || [])}
-                        evidenceMatches={evidenceMatches}
-                    />
-                )}
-
-                {/* Mock Inspector View */}
-                {activeView === 'inspector' && (
-                    <MockInspector
-                        schoolData={{
-                            name: organization?.name || 'Your School',
-                            phase: 'Primary'
-                        }}
-                        ofstedAssessments={ofstedAssessments}
-                        actions={Object.values({ ...ofstedAssessments, ...siamsAssessments })
-                            .flatMap((assessment: any) => assessment?.actions || [])}
-                        evidenceCount={evidenceMatches.length}
-                    />
-                )}
-
-                {/* Settings View */}
-                {activeView === 'settings' && (
-                    <SettingsView />
-                )}
-            </main>
-
-            {/* Lesson Observation Modal */}
-            <LessonObservationModal
-                isOpen={showObservationModal}
-                onClose={() => setShowObservationModal(false)}
-                onSave={handleSaveObservation}
-                currentUser={{ id: user?.uid || '', name: user?.displayName || user?.email || '' }}
-            />
-
-            {/* Local Folder Scanner Modal */}
-            {showLocalScanner && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="max-w-2xl w-full">
-                        <LocalFolderScanner
-                            onScanComplete={handleLocalScanComplete}
-                            onAnalysisComplete={handleAnalysisComplete}
-                            onClose={() => setShowLocalScanner(false)}
-                        />
-                    </div>
-                </div>
+              </div>
             )}
 
-            {/* Ed Chatbot - Always visible */}
-            <EdChatbot 
-                context={{
-                    schoolName: organization?.name,
-                    currentView: activeView,
-                    topic: activeView === 'ofsted' ? 'ofsted framework inspection' : 
-                           activeView === 'siams' ? 'siams church school inspection' :
-                           activeView === 'actions' ? 'school improvement actions' : undefined
-                }}
-            />
+            {/* Headteacher Info */}
+            {riskProfile.headteacher.startDate && (
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <div className="flex items-center gap-2 mb-3">
+                  <h3 className="font-semibold text-gray-900">Headteacher</h3>
+                  {riskProfile.headteacher.isNew && (
+                    <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded">
+                      New
+                    </span>
+                  )}
+                </div>
+                <div className="text-sm text-gray-600">
+                  <p>
+                    In post since: {new Date(riskProfile.headteacher.startDate).toLocaleDateString('en-GB', {
+                      month: 'long',
+                      year: 'numeric'
+                    })}
+                  </p>
+                  {riskProfile.headteacher.tenureMonths !== null && (
+                    <p className="mt-1">
+                      Tenure: {Math.floor(riskProfile.headteacher.tenureMonths / 12)} years, {riskProfile.headteacher.tenureMonths % 12} months
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Predicted Window */}
+            <div className="mt-6 pt-6 border-t border-gray-200">
+              <div className="flex items-center gap-2 mb-3">
+                <Calendar className="text-gray-600" size={18} />
+                <h3 className="font-semibold text-gray-900">Predicted Inspection Window</h3>
+              </div>
+              <div className="flex items-center gap-4 text-sm">
+                <div>
+                  <span className="text-gray-500">Earliest:</span>
+                  <span className="ml-2 font-medium text-gray-900">
+                    {new Date(riskProfile.predictedWindow.earliest).toLocaleDateString('en-GB', {
+                      month: 'long',
+                      year: 'numeric'
+                    })}
+                  </span>
+                </div>
+                <span className="text-gray-300">→</span>
+                <div>
+                  <span className="text-gray-500">Latest:</span>
+                  <span className="ml-2 font-medium text-gray-900">
+                    {new Date(riskProfile.predictedWindow.latest).toLocaleDateString('en-GB', {
+                      month: 'long',
+                      year: 'numeric'
+                    })}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Risk Factors */}
+            {riskProfile.riskFactors.length > 0 && (
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <h3 className="font-semibold text-gray-900 mb-3">Key Risk Factors</h3>
+                <div className="space-y-2">
+                  {riskProfile.riskFactors.map((factor, idx) => (
+                    <div
+                      key={idx}
+                      className={`p-3 rounded-lg border ${
+                        factor.severity === 'high'
+                          ? 'bg-red-50 border-red-200'
+                          : factor.severity === 'medium'
+                          ? 'bg-yellow-50 border-yellow-200'
+                          : 'bg-green-50 border-green-200'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-gray-900">{factor.category}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-500">Impact: {factor.impact}%</span>
+                          <span className={`text-xs px-2 py-1 rounded ${
+                            factor.severity === 'high'
+                              ? 'bg-red-100 text-red-700'
+                              : factor.severity === 'medium'
+                              ? 'bg-yellow-100 text-yellow-700'
+                              : 'bg-green-100 text-green-700'
+                          }`}>
+                            {factor.severity.toUpperCase()}
+                          </span>
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-600 mt-1">{factor.description}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Recommendations */}
+            {riskProfile.recommendations && riskProfile.recommendations.length > 0 && (
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <h3 className="font-semibold text-gray-900 mb-3">Recommendations</h3>
+                <ul className="space-y-2">
+                  {riskProfile.recommendations.map((rec, idx) => (
+                    <li key={idx} className="flex items-start gap-2 text-sm text-gray-700">
+                      <span className="text-blue-600 mt-1">•</span>
+                      <span>{rec}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
         </div>
-    );
+      )}
+
+      {/* Intervention Timeline */}
+      {organization?.id && (
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Intervention Timeline</h2>
+          <InterventionTimeline organizationId={organization.id} />
+        </div>
+      )}
+    </div>
+  );
 }

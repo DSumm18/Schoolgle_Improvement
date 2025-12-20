@@ -23,12 +23,7 @@ export default defineConfig(({ mode }) => {
               assetFileNames: 'ed-widget.[ext]',
             },
           },
-          minify: 'terser',
-          terserOptions: {
-            compress: {
-              drop_console: true,
-            },
-          },
+          minify: 'esbuild',
         }
       : {
           outDir: 'dist',
