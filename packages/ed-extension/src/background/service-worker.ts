@@ -62,17 +62,17 @@ async function handleMessage(
       
       // Check cache first (skip cache for automation requests with pageState)
       if (!pageState) {
-        const cacheKey = `${context.detectedTool?.id || 'general'}:${question.toLowerCase().trim()}`;
-        const cached = responseCache.get(cacheKey);
-        
-        if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-          console.log('[Ed Background] Cache hit for:', cacheKey);
-          return {
-            id: crypto.randomUUID(),
-            answer: cached.response,
-            confidence: 0.9,
-            source: 'cache',
-          };
+      const cacheKey = `${context.detectedTool?.id || 'general'}:${question.toLowerCase().trim()}`;
+      const cached = responseCache.get(cacheKey);
+      
+      if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+        console.log('[Ed Background] Cache hit for:', cacheKey);
+        return {
+          id: crypto.randomUUID(),
+          answer: cached.response,
+          confidence: 0.9,
+          source: 'cache',
+        };
         }
       }
       

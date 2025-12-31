@@ -35,7 +35,7 @@ const HEADER_COLOR_MAP: Record<string, string> = {
 };
 
 export default function OfstedFrameworkView({ assessments, setAssessments, localEvidence = {} }: OfstedFrameworkViewProps) {
-    const { user, accessToken, providerId, signInWithGoogle, signInWithMicrosoft } = useAuth();
+    const { user, organization, accessToken, providerId, signInWithGoogle, signInWithMicrosoft } = useAuth();
     const [scanProgress, setScanProgress] = useState<{
         status: 'idle' | 'scanning' | 'complete' | 'error';
         message?: string;
@@ -111,7 +111,7 @@ export default function OfstedFrameworkView({ assessments, setAssessments, local
         // Find the subcategory ID from the action's category name
         const matchingSubcategory = OFSTED_FRAMEWORK.flatMap(c => c.subcategories).find(
             sub => action.category && (sub.name.toLowerCase().includes(action.category.toLowerCase()) ||
-                   action.category.toLowerCase().includes(sub.name.toLowerCase()))
+                action.category.toLowerCase().includes(sub.name.toLowerCase()))
         );
 
         if (!matchingSubcategory) {
@@ -250,6 +250,7 @@ export default function OfstedFrameworkView({ assessments, setAssessments, local
                     provider: providerId,
                     accessToken: accessToken,
                     folderId: selectedFolderId,
+                    organizationId: organization?.id,
                     userId: user?.uid,
                     recursive: true,
                     useAI: true
@@ -607,7 +608,7 @@ export default function OfstedFrameworkView({ assessments, setAssessments, local
                                                 <div className={`text-lg font-bold ${getScoreColor(aiScore)}`}>{aiScore}%</div>
                                             </div>
                                         </div>
-                                        
+
                                         {/* Analyze with Ed Button */}
                                         <button
                                             onClick={(e) => {
@@ -615,7 +616,7 @@ export default function OfstedFrameworkView({ assessments, setAssessments, local
                                                 openEdAnalysis(
                                                     category.name,
                                                     userScore >= 90 ? 'Outstanding' : userScore >= 70 ? 'Good' : userScore >= 40 ? 'Requires Improvement' : 'Inadequate',
-                                                    category.subcategories.reduce((acc, sub) => 
+                                                    category.subcategories.reduce((acc, sub) =>
                                                         acc + (assessments[sub.id]?.evidenceCount || 0), 0
                                                     )
                                                 );
@@ -677,11 +678,10 @@ export default function OfstedFrameworkView({ assessments, setAssessments, local
                                                                     ))}
                                                                 </div>
                                                             </div>
-                                                            <span className={`text-xs px-2 py-1 rounded-full ml-2 ${
-                                                                evidence.confidence >= 0.7 ? 'bg-green-100 text-green-700' :
+                                                            <span className={`text-xs px-2 py-1 rounded-full ml-2 ${evidence.confidence >= 0.7 ? 'bg-green-100 text-green-700' :
                                                                 evidence.confidence >= 0.5 ? 'bg-yellow-100 text-yellow-700' :
-                                                                'bg-gray-100 text-gray-600'
-                                                            }`}>
+                                                                    'bg-gray-100 text-gray-600'
+                                                                }`}>
                                                                 {Math.round(evidence.confidence * 100)}%
                                                             </span>
                                                         </div>

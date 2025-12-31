@@ -8,12 +8,12 @@ export async function POST(req: NextRequest) {
     try {
         // Check env vars
         if (!supabaseUrl || !supabaseServiceKey) {
-            console.error('Missing env vars:', { 
-                hasUrl: !!supabaseUrl, 
-                hasKey: !!supabaseServiceKey 
+            console.error('Missing env vars:', {
+                hasUrl: !!supabaseUrl,
+                hasKey: !!supabaseServiceKey
             });
-            return NextResponse.json({ 
-                error: 'Server configuration error - missing Supabase credentials' 
+            return NextResponse.json({
+                error: 'Server configuration error - missing Supabase credentials'
             }, { status: 500 });
         }
 
@@ -26,15 +26,16 @@ export async function POST(req: NextRequest) {
         }
 
         // 1. Sync User to Supabase
+        // auth_id is the canonical UUID from Supabase Auth
+        // userId is the legacy ID (currently also the Supabase ID in new setups, but decoupled in schema)
         const { error: userError } = await supabase
             .from('users')
             .upsert({
                 id: userId,
+                auth_id: userId, // In Supabase flow, the user's ID is the UUID
                 email: email,
                 display_name: displayName,
-                // created_at will be set on insert, ignored on update if not specified? 
-                // actually upsert updates all columns provided. We might want to preserve created_at.
-                // But for now simple upsert is fine.
+                updated_at: new Date().toISOString(),
             }, { onConflict: 'id' });
 
         if (userError) {

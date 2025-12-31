@@ -20,7 +20,7 @@ as $$
   select exists (
     select 1
     from organization_members
-    where user_id = user_id_param
+    where (user_id = user_id_param or (auth_id is not null and auth_id::text = user_id_param))
       and organization_id = org_id
   );
 $$;
@@ -38,10 +38,16 @@ begin
   -- Try to get from connection-local setting (set by MCP server)
   user_id_val := current_setting('app.user_id', true);
   
-  -- If not set, try to get from JWT claims (for future Firebase integration)
+  -- If not set, try to get from JWT claims
   if user_id_val is null then
     begin
-      user_id_val := current_setting('request.jwt.claims', true)::json->>'user_id';
+      -- Try 'sub' (Supabase standard)
+      user_id_val := current_setting('request.jwt.claims', true)::json->>'sub';
+      
+      -- Fallback to 'user_id' (Legacy/Firebase)
+      if user_id_val is null then
+        user_id_val := current_setting('request.jwt.claims', true)::json->>'user_id';
+      end if;
     exception
       when others then
         user_id_val := null;

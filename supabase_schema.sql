@@ -13,12 +13,15 @@ create extension if not exists vector;
 drop table if exists users cascade;
 create table users (
   id text primary key, -- Firebase UID
+  auth_id uuid unique, -- Canonical Supabase Auth ID
   email text not null,
   display_name text,
   avatar_url text,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+create index users_auth_id_idx on users (auth_id);
 
 -- Organizations (Schools)
 drop table if exists organizations cascade;
@@ -41,11 +44,14 @@ drop table if exists organization_members cascade;
 create table organization_members (
   organization_id uuid references organizations(id) on delete cascade,
   user_id text references users(id) on delete cascade,
+  auth_id uuid, -- Canonical Supabase Auth ID
   role text not null check (role in ('admin', 'slt', 'teacher', 'governor', 'viewer')),
   job_title text,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   primary key (organization_id, user_id)
 );
+
+create index org_members_auth_id_idx on organization_members (organization_id, auth_id);
 
 -- Invitations
 drop table if exists invitations cascade;
@@ -344,6 +350,7 @@ create table actions (
   source text check (source in ('manual', 'ed_recommendation', 'scan_gap', 'observation')),
   
   created_by text references users(id),
+  auth_id uuid, -- Canonical Supabase Auth ID
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
@@ -352,6 +359,7 @@ create index actions_organization_idx on actions (organization_id);
 create index actions_category_idx on actions (framework_type, category_id);
 create index actions_status_idx on actions (status);
 create index actions_owner_idx on actions (owner_id);
+create index actions_auth_id_idx on actions (auth_id);
 
 -- ============================================================================
 -- EVIDENCE (Documents and matches)
@@ -383,6 +391,7 @@ create table documents (
   -- Metadata
   folder_path text,
   scanned_at timestamp with time zone,
+  auth_id uuid, -- Canonical Supabase Auth ID
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
@@ -390,6 +399,7 @@ create table documents (
 create index documents_organization_idx on documents (organization_id);
 create index documents_provider_idx on documents (provider);
 create index documents_content_hash_idx on documents (content_hash);
+create index documents_auth_id_idx on documents (auth_id);
 
 -- Evidence matches (AI-identified evidence linked to framework)
 drop table if exists evidence_matches cascade;
@@ -416,7 +426,7 @@ create table evidence_matches (
   
   -- Document link for easy access
   document_link text,
-  
+  auth_id uuid, -- Canonical Supabase Auth ID
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
@@ -425,6 +435,7 @@ create index evidence_matches_organization_idx on evidence_matches (organization
 create index evidence_matches_document_idx on evidence_matches (document_id);
 create index evidence_matches_category_idx on evidence_matches (framework_type, category_id, subcategory_id);
 create index evidence_matches_confidence_idx on evidence_matches (confidence desc);
+create index evidence_matches_auth_id_idx on evidence_matches (auth_id);
 
 -- ============================================================================
 -- LESSON OBSERVATIONS
@@ -470,6 +481,7 @@ create table lesson_observations (
   -- Who observed
   observer_id text references users(id),
   observer_name text,
+  auth_id uuid, -- Canonical Supabase Auth ID
   
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
@@ -478,6 +490,7 @@ create table lesson_observations (
 create index observations_organization_idx on lesson_observations (organization_id);
 create index observations_teacher_idx on lesson_observations (teacher_name);
 create index observations_date_idx on lesson_observations (date desc);
+create index observations_auth_id_idx on lesson_observations (auth_id);
 
 -- ============================================================================
 -- STATUTORY DOCUMENTS (SEF, SDP, PP Strategy, Sports Premium, etc.)
@@ -524,6 +537,7 @@ create table statutory_documents (
   reviewed_at timestamp with time zone,
   approved_by text references users(id),
   approved_at timestamp with time zone,
+  auth_id uuid, -- Canonical Supabase Auth ID
   
   -- Deadline tracking
   deadline_date date,
@@ -537,6 +551,7 @@ create index statutory_docs_organization_idx on statutory_documents (organizatio
 create index statutory_docs_type_idx on statutory_documents (document_type);
 create index statutory_docs_current_idx on statutory_documents (organization_id, document_type, is_current) where is_current = true;
 create index statutory_docs_deadline_idx on statutory_documents (deadline_date) where status != 'archived';
+create index statutory_docs_auth_id_idx on statutory_documents (auth_id);
 
 -- ============================================================================
 -- PUPIL PREMIUM DATA (for PP Strategy generation)
@@ -786,6 +801,7 @@ create table notes (
   -- Author
   author_id text references users(id),
   author_name text,
+  auth_id uuid, -- Canonical Supabase Auth ID
   
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
@@ -793,6 +809,7 @@ create table notes (
 
 create index notes_entity_idx on notes (entity_type, entity_id);
 create index notes_organization_idx on notes (organization_id);
+create index notes_auth_id_idx on notes (auth_id);
 
 -- ============================================================================
 -- ACTIVITY LOG (audit trail)

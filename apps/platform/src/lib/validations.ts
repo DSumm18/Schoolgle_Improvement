@@ -65,7 +65,9 @@ export const scanRequestSchema = z.object({
   provider: cloudProviderSchema,
   accessToken: nonEmptyString(2048),
   folderId: nonEmptyString(512),
-  userId: uuidSchema.optional(),
+  organizationId: uuidSchema, // Mandatory for tenant isolation
+  userId: z.string().optional(), // Legacy text ID
+  authId: uuidSchema.optional(), // Canonical UUID
   recursive: z.boolean().default(true),
   maxFiles: z.number().int().min(1).max(500).default(50),
   useAI: z.boolean().default(true)
@@ -101,7 +103,9 @@ export type SearchRequest = z.infer<typeof searchRequestSchema>;
  */
 export const createOrganizationSchema = z.object({
   name: sanitizedString(255),
-  userId: uuidSchema
+  userId: z.string(), // Legacy text ID
+  authId: uuidSchema.optional(), // Canonical UUID
+  urn: z.string().min(6).max(10).optional()
 });
 
 export type CreateOrganizationRequest = z.infer<typeof createOrganizationSchema>;

@@ -140,33 +140,59 @@ export default function DashboardPage() {
   };
 
   const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'there';
-  const currentTime = new Date().toLocaleTimeString('en-GB', { 
-    hour: '2-digit', 
-    minute: '2-digit' 
+  const currentTime = new Date().toLocaleTimeString('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit'
   });
 
   return (
     <div className="p-8 space-y-8">
-      {/* Welcome Header */}
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-        <div className="flex items-center justify-between">
+      {/* Welcome Header & School Snapshot */}
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 overflow-hidden relative">
+        {/* Subtle background gradient for "premium" feel */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50/50 rounded-full blur-3xl -mr-32 -mt-32 -z-10"></div>
+
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">
+            <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
               {getGreeting()}, {userName}
             </h1>
-            <p className="text-gray-600 mt-2">
+            <p className="text-gray-600 mt-2 flex items-center gap-2">
+              <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
               {currentTime} • {riskProfile?.schoolName || organization?.name || 'Schoolgle'}
-              {riskProfile?.urn && <span className="ml-2 text-sm text-gray-500">(URN: {riskProfile.urn})</span>}
+              {riskProfile?.urn && <span className="text-sm text-gray-400 font-medium">URN: {riskProfile.urn}</span>}
             </p>
           </div>
-          {organization && (
-            <div className="text-right">
-              <div className="text-sm text-gray-500">Organization</div>
-              <div className="font-semibold text-gray-900 capitalize">
-                {organization.organization_type?.replace('_', ' ')}
+
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Intelligence Anchor Badges */}
+            {riskProfile && riskProfile.headteacher && riskProfile.headteacher.tenureMonths !== null && (
+              <div className="flex flex-col bg-amber-50 border border-amber-200 px-4 py-2 rounded-xl shadow-sm">
+                <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">HT Tenure</span>
+                <span className="text-sm font-bold text-amber-900">
+                  {Math.floor(riskProfile.headteacher.tenureMonths / 12)}y {riskProfile.headteacher.tenureMonths % 12}m
+                </span>
               </div>
-            </div>
-          )}
+            )}
+
+            {riskProfile && riskProfile.lastInspection && riskProfile.lastInspection.date && (
+              <div className="flex flex-col bg-blue-50 border border-blue-200 px-4 py-2 rounded-xl shadow-sm">
+                <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">Last Inspection</span>
+                <span className="text-sm font-bold text-blue-900">
+                  {new Date(riskProfile.lastInspection.date).getFullYear()} • {riskProfile.lastInspection.rating}
+                </span>
+              </div>
+            )}
+
+            {organization && (
+              <div className="flex flex-col bg-gray-50 border border-gray-200 px-4 py-2 rounded-xl shadow-sm">
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Role</span>
+                <span className="text-sm font-bold text-gray-900 capitalize">
+                  {organization.organization_type?.replace('_', ' ')}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -199,25 +225,31 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Risk Meter */}
-          <div className="space-y-4">
-            <div className="relative">
-              <div className="h-8 bg-gray-100 rounded-full overflow-hidden">
+          {/* Readiness Gauge (Enhanced) */}
+          <div className="space-y-6">
+            <div className="relative pt-2">
+              <div className="flex justify-between mb-2">
+                <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Inspection Readiness</span>
+                <span className={`text-xs font-bold uppercase tracking-widest ${riskProfile.riskScore >= 70 ? 'text-red-500' : riskProfile.riskScore >= 40 ? 'text-yellow-600' : 'text-green-600'
+                  }`}>
+                  {100 - riskProfile.riskScore}% Ready
+                </span>
+              </div>
+              <div className="h-4 bg-gray-100 rounded-full overflow-hidden shadow-inner flex">
+                {/* 100 - riskScore is the "Readiness" */}
                 <div
-                  className={`h-full transition-all duration-500 ${
-                    riskProfile.riskScore >= 70
-                      ? 'bg-red-500'
-                      : riskProfile.riskScore >= 40
-                      ? 'bg-yellow-500'
-                      : 'bg-green-500'
-                  }`}
-                  style={{ width: `${riskProfile.riskScore}%` }}
+                  className={`h-full transition-all duration-1000 ease-out shadow-lg rounded-full ${riskProfile.riskScore >= 70
+                    ? 'bg-gradient-to-r from-red-600 to-orange-500'
+                    : riskProfile.riskScore >= 40
+                      ? 'bg-gradient-to-r from-yellow-500 to-amber-400'
+                      : 'bg-gradient-to-r from-green-500 to-emerald-400'
+                    }`}
+                  style={{ width: `${100 - riskProfile.riskScore}%` }}
                 />
               </div>
-              <div className="flex justify-between mt-2 text-xs text-gray-500">
-                <span>0%</span>
-                <span className="font-semibold text-gray-900">{riskProfile.riskScore}%</span>
-                <span>100%</span>
+              <div className="flex justify-between mt-2 text-[10px] font-bold text-gray-400 uppercase">
+                <span>Critical Risk</span>
+                <span>Optimized</span>
               </div>
             </div>
 
@@ -329,25 +361,23 @@ export default function DashboardPage() {
                   {riskProfile.riskFactors.map((factor, idx) => (
                     <div
                       key={idx}
-                      className={`p-3 rounded-lg border ${
-                        factor.severity === 'high'
-                          ? 'bg-red-50 border-red-200'
-                          : factor.severity === 'medium'
+                      className={`p-3 rounded-lg border ${factor.severity === 'high'
+                        ? 'bg-red-50 border-red-200'
+                        : factor.severity === 'medium'
                           ? 'bg-yellow-50 border-yellow-200'
                           : 'bg-green-50 border-green-200'
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center justify-between">
                         <span className="font-medium text-gray-900">{factor.category}</span>
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-gray-500">Impact: {factor.impact}%</span>
-                          <span className={`text-xs px-2 py-1 rounded ${
-                            factor.severity === 'high'
-                              ? 'bg-red-100 text-red-700'
-                              : factor.severity === 'medium'
+                          <span className={`text-xs px-2 py-1 rounded ${factor.severity === 'high'
+                            ? 'bg-red-100 text-red-700'
+                            : factor.severity === 'medium'
                               ? 'bg-yellow-100 text-yellow-700'
                               : 'bg-green-100 text-green-700'
-                          }`}>
+                            }`}>
                             {factor.severity.toUpperCase()}
                           </span>
                         </div>

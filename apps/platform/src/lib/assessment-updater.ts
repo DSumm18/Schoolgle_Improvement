@@ -5,7 +5,8 @@ import type { EvidenceMatch } from './ai-evidence-matcher';
 
 export interface AssessmentUpdate {
     subcategoryId: string;
-    aiRating: 'outstanding' | 'good' | 'requires_improvement' | 'inadequate';
+    aiRating: 'outstanding' | 'good' | 'requires_improvement' | 'inadequate' | 'not_assessed';
+    aiRatingRaw: 'exceptional' | 'strong_standard' | 'expected_standard' | 'needs_attention' | 'urgent_improvement' | 'not_assessed';
     aiRationale: string;
     evidenceCount: number;
     requiredCount: number;
@@ -166,13 +167,14 @@ export function updateAssessmentsFromEvidence(
                 // Store update
                 // Map new 5-point scale to old 4-point scale for compatibility
                 const mappedRating = aiRating === 'exceptional' || aiRating === 'strong_standard' ? 'outstanding' :
-                                    aiRating === 'expected_standard' ? 'good' :
-                                    aiRating === 'needs_attention' ? 'requires_improvement' :
-                                    aiRating === 'urgent_improvement' ? 'inadequate' : 'not_assessed';
-                
+                    aiRating === 'expected_standard' ? 'good' :
+                        aiRating === 'needs_attention' ? 'requires_improvement' :
+                            aiRating === 'urgent_improvement' ? 'inadequate' : 'not_assessed';
+
                 updates[subcategory.id] = {
                     subcategoryId: subcategory.id,
-                    aiRating: mappedRating as 'outstanding' | 'good' | 'requires_improvement' | 'inadequate',
+                    aiRating: mappedRating as 'outstanding' | 'good' | 'requires_improvement' | 'inadequate' | 'not_assessed',
+                    aiRatingRaw: aiRating as 'exceptional' | 'strong_standard' | 'expected_standard' | 'needs_attention' | 'urgent_improvement' | 'not_assessed',
                     aiRationale,
                     evidenceCount,
                     requiredCount,
@@ -248,7 +250,7 @@ export function generateCategorySummaries(
 }
 
 export interface FormattedAssessment {
-    aiRating: 'outstanding' | 'good' | 'requires_improvement' | 'inadequate';
+    aiRating: 'outstanding' | 'good' | 'requires_improvement' | 'inadequate' | 'not_assessed';
     aiRationale: string;
     evidenceCount: number;
     requiredCount: number;

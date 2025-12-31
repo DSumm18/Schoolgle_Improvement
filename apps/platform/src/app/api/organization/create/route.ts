@@ -35,22 +35,55 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: validation.error }, { status: 400 });
         }
 
-        const { name, userId } = validation.data;
+        const { name, userId, authId, urn } = validation.data;
 
+        // --- DfE Data Enrichment ---
+        let enrichedName = name;
+        let schoolType = null;
+        let localAuthority = null;
+
+        if (urn) {
+            console.log(`[CreateOrg] Looking up DfE data for URN: ${urn}`);
+            const { data: dfeSchool, error: dfeError } = await supabase
+                .schema('dfe_data')
+                .from('schools')
+                .select('*')
+                .eq('urn', parseInt(urn))
+                .single();
+
+            if (dfeSchool) {
+                console.log(`[CreateOrg] Found DfE school: ${dfeSchool.school_name || dfeSchool.name}`);
+                enrichedName = dfeSchool.school_name || dfeSchool.name || enrichedName;
+                schoolType = dfeSchool.school_type || dfeSchool.type;
+                localAuthority = dfeSchool.local_authority || dfeSchool.la_name;
+            } else if (dfeError) {
+                console.warn(`[CreateOrg] DfE lookup failed or no record found for URN ${urn}:`, dfeError.message);
+            }
+        }
+
+        // --- Identity Sync ---
         // First ensure the user exists in the users table
         const { error: userError } = await supabase
             .from('users')
-            .upsert({ id: userId }, { onConflict: 'id' });
+            .upsert({
+                id: userId,
+                auth_id: authId || (userId && userId.includes('-') ? userId : null)
+            }, { onConflict: 'id' });
 
         if (userError) {
             console.error('Error ensuring user exists:', userError);
             return NextResponse.json({ error: `User sync failed: ${userError.message}` }, { status: 500 });
         }
 
-        // 1. Create Organization
+        // 1. Create Organization (with enriched data)
         const { data: org, error: orgError } = await supabase
             .from('organizations')
-            .insert({ name })
+            .insert({
+                name: enrichedName,
+                urn,
+                school_type: schoolType,
+                local_authority: localAuthority
+            })
             .select()
             .single();
 
@@ -65,6 +98,7 @@ export async function POST(req: NextRequest) {
             .insert({
                 organization_id: org.id,
                 user_id: userId,
+                auth_id: authId || (userId && userId.includes('-') ? userId : null),
                 role: 'admin'
             });
 

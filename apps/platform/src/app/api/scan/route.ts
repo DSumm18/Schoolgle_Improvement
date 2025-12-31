@@ -24,7 +24,9 @@ interface ScanRequest {
     provider: 'google.com' | 'microsoft.com';
     accessToken: string;
     folderId: string;
+    organizationId: string; // Mandatory for multi-tenancy
     userId?: string;
+    authId?: string;
     recursive?: boolean; // Default true
     maxFiles?: number; // Limit for testing
     useAI?: boolean; // Default true
@@ -99,26 +101,28 @@ async function extractTextFromFile(
 async function shouldProcessFile(
     file: FileMetadataExtended,
     supabase: any,
+    organizationId?: string,
     userId?: string
 ): Promise<boolean> {
-    if (!supabase || !userId || !file.modifiedTime) {
+    if (!supabase || !organizationId || !file.modifiedTime) {
         return true; // Process if we can't check
     }
 
-    const dedupLogger = createOperationLogger('shouldProcessFile', { fileId: file.id, userId });
+    const dedupLogger = createOperationLogger('shouldProcessFile', { fileId: file.id, organizationId, userId });
 
     try {
         // Check if file exists in database and hasn't been modified
+        // Priority check by organization_id per user's request
         const { data, error } = await supabase
             .from('documents')
             .select('metadata')
             .eq('metadata->>fileId', file.id)
-            .eq('user_id', userId)
+            .eq('organization_id', organizationId)
             .single();
 
         if (error || !data) {
-            dedupLogger.debug('File not found in database, will process');
-            return true; // File not in DB, process it
+            dedupLogger.debug('File not found in database for this org, will process');
+            return true;
         }
 
         const lastScannedTime = data.metadata?.scannedAt;
@@ -134,7 +138,7 @@ async function shouldProcessFile(
 
     } catch (error) {
         dedupLogger.error('Error checking file for deduplication', undefined, error);
-        return true; // On error, process the file
+        return true;
     }
 }
 
@@ -167,13 +171,15 @@ export async function POST(req: NextRequest) {
             provider,
             accessToken,
             folderId,
+            organizationId,
             userId,
+            authId,
             recursive,
             maxFiles,
             useAI
         } = validation.data;
 
-        scanLogger.info('Starting scan', { provider, userId, folderId }, { recursive, maxFiles, useAI });
+        scanLogger.info('Starting scan', { provider, organizationId, userId, folderId }, { recursive, maxFiles, useAI });
 
         // Initialize Supabase
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -238,7 +244,7 @@ export async function POST(req: NextRequest) {
                 console.log(`[Process] ${file.name} (${file.folderPath})`);
 
                 // Check if file should be processed (deduplication)
-                const shouldProcess = await shouldProcessFile(file, supabase, userId);
+                const shouldProcess = await shouldProcessFile(file, supabase, organizationId, userId);
 
                 if (!shouldProcess) {
                     console.log(`[Skip] File unchanged: ${file.name}  `);
@@ -276,30 +282,39 @@ export async function POST(req: NextRequest) {
                     continue;
                 }
 
-                // Use AI to match evidence (if enabled)
+                // Use AI to match evidence (if enabled) with RETRY logic for stability
                 let evidenceMatches: any[] = [];
 
                 if (useAI) {
-                    try {
-                        const matchResult = await matchDocumentToEvidenceRequirements(
-                            text,
-                            {
-                                filename: file.name,
-                                fileId: file.id,
-                                mimeType: file.mimeType,
-                                foldername: file.folderPath,
-                                webViewLink: file.webViewLink
+                    let retries = 2;
+                    let success = false;
+                    while (retries >= 0 && !success) {
+                        try {
+                            const matchResult = await matchDocumentToEvidenceRequirements(
+                                text,
+                                {
+                                    filename: file.name,
+                                    fileId: file.id,
+                                    mimeType: file.mimeType,
+                                    foldername: file.folderPath,
+                                    webViewLink: file.webViewLink
+                                }
+                            );
+
+                            evidenceMatches = matchResult.matches;
+                            stats.evidenceMatches += evidenceMatches.length;
+                            success = true;
+
+                            console.log(`[AI] Found ${evidenceMatches.length} evidence matches in ${file.name}`);
+
+                        } catch (aiError: any) {
+                            console.error(`[AI] Attempt failed for ${file.name} (Retries left: ${retries}):`, aiError.message);
+                            if (retries === 0) {
+                                errors.push(`AI matching failed for ${file.name} after multiple attempts: ${aiError.message}`);
                             }
-                        );
-
-                        evidenceMatches = matchResult.matches;
-                        stats.evidenceMatches += evidenceMatches.length;
-
-                        console.log(`[AI] Found ${evidenceMatches.length} evidence matches in ${file.name}`);
-
-                    } catch (aiError) {
-                        console.error(`[AI] Error matching ${file.name}:`, aiError);
-                        errors.push(`AI matching failed for ${file.name}`);
+                            retries--;
+                            if (retries >= 0) await new Promise(resolve => setTimeout(resolve, 1000)); // Backoff
+                        }
                     }
                 }
 
@@ -323,7 +338,9 @@ export async function POST(req: NextRequest) {
                         const { data: docData, error: docError } = await supabase
                             .from('documents')
                             .upsert({
+                                organization_id: organizationId,
                                 user_id: userId,
+                                auth_id: authId || (userId && userId.includes('-') ? userId : null), // Heuristic fallback
                                 content: text.substring(0, 50000), // Limit storage
                                 metadata: {
                                     filename: file.name,
@@ -335,9 +352,16 @@ export async function POST(req: NextRequest) {
                                     size: file.size,
                                     scannedAt: new Date().toISOString()
                                 },
+                                name: file.name, // Added 'name' field based on schema
+                                file_type: file.mimeType,
+                                file_size: file.size,
+                                provider: provider === 'google.com' ? 'google_drive' : 'onedrive',
+                                external_id: file.id,
+                                web_view_link: file.webViewLink,
+                                folder_path: file.folderPath,
                                 embedding: embedding
                             }, {
-                                onConflict: 'user_id,metadata->>fileId'
+                                onConflict: 'organization_id,external_id'
                             })
                             .select('id')
                             .single();
@@ -349,24 +373,26 @@ export async function POST(req: NextRequest) {
                         // Store evidence matches
                         if (evidenceMatches.length > 0 && docData) {
                             const evidenceRecords = evidenceMatches.map(match => ({
+                                organization_id: organizationId,
                                 user_id: userId,
+                                auth_id: authId || (userId && userId.includes('-') ? userId : null),
                                 document_id: docData.id,
+                                framework_type: 'ofsted', // Added mandatory field
                                 category_id: match.categoryId,
                                 category_name: match.categoryName,
                                 subcategory_id: match.subcategoryId,
                                 subcategory_name: match.subcategoryName,
-                                evidence_item: match.evidenceItem,
+                                // evidence_item removed as not in schema
                                 confidence: match.confidence,
                                 relevance_explanation: match.relevanceExplanation,
                                 key_quotes: match.keyQuotes,
-                                document_link: file.webViewLink,
-                                folder_path: file.folderPath
+                                document_link: file.webViewLink
                             }));
 
                             const { error: evidenceError } = await supabase
                                 .from('evidence_matches')
                                 .upsert(evidenceRecords, {
-                                    onConflict: 'user_id,document_id,subcategory_id,evidence_item'
+                                    onConflict: 'organization_id,document_id,subcategory_id'
                                 });
 
                             if (evidenceError) {
@@ -399,6 +425,40 @@ export async function POST(req: NextRequest) {
                 categorySummaries = generateCategorySummaries(assessmentUpdates);
 
                 console.log(`[Assessments] Updated ${Object.keys(assessmentUpdates).length} subcategories`);
+
+                // Persist assessment updates to Database
+                if (supabase) {
+                    try {
+                        const assessmentRecords = Object.values(assessmentUpdates).map((update: any) => ({
+                            organization_id: organizationId,
+                            subcategory_id: update.subcategoryId,
+                            ai_rating: update.aiRatingRaw, // Use raw rating for new schema
+                            ai_rationale: update.aiRationale,
+                            evidence_count: update.evidenceCount,
+                            assessed_by: userId, // Attribute the assessment to the user
+                            assessed_at: new Date().toISOString(),
+                            updated_at: new Date().toISOString()
+                        }));
+
+                        if (assessmentRecords.length > 0) {
+                            const { error: upsertError } = await supabase
+                                .from('ofsted_assessments')
+                                .upsert(assessmentRecords, {
+                                    onConflict: 'organization_id,subcategory_id',
+                                    ignoreDuplicates: false // Update existing
+                                });
+
+                            if (upsertError) {
+                                console.error('[Assessments] DB Upsert Error:', upsertError);
+                                errors.push('Failed to save assessment updates to database');
+                            } else {
+                                console.log('[Assessments] Successfully saved upgrades to DB');
+                            }
+                        }
+                    } catch (dbError) {
+                        console.error('[Assessments] DB save failed:', dbError);
+                    }
+                }
 
             } catch (assessmentError) {
                 console.error('[Assessments] Error generating updates:', assessmentError);
