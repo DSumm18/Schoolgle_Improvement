@@ -153,6 +153,21 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
       const data = await response.json();
       console.log('[AuthContext] ✅ Profile sync successful');
 
+      // Track signup/login in analytics
+      fetch('/api/analytics/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event: 'user_signup',
+          properties: {
+            userId: currentUser.id,
+            email: currentUser.email,
+            isFirstSync: data.isNewUser || false // Assuming API might return this
+          },
+          timestamp: new Date().toISOString()
+        })
+      }).catch(() => { });
+
       // Update organization state if the profile sync returned new data
       if (data.organization && !organizationId) {
         setOrganizationId(data.organization.id);

@@ -5,8 +5,10 @@ interface EvidenceMatch {
     documentName: string;
     documentLink?: string;
     confidence: number;
+    confidenceLevel?: 'HIGH' | 'MEDIUM' | 'LOW';
     relevanceExplanation: string;
     keyQuotes?: string[];
+    matchedKeywords?: string[];
     folderPath?: string;
 }
 
@@ -111,8 +113,15 @@ export default function EvidenceModal({
                                                 )}
                                             </div>
                                         </div>
-                                        <div className={`px-3 py-1 rounded-full text-xs font-bold border ${getConfidenceColor(match.confidence)}`}>
-                                            {Math.round(match.confidence * 100)}% Match
+                                        <div className="flex flex-col items-end gap-1">
+                                            <div className={`px-3 py-1 rounded-full text-xs font-bold border ${getConfidenceColor(match.confidence)}`}>
+                                                {match.confidenceLevel || (Math.round(match.confidence * 100) + '% Match')}
+                                            </div>
+                                            {match.confidenceLevel && (
+                                                <span className="text-[10px] text-gray-400 font-medium">
+                                                    {Math.round(match.confidence * 100)}% Accuracy
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
 
@@ -121,6 +130,16 @@ export default function EvidenceModal({
                                             <span className="font-semibold text-gray-900 block mb-1">Why it matches:</span>
                                             {match.relevanceExplanation}
                                         </div>
+
+                                        {match.matchedKeywords && match.matchedKeywords.length > 0 && (
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {match.matchedKeywords.map((kw, kwIdx) => (
+                                                    <span key={kwIdx} className="px-2 py-0.5 bg-blue-100/50 text-blue-700 text-[10px] font-bold rounded-md border border-blue-200/50">
+                                                        {kw}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
 
                                         {match.keyQuotes && match.keyQuotes.length > 0 && (
                                             <div>

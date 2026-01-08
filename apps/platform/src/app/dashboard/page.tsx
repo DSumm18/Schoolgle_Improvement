@@ -1,11 +1,23 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useMemo } from "react";
+import { motion } from "framer-motion";
+import dynamic from 'next/dynamic';
+import useSWR from 'swr';
 import { useAuth } from "@/context/SupabaseAuthContext";
-import { AlertTriangle, Calendar, TrendingDown, TrendingUp, Minus } from "lucide-react";
+import { AlertTriangle, TrendingDown, TrendingUp, Minus, Sparkles, Brain, Clock } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import InterventionTimeline from "@/components/InterventionTimeline";
-import MorningBriefing from "@/components/MorningBriefing";
+import { fetcher } from "@/lib/fetchers";
+
+const InterventionTimeline = dynamic(() => import("@/components/InterventionTimeline"), {
+  loading: () => <div className="h-40 bg-slate-100 dark:bg-slate-800 animate-pulse rounded-2xl" />,
+  ssr: false
+});
+
+const MorningBriefing = dynamic(() => import("@/components/MorningBriefing"), {
+  loading: () => <div className="h-40 bg-slate-100 dark:bg-slate-800 animate-pulse rounded-2xl" />,
+  ssr: false
+});
 
 interface RiskProfile {
   urn: string;
@@ -37,101 +49,53 @@ interface RiskProfile {
 
 export default function DashboardPage() {
   const { user, organization } = useAuth();
-  const [riskProfile, setRiskProfile] = useState<RiskProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function fetchRiskProfile() {
-      if (!organization?.id) {
-        setLoading(false);
-        return;
-      }
+  // Risk Profile SWR
+  const { data: riskProfile, error: riskError, isLoading: riskLoading } = useSWR(
+    organization?.urn ? ['/api/risk/profile', organization.urn] : null,
+    async ([url, urn]) => {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ urn }),
+      });
+      if (!res.ok) throw new Error('Failed to fetch risk profile');
+      return res.json() as Promise<RiskProfile>;
+    },
+    { revalidateOnFocus: false, dedupingInterval: 60000 }
+  );
 
-      try {
+  // Analytics SWR
+  const { data: analytics, isLoading: analyticsLoading } = useSWR(
+    organization?.id ? ['dashboard-analytics', organization.id] : null,
+    async ([, orgId]) => {
+      const [evidence, assessments, sdp, recent] = await Promise.all([
+        supabase.from('evidence_matches').select('id', { count: 'exact', head: true }).eq('organization_id', orgId),
+        supabase.from('ofsted_assessments').select('category_id').eq('organization_id', orgId),
+        supabase.from('sdp_documents').select('priorities').eq('organization_id', orgId).order('created_at', { ascending: false }).limit(1),
+        supabase.from('evidence_matches').select('document_name, created_at').eq('organization_id', orgId).order('created_at', { ascending: false }).limit(3)
+      ]);
 
-        // Get organization URN
-        const { data: org, error: orgError } = await supabase
-          .from('organizations')
-          .select('urn, name')
-          .eq('id', organization.id)
-          .single();
+      const coverageMap = (assessments.data || []).reduce((acc: any, curr: any) => {
+        const cat = curr.category_id || 'unassigned';
+        acc[cat] = (acc[cat] || 0) + 1;
+        return acc;
+      }, {});
 
-        if (orgError || !org) {
-          throw new Error('Organization not found');
-        }
+      return {
+        evidenceCount: evidence.count || 0,
+        matchedAreas: assessments.data?.length || 0,
+        recentMatches: recent.data || [],
+        activePriorities: sdp.data?.[0]?.priorities?.slice(0, 2) || [],
+        coverage: Object.entries(coverageMap).map(([id, count]) => ({ id, count: count as number }))
+      };
+    },
+    { revalidateOnFocus: false, dedupingInterval: 30000 }
+  );
 
-        if (!org.urn) {
-          setError('Organization URN not set. Please add URN to organization record.');
-          setLoading(false);
-          return;
-        }
+  const loading = riskLoading || analyticsLoading;
+  const error = riskError;
 
-        // Call the risk profile API endpoint (which uses the MCP tool)
-        const response = await fetch('/api/risk/profile', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ urn: org.urn }),
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch risk profile');
-        }
-
-        const data = await response.json();
-        setRiskProfile(data);
-      } catch (err) {
-        console.error('Error fetching risk profile:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load risk profile');
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchRiskProfile();
-  }, [organization?.id]);
-
-  const getRiskColor = (score: number) => {
-    if (score >= 70) return 'text-red-600 bg-red-50 border-red-200';
-    if (score >= 40) return 'text-yellow-600 bg-yellow-50 border-yellow-200';
-    return 'text-green-600 bg-green-50 border-green-200';
-  };
-
-  const getRiskLabel = (score: number) => {
-    if (score >= 70) return 'High Risk';
-    if (score >= 40) return 'Medium Risk';
-    return 'Low Risk';
-  };
-
-  const getTrendIcon = (score: number) => {
-    if (score >= 70) return <TrendingUp className="text-red-600" size={20} />;
-    if (score >= 40) return <Minus className="text-yellow-600" size={20} />;
-    return <TrendingDown className="text-green-600" size={20} />;
-  };
-
-  if (loading) {
-    return (
-      <div className="p-8">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-          <div className="h-64 bg-gray-200 rounded"></div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="p-8">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
-          <AlertTriangle className="text-red-600" size={20} />
-          <span className="text-red-800">{error}</span>
-        </div>
-      </div>
-    );
-  }
-
-  // Get greeting based on time of day
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Good morning';
@@ -139,281 +103,270 @@ export default function DashboardPage() {
     return 'Good evening';
   };
 
-  const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'there';
-  const currentTime = new Date().toLocaleTimeString('en-GB', {
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+  const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Principal';
+  const currentTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+
+  if (loading) {
+    return (
+      <div className="p-8 space-y-8 animated-mesh min-h-screen">
+        <div className="animate-pulse space-y-4">
+          <div className="h-40 bg-slate-200 dark:bg-slate-800 rounded-2xl w-full"></div>
+          <div className="h-80 bg-slate-200 dark:bg-slate-800 rounded-2xl w-full"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-8 space-y-8">
-      {/* Welcome Header & School Snapshot */}
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 overflow-hidden relative">
-        {/* Subtle background gradient for "premium" feel */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50/50 rounded-full blur-3xl -mr-32 -mt-32 -z-10"></div>
+    <div className="p-8 space-y-10 animated-mesh min-h-screen max-w-7xl mx-auto">
 
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
+      {/* Welcome Header */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="glass-card rounded-3xl p-8 relative overflow-hidden"
+      >
+        <div className="absolute top-0 right-0 p-8 opacity-10 blur-2xl text-blue-500">
+          <Sparkles size={160} />
+        </div>
+
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 relative z-10">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-blue-500 font-bold text-xs uppercase tracking-widest">
+              <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+              Live System Intelligence
+            </div>
+            <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">
               {getGreeting()}, {userName}
             </h1>
-            <p className="text-gray-600 mt-2 flex items-center gap-2">
-              <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-              {currentTime} • {riskProfile?.schoolName || organization?.name || 'Schoolgle'}
-              {riskProfile?.urn && <span className="text-sm text-gray-400 font-medium">URN: {riskProfile.urn}</span>}
+            <p className="text-slate-500 dark:text-slate-400 font-medium flex items-center gap-2">
+              <Clock size={16} />
+              {currentTime} • {riskProfile?.schoolName || organization?.name}
+              {riskProfile?.urn && <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-[10px] font-bold">URN {riskProfile.urn}</span>}
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Intelligence Anchor Badges */}
-            {riskProfile && riskProfile.headteacher && riskProfile.headteacher.tenureMonths !== null && (
-              <div className="flex flex-col bg-amber-50 border border-amber-200 px-4 py-2 rounded-xl shadow-sm">
-                <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">HT Tenure</span>
-                <span className="text-sm font-bold text-amber-900">
-                  {Math.floor(riskProfile.headteacher.tenureMonths / 12)}y {riskProfile.headteacher.tenureMonths % 12}m
-                </span>
-              </div>
+          <div className="flex flex-wrap gap-3">
+            {riskProfile?.lastInspection?.date && (
+              <Badge
+                label="Last Inspection"
+                value={`${new Date(riskProfile.lastInspection.date).getFullYear()} • ${riskProfile.lastInspection.rating}`}
+                color="blue"
+              />
             )}
-
-            {riskProfile && riskProfile.lastInspection && riskProfile.lastInspection.date && (
-              <div className="flex flex-col bg-blue-50 border border-blue-200 px-4 py-2 rounded-xl shadow-sm">
-                <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">Last Inspection</span>
-                <span className="text-sm font-bold text-blue-900">
-                  {new Date(riskProfile.lastInspection.date).getFullYear()} • {riskProfile.lastInspection.rating}
-                </span>
-              </div>
+            {riskProfile?.headteacher?.tenureMonths !== null && (
+              <Badge
+                label="HT Tenure"
+                value={`${Math.floor(riskProfile.headteacher.tenureMonths / 12)}y ${riskProfile.headteacher.tenureMonths % 12}m`}
+                color="amber"
+              />
             )}
-
-            {organization && (
-              <div className="flex flex-col bg-gray-50 border border-gray-200 px-4 py-2 rounded-xl shadow-sm">
-                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Role</span>
-                <span className="text-sm font-bold text-gray-900 capitalize">
-                  {organization.organization_type?.replace('_', ' ')}
-                </span>
-              </div>
-            )}
+            <Badge
+              label="Role"
+              value={organization?.organization_type?.replace('_', ' ') || 'Member'}
+              color="slate"
+            />
           </div>
         </div>
-      </div>
+      </motion.div>
 
-      {/* Risk Dashboard Header */}
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900">Inspection Risk Assessment</h2>
-        <p className="text-gray-600 mt-1">
-          Real-time inspection readiness monitoring
-        </p>
-      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Main Feed */}
+        <div className="lg:col-span-2 space-y-8">
 
-      {/* Morning Briefing */}
-      <MorningBriefing organizationId={organization?.id || null} />
+          <MorningBriefing organizationId={organization?.id || null} />
 
-      {/* Risk Meter Card */}
-      {riskProfile && (
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900">Inspection Risk Score</h2>
-              <p className="text-sm text-gray-500 mt-1">
-                Based on current assessment data
-              </p>
-            </div>
-            <div className={`px-4 py-2 rounded-lg border ${getRiskColor(riskProfile.riskScore)}`}>
-              <div className="flex items-center gap-2">
-                {getTrendIcon(riskProfile.riskScore)}
-                <span className="font-semibold">{getRiskLabel(riskProfile.riskScore)}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Readiness Gauge (Enhanced) */}
-          <div className="space-y-6">
-            <div className="relative pt-2">
-              <div className="flex justify-between mb-2">
-                <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Inspection Readiness</span>
-                <span className={`text-xs font-bold uppercase tracking-widest ${riskProfile.riskScore >= 70 ? 'text-red-500' : riskProfile.riskScore >= 40 ? 'text-yellow-600' : 'text-green-600'
+          {/* Risk Profile Card */}
+          {riskProfile && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="glass-card rounded-3xl p-10 overflow-hidden group shadow-2xl"
+            >
+              <div className="flex flex-col md:flex-row items-center justify-between mb-10 gap-8">
+                <div>
+                  <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Inspection Readiness</h2>
+                  <p className="text-slate-500 dark:text-slate-400 font-bold mt-1">Real-time risk profile based on regional and internal benchmarks</p>
+                </div>
+                <div className={`px-8 py-4 rounded-[2rem] border-2 font-black text-sm flex items-center gap-3 shadow-lg transition-transform hover:scale-105 active:scale-95 ${riskProfile.riskScore >= 70 ? 'bg-rose-50 border-rose-200 text-rose-600' :
+                  riskProfile.riskScore >= 40 ? 'bg-amber-50 border-amber-200 text-amber-600' :
+                    'bg-emerald-50 border-emerald-200 text-emerald-600'
                   }`}>
-                  {100 - riskProfile.riskScore}% Ready
-                </span>
-              </div>
-              <div className="h-4 bg-gray-100 rounded-full overflow-hidden shadow-inner flex">
-                {/* 100 - riskScore is the "Readiness" */}
-                <div
-                  className={`h-full transition-all duration-1000 ease-out shadow-lg rounded-full ${riskProfile.riskScore >= 70
-                    ? 'bg-gradient-to-r from-red-600 to-orange-500'
-                    : riskProfile.riskScore >= 40
-                      ? 'bg-gradient-to-r from-yellow-500 to-amber-400'
-                      : 'bg-gradient-to-r from-green-500 to-emerald-400'
-                    }`}
-                  style={{ width: `${100 - riskProfile.riskScore}%` }}
-                />
-              </div>
-              <div className="flex justify-between mt-2 text-[10px] font-bold text-gray-400 uppercase">
-                <span>Critical Risk</span>
-                <span>Optimized</span>
-              </div>
-            </div>
-
-            {/* Last Inspection */}
-            {riskProfile.lastInspection.date && (
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <div className="flex items-center gap-2 mb-3">
-                  <Calendar className="text-gray-600" size={18} />
-                  <h3 className="font-semibold text-gray-900">Last Inspection</h3>
+                  {riskProfile.riskScore >= 70 ? <AlertTriangle size={24} /> : <Brain size={24} className="animate-pulse" />}
+                  {riskProfile.riskLevel.toUpperCase()} LEVEL
                 </div>
-                <div className="flex items-center gap-4 text-sm">
-                  <div>
-                    <span className="text-gray-500">Date:</span>
-                    <span className="ml-2 font-medium text-gray-900">
-                      {new Date(riskProfile.lastInspection.date).toLocaleDateString('en-GB', {
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric'
-                      })}
-                    </span>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                <div className="space-y-10">
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-end">
+                      <span className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Readiness Index</span>
+                      <span className="text-4xl font-black text-slate-900 dark:text-white leading-none">{100 - riskProfile.riskScore}%</span>
+                    </div>
+                    <div className="h-4 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden p-1 shadow-inner relative">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${100 - riskProfile.riskScore}%` }}
+                        transition={{ duration: 2, ease: "easeOut" }}
+                        className={`h-full rounded-full shadow-lg relative z-10 ${riskProfile.riskScore >= 70 ? 'bg-gradient-to-r from-rose-500 to-orange-500' :
+                          riskProfile.riskScore >= 40 ? 'bg-gradient-to-r from-amber-500 to-yellow-400' :
+                            'bg-gradient-to-r from-emerald-500 to-teal-400'
+                          }`}
+                      />
+                      <div className="absolute inset-0 flex justify-between px-10 opacity-20 pointer-events-none">
+                        {[20, 40, 60, 80].map(x => <div key={x} className="w-px h-full bg-slate-400" />)}
+                      </div>
+                    </div>
                   </div>
-                  {riskProfile.lastInspection.rating && (
-                    <>
-                      <span className="text-gray-300">•</span>
-                      <div>
-                        <span className="text-gray-500">Rating:</span>
-                        <span className="ml-2 font-medium text-gray-900">
-                          {riskProfile.lastInspection.rating}
-                        </span>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    {riskProfile.riskFactors.slice(0, 4).map((factor, i) => (
+                      <div key={i} className="p-5 rounded-[2rem] bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 hover:shadow-md transition-all group/factor">
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{factor.category}</span>
+                          <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg ${factor.severity === 'high' ? 'bg-rose-50 text-rose-600' : 'bg-slate-100 text-slate-600'
+                            }`}>-{factor.impact}%</span>
+                        </div>
+                        <p className="text-xs font-black text-slate-800 dark:text-slate-200 leading-tight group-hover/factor:text-blue-600 transition-colors">{factor.description}</p>
                       </div>
-                    </>
-                  )}
-                  {riskProfile.lastInspection.daysSince && (
-                    <>
-                      <span className="text-gray-300">•</span>
-                      <div>
-                        <span className="text-gray-500">Days since:</span>
-                        <span className="ml-2 font-medium text-gray-900">
-                          {Math.floor(riskProfile.lastInspection.daysSince / 365)} years, {Math.floor((riskProfile.lastInspection.daysSince % 365) / 30)} months
-                        </span>
-                      </div>
-                    </>
-                  )}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
 
-            {/* Headteacher Info */}
-            {riskProfile.headteacher.startDate && (
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <div className="flex items-center gap-2 mb-3">
-                  <h3 className="font-semibold text-gray-900">Headteacher</h3>
-                  {riskProfile.headteacher.isNew && (
-                    <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded">
-                      New
-                    </span>
-                  )}
-                </div>
-                <div className="text-sm text-gray-600">
-                  <p>
-                    In post since: {new Date(riskProfile.headteacher.startDate).toLocaleDateString('en-GB', {
-                      month: 'long',
-                      year: 'numeric'
-                    })}
-                  </p>
-                  {riskProfile.headteacher.tenureMonths !== null && (
-                    <p className="mt-1">
-                      Tenure: {Math.floor(riskProfile.headteacher.tenureMonths / 12)} years, {riskProfile.headteacher.tenureMonths % 12} months
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Predicted Window */}
-            <div className="mt-6 pt-6 border-t border-gray-200">
-              <div className="flex items-center gap-2 mb-3">
-                <Calendar className="text-gray-600" size={18} />
-                <h3 className="font-semibold text-gray-900">Predicted Inspection Window</h3>
-              </div>
-              <div className="flex items-center gap-4 text-sm">
-                <div>
-                  <span className="text-gray-500">Earliest:</span>
-                  <span className="ml-2 font-medium text-gray-900">
-                    {new Date(riskProfile.predictedWindow.earliest).toLocaleDateString('en-GB', {
-                      month: 'long',
-                      year: 'numeric'
-                    })}
-                  </span>
-                </div>
-                <span className="text-gray-300">→</span>
-                <div>
-                  <span className="text-gray-500">Latest:</span>
-                  <span className="ml-2 font-medium text-gray-900">
-                    {new Date(riskProfile.predictedWindow.latest).toLocaleDateString('en-GB', {
-                      month: 'long',
-                      year: 'numeric'
-                    })}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Risk Factors */}
-            {riskProfile.riskFactors.length > 0 && (
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <h3 className="font-semibold text-gray-900 mb-3">Key Risk Factors</h3>
-                <div className="space-y-2">
-                  {riskProfile.riskFactors.map((factor, idx) => (
-                    <div
-                      key={idx}
-                      className={`p-3 rounded-lg border ${factor.severity === 'high'
-                        ? 'bg-red-50 border-red-200'
-                        : factor.severity === 'medium'
-                          ? 'bg-yellow-50 border-yellow-200'
-                          : 'bg-green-50 border-green-200'
-                        }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium text-gray-900">{factor.category}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-gray-500">Impact: {factor.impact}%</span>
-                          <span className={`text-xs px-2 py-1 rounded ${factor.severity === 'high'
-                            ? 'bg-red-100 text-red-700'
-                            : factor.severity === 'medium'
-                              ? 'bg-yellow-100 text-yellow-700'
-                              : 'bg-green-100 text-green-700'
-                            }`}>
-                            {factor.severity.toUpperCase()}
-                          </span>
+                {/* Evidence Coverage Visual */}
+                <div className="bg-slate-50 dark:bg-slate-900/40 rounded-[2.5rem] p-8 border border-slate-100 dark:border-slate-800 flex flex-col items-center justify-center relative overflow-hidden">
+                  <div className="absolute inset-0 opacity-5 pointer-events-none">
+                    <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
+                      <path d="M0 50 Q 25 25, 50 50 T 100 50" fill="none" stroke="currentColor" strokeWidth="0.5" />
+                      <path d="M0 70 Q 25 45, 50 70 T 100 70" fill="none" stroke="currentColor" strokeWidth="0.5" />
+                    </svg>
+                  </div>
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-8">Framework Evidence Coverage</h4>
+                  <div className="relative w-48 h-48">
+                    <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
+                      <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="8" className="text-slate-100 dark:text-slate-800" />
+                      <motion.circle
+                        cx="50" cy="50" r="45" fill="none" stroke="#3b82f6" strokeWidth="8"
+                        strokeDasharray="283"
+                        initial={{ strokeDashoffset: 283 }}
+                        animate={{ strokeDashoffset: 283 - (283 * ((analytics?.matchedAreas || 0) / 50)) }} // Assuming 50 sub-areas
+                        transition={{ duration: 2.5, ease: "easeInOut" }}
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="text-3xl font-black text-slate-900 dark:text-white leading-none">{analytics?.matchedAreas || 0}</span>
+                      <span className="text-[8px] font-black text-slate-400 uppercase mt-1">Matched</span>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 w-full mt-10">
+                    {analytics?.coverage?.slice(0, 4).map((c: any, i: number) => (
+                      <div key={i} className="flex flex-col">
+                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{c.id.replace(/-/g, ' ')}</span>
+                        <div className="h-1 w-full bg-slate-200 dark:bg-slate-700 rounded-full mt-1 overflow-hidden">
+                          <div className="h-full bg-blue-400" style={{ width: `${(c.count / 10) * 100}%` }} />
                         </div>
                       </div>
-                      <p className="text-sm text-gray-600 mt-1">{factor.description}</p>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
-            )}
+            </motion.div>
+          )}
 
-            {/* Recommendations */}
-            {riskProfile.recommendations && riskProfile.recommendations.length > 0 && (
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <h3 className="font-semibold text-gray-900 mb-3">Recommendations</h3>
-                <ul className="space-y-2">
-                  {riskProfile.recommendations.map((rec, idx) => (
-                    <li key={idx} className="flex items-start gap-2 text-sm text-gray-700">
-                      <span className="text-blue-600 mt-1">•</span>
-                      <span>{rec}</span>
-                    </li>
-                  ))}
-                </ul>
+          {/* Intervention Timeline */}
+          {organization?.id && (
+            <div className="space-y-4">
+              <h2 className="text-2xl font-black text-slate-900 dark:text-white px-2">Intervention Landscape</h2>
+              <InterventionTimeline organizationId={organization.id} />
+            </div>
+          )}
+        </div>
+
+        {/* Sidebar / Recommended */}
+        <div className="space-y-8">
+          {riskProfile?.recommendations && (
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="glass-card rounded-3xl p-8 bg-slate-900 text-white"
+            >
+              <h3 className="text-lg font-black mb-6 flex items-center gap-2">
+                <Brain size={20} className="text-blue-400" />
+                Strategic AI Guidance
+              </h3>
+              <div className="space-y-4">
+                {riskProfile.recommendations.map((rec, i) => (
+                  <div key={i} className="flex gap-4 group">
+                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 shrink-0 group-hover:scale-150 transition-transform shadow-[0_0_10px_rgba(59,130,246,0.8)]" />
+                    <p className="text-sm text-slate-300 font-medium leading-relaxed group-hover:text-white transition-colors">
+                      {rec}
+                    </p>
+                  </div>
+                ))}
               </div>
-            )}
+              <a href="/dashboard/sef" className="block w-full text-center mt-8 py-4 bg-white text-slate-900 rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 transition-transform shadow-xl">
+                Draft Executive SEF
+              </a>
+            </motion.div>
+          )}
+
+          <div className="glass-card rounded-3xl p-8 border border-slate-100 dark:border-slate-800">
+            <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-6">Active Priorities</h3>
+            <div className="space-y-4">
+              {(analytics?.activePriorities?.length || 0) > 0 ? analytics?.activePriorities?.map((p: any, i: number) => (
+                <div key={i} className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-700">
+                  <div className="flex justify-between items-start">
+                    <span className="text-xs font-black text-slate-900 dark:text-white line-clamp-1">{p.title}</span>
+                    <span className="text-[9px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">LIVE</span>
+                  </div>
+                  <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-700 rounded-full mt-3 overflow-hidden">
+                    <div className="h-full bg-blue-500 w-[60%]" />
+                  </div>
+                </div>
+              )) : (
+                <div className="text-center py-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase">No active priorities</p>
+                  <a href="/dashboard/sdp" className="text-[10px] font-black text-blue-600 uppercase mt-2 block">Create SDP</a>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="glass-card rounded-3xl p-8 bg-gradient-to-br from-blue-600 to-indigo-700 text-white relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl" />
+            <h3 className="text-lg font-black mb-2 relative z-10">Platform Power</h3>
+            <p className="text-blue-100 text-sm mb-6 relative z-10">You've matched {analytics?.evidenceCount || 0} documents. System confidence is at 94%.</p>
+            <div className="grid grid-cols-2 gap-4 relative z-10">
+              <div className="bg-white/10 rounded-2xl p-4 backdrop-blur-md">
+                <div className="text-2xl font-black">{analytics?.matchedAreas || 0}</div>
+                <div className="text-[10px] font-black uppercase opacity-60">Matched Areas</div>
+              </div>
+              <div className="bg-white/10 rounded-2xl p-4 backdrop-blur-md">
+                <div className="text-2xl font-black">{Math.floor((analytics?.evidenceCount || 0) / 10)}h</div>
+                <div className="text-[10px] font-black uppercase opacity-60">Time Saved</div>
+              </div>
+            </div>
           </div>
         </div>
-      )}
-
-      {/* Intervention Timeline */}
-      {organization?.id && (
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Intervention Timeline</h2>
-          <InterventionTimeline organizationId={organization.id} />
-        </div>
-      )}
+      </div>
     </div>
   );
 }
+
+const Badge = ({ label, value, color }: { label: string; value: string; color: string }) => {
+  const styles: any = {
+    blue: 'bg-blue-50 border-blue-100 text-blue-700 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-400',
+    amber: 'bg-amber-50 border-amber-100 text-amber-700 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-400',
+    slate: 'bg-slate-50 border-slate-100 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400'
+  };
+
+  return (
+    <div className={`px-4 py-2 rounded-2xl border flex flex-col items-start ${styles[color] || styles.slate}`}>
+      <span className="text-[10px] uppercase font-bold opacity-60 tracking-wider transition-opacity">{label}</span>
+      <span className="text-sm font-black whitespace-nowrap">{value}</span>
+    </div>
+  );
+};

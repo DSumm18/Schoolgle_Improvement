@@ -21,10 +21,10 @@ const Navbar = () => {
                         Schoolgle
                     </span>
                     {/* Animated planets orbiting around the center of "Schoolgle" text */}
-                    <div 
-                        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 overflow-visible pointer-events-none" 
-                        style={{ 
-                            width: 200, 
+                    <div
+                        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 overflow-visible pointer-events-none"
+                        style={{
+                            width: 200,
                             height: 200
                         }}
                     >
@@ -39,8 +39,11 @@ const Navbar = () => {
                     <a href="/#early-access" className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-black transition-colors">Early access</a>
                 </div>
 
-                <div className="flex items-center gap-4">
-                    <a href="#early-access" className="px-6 py-2.5 text-sm font-medium text-white bg-gray-900 rounded-full hover:bg-gray-800 transition-colors">
+                <div className="flex items-center gap-6">
+                    <Link href="/login" className="text-sm font-medium text-gray-400 hover:text-black transition-colors">
+                        Sign In
+                    </Link>
+                    <a href="#early-access" className="px-6 py-2.5 text-sm font-black uppercase tracking-widest text-white bg-blue-600 rounded-full hover:bg-blue-700 transition-all shadow-[0_10px_20px_rgba(37,99,235,0.1)]">
                         Request early access
                     </a>
                 </div>

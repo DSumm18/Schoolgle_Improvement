@@ -38,6 +38,15 @@ export const MODEL_CONFIG = {
         costPerRequest: 0.0003,
         useFor: ['retry', 'json-parsing-failed'],
         maxTokens: 8000
+    },
+
+    // Premium model for final report generation and complex synthesis
+    premium: {
+        id: 'anthropic/claude-3.5-sonnet',
+        name: 'Claude 3.5 Sonnet',
+        costPerRequest: 0.015,
+        useFor: ['sef-generation', 'final-synthesis'],
+        maxTokens: 8000
     }
 };
 
@@ -50,6 +59,7 @@ export interface DocumentMetadata {
     foldername?: string;
     folderPath?: string;
     webViewLink?: string;
+    modifiedTime?: string;
 }
 
 export interface EvidenceMatch {
@@ -59,11 +69,15 @@ export interface EvidenceMatch {
     subcategoryName: string;
     evidenceItem: string;
     confidence: number; // 0-1
+    confidenceLevel: 'HIGH' | 'MEDIUM' | 'LOW';
     relevanceExplanation: string;
+    triggeredKeywords: string[];
+    suggestedAlternativeCategory?: string;
     keyQuotes: string[];
     documentId: string;
     documentName: string;
     documentLink?: string;
+    documentModifiedTime?: string;
 }
 
 export interface MatchResult {
@@ -81,7 +95,10 @@ interface AIResponse {
         subcategory_id: string;
         evidence_item: string;
         confidence: number;
+        confidence_level: 'HIGH' | 'MEDIUM' | 'LOW';
         explanation: string;
+        triggered_keywords: string[];
+        suggested_alternative?: string;
         key_quotes: string[];
     }[];
     summary?: string;
@@ -95,21 +112,26 @@ interface AIResponse {
 export function selectModel(metadata: DocumentMetadata): string {
     const { mimeType, filename } = metadata;
 
-    // Check for scanned PDFs or images
+    // OCR for scanned PDFs or images
     if (mimeType.includes('image') ||
-        filename.toLowerCase().includes('scan') ||
-        filename.toLowerCase().includes('photo')) {
+        mimeType.includes('pdf') && (
+            filename.toLowerCase().includes('scan') ||
+            filename.toLowerCase().includes('photo') ||
+            filename.toLowerCase().includes('handwritten')
+        )) {
         return MODEL_CONFIG.ocr.id;
     }
 
-    // Check for visual-heavy documents (charts, diagrams)
+    // Vision for visual-heavy documents
     if (filename.toLowerCase().includes('chart') ||
         filename.toLowerCase().includes('diagram') ||
-        filename.toLowerCase().includes('infographic')) {
+        filename.toLowerCase().includes('infographic') ||
+        filename.toLowerCase().includes('visual') ||
+        filename.toLowerCase().includes('map')) {
         return MODEL_CONFIG.vision.id;
     }
 
-    // Default: Use primary model (DeepSeek V3)
+    // Default to DeepSeek V3 for text processing
     return MODEL_CONFIG.primary.id;
 }
 
@@ -143,13 +165,16 @@ function createSystemPrompt(): string {
 Your task is to:
 1. Read the document carefully
 2. Identify which Ofsted evidence requirements it satisfies
-3. Provide a confidence score (0-1) for each match
-4. Extract relevant quotes that demonstrate the evidence
-5. Explain WHY the document satisfies each requirement
+3. Provide a confidence score (0-1) AND a level (HIGH, MEDIUM, LOW)
+   - HIGH: Direct, clear evidence that fully satisfies the requirement
+   - MEDIUM: Partial or indirect evidence that requires manual verification
+   - LOW: Weak association or purely contextual information
+4. Extract specific triggered keywords or phrases that led to the match
+5. Extract relevant quotes that demonstrate the evidence
+6. Explain WHY the document satisfies each requirement
+7. If the document seems to fit better in another category, suggest it.
 
-Be thorough but precise. Only match evidence with high confidence (>0.7).
-If a document partially satisfies a requirement, use a moderate confidence score (0.5-0.7).
-If a document clearly and comprehensively addresses a requirement, use high confidence (0.8-1.0).`;
+Only return HIGH confidence matches if you are certain.`;
 }
 
 /**
@@ -158,9 +183,9 @@ If a document clearly and comprehensively addresses a requirement, use high conf
 function createUserPrompt(documentText: string, metadata: DocumentMetadata): string {
     const frameworkData = formatFrameworkForPrompt();
 
-    // Truncate document if too long (keep first 8000 chars for context)
-    const truncatedText = documentText.length > 8000
-        ? documentText.substring(0, 8000) + '\n\n[Document truncated for analysis...]'
+    // Use a larger context window for higher quality models
+    const truncatedText = documentText.length > 20000
+        ? documentText.substring(0, 20000) + '\n\n[Document truncated for analysis...]'
         : documentText;
 
     return `Analyze this school document and identify which Ofsted evidence requirements it satisfies.
@@ -185,14 +210,17 @@ Return a JSON object with this exact structure:
       "subcategory_id": "curriculum_intent",
       "evidence_item": "Curriculum policy documents",
       "confidence": 0.95,
+      "confidence_level": "HIGH",
       "explanation": "This document is a comprehensive curriculum policy...",
+      "triggered_keywords": ["curriculum intent", "progression map"],
+      "suggested_alternative": null,
       "key_quotes": ["Quote 1 from document", "Quote 2 from document"]
     }
   ],
   "summary": "Overall assessment of what this document provides evidence for"
 }
 
-Only include matches with confidence >= 0.5. Be selective and accurate.`;
+Only include matches with confidence >= 0.3. Be selective and accurate.`;
 }
 
 /**
@@ -226,6 +254,14 @@ function parseAIResponse(
             const category = OFSTED_FRAMEWORK.find(c => c.id === match.category_id);
             const subcategory = category?.subcategories.find(s => s.id === match.subcategory_id);
 
+            // Infer confidence level if missing
+            let level = match.confidence_level;
+            if (!level) {
+                if (match.confidence >= 0.8) level = 'HIGH';
+                else if (match.confidence >= 0.5) level = 'MEDIUM';
+                else level = 'LOW';
+            }
+
             return {
                 categoryId: match.category_id,
                 categoryName: category?.name || 'Unknown Category',
@@ -233,11 +269,15 @@ function parseAIResponse(
                 subcategoryName: subcategory?.name || 'Unknown Subcategory',
                 evidenceItem: match.evidence_item,
                 confidence: match.confidence,
+                confidenceLevel: level as 'HIGH' | 'MEDIUM' | 'LOW',
                 relevanceExplanation: match.explanation,
+                triggeredKeywords: match.triggered_keywords || [],
+                suggestedAlternativeCategory: match.suggested_alternative,
                 keyQuotes: match.key_quotes || [],
                 documentId: documentMetadata.fileId,
                 documentName: documentMetadata.filename,
-                documentLink: documentMetadata.webViewLink
+                documentLink: documentMetadata.webViewLink,
+                documentModifiedTime: documentMetadata.modifiedTime
             };
         });
 

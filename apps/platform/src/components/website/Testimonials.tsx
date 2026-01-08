@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Play } from 'lucide-react';
+import Image from 'next/image';
 
 interface Testimonial {
     heading: string;
@@ -37,10 +38,12 @@ const Testimonials = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     {testimonials.map((testimonial, index) => (
                         <div key={index} className="group relative aspect-video rounded-3xl overflow-hidden bg-gray-200 cursor-pointer shadow-lg hover:shadow-xl transition-all duration-500">
-                            <img
+                            <Image
                                 src={testimonial.image}
                                 alt={testimonial.author}
-                                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 filter brightness-[0.7]"
+                                fill
+                                className="object-cover transition-transform duration-700 group-hover:scale-105 filter brightness-[0.7]"
+                                sizes="(max-width: 768px) 100vw, 50vw"
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-8 md:p-12">
                                 <div className="mb-auto self-center w-16 h-16 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white group-hover:scale-110 transition-transform mb-8">

@@ -15,6 +15,7 @@ import TrustSection from '@/components/website/TrustSection';
 import PreviewModules from '@/components/website/PreviewModules';
 import InsightsSection from '@/components/website/InsightsSection';
 import EarlyAccessForm from '@/components/website/EarlyAccessForm';
+import Testimonials from '@/components/website/Testimonials';
 import Footer from '@/components/website/Footer';
 
 // Product suites with clean styling
@@ -147,6 +148,9 @@ export default function HomePage() {
                 {/* Trust Building */}
                 <TrustSection />
 
+                {/* Social Proof */}
+                <Testimonials />
+
                 {/* What We're Building (Preview Mode) */}
                 <section id="preview">
                     <PreviewModules />
@@ -175,8 +179,8 @@ export default function HomePage() {
                                     <div
                                         key={suite.id}
                                         className={`bg-white rounded-2xl border transition-all overflow-hidden ${suite.featured
-                                                ? 'border-gray-900 shadow-sm'
-                                                : 'border-gray-200 hover:border-gray-300'
+                                            ? 'border-gray-900 shadow-sm'
+                                            : 'border-gray-200 hover:border-gray-300'
                                             }`}
                                     >
                                         {suite.featured && (
@@ -195,8 +199,8 @@ export default function HomePage() {
                                                     <div className="flex items-center gap-2 mb-1">
                                                         <h3 className="text-lg font-semibold text-gray-900">{suite.name}</h3>
                                                         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${isLive ? 'bg-green-100 text-green-700' :
-                                                                suite.status === 'coming-soon' ? 'bg-amber-100 text-amber-700' :
-                                                                    'bg-gray-100 text-gray-600'
+                                                            suite.status === 'coming-soon' ? 'bg-amber-100 text-amber-700' :
+                                                                'bg-gray-100 text-gray-600'
                                                             }`}>
                                                             {isLive ? 'Live' : suite.status === 'coming-soon' ? 'Coming Soon' : 'Planned'}
                                                         </span>
@@ -243,8 +247,8 @@ export default function HomePage() {
                                                                 ) : null}
                                                             </div>
                                                             <span className={`text-xs ${app.status === 'live' ? 'text-green-600' :
-                                                                    app.status === 'beta' ? 'text-gray-500' :
-                                                                        'text-gray-400'
+                                                                app.status === 'beta' ? 'text-gray-500' :
+                                                                    'text-gray-400'
                                                                 }`}>
                                                                 {app.status === 'live' ? '●' : app.status === 'beta' ? 'Beta' : ''}
                                                             </span>

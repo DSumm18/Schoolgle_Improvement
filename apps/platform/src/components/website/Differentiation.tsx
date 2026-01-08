@@ -62,6 +62,32 @@ const Differentiation = () => {
                         );
                     })}
                 </div>
+
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
+                    viewport={{ once: true }}
+                    className="mt-20 p-12 bg-slate-900 rounded-[3rem] text-center border border-slate-800 shadow-2xl relative overflow-hidden"
+                >
+                    <div className="absolute inset-0 opacity-10 pointer-events-none">
+                        <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
+                            <path d="M0 50 Q 25 25, 50 50 T 100 50" fill="none" stroke="white" strokeWidth="0.5" />
+                        </svg>
+                    </div>
+
+                    <h3 className="text-3xl font-black text-white mb-6 tracking-tight">
+                        Ready to see <span className="text-blue-400">Schoolgle</span> in action?
+                    </h3>
+                    <p className="text-lg text-slate-400 max-w-2xl mx-auto mb-10 font-medium leading-relaxed">
+                        Join our Early Access Pilot and start mapping your evidence automatically. No credit card required. No long-term commitment.
+                    </p>
+                    <a
+                        href="#early-access"
+                        className="inline-block px-10 py-5 bg-blue-600 text-white rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] hover:bg-blue-700 transition-all shadow-[0_20px_40px_rgba(37,99,235,0.4)] hover:scale-105"
+                    >
+                        Request early access
+                    </a>
+                </motion.div>
             </div>
         </section>
     );

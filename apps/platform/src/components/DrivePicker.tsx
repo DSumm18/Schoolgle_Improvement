@@ -28,7 +28,6 @@ export default function DrivePicker({ onFolderSelect }: DrivePickerProps) {
             .setMimeTypes("application/vnd.google-apps.folder");
 
         const picker = new window.google.picker.PickerBuilder()
-            .setAppId(process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "")
             .setOAuthToken(accessToken)
             .addView(view)
             .setCallback((data: any) => {

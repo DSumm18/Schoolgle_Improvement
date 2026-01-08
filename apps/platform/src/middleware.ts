@@ -2,10 +2,11 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
-    // Redirect www to non-www
-    if (request.headers.get('host')?.startsWith('www.')) {
+    // Redirect non-www to www (canonical)
+    const host = request.headers.get('host');
+    if (host === 'schoolgle.co.uk') {
         const url = request.nextUrl.clone();
-        url.host = url.host.replace('www.', '');
+        url.host = 'www.schoolgle.co.uk';
         return NextResponse.redirect(url, 301);
     }
 

@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@next/bundle-analyzer": "^16.1.1",
     "@schoolgle/ed-backend": "file:../../packages/ed-backend",
     "@schoolgle/ed-widget": "file:../../packages/ed-widget",
     "@schoolgle/shared": "file:../../packages/shared",
@@ -29,6 +30,7 @@
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "stripe": "^17.0.0",
+    "swr": "^2.3.8",
     "three": "^0.160.1",
     "xlsx": "^0.18.5"
   },

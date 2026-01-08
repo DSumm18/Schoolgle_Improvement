@@ -42,7 +42,12 @@ export interface ActionItem {
     startDate?: string;
     owner?: string;
     assignee?: string;
-    status: 'not_started' | 'in_progress' | 'completed' | 'open';
+    assigneeId?: string;
+    progress?: number; // 0-100
+    status: 'not_started' | 'in_progress' | 'completed' | 'open' | 'draft';
+    dependencies?: string[];
+    isCritical?: boolean;
+    linkedEvidence?: { documentId: string; documentName: string; matchedAt: string }[];
     notes?: any[];
     createdAt?: string;
     updatedAt?: string;
@@ -50,44 +55,44 @@ export interface ActionItem {
 
 // NEW 5-Point Grading Scale (November 2025)
 export const OFSTED_RATINGS = {
-    'exceptional': { 
-        label: 'Exceptional', 
-        color: 'bg-purple-500', 
+    'exceptional': {
+        label: 'Exceptional',
+        color: 'bg-purple-500',
         textColor: 'text-purple-700',
         description: 'Highest quality provision',
         score: 5
     },
-    'strong_standard': { 
-        label: 'Strong Standard', 
-        color: 'bg-green-500', 
+    'strong_standard': {
+        label: 'Strong Standard',
+        color: 'bg-green-500',
         textColor: 'text-green-700',
         description: 'Above expected standards',
         score: 4
     },
-    'expected_standard': { 
-        label: 'Expected Standard', 
-        color: 'bg-blue-500', 
+    'expected_standard': {
+        label: 'Expected Standard',
+        color: 'bg-blue-500',
         textColor: 'text-blue-700',
         description: 'Meets all required standards',
         score: 3
     },
-    'needs_attention': { 
-        label: 'Needs Attention', 
-        color: 'bg-yellow-500', 
+    'needs_attention': {
+        label: 'Needs Attention',
+        color: 'bg-yellow-500',
         textColor: 'text-yellow-700',
         description: 'Some aspects inconsistent or limited',
         score: 2
     },
-    'urgent_improvement': { 
-        label: 'Urgent Improvement', 
-        color: 'bg-red-500', 
+    'urgent_improvement': {
+        label: 'Urgent Improvement',
+        color: 'bg-red-500',
         textColor: 'text-red-700',
         description: 'Requires immediate action',
         score: 1
     },
-    'not_assessed': { 
-        label: 'Not Assessed', 
-        color: 'bg-gray-400', 
+    'not_assessed': {
+        label: 'Not Assessed',
+        color: 'bg-gray-400',
         textColor: 'text-gray-600',
         description: 'Awaiting assessment',
         score: 0
@@ -665,11 +670,11 @@ export interface OfstedAssessment {
 export function calculateCategoryReadiness(categoryId: string, assessments: Record<string, OfstedAssessment>): { userScore: number; aiScore: number } {
     const category = OFSTED_FRAMEWORK.find(c => c.id === categoryId);
     if (!category) return { userScore: 0, aiScore: 0 };
-    
+
     let totalUserScore = 0;
     let totalAIScore = 0;
     let assessedCount = 0;
-    
+
     for (const sub of category.subcategories) {
         const assessment = assessments[sub.id];
         if (assessment?.schoolRating && assessment.schoolRating !== 'not_assessed') {
@@ -678,10 +683,10 @@ export function calculateCategoryReadiness(categoryId: string, assessments: Reco
             totalUserScore += (rating?.score || 0) * 20; // Convert to percentage
         }
     }
-    
+
     const userScore = assessedCount > 0 ? Math.round(totalUserScore / assessedCount) : 0;
     const aiScore = 0; // Would be calculated from evidence scanning
-    
+
     return { userScore, aiScore };
 }
 
@@ -689,7 +694,7 @@ export function calculateOverallReadiness(assessments: Record<string, OfstedAsse
     let totalUserScore = 0;
     let totalAIScore = 0;
     let categoryCount = 0;
-    
+
     for (const category of OFSTED_FRAMEWORK) {
         const { userScore, aiScore } = calculateCategoryReadiness(category.id, assessments);
         if (userScore > 0) {
@@ -698,7 +703,7 @@ export function calculateOverallReadiness(assessments: Record<string, OfstedAsse
         }
         totalAIScore += aiScore;
     }
-    
+
     return {
         userScore: categoryCount > 0 ? Math.round(totalUserScore / categoryCount) : 0,
         aiScore: categoryCount > 0 ? Math.round(totalAIScore / categoryCount) : 0

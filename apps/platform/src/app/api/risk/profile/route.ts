@@ -1,7 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { withErrorHandling, apiError, apiSuccess } from '@/lib/api-utils';
 
-// --- Risk Calculation Helpers (Ported from MCP tool for MVP speed) ---
+// --- Risk Calculation Helpers ---
+// ... (omitted for brevity in replacement, but I will keep them)
 
 function calculateRiskScore(
   daysSinceInspection: number | null,
@@ -69,9 +71,9 @@ function predictInspectionWindow(daysSinceInspection: number | null, riskScore: 
 }
 
 export async function POST(req: NextRequest) {
-  try {
+  return withErrorHandling(async () => {
     const { urn } = await req.json();
-    if (!urn) return NextResponse.json({ error: 'URN is required' }, { status: 400 });
+    if (!urn) return apiError('URN is required', 400);
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -136,10 +138,6 @@ export async function POST(req: NextRequest) {
       ]
     };
 
-    return NextResponse.json(responseData);
-
-  } catch (error: any) {
-    console.error('[RiskAPI] Error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+    return apiSuccess(responseData);
+  }, 'Risk Profile API');
 }

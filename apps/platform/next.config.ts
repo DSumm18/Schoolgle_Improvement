@@ -1,4 +1,7 @@
 import type { NextConfig } from "next";
+const withBundleAnalyzer = require('@next/bundle-analyzer')({
+  enabled: process.env.ANALYZE === 'true',
+});
 
 const nextConfig: NextConfig = {
   typescript: {
@@ -7,16 +10,13 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  // Explicitly use webpack (not Turbopack) to avoid config conflicts
   webpack: (config, { isServer }) => {
-    // Handle ed-widget package
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
         fs: false,
       };
     }
-    // Make @schoolgle/ed-widget optional for marketing site - alias to stub module
     const path = require('path');
     config.resolve.alias = {
       ...config.resolve.alias,
@@ -25,10 +25,9 @@ const nextConfig: NextConfig = {
     return config;
   },
   images: {
-    domains: ['schoolgle.co.uk', 'www.schoolgle.co.uk'],
+    domains: ['schoolgle.co.uk', 'www.schoolgle.co.uk', 'www.google.com'],
   },
-  // Add empty turbopack config to silence the warning
   turbopack: {},
 } as NextConfig;
 
-export default nextConfig;
+export default withBundleAnalyzer(nextConfig);

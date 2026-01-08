@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useAnalytics } from '@/hooks/useAnalytics';
 
 const EarlyAccessForm = () => {
+    const { track } = useAnalytics();
     const [email, setEmail] = useState('');
     const [schoolName, setSchoolName] = useState('');
     const [role, setRole] = useState('');
@@ -33,14 +35,17 @@ const EarlyAccessForm = () => {
 
             if (data.success) {
                 setSubmitted(true);
+                track('waitlist_signup_success', { email, schoolName, role });
                 setEmail('');
                 setSchoolName('');
                 setRole('');
             } else {
                 setError(data.error || 'Something went wrong. Please try again.');
+                track('waitlist_signup_error', { email, error: data.error });
             }
-        } catch (err) {
+        } catch (err: any) {
             setError('Failed to connect to the server. Please check your internet connection.');
+            track('waitlist_signup_failed', { email, error: err.message });
             console.error('Waitlist submission error:', err);
         } finally {
             setLoading(false);
@@ -77,65 +82,67 @@ const EarlyAccessForm = () => {
                     </div>
 
                     {!submitted ? (
-                        <form onSubmit={handleSubmit} className="max-w-xl mx-auto space-y-4">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div className="sm:col-span-2">
+                        <form onSubmit={handleSubmit} className="max-w-xl mx-auto space-y-6">
+                            <div className="space-y-4">
+                                <div>
                                     <input
                                         type="email"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
-                                        placeholder="Your work email"
+                                        placeholder="Enter your work email"
                                         required
                                         disabled={loading}
-                                        className="w-full px-4 py-3 rounded-xl border border-gray-700 bg-gray-800 text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent disabled:opacity-50"
+                                        className="w-full px-6 py-5 rounded-3xl border-2 border-slate-700 bg-slate-800 text-white placeholder:text-slate-500 focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 disabled:opacity-50 text-lg font-medium transition-all"
                                     />
                                 </div>
-                                <div>
-                                    <input
-                                        type="text"
-                                        value={schoolName}
-                                        onChange={(e) => setSchoolName(e.target.value)}
-                                        placeholder="School / Trust Name"
-                                        disabled={loading}
-                                        className="w-full px-4 py-3 rounded-xl border border-gray-700 bg-gray-800 text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent disabled:opacity-50"
-                                    />
-                                </div>
-                                <div>
-                                    <select
-                                        value={role}
-                                        onChange={(e) => setRole(e.target.value)}
-                                        disabled={loading}
-                                        className="w-full px-4 py-3 rounded-xl border border-gray-700 bg-gray-800 text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent disabled:opacity-50 appearance-none"
-                                    >
-                                        <option value="" disabled>Select your role</option>
-                                        <option value="headteacher">Headteacher / Principal</option>
-                                        <option value="sbm">SBM / Finance Lead</option>
-                                        <option value="trust-lead">Trust / MAT Lead</option>
-                                        <option value="governor">Governor / Trustee</option>
-                                        <option value="other">Other</option>
-                                    </select>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 opacity-80 focus-within:opacity-100 transition-opacity">
+                                    <div>
+                                        <input
+                                            type="text"
+                                            value={schoolName}
+                                            onChange={(e) => setSchoolName(e.target.value)}
+                                            placeholder="School / Trust (Optional)"
+                                            disabled={loading}
+                                            className="w-full px-4 py-3 rounded-2xl border border-slate-700 bg-slate-800 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 text-sm font-medium transition-all"
+                                        />
+                                    </div>
+                                    <div>
+                                        <select
+                                            value={role}
+                                            onChange={(e) => setRole(e.target.value)}
+                                            disabled={loading}
+                                            className="w-full px-4 py-3 rounded-2xl border border-slate-700 bg-slate-800 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 appearance-none text-sm font-medium transition-all"
+                                        >
+                                            <option value="" disabled>Select your role (Optional)</option>
+                                            <option value="headteacher">Headteacher / Principal</option>
+                                            <option value="sbm">SBM / Finance Lead</option>
+                                            <option value="trust-lead">Trust / MAT Lead</option>
+                                            <option value="governor">Governor / Trustee</option>
+                                            <option value="other">Other</option>
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
 
                             {error && (
-                                <p className="text-red-400 text-sm">{error}</p>
+                                <p className="text-rose-400 text-sm font-bold">{error}</p>
                             )}
 
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="w-full sm:w-auto px-12 py-3 bg-white text-gray-900 font-medium rounded-xl hover:bg-gray-100 transition-colors disabled:opacity-50 flex items-center justify-center mx-auto"
+                                className="w-full px-12 py-5 bg-blue-600 text-white font-black text-xs uppercase tracking-[0.2em] rounded-3xl hover:bg-blue-700 transition-all shadow-[0_20px_40px_rgba(37,99,235,0.2)] disabled:opacity-50 flex items-center justify-center mx-auto hover:scale-105"
                             >
                                 {loading ? (
-                                    <div className="w-5 h-5 border-2 border-gray-900 border-t-transparent rounded-full animate-spin"></div>
+                                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                                 ) : (
-                                    "Request early access"
+                                    "Launch Early Access"
                                 )}
                             </button>
 
-                            <div className="text-sm text-gray-500 mt-4 space-y-1">
+                            <div className="text-[10px] text-slate-500 mt-6 space-y-1 font-black uppercase tracking-widest text-center">
                                 <p>No spam. Pilot updates only.</p>
-                                <p>Designed for UK primary schools, trusts, and MATs.</p>
+                                <p>Designed specifically for UK primary schools & trusts.</p>
                             </div>
                         </form>
                     ) : (

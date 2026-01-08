@@ -1,5 +1,6 @@
 "use client";
 
+import Image from 'next/image';
 import { useAuth } from "@/context/SupabaseAuthContext";
 import { LogIn } from "lucide-react";
 
@@ -9,10 +10,16 @@ export default function LoginButton() {
     return (
         <button
             onClick={signInWithGoogle}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition-all duration-200 ease-in-out transform hover:scale-105"
+            className="w-full flex items-center justify-center gap-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-bold py-4 px-8 rounded-2xl shadow-xl shadow-blue-500/5 hover:scale-[1.02] active:scale-[0.98] transition-all border border-slate-200 dark:border-slate-700"
         >
-            <LogIn size={20} />
-            <span>Sign in with Google</span>
+            <Image
+                src="https://www.google.com/favicon.ico"
+                alt="Google"
+                width={20}
+                height={20}
+                className="w-5 h-5"
+            />
+            <span>Continue with Google</span>
         </button>
     );
 }

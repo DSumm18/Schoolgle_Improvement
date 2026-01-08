@@ -99,6 +99,15 @@ const HowItWorks = () => {
                             As you continue using Schoolgle, the platform learns your school's structure and priorities. Evidence mapping becomes more accurate. Action plans stay automatically updated as tasks are completed. Reports become more tailored to your school's context. The longer you use it, the less manual work is required.
                         </p>
                     </div>
+
+                    <div className="pt-12 text-center">
+                        <a
+                            href="#early-access"
+                            className="inline-block px-10 py-5 bg-blue-600 text-white rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] hover:bg-blue-700 transition-all shadow-[0_20px_40px_rgba(37,99,235,0.2)] hover:scale-105"
+                        >
+                            Request early access
+                        </a>
+                    </div>
                 </motion.div>
             </div>
         </section>

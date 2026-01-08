@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { ExternalLink, Globe } from 'lucide-react';
+import Image from 'next/image';
 
 export interface Tool {
     id: string;
@@ -59,9 +60,11 @@ export default function ToolCard({ tool, workspaceMode, onLaunchInWorkspace }: T
             <div className="flex items-start gap-4 mb-4">
                 <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center overflow-hidden">
                     {!faviconError ? (
-                        <img 
-                            src={faviconUrl} 
-                            alt="" 
+                        <Image
+                            src={faviconUrl}
+                            alt=""
+                            width={24}
+                            height={24}
                             className="w-6 h-6"
                             onError={() => setFaviconError(true)}
                         />

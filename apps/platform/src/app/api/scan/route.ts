@@ -13,6 +13,7 @@ import { createClient } from '@supabase/supabase-js';
 import { parseDocx, parseExcel, parseImage } from "@/lib/extractors";
 import { matchDocumentToEvidenceRequirements } from "@/lib/ai-evidence-matcher";
 import { updateAssessmentsFromEvidence, generateCategorySummaries } from "@/lib/assessment-updater";
+import { generateSmartTasks } from "@/lib/smart-task-generator";
 import { generateEmbedding } from "@/lib/embeddings";
 import { scanRequestSchema, validateRequest } from "@/lib/validations";
 import { scanLimiter } from "@/lib/rateLimit";
@@ -145,351 +146,328 @@ async function shouldProcessFile(
 // --- Main Handler ---
 
 export async function POST(req: NextRequest) {
-    const scanLogger = createOperationLogger('scan-api', { endpoint: '/api/scan' });
+    const encoder = new TextEncoder();
 
-    try {
-        // Rate limiting check
-        const rateLimitResult = await scanLimiter.check(req);
-        if (!rateLimitResult.allowed) {
-            scanLogger.warn('Rate limit exceeded');
-            return rateLimitResult.response!;
-        }
+    return new Response(
+        new ReadableStream({
+            async start(controller) {
+                const sendUpdate = (data: any) => {
+                    controller.enqueue(encoder.encode(JSON.stringify(data) + '\n'));
+                };
 
-        // Parse and validate request body
-        const body = await req.json();
-        const validation = validateRequest(scanRequestSchema, body);
+                const scanLogger = createOperationLogger('scan-api', { endpoint: '/api/scan' });
 
-        if (!validation.success) {
-            scanLogger.warn('Invalid request', undefined, undefined, { validationError: validation.error });
-            return new Response(JSON.stringify({ error: validation.error }), {
-                status: 400,
-                headers: { 'Content-Type': 'application/json' }
-            });
-        }
-
-        const {
-            provider,
-            accessToken,
-            folderId,
-            organizationId,
-            userId,
-            authId,
-            recursive,
-            maxFiles,
-            useAI
-        } = validation.data;
-
-        scanLogger.info('Starting scan', { provider, organizationId, userId, folderId }, { recursive, maxFiles, useAI });
-
-        // Initialize Supabase
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-        let supabase = null;
-
-        if (supabaseUrl && supabaseKey) {
-            supabase = createClient(supabaseUrl, supabaseKey);
-            console.log("[Scan] Supabase client initialized");
-        }
-
-        // Scan folder structure
-        let allFiles: FileMetadataExtended[] = [];
-
-        if (recursive) {
-            console.log("[Scan] Starting recursive folder scan...");
-            const scanFunc = provider === 'google.com'
-                ? listGoogleFilesRecursive
-                : listOneDriveFilesRecursive;
-
-            allFiles = await scanFunc(accessToken, folderId, (progress: ScanProgress) => {
-                console.log(`[Progress] Folder: ${progress.currentFolder}, Files: ${progress.totalFiles}`);
-            });
-        } else {
-            // Non-recursive scan (legacy)
-            console.log("[Scan] Single folder scan...");
-            const { listGoogleFiles, listOneDriveFiles } = await import("@/lib/cloud-service");
-            const files = provider === 'google.com'
-                ? await listGoogleFiles(accessToken, folderId)
-                : await listOneDriveFiles(accessToken, folderId);
-
-            allFiles = files.map(f => ({
-                ...f,
-                folderPath: 'Root',
-                isFolder: false
-            }));
-        }
-
-        console.log(`[Scan] Found ${allFiles.length} total files`);
-
-        // Filter out folders, limit files
-        const filesToProcess = allFiles
-            .filter(f => !f.isFolder)
-            .slice(0, maxFiles);
-
-        console.log(`[Scan] Processing ${filesToProcess.length} files (limit: ${maxFiles})`);
-
-        // Process files
-        const stats = {
-            totalFiles: filesToProcess.length,
-            processedFiles: 0,
-            skippedFiles: 0,
-            failedFiles: 0,
-            evidenceMatches: 0
-        };
-
-        const errors: string[] = [];
-        const allEvidenceMatches: any[] = [];
-
-        for (const file of filesToProcess) {
-            try {
-                console.log(`[Process] ${file.name} (${file.folderPath})`);
-
-                // Check if file should be processed (deduplication)
-                const shouldProcess = await shouldProcessFile(file, supabase, organizationId, userId);
-
-                if (!shouldProcess) {
-                    console.log(`[Skip] File unchanged: ${file.name}  `);
-                    stats.skippedFiles++;
-                    continue;
-                }
-
-                // Download file
-                let buffer: Buffer;
                 try {
-                    if (provider === 'google.com') {
-                        buffer = await getGoogleFileContent(accessToken, file.id);
+                    // Rate limiting check
+                    const rateLimitResult = await scanLimiter.check(req);
+                    if (!rateLimitResult.allowed) {
+                        scanLogger.warn('Rate limit exceeded');
+                        sendUpdate({ type: 'error', message: 'Rate limit exceeded' });
+                        controller.close();
+                        return;
+                    }
+
+                    // Parse and validate request body
+                    const body = await req.json();
+                    const validation = validateRequest(scanRequestSchema, body);
+
+                    if (!validation.success) {
+                        scanLogger.warn('Invalid request', undefined, undefined, { validationError: validation.error });
+                        sendUpdate({ type: 'error', message: 'Invalid request parameters' });
+                        controller.close();
+                        return;
+                    }
+
+                    const {
+                        provider,
+                        accessToken,
+                        folderId,
+                        organizationId,
+                        userId,
+                        authId,
+                        recursive,
+                        maxFiles,
+                        useAI
+                    } = validation.data;
+
+                    sendUpdate({ type: 'progress', message: 'Initializing scan...', stats: { totalFiles: 0, processedFiles: 0, evidenceMatches: 0, skippedFiles: 0, failedFiles: 0 } });
+
+                    // Initialize Supabase
+                    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+                    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+                    let supabase = null;
+
+                    if (supabaseUrl && supabaseKey) {
+                        supabase = createClient(supabaseUrl, supabaseKey);
+                    }
+
+                    // Scan folder structure
+                    let allFiles: FileMetadataExtended[] = [];
+
+                    sendUpdate({ type: 'progress', message: 'Scanning folder structure...' });
+
+                    if (recursive) {
+                        const scanFunc = provider === 'google.com'
+                            ? listGoogleFilesRecursive
+                            : listOneDriveFilesRecursive;
+
+                        allFiles = await scanFunc(accessToken, folderId, (progress: ScanProgress) => {
+                            sendUpdate({ type: 'progress', message: `Scanning folders: Found ${progress.totalFiles} files` });
+                        });
                     } else {
-                        buffer = await getOneDriveFileContent(accessToken, file.id);
+                        const { listGoogleFiles, listOneDriveFiles } = await import("@/lib/cloud-service");
+                        const files = provider === 'google.com'
+                            ? await listGoogleFiles(accessToken, folderId)
+                            : await listOneDriveFiles(accessToken, folderId);
+
+                        allFiles = files.map(f => ({
+                            ...f,
+                            folderPath: 'Root',
+                            isFolder: false
+                        }));
                     }
-                } catch (downloadError) {
-                    console.error(`[Download] Failed: ${file.name}`, downloadError);
-                    errors.push(`Failed to download ${file.name}`);
-                    stats.failedFiles++;
-                    continue;
-                }
 
-                // Extract text
-                const text = await extractTextFromFile(
-                    buffer,
-                    file.mimeType,
-                    file.id,
-                    accessToken,
-                    provider
-                );
+                    const filesToProcess = allFiles
+                        .filter(f => !f.isFolder)
+                        .slice(0, maxFiles);
 
-                if (!text || text.length < 50) {
-                    console.log(`[Extract] Insufficient text in ${file.name}`);
-                    stats.skippedFiles++;
-                    continue;
-                }
+                    const stats = {
+                        totalFiles: filesToProcess.length,
+                        processedFiles: 0,
+                        skippedFiles: 0,
+                        failedFiles: 0,
+                        evidenceMatches: 0
+                    };
 
-                // Use AI to match evidence (if enabled) with RETRY logic for stability
-                let evidenceMatches: any[] = [];
+                    sendUpdate({ type: 'progress', message: `Found ${filesToProcess.length} files to analyze.`, stats });
 
-                if (useAI) {
-                    let retries = 2;
-                    let success = false;
-                    while (retries >= 0 && !success) {
+                    const errors: string[] = [];
+                    const allEvidenceMatches: any[] = [];
+
+                    for (const file of filesToProcess) {
                         try {
-                            const matchResult = await matchDocumentToEvidenceRequirements(
-                                text,
-                                {
-                                    filename: file.name,
-                                    fileId: file.id,
-                                    mimeType: file.mimeType,
-                                    foldername: file.folderPath,
-                                    webViewLink: file.webViewLink
-                                }
-                            );
+                            sendUpdate({
+                                type: 'progress',
+                                message: `Analyzing: ${file.name}`,
+                                stats
+                            });
 
-                            evidenceMatches = matchResult.matches;
-                            stats.evidenceMatches += evidenceMatches.length;
-                            success = true;
+                            // Check if file should be processed
+                            const shouldProcess = await shouldProcessFile(file, supabase, organizationId, userId);
 
-                            console.log(`[AI] Found ${evidenceMatches.length} evidence matches in ${file.name}`);
-
-                        } catch (aiError: any) {
-                            console.error(`[AI] Attempt failed for ${file.name} (Retries left: ${retries}):`, aiError.message);
-                            if (retries === 0) {
-                                errors.push(`AI matching failed for ${file.name} after multiple attempts: ${aiError.message}`);
+                            if (!shouldProcess) {
+                                stats.skippedFiles++;
+                                sendUpdate({ type: 'progress', message: `Skipped (unchanged): ${file.name}`, stats });
+                                continue;
                             }
-                            retries--;
-                            if (retries >= 0) await new Promise(resolve => setTimeout(resolve, 1000)); // Backoff
+
+                            // Download file
+                            let buffer: Buffer;
+                            try {
+                                if (provider === 'google.com') {
+                                    buffer = await getGoogleFileContent(accessToken, file.id);
+                                } else {
+                                    buffer = await getOneDriveFileContent(accessToken, file.id);
+                                }
+                            } catch (downloadError) {
+                                stats.failedFiles++;
+                                errors.push(`Failed to download ${file.name}`);
+                                continue;
+                            }
+
+                            // Extract text
+                            const text = await extractTextFromFile(buffer, file.mimeType, file.id, accessToken, provider);
+
+                            if (!text || text.length < 50) {
+                                stats.skippedFiles++;
+                                continue;
+                            }
+
+                            // AI Matching
+                            let evidenceMatches: any[] = [];
+                            if (useAI) {
+                                try {
+                                    const matchResult = await matchDocumentToEvidenceRequirements(
+                                        text,
+                                        {
+                                            filename: file.name,
+                                            fileId: file.id,
+                                            mimeType: file.mimeType,
+                                            foldername: file.folderPath,
+                                            webViewLink: file.webViewLink,
+                                            modifiedTime: file.modifiedTime
+                                        }
+                                    );
+
+                                    evidenceMatches = matchResult.matches;
+                                    stats.evidenceMatches += evidenceMatches.length;
+                                    allEvidenceMatches.push(...evidenceMatches);
+                                } catch (aiError: any) {
+                                    errors.push(`AI matching failed for ${file.name}: ${aiError.message}`);
+                                }
+                            }
+
+                            // Generate embedding
+                            let embedding: number[] = [];
+                            try {
+                                embedding = await generateEmbedding(text.substring(0, 8000));
+                            } catch (e) {
+                                embedding = new Array(1536).fill(0);
+                            }
+
+                            // Store in DB
+                            if (supabase) {
+                                const { data: docData } = await supabase
+                                    .from('documents')
+                                    .upsert({
+                                        organization_id: organizationId,
+                                        user_id: userId,
+                                        auth_id: authId || (userId?.includes('-') ? userId : null),
+                                        content: text.substring(0, 50000),
+                                        metadata: {
+                                            filename: file.name,
+                                            fileId: file.id,
+                                            mimeType: file.mimeType,
+                                            provider: provider,
+                                            folderPath: file.folderPath,
+                                            webViewLink: file.webViewLink,
+                                            size: file.size,
+                                            scannedAt: new Date().toISOString()
+                                        },
+                                        name: file.name,
+                                        file_type: file.mimeType,
+                                        file_size: file.size,
+                                        provider: provider === 'google.com' ? 'google_drive' : 'onedrive',
+                                        external_id: file.id,
+                                        web_view_link: file.webViewLink,
+                                        folder_path: file.folderPath,
+                                        embedding: embedding
+                                    }, { onConflict: 'organization_id,external_id' })
+                                    .select('id')
+                                    .single();
+
+                                if (docData && evidenceMatches.length > 0) {
+                                    const evidenceRecords = evidenceMatches.map(match => ({
+                                        organization_id: organizationId,
+                                        user_id: userId,
+                                        auth_id: authId || (userId?.includes('-') ? userId : null),
+                                        document_id: docData.id,
+                                        framework_type: 'ofsted',
+                                        category_id: match.categoryId,
+                                        category_name: match.categoryName,
+                                        subcategory_id: match.subcategoryId,
+                                        subcategory_name: match.subcategoryName,
+                                        confidence: match.confidence,
+                                        matched_keywords: match.triggeredKeywords, // Using standard column name
+                                        relevance_explanation: match.relevanceExplanation,
+                                        key_quotes: match.keyQuotes,
+                                        document_link: file.webViewLink
+                                    }));
+
+                                    await supabase
+                                        .from('evidence_matches')
+                                        .upsert(evidenceRecords, { onConflict: 'organization_id,document_id,subcategory_id' });
+                                }
+                            }
+
+                            stats.processedFiles++;
+                            sendUpdate({
+                                type: 'progress',
+                                message: `Processed: ${file.name} (${evidenceMatches.length} matches)`,
+                                stats
+                            });
+
+                        } catch (fileError: any) {
+                            stats.failedFiles++;
+                            errors.push(`Error processing ${file.name}: ${fileError.message}`);
                         }
                     }
-                }
 
-                allEvidenceMatches.push(...evidenceMatches);
+                    // Assessment Updates
+                    let assessmentUpdates = {};
+                    let categorySummaries: any[] = [];
 
-                // Generate embedding
-                let embedding: number[] = [];
-                try {
-                    // Truncate text for embedding (first 8000 chars)
-                    const embeddingText = text.substring(0, 8000);
-                    embedding = await generateEmbedding(embeddingText);
-                } catch (embError) {
-                    console.error(`[Embedding] Failed for ${file.name}:`, embError);
-                    embedding = new Array(1536).fill(0); // Dummy embedding
-                }
+                    if (useAI && allEvidenceMatches.length > 0) {
+                        assessmentUpdates = updateAssessmentsFromEvidence(allEvidenceMatches);
+                        categorySummaries = generateCategorySummaries(assessmentUpdates);
 
-                // Store in database
-                if (supabase) {
-                    try {
-                        // Store document
-                        const { data: docData, error: docError } = await supabase
-                            .from('documents')
-                            .upsert({
+                        if (supabase) {
+                            const assessmentRecords = Object.values(assessmentUpdates).map((update: any) => ({
                                 organization_id: organizationId,
-                                user_id: userId,
-                                auth_id: authId || (userId && userId.includes('-') ? userId : null), // Heuristic fallback
-                                content: text.substring(0, 50000), // Limit storage
-                                metadata: {
-                                    filename: file.name,
-                                    fileId: file.id,
-                                    mimeType: file.mimeType,
-                                    provider: provider,
-                                    folderPath: file.folderPath,
-                                    webViewLink: file.webViewLink,
-                                    size: file.size,
-                                    scannedAt: new Date().toISOString()
-                                },
-                                name: file.name, // Added 'name' field based on schema
-                                file_type: file.mimeType,
-                                file_size: file.size,
-                                provider: provider === 'google.com' ? 'google_drive' : 'onedrive',
-                                external_id: file.id,
-                                web_view_link: file.webViewLink,
-                                folder_path: file.folderPath,
-                                embedding: embedding
-                            }, {
-                                onConflict: 'organization_id,external_id'
-                            })
-                            .select('id')
-                            .single();
-
-                        if (docError) {
-                            console.error(`[DB] Error saving document:`, docError);
-                        }
-
-                        // Store evidence matches
-                        if (evidenceMatches.length > 0 && docData) {
-                            const evidenceRecords = evidenceMatches.map(match => ({
-                                organization_id: organizationId,
-                                user_id: userId,
-                                auth_id: authId || (userId && userId.includes('-') ? userId : null),
-                                document_id: docData.id,
-                                framework_type: 'ofsted', // Added mandatory field
-                                category_id: match.categoryId,
-                                category_name: match.categoryName,
-                                subcategory_id: match.subcategoryId,
-                                subcategory_name: match.subcategoryName,
-                                // evidence_item removed as not in schema
-                                confidence: match.confidence,
-                                relevance_explanation: match.relevanceExplanation,
-                                key_quotes: match.keyQuotes,
-                                document_link: file.webViewLink
+                                subcategory_id: update.subcategoryId,
+                                ai_rating: update.aiRatingRaw,
+                                ai_rationale: update.aiRationale,
+                                evidence_count: update.evidenceCount,
+                                assessed_by: userId,
+                                assessed_at: new Date().toISOString(),
+                                updated_at: new Date().toISOString()
                             }));
 
-                            const { error: evidenceError } = await supabase
-                                .from('evidence_matches')
-                                .upsert(evidenceRecords, {
-                                    onConflict: 'organization_id,document_id,subcategory_id'
-                                });
+                            if (assessmentRecords.length > 0) {
+                                await supabase
+                                    .from('ofsted_assessments')
+                                    .upsert(assessmentRecords, { onConflict: 'organization_id,subcategory_id' });
+                            }
 
-                            if (evidenceError) {
-                                console.error(`[DB] Error saving evidence:`, evidenceError);
+                            // Generate and store smart tasks
+                            const smartTasks = generateSmartTasks(
+                                assessmentUpdates as any,
+                                allEvidenceMatches,
+                                { organizationId, userId, authId }
+                            );
+
+                            if (smartTasks.length > 0) {
+                                await supabase
+                                    .from('actions')
+                                    .insert(smartTasks);
+
+                                scanLogger.info(`Generated ${smartTasks.length} smart tasks`);
                             }
                         }
-
-                    } catch (dbError) {
-                        console.error(`[DB] Database error:`, dbError);
-                        errors.push(`DB error for ${file.name}`);
                     }
-                }
 
-                stats.processedFiles++;
+                    sendUpdate({
+                        type: 'complete',
+                        stats,
+                        assessmentUpdates,
+                        categorySummaries,
+                        errors: errors.length > 0 ? errors : undefined
+                    });
 
-            } catch (fileError: any) {
-                console.error(`[Process] Error with ${file.name}:`, fileError);
-                errors.push(`Error processing ${file.name}: ${fileError.message}`);
-                stats.failedFiles++;
-            }
-        }
-
-        // Generate assessment updates from evidence
-        let assessmentUpdates = {};
-        let categorySummaries: any[] = [];
-
-        if (useAI && allEvidenceMatches.length > 0) {
-            try {
-                assessmentUpdates = updateAssessmentsFromEvidence(allEvidenceMatches);
-                categorySummaries = generateCategorySummaries(assessmentUpdates);
-
-                console.log(`[Assessments] Updated ${Object.keys(assessmentUpdates).length} subcategories`);
-
-                // Persist assessment updates to Database
-                if (supabase) {
+                    // Track scan completion in analytics
                     try {
-                        const assessmentRecords = Object.values(assessmentUpdates).map((update: any) => ({
-                            organization_id: organizationId,
-                            subcategory_id: update.subcategoryId,
-                            ai_rating: update.aiRatingRaw, // Use raw rating for new schema
-                            ai_rationale: update.aiRationale,
-                            evidence_count: update.evidenceCount,
-                            assessed_by: userId, // Attribute the assessment to the user
-                            assessed_at: new Date().toISOString(),
-                            updated_at: new Date().toISOString()
-                        }));
-
-                        if (assessmentRecords.length > 0) {
-                            const { error: upsertError } = await supabase
-                                .from('ofsted_assessments')
-                                .upsert(assessmentRecords, {
-                                    onConflict: 'organization_id,subcategory_id',
-                                    ignoreDuplicates: false // Update existing
-                                });
-
-                            if (upsertError) {
-                                console.error('[Assessments] DB Upsert Error:', upsertError);
-                                errors.push('Failed to save assessment updates to database');
-                            } else {
-                                console.log('[Assessments] Successfully saved upgrades to DB');
-                            }
-                        }
-                    } catch (dbError) {
-                        console.error('[Assessments] DB save failed:', dbError);
+                        await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/analytics/track`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                event: 'evidence_scan_completed',
+                                properties: {
+                                    organizationId,
+                                    provider,
+                                    stats,
+                                    hasErrors: errors.length > 0
+                                },
+                                timestamp: new Date().toISOString()
+                            })
+                        });
+                    } catch (trackError) {
+                        console.error('Failed to track scan analytics:', trackError);
                     }
+
+                } catch (error: any) {
+                    scanLogger.error('Fatal error in scan', undefined, error);
+                    sendUpdate({ type: 'error', message: error.message || 'Internal Server Error' });
+                } finally {
+                    controller.close();
                 }
-
-            } catch (assessmentError) {
-                console.error('[Assessments] Error generating updates:', assessmentError);
-                errors.push('Failed to generate assessment updates');
             }
+        }),
+        {
+            headers: {
+                'Content-Type': 'text/event-stream',
+                'Cache-Control': 'no-cache',
+                'Connection': 'keep-alive',
+            },
         }
-
-        // Build response
-        const result: ScanResult = {
-            status: stats.failedFiles > stats.processedFiles / 2 ? 'partial' : 'complete',
-            stats,
-            assessmentUpdates,
-            categorySummaries,
-            errors: errors.length > 0 ? errors : undefined
-        };
-
-        console.log(`[Scan] Complete - Processed: ${stats.processedFiles}, Matches: ${stats.evidenceMatches}`);
-
-        return new Response(JSON.stringify(result), {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' }
-        });
-
-    } catch (error: any) {
-        console.error("[Scan] Fatal error:", error);
-        return new Response(JSON.stringify({
-            status: 'error',
-            error: error.message || "Internal Server Error"
-        }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' }
-        });
-    }
+    );
 }

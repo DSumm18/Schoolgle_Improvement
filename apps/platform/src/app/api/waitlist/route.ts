@@ -1,69 +1,45 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { NextRequest } from 'next/server';
+import { withErrorHandling, apiError, apiSuccess } from '@/lib/api-utils';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
-export async function POST(req: NextRequest) {
-    try {
-        if (!supabaseUrl || !supabaseServiceKey) {
-            console.error('Missing Supabase configuration');
-            return NextResponse.json({
-                success: false,
-                error: 'Server configuration error'
-            }, { status: 500 });
-        }
-
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
-        const body = await req.json();
+export async function POST(request: NextRequest) {
+    return withErrorHandling(async () => {
+        const body = await request.json();
         const { email, school_name, role } = body;
 
-        // Validate email
-        if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
-            return NextResponse.json({
-                success: false,
-                error: 'Invalid email address'
-            }, { status: 400 });
+        if (!email || !email.includes('@')) {
+            return apiError('Valid email required', 400);
         }
 
-        // Capture UTM params from headers, search params, or cookies
-        // Next.js Route Handlers can access headers and cookies
-        const utm_source = req.nextUrl.searchParams.get('utm_source') || req.headers.get('x-utm-source') || req.cookies.get('utm_source')?.value || body.utm_source;
-        const utm_medium = req.nextUrl.searchParams.get('utm_medium') || req.headers.get('x-utm-medium') || req.cookies.get('utm_medium')?.value || body.utm_medium;
-        const utm_campaign = req.nextUrl.searchParams.get('utm_campaign') || req.headers.get('x-utm-campaign') || req.cookies.get('utm_campaign')?.value || body.utm_campaign;
+        // Get UTM params from cookies or headers
+        const utm_source = request.cookies.get('utm_source')?.value || null;
+        const utm_medium = request.cookies.get('utm_medium')?.value || null;
+        const utm_campaign = request.cookies.get('utm_campaign')?.value || null;
 
-        // Insert into waitlist table
-        const { error } = await supabase
+        const { error } = await supabaseAdmin
             .from('waitlist')
             .insert({
-                email,
-                school_name: school_name || null,
-                role: role || null,
-                utm_source: utm_source || null,
-                utm_medium: utm_medium || null,
-                utm_campaign: utm_campaign || null,
-                source: 'website'
+                email: email.toLowerCase().trim(),
+                school_name,
+                role,
+                source: 'website',
+                utm_source,
+                utm_medium,
+                utm_campaign,
             });
 
         if (error) {
-            // Handle duplicates gracefully (23505 is unique violation in Postgres)
             if (error.code === '23505') {
-                console.log(`Duplicate waitlist entry for ${email}`);
-                return NextResponse.json({ success: true });
+                return apiSuccess({ success: true, message: 'Already registered' });
             }
-            console.error('Waitlist insertion error:', error);
-            return NextResponse.json({
-                success: false,
-                error: 'Failed to join waitlist'
-            }, { status: 500 });
+            throw error;
         }
 
-        return NextResponse.json({ success: true });
-    } catch (error: any) {
-        console.error('Waitlist API error:', error);
-        return NextResponse.json({
-            success: false,
-            error: error.message || 'Internal server error'
-        }, { status: 500 });
-    }
+        return apiSuccess({ success: true });
+    }, 'Waitlist API');
 }
