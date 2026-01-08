@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import OfstedFrameworkView from './OfstedFrameworkView';
-import { AuthContext } from '@/context/AuthContext';
+import { AuthContext } from '@/context/SupabaseAuthContext';
 
 // Mock the child components
 vi.mock('./ActionModal', () => ({

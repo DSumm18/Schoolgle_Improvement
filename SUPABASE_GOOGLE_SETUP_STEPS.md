@@ -19,8 +19,6 @@
 5. Find **"Google"** in the list
 6. Toggle it **ON**
 
-## What You'll See
-
 Once you toggle Google ON, you'll see fields for:
 - **Client ID** (paste your Google Client ID here)
 - **Client Secret** (paste your Google Client Secret here)
@@ -30,7 +28,10 @@ Once you toggle Google ON, you'll see fields for:
 
 1. Paste your **Client ID** from Google Cloud Console
 2. Paste your **Client Secret** from Google Cloud Console
-3. Verify the **Redirect URL** is: `http://localhost:3000/auth/callback`
+3. Verify the **Redirect URL** includes:
+   - `http://localhost:3000/auth/callback` (Local)
+   - `https://schoolgle.co.uk/auth/callback` (Production)
+   - `https://www.schoolgle.co.uk/auth/callback` (Production)
 4. Click **"Save"** at the bottom
 
 ## Visual Guide

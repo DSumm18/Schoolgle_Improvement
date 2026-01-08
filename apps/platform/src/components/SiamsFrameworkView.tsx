@@ -1,15 +1,15 @@
 "use client";
 
 import { useState } from 'react';
-import { useAuth } from '@/context/AuthContext';
-import { 
+import { useAuth } from '@/context/SupabaseAuthContext';
+import {
     SIAMS_FRAMEWORK, SIAMS_RATINGS, SIAMS_EVIDENCE_KEYWORDS,
     calculateStrandReadiness, calculateOverallSiamsReadiness,
     SiamsStrand, SiamsActionItem
 } from '@/lib/siams-framework';
-import { 
-    ChevronDown, ChevronRight, AlertTriangle, CheckCircle, FileText, 
-    Plus, Edit2, Calendar, User, Info, ExternalLink, X, 
+import {
+    ChevronDown, ChevronRight, AlertTriangle, CheckCircle, FileText,
+    Plus, Edit2, Calendar, User, Info, ExternalLink, X,
     GraduationCap, Sparkles, Church, BookOpen, Heart, Users,
     Star, Cross, AlertCircle
 } from 'lucide-react';
@@ -53,9 +53,9 @@ const STRAND_ICONS: Record<string, any> = {
     're': BookOpen,
 };
 
-export default function SiamsFrameworkView({ 
-    assessments = {}, 
-    setAssessments = () => {},
+export default function SiamsFrameworkView({
+    assessments = {},
+    setAssessments = () => { },
     localEvidence = {}
 }: SiamsFrameworkViewProps) {
     const { user } = useAuth();
@@ -230,8 +230,8 @@ export default function SiamsFrameworkView({
                                 About SIAMS Inspection
                             </h3>
                             <p className="text-purple-800 text-sm leading-relaxed mb-3">
-                                SIAMS (Statutory Inspection of Anglican and Methodist Schools) evaluates how well a church school's 
-                                Christian vision enables pupils and adults to flourish. The framework focuses on 7 strands covering 
+                                SIAMS (Statutory Inspection of Anglican and Methodist Schools) evaluates how well a church school's
+                                Christian vision enables pupils and adults to flourish. The framework focuses on 7 strands covering
                                 vision, curriculum, character, community, dignity, worship, and RE.
                             </p>
                             <a
@@ -323,7 +323,7 @@ export default function SiamsFrameworkView({
                                                 <div className={`text-lg font-bold ${getScoreColor(userScore)}`}>{userScore}%</div>
                                             </div>
                                         </div>
-                                        
+
                                         {/* Ask Ed Button */}
                                         <button
                                             onClick={(e) => {
@@ -387,11 +387,10 @@ export default function SiamsFrameworkView({
                                                                     ))}
                                                                 </div>
                                                             </div>
-                                                            <span className={`text-xs px-2 py-1 rounded-full ml-2 ${
-                                                                evidence.confidence >= 0.7 ? 'bg-green-100 text-green-700' :
-                                                                evidence.confidence >= 0.5 ? 'bg-yellow-100 text-yellow-700' :
-                                                                'bg-gray-100 text-gray-600'
-                                                            }`}>
+                                                            <span className={`text-xs px-2 py-1 rounded-full ml-2 ${evidence.confidence >= 0.7 ? 'bg-green-100 text-green-700' :
+                                                                    evidence.confidence >= 0.5 ? 'bg-yellow-100 text-yellow-700' :
+                                                                        'bg-gray-100 text-gray-600'
+                                                                }`}>
                                                                 {Math.round(evidence.confidence * 100)}%
                                                             </span>
                                                         </div>
@@ -426,11 +425,10 @@ export default function SiamsFrameworkView({
                                                                 <button
                                                                     key={key}
                                                                     onClick={() => handleRatingChange(question.id, key)}
-                                                                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border ${
-                                                                        rating === key
+                                                                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border ${rating === key
                                                                             ? getRatingColor(key)
                                                                             : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
-                                                                    }`}
+                                                                        }`}
                                                                 >
                                                                     {value.label}
                                                                 </button>

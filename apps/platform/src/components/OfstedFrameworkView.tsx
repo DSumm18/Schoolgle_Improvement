@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/context/SupabaseAuthContext';
 import { OFSTED_FRAMEWORK, OFSTED_RATINGS, SAFEGUARDING_FRAMEWORK, calculateAIRating, calculateCategoryReadiness, calculateOverallReadiness, ActionItem } from '@/lib/ofsted-framework';
 import { ChevronDown, ChevronRight, AlertTriangle, CheckCircle, FileText, RefreshCw, Plus, Edit2, Calendar, User, AlertCircle, TrendingUp, Brain, Info, ExternalLink, X, GraduationCap, Sparkles } from 'lucide-react';
 import ActionModal from './ActionModal';

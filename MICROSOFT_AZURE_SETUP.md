@@ -16,7 +16,10 @@
   - Select: "Accounts in any organizational directory and personal Microsoft accounts"
 - **Redirect URI:**
   - Platform: **Web**
-  - URI: `http://localhost:3000/auth/callback`
+  - URIs: 
+    - `http://localhost:3000/auth/callback`
+    - `https://schoolgle.co.uk/auth/callback`
+    - `https://www.schoolgle.co.uk/auth/callback`
 - Click **"Register"**
 
 ### 4. Get Your Credentials
@@ -49,7 +52,10 @@ After registration, you'll see the **Overview** page:
   - **Client Secret** → Client Secret field (from Step 5)
   - **Tenant ID** → Tenant ID field (from Step 4)
     - Or use `common` for multi-tenant
-- **Redirect URL** should already be set to: `http://localhost:3000/auth/callback`
+- **Redirect URL** should include:
+  - `http://localhost:3000/auth/callback`
+  - `https://schoolgle.co.uk/auth/callback`
+  - `https://www.schoolgle.co.uk/auth/callback`
 - Click **"Save"**
 
 ## Quick Links

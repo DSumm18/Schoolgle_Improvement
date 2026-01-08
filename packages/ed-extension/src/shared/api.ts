@@ -9,17 +9,17 @@ async function getApiUrl(): Promise<string> {
   // Check for dev mode flag in chrome storage
   try {
     const result = await chrome.storage.local.get(['ed_dev_mode', 'ed_api_url']);
-    
+
     // If custom API URL is set, use it
     if (result.ed_api_url) {
       return result.ed_api_url;
     }
-    
+
     // If dev mode is explicitly set, use localhost
     if (result.ed_dev_mode === true) {
       return DEV_API_BASE_URL;
     }
-    
+
     // If dev mode is explicitly false, use production
     if (result.ed_dev_mode === false) {
       return API_BASE_URL;
@@ -27,9 +27,9 @@ async function getApiUrl(): Promise<string> {
   } catch (e) {
     // Ignore storage errors
   }
-  
-  // Default to localhost for development (change this to API_BASE_URL for production)
-  return DEV_API_BASE_URL;
+
+  // Default to production domain
+  return API_BASE_URL;
 }
 
 /**
@@ -38,7 +38,7 @@ async function getApiUrl(): Promise<string> {
 export async function checkSubscription(userId: string): Promise<SubscriptionStatus> {
   const apiUrl = await getApiUrl();
   const url = `${apiUrl}/subscription/check?userId=${encodeURIComponent(userId)}`;
-  
+
   try {
     const response = await fetch(url);
     if (!response.ok) {
@@ -47,14 +47,14 @@ export async function checkSubscription(userId: string): Promise<SubscriptionSta
     return await response.json();
   } catch (error) {
     // Suppress expected errors (404, network failures)
-    const isExpectedError = 
+    const isExpectedError =
       error instanceof TypeError && error.message.includes('Failed to fetch') ||
       (error instanceof Error && (error.message.includes('404') || error.message.includes('Network')));
-    
+
     if (!isExpectedError) {
       console.warn('[Ed API] Subscription check error:', error);
     }
-    
+
     return {
       hasAccess: false,
       status: 'none',
@@ -77,23 +77,23 @@ export async function askEd(
 ): Promise<EdResponse> {
   const apiUrl = await getApiUrl();
   const url = `${apiUrl}/ed/chat`;
-  
+
   try {
     // Get Gemini API key from config for automation
     const config = await chrome.storage.local.get('ed_config');
     const geminiApiKey = config.ed_config?.geminiApiKey;
-    
+
     const body: any = {
-        question,
-        context: {
-          url: context.url,
-          hostname: context.hostname,
-          title: context.title,
-          tool: context.detectedTool,
-          visibleText: context.visibleText.slice(0, 3000), // Limit for API
-          headings: context.headings.slice(0, 20),
-          selectedText: context.selectedText,
-        },
+      question,
+      context: {
+        url: context.url,
+        hostname: context.hostname,
+        title: context.title,
+        tool: context.detectedTool,
+        visibleText: context.visibleText.slice(0, 3000), // Limit for API
+        headings: context.headings.slice(0, 20),
+        selectedText: context.selectedText,
+      },
     };
 
     // Add Gemini API key if available (for automation features)
@@ -121,16 +121,16 @@ export async function askEd(
     return await response.json();
   } catch (error) {
     // Suppress expected errors (404, network failures) - these are normal when API isn't available
-    const isExpectedError = 
+    const isExpectedError =
       error instanceof TypeError && error.message.includes('Failed to fetch') ||
       (error instanceof Error && (error.message.includes('404') || error.message.includes('Network')));
-    
+
     if (!isExpectedError) {
       // Only log unexpected errors
       console.warn('[Ed API] Unexpected error:', error);
     }
     // Expected errors (404, network failures) are silently handled
-    
+
     // Return fallback response
     return {
       id: crypto.randomUUID(),
@@ -147,11 +147,11 @@ export async function askEd(
 export async function getCachedResponses(toolId: string): Promise<Map<string, EdResponse>> {
   const apiUrl = await getApiUrl();
   const url = `${apiUrl}/ed/cache/${toolId}`;
-  
+
   try {
     const response = await fetch(url);
     if (!response.ok) return new Map();
-    
+
     const data = await response.json();
     return new Map(Object.entries(data));
   } catch {
@@ -170,9 +170,9 @@ export async function reportAnalytics(event: {
   const apiUrl = await getApiUrl();
   // Skip analytics in development (localhost)
   if (apiUrl.includes('localhost')) return;
-  
+
   const url = `${apiUrl}/ed/analytics`;
-  
+
   try {
     await fetch(url, {
       method: 'POST',

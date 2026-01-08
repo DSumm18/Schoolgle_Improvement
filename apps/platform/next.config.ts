@@ -24,6 +24,9 @@ const nextConfig: NextConfig = {
     };
     return config;
   },
+  images: {
+    domains: ['schoolgle.co.uk', 'www.schoolgle.co.uk'],
+  },
   // Add empty turbopack config to silence the warning
   turbopack: {},
 } as NextConfig;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context/SupabaseAuthContext";
 import { loadGoogleDriveApi } from "@/lib/drive";
 import { FolderPlus } from "lucide-react";
 
