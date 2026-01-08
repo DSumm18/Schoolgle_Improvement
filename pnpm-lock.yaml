@@ -2855,6 +2855,7 @@ packages:
     resolution: {integrity: sha512-5q4TLAZb9RliRQ6JeSrc3UeTw9JAEyMs6ce3pccN1y4g1kgUWMU1ENcFG6iYEfLyR34FBDjGK4AuMwD0+1sGKw==}
     engines: {node: '>=20.18.0'}
     hasBin: true
+    bundledDependencies: []
 
   pdfjs-dist@5.4.530:
     resolution: {integrity: sha512-r1hWsSIGGmyYUAHR26zSXkxYWLXLMd6AwqcaFYG9YUZ0GBf5GvcjJSeo512tabM4GYFhxhl5pMCmPr7Q72Rq2Q==}
