@@ -5,14 +5,35 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase"; // Use shared client for auth operations
 
-// Force dynamic rendering to avoid useSearchParams SSG error
-export const dynamic = 'force-dynamic';
-
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
+// Loading fallback for Suspense
+function CallbackLoading() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center space-y-4">
+        <div className="flex justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
+        </div>
+        <p className="text-gray-700">Processing authentication...</p>
+      </div>
+    </div>
+  );
+}
+
+// Main page component wrapped in Suspense
 export default function AuthCallbackPage() {
+  return (
+    <Suspense fallback={<CallbackLoading />}>
+      <AuthCallbackContent />
+    </Suspense>
+  );
+}
+
+// Inner component that uses useSearchParams
+function AuthCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<'loading' | 'error' | 'success'>('loading');
