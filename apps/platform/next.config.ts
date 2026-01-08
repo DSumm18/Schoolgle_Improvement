@@ -37,7 +37,7 @@ const nextConfig: NextConfig = {
     };
     return config;
   },
-  turbo: {
+  turbopack: {
     resolveAlias: {
       '@schoolgle/ed-widget': './src/lib/ed-widget-stub.ts',
     },
