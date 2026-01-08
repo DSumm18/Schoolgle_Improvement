@@ -323,77 +323,84 @@ export default function DashboardLayout({
               <Settings size={18} />
               Settings
             </a>
-          </a>
+            {isSuperAdmin && (
+              <a
+                href="/admin/super"
+                className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-emerald-600 hover:bg-emerald-50 transition-colors"
+              >
+                <ShieldCheck size={18} />
+                Super Admin
+              </a>
             )}
-          {organization?.role === 'admin' && (
-            <a
-              href="https://control.schoolgle.co.uk"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-blue-600 hover:bg-blue-50 transition-colors"
-            >
-              <ShieldCheck size={18} />
-              Mission Control
-            </a>
-          )}
-        </div>
-      </nav>
-
-      {/* User Footer */}
-      <div className="p-4 border-t border-gray-200">
-        <div className="flex items-center justify-between mb-4 px-2">
-          <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Global Status</span>
-          <NotificationBell />
-        </div>
-        <div className="flex items-center gap-3 mb-3">
-          <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-700 font-medium text-sm">
-            {user.email?.[0]?.toUpperCase() || 'U'}
+            {organization?.role === 'admin' && (
+              <a
+                href="https://control.schoolgle.co.uk"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-blue-600 hover:bg-blue-50 transition-colors"
+              >
+                <ShieldCheck size={18} />
+                Mission Control
+              </a>
+            )}
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium text-gray-900 truncate">
-              {user.user_metadata?.full_name || user.email}
+        </nav>
+
+        {/* User Footer */}
+        <div className="p-4 border-t border-gray-200">
+          <div className="flex items-center justify-between mb-4 px-2">
+            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Global Status</span>
+            <NotificationBell />
+          </div>
+          <div className="flex items-center gap-3 mb-3">
+            <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-700 font-medium text-sm">
+              {user.email?.[0]?.toUpperCase() || 'U'}
             </div>
-            <div className="text-xs text-gray-500 truncate">
-              {currentOrg?.name || organization?.name}
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium text-gray-900 truncate">
+                {user.user_metadata?.full_name || user.email}
+              </div>
+              <div className="text-xs text-gray-500 truncate">
+                {currentOrg?.name || organization?.name}
+              </div>
             </div>
           </div>
+          <button
+            onClick={signOut}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
+          >
+            <LogOut size={16} />
+            Sign Out
+          </button>
         </div>
-        <button
-          onClick={signOut}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
-        >
-          <LogOut size={16} />
-          Sign Out
-        </button>
-      </div>
-    </aside>
+      </aside>
 
-      {/* Center Stage - Main Content */ }
-  <main className={`flex-1 overflow-y-auto transition-all duration-300 ${edChatbotOpen && !edChatbotMinimized ? 'mr-96' : ''}`}>
-    {children}
-  </main>
+      {/* Center Stage - Main Content */}
+      <main className={`flex-1 overflow-y-auto transition-all duration-300 ${edChatbotOpen && !edChatbotMinimized ? 'mr-96' : ''}`}>
+        {children}
+      </main>
 
-  {/* Right Drawer - Ed Chatbot (Collapsible) */ }
-  <EdWidgetWrapper
-    isOpen={edChatbotOpen}
-    onToggle={() => setEdChatbotOpen(!edChatbotOpen)}
-    isMinimized={edChatbotMinimized}
-    onToggleMinimize={() => setEdChatbotMinimized(!edChatbotMinimized)}
-  />
+      {/* Right Drawer - Ed Chatbot (Collapsible) */}
+      <EdWidgetWrapper
+        isOpen={edChatbotOpen}
+        onToggle={() => setEdChatbotOpen(!edChatbotOpen)}
+        isMinimized={edChatbotMinimized}
+        onToggleMinimize={() => setEdChatbotMinimized(!edChatbotMinimized)}
+      />
 
-  {/* Upgrade Modal */ }
-  <UpgradeModal
-    isOpen={upgradeModal.isOpen}
-    moduleName={upgradeModal.moduleName}
-    moduleDescription={upgradeModal.moduleDescription}
-    onClose={() => setUpgradeModal({ ...upgradeModal, isOpen: false })}
-  />
+      {/* Upgrade Modal */}
+      <UpgradeModal
+        isOpen={upgradeModal.isOpen}
+        moduleName={upgradeModal.moduleName}
+        moduleDescription={upgradeModal.moduleDescription}
+        onClose={() => setUpgradeModal({ ...upgradeModal, isOpen: false })}
+      />
 
-  {/* Debug Environment Variables (hidden, logs to console) */ }
-  <DebugEnv />
+      {/* Debug Environment Variables (hidden, logs to console) */}
+      <DebugEnv />
 
-  {/* Operations Support */ }
-  <SupportWidget />
+      {/* Operations Support */}
+      <SupportWidget />
     </div >
   );
 }

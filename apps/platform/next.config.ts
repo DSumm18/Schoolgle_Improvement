@@ -7,8 +7,21 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  eslint: {
-    ignoreDuringBuilds: true,
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'schoolgle.co.uk',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.schoolgle.co.uk',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.google.com',
+      },
+    ],
   },
   webpack: (config, { isServer }) => {
     if (!isServer) {
@@ -24,10 +37,13 @@ const nextConfig: NextConfig = {
     };
     return config;
   },
-  images: {
-    domains: ['schoolgle.co.uk', 'www.schoolgle.co.uk', 'www.google.com'],
+  experimental: {
+    turbo: {
+      aliases: {
+        '@schoolgle/ed-widget': './src/lib/ed-widget-stub.ts',
+      },
+    },
   },
-  turbopack: {},
 } as NextConfig;
 
 export default withBundleAnalyzer(nextConfig);
