@@ -27,11 +27,25 @@ const EarlyAccessForm = () => {
                     viewport={{ once: true }}
                 >
                     <h2 className="text-3xl md:text-4xl font-medium text-white mb-4 tracking-tight">
-                        Join early access
+                        Join the Early Access Pilot
                     </h2>
-                    <p className="text-gray-400 mb-10 max-w-xl mx-auto">
-                        We're working with a small group of schools to shape Schoolgle. Get updates and early access invitations.
+                    <p className="text-gray-400 mb-6 max-w-xl mx-auto">
+                        We're working with a small group of UK primary schools, trusts, and MATs to shape Schoolgle's development.
                     </p>
+                    <div className="text-gray-400 mb-10 max-w-2xl mx-auto space-y-4 text-left">
+                        <div>
+                            <h3 className="text-white font-medium mb-2">Who the pilot is for</h3>
+                            <p className="text-sm">Headteachers and School Business Managers who understand the challenges of inspection readiness and are willing to provide honest feedback.</p>
+                        </div>
+                        <div>
+                            <h3 className="text-white font-medium mb-2">What schools get</h3>
+                            <p className="text-sm">Full access to Schoolgle Improvement at no cost during the pilot period, including automatic evidence mapping, SEF generation, action planning, and priority support.</p>
+                        </div>
+                        <div>
+                            <h3 className="text-white font-medium mb-2">No risk, no commitment</h3>
+                            <p className="text-sm">The pilot is completely free. There's no payment required, no long-term commitment, and no obligation to continue after the pilot period. Your data remains yours and can be exported at any time.</p>
+                        </div>
+                    </div>
                     
                     {!submitted ? (
                         <form onSubmit={handleSubmit} className="max-w-md mx-auto">
@@ -48,12 +62,12 @@ const EarlyAccessForm = () => {
                                     type="submit"
                                     className="px-8 py-3 bg-white text-gray-900 font-medium rounded-xl hover:bg-gray-100 transition-colors"
                                 >
-                                    Request access
+                                    Request early access
                                 </button>
                             </div>
                             <div className="text-sm text-gray-500 mt-4 space-y-1">
-                                <p>No spam. Early access updates only.</p>
-                                <p>Designed for UK schools and trusts.</p>
+                                <p>No spam. Pilot updates only.</p>
+                                <p>Designed for UK primary schools, trusts, and MATs.</p>
                             </div>
                         </form>
                     ) : (

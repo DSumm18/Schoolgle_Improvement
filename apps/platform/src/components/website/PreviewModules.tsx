@@ -39,7 +39,7 @@ const modules = [
 
 const PreviewModules = () => {
     return (
-        <section className="py-24 bg-gray-50">
+        <section className="py-32 bg-gray-50">
             <div className="max-w-7xl mx-auto px-6">
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}

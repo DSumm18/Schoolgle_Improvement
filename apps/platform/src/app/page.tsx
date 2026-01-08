@@ -10,6 +10,8 @@ import Navbar from '@/components/website/Navbar';
 import Hero from '@/components/website/Hero';
 import ProblemStatement from '@/components/website/ProblemStatement';
 import Differentiation from '@/components/website/Differentiation';
+import HowItWorks from '@/components/website/HowItWorks';
+import TrustSection from '@/components/website/TrustSection';
 import PreviewModules from '@/components/website/PreviewModules';
 import InsightsSection from '@/components/website/InsightsSection';
 import EarlyAccessForm from '@/components/website/EarlyAccessForm';
@@ -138,6 +140,12 @@ export default function HomePage() {
 
                 {/* What Makes Schoolgle Different */}
                 <Differentiation />
+
+                {/* How It Works */}
+                <HowItWorks />
+
+                {/* Trust Building */}
+                <TrustSection />
 
                 {/* What We're Building (Preview Mode) */}
                 <section id="preview">

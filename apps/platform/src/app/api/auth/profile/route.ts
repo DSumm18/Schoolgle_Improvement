@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Failed to sync user' }, { status: 500 });
         }
 
-        // 2. Fetch Organization
+        // 2. Fetch Organization (user may not have one yet - that's OK)
         const { data: memberData, error: memberError } = await supabase
             .from('organization_members')
             .select(`
@@ -54,10 +54,12 @@ export async function POST(req: NextRequest) {
                 )
             `)
             .eq('user_id', userId)
-            .single();
+            .maybeSingle();
 
-        if (memberError && memberError.code !== 'PGRST116') { // PGRST116 is "The result contains 0 rows"
+        // PGRST116 = no rows, which is fine for new users without organizations
+        if (memberError && memberError.code !== 'PGRST116') {
             console.error('Error fetching member:', memberError);
+            // Don't fail the whole request - user sync succeeded
         }
 
         const member = memberData as any;

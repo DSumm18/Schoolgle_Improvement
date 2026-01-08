@@ -7,24 +7,24 @@ import { Users, School, Zap } from 'lucide-react';
 const differentiators = [
     {
         icon: Users,
-        title: "Expert-led",
-        description: "Built with senior school leaders and validated against real school practice."
+        title: "Evidence organised automatically",
+        description: "Your policies, assessments, and improvement plans are mapped to inspection frameworks from day one. When inspection arrives, everything is already in place."
     },
     {
         icon: School,
-        title: "Sector-specific",
-        description: "Understands UK school operations, not generic business processes."
+        title: "Actions tracked without the admin",
+        description: "See what needs doing, who's responsible, and what's overdue. Schoolgle keeps your improvement plan visible and actionable without adding to anyone's workload."
     },
     {
         icon: Zap,
-        title: "Built for real schools",
-        description: "Works with the systems you already use, not against them."
+        title: "Reports generated in minutes",
+        description: "One-click SEF generation, action plan summaries, and evidence mapping reports. What used to take days now takes minutes."
     }
 ];
 
 const Differentiation = () => {
     return (
-        <section className="py-24 bg-white">
+        <section className="py-32 bg-white">
             <div className="max-w-7xl mx-auto px-6">
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}

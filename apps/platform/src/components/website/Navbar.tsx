@@ -41,7 +41,7 @@ const Navbar = () => {
 
                 <div className="flex items-center gap-4">
                     <a href="#early-access" className="px-6 py-2.5 text-sm font-medium text-white bg-gray-900 rounded-full hover:bg-gray-800 transition-colors">
-                        Join early access
+                        Request early access
                     </a>
                 </div>
             </div>

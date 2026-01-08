@@ -10,7 +10,7 @@ const InsightsSection = () => {
     const insights = getLatestPublicInsights(2);
 
     return (
-        <section id="insights" className="py-24 bg-white">
+        <section id="insights" className="py-32 bg-white">
             <div className="max-w-7xl mx-auto px-6">
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}

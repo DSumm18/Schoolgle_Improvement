@@ -1,15 +1,40 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 /**
  * DfE Data Warehouse Supabase Client
  * 
  * Separate client for querying the DfE data warehouse database
  * Schema: dfe_data (isolated from main app data)
+ * 
+ * Lazy-loaded to ensure environment variables are available when the client is created.
  */
-export const dfeClient = createClient(
-  process.env.DFE_SUPABASE_URL!,
-  process.env.DFE_SUPABASE_SERVICE_ROLE_KEY!
-);
+let dfeClientInstance: SupabaseClient | null = null;
+
+/**
+ * Get or create the DfE Supabase client (lazy-loaded)
+ * 
+ * Creates the client only when first called, ensuring environment variables
+ * are loaded by Next.js before client creation.
+ * 
+ * @throws Error if DFE_SUPABASE_URL or DFE_SUPABASE_SERVICE_ROLE_KEY are not set
+ */
+export function getDfeClient(): SupabaseClient {
+  if (!dfeClientInstance) {
+    const url = process.env.DFE_SUPABASE_URL;
+    const key = process.env.DFE_SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (!url || !key) {
+      throw new Error(
+        'DfE client not configured - missing environment variables. ' +
+        'Required: DFE_SUPABASE_URL and DFE_SUPABASE_SERVICE_ROLE_KEY'
+      );
+    }
+    
+    dfeClientInstance = createClient(url, key);
+  }
+  
+  return dfeClientInstance;
+}
 
 /**
  * School data from DfE warehouse
@@ -43,8 +68,14 @@ export interface DFESchoolData {
  */
 export async function lookupSchoolByURN(urn: string | number): Promise<DFESchoolData | null> {
   try {
+    // Check env vars
+    if (!process.env.DFE_SUPABASE_URL || !process.env.DFE_SUPABASE_SERVICE_ROLE_KEY) {
+      console.error('DfE client not configured');
+      return null;
+    }
+
     // Try direct query first (works if views exist in public schema)
-    const { data: directData, error: directError } = await dfeClient
+    const { data: directData, error: directError } = await getDfeClient()
       .from('schools')
       .select('*')
       .eq('urn', parseInt(urn.toString()))
@@ -55,23 +86,27 @@ export async function lookupSchoolByURN(urn: string | number): Promise<DFESchool
     }
 
     // Fallback: Use REST API with schema prefix
-    const response = await fetch(
-      `${process.env.DFE_SUPABASE_URL}/rest/v1/schools?urn=eq.${urn}`,
-      {
-        headers: {
-          'apikey': process.env.DFE_SUPABASE_SERVICE_ROLE_KEY!,
-          'Authorization': `Bearer ${process.env.DFE_SUPABASE_SERVICE_ROLE_KEY!}`,
-          'Content-Type': 'application/json'
+    try {
+      const response = await fetch(
+        `${process.env.DFE_SUPABASE_URL}/rest/v1/schools?urn=eq.${urn}`,
+        {
+          headers: {
+            'apikey': process.env.DFE_SUPABASE_SERVICE_ROLE_KEY!,
+            'Authorization': `Bearer ${process.env.DFE_SUPABASE_SERVICE_ROLE_KEY!}`,
+            'Content-Type': 'application/json'
+          }
         }
-      }
-    );
+      );
 
-    if (response.ok) {
-      const data = await response.json();
-      return Array.isArray(data) && data.length > 0 ? data[0] as DFESchoolData : null;
+      if (response.ok) {
+        const data = await response.json();
+        return Array.isArray(data) && data.length > 0 ? data[0] as DFESchoolData : null;
+      }
+    } catch (fetchError) {
+      console.error('DfE REST API fallback error:', fetchError);
     }
 
-    console.error('DfE lookup error:', directError || 'No data found');
+    console.error('DfE lookup error:', directError?.message || 'No data found');
     return null;
   } catch (error) {
     console.error('Error looking up school:', error);

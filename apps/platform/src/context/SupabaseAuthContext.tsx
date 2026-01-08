@@ -144,7 +144,10 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
       });
 
       if (!response.ok) {
-        throw new Error(`Profile sync failed with status: ${response.status}`);
+        // Don't throw - log and continue (user can still use the app)
+        const errorText = await response.text().catch(() => 'Unknown error');
+        console.warn(`[AuthContext] Profile sync failed with status: ${response.status}`, errorText);
+        return; // Exit early but don't throw
       }
 
       const data = await response.json();

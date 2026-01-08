@@ -50,20 +50,25 @@ export default function EdWidgetWrapper({
           EdWidget = module.EdWidget;
           console.log('[EdWidgetWrapper] ✅ Loaded from relative path (workspace source)');
         } catch (relativeError) {
-          // Strategy 2: Try workspace package import
+          // Strategy 2: Try workspace package import (only if available)
           try {
-            // @ts-ignore - Workspace package, TypeScript can't resolve but works at runtime
-            const module = await import('@schoolgle/ed-widget');
-            EdWidget = module.EdWidget;
-            console.log('[EdWidgetWrapper] ✅ Loaded from @schoolgle/ed-widget package');
+            // Use dynamic import with error handling to avoid build-time errors
+            const module = await import('@schoolgle/ed-widget').catch(() => null);
+            if (module?.EdWidget) {
+              EdWidget = module.EdWidget;
+              console.log('[EdWidgetWrapper] ✅ Loaded from @schoolgle/ed-widget package');
+            } else {
+              throw new Error('Module not available');
+            }
           } catch (moduleError: any) {
             // Strategy 3: Use global EdWidget (set by auto-init or script tag)
             if ((window as any).EdWidget) {
               EdWidget = (window as any).EdWidget;
               console.log('[EdWidgetWrapper] ✅ Using global EdWidget');
             } else {
-              console.error('[EdWidgetWrapper] ❌ EdWidget not found in any location');
-              console.error('[EdWidgetWrapper] Tried: relative path, @schoolgle/ed-widget, global');
+              // Silently fail for marketing site - Ed widget is optional
+              console.warn('[EdWidgetWrapper] Ed widget not available (this is OK for marketing pages)');
+              initLockRef.current = false;
               return;
             }
           }

@@ -2,52 +2,72 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import Link from 'next/link';
-
-const benefits = [
-    "Take the pressure off school offices",
-    "Help staff get more from the systems you already pay for",
-    "Stay inspection-ready without the panic",
-    "Give leaders clear, honest visibility"
-];
 
 const WhySchoolgle = () => {
     return (
-        <section className="py-24 bg-black text-white overflow-hidden relative">
-            {/* Background Gradient */}
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 via-purple-900/20 to-pink-900/20 pointer-events-none" />
+        <section className="py-24 bg-gray-50">
+            <div className="max-w-7xl mx-auto px-6">
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    className="text-center mb-16"
+                >
+                    <h2 className="text-4xl md:text-5xl font-medium text-gray-900 mb-6 tracking-tight">
+                        Why Schoolgle
+                    </h2>
+                </motion.div>
 
-            <div className="max-w-7xl mx-auto px-6 relative z-10">
-                <div className="grid lg:grid-cols-2 gap-16 items-center">
-                    <div>
-                        <h2 className="text-4xl md:text-6xl font-medium mb-8 tracking-tight">
-                            Less admin. <br />
-                            More time. <br />
-                            <span className="text-gray-400">Better schools.</span>
-                        </h2>
-                        <p className="text-xl text-gray-300 mb-12 font-light leading-relaxed max-w-lg">
-                            Schoolgle joins up the tools you already use and does the busywork in the background – so your staff can focus on pupils, not paperwork.
+                <div className="max-w-4xl mx-auto space-y-12">
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        className="space-y-4"
+                    >
+                        <h3 className="text-2xl font-medium text-gray-900">The current reality: spreadsheets, folders, and panic</h3>
+                        <p className="text-lg text-gray-600 leading-relaxed">
+                            Most schools prepare for inspections using a combination of spreadsheets, shared folders, and memory. Evidence lives in different places. Tracking what's been done and what's outstanding requires manual cross-referencing. When inspection arrives, staff spend days—sometimes weeks—pulling together evidence that should already be organised.
                         </p>
+                        <p className="text-lg text-gray-600 leading-relaxed">
+                            Schoolgle replaces the spreadsheet-and-folder approach with a single platform that automatically organises evidence, tracks actions, and generates reports. Evidence is mapped to inspection frameworks from the moment it's created. Action plans are visible and trackable without manual updates. Reports generate themselves. Inspection readiness becomes a background process, not a crisis.
+                        </p>
+                    </motion.div>
 
-                        <Link href="/signup" className="inline-block px-8 py-4 bg-white text-black rounded-full font-medium hover:bg-gray-100 transition-colors">
-                            Get started today
-                        </Link>
-                    </div>
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ delay: 0.1 }}
+                        className="space-y-4"
+                    >
+                        <h3 className="text-2xl font-medium text-gray-900">Why this is different to consultants</h3>
+                        <p className="text-lg text-gray-600 leading-relaxed">
+                            Consultants provide valuable expertise, but they're expensive and temporary. They come in, help you prepare, and leave. When the next inspection cycle begins, you're back to square one.
+                        </p>
+                        <p className="text-lg text-gray-600 leading-relaxed">
+                            Schoolgle gives you the structure and tools consultants would set up, but it stays with your school permanently. It's a fraction of the cost of consultant support, and it improves over time as it learns your school's context. You get the benefits of expert-led inspection preparation without the ongoing consultancy fees.
+                        </p>
+                    </motion.div>
 
-                    <div className="grid sm:grid-cols-2 gap-6">
-                        {benefits.map((benefit, index) => (
-                            <motion.div
-                                key={index}
-                                initial={{ opacity: 0, x: 20 }}
-                                whileInView={{ opacity: 1, x: 0 }}
-                                viewport={{ once: true }}
-                                transition={{ delay: index * 0.1 }}
-                                className="p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm hover:bg-white/10 transition-colors cursor-default"
-                            >
-                                <p className="text-lg font-medium text-gray-200 leading-snug">{benefit}</p>
-                            </motion.div>
-                        ))}
-                    </div>
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ delay: 0.2 }}
+                        className="space-y-4"
+                    >
+                        <h3 className="text-2xl font-medium text-gray-900">Why this aligns with Ofsted expectations</h3>
+                        <p className="text-lg text-gray-600 leading-relaxed">
+                            Ofsted expects schools to have a clear understanding of their strengths and areas for improvement. They want to see evidence of continuous improvement, not last-minute preparation. Schoolgle supports this by making self-evaluation an ongoing process, not an annual scramble.
+                        </p>
+                        <p className="text-lg text-gray-600 leading-relaxed">
+                            The platform helps schools demonstrate the "quality of education" through organised evidence of curriculum intent, implementation, and impact. It supports "behaviour and attitudes" through clear tracking of policies and their implementation. It aids "personal development" and "leadership and management" through transparent action planning and progress tracking.
+                        </p>
+                        <p className="text-lg text-gray-600 leading-relaxed">
+                            Schoolgle doesn't replace good leadership or teaching. It removes the administrative burden that prevents school leaders from focusing on what matters most.
+                        </p>
+                    </motion.div>
                 </div>
             </div>
         </section>

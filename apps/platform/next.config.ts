@@ -7,7 +7,6 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  transpilePackages: ['@schoolgle/ed-widget'],
   // Explicitly use webpack (not Turbopack) to avoid config conflicts
   webpack: (config, { isServer }) => {
     // Handle ed-widget package
@@ -17,6 +16,12 @@ const nextConfig: NextConfig = {
         fs: false,
       };
     }
+    // Make @schoolgle/ed-widget optional for marketing site - alias to stub module
+    const path = require('path');
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@schoolgle/ed-widget': path.resolve(__dirname, 'src/lib/ed-widget-stub.ts'),
+    };
     return config;
   },
   // Add empty turbopack config to silence the warning

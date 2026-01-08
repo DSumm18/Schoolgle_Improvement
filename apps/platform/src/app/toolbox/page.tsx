@@ -82,9 +82,14 @@ export default function ToolboxPage() {
                                 Free tools for schools
                             </h1>
 
-                            <p className="text-xl text-gray-500 dark:text-gray-400 mb-8 leading-relaxed">
-                                A curated directory of useful (mostly free) tools for school leaders, 
-                                office staff, and teachers. Updated weekly.
+                            <p className="text-xl text-gray-500 dark:text-gray-400 mb-6 leading-relaxed max-w-2xl mx-auto">
+                                A curated directory of free, external tools that schools can use immediately. 
+                                No sign-up required. No Schoolgle account needed.
+                            </p>
+                            
+                            <p className="text-base text-gray-600 dark:text-gray-300 mb-8 leading-relaxed max-w-2xl mx-auto">
+                                We curate these tools because we know how hard it is to find reliable resources that actually work in UK schools. 
+                                Each tool is tested and verified. Ed, our guide, can help you choose the right tool for your needs and explain how to use them effectively.
                             </p>
 
                             <div className="flex flex-wrap items-center justify-center gap-3">
@@ -110,10 +115,13 @@ export default function ToolboxPage() {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             transition={{ delay: 0.2 }}
-                            className="max-w-2xl mx-auto mt-8"
+                            className="max-w-2xl mx-auto mt-8 space-y-2"
                         >
                             <p className="text-center text-sm text-gray-400 dark:text-gray-500">
-                                Links go to third-party tools. Check your organisation's data protection rules before uploading personal data.
+                                All tools are external and free to use. Links go directly to third-party websites.
+                            </p>
+                            <p className="text-center text-sm text-gray-400 dark:text-gray-500">
+                                Check your organisation's data protection rules before uploading personal data.
                             </p>
                         </motion.div>
                     </div>
@@ -251,7 +259,8 @@ export default function ToolboxPage() {
                             Know a useful tool we've missed?
                         </h2>
                         <p className="text-gray-500 dark:text-gray-400 mb-8">
-                            We're always looking to expand this directory with helpful, trustworthy resources for schools.
+                            We're always looking to expand this directory with helpful, trustworthy resources for schools. 
+                            Ed can help you find the right tool for your specific needs.
                         </p>
                         <a
                             href="mailto:admin@schoolgle.co.uk?subject=Tool%20Suggestion%20for%20Schoolgle%20Toolbox"
