@@ -2,27 +2,20 @@ import mammoth from 'mammoth';
 // import officeParser from 'officeparser'; // Disabled - not used
 import * as XLSX from 'xlsx';
 import OpenAI from 'openai';
-import * as pdfjsLib from 'pdfjs-dist';
+// pdfjs-dist is dynamically imported to avoid DOMMatrix error in Node.js
 import { logger } from './logger';
 
-/**
- * Custom error class for extraction failures
- */
-export class ExtractionError extends Error {
-    constructor(
-        message: string,
-        public fileType: string,
-        public originalError?: Error
-    ) {
-        super(message);
-        this.name = 'ExtractionError';
-    }
-}
+// Lazy-loaded PDF.js instance
+let pdfjsLib: any = null;
 
-// Configure PDF.js worker
-if (typeof window === 'undefined') {
-    // Server-side configuration
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+async function getPdfjs() {
+    if (!pdfjsLib) {
+        // Dynamic import to avoid build-time issues with DOMMatrix
+        pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
+        // Configure worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+    }
+    return pdfjsLib;
 }
 
 /**
@@ -34,14 +27,16 @@ export async function parsePDF(buffer: Buffer): Promise<string> {
     try {
         logger.debug('Starting PDF extraction', context, { bufferSize: buffer.length });
 
+        // Get lazy-loaded pdfjs
+        const pdfjs = await getPdfjs();
+
         // Convert Buffer to Uint8Array for pdfjs-dist
         const data = new Uint8Array(buffer);
 
         // Load the PDF document
-        const loadingTask = pdfjsLib.getDocument({
+        const loadingTask = pdfjs.getDocument({
             data: data,
             useSystemFonts: true,
-            standardFontDataUrl: `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/standard_fonts/`,
         });
 
         const pdf = await loadingTask.promise;
