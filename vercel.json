@@ -1,6 +1,7 @@
 {
     "installCommand": "pnpm install",
-    "buildCommand": "pnpm build",
+    "buildCommand": "cd apps/platform && pnpm build",
+    "outputDirectory": "apps/platform/.next",
     "build": {
         "env": {
             "PNPM_VERSION": "9.15.0"
