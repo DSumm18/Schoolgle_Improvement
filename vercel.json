@@ -1,4 +1,9 @@
 {
     "installCommand": "pnpm install",
-    "buildCommand": "pnpm build"
+    "buildCommand": "pnpm build",
+    "build": {
+        "env": {
+            "PNPM_VERSION": "9.15.0"
+        }
+    }
 }
