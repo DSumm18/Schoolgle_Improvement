@@ -1,0 +1,122 @@
+/* Landing Page Specific Styles */
+
+.landing-dark {
+    background-color: var(--lp-bg);
+    color: var(--lp-text);
+    font-family: var(--font-sans);
+}
+
+.landing-dark h1,
+.landing-dark h2,
+.landing-dark h3,
+.landing-dark h4 {
+    font-family: var(--font-display);
+}
+
+/* Grid Background */
+.grid-background {
+    background-image:
+        linear-gradient(to right, rgba(59, 130, 246, 0.05) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(59, 130, 246, 0.05) 1px, transparent 1px);
+    background-size: 40px 40px;
+}
+
+/* Hero Glow */
+.hero-glow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at center, rgba(59, 130, 246, 0.15) 0%, transparent 70%);
+    z-index: -1;
+    filter: blur(80px);
+}
+
+/* Bento Card Glow */
+.bento-card {
+    position: relative;
+    background: var(--lp-bg-sec);
+    border: 1px solid var(--lp-border);
+    border-radius: 1.5rem;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.bento-card:hover {
+    border-color: var(--lp-border-hover);
+    transform: translateY(-4px);
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+}
+
+.bento-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(59, 130, 246, 0.1) 0%, transparent 50%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+.bento-card:hover::before {
+    opacity: 1;
+}
+
+/* Gradient Text */
+.text-gradient {
+    background: linear-gradient(135deg, #f8fafc 0%, #94a3b8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Floating Animation */
+@keyframes float {
+    0% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(-20px);
+    }
+
+    100% {
+        transform: translateY(0px);
+    }
+}
+
+.animate-float {
+    animation: float 6s ease-in-out infinite;
+}
+
+/* Button Scale */
+.btn-scale {
+    transition: transform 0.2s ease;
+}
+
+.btn-scale:active {
+    transform: scale(0.98);
+}
+
+/* Section Reveal Reveal */
+.reveal {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.8s ease-out;
+}
+
+.reveal.active {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Pilot CTA Gradient */
+.pilot-gradient {
+    background: radial-gradient(circle at top right, rgba(59, 130, 246, 0.1), transparent),
+        radial-gradient(circle at bottom left, rgba(245, 158, 11, 0.05), transparent);
+}
