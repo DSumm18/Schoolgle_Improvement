@@ -5,28 +5,22 @@ import { motion } from 'framer-motion';
 import { ChevronRight, Play } from 'lucide-react';
 import Link from 'next/link';
 
-import SchoolgleLogo from '@/components/brand/SchoolgleLogo';
+import SchoolgleAnimatedLogo from '@/components/SchoolgleAnimatedLogo';
 import ThemeToggle from '@/components/effects/ThemeToggle';
 
 const Hero = () => {
     return (
         <section className="relative min-h-screen flex flex-col items-center justify-center pt-20 pb-32 overflow-hidden px-6">
-            {/* Background Grid */}
-            <div className="absolute inset-0 grid-background opacity-20 pointer-events-none" />
-
-            {/* Glow Effect */}
-            <div className="hero-glow pointer-events-none" />
-
             {/* Nav Placeholder (Minimal) */}
             <nav className="absolute top-0 left-0 right-0 h-20 z-50 flex items-center justify-between max-w-7xl mx-auto px-6">
                 <div className="flex items-center gap-8">
                     <Link href="/" className="flex items-center gap-2">
-                        <SchoolgleLogo size="sm" showText />
+                        <SchoolgleAnimatedLogo size={200} showText={true} className="scale-[0.4] origin-left" />
                     </Link>
-                    <div className="hidden md:flex items-center gap-6">
-                        <a href="#features" className="text-sm font-medium text-lp-text-sec hover:text-lp-text transition-colors">Features</a>
-                        <a href="/pricing" className="text-sm font-medium text-lp-text-sec hover:text-lp-text transition-colors">Pricing</a>
-                        <a href="/blog" className="text-sm font-medium text-lp-text-sec hover:text-lp-text transition-colors">Blog</a>
+                    <div className="hidden md:flex items-center gap-4">
+                        <a href="#preview" className="text-sm font-medium text-lp-text-sec hover:text-lp-text transition-colors">What we're building</a>
+                        <Link href="/insights" className="text-sm font-medium text-lp-text-sec hover:text-lp-text transition-colors">Insights</Link>
+                        <Link href="/toolbox" className="text-sm font-medium text-lp-text-sec hover:text-lp-text transition-colors">Toolbox</Link>
                     </div>
                 </div>
                 <div className="flex items-center gap-4">
@@ -35,7 +29,7 @@ const Hero = () => {
                         href="#early-access"
                         className="px-5 py-2 bg-lp-accent text-white rounded-full text-sm font-bold hover:bg-blue-600 transition-all btn-scale shadow-lg shadow-blue-500/20"
                     >
-                        Request Access
+                        Early access
                     </Link>
                 </div>
             </nav>
@@ -43,7 +37,7 @@ const Hero = () => {
             <div className="container max-w-5xl relative z-10 text-center">
                 {/* Logo in Hero */}
                 <div className="flex justify-center mb-12">
-                    <SchoolgleLogo size="lg" />
+                    <SchoolgleAnimatedLogo size={520} />
                 </div>
 
                 {/* Badge */}

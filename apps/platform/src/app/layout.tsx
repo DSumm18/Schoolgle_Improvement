@@ -33,7 +33,7 @@ export const metadata: Metadata = {
 };
 
 import { ThemeProvider } from "@/providers/ThemeProvider";
-import ParallaxBackground from "@/components/effects/ParallaxBackground";
+import AntigravityBackground from "@/components/effects/AntigravityBackground";
 import SmoothScroll from "@/components/effects/SmoothScroll";
 
 export default function RootLayout({
@@ -48,7 +48,7 @@ export default function RootLayout({
           <ErrorBoundary name="RootLayout">
             <SupabaseAuthProvider>
               <SmoothScroll>
-                <ParallaxBackground />
+                <AntigravityBackground />
                 <div className="relative z-0">
                   {children}
                 </div>
