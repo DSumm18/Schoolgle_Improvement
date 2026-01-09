@@ -32,20 +32,31 @@ export const metadata: Metadata = {
   },
 };
 
+import { ThemeProvider } from "@/providers/ThemeProvider";
+import ParallaxBackground from "@/components/effects/ParallaxBackground";
+import SmoothScroll from "@/components/effects/SmoothScroll";
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${outfit.variable}`}>
-      <body className="antialiased" suppressHydrationWarning>
-        <ErrorBoundary name="RootLayout">
-          <SupabaseAuthProvider>
-            {children}
-            <OfflineIndicator />
-          </SupabaseAuthProvider>
-        </ErrorBoundary>
+    <html lang="en" className={`${inter.variable} ${outfit.variable}`} suppressHydrationWarning>
+      <body className="antialiased min-h-screen relative" suppressHydrationWarning>
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+          <ErrorBoundary name="RootLayout">
+            <SupabaseAuthProvider>
+              <SmoothScroll>
+                <ParallaxBackground />
+                <div className="relative z-0">
+                  {children}
+                </div>
+              </SmoothScroll>
+              <OfflineIndicator />
+            </SupabaseAuthProvider>
+          </ErrorBoundary>
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -5,6 +5,9 @@ import { motion } from 'framer-motion';
 import { ChevronRight, Play } from 'lucide-react';
 import Link from 'next/link';
 
+import SchoolgleLogo from '@/components/brand/SchoolgleLogo';
+import ThemeToggle from '@/components/effects/ThemeToggle';
+
 const Hero = () => {
     return (
         <section className="relative min-h-screen flex flex-col items-center justify-center pt-20 pb-32 overflow-hidden px-6">
@@ -17,8 +20,8 @@ const Hero = () => {
             {/* Nav Placeholder (Minimal) */}
             <nav className="absolute top-0 left-0 right-0 h-20 z-50 flex items-center justify-between max-w-7xl mx-auto px-6">
                 <div className="flex items-center gap-8">
-                    <Link href="/" className="text-xl font-black tracking-tighter text-lp-text outfit">
-                        SCHOOLGLE
+                    <Link href="/" className="flex items-center gap-2">
+                        <SchoolgleLogo size="sm" showText />
                     </Link>
                     <div className="hidden md:flex items-center gap-6">
                         <a href="#features" className="text-sm font-medium text-lp-text-sec hover:text-lp-text transition-colors">Features</a>
@@ -26,19 +29,27 @@ const Hero = () => {
                         <a href="/blog" className="text-sm font-medium text-lp-text-sec hover:text-lp-text transition-colors">Blog</a>
                     </div>
                 </div>
-                <Link
-                    href="#early-access"
-                    className="px-5 py-2 bg-lp-accent text-white rounded-full text-sm font-bold hover:bg-blue-600 transition-all btn-scale shadow-lg shadow-blue-500/20"
-                >
-                    Request Access
-                </Link>
+                <div className="flex items-center gap-4">
+                    <ThemeToggle />
+                    <Link
+                        href="#early-access"
+                        className="px-5 py-2 bg-lp-accent text-white rounded-full text-sm font-bold hover:bg-blue-600 transition-all btn-scale shadow-lg shadow-blue-500/20"
+                    >
+                        Request Access
+                    </Link>
+                </div>
             </nav>
 
             <div className="container max-w-5xl relative z-10 text-center">
+                {/* Logo in Hero */}
+                <div className="flex justify-center mb-12">
+                    <SchoolgleLogo size="lg" />
+                </div>
+
                 {/* Badge */}
                 <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.6 }}
                     className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-lp-border bg-lp-bg-sec/50 backdrop-blur-sm mb-8"
                 >
@@ -62,9 +73,9 @@ const Hero = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6, delay: 0.2 }}
-                    className="text-xl md:text-2xl text-lp-text-sec max-w-2xl mx-auto mb-10 leading-relaxed font-medium"
+                    className="text-xl md:text-2xl text-lp-text-sec max-w-2xl mx-auto mb-10 font-medium"
                 >
-                    The operations engine for UK schools that maps evidence and identifies gaps automatically, so you're never caught off guard.
+                    The operations engine for UK schools that maps evidence and identifies gaps automatically.
                 </motion.p>
 
                 {/* CTAs */}
@@ -83,7 +94,7 @@ const Hero = () => {
                     <button
                         className="w-full sm:w-auto px-10 py-5 border border-lp-border bg-lp-bg-sec/50 backdrop-blur-sm text-lp-text rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-lp-bg-sec transition-all btn-scale flex items-center justify-center gap-2"
                     >
-                        <Play size={14} fill="white" /> See how it works
+                        <Play size={14} fill="currentColor" /> See how it works
                     </button>
                 </motion.div>
 
