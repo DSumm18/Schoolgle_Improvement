@@ -41,3 +41,20 @@ envlocal.txt
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# --- anti-gravity / agent temp ---
+.agent/
+.gemini/
+tmpclaude-*/
+**/tmpclaude-*/
+.next_old/
+_reference/
+root_app_backup/
+apps/platform/npm-dev.log
+apps/platform/nul
+nul
+audit_*.txt
+*_list.txt
+api_list.txt
+*.log
+
