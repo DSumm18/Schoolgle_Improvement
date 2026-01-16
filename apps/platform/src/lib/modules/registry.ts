@@ -212,6 +212,26 @@ export const APPS: AppDefinition[] = [
         requiredPermissions: ['admin', 'headteacher', 'slt', 'teacher']
     },
 
+    // HR Apps
+    {
+        id: 'hr-home',
+        moduleId: 'hr',
+        name: 'HR & People',
+        route: '/dashboard/hr',
+        icon: Users,
+        shortDescription: 'HR overview & tools.',
+        requiredPermissions: ['admin', 'headteacher', 'slt']
+    },
+    {
+        id: 'maternity-leave-calculator',
+        moduleId: 'hr',
+        name: 'Maternity Leave Calculator',
+        route: '/dashboard/hr/maternity-leave-calculator',
+        icon: ClipboardList,
+        shortDescription: 'Calculate pay & leave dates.',
+        requiredPermissions: ['admin', 'headteacher', 'slt']
+    },
+
     // Estates Apps
     {
         id: 'maintenance-tickets',
