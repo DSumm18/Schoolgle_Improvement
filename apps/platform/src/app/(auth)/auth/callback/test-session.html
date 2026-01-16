@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Session Test</title>
+</head>
+<body>
+    <h1>Session Diagnostic</h1>
+    <button onclick="checkSession()">Check Session</button>
+    <button onclick="clearSession()">Clear Session</button>
+    <pre id="output"></pre>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+        
+        const supabaseUrl = 'YOUR_SUPABASE_URL';
+        const supabaseAnonKey = 'YOUR_ANON_KEY';
+        const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+            auth: {
+                persistSession: true,
+                autoRefreshToken: true,
+                detectSessionInUrl: true
+            }
+        });
+
+        window.checkSession = async function() {
+            const output = document.getElementById('output');
+            output.textContent = 'Checking session...\n';
+            
+            // Check localStorage
+            const keys = Object.keys(localStorage).filter(k => k.includes('auth'));
+            output.textContent += `\nLocalStorage keys: ${keys.join(', ')}\n`;
+            
+            // Check Supabase session
+            const { data: { session }, error } = await supabase.auth.getSession();
+            output.textContent += `\nSession: ${session ? 'FOUND' : 'NOT FOUND'}\n`;
+            output.textContent += `User: ${session?.user?.id || 'NONE'}\n`;
+            output.textContent += `Error: ${error?.message || 'NONE'}\n`;
+            
+            if (session) {
+                output.textContent += `\nSession details:\n${JSON.stringify(session, null, 2)}`;
+            }
+        };
+
+        window.clearSession = async function() {
+            await supabase.auth.signOut();
+            localStorage.clear();
+            document.getElementById('output').textContent = 'Session cleared!';
+        };
+    </script>
+</body>
+</html>
+
