@@ -221,6 +221,15 @@ export const APPS: AppDefinition[] = [
         icon: HelpCircle,
         shortDescription: 'Helpdesk & PPM.',
         requiredPermissions: ['admin', 'headteacher', 'slt', 'caretaker']
+    },
+    {
+        id: 'estates-audit',
+        moduleId: 'estates',
+        name: 'Estates Audit',
+        route: '/dashboard/estates/audit',
+        icon: ShieldCheck,
+        shortDescription: 'Performance audit & compliance.',
+        requiredPermissions: ['admin', 'headteacher', 'slt', 'caretaker']
     }
 ];
 

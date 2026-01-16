@@ -17,7 +17,7 @@ const tools = [
         title: 'Maternity Calculator',
         description: 'Specialized tool for calculating parental leave payouts and schedules.',
         status: 'Live',
-        href: '/hr/maternity-leave-calculator',
+        href: '/dashboard/hr/maternity-leave-calculator',
         icon: Calculator
     },
     {

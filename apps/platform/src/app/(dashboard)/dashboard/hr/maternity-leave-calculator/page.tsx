@@ -62,7 +62,7 @@ export default function MaternityLeaveCalculatorPage() {
         <div className="p-8 max-w-4xl mx-auto space-y-12">
             {/* Header */}
             <div className="space-y-4">
-                <Link href="/hr" className="inline-flex items-center text-sm font-bold text-gray-400 hover:text-indigo-600 transition-colors group">
+                <Link href="/dashboard/hr" className="inline-flex items-center text-sm font-bold text-gray-400 hover:text-indigo-600 transition-colors group">
                     <ArrowLeft size={16} className="mr-2 group-hover:-translate-x-1 transition-transform" />
                     BACK TO HR MODULE
                 </Link>
