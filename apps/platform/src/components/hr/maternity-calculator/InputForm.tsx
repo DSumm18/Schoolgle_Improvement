@@ -43,6 +43,13 @@ export function InputForm({ inputs, handleInputChange, handleCalculate }: InputF
         handleInputChange({ target: { name, value } });
     };
 
+    const renderEwcLabel = () => {
+        if (!inputs.ewcOrPlacementDate) return <span>Pick a date</span>;
+        const d = new Date(inputs.ewcOrPlacementDate);
+        if (Number.isNaN(d.getTime())) return <span>Pick a date</span>;
+        return format(d, "PPP");
+    };
+
     return (
         <form onSubmit={handleCalculate} className="space-y-6">
             <div className="space-y-2">
@@ -140,7 +147,7 @@ export function InputForm({ inputs, handleInputChange, handleCalculate }: InputF
                             className={cn("w-full justify-start text-left font-normal", !inputs.ewcOrPlacementDate && "text-muted-foreground")}
                         >
                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {inputs.ewcOrPlacementDate ? format(new Date(inputs.ewcOrPlacementDate), "PPP") : <span>Pick a date</span>}
+                            {renderEwcLabel()}
                         </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
