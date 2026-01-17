@@ -244,6 +244,15 @@ export const APPS: AppDefinition[] = [
 
     // Estates Apps
     {
+        id: 'estates-home',
+        moduleId: 'estates',
+        name: 'Estates',
+        route: '/dashboard/estates',
+        icon: Building2,
+        shortDescription: 'Estates overview & tools.',
+        requiredPermissions: ['admin', 'headteacher', 'slt', 'caretaker']
+    },
+    {
         id: 'maintenance-tickets',
         moduleId: 'estates',
         name: 'Maintenance',
