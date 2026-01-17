@@ -10,7 +10,7 @@ const tools = [
         title: 'Staff Directory',
         description: 'Centralised people management with roles, direct reports and contact data.',
         status: 'Live',
-        href: '/people',
+        href: '/dashboard/hr/people',
         icon: Users
     },
     {
