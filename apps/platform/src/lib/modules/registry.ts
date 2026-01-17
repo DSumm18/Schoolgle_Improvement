@@ -232,6 +232,15 @@ export const APPS: AppDefinition[] = [
         shortDescription: 'Calculate pay & leave dates.',
         requiredPermissions: ['admin', 'headteacher', 'slt']
     },
+    {
+        id: 'staff-directory',
+        moduleId: 'hr',
+        name: 'Staff Directory',
+        route: '/dashboard/hr/people',
+        icon: Users,
+        shortDescription: 'Search and view staff records.',
+        requiredPermissions: ['admin', 'headteacher', 'slt']
+    },
 
     // Estates Apps
     {
