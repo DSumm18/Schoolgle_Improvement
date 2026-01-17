@@ -17,7 +17,8 @@ import {
     Mail,
     ClipboardList,
     Briefcase,
-    HelpCircle
+    HelpCircle,
+    Zap
 } from 'lucide-react';
 
 export type Role = 'admin' | 'headteacher' | 'slt' | 'teacher' | 'governor' | 'caretaker' | 'viewer';
@@ -249,6 +250,24 @@ export const APPS: AppDefinition[] = [
         route: '/dashboard/estates/audit',
         icon: ShieldCheck,
         shortDescription: 'Performance audit & compliance.',
+        requiredPermissions: ['admin', 'headteacher', 'slt', 'caretaker']
+    },
+    {
+        id: 'compliance-checks',
+        moduleId: 'estates',
+        name: 'Compliance Checks',
+        route: '/dashboard/estates/compliance',
+        icon: ShieldCheck,
+        shortDescription: 'Statutory compliance tracking.',
+        requiredPermissions: ['admin', 'headteacher', 'slt', 'caretaker']
+    },
+    {
+        id: 'energy-data',
+        moduleId: 'estates',
+        name: 'Energy & Utilities',
+        route: '/dashboard/estates/energy',
+        icon: Zap,
+        shortDescription: 'Monitor usage & costs.',
         requiredPermissions: ['admin', 'headteacher', 'slt', 'caretaker']
     }
 ];

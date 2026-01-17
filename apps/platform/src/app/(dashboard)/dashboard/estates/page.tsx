@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Building, TrendingUp, AlertCircle, CheckCircle, ArrowRight, ShieldCheck, Zap, Accessibility } from 'lucide-react';
+import { Building, TrendingUp, AlertCircle, CheckCircle, ArrowRight, ShieldCheck, Zap, Accessibility, Hammer } from 'lucide-react';
 import Link from 'next/link';
 
 export default function EstatesAuditHome() {
@@ -108,6 +108,65 @@ export default function EstatesAuditHome() {
                     ))}
                 </div>
             </div>
+
+            {/* Other Estates Apps */}
+            <div className="space-y-8">
+                <div className="text-center space-y-2">
+                    <h2 className="text-3xl font-black tracking-tight text-slate-900 border-l-4 border-indigo-600 pl-4 inline-block">Management Tools</h2>
+                    <p className="text-slate-500 font-medium">Streamline your daily estates operations</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    {[
+                        {
+                            title: 'Maintenance',
+                            desc: 'Helpdesk, reactive repairs, and planned preventative maintenance.',
+                            icon: Hammer,
+                            href: '/dashboard/estates/maintenance',
+                            badge: 'Pilot'
+                        },
+                        {
+                            title: 'Compliance Checks',
+                            desc: 'Statutory compliance tracking and document storage.',
+                            icon: ShieldCheck,
+                            href: '/dashboard/estates/compliance',
+                            badge: 'Coming Soon'
+                        },
+                        {
+                            title: 'Energy & Utilities',
+                            desc: 'Monitor consumption, costs, and carbon footprint.',
+                            icon: Zap,
+                            href: '/dashboard/estates/energy',
+                            badge: 'Preview'
+                        }
+                    ].map((app, i) => (
+                        <Link href={app.href} key={i}>
+                            <Card className="group hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 border-0 shadow-lg shadow-slate-200/50 rounded-3xl p-6 h-full flex flex-col justify-between">
+                                <CardHeader className="p-0">
+                                    <div className="flex justify-between items-start mb-6">
+                                        <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-900 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                                            <app.icon className="h-6 w-6" />
+                                        </div>
+                                        <Badge className="bg-slate-100 text-slate-600 border-0 uppercase tracking-widest text-[9px] font-black">
+                                            {app.badge}
+                                        </Badge>
+                                    </div>
+                                    <CardTitle className="text-2xl font-black tracking-tight mb-2 group-hover:text-indigo-600 transition-colors">{app.title}</CardTitle>
+                                    <CardDescription className="text-slate-500 font-medium leading-relaxed">
+                                        {app.desc}
+                                    </CardDescription>
+                                </CardHeader>
+                                <div className="mt-8">
+                                    <Button variant="ghost" className="p-0 font-black text-indigo-600 group-hover:translate-x-2 transition-transform h-auto">
+                                        Launch App <ArrowRight className="ml-2 h-4 w-4" />
+                                    </Button>
+                                </div>
+                            </Card>
+                        </Link>
+                    ))}
+                </div>
+            </div>
+
 
             {/* How it Works / CTA */}
             <Card className="rounded-[3rem] border-0 bg-slate-900 text-white overflow-hidden relative">
