@@ -21,7 +21,8 @@ export default function MaintenancePage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <Card className="border-0 shadow-lg shadow-slate-200/50 rounded-[2rem] bg-amber-50 dark:bg-amber-900/10 border-l-4 border-amber-500">
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-black uppercase tracking-widest text-amber-600">Pending Tasks</Card">12</CardTitle>
+                        <CardTitle className="text-sm font-black uppercase tracking-widest text-amber-600">Pending Tasks</CardTitle>
+                        <CardTitle className="text-3xl font-black text-amber-900">12</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <p className="text-xs font-bold text-amber-700/60 uppercase">4 high priority</p>
