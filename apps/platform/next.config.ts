@@ -34,6 +34,7 @@ const nextConfig: NextConfig = {
     config.resolve.alias = {
       ...config.resolve.alias,
       '@schoolgle/ed-widget': path.resolve(__dirname, 'src/lib/ed-widget-stub.ts'),
+      '@schoolgle/ed-agents': path.resolve(__dirname, '../../packages/ed-agents/src'),
     };
     return config;
   },
