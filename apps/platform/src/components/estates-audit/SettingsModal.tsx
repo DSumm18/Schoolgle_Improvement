@@ -87,7 +87,7 @@ export default function SettingsModal({ isOpen, onClose, onSave }: SettingsModal
                             <Input
                                 id="api-key"
                                 type="password"
-                                placeholder="AIzaSyAFX-_Pxp36PuMevKF69h_ookWAnGtzs4Y"
+                                placeholder="Enter your Google Maps API key"
                                 value={apiKey}
                                 onChange={(e) => setApiKey(e.target.value)}
                                 className="bg-muted/50 border-indigo-500/10 focus:border-indigo-500"
