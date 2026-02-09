@@ -238,6 +238,9 @@ export interface ChatOptions {
   maxTokens?: number;
   topP?: number;
   stream?: boolean;
+  tools?: any[];
+  tool_choice?: string | object;
+  timeout?: number;
 }
 
 export interface ChatResponse {
@@ -249,6 +252,14 @@ export interface ChatResponse {
     totalTokens: number;
   };
   finishReason?: string;
+  toolCalls?: Array<{
+    id: string;
+    type: 'function';
+    function: {
+      name: string;
+      arguments: string;
+    };
+  }>;
 }
 
 /**
@@ -282,6 +293,8 @@ export class OpenRouterClient {
       max_tokens: options.maxTokens ?? 4096,
       top_p: options.topP,
       stream: options.stream ?? false,
+      tools: options.tools,
+      tool_choice: options.tool_choice,
     };
 
     const response = await fetch(`${this.baseURL}/chat/completions`, {
@@ -322,6 +335,7 @@ export class OpenRouterClient {
         totalTokens: data.usage?.total_tokens || 0,
       },
       finishReason: choice.finish_reason,
+      toolCalls: choice.message?.tool_calls,
     };
   }
 

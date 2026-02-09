@@ -68,3 +68,4 @@ apps/platform/src/components/brand/tmpclaude-*
 # Local scratch
 audit_script.ps1
 *.old.css
+.mcp.json

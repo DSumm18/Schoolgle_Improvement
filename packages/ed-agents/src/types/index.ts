@@ -105,6 +105,7 @@ export interface AppContext {
   schoolData?: SchoolContext;
   sessionId: string;
   openRouterApiKey?: string; // Optional: Pass API key directly
+  supabase: any; // SupabaseClient
 }
 
 export interface SchoolContext {
@@ -155,6 +156,10 @@ export interface KnowledgeEntry {
   nextReviewDue?: Date;
   version: number;
   rank?: number;
+  isStatutory?: boolean;
+  legislationReference?: string;
+  contractorContext?: string;
+  category?: string;
 }
 
 export interface KnowledgeQueryOptions {

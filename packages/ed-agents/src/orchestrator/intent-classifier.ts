@@ -21,10 +21,11 @@ const WORK_KEYWORDS = [
 
 /**
  * Chat/non-work keywords - indicates user is just chatting
+ * Note: "hi" and "hello" are excluded - they're handled as greetings in the chat route
  */
 const CHAT_KEYWORDS = [
   'tell me a joke', 'how are you', 'what do you think', 'lets chat',
-  'conversation', 'just saying', 'bored', 'nothing', 'hi', 'hello',
+  'conversation', 'just saying', 'bored', 'nothing',
 ];
 
 /**

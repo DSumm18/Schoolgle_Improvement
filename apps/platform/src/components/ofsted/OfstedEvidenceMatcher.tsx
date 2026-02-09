@@ -1,0 +1,505 @@
+"use client";
+
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import {
+    Search,
+    Link,
+    Unlink,
+    FileText,
+    Filter,
+    Check,
+    Plus,
+    AlertCircle,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+    CATEGORY_SUBCATEGORIES,
+    CATEGORY_INFO,
+} from '@/lib/ofsted';
+
+interface OfstedEvidenceMatcherProps {
+    organizationId: string;
+    onRefresh?: () => void;
+}
+
+interface EvidenceItem {
+    id: string;
+    title: string;
+    type: string;
+    date: string;
+    source: string;
+    confidence?: 'HIGH' | 'MEDIUM' | 'LOW';
+}
+
+interface OfstedEvidenceMatch {
+    question_id: string;
+    evidence_id: string;
+    evidence_title: string;
+    confidence?: 'HIGH' | 'MEDIUM' | 'LOW';
+    matched_at?: string;
+}
+
+interface OfstedQuestion {
+    id: string;
+    question: string;
+    guidance: string;
+    evidenceRequired: string[];
+    category_id: string;
+    subcategory_id: string;
+}
+
+const CATEGORY_OPTIONS = [
+    { value: 'all', label: 'All Categories' },
+    { value: 'inclusion', label: 'Inclusion' },
+    { value: 'curriculum-teaching', label: 'Curriculum & Teaching' },
+    { value: 'achievement', label: 'Achievement' },
+    { value: 'attendance-behaviour', label: 'Attendance & Behaviour' },
+    { value: 'personal-development', label: 'Personal Development' },
+    { value: 'leadership-governance', label: 'Leadership & Governance' },
+];
+
+const CONFIDENCE_COLORS = {
+    HIGH: 'bg-emerald-100 text-emerald-700',
+    MEDIUM: 'bg-amber-100 text-amber-700',
+    LOW: 'bg-slate-100 text-slate-500',
+};
+
+export default function OfstedEvidenceMatcher({
+    organizationId,
+    onRefresh,
+}: OfstedEvidenceMatcherProps) {
+    const [matches, setMatches] = useState<Record<string, OfstedEvidenceMatch[]>>({});
+    const [allEvidence, setAllEvidence] = useState<EvidenceItem[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [selectedCategory, setSelectedCategory] = useState<string | 'all'>('all');
+    const [selectedQuestion, setSelectedQuestion] = useState<string | null>(null);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+    const [unlinking, setUnlinking] = useState<string | null>(null);
+
+    useEffect(() => {
+        fetchEvidence();
+    }, [organizationId, selectedCategory]);
+
+    const fetchEvidence = async () => {
+        setLoading(true);
+        try {
+            const params = new URLSearchParams({ organizationId });
+            if (selectedCategory !== 'all') params.append('category', selectedCategory);
+
+            const response = await fetch(`/api/ofsted/evidence?${params}`);
+            if (response.ok) {
+                const data = await response.json();
+                const matchesByQuestion: Record<string, OfstedEvidenceMatch[]> = {};
+
+                data.evidence?.forEach((match: OfstedEvidenceMatch) => {
+                    if (!matchesByQuestion[match.question_id]) {
+                        matchesByQuestion[match.question_id] = [];
+                    }
+                    matchesByQuestion[match.question_id].push(match);
+                });
+
+                setMatches(matchesByQuestion);
+                setAllEvidence(data.available_evidence || []);
+            }
+        } catch (error) {
+            console.error('Failed to fetch evidence:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleUnlink = async (questionId: string, evidenceId: string) => {
+        setUnlinking(`${questionId}-${evidenceId}`);
+        try {
+            const response = await fetch('/api/ofsted/evidence', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    organizationId,
+                    questionId,
+                    evidenceId,
+                }),
+            });
+
+            if (response.ok) {
+                setMatches((prev) => ({
+                    ...prev,
+                    [questionId]: prev[questionId]?.filter((m) => m.evidence_id !== evidenceId) || [],
+                }));
+                onRefresh?.();
+            }
+        } catch (error) {
+            console.error('Failed to unlink evidence:', error);
+        } finally {
+            setUnlinking(null);
+        }
+    };
+
+    // Build questions list from categories and subcategories
+    const getAllQuestions = (): OfstedQuestion[] => {
+        const questions: OfstedQuestion[] = [];
+        const categoriesToInclude = selectedCategory === 'all'
+            ? Object.keys(CATEGORY_SUBCATEGORIES)
+            : [selectedCategory];
+
+        for (const categoryId of categoriesToInclude) {
+            const subcategories = CATEGORY_SUBCATEGORIES[categoryId];
+            if (!subcategories) continue;
+
+            for (const subcategory of subcategories) {
+                // Generate questions based on inspection focus
+                for (let i = 0; i < (subcategory.inspectionFocus?.length || 1); i++) {
+                    questions.push({
+                        id: `${subcategory.id}-${i + 1}`,
+                        question: subcategory.inspectionFocus?.[i] || subcategory.name,
+                        guidance: subcategory.description,
+                        evidenceRequired: subcategory.evidenceRequired?.map((e: any) => typeof e === 'string' ? e : e.title) || [],
+                        category_id: categoryId,
+                        subcategory_id: subcategory.id,
+                    });
+                }
+            }
+        }
+
+        return questions;
+    };
+
+    const filteredEvidence = allEvidence.filter((evidence) =>
+        !searchQuery || evidence.title.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    const questionMatchCount = (questionId: string) => matches[questionId]?.length || 0;
+
+    return (
+        <div className="space-y-4">
+            {/* Controls */}
+            <Card>
+                <CardContent className="p-4">
+                    <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                        <div className="flex flex-wrap items-center gap-3">
+                            <Select value={selectedCategory} onValueChange={(value) => setSelectedCategory(value as any)}>
+                                <SelectTrigger className="w-48">
+                                    <SelectValue placeholder="Filter by category" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {CATEGORY_OPTIONS.map((option) => (
+                                        <SelectItem key={option.value} value={option.value}>
+                                            {option.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+
+                            <div className="relative w-64">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                                <input
+                                    type="text"
+                                    placeholder="Search evidence..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                                />
+                            </div>
+                        </div>
+
+                        <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => setLinkDialogOpen(true)}>
+                            <Plus className="w-4 h-4 mr-2" />
+                            Link Evidence
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Questions with Evidence */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {getAllQuestions().map((question) => {
+                    const questionMatches = matches[question.id] || [];
+                    const hasEvidence = questionMatches.length > 0;
+                    const catInfo = CATEGORY_INFO[question.category_id];
+
+                    return (
+                        <Card
+                            key={question.id}
+                            className={`${hasEvidence ? 'border-blue-200' : ''}`}
+                        >
+                            <CardContent className="p-4">
+                                <div className="flex items-start justify-between gap-2 mb-3">
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className="text-[10px] font-mono text-slate-400">
+                                                {question.id}
+                                            </span>
+                                            <Badge variant="outline" className="text-[10px]">
+                                                {catInfo.icon} {catInfo.name}
+                                            </Badge>
+                                        </div>
+                                        <p className="text-sm font-medium line-clamp-2">{question.question}</p>
+                                    </div>
+                                    <div className="flex items-center gap-1 bg-blue-50 px-2 py-1 rounded-lg">
+                                        <Link className="w-3.5 h-3.5 text-blue-600" />
+                                        <span className="text-xs font-bold text-blue-700">
+                                            {questionMatches.length}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {questionMatches.length > 0 ? (
+                                    <div className="space-y-2">
+                                        {questionMatches.map((match) => (
+                                            <div
+                                                key={match.evidence_id}
+                                                className="flex items-start gap-2 p-2 bg-slate-50 dark:bg-slate-800 rounded-lg group"
+                                            >
+                                                <FileText className="w-4 h-4 text-slate-400 mt-0.5" />
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-medium truncate">
+                                                        {match.evidence_title || 'Untitled Evidence'}
+                                                    </p>
+                                                    <div className="flex items-center gap-2 mt-1">
+                                                        {match.confidence && (
+                                                            <Badge
+                                                                className={`text-[9px] ${CONFIDENCE_COLORS[match.confidence]}`}
+                                                            >
+                                                                {match.confidence}
+                                                            </Badge>
+                                                        )}
+                                                        <span className="text-[10px] text-slate-400">
+                                                            {match.matched_at &&
+                                                                new Date(match.matched_at).toLocaleDateString()}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => handleUnlink(question.id, match.evidence_id)}
+                                                    disabled={
+                                                        unlinking === `${question.id}-${match.evidence_id}`
+                                                    }
+                                                    className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                                >
+                                                    <Unlink className="w-4 h-4 text-rose-600" />
+                                                </Button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-4 text-slate-400">
+                                        <Link className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                        <p className="text-xs">No evidence linked</p>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    );
+                })}
+            </div>
+
+            {/* Link Evidence Dialog */}
+            <LinkEvidenceDialog
+                isOpen={linkDialogOpen}
+                onClose={() => setLinkDialogOpen(false)}
+                onLinked={() => {
+                    setLinkDialogOpen(false);
+                    fetchEvidence();
+                    onRefresh?.();
+                }}
+                organizationId={organizationId}
+                questions={getAllQuestions()}
+            />
+        </div>
+    );
+}
+
+// Link Evidence Dialog
+interface LinkEvidenceDialogProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onLinked: () => void;
+    organizationId: string;
+    questions: OfstedQuestion[];
+}
+
+function LinkEvidenceDialog({
+    isOpen,
+    onClose,
+    onLinked,
+    organizationId,
+    questions,
+}: LinkEvidenceDialogProps) {
+    const [selectedQuestions, setSelectedQuestions] = useState<Set<string>>(new Set());
+    const [evidenceIds, setEvidenceIds] = useState<string>('');
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    // Reset state on open
+    useEffect(() => {
+        if (isOpen) {
+            setSelectedQuestions(new Set());
+            setEvidenceIds('');
+            setError(null);
+        }
+    }, [isOpen]);
+
+    const toggleQuestion = (questionId: string) => {
+        const newSelected = new Set(selectedQuestions);
+        if (newSelected.has(questionId)) {
+            newSelected.delete(questionId);
+        } else {
+            newSelected.add(questionId);
+        }
+        setSelectedQuestions(newSelected);
+    };
+
+    const handleLink = async () => {
+        if (selectedQuestions.size === 0) {
+            setError('Please select at least one question');
+            return;
+        }
+        if (!evidenceIds.trim()) {
+            setError('Please enter at least one evidence ID');
+            return;
+        }
+
+        setSaving(true);
+        setError(null);
+
+        try {
+            const ids = evidenceIds
+                .split(',')
+                .map((id) => id.trim())
+                .filter((id) => id);
+
+            const response = await fetch('/api/ofsted/evidence', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    organizationId,
+                    links: ids.flatMap((evidenceId) =>
+                        Array.from(selectedQuestions).map((questionId) => ({
+                            questionId,
+                            evidenceId,
+                            confidence: 'MEDIUM',
+                        }))
+                    ),
+                }),
+            });
+
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.error || 'Failed to link evidence');
+            }
+
+            onLinked();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to link evidence');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+            <DialogContent className="max-w-lg">
+                <DialogHeader>
+                    <DialogTitle>Link Evidence to Ofsted Questions</DialogTitle>
+                    <DialogDescription>
+                        Connect evidence documents to specific Ofsted framework questions
+                    </DialogDescription>
+                </DialogHeader>
+
+                {error && (
+                    <div className="p-3 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 rounded-lg">
+                        <p className="text-sm text-rose-700">{error}</p>
+                    </div>
+                )}
+
+                <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Select Questions</label>
+                        <div className="max-h-48 overflow-y-auto border rounded-lg p-2 space-y-1">
+                            {questions.slice(0, 20).map((question) => {
+                                const catInfo = CATEGORY_INFO[question.category_id];
+                                return (
+                                    <div
+                                        key={question.id}
+                                        className="flex items-start gap-2 p-2 hover:bg-slate-50 rounded"
+                                    >
+                                        <Checkbox
+                                            id={`q-${question.id}`}
+                                            checked={selectedQuestions.has(question.id)}
+                                            onCheckedChange={() => toggleQuestion(question.id)}
+                                        />
+                                        <label
+                                            htmlFor={`q-${question.id}`}
+                                            className="text-sm cursor-pointer flex-1"
+                                        >
+                                            <span className="text-[10px] text-slate-400 mr-2">
+                                                {question.id}
+                                            </span>
+                                            <span className="text-[10px] mr-1">{catInfo.icon}</span>
+                                            {question.question}
+                                        </label>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        <p className="text-xs text-slate-500">
+                            {selectedQuestions.size} question{selectedQuestions.size !== 1 ? 's' : ''} selected
+                        </p>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label htmlFor="evidenceIds" className="text-sm font-medium">
+                            Evidence IDs
+                        </label>
+                        <Input
+                            id="evidenceIds"
+                            value={evidenceIds}
+                            onChange={(e) => setEvidenceIds(e.target.value)}
+                            placeholder="id1, id2, id3..."
+                            className="font-mono text-sm"
+                        />
+                        <p className="text-xs text-slate-500">
+                            Enter comma-separated evidence document IDs
+                        </p>
+                    </div>
+                </div>
+
+                <DialogFooter>
+                    <Button type="button" variant="outline" onClick={onClose}>
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={handleLink}
+                        disabled={saving || selectedQuestions.size === 0}
+                        className="bg-blue-600 hover:bg-blue-700"
+                    >
+                        {saving ? 'Linking...' : `Link Evidence (${selectedQuestions.size} questions)`}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}

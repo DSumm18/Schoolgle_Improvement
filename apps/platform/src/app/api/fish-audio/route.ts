@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * Simply forwards requests from client to Fish Audio API
  */
 export async function POST(request: NextRequest) {
+    console.log('[Fish Audio Proxy] POST request received');
     try {
         // Get the request body from the client (contains text, reference_id, language, etc.)
         const requestBody = await request.json();
@@ -29,7 +30,8 @@ export async function POST(request: NextRequest) {
         }
 
         console.log('[Fish Audio Proxy] Forwarding request to Fish Audio:', {
-            text: requestBody.text?.substring(0, 50) + '...',
+            textLength: requestBody.text?.length || 0,
+            textPreview: requestBody.text?.substring(0, 50) + '...',
             reference_id: requestBody.reference_id,
             hasLanguage: !!requestBody.language,
         });
@@ -37,9 +39,9 @@ export async function POST(request: NextRequest) {
         // Forward the request to Fish Audio API
         // The client calls /api/fish-audio, we forward to https://api.fish.audio/v1/tts
         const fishAudioUrl = 'https://api.fish.audio/v1/tts';
-        
+
         console.log('[Fish Audio Proxy] Forwarding to:', fishAudioUrl);
-        
+
         const response = await fetch(fishAudioUrl, {
             method: 'POST',
             headers: {
@@ -49,6 +51,8 @@ export async function POST(request: NextRequest) {
             body: JSON.stringify(requestBody),
         });
 
+        console.log('[Fish Audio Proxy] Upstream response status:', response.status);
+
         if (!response.ok) {
             const errorText = await response.text();
             console.error('[Fish Audio Proxy] ❌ API Error:', {
@@ -56,6 +60,7 @@ export async function POST(request: NextRequest) {
                 statusText: response.statusText,
                 body: errorText,
             });
+            // Forward the upstream error details
             return NextResponse.json(
                 { error: 'Fish Audio TTS failed', details: errorText, status: response.status },
                 { status: response.status }
@@ -64,6 +69,8 @@ export async function POST(request: NextRequest) {
 
         // Return audio blob
         const audioBlob = await response.blob();
+        console.log('[Fish Audio Proxy] Success! Audio blob size:', audioBlob.size);
+
         return new NextResponse(audioBlob, {
             headers: {
                 'Content-Type': 'audio/mpeg',
@@ -71,9 +78,9 @@ export async function POST(request: NextRequest) {
         });
 
     } catch (error) {
-        console.error('[Fish Audio Proxy] Error:', error);
+        console.error('[Fish Audio Proxy] Critical Error:', error);
         return NextResponse.json(
-            { error: 'Internal server error' },
+            { error: 'Internal server error', details: error instanceof Error ? error.message : String(error) },
             { status: 500 }
         );
     }

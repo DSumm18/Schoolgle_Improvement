@@ -6,7 +6,14 @@
  */
 
 import { FishAudioVoice } from './fish-audio';
-import { EMOTIONS, pause, SHORT_PAUSE, MEDIUM_PAUSE, LONG_PAUSE } from './intro-scripts';
+import {
+  EMOTIONS,
+  pause,
+  SHORT_PAUSE,
+  MEDIUM_PAUSE,
+  LONG_PAUSE,
+  getIntroForPersona
+} from './intro-scripts';
 
 /**
  * Test all available emotions
@@ -51,7 +58,7 @@ export async function testEmotions(apiKey: string): Promise<void> {
     const test = tests[i];
     console.log(`\n${i + 1}. ${test.name}`);
     console.log(`   Text: ${test.text.replace(/\([^)]+\)/g, '[emotion]')}`);
-    
+
     try {
       await fish.speakAndPlay(test.text, 'ed', 'en-GB');
       // Wait 2 seconds between tests
@@ -98,7 +105,7 @@ export async function testPauses(apiKey: string): Promise<void> {
   for (let i = 0; i < tests.length; i++) {
     const test = tests[i];
     console.log(`\n${i + 1}. ${test.name}`);
-    
+
     try {
       await fish.speakAndPlay(test.text, 'ed', 'en-GB');
       // Wait 2 seconds between tests
@@ -116,7 +123,6 @@ export async function testPauses(apiKey: string): Promise<void> {
  */
 export async function testIntros(apiKey: string): Promise<void> {
   const fish = new FishAudioVoice(apiKey);
-  const { getIntroForPersona } = await import('./intro-scripts');
 
   console.log('🎬 Testing Intro Scripts...\n');
 
@@ -151,10 +157,10 @@ export async function testIntros(apiKey: string): Promise<void> {
   for (let i = 0; i < scenarios.length; i++) {
     const scenario = scenarios[i];
     const intro = getIntroForPersona(scenario.persona, scenario.context);
-    
+
     console.log(`\n${i + 1}. ${scenario.name}`);
     console.log(`   Text: ${intro.replace(/\([^)]+\)/g, '[emotion]')}`);
-    
+
     try {
       await fish.speakAndPlay(intro, scenario.persona, 'en-GB');
       // Wait 2 seconds between tests
@@ -173,16 +179,16 @@ export async function testIntros(apiKey: string): Promise<void> {
 export async function runAllTests(apiKey: string): Promise<void> {
   console.log('🚀 Starting Fish Audio Tests...\n');
   console.log('='.repeat(50));
-  
+
   await testEmotions(apiKey);
   console.log('\n' + '='.repeat(50));
-  
+
   await testPauses(apiKey);
   console.log('\n' + '='.repeat(50));
-  
+
   await testIntros(apiKey);
   console.log('\n' + '='.repeat(50));
-  
+
   console.log('\n🎉 All tests complete!');
 }
 

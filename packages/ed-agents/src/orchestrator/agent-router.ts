@@ -10,6 +10,7 @@ import type {
   SchoolContext,
 } from '../types';
 import { AGENTS, getAgent } from '../agents';
+import { getSkillTools, executeSkill } from '../agents/skills-agent';
 import { classifyIntent } from './intent-classifier';
 import { queryKnowledgeBase } from '../knowledge-base/query';
 import { getModelRouter } from '../models';
@@ -42,7 +43,7 @@ export async function routeToSpecialist(
 
   // 3. Check knowledge base first (for high-confidence factual queries)
   if (classification.confidence > 0.7 && classification.isWorkRelated) {
-    const cached = await queryKnowledgeBase(question, classification.domain);
+    const cached = await queryKnowledgeBase(context.supabase, question, classification.domain);
     if (cached && cached.confidence === 'HIGH') {
       return {
         agentId: classification.specialist,
@@ -72,9 +73,12 @@ export async function routeToSpecialist(
     question
   );
 
-  // 6. Call LLM via OpenRouter
+  // 6. Call LLM via OpenRouter with Tools
   const modelRouter = getModelRouter(context.openRouterApiKey);
   const model = modelRouter.selectModel('specialist-response', context);
+
+  // Get skill tools for the LLM
+  const tools = getSkillTools();
 
   try {
     const llmResponse = await modelRouter.chat(
@@ -84,10 +88,52 @@ export async function routeToSpecialist(
         model: model.id,
         temperature: 0.7,
         maxTokens: 2048,
+        tools: tools, // Pass available tools
       }
     );
 
-    // 7. Format response
+    // 7. Check for Tool Calls
+    if (llmResponse.toolCalls && llmResponse.toolCalls.length > 0) {
+      const toolCall = llmResponse.toolCalls[0]; // Handle first tool call
+      const functionName = toolCall.function.name;
+      let args = {};
+
+      try {
+        args = JSON.parse(toolCall.function.arguments);
+      } catch (e) {
+        console.error('[Agent Router] Error parsing tool arguments:', e);
+      }
+
+      // Execute the skill
+      const skillResult = await executeSkill(functionName, args);
+
+      return {
+        agentId: classification.specialist,
+        content: skillResult.response,
+        sources: [{
+          name: `${agent.name} (Action: ${functionName})`,
+          type: 'AI Action',
+        }],
+        confidence: 'HIGH',
+        requiresHuman: !skillResult.success,
+        metadata: {
+          classification,
+          modelUsed: model.id,
+          toolCall: {
+            name: functionName,
+            arguments: args,
+            success: skillResult.success
+          },
+          tokensUsed: {
+            input: llmResponse.usage.promptTokens,
+            output: llmResponse.usage.completionTokens,
+            total: llmResponse.usage.totalTokens,
+          },
+        },
+      };
+    }
+
+    // 8. Format standard natural language response
     return {
       agentId: classification.specialist,
       content: llmResponse.content,

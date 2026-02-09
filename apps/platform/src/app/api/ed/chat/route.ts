@@ -5,6 +5,7 @@ import { createServerSupabaseClient } from '@/lib/supabase-server';
 
 // Import Ed Orchestrator via webpack alias (see next.config.ts)
 import { createOrchestrator } from '@schoolgle/ed-agents/orchestrator/orchestrator';
+import { isGreeting, getContextualGreeting } from '@schoolgle/ed-agents/agents/contextual-greeting';
 import type { OrchestratorConfig } from '@schoolgle/ed-agents/types';
 
 interface ChatRequest {
@@ -113,8 +114,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Try quick answer first (for tool-specific questions)
-    const quickAnswer = findQuickAnswer(question, context.tool?.id);
+    // Check if this is a tool-specific quick answer first
+    const quickAnswer = findQuickAnswer(question, context?.tool?.id);
     if (quickAnswer) {
       const response: ChatResponse = {
         id: crypto.randomUUID(),
@@ -170,9 +171,40 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Check for greetings first - before any other processing
+    if (isGreeting(question)) {
+      // Create orchestrator for greeting context
+      const apiKey = process.env.OPENROUTER_API_KEY || '';
+      const orchestratorConfig: OrchestratorConfig = {
+        supabase,
+        userId: user?.id || 'anonymous',
+        orgId: organization?.id || 'unknown',
+        userRole,
+        subscription,
+        activeApp,
+        openRouterApiKey: apiKey,
+      };
+
+      const orchestrator = await createOrchestrator(orchestratorConfig);
+      const { greeting, alerts } = await orchestrator.handleProactiveGreeting({
+        url: context?.url,
+        title: context?.title,
+        userName: user?.user_metadata?.name || user?.email?.split('@')[0],
+      });
+
+      const response: ChatResponse = {
+        id: crypto.randomUUID(),
+        answer: greeting,
+        confidence: 0.95,
+        source: 'ai',
+        suggestions: alerts.length > 0 ? alerts : undefined,
+      };
+      return NextResponse.json(response);
+    }
+
     // Determine active app based on context
     let activeApp: string | undefined;
-    if (context.tool?.id) {
+    if (context?.tool?.id) {
       const appMap: Record<string, string> = {
         'sims': 'schoolgle-platform',
         'arbor': 'schoolgle-platform',
@@ -204,7 +236,7 @@ export async function POST(request: NextRequest) {
     // Process through agent framework
     const edResponse = await orchestrator.processQuestion(question, {
       app: activeApp,
-      page: context.title,
+      page: context?.title,
       screenshot: pageState?.screenshot,
     });
 
@@ -333,7 +365,7 @@ async function callAutomationAPI(
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
     const body: any = {
-      url: context.url,
+      url: context?.url || '',
       task: question,
     };
 

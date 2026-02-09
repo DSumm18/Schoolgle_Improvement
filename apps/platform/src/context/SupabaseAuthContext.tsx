@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState, useRef, ReactNode } fro
 import { useRouter } from "next/navigation";
 import type { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase"; // Use shared client
+import { safeAuthLog, isAbortError } from "@/lib/auth-safety";
 
 export interface Organization {
   id: string;
@@ -47,10 +48,12 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
     fetchingOrgRef.current.add(userId);
 
     try {
+      console.log('[AuthContext] Fetching organization for user:', userId);
       // Get organization from JWT claims (set by Supabase Auth hooks)
       const { data: { user: currentUser } } = await supabase.auth.getUser();
 
       if (!currentUser) {
+        console.warn('[AuthContext] No current user found in verify check');
         setOrganization(null);
         setOrganizationId(null);
         return;
@@ -60,69 +63,60 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
       const orgIdFromJWT = currentUser.user_metadata?.organization_id ||
         currentUser.app_metadata?.organization_id;
 
-      if (orgIdFromJWT) {
-        setOrganizationId(orgIdFromJWT);
+      console.log('[AuthContext] Org ID from JWT:', orgIdFromJWT);
 
-        // Ensure session is set before making requests
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
-        if (currentSession?.access_token) {
-          await supabase.auth.setSession({
-            access_token: currentSession.access_token,
-            refresh_token: currentSession.refresh_token || '',
-          });
-        }
+      // CRITICAL FIX: Always verify membership even if orgIdFromJWT is present
+      // This prevents "ghost" IDs from sticking in the frontend state
 
-        // Fetch organization details - ensure we use the authenticated session
-        const { data: org, error } = await supabase
-          .from('organizations')
-          .select('id, name, organization_type')
-          .eq('id', orgIdFromJWT)
-          .single();
+      // Get all memberships for the user
+      const { data: memberships, error: membershipError } = await supabase
+        .from('organization_members')
+        .select('organization_id, role, organizations(id, name, organization_type)')
+        .eq('user_id', userId);
 
-        if (!error && org) {
-          // Get user's role in organization
-          const { data: membership } = await supabase
-            .from('organization_members')
-            .select('role')
-            .eq('organization_id', orgIdFromJWT)
-            .eq('user_id', userId)
-            .single();
+      if (membershipError) {
+        console.error('[AuthContext] Error fetching memberships:', membershipError);
+        // If we can't fetch memberships, we can't reliably reconcile
+      }
 
-          setOrganization({
-            id: org.id,
-            name: org.name,
-            role: (membership?.role || 'viewer') as Organization['role'],
-            organization_type: org.organization_type
-          });
-        }
+      const validMemberships = memberships || [];
+      console.log('[AuthContext] Found', validMemberships.length, 'valid memberships');
+
+      // 1. Try to find the JWT organization in the valid memberships
+      const currentMembership = validMemberships.find(m => m.organization_id === orgIdFromJWT);
+
+      if (orgIdFromJWT && currentMembership && currentMembership.organizations) {
+        // JWT ID is valid and user is a member
+        console.log('[AuthContext] JWT Org ID is valid and verified:', orgIdFromJWT);
+        const org = currentMembership.organizations as any;
+        setOrganizationId(org.id);
+        setOrganization({
+          id: org.id,
+          name: org.name,
+          role: currentMembership.role as Organization['role'],
+          organization_type: org.organization_type
+        });
+      } else if (validMemberships.length > 0) {
+        // JWT ID is missing or invalid (GHOST ID detected) - Use first valid membership
+        const fallback = validMemberships[0];
+        const org = fallback.organizations as any;
+        console.warn('[AuthContext] JWT Org ID mismatch. Falling back to verified membership:', org.id);
+
+        setOrganizationId(org.id);
+        setOrganization({
+          id: org.id,
+          name: org.name,
+          role: fallback.role as Organization['role'],
+          organization_type: org.organization_type
+        });
       } else {
-        // Fallback: Get first organization user is member of
-        // Use .maybeSingle() to avoid errors when user has no organization yet
-        const { data: membership, error: membershipError } = await supabase
-          .from('organization_members')
-          .select('organization_id, role, organizations(id, name, organization_type)')
-          .eq('user_id', userId)
-          .limit(1)
-          .maybeSingle();
-
-        if (membership && membership.organizations) {
-          const org = membership.organizations as any;
-          setOrganizationId(org.id);
-          setOrganization({
-            id: org.id,
-            name: org.name,
-            role: membership.role as Organization['role'],
-            organization_type: org.organization_type
-          });
-        } else {
-          // User has no organization - this is OK, they'll be redirected to onboarding
-          console.log('[AuthContext] User has no organization membership yet');
-          setOrganization(null);
-          setOrganizationId(null);
-        }
+        // User has no organization memberships at all
+        console.log('[AuthContext] User has no organization membership yet');
+        setOrganization(null);
+        setOrganizationId(null);
       }
     } catch (error) {
-      console.error('Error fetching organization:', error);
+      safeAuthLog('[AuthContext] Error in fetchOrganization reconciliation', error);
       setOrganization(null);
       setOrganizationId(null);
     } finally {
@@ -174,12 +168,13 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
         setOrganization(data.organization);
       }
     } catch (error) {
-      console.error('[AuthContext] Error syncing profile:', error);
+      safeAuthLog('[AuthContext] Error syncing profile', error);
     }
   };
 
   useEffect(() => {
     let mounted = true;
+    let timeoutId: NodeJS.Timeout | null = null;
 
     // Get initial session with retry logic
     async function initializeAuth() {
@@ -187,8 +182,19 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
         // Wait a moment for localStorage to be available (especially after redirect)
         await new Promise(resolve => setTimeout(resolve, 100));
 
-        // First attempt
-        let { data: { session }, error } = await supabase.auth.getSession();
+        // First attempt with timeout
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Auth init timeout')), 5000)
+        );
+
+        let { data: { session }, error } = await Promise.race([
+          sessionPromise,
+          timeoutPromise,
+        ]).catch((err) => {
+          console.warn('[AuthContext] getSession timeout or error:', err.message);
+          return { data: { session: null }, error: null };
+        }) as any;
 
         // If no session, wait a bit longer and try again (for redirect scenarios)
         if (!session && !error) {
@@ -200,7 +206,7 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
         }
 
         if (error) {
-          console.error('[AuthContext] Error getting session:', error);
+          safeAuthLog('[AuthContext] Error getting session', error);
         }
 
         if (mounted) {
@@ -217,13 +223,21 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
 
           setLoading(false);
         }
-      } catch (error) {
-        console.error('[AuthContext] Error initializing auth:', error);
+      } catch (error: any) {
+        safeAuthLog('[AuthContext] Error initializing auth', error);
         if (mounted) {
           setLoading(false);
         }
       }
     }
+
+    // Set a safety timeout to ensure loading is always cleared
+    timeoutId = setTimeout(() => {
+      if (mounted && loading) {
+        console.warn('[AuthContext] Safety timeout triggered, forcing loading=false');
+        setLoading(false);
+      }
+    }, 10000); // 10 second safety timeout
 
     initializeAuth();
 
@@ -231,26 +245,34 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event: string, session: Session | null) => {
-      console.log('[AuthContext] Auth state changed:', event, session?.user?.id || 'no user');
+      try {
+        console.log('[AuthContext] Auth state changed:', event, session?.user?.id || 'no user');
 
-      if (mounted) {
-        setSession(session);
-        setUser(session?.user ?? null);
+        if (mounted) {
+          setSession(session);
+          setUser(session?.user ?? null);
 
-        if (session?.user) {
-          await syncUserProfile(session.user);
-          await fetchOrganization(session.user.id);
-        } else {
-          setOrganization(null);
-          setOrganizationId(null);
+          if (session?.user) {
+            await syncUserProfile(session.user);
+            await fetchOrganization(session.user.id);
+          } else {
+            setOrganization(null);
+            setOrganizationId(null);
+          }
+
+          setLoading(false);
         }
-
-        setLoading(false);
+      } catch (error) {
+        safeAuthLog('[AuthContext] Error in onAuthStateChange callback', error);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     });
 
     return () => {
       mounted = false;
+      if (timeoutId) clearTimeout(timeoutId);
       subscription.unsubscribe();
     };
   }, []);
@@ -272,7 +294,7 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
       if (error) throw error;
       // OAuth redirect happens automatically, no need to handle response
     } catch (error: any) {
-      console.error('Error signing in with Google:', error);
+      safeAuthLog('Error signing in with Google', error);
       // Provide user-friendly error messages
       if (error.message?.includes('popup')) {
         throw new Error('Pop-up blocked. Please allow pop-ups and try again.');
@@ -293,7 +315,7 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
       if (error) throw error;
       // OAuth redirect happens automatically, no need to handle response
     } catch (error: any) {
-      console.error('Error signing in with Microsoft:', error);
+      safeAuthLog('Error signing in with Microsoft', error);
       // Provide user-friendly error messages
       if (error.message?.includes('popup')) {
         throw new Error('Pop-up blocked. Please allow pop-ups and try again.');
@@ -313,7 +335,7 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
       setOrganizationId(null);
       router.push('/login');
     } catch (error) {
-      console.error('Error signing out:', error);
+      safeAuthLog('Error signing out', error);
       throw error;
     }
   };

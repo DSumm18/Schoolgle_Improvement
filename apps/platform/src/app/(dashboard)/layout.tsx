@@ -23,12 +23,14 @@ import {
     LogOut,
     PanelLeftClose,
     PanelLeftOpen,
+    Zap,
 } from 'lucide-react';
 import NotificationBell from '@/components/NotificationBell';
 import OrgSwitcher from "@/components/OrgSwitcher";
 import UpgradeModal from "@/components/UpgradeModal";
 import { supabase } from "@/lib/supabase";
 import { useAnalytics } from "@/hooks/useAnalytics";
+import { Toaster } from "@/components/ui/toaster";
 
 export default function DashboardLayout({
     children,
@@ -149,6 +151,8 @@ export default function DashboardLayout({
             section: 'SETTINGS',
             type: 'settings' as const,
             items: [
+                { id: 'skills', name: 'Skill Library', href: '/dashboard/settings/skills', icon: Zap },
+                { id: 'approvals', name: 'Approval Hub', href: '/dashboard/settings/approvals', icon: ShieldCheck },
                 { id: 'settings', name: 'Settings', href: '/dashboard/settings', icon: Settings },
                 { id: 'account', name: 'Billing', href: '/dashboard/account', icon: CreditCard },
             ]
@@ -157,8 +161,8 @@ export default function DashboardLayout({
 
     if (authLoading || loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
+            <div className="min-h-screen flex items-center justify-center bg-background">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
             </div>
         );
     }
@@ -168,26 +172,41 @@ export default function DashboardLayout({
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 flex overflow-hidden">
-            <aside className={`bg-white border-r border-gray-200 flex flex-col fixed inset-y-0 left-0 z-40 transition-all duration-300 ease-in-out ${isSidebarExpanded ? 'w-64' : 'w-20'}`}>
-                <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-                    {isSidebarExpanded && (
-                        <div>
-                            <h1 className="text-xl font-black text-gray-900 tracking-tight">SCHOOLGLE</h1>
-                            <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mt-1">Inspection Ready</p>
+        <div className="min-h-screen bg-background text-foreground flex overflow-hidden">
+            <aside className={`bg-card border-r border-border flex flex-col fixed inset-y-0 left-0 z-40 transition-all duration-300 ease-in-out ${isSidebarExpanded ? 'w-64' : 'w-20'}`}>
+                {/* Header with school name */}
+                <div className="p-4 border-b border-border">
+                    <div className="flex items-center justify-between mb-3">
+                        {isSidebarExpanded && (
+                            <div>
+                                <h1 className="text-lg font-black tracking-tight">SCHOOLGLE</h1>
+                                <p className="text-[9px] font-bold text-primary uppercase tracking-widest">Inspection Ready</p>
+                            </div>
+                        )}
+                        {!isSidebarExpanded && (
+                            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-primary-foreground font-black text-xs">
+                                S
+                            </div>
+                        )}
+                        <button
+                            onClick={() => setIsSidebarExpanded(!isSidebarExpanded)}
+                            className={`p-1.5 rounded-lg hover:bg-accent text-muted-foreground transition-colors ${!isSidebarExpanded ? 'mx-auto' : ''}`}
+                        >
+                            {isSidebarExpanded ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
+                        </button>
+                    </div>
+                    {/* School/Organization Name */}
+                    {isSidebarExpanded && organization?.name && (
+                        <div className="mt-2 px-2 py-1.5 bg-accent/50 rounded-lg border border-border">
+                            <div className="flex items-center gap-2">
+                                <LayoutDashboard size={14} className="text-primary shrink-0" />
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Current School</p>
+                                    <p className="text-sm font-bold truncate">{organization.name}</p>
+                                </div>
+                            </div>
                         </div>
                     )}
-                    {!isSidebarExpanded && (
-                        <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-black text-xs">
-                            S
-                        </div>
-                    )}
-                    <button
-                        onClick={() => setIsSidebarExpanded(!isSidebarExpanded)}
-                        className={`p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors ${!isSidebarExpanded ? 'mx-auto' : ''}`}
-                    >
-                        {isSidebarExpanded ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
-                    </button>
                 </div>
 
                 {/* App Launcher (4-squares) */}
@@ -195,8 +214,8 @@ export default function DashboardLayout({
                     <AppLauncher />
                     {isSidebarExpanded && (
                         <div className="flex-1 min-w-0">
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active App</p>
-                            <p className="text-sm font-black text-slate-900 dark:text-white truncate">
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Active App</p>
+                            <p className="text-sm font-black truncate">
                                 {APPS.find(a => pathname === a.route)?.name || 'Dashboard'}
                             </p>
                         </div>
@@ -204,7 +223,7 @@ export default function DashboardLayout({
                 </div>
 
                 {user && isSidebarExpanded && (
-                    <div className="p-4 border-b border-gray-200">
+                    <div className="p-4 border-b border-border">
                         <OrgSwitcher
                             currentOrgId={currentOrgId || organizationId || organization?.id || ''}
                             onOrgChange={handleOrgChange}
@@ -212,7 +231,11 @@ export default function DashboardLayout({
                     </div>
                 )}
 
-                <nav className="flex-1 overflow-y-auto p-4">
+                {/* Navigation with smooth hover-to-scroll */}
+                <nav
+                    className="flex-1 overflow-y-scroll p-4 sidebar-scroll-container"
+                    data-lenis-prevent
+                >
                     {navigationItems.map((section) => (
                         <div key={section.section} className="mb-6 last:mb-0">
                             {isSidebarExpanded && (
@@ -238,8 +261,8 @@ export default function DashboardLayout({
                                                 <Link
                                                     href={item.href}
                                                     className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 group ${!isSidebarExpanded ? 'justify-center' : ''} ${isActive
-                                                        ? 'bg-blue-50 text-blue-600 shadow-sm'
-                                                        : 'text-gray-700 hover:bg-gray-100 hover:text-blue-600'
+                                                        ? 'bg-primary/10 text-primary shadow-sm'
+                                                        : 'text-foreground/80 hover:bg-accent hover:text-primary'
                                                         }`}
                                                     title={!isSidebarExpanded ? item.name : undefined}
                                                 >
@@ -250,7 +273,7 @@ export default function DashboardLayout({
                                                         />
                                                         {item.color && (
                                                             <div
-                                                                className="absolute -top-1 -right-1 w-2 h-2 rounded-full border border-white dark:border-slate-900"
+                                                                className="absolute -top-1 -right-1 w-2 h-2 rounded-full border border-card dark:border-background"
                                                                 style={{
                                                                     backgroundColor: item.color === 'rose' ? '#f43f5e' :
                                                                         item.color === 'blue' ? '#3b82f6' :
@@ -267,7 +290,7 @@ export default function DashboardLayout({
                                                     {isActive && isSidebarExpanded && (
                                                         <motion.div
                                                             layoutId="active-nav"
-                                                            className="w-1.5 h-4 bg-blue-600 rounded-full"
+                                                            className="w-1.5 h-4 bg-primary rounded-full"
                                                             transition={{ type: "spring", stiffness: 300, damping: 30 }}
                                                         />
                                                     )}
@@ -281,11 +304,11 @@ export default function DashboardLayout({
                                                                 key={app.id}
                                                                 href={app.route}
                                                                 className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${pathname === app.route
-                                                                    ? 'text-blue-600 bg-blue-50/50'
-                                                                    : 'text-gray-500 hover:text-blue-600 hover:bg-gray-50'
+                                                                    ? 'text-primary bg-primary/10'
+                                                                    : 'text-muted-foreground hover:text-primary hover:bg-accent'
                                                                     }`}
                                                             >
-                                                                <app.icon size={12} className={pathname === app.route ? 'text-blue-600' : 'text-gray-400'} />
+                                                                <app.icon size={12} className={pathname === app.route ? 'text-primary' : 'text-muted-foreground'} />
                                                                 {app.name}
                                                             </Link>
                                                         ))}
@@ -299,10 +322,10 @@ export default function DashboardLayout({
                     ))}
 
                     {isSuperAdmin && (
-                        <div className="mt-4 pt-4 border-t border-gray-200">
+                        <div className="mt-4 pt-4 border-t border-border">
                             <Link
                                 href="/admin/super"
-                                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium ${pathname === '/admin/super' ? 'bg-emerald-50 text-emerald-600' : 'text-emerald-600 hover:bg-emerald-50'} transition-colors ${!isSidebarExpanded ? 'justify-center' : ''}`}
+                                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium ${pathname === '/admin/super' ? 'bg-emerald-500/10 text-emerald-500' : 'text-emerald-500 hover:bg-emerald-500/10'} transition-colors ${!isSidebarExpanded ? 'justify-center' : ''}`}
                                 title={!isSidebarExpanded ? 'Super Admin' : undefined}
                             >
                                 <ShieldCheck size={18} />
@@ -312,17 +335,17 @@ export default function DashboardLayout({
                     )}
                 </nav>
 
-                <div className="p-4 border-t border-gray-200 bg-gray-50/50">
+                <div className="p-4 border-t border-border bg-accent/30">
                     <div className={`flex items-center gap-3 mb-4 ${!isSidebarExpanded ? 'justify-center' : ''}`}>
-                        <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-xs shrink-0">
+                        <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-xs shrink-0">
                             {user.email?.[0]?.toUpperCase() || 'U'}
                         </div>
                         {isSidebarExpanded && (
                             <div className="flex-1 min-w-0">
-                                <div className="text-sm font-bold text-gray-900 truncate">
+                                <div className="text-sm font-bold truncate">
                                     {user.user_metadata?.full_name || user.email?.split('@')[0]}
                                 </div>
-                                <div className="text-[10px] text-gray-500 truncate uppercase font-bold">
+                                <div className="text-[10px] text-muted-foreground truncate uppercase font-bold">
                                     {organization?.role || 'Staff'}
                                 </div>
                             </div>
@@ -331,7 +354,7 @@ export default function DashboardLayout({
                     </div>
                     <button
                         onClick={signOut}
-                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold text-gray-600 hover:bg-white hover:text-red-600 border border-transparent hover:border-red-100 transition-all shadow-sm ${!isSidebarExpanded ? 'justify-center' : 'justify-center'}`}
+                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold text-muted-foreground hover:bg-background hover:text-destructive border border-transparent hover:border-destructive/20 transition-all shadow-sm ${!isSidebarExpanded ? 'justify-center' : 'justify-center'}`}
                         title={!isSidebarExpanded ? 'Sign Out' : undefined}
                     >
                         <LogOut size={16} />
@@ -340,7 +363,7 @@ export default function DashboardLayout({
                 </div>
             </aside>
 
-            <main className={`flex-1 overflow-y-auto transition-all duration-500 ease-in-out ${isSidebarExpanded ? 'ml-64' : 'ml-20'}`}>
+            <main className={`flex-1 overflow-y-auto transition-all duration-500 ease-in-out bg-background text-foreground ${isSidebarExpanded ? 'ml-64' : 'ml-20'}`}>
                 <AnimatePresence mode="wait">
                     <motion.div
                         key={pathname}
@@ -361,6 +384,8 @@ export default function DashboardLayout({
                 moduleDescription={upgradeModal.moduleDescription}
                 onClose={() => setUpgradeModal({ ...upgradeModal, isOpen: false })}
             />
+
+            <Toaster />
         </div >
     );
 }

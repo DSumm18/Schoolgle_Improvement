@@ -37,13 +37,16 @@ export default function ActionPlanPage() {
     });
 
     useEffect(() => {
-        if (organization?.id) {
-            fetchActions();
-            fetchReadiness();
-        }
+        fetchActions();
+        fetchReadiness();
     }, [organization?.id]);
 
     async function fetchActions() {
+        if (!organization?.id) {
+            setLoading(false);
+            return;
+        }
+
         try {
             const { data, error } = await supabase
                 .from('actions')

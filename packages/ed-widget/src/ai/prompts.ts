@@ -41,6 +41,15 @@ export const personas: Record<PersonaType, Persona> = {
     greeting: "Hi there! I'm Jingle the Elf, here to help with all your school questions!",
     icon: '🧝',
   },
+  headteacher: {
+    id: 'headteacher',
+    name: 'Headteacher',
+    color: '#0f172a',
+    voicePitch: 0.9,
+    voiceRate: 0.9,
+    greeting: "Welcome to our school. I am the Headteacher. How may I assist you today?",
+    icon: '🧑‍🏫',
+  },
   custom: {
     id: 'custom',
     name: 'Assistant',

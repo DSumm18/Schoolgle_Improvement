@@ -245,7 +245,7 @@ const AntigravityBackground = ({ moduleName, shape = 'orb' }: AntigravityBackgro
     return (
         <div
             ref={containerRef}
-            className="fixed inset-0 -z-20 pointer-events-none overflow-hidden bg-background"
+            className="fixed inset-0 -z-1 pointer-events-none overflow-hidden"
             style={{ filter: 'blur(0.5px)' }}
         />
     );

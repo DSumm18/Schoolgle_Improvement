@@ -5,18 +5,19 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ErrorBoundary from "@/components/common/ErrorBoundary";
 import { useAuth } from '@/context/SupabaseAuthContext';
 import { supabase } from '@/lib/supabase';
+import { useGoogleDriveAccess } from '@/hooks/useGoogleDriveAccess';
 import {
     OFSTED_FRAMEWORK,
     calculateCategoryReadiness,
     calculateOverallReadiness
 } from '@/lib/ofsted-framework';
-import { FrameworkCategoryCard } from './framework/FrameworkCategoryCard';
-import { SubcategoryAssessment } from './framework/SubcategoryAssessment';
-import { FrameworkScanControls } from './framework/FrameworkScanControls';
-import ActionModal from './action-plan/ActionModal';
-import EvidenceModal from './EvidenceModal';
-import EdAnalysisPanel from './EdAnalysisPanel';
-import { ActionItem, FrameworkAssessment, LocalEvidenceMatch } from './framework/types';
+import { FrameworkCategoryCard } from '@/components/framework/FrameworkCategoryCard';
+import { SubcategoryAssessment } from '@/components/framework/SubcategoryAssessment';
+import { FrameworkScanControls } from '@/components/framework/FrameworkScanControls';
+import ActionModal from '@/components/action-plan/ActionModal';
+import EvidenceModal from '@/components/EvidenceModal';
+import EdAnalysisPanel from '@/components/EdAnalysisPanel';
+import { ActionItem, FrameworkAssessment, LocalEvidenceMatch } from '@/components/framework/types';
 
 interface OfstedFrameworkViewProps {
     assessments: FrameworkAssessment;
@@ -29,12 +30,20 @@ export default function OfstedFrameworkView({
     setAssessments,
     localEvidence = {}
 }: OfstedFrameworkViewProps) {
-    const { organization, accessToken, providerId, signInWithGoogle, signInWithMicrosoft } = useAuth();
+    const { organization, providerId, signInWithMicrosoft } = useAuth();
+
+    // Google Drive OAuth (separate from app auth)
+    const driveAccess = useGoogleDriveAccess();
+
+    // Use Drive access token if available, otherwise fall back to app auth
+    const accessToken = driveAccess.accessToken || null;
+    const isDriveConnected = driveAccess.isConnected;
 
     // -- State --
-    const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['quality_of_education']));
+    const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['inclusion']));
     const [showScanConfig, setShowScanConfig] = useState(false);
     const [selectedFolderId, setSelectedFolderId] = useState('root');
+    const [selectedFolderIds, setSelectedFolderIds] = useState<string[]>([]);
     const [isScanning, setIsScanning] = useState(false);
     const [scanProgress, setScanProgress] = useState({ status: 'idle' as any, message: '', stats: undefined });
 
@@ -60,7 +69,6 @@ export default function OfstedFrameworkView({
             .from('actions')
             .select('*')
             .eq('organization_id', organization?.id);
-        // Re-applying framework filter if necessary, but organization scope is primary
 
         if (data) setDbActions(data);
     }
@@ -83,15 +91,19 @@ export default function OfstedFrameworkView({
         setScanProgress({ status: 'scanning', message: 'Initiating AI Evidence Scan...', stats: undefined });
         setShowScanConfig(false);
 
+        // Determine provider (default to google, use microsoft if that's what they're connected with)
+        const provider = providerId === 'microsoft.com' ? 'microsoft.com' : 'google.com';
+
         try {
             const response = await fetch('/api/scan', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     organizationId: organization?.id,
-                    provider: providerId === 'microsoft.com' ? 'microsoft.com' : 'google.com',
+                    provider,
                     accessToken,
-                    folderId: selectedFolderId === 'root' ? undefined : selectedFolderId,
+                    folderIds: selectedFolderIds.length > 0 ? selectedFolderIds : undefined,
+                    folderId: selectedFolderIds.length > 0 ? undefined : (selectedFolderId === 'root' ? undefined : selectedFolderId),
                     recursive: true
                 })
             });
@@ -186,8 +198,13 @@ export default function OfstedFrameworkView({
                     setShowScanConfig={setShowScanConfig}
                     selectedFolderId={selectedFolderId}
                     setSelectedFolderId={setSelectedFolderId}
+                    selectedFolderIds={selectedFolderIds}
+                    setSelectedFolderIds={setSelectedFolderIds}
                     onStartScan={handleStartScan}
-                    onConnect={() => providerId === 'microsoft.com' ? signInWithMicrosoft() : signInWithGoogle()}
+                    onConnect={() => providerId === 'microsoft.com' ? signInWithMicrosoft() : driveAccess.connect()}
+                    onDisconnect={() => driveAccess.disconnect()}
+                    isDriveConnected={isDriveConnected}
+                    driveError={driveAccess.error}
                     scanProgress={scanProgress}
                     setScanProgress={setScanProgress}
                 />
@@ -283,12 +300,9 @@ export default function OfstedFrameworkView({
                     <EdAnalysisPanel
                         isOpen={showEdPanel}
                         onClose={() => setShowEdPanel(false)}
-                        categoryName={edContext.category}
+                        category={edContext.category}
                         currentRating={edContext.rating}
                         evidenceCount={edContext.evidenceCount}
-                        onActionCreated={() => {
-                            fetchActions();
-                        }}
                     />
                 )}
             </div>

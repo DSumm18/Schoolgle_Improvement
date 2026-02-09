@@ -4,6 +4,7 @@ import { useAuth } from "@/context/SupabaseAuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { Settings2 } from "lucide-react";
 
 export default function SettingsPage() {
   const { user, organization, loading: authLoading } = useAuth();
@@ -95,6 +96,21 @@ export default function SettingsPage() {
         </div>
       </div>
 
+      {/* Communication Skills */}
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+        <h2 className="text-xl font-semibold text-gray-900 mb-2">Ed Skill Library</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Enable and configure autonomous communication skills for Estates, HR, and Compliance.
+        </p>
+        <button
+          onClick={() => router.push('/dashboard/settings/skills')}
+          className="px-4 py-2 bg-primary text-primary-foreground font-bold rounded-lg hover:opacity-90 transition-all flex items-center gap-2"
+        >
+          <Settings2 className="w-4 h-4" />
+          Manage Skill Library
+        </button>
+      </div>
+
       {/* Current Organizations */}
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Your Organizations</h2>
@@ -105,11 +121,10 @@ export default function SettingsPage() {
             {organizations.map((org) => (
               <div
                 key={org.id}
-                className={`p-4 border rounded-lg ${
-                  organization?.id === org.id
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200'
-                }`}
+                className={`p-4 border rounded-lg ${organization?.id === org.id
+                  ? 'border-blue-500 bg-blue-50'
+                  : 'border-gray-200'
+                  }`}
               >
                 <div className="flex items-center justify-between">
                   <div>

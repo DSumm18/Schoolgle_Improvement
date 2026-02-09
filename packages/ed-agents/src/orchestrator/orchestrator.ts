@@ -12,7 +12,20 @@ import { classifyIntent, isWorkRelated } from './intent-classifier';
 import { createCreditManager } from '../credit/manager';
 import { applyGuardrails } from '../guardrails/pipeline';
 import { generateMultiPerspectiveResponse } from '../perspectives/generator';
-import { loadSchoolContext } from './context-loader';
+import {
+  buildEnrichedPrompt,
+  loadSchoolContext,
+  getTypeSpecificGuidance,
+  injectExpertKnowledge,
+  mapUrlToDomain,
+  generateProactiveContext
+} from './context-loader';
+
+import { CommunicationRouter } from '../communication/communication-router';
+import { CommunicationPayload, CommunicationResult } from '../communication/types';
+import { ResendProvider } from '../communication/providers/resend';
+import { TwilioProvider } from '../communication/providers/twilio';
+import { FishAudioProvider } from '../communication/providers/fish-audio';
 
 /**
  * Ed Orchestrator - coordinates all agent processing
@@ -20,6 +33,7 @@ import { loadSchoolContext } from './context-loader';
 export class EdOrchestrator {
   private config: OrchestratorConfig;
   private creditManager: ReturnType<typeof createCreditManager>;
+  private commRouter: CommunicationRouter;
   private schoolContext: AppContext['schoolData'] | null = null;
   private totalTokensUsed = 0;
 
@@ -27,6 +41,47 @@ export class EdOrchestrator {
     this.config = config;
     this.creditManager = createCreditManager(config.subscription);
     this.schoolContext = config.schoolData || null;
+
+    // Initialize Communication Router
+    this.commRouter = new CommunicationRouter(this.creditManager);
+    this.initializeProviders();
+  }
+
+  /**
+   * Initialize communication providers based on available config
+   */
+  private initializeProviders() {
+    // Email (Resend)
+    if (process.env.RESEND_API_KEY) {
+      this.commRouter.registerProvider(new ResendProvider(process.env.RESEND_API_KEY));
+    }
+
+    // SMS (Twilio)
+    if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
+      this.commRouter.registerProvider(
+        new TwilioProvider(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
+      );
+    }
+
+    // TTS (Fish Audio)
+    if (process.env.NEXT_PUBLIC_FISH_AUDIO_API_KEY) {
+      this.commRouter.registerProvider(
+        new FishAudioProvider(process.env.NEXT_PUBLIC_FISH_AUDIO_API_KEY)
+      );
+    }
+  }
+
+  /**
+   * Send a communication message
+   */
+  async sendMessage(payload: CommunicationPayload): Promise<CommunicationResult> {
+    const result = await this.commRouter.send(payload);
+
+    if (result.success) {
+      this.creditManager.trackCommunication(result.channel, result.cost);
+    }
+
+    return result;
   }
 
   /**
@@ -53,6 +108,7 @@ export class EdOrchestrator {
       schoolData: this.schoolContext,
       sessionId: this.generateSessionId(),
       openRouterApiKey: this.config.openRouterApiKey,
+      supabase: this.config.supabase,
     };
 
     // Load school context if not already loaded
@@ -88,8 +144,19 @@ export class EdOrchestrator {
         };
       }
 
-      // Step 2: Route to specialist and get initial response
-      const agentResponse = await routeToSpecialist(question, appContext);
+      // Step 2: Detect domain and inject expert knowledge
+      const domain = appContext.currentTask ? mapUrlToDomain(appContext.currentTask) : null;
+      let enrichedQuestion = question;
+
+      if (domain && this.config.supabase) {
+        const expertKnowledge = await injectExpertKnowledge(domain, this.config.supabase);
+        if (expertKnowledge) {
+          enrichedQuestion = `${expertKnowledge}\n\nUser Question: ${question}`;
+        }
+      }
+
+      // Step 3: Route to specialist and get initial response
+      const agentResponse = await routeToSpecialist(enrichedQuestion, appContext);
 
       // Track tokens from specialist response
       if (agentResponse.metadata?.tokensUsed) {
@@ -233,6 +300,34 @@ export class EdOrchestrator {
     // Rough estimate using average model cost
     const avgCostPerMillion = 1.0; // $1 per million tokens
     return (tokens / 1_000_000) * avgCostPerMillion;
+  }
+
+  /**
+   * Handle proactive greeting based on page context (The "Wow Factor")
+   */
+  async handleProactiveGreeting(context: {
+    url?: string;
+    title?: string;
+    userName?: string;
+  }): Promise<{ greeting: string; alerts: string[] }> {
+    const domain = context.url ? mapUrlToDomain(context.url) : null;
+    let greeting = `Hi ${context.userName || 'there'}! I'm Ed, your school specialist. How can I help you today?`;
+    let alerts: string[] = [];
+
+    if (domain && this.config.supabase && this.config.orgId) {
+      alerts = await generateProactiveContext(
+        this.config.orgId,
+        domain,
+        this.config.supabase
+      );
+
+      if (alerts.length > 0) {
+        greeting = `Hi ${context.userName || 'there'}! I noticed you're looking at **${domain}**. 
+I've scanned your school's compliance data and found **${alerts.length}** items that might need your attention.`;
+      }
+    }
+
+    return { greeting, alerts };
   }
 
   /**

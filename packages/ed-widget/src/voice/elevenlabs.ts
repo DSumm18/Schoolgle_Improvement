@@ -117,10 +117,10 @@ export class ElevenLabsVoice {
   public async play(audioUrl: string): Promise<void> {
     return new Promise((resolve, reject) => {
       const audio = new Audio(audioUrl);
-      
+
       audio.onended = () => resolve();
       audio.onerror = (error) => reject(error);
-      
+
       audio.play().catch(reject);
     });
   }
@@ -229,10 +229,10 @@ export class BrowserVoice {
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = language;
       utterance.voice = this.voice;
-      
+
       utterance.onend = () => resolve();
       utterance.onerror = (error) => reject(error);
-      
+
       this.synth.speak(utterance);
     });
   }

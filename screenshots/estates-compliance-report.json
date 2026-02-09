@@ -1,0 +1,80 @@
+{
+  "timestamp": "2026-01-24T13:55:14.795Z",
+  "url": "http://localhost:3000/login",
+  "originalUrl": "http://localhost:3000/estates-compliance",
+  "responseStatus": 200,
+  "pageTitle": "Schoolgle - Ofsted Inspection Preparation for UK Schools",
+  "isLoginPage": true,
+  "contentChecks": {
+    "hasTodayTasksCard": false,
+    "hasStatutoryChecks": false,
+    "hasOverdueItems": false,
+    "hasDueTodayItems": false,
+    "hasComplianceContent": true,
+    "hasDashboardElements": true
+  },
+  "consoleMessages": [
+    {
+      "type": "info",
+      "text": "%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold"
+    },
+    {
+      "type": "log",
+      "text": "[Supabase Init] Environment check: {hasUrl: true, hasAnonKey: true, urlPreview: https://ygquvauptwyvlhkyxkwy.s..., anonKeyPreview: eyJhbGciOiJIUzI1NiIs...}"
+    },
+    {
+      "type": "log",
+      "text": "[Supabase Init] ✅ Client initialized successfully"
+    },
+    {
+      "type": "log",
+      "text": "[HMR] connected"
+    },
+    {
+      "type": "warning",
+      "text": "[GroupMarkerNotSet(crbug.com/242999)!:A8401800AC160000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader (about:flags#enable-unsafe-swiftshader) flag to opt in to lower security guarantees for trusted content."
+    },
+    {
+      "type": "log",
+      "text": "[Supabase Init] No active session"
+    },
+    {
+      "type": "warning",
+      "text": "[.WebGL-0x290c00f75c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+    },
+    {
+      "type": "warning",
+      "text": "[.WebGL-0x290c00f75c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+    },
+    {
+      "type": "log",
+      "text": "[AuthContext] Auth state changed: INITIAL_SESSION no user"
+    },
+    {
+      "type": "log",
+      "text": "[AuthContext] No session on first attempt, retrying..."
+    },
+    {
+      "type": "warning",
+      "text": "[.WebGL-0x290c00f75c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+    },
+    {
+      "type": "warning",
+      "text": "[.WebGL-0x290c00f75c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+    },
+    {
+      "type": "log",
+      "text": "[AuthContext] No session found on initial load"
+    }
+  ],
+  "pageErrors": [],
+  "navigationLog": [
+    "Navigating to estates-compliance page",
+    "Response status: 200",
+    "Page title: Schoolgle - Ofsted Inspection Preparation for UK Schools",
+    "Current URL: http://localhost:3000/login",
+    "Is login page: true",
+    "Element checks: {\"hasTodayTasksCard\":false,\"hasStatutoryChecks\":false,\"hasOverdueItems\":false,\"hasDueTodayItems\":false,\"hasComplianceContent\":true,\"hasDashboardElements\":true}"
+  ],
+  "screenshotPath": "C:\\Git\\Schoolgle_Improvement\\screenshots\\estates-compliance-logged-in.png"
+}

@@ -18,7 +18,8 @@ import {
     ClipboardList,
     Briefcase,
     HelpCircle,
-    Zap
+    Zap,
+    Church,
 } from 'lucide-react';
 
 export type Role = 'admin' | 'headteacher' | 'slt' | 'teacher' | 'governor' | 'caretaker' | 'viewer';
@@ -148,6 +149,24 @@ export const APPS: AppDefinition[] = [
         requiredPermissions: ['admin', 'headteacher', 'slt', 'teacher']
     },
     {
+        id: 'siams-readiness',
+        moduleId: 'improvement',
+        name: 'SIAMS Readiness',
+        route: '/dashboard/siams',
+        icon: Church,
+        shortDescription: 'Church school inspection preparation.',
+        requiredPermissions: ['admin', 'headteacher', 'slt', 'teacher', 'governor']
+    },
+    {
+        id: 'unified-tasks',
+        moduleId: 'improvement',
+        name: 'Tasks',
+        route: '/dashboard/tasks',
+        icon: CheckSquare,
+        shortDescription: 'Unified task management.',
+        requiredPermissions: ['admin', 'headteacher', 'slt', 'teacher', 'governor', 'caretaker']
+    },
+    {
         id: 'evidence-vault',
         moduleId: 'improvement',
         name: 'My Evidence',
@@ -274,7 +293,7 @@ export const APPS: AppDefinition[] = [
         id: 'compliance-checks',
         moduleId: 'estates',
         name: 'Compliance Checks',
-        route: '/dashboard/estates/compliance',
+        route: '/estates-compliance',
         icon: ShieldCheck,
         shortDescription: 'Statutory compliance tracking.',
         requiredPermissions: ['admin', 'headteacher', 'slt', 'caretaker']
@@ -296,7 +315,7 @@ export const NAVBAR_CONFIG = [
         name: 'Workspace',
         items: [
             { id: 'home', name: 'Home', route: '/dashboard', icon: LayoutDashboard, permissions: ['admin', 'headteacher', 'slt', 'teacher', 'governor', 'caretaker', 'viewer'] },
-            { id: 'tasks', name: 'My Tasks', route: '/dashboard/tasks', icon: Target, permissions: ['admin', 'headteacher', 'slt', 'teacher', 'governor', 'caretaker', 'viewer'] },
+            { id: 'tasks', name: 'My Tasks', route: '/dashboard/tasks', icon: CheckSquare, permissions: ['admin', 'headteacher', 'slt', 'teacher', 'governor', 'caretaker', 'viewer'] },
         ]
     }
 ];
@@ -315,6 +334,8 @@ export function getModuleByPath(path: string): ModuleDefinition | undefined {
     if (path.startsWith('/timeline')) return MODULES.find(m => m.id === 'improvement');
     if (path.startsWith('/dashboard/sef')) return MODULES.find(m => m.id === 'improvement');
     if (path.startsWith('/dashboard/sdp')) return MODULES.find(m => m.id === 'improvement');
+    if (path.startsWith('/dashboard/siams')) return MODULES.find(m => m.id === 'improvement');
+    if (path.startsWith('/dashboard/tasks')) return MODULES.find(m => m.id === 'improvement');
 
     return undefined;
 }

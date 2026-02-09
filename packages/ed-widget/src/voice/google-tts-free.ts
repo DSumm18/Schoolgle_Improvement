@@ -19,6 +19,12 @@ const VOICE_CONFIGS = {
     pitch: 0,
     speakingRate: 1.0,
   },
+  edwina: {
+    languageCode: 'en-GB',
+    name: 'en-GB-Neural2-A', // Female, energetic
+    pitch: 2,
+    speakingRate: 1.0,
+  },
   santa: {
     languageCode: 'en-GB',
     name: 'en-GB-Neural2-D', // Male, deep voice
@@ -30,6 +36,18 @@ const VOICE_CONFIGS = {
     name: 'en-GB-Neural2-A', // Female, energetic
     pitch: 2,
     speakingRate: 1.1,
+  },
+  headteacher: {
+    languageCode: 'en-GB',
+    name: 'en-GB-Neural2-B', // Male, authoritative
+    pitch: -1,
+    speakingRate: 0.9,
+  },
+  custom: {
+    languageCode: 'en-GB',
+    name: 'en-GB-Neural2-B',
+    pitch: 0,
+    speakingRate: 1.0,
   },
 };
 
@@ -51,7 +69,7 @@ export class GoogleTTSFree {
   private apiKey: string;
   private baseUrl = 'https://texttospeech.googleapis.com/v1';
   private audioCache: Map<string, string> = new Map();
-  
+
   // Usage tracking
   private monthlyCharCount = 0;
   private lastResetDate = new Date().getMonth();
@@ -65,19 +83,19 @@ export class GoogleTTSFree {
    */
   private checkUsage(textLength: number): boolean {
     const currentMonth = new Date().getMonth();
-    
+
     // Reset counter on new month
     if (currentMonth !== this.lastResetDate) {
       this.monthlyCharCount = 0;
       this.lastResetDate = currentMonth;
     }
-    
+
     // Check if we're within free tier (4M chars)
     if (this.monthlyCharCount + textLength > 4000000) {
       console.warn('[Google TTS] Approaching free tier limit (4M chars/month)');
       return false;
     }
-    
+
     this.monthlyCharCount += textLength;
     return true;
   }
@@ -224,11 +242,11 @@ export class GoogleTTSFree {
   private base64ToBlob(base64: string, mimeType: string): Blob {
     const byteCharacters = atob(base64);
     const byteNumbers = new Array(byteCharacters.length);
-    
+
     for (let i = 0; i < byteCharacters.length; i++) {
       byteNumbers[i] = byteCharacters.charCodeAt(i);
     }
-    
+
     const byteArray = new Uint8Array(byteNumbers);
     return new Blob([byteArray], { type: mimeType });
   }
