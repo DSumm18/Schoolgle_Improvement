@@ -69,3 +69,4 @@ apps/platform/src/components/brand/tmpclaude-*
 audit_script.ps1
 *.old.css
 .mcp.json
+.claude/settings.local.json
