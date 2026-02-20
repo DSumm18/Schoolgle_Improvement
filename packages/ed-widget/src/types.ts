@@ -9,6 +9,8 @@ export interface EdConfig {
   position: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
   language: string;
   persona: PersonaType;
+  mode?: 'website' | 'support' | 'school'; // Mode: website (public visitors), support (login help), or school (logged-in staff)
+  apiBaseUrl?: string; // Base URL for API calls (e.g., /api/ed/chat)
   features: {
     admissions: boolean;
     policies: boolean;
@@ -23,10 +25,12 @@ export interface EdConfig {
   fishAudioApiKey?: string;
   fishAudioVoiceIds?: Record<PersonaType, string>;
   disableBrowserTTS?: boolean; // Disable browser TTS fallback (only use Fish Audio)
-  provider?: 'openrouter' | 'gemini'; // LLM provider selection
+  provider?: 'openrouter' | 'gemini' | 'api'; // LLM provider selection (api = use /api/ed/chat endpoint)
   enableAI?: boolean; // Enable/disable AI features
   enableTTS?: boolean; // Enable/disable TTS features
   ttsProvider?: 'browser' | 'fish'; // TTS provider selection
+  organizationId?: string; // User's organization ID (for logged-in users)
+  userId?: string; // User ID (for logged-in users)
 }
 
 export type PersonaType = 'ed' | 'edwina' | 'santa' | 'elf' | 'headteacher' | 'custom';

@@ -28,6 +28,7 @@ export type SpecialistId =
   | 'procurement-specialist'
   | 'governance-specialist'
   | 'communications-specialist'
+  | 'form-specialist'
   | 'ed-general';
 
 // ============================================================================
@@ -254,6 +255,78 @@ export interface EdResponse {
     cached?: boolean;
     processedAt: Date;
   };
+  // Form helper mode metadata
+  formMode?: {
+    active: boolean;
+    templateId?: string;
+    currentField?: string;
+    suggestedWording?: {
+      original: string;
+      suggested: string;
+      reason: string;
+    };
+    redFlags?: Array<{
+      type: string;
+      message: string;
+      severity: 'low' | 'medium' | 'high';
+    }>;
+  };
+}
+
+// ============================================================================
+// Form Helper Types
+// ============================================================================
+
+export interface FormTemplate {
+  form_key: string;
+  form_name: string;
+  form_category: string;
+  url_pattern: string;
+  form_structure: {
+    fields: FormField[];
+  };
+  conversation_template: {
+    intro: { en: string; [key: string]: string };
+    questions: FormQuestion[];
+    outro: { en: string; [key: string]: string };
+  };
+  description: string;
+  help_text: string;
+  estimated_time_minutes?: number;
+}
+
+export interface FormField {
+  index: number;
+  label: string;
+  type: string;
+  selector: string;
+  required: boolean;
+  question?: string;
+  example?: string;
+  options?: string[];
+}
+
+export interface FormQuestion {
+  fieldIndex: number;
+  question: { en: string; [key: string]: string };
+  helpText?: { en: string; [key: string]: string };
+}
+
+export interface FormFieldKnowledge {
+  explanation: string;
+  explanation_level: 'layperson' | 'professional' | 'legal';
+  red_flags: Array<{
+    type: string;
+    examples: string[];
+    explanation: string;
+    consequence: string;
+  }>;
+  suggested_wordings: {
+    formal?: string;
+    simple?: string;
+    legal?: string;
+  };
+  legal_context?: string;
 }
 
 // ============================================================================

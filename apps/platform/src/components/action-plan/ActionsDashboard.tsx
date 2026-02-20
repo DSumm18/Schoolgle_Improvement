@@ -21,7 +21,6 @@ import {
     DollarSign,
     BookOpen,
     Sparkles,
-    Calendar,
 } from 'lucide-react';
 import ActionsGanttChart from './ActionsGanttChart';
 import { motion, AnimatePresence } from 'framer-motion';

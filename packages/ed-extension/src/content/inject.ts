@@ -7,11 +7,13 @@ import { extractPageContext } from './page-reader';
 import { detectTool } from './tool-detector';
 import { EdWidget } from './ed-widget';
 import { initializeRealEd, hasWebGL } from './ed-real-widget';
+import { autoDetectFormPage } from './form-template-matcher';
 
 // Singleton Ed widget instance
 let edWidget: EdWidget | null = null;
 let pageScriptReady = false;
 let widgetInitialized = false;
+let formDetectionCompleted = false;
 
 /**
  * Initialize Ed on the page
@@ -44,12 +46,16 @@ async function initialize() {
   try {
     console.log('[Ed Content] Attempting to load real Ed widget via page context...');
     const realEdLoaded = await initializeRealEd();
-    
+
     if (realEdLoaded) {
       console.log('[Ed Content] ✅ Real Ed widget loaded successfully - CSS widget will NOT load');
+
+      // Phase 1: Run form detection after widget is loaded
+      runFormDetection();
+
       return; // Real widget is active, don't load CSS fallback
     }
-    
+
     console.warn('[Ed Content] ⚠️ Real Ed widget failed to load, reason logged above');
   } catch (error) {
     console.error('[Ed Content] ❌ Error during real Ed widget initialization:', error);
@@ -79,6 +85,42 @@ async function initialize() {
   
   // Mount Ed to the page
   edWidget.mount();
+
+  // Phase 1: Run form detection (CSS widget path)
+  runFormDetection();
+}
+
+/**
+ * Phase 1: Run form detection
+ * Checks if current page is a known form and offers help
+ */
+async function runFormDetection(): Promise<void> {
+  // Avoid duplicate detection
+  if (formDetectionCompleted) {
+    console.log('[Ed Content] Form detection already completed, skipping');
+    return;
+  }
+
+  // Wait a moment for page to fully load
+  await new Promise(resolve => setTimeout(resolve, 2000));
+
+  // Check if we should skip this page (e.g., user previously declined)
+  const skipKey = 'ed-form-skip-all';
+  const skipUntil = sessionStorage.getItem(skipKey);
+  if (skipUntil && parseInt(skipUntil) > Date.now()) {
+    console.log('[Ed Content] Form detection skipped (user preference)');
+    return;
+  }
+
+  // Run auto-detection
+  console.log('[Ed Content] Running form detection...');
+  formDetectionCompleted = true;
+
+  try {
+    await autoDetectFormPage();
+  } catch (error) {
+    console.warn('[Ed Content] Form detection error:', error);
+  }
 }
 
 /**
@@ -324,6 +366,21 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage, sender, sendRes
       sendResponse({ success: true });
       break;
     }
+
+    case 'OPEN_ED_FOR_FORM': {
+      // Open Ed widget with form helper context
+      console.log('[Ed Content] Opening Ed for form helper:', message.template);
+      // Send to page script to open the widget
+      sendToPageScript({
+        type: 'OPEN_WIDGET',
+        payload: {
+          formMode: true,
+          template: message.template,
+        }
+      });
+      sendResponse({ success: true });
+      break;
+    }
   }
   
   return true;
@@ -337,12 +394,16 @@ const urlObserver = new MutationObserver(() => {
   if (window.location.href !== lastUrl) {
     lastUrl = window.location.href;
     console.log('[Ed Content] URL changed:', lastUrl);
-    
+
     // Re-detect tool on navigation
     const tool = detectTool(window.location, document);
     if (edWidget) {
       edWidget.setTool(tool);
     }
+
+    // Phase 1: Re-run form detection on navigation
+    formDetectionCompleted = false; // Reset flag
+    runFormDetection();
   }
 });
 
@@ -351,8 +412,12 @@ urlObserver.observe(document.body, { childList: true, subtree: true });
 
 // Listen for messages from page context script
 window.addEventListener('message', (event) => {
-  // Security: Only accept messages from our page script
-  if (event.data?.source !== 'ed-page-script' || event.data?.extensionId !== chrome.runtime.id) {
+  // Security: Only accept messages from our page script or content script
+  if (event.data?.source !== 'ed-page-script' && event.data?.source !== 'ed-content-script') {
+    return;
+  }
+  // For content-script messages, verify extension ID
+  if (event.data?.source === 'ed-content-script' && event.data?.extensionId !== chrome.runtime.id) {
     return;
   }
   
@@ -389,6 +454,15 @@ window.addEventListener('message', (event) => {
       widgetInitialized = false;
       // Fall back to CSS widget
       initialize();
+      break;
+    }
+    case 'START_FORM_HELPER': {
+      // Handle form helper request from content script (forwarded to page script)
+      console.log('[Ed Content] START_FORM_HELPER received, forwarding to page script');
+      sendToPageScript({
+        type: 'OPEN_WIDGET_WITH_FORM',
+        payload: payload
+      });
       break;
     }
   }

@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { EdOrchestrator } from '@schoolgle/ed-agents';
-import { createClient } from '@/lib/supabase/server';
+import { createOrchestrator } from '@schoolgle/ed-agents';
+import type { EdOrchestrator } from '@schoolgle/ed-agents/types';
+import { createServerSupabaseClient } from '@/lib/supabase-server';
 
 export async function POST(req: NextRequest) {
     try {
-        const supabase = await createClient();
+        const supabase = createServerSupabaseClient();
         const { data: { user } } = await supabase.auth.getUser();
 
         if (!user) {

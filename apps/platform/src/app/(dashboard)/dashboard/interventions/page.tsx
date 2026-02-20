@@ -1,3 +1,6 @@
+// Force dynamic rendering to avoid useSearchParams() build errors
+export const dynamic = 'force-dynamic';
+
 export default function InterventionsPage() {
     return (
         <div className="p-8">

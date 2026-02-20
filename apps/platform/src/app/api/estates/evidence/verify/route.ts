@@ -8,7 +8,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyComplianceDocument, type VerificationInput } from '@/lib/estates-compliance/ai-document-verifier';
-import { getEvidenceById, dbUpdateEvidence } from '@/lib/estates-compliance/database/evidence';
+import { getEvidenceById, updateEvidence } from '@/lib/estates-compliance/database/evidence';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60; // 60 seconds for AI processing
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     const result = await verifyComplianceDocument(verificationInput);
 
     // Update evidence with verification results
-    await dbUpdateEvidence(evidence_id, {
+    await updateEvidence(evidence_id, {
       ai_verified: result.verified,
       ai_confidence_score: result.confidence,
       ai_insights: {

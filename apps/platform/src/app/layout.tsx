@@ -1,3 +1,6 @@
+// Force dynamic rendering for all pages to avoid useSearchParams() build errors
+export const dynamic = 'force-dynamic';
+
 import type { Metadata } from "next";
 import { Inter, Outfit } from "next/font/google";
 import "./globals.css";
@@ -6,6 +9,7 @@ import { SupabaseAuthProvider } from "@/context/SupabaseAuthContext";
 import ErrorBoundary from "@/components/common/ErrorBoundary";
 import OfflineIndicator from "@/components/common/OfflineIndicator";
 import { Toaster } from "@/components/ui/sonner";
+import { EdChatbotProvider } from "@/components/EdChatbotProvider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -48,13 +52,15 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
           <ErrorBoundary name="RootLayout">
             <SupabaseAuthProvider>
-              <SmoothScroll>
-                <AntigravityBackground />
-                <div className="relative z-0">
-                  {children}
-                </div>
-              </SmoothScroll>
-              <OfflineIndicator />
+              <EdChatbotProvider>
+                <SmoothScroll>
+                  <AntigravityBackground />
+                  <div className="relative z-0">
+                    {children}
+                  </div>
+                </SmoothScroll>
+                <OfflineIndicator />
+              </EdChatbotProvider>
             </SupabaseAuthProvider>
           </ErrorBoundary>
           <Toaster />

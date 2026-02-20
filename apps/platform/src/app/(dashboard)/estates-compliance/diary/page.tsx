@@ -10,7 +10,7 @@
  * - Mobile-friendly responsive design
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import Link from 'next/link';
 import { format, startOfDay, endOfDay, subDays, subMonths } from 'date-fns';
 import { useAuth } from '@/context/SupabaseAuthContext';
@@ -47,7 +47,7 @@ interface FilterState {
   dateTo?: string;
 }
 
-export default function SiteDiaryPage() {
+function SiteDiaryPageContent() {
   const { organizationId, user, session } = useAuth();
   const [entries, setEntries] = useState<DiaryEntryData[]>([]);
   const [filteredEntries, setFilteredEntries] = useState<DiaryEntryData[]>([]);
@@ -603,5 +603,18 @@ function FilterContent({
         )}
       </div>
     </div>
+  );
+}
+
+// Wrapper with Suspense boundary
+export default function SiteDiaryPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="w-10 h-10 border-4 border-muted border-t-primary rounded-full animate-spin" />
+      </div>
+    }>
+      <SiteDiaryPageContent />
+    </Suspense>
   );
 }

@@ -7,11 +7,12 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { ChevronRight, ChevronLeft, MapPin, CheckCircle2, AlertCircle, Camera, Save, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
-import { useAuth } from '@/hooks/use-auth';
-import { supabaseClient } from '@/lib/supabase/client';
+import { useAuth } from '@/context/SupabaseAuthContext';
+import { supabase } from '@/lib/supabase';
 
 export default function InspectionsPage() {
-    const { organizationId, loading: authLoading } = useAuth();
+    const { organization, loading: authLoading } = useAuth();
+    const organizationId = organization?.id;
     const [step, setStep] = useState(1); // 1: Select Location, 2: Perform Inspection
     const [locations, setLocations] = useState<any[]>([]);
     const [selectedLocation, setSelectedLocation] = useState<any>(null);
@@ -34,7 +35,7 @@ export default function InspectionsPage() {
     const fetchLocations = async () => {
         try {
             setLoading(true);
-            const { data, error } = await supabaseClient
+            const { data, error } = await supabase
                 .from('estates_locations')
                 .select('*')
                 .eq('organization_id', organizationId)

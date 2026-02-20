@@ -1,12 +1,22 @@
 /**
  * Skills Agent
  *
- * Provides tool definitions for native LLM function-calling and 
+ * Provides tool definitions for native LLM function-calling and
  * executes platform skills (Staff Directory, Actions Hub, Estates, etc.)
  */
 
 import type { AppContext, SpecialistId } from '../types';
-import { SCHOOL_FUNCTION_SCHEMAS } from '@schoolgle/platform/lib/skills/school-skills-registry';
+
+// Try to import platform schemas, but provide fallback for builds
+let SCHOOL_FUNCTION_SCHEMAS: any[] = [];
+try {
+  // @ts-ignore - Optional import for monorepo compatibility
+  const schemas = require('@schoolgle/platform/lib/skills/school-skills-registry');
+  SCHOOL_FUNCTION_SCHEMAS = schemas.SCHOOL_FUNCTION_SCHEMAS || [];
+} catch {
+  // Fallback: schemas will be provided at runtime via /api/skills/invoke
+  SCHOOL_FUNCTION_SCHEMAS = [];
+}
 
 interface SkillExecutionResult {
     success: boolean;
@@ -198,4 +208,32 @@ function formatSkillSuccessResponse(
         response: `✅ Action completed successfully.`,
         data: result.data
     };
+}
+
+// ============================================================================
+// Phase 4: Form Skills Integration
+// ============================================================================
+
+/**
+ * Get all available skills including form skills
+ */
+export function getAllSkillTools() {
+    const platformSkills = getSkillTools();
+    const formSkills = getFormSkillFunctions();
+    return [...platformSkills, ...formSkills];
+}
+
+/**
+ * Get form skills list for UI display
+ */
+export function getFormSkillsList() {
+    return FORM_SKILLS.map(skill => ({
+        id: skill.id,
+        name: skill.name,
+        description: skill.description,
+        category: skill.category,
+        isAutomated: skill.isAutomated,
+        requiresApproval: skill.requiresApproval,
+        riskLevel: skill.riskLevel,
+    }));
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase"; // Use shared client for auth operations
 
@@ -35,22 +35,24 @@ export default function AuthCallbackPage() {
 // Inner component that uses useSearchParams
 function AuthCallbackContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [status, setStatus] = useState<'loading' | 'error' | 'success'>('loading');
   const [message, setMessage] = useState('Processing authentication...');
 
   useEffect(() => {
     async function handleCallback() {
+      // Get current search params
+      const currentSearchParams = new URLSearchParams(window.location.search);
+
       // Diagnostic logging
       console.log('[Auth Callback] URL:', window.location.href);
-      console.log('[Auth Callback] Query params:', Object.fromEntries(searchParams.entries()));
+      console.log('[Auth Callback] Query params:', Object.fromEntries(currentSearchParams.entries()));
       console.log('[Auth Callback] Hash:', window.location.hash);
       console.log('[Auth Callback] Supabase URL:', supabaseUrl);
       console.log('[Auth Callback] Has service key:', !!supabaseServiceKey);
 
       try {
         // Check for OAuth errors
-        const error = searchParams.get('error') || window.location.hash.match(/error=([^&]+)/)?.[1];
+        const error = currentSearchParams.get('error') || window.location.hash.match(/error=([^&]+)/)?.[1];
         if (error) {
           console.error('OAuth error:', error);
           setStatus('error');
@@ -60,7 +62,7 @@ function AuthCallbackContent() {
         }
 
         // PKCE Flow (Preferred) - Supabase returns ?code=...
-        const code = searchParams.get('code');
+        const code = currentSearchParams.get('code');
         if (code) {
           console.log('[Auth Callback] PKCE flow detected: Exchanging code for session');
           const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
@@ -343,7 +345,7 @@ function AuthCallbackContent() {
     }
 
     handleCallback();
-  }, [searchParams, router]);
+  }, [router]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">

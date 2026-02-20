@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Report a Concern - Safeguarding Test Form</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #1f2937;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #6b7280;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        label {
+            display: block;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .required {
+            color: #ef4444;
+        }
+
+        input[type="text"],
+        input[type="email"],
+        input[type="tel"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        input:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: #10b981;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .help-text {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 4px;
+        }
+
+        .radio-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .radio-option:hover {
+            border-color: #10b981;
+            background: #f0fdf4;
+        }
+
+        .radio-option input[type="radio"] {
+            margin-right: 12px;
+            width: 18px;
+            height: 18px;
+        }
+
+        .privacy-notice {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            font-size: 13px;
+            color: #92400e;
+        }
+
+        .privacy-notice strong {
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 30px;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-submit {
+            background: #10b981;
+            color: white;
+            flex: 1;
+        }
+
+        .btn-submit:hover {
+            background: #059669;
+        }
+
+        .btn-cancel {
+            background: #f3f4f6;
+            color: #374151;
+        }
+
+        .btn-cancel:hover {
+            background: #e5e7eb;
+        }
+
+        /* Test controls */
+        .test-controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #1f2937;
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            z-index: 9999;
+            min-width: 250px;
+        }
+
+        .test-controls h3 {
+            margin-bottom: 12px;
+            font-size: 16px;
+        }
+
+        .test-controls button {
+            width: 100%;
+            margin-bottom: 8px;
+            padding: 10px;
+            background: #374151;
+            color: white;
+            font-size: 13px;
+        }
+
+        .test-controls button:hover {
+            background: #4b5563;
+        }
+
+        .test-controls .label {
+            font-size: 11px;
+            color: #9ca3af;
+            margin-bottom: 4px;
+        }
+
+        .test-controls select {
+            width: 100%;
+            margin-bottom: 12px;
+            padding: 8px;
+            background: #374151;
+            color: white;
+            border: 1px solid #4b5563;
+            border-radius: 6px;
+        }
+
+        /* Simulated Ed badge */
+        .ed-badge {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            z-index: 10000;
+            display: none;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .ed-badge.visible {
+            display: flex;
+        }
+
+        .progress-bar {
+            margin-top: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            height: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: white;
+            transition: width 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <!-- Test Controls -->
+    <div class="test-controls">
+        <h3>🧪 Form Helper Test</h3>
+        <div class="label">Language</div>
+        <select id="test-language">
+            <option value="en">English</option>
+            <option value="ur">اردو (Urdu)</option>
+            <option value="pl">Polski (Polish)</option>
+        </select>
+        <div class="label">Experience Level</div>
+        <select id="test-experience">
+            <option value="beginner">Beginner</option>
+            <option value="learning">Learning</option>
+            <option value="competent">Competent</option>
+            <option value="expert">Expert</option>
+        </select>
+        <button onclick="startFormHelper()">▶️ Start Form Helper</button>
+        <button onclick="pauseFormHelper()">⏸️ Pause</button>
+        <button onclick="resumeFormHelper()">▶️ Resume</button>
+        <button onclick="simulateInterrupt()">🖱️ Simulate Mouse Move</button>
+        <button onclick="resetConfidence()">🔄 Reset Confidence</button>
+        <button onclick="fillTestData()">📝 Fill Test Data</button>
+    </div>
+
+    <!-- Main Form -->
+    <div class="container">
+        <h1>Report a Concern</h1>
+        <p class="subtitle">Safeguarding Concern Form</p>
+
+        <div class="privacy-notice">
+            <strong>🔒 Your privacy matters</strong>
+            This form is confidential. Your information will only be shared with designated safeguarding leads.
+        </div>
+
+        <form id="safeguarding-form">
+            <!-- Your Name -->
+            <div class="form-group">
+                <label for="your-name">
+                    Your Name <span class="required">*</span>
+                </label>
+                <input
+                    type="text"
+                    id="your-name"
+                    name="your_name"
+                    placeholder="Enter your full name"
+                    required
+                >
+                <div class="help-text">We need to know who is reporting so we can follow up if needed.</div>
+            </div>
+
+            <!-- Contact Number -->
+            <div class="form-group">
+                <label for="contact-number">
+                    Contact Number <span class="required">*</span>
+                </label>
+                <input
+                    type="tel"
+                    id="contact-number"
+                    name="contact_number"
+                    placeholder="e.g., 07700 900123"
+                    required
+                >
+                <div class="help-text">We may need to contact you for more information.</div>
+            </div>
+
+            <!-- Email Address -->
+            <div class="form-group">
+                <label for="email-address">
+                    Email Address <span class="required">*</span>
+                </label>
+                <input
+                    type="email"
+                    id="email-address"
+                    name="email_address"
+                    placeholder="your.email@example.com"
+                    required
+                >
+            </div>
+
+            <!-- Relationship -->
+            <div class="form-group">
+                <label for="relationship">
+                    Your Relationship to School <span class="required">*</span>
+                </label>
+                <select id="relationship" name="relationship" required>
+                    <option value="">Please select...</option>
+                    <option value="parent">Parent/Carer</option>
+                    <option value="staff">Staff Member</option>
+                    <option value="student">Student</option>
+                    <option value="governor">Governor</option>
+                    <option value="community">Community Member</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+
+            <!-- Concern Details -->
+            <div class="form-group">
+                <label for="concern-details">
+                    Details of Your Concern <span class="required">*</span>
+                </label>
+                <textarea
+                    id="concern-details"
+                    name="concern_details"
+                    placeholder="Please provide as much detail as possible about your concern, including names, dates, and any relevant information..."
+                    required
+                ></textarea>
+                <div class="help-text">Be as specific as possible. All information will be treated confidentially.</div>
+            </div>
+
+            <!-- Urgency -->
+            <div class="form-group">
+                <label>
+                    How urgent is this concern? <span class="required">*</span>
+                </label>
+                <div class="radio-group">
+                    <label class="radio-option">
+                        <input type="radio" name="urgency" value="immediate" required>
+                        <span>🚨 Immediate - A child is in danger right now</span>
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="urgency" value="urgent">
+                        <span>⚠️ Urgent - Needs attention today</span>
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="urgency" value="concern">
+                        <span>📋 Concern - Not urgent but important</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Submit -->
+            <div class="button-group">
+                <button type="button" class="btn-cancel" onclick="window.location.href='#'">Cancel</button>
+                <button type="submit" class="btn-submit">Submit Concern</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Simulated Ed Badge -->
+    <div id="ed-badge" class="ed-badge">
+        <span id="ed-icon">🎯</span>
+        <span id="ed-status">Ed is filling...</span>
+    </div>
+
+    <script>
+        // ============================================================
+        // FORM HELPER SIMULATION
+        // ============================================================
+
+        class FormHelperSimulator {
+            constructor() {
+                this.state = 'IDLE';
+                this.currentFieldIndex = 0;
+                this.totalFields = 5;
+                this.paused = false;
+                this.language = 'en';
+                this.experience = 'beginner';
+                this.confidence = parseInt(localStorage.getItem('ed_confidence') || '0');
+
+                this.fields = [
+                    { id: 'your-name', name: 'your_name', label: 'Your Name', type: 'text' },
+                    { id: 'contact-number', name: 'contact_number', label: 'Contact Number', type: 'tel' },
+                    { id: 'email-address', name: 'email_address', label: 'Email Address', type: 'email' },
+                    { id: 'relationship', name: 'relationship', label: 'Relationship', type: 'select' },
+                    { id: 'concern-details', name: 'concern_details', label: 'Concern Details', type: 'textarea' },
+                ];
+
+                this.testData = {
+                    'your_name': 'Ahmed Ali',
+                    'contact_number': '07700 900123',
+                    'email_address': 'ahmed.ali@example.com',
+                    'relationship': 'parent',
+                    'concern_details': 'I am concerned about bullying in the playground during lunch breaks. This has been happening for the past two weeks.',
+                };
+
+                this.messages = {
+                    en: {
+                        firstTime: "I'll take over now. Just watch and talk to me. I'll fill in the form for you.",
+                        confirmField: (value) => `Is "${value}" correct?`,
+                        paused: "I noticed you moved the mouse. Do you want to take over?",
+                        complete: "All done! Please review and submit.",
+                    },
+                    ur: {
+                        firstTime: "Mein ab control karunga. Bas dekhtay rahiye.",
+                        confirmField: (value) => `Kya "${value}" sahi hai?`,
+                        paused: "Aap mouse move kar rahe hain.",
+                        complete: "Ho gaya! Form check karke submit kar dijiye.",
+                    },
+                    pl: {
+                        firstTime: "Przejmę kontrolę. Po prostu obserwuj.",
+                        confirmField: (value) => `Czy "${value}" jest poprawne?`,
+                        paused: "Zauważyłem ruch myszy.",
+                        complete: "Gotowe! Sprawdź i wyślij.",
+                    },
+                };
+            }
+
+            start() {
+                this.language = document.getElementById('test-language').value;
+                this.experience = document.getElementById('test-experience').value;
+
+                console.log('[FormHelper] Starting session...');
+                console.log('[FormHelper] Language:', this.language);
+                console.log('[FormHelper] Experience:', this.experience);
+                console.log('[FormHelper] Confidence:', this.confidence);
+
+                // Show first time message for beginners
+                if (this.experience === 'beginner') {
+                    alert(this.messages[this.language].firstTime);
+                }
+
+                this.state = 'ASKING';
+                this.updateBadge();
+
+                // Start filling process
+                setTimeout(() => this.processNextField(), 1000);
+            }
+
+            processNextField() {
+                if (this.paused) return;
+
+                if (this.currentFieldIndex >= this.fields.length) {
+                    this.complete();
+                    return;
+                }
+
+                const field = this.fields[this.currentFieldIndex];
+                const value = this.testData[field.name];
+
+                this.state = 'FILLING';
+                this.updateBadge(field.label);
+
+                // Highlight the field
+                this.highlightField(field.id);
+
+                // Ask for confirmation based on experience
+                const shouldConfirm = this.experience === 'beginner' ||
+                                     field.type === 'email' ||
+                                     field.type === 'tel';
+
+                if (shouldConfirm) {
+                    setTimeout(() => {
+                        const confirmed = confirm(this.messages[this.language].confirmField(value));
+                        if (confirmed) {
+                            this.fillField(field.id, value);
+                        } else {
+                            // User wants to change
+                            const newValue = prompt(`Enter correct value for ${field.label}:`, value);
+                            if (newValue) {
+                                this.fillField(field.id, newValue);
+                            }
+                        }
+                    }, 500);
+                } else {
+                    // Auto-fill for experienced users
+                    setTimeout(() => {
+                        this.fillField(field.id, value);
+                    }, 500);
+                }
+            }
+
+            fillField(fieldId, value) {
+                const element = document.getElementById(fieldId);
+                if (element) {
+                    element.value = value;
+                    element.style.borderColor = '#10b981';
+                    element.style.backgroundColor = '#f0fdf4';
+
+                    // Add checkmark indicator
+                    this.showCheckmark(element);
+
+                    console.log(`[FormHelper] Filled ${fieldId} with: ${value}`);
+                }
+
+                this.currentFieldIndex++;
+                this.updateProgress();
+
+                // Process next field after delay
+                setTimeout(() => {
+                    if (!this.paused) {
+                        this.processNextField();
+                    }
+                }, this.getDelay());
+            }
+
+            highlightField(fieldId) {
+                const element = document.getElementById(fieldId);
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    element.style.transition = 'all 0.3s';
+                    element.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.3)';
+                }
+            }
+
+            showCheckmark(element) {
+                const check = document.createElement('span');
+                check.textContent = '✓';
+                check.style.cssText = `
+                    position: absolute;
+                    right: 12px;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    color: #10b981;
+                    font-weight: bold;
+                    font-size: 18px;
+                `;
+                element.parentElement.style.position = 'relative';
+                element.parentElement.appendChild(check);
+            }
+
+            pause() {
+                this.paused = true;
+                this.state = 'PAUSED';
+                this.updateBadge();
+                console.log('[FormHelper] Paused at field', this.currentFieldIndex);
+            }
+
+            resume() {
+                this.paused = false;
+                this.state = 'FILLING';
+                this.updateBadge();
+                console.log('[FormHelper] Resumed');
+                this.processNextField();
+            }
+
+            interrupt() {
+                this.pause();
+                alert(this.messages[this.language].paused);
+            }
+
+            complete() {
+                this.state = 'COMPLETE';
+                this.updateBadge();
+                console.log('[FormHelper] Complete!');
+
+                // Update confidence
+                this.confidence = Math.min(100, this.confidence + 10);
+                localStorage.setItem('ed_confidence', this.confidence.toString());
+                console.log('[FormHelper] New confidence:', this.confidence);
+
+                alert(this.messages[this.language].complete);
+            }
+
+            updateBadge(currentField = '') {
+                const badge = document.getElementById('ed-badge');
+                const icon = document.getElementById('ed-icon');
+                const status = document.getElementById('ed-status');
+
+                badge.classList.add('visible');
+
+                switch(this.state) {
+                    case 'IDLE':
+                        badge.style.background = '#6b7280';
+                        icon.textContent = '💤';
+                        status.textContent = 'Ed ready';
+                        break;
+                    case 'ASKING':
+                        badge.style.background = '#3b82f6';
+                        icon.textContent = '👁️';
+                        status.textContent = 'Ed is asking...';
+                        break;
+                    case 'FILLING':
+                        badge.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+                        icon.textContent = '🎯';
+                        status.textContent = currentField ? `Filling: ${currentField}` : 'Ed is filling...';
+                        break;
+                    case 'PAUSED':
+                        badge.style.background = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
+                        icon.textContent = '⏸️';
+                        status.textContent = `Paused - ${this.currentFieldIndex}/${this.totalFields} done`;
+                        break;
+                    case 'COMPLETE':
+                        badge.style.background = 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)';
+                        icon.textContent = '✅';
+                        status.textContent = `Done! ${this.totalFields} fields filled`;
+                        break;
+                }
+            }
+
+            updateProgress() {
+                const percent = Math.round((this.currentFieldIndex / this.totalFields) * 100);
+                console.log(`[FormHelper] Progress: ${percent}%`);
+            }
+
+            getDelay() {
+                switch(this.experience) {
+                    case 'beginner': return 1500;
+                    case 'learning': return 800;
+                    case 'competent': return 400;
+                    case 'expert': return 200;
+                    default: return 500;
+                }
+            }
+
+            resetConfidence() {
+                this.confidence = 0;
+                localStorage.setItem('ed_confidence', '0');
+                console.log('[FormHelper] Confidence reset to 0');
+                alert('Confidence reset! You are now a beginner.');
+            }
+
+            fillTestData() {
+                this.testData['your_name'] = prompt('Enter name:', 'Ahmed Ali') || 'Ahmed Ali';
+                this.testData['contact_number'] = prompt('Enter phone:', '07700 900123') || '07700 900123';
+                this.testData['email_address'] = prompt('Enter email:', 'ahmed@example.com') || 'ahmed@example.com';
+                this.testData['relationship'] = prompt('Enter relationship (parent/staff/student):', 'parent') || 'parent';
+                this.testData['concern_details'] = prompt('Enter concern:', 'Bullying in playground') || 'Bullying in playground';
+                console.log('[FormHelper] Test data updated:', this.testData);
+            }
+        }
+
+        // Initialize
+        const formHelper = new FormHelperSimulator();
+
+        function startFormHelper() {
+            formHelper.start();
+        }
+
+        function pauseFormHelper() {
+            formHelper.pause();
+        }
+
+        function resumeFormHelper() {
+            formHelper.resume();
+        }
+
+        function simulateInterrupt() {
+            formHelper.interrupt();
+        }
+
+        function resetConfidence() {
+            formHelper.resetConfidence();
+        }
+
+        function fillTestData() {
+            formHelper.fillTestData();
+        }
+
+        // Form submission
+        document.getElementById('safeguarding-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            alert('Form submitted! (This is a test - nothing was actually sent)');
+        });
+
+        // Log initial state
+        console.log('[Test] Safeguarding form loaded');
+        console.log('[Test] Fields found:', document.querySelectorAll('#safeguarding-form input, #safeguarding-form select, #safeguarding-form textarea').length);
+    </script>
+</body>
+</html>

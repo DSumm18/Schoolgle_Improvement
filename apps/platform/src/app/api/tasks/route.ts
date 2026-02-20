@@ -85,8 +85,25 @@ export async function GET(req: NextRequest) {
                 .not('status', 'in', ['completed', 'cancelled']);
         }
 
-        // Get total count before pagination
-        const { count: actionsCount, error: countError } = await (actionsQuery as any).clone();
+        // Get total count before pagination (create a separate query for count)
+        const countQuery = supabase
+            .from('actions')
+            .select('*', { count: 'exact', head: true })
+            .eq('organization_id', organizationId);
+
+        // Apply same filters to count query
+        if (status && status.length > 0) countQuery.in('status', status);
+        if (taskType && taskType.length > 0) countQuery.in('task_type', taskType);
+        if (assigneeId) countQuery.eq('assignee_id', assigneeId);
+        if (teamId) countQuery.eq('team_id', teamId);
+        if (department && department.length > 0) countQuery.in('department', department);
+        if (search) countQuery.or(`title.ilike.%${search}%,description.ilike.%${search}%`);
+        if (isOverdue) {
+            countQuery.lt('due_date', new Date().toISOString().split('T')[0])
+                .not('status', 'in', ['completed', 'cancelled']);
+        }
+
+        const { count: actionsCount } = await countQuery;
 
         // Apply pagination
         actionsQuery = actionsQuery.range(offset, offset + limit - 1);

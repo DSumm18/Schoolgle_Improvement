@@ -11,6 +11,14 @@ export interface Organization {
   name: string;
   role: 'admin' | 'slt' | 'teacher' | 'governor' | 'viewer';
   organization_type?: 'school' | 'trust' | 'local_authority';
+  urn?: string;
+  location?: {
+    lat?: number;
+    lon?: number;
+    town?: string;
+    address?: string;
+    postcode?: string;
+  };
 }
 
 interface AuthContextType {

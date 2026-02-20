@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ed Form Detection Test - RIDDOR Injury Form</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .header {
+      background: #1e293b;
+      color: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    .header h1 {
+      margin: 0 0 10px 0;
+      font-size: 24px;
+    }
+    .header p {
+      margin: 0;
+      opacity: 0.8;
+      font-size: 14px;
+    }
+    .test-info {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      border-left: 4px solid #10b981;
+    }
+    .test-info h2 {
+      margin-top: 0;
+      font-size: 18px;
+      color: #1e293b;
+    }
+    .test-info ul {
+      margin: 10px 0;
+      padding-left: 20px;
+    }
+    .test-info li {
+      margin: 5px 0;
+      font-size: 14px;
+    }
+    .form-container {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .form-title {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      color: #1e293b;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    .form-group label {
+      display: block;
+      font-weight: 500;
+      margin-bottom: 5px;
+      color: #374151;
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #10b981;
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+    }
+    .form-group textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+    .required {
+      color: #ef4444;
+    }
+    .help-text {
+      font-size: 12px;
+      color: #6b7280;
+      margin-top: 4px;
+    }
+    .btn-submit {
+      background: #10b981;
+      color: white;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 6px;
+      font-weight: 500;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .btn-submit:hover {
+      background: #059669;
+    }
+    .status-bar {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: #1e293b;
+      color: white;
+      padding: 10px 15px;
+      border-radius: 6px;
+      font-size: 12px;
+      z-index: 9999;
+    }
+    .status-indicator {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+    .status-indicator.testing {
+      background: #f59e0b;
+    }
+    .status-indicator.detected {
+      background: #10b981;
+    }
+  </style>
+</head>
+<body>
+  <div class="status-bar">
+    <span class="status-indicator testing" id="status-indicator"></span>
+    <span id="status-text">Testing form detection...</span>
+  </div>
+
+  <div class="header">
+    <h1>Ed Form Detection Test</h1>
+    <p>Simulating HSE RIDDOR Injury Reporting Form for Phase 1 testing</p>
+  </div>
+
+  <div class="test-info">
+    <h2>Test Information</h2>
+    <p>This page simulates a RIDDOR injury reporting form. When Ed extension is loaded:</p>
+    <ul>
+      <li><strong>Expected:</strong> Ed should detect this as a form page after 2 seconds</li>
+      <li><strong>Expected:</strong> A prompt should appear offering to guide you through the form</li>
+      <li><strong>Action:</strong> Click "Guide me through it" to open Ed chat with form context</li>
+      <li><strong>Action:</strong> Click "No thanks" to dismiss (Ed won't ask again this session)</li>
+    </ul>
+  </div>
+
+  <div class="form-container">
+    <div class="form-title">Report an Injury under RIDDOR</div>
+
+    <form id="riddor-form">
+      <div class="form-group">
+        <label>Date and time of incident <span class="required">*</span></label>
+        <input type="datetime-local" name="incident_date" required>
+        <div class="help-text">Enter the date and time when the incident occurred</div>
+      </div>
+
+      <div class="form-group">
+        <label>Type of incident <span class="required">*</span></label>
+        <select name="incident_type" required>
+          <option value="">Select type...</option>
+          <option value="injury">Injury</option>
+          <option value="death">Death</option>
+          <option value="dangerous_occurrence">Dangerous occurrence</option>
+          <option value="disease">Work-related disease</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Name of person involved <span class="required">*</span></label>
+        <input type="text" name="person_name" placeholder="Full name" required>
+      </div>
+
+      <div class="form-group">
+        <label>Nature of injury <span class="required">*</span></label>
+        <textarea name="injury_description" placeholder="Describe what happened and the injury sustained" required></textarea>
+      </div>
+
+      <div class="form-group">
+        <label>Location of incident <span class="required">*</span></label>
+        <input type="text" name="location" placeholder="Where exactly did this happen?" required>
+      </div>
+
+      <div class="form-group">
+        <label>Your name <span class="required">*</span></label>
+        <input type="text" name="reporter_name" placeholder="Your full name" required>
+      </div>
+
+      <div class="form-group">
+        <label>Your role <span class="required">*</span></label>
+        <select name="reporter_role" required>
+          <option value="">Select role...</option>
+          <option value="headteacher">Headteacher</option>
+          <option value="deputy_head">Deputy Headteacher</option>
+          <option value="school_business_manager">School Business Manager</option>
+          <option value="site_manager">Site Manager</option>
+          <option value="teacher">Teacher</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>School name <span class="required">*</span></label>
+        <input type="text" name="school_name" placeholder="Full school name" required>
+      </div>
+
+      <div class="form-group">
+        <label>School address <span class="required">*</span></label>
+        <textarea name="school_address" placeholder="Full school address including postcode" required></textarea>
+      </div>
+
+      <div class="form-group">
+        <label>Contact phone number <span class="required">*</span></label>
+        <input type="tel" name="contact_phone" placeholder="Phone number HSE can contact you on" required>
+      </div>
+
+      <button type="submit" class="btn-submit">Submit RIDDOR Report</button>
+    </form>
+  </div>
+
+  <script>
+    // Set the URL to match the pattern in the database
+    // This simulates being on the HSE RIDDOR page
+    const testUrls = [
+      'https://notifications.hse.gov.uk/riddorforms/Injury',
+      'https://notifications.hse.gov.uk/riddorforms/Injury?ref=test',
+      'https://hse.gov.uk/riddorforms/Injury',
+    ];
+
+    // Use history.replaceState to change URL without reloading
+    history.replaceState(null, '', testUrls[0]);
+
+    console.log('[Test Page] URL set to:', window.location.href);
+    console.log('[Test Page] Waiting for Ed form detection...');
+
+    // Update status indicator when Ed widget is detected
+    let detectionAttempts = 0;
+    const maxAttempts = 30; // Check for 30 seconds
+
+    const checkInterval = setInterval(() => {
+      detectionAttempts++;
+
+      // Check for Ed elements
+      const edWidget = document.getElementById('ed-floating-button') ||
+                       document.querySelector('[class*="ed-widget"]') ||
+                       document.querySelector('[class*="ed-orb"]');
+
+      const edPrompt = document.getElementById('ed-form-helper-prompt');
+
+      if (edPrompt) {
+        document.getElementById('status-indicator').className = 'status-indicator detected';
+        document.getElementById('status-text').textContent = '✅ Ed form helper prompt detected!';
+        clearInterval(checkInterval);
+      } else if (edWidget) {
+        document.getElementById('status-text').textContent = 'Ed widget loaded, waiting for form detection...';
+      } else if (detectionAttempts >= maxAttempts) {
+        document.getElementById('status-indicator').className = 'status-indicator';
+        document.getElementById('status-indicator').style.background = '#ef4444';
+        document.getElementById('status-text').textContent = '⚠️ Ed not detected - check extension is loaded';
+        clearInterval(checkInterval);
+      }
+
+      console.log('[Test Page] Detection check:', detectionAttempts, 'Ed prompt found:', !!edPrompt);
+    }, 1000);
+
+    // Prevent form submission
+    document.getElementById('riddor-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      alert('This is a test form. In production, this would submit to HSE.');
+    });
+  </script>
+</body>
+</html>

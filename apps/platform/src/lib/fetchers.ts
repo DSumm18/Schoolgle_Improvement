@@ -1,15 +1,30 @@
 import { supabase } from './supabase';
 
 export const fetcher = async (url: string) => {
-    const res = await fetch(url);
-    if (!res.ok) {
-        const info = await res.json().catch(() => ({}));
-        const error = new Error(info.error || 'An error occurred while fetching the data.');
-        (error as any).status = res.status;
-        (error as any).info = info;
-        throw error;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
+    try {
+        const res = await fetch(url, {
+            signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+
+        if (!res.ok) {
+            const info = await res.json().catch(() => ({}));
+            const error = new Error(info.error || 'An error occurred while fetching the data.');
+            (error as any).status = res.status;
+            (error as any).info = info;
+            throw error;
+        }
+        return res.json();
+    } catch (err) {
+        clearTimeout(timeoutId);
+        if (err instanceof Error && err.name === 'AbortError') {
+            throw new Error('Request timed out');
+        }
+        throw err;
     }
-    return res.json();
 };
 
 export const supabaseFetcher = async (key: { table: string, query: string, organizationId: string }) => {

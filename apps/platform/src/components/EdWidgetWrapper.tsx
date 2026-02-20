@@ -112,18 +112,35 @@ export default function EdWidgetWrapper({
           }
 
           // Configure Ed based on mode
-          // Demo mode: For logged-out users - explains system, shows off features
-          // User mode: For logged-in users - full functionality
+          // Website mode: Public visitors (parents, students) - school info only
+          // Support mode: Pre-login - helps with login/access only
+          // School mode: Post-login - full school support functionality
+
+          // Determine mode from props and config
+          let edMode: 'website' | 'support' | 'school' = 'support';
+          if (mode === 'demo' || (mode === 'user' && !organizationId)) {
+            // Demo mode or user without org = support mode (login help)
+            edMode = 'support';
+          } else if (organizationId) {
+            // Logged in with organization = school mode
+            edMode = 'school';
+          }
+          // website mode would be set explicitly if isWebsiteEmbed is true
+
           const config: any = {
             position: 'bottom-right',
             theme: 'standard',
             persona: 'ed',
+            mode: edMode,
+            provider: 'api', // Use /api/ed/chat endpoint (preferred)
+            apiBaseUrl: '/api/ed/chat',
+            organizationId: organizationId || undefined, // Pass org ID if logged in
             features: {
-              admissions: mode === 'user', // Only for logged-in users
+              admissions: false, // Not for school support version
               policies: mode === 'user',
               calendar: mode === 'user',
               staffDirectory: false,
-              formFill: mode === 'user',
+              formFill: false, // Disable form fill for school support
               voice: true, // Voice always enabled
             },
             // TTS Configuration - Use Fish Audio for voice output
@@ -132,15 +149,7 @@ export default function EdWidgetWrapper({
             fishAudioApiKey: fishAudioApiKey, // Pass API key to enable Fish Audio
             fishAudioVoiceIds: Object.keys(fishAudioVoiceIds).length > 0 ? fishAudioVoiceIds : undefined, // Pass voice IDs if configured
             disableBrowserTTS: false, // Allow browser TTS as fallback if Fish Audio fails
-            // TODO: Add customKnowledge for demo mode when user provides rules
-            // customKnowledge: mode === 'demo' ? [...demoKnowledge] : undefined,
           };
-
-          if (mode === 'demo') {
-            console.log('[EdWidgetWrapper] 🎭 Demo mode enabled - Ed will explain the system');
-          } else {
-            console.log('[EdWidgetWrapper] 👤 User mode enabled - Full functionality');
-          }
 
           const ed = EdWidget.init(config);
           edInstanceRef.current = ed;
@@ -178,6 +187,55 @@ export default function EdWidgetWrapper({
       }
     };
   }, []);
+
+  // Auto-scan website in website mode
+  useEffect(() => {
+    // Only scan in website mode with organization
+    if (mode !== 'demo' || !organizationId || !isInitialized) return;
+
+    const triggerWebsiteScan = async () => {
+      try {
+        console.log('[EdWidgetWrapper] 🌐 Website mode detected - triggering initial website scan');
+
+        // Get current page URL as base
+        const websiteUrl = window.location.origin;
+
+        const response = await fetch('/api/ed/website-scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            websiteUrl,
+            organizationId,
+            fullScan: true, // Initial scan is always full
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log('[EdWidgetWrapper] ✅ Website scan completed:', data);
+
+          // Update Ed instance with knowledge
+          const ed = edInstanceRef.current || (window as any).__ED_INSTANCE__;
+          if (ed && ed.setKnowledgeBase) {
+            ed.setKnowledgeBase({
+              totalItems: data.knowledgeItems,
+              pagesScanned: data.pagesScanned,
+              lastScanned: new Date().toISOString(),
+            });
+          }
+        } else {
+          const error = await response.text();
+          console.warn('[EdWidgetWrapper] ⚠️ Website scan returned error:', error);
+        }
+      } catch (error) {
+        console.error('[EdWidgetWrapper] ❌ Website scan failed:', error);
+      }
+    };
+
+    // Trigger scan after a short delay to let widget initialize
+    const timeoutId = setTimeout(triggerWebsiteScan, 2000);
+    return () => clearTimeout(timeoutId);
+  }, [isInitialized, organizationId, mode]);
 
   // Listen for context events from EdChatButton components
   useEffect(() => {

@@ -224,7 +224,7 @@ export default function ApprovalHubPage() {
                                     </CardHeader>
                                     <CardContent>
                                         <div className="bg-neutral-950/50 p-4 rounded-lg border border-neutral-800/50 text-sm font-light italic text-neutral-400 leading-relaxed shadow-inner">
-                                            "{item.payload.body}"
+                                            &ldquo;{item.payload.body}&rdquo;
                                         </div>
                                     </CardContent>
                                     <CardFooter className="flex gap-2 pt-0">
@@ -246,7 +246,8 @@ export default function ApprovalHubPage() {
                                         </Button>
                                     </CardFooter>
                                 </Card>
-                            ))
+                            );
+                        })
                     )}
                 </div>
 

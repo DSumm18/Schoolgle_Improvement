@@ -4,8 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 
 // Import Ed Orchestrator via webpack alias (see next.config.ts)
-import { createOrchestrator } from '@schoolgle/ed-agents/orchestrator/orchestrator';
-import { isGreeting, getContextualGreeting } from '@schoolgle/ed-agents/agents/contextual-greeting';
+import { createOrchestrator, isGreeting, getContextualGreeting } from '@schoolgle/ed-agents';
 import type { OrchestratorConfig } from '@schoolgle/ed-agents/types';
 
 interface ChatRequest {
@@ -27,6 +26,16 @@ interface ChatRequest {
     screenshot: string;
     domSnapshot: string;
   };
+  // Phase 2: Form mode fields
+  formMode?: {
+    active: boolean;
+    templateId?: string;
+    currentField?: string;
+    fieldsFilled?: string[];
+    template?: any; // Form template from database
+  };
+  // Phase 2: Language preference
+  language?: 'en' | 'ur' | 'cy' | 'other';
 }
 
 interface ChatResponse {
@@ -39,6 +48,29 @@ interface ChatResponse {
     sessionId: string;
     actions: number;
     success: boolean;
+  };
+  // Phase 2: Form mode response fields
+  formMode?: {
+    active: boolean;
+    templateId?: string;
+    currentField?: string;
+    suggestedWording?: {
+      original: string;
+      suggested: string;
+      reason: string;
+    };
+    redFlags?: Array<{
+      type: string;
+      message: string;
+      severity: 'low' | 'medium' | 'high';
+    }>;
+  };
+  // Phase 2: Translation support
+  translation?: {
+    originalText: string;
+    originalLanguage: string;
+    translatedText: string;
+    suggestedWording?: string;
   };
 }
 
@@ -75,13 +107,23 @@ const QUICK_ANSWERS: Record<string, Record<string, string>> = {
 export async function POST(request: NextRequest) {
   try {
     const body: ChatRequest = await request.json();
-    const { question, context, pageState } = body;
+    const { question, context, pageState, formMode, language } = body;
 
     if (!question) {
       return NextResponse.json(
         { error: 'Question is required' },
         { status: 400 }
       );
+    }
+
+    // Get user context from Supabase early (needed for form detection)
+    const supabase = await createServerSupabaseClient();
+
+    // Phase 2: Check if this is a form helper request
+    const isFormRequest = detectFormRequest(question, context?.url, formMode);
+    if (isFormRequest || formMode?.active) {
+      console.log('[Ed Chat API] Form request detected, routing to form specialist');
+      return await handleFormRequest(body, supabase);
     }
 
     // Check if this is an automation request
@@ -126,8 +168,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(response);
     }
 
-    // Get user context from Supabase
-    const supabase = await createServerSupabaseClient();
+    // Get user from Supabase
     const { data: { user } } = await supabase.auth.getUser();
 
     // Get user's organization and role
@@ -417,4 +458,314 @@ async function callAutomationAPI(
     console.error('[Automation API] Request error:', error);
     return null;
   }
+}
+
+/**
+ * Phase 2: Detect if a request is form-related
+ */
+function detectFormRequest(
+  question: string,
+  url?: string,
+  formMode?: ChatRequest['formMode']
+): boolean {
+  // If already in form mode, continue
+  if (formMode?.active) {
+    return true;
+  }
+
+  const lowerQuestion = question.toLowerCase();
+  const lowerUrl = url?.toLowerCase() || '';
+
+  // Form-related keywords
+  const formKeywords = [
+    'fill form', 'fill in', 'fill out', 'complete form',
+    'form help', 'help with form', 'form guidance',
+    'what do i put', 'how do i answer', 'what should i write',
+    'riddor', 'safeguarding form', 'ehcp', 'send form',
+    'incident report', 'accident report',
+  ];
+
+  // Check for form keywords
+  const hasFormKeyword = formKeywords.some(keyword =>
+    lowerQuestion.includes(keyword) || lowerUrl.includes(keyword)
+  );
+
+  return hasFormKeyword;
+}
+
+/**
+ * Phase 2: Handle form-related requests
+ * Phase 3: Enhanced with field knowledge from database
+ */
+async function handleFormRequest(
+  body: ChatRequest,
+  supabase: any
+): Promise<NextResponse<ChatResponse>> {
+  const { question, context, formMode, language } = body;
+
+  console.log('[Ed Chat API] Handling form request:', { question, formMode, language });
+
+  // Get form template if provided or fetch from URL
+  let template = formMode?.template;
+  if (!template && context?.url) {
+    template = await getFormTemplateForUrl(supabase, context.url);
+  }
+
+  // Phase 3: Fetch field knowledge from database
+  let fieldKnowledge: any[] = [];
+  let currentFieldKnowledge = null;
+  let redFlagCheckResult = null;
+
+  if (template?.form_key) {
+    // Get all field knowledge for this template
+    const knowledgeResponse = await fetchFieldKnowledge(supabase, template.form_key);
+    if (knowledgeResponse) {
+      fieldKnowledge = knowledgeResponse.fields || [];
+    }
+
+    // If we know the current field, get specific knowledge
+    if (formMode?.currentField) {
+      const specificKnowledge = await fetchFieldKnowledge(
+        supabase,
+        template.form_key,
+        formMode.currentField
+      );
+      if (specificKnowledge?.knowledge) {
+        currentFieldKnowledge = specificKnowledge.knowledge;
+      }
+    }
+
+    // Phase 3: Check user input for red flags
+    if (question && formMode?.currentField) {
+      redFlagCheckResult = await checkForRedFlags(
+        supabase,
+        template.form_key,
+        formMode.currentField,
+        question
+      );
+    }
+  }
+
+  // Build form-specific context with knowledge
+  let formContext = '';
+  if (template) {
+    formContext = `
+FORM CONTEXT: You are helping with the "${template.form_name}" form.
+Form description: ${template.description || 'No description available'}
+Form category: ${template.form_category}
+Estimated time: ${template.estimated_time_minutes || 5} minutes
+
+The user is currently viewing this form. Guide them through it step by step.
+`;
+  }
+
+  // Phase 3: Add field knowledge to context
+  if (currentFieldKnowledge) {
+    formContext += `\nCURRENT FIELD GUIDANCE:\n`;
+    formContext += `Field: ${currentFieldKnowledge.field_label}\n`;
+    formContext += `Explanation: ${currentFieldKnowledge.explanation}\n`;
+
+    if (currentFieldKnowledge.red_flags && currentFieldKnowledge.red_flags.length > 0) {
+      formContext += `\nRed flags to watch for:\n`;
+      for (const flag of currentFieldKnowledge.red_flags) {
+        formContext += `- ${flag.type}: ${flag.explanation}\n`;
+      }
+    }
+
+    if (currentFieldKnowledge.legal_context) {
+      formContext += `\nLegal context: ${currentFieldKnowledge.legal_context}\n`;
+    }
+  } else if (fieldKnowledge.length > 0) {
+    formContext += `\nAvailable fields with guidance: ${fieldKnowledge.map((f: any) => f.field_label).join(', ')}\n`;
+  }
+
+  // Get user for organization context
+  const { data: { user } } = await supabase.auth.getUser();
+
+  // Create orchestrator with form-specialist
+  const apiKey = process.env.OPENROUTER_API_KEY || '';
+  const orchestratorConfig = {
+    supabase,
+    userId: user?.id || 'anonymous',
+    orgId: user?.user_metadata?.orgId || 'unknown',
+    userRole: 'staff' as const,
+    subscription: {
+      plan: 'schools' as const,
+      features: [],
+      creditsRemaining: 1000,
+      creditsUsed: 0,
+    },
+    openRouterApiKey: apiKey,
+  };
+
+  const { createOrchestrator } = await import('@schoolgle/ed-agents');
+  const orchestrator = await createOrchestrator(orchestratorConfig);
+
+  // Process with form specialist
+  // Add form context to the question
+  const enhancedQuestion = formContext + `\n\nUser question: ${question}`;
+
+  const edResponse = await orchestrator.processQuestion(enhancedQuestion, {
+    app: 'form-helper',
+    page: context?.title,
+    formTemplate: template?.form_key,
+  });
+
+  // Check for red flags and suggested wording in the response
+  const formModeResponse = analyzeResponseForFormHints(edResponse.response, question);
+
+  // Phase 3: Include red flag check results in response
+  if (redFlagCheckResult?.has_red_flags) {
+    formModeResponse.redFlags = [
+      ...(formModeResponse.redFlags || []),
+      ...redFlagCheckResult.matched_flags.map((flag: any) => ({
+        type: flag.type,
+        message: flag.explanation,
+        severity: 'high' as const,
+      })),
+    ];
+  }
+
+  const response: ChatResponse = {
+    id: crypto.randomUUID(),
+    answer: edResponse.response,
+    confidence: edResponse.confidence === 'HIGH' ? 0.9 : 0.7,
+    source: 'ai',
+    formMode: {
+      active: true,
+      templateId: template?.form_key,
+      currentField: formMode?.currentField,
+      ...formModeResponse,
+    },
+  };
+
+  return NextResponse.json(response);
+}
+
+/**
+ * Phase 3: Fetch field knowledge from database
+ */
+async function fetchFieldKnowledge(
+  supabase: any,
+  templateId: string,
+  fieldKey?: string
+): Promise<{ fields?: any[]; knowledge?: any } | null> {
+  try {
+    if (fieldKey) {
+      const { data, error } = await supabase.rpc('get_field_knowledge', {
+        p_template_id: templateId,
+        p_field_key: fieldKey,
+      });
+
+      if (error) {
+        console.warn('[Ed Chat API] Field knowledge fetch error:', error);
+        return null;
+      }
+
+      const knowledge = Array.isArray(data) && data.length > 0 ? data[0] : null;
+      return { knowledge };
+    }
+
+    // Get all fields for template
+    const { data, error } = await supabase
+      .from('ed_form_field_knowledge')
+      .select('*')
+      .eq('template_id', templateId)
+      .order('field_label', { ascending: true });
+
+    if (error) {
+      console.warn('[Ed Chat API] Template knowledge fetch error:', error);
+      return null;
+    }
+
+    return { fields: data || [] };
+  } catch (error) {
+    console.warn('[Ed Chat API] Knowledge fetch exception:', error);
+    return null;
+  }
+}
+
+/**
+ * Phase 3: Check user input for red flags
+ */
+async function checkForRedFlags(
+  supabase: any,
+  templateId: string,
+  fieldKey: string,
+  userText: string
+): Promise<{ has_red_flags: boolean; matched_flags: any[]; suggestions: any[] } | null> {
+  try {
+    const { data, error } = await supabase.rpc('check_form_text_red_flags', {
+      p_template_id: templateId,
+      p_field_key: fieldKey,
+      p_user_text: userText,
+    });
+
+    if (error) {
+      console.warn('[Ed Chat API] Red flag check error:', error);
+      return null;
+    }
+
+    const result = Array.isArray(data) && data.length > 0 ? data[0] : null;
+    return result;
+  } catch (error) {
+    console.warn('[Ed Chat API] Red flag check exception:', error);
+    return null;
+  }
+}
+
+/**
+ * Get form template for a URL
+ */
+async function getFormTemplateForUrl(supabase: any, url: string): Promise<any> {
+  try {
+    const { data } = await supabase
+      .rpc('get_form_template_by_url', { url });
+    return data;
+  } catch (error) {
+    console.warn('[Ed Chat API] Failed to get form template:', error);
+    return null;
+  }
+}
+
+/**
+ * Analyze response for form-related hints (red flags, suggested wording)
+ */
+function analyzeResponseForFormHints(
+  response: string,
+  originalQuestion: string
+): {
+  suggestedWording?: { original: string; suggested: string; reason: string };
+  redFlags?: Array<{ type: string; message: string; severity: 'low' | 'medium' | 'high' }>;
+} {
+  const result: ReturnType<typeof analyzeResponseForFormHints> = {};
+
+  // Check if response contains suggested wording
+  const wordingMatch = response.match(/I suggest:?"(.+?)"/);
+  if (wordingMatch) {
+    result.suggestedWording = {
+      original: originalQuestion,
+      suggested: wordingMatch[1],
+      reason: 'More professional and likely to be more effective',
+    };
+  }
+
+  // Check for red flags mentioned in response
+  const redFlagPatterns = [
+    { pattern: /aggressive|emotional|accusatory/i, severity: 'high' as const, type: 'tone' },
+    { pattern: /vague|specific|example/i, severity: 'medium' as const, type: 'clarity' },
+  ];
+
+  for (const flag of redFlagPatterns) {
+    if (flag.pattern.test(response)) {
+      result.redFlags = result.redFlags || [];
+      result.redFlags.push({
+        type: flag.type,
+        message: `Consider revising your wording to be more ${flag.type === 'tone' ? 'neutral' : 'specific'}`,
+        severity: flag.severity,
+      });
+    }
+  }
+
+  return result;
 }

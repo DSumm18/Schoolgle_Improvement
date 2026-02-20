@@ -8,7 +8,10 @@ import type {
   SpecialistId,
   IntentClassification,
 } from '../types';
-import { DOMAIN_KEYWORDS, getAgentByDomain } from '../agents';
+import { DOMAIN_KEYWORDS, getAgent } from '../agents';
+
+// Import form specialist directly
+import { FORM_KEYWORDS, FORM_SPECIALIST_ID } from '../agents/prompts/form-specialist';
 
 /**
  * Work-focused keywords - indicates user is asking about work tasks
@@ -75,11 +78,14 @@ export function isWorkRelated(query: string): { isWorkRelated: boolean; confiden
     keywords.some(kw => queryLower.includes(kw.toLowerCase()))
   );
 
-  if (hasChatKeywords && !hasWorkKeywords && !hasDomainKeywords) {
+  // Phase 2: Check form keywords
+  const hasFormKeywords = FORM_KEYWORDS.some(kw => queryLower.includes(kw.toLowerCase()));
+
+  if (hasChatKeywords && !hasWorkKeywords && !hasDomainKeywords && !hasFormKeywords) {
     return { isWorkRelated: false, confidence: 0.9 };
   }
 
-  if (hasWorkKeywords || hasDomainKeywords) {
+  if (hasWorkKeywords || hasDomainKeywords || hasFormKeywords) {
     return { isWorkRelated: true, confidence: 0.8 };
   }
 
@@ -110,6 +116,19 @@ export function classifyIntent(
   userRole?: string
 ): IntentClassification {
   const queryLower = query.toLowerCase();
+
+  // Phase 2: Check for form-related requests FIRST (highest priority)
+  const formScore = scoreDomain(query, FORM_KEYWORDS);
+  if (formScore > 0) {
+    return {
+      domain: 'general',
+      specialist: FORM_SPECIALIST_ID,
+      confidence: Math.min(0.95, 0.7 + formScore * 0.1),
+      reasoning: `Form-related request detected (score: ${formScore})`,
+      requiresMultiPerspective: false,
+      isWorkRelated: true,
+    };
+  }
 
   // Check if work-related
   const { isWorkRelated: workRelated } = isWorkRelated(query);

@@ -45,7 +45,7 @@ import type {
     FrameworkType,
 } from '@/lib/actions-hub';
 import { STATUS_MATRIX, FUNDING_SOURCES, getFinancialYears } from '@/lib/actions-hub';
-import { EEF_STRATEGIES } from '@/lib/eef-toolkit';
+import { eefStrategies } from '@/lib/eef-toolkit';
 
 interface ActionNote {
     id: string;
@@ -256,7 +256,7 @@ export default function EnhancedActionModal({
         return matrix || { display: 'Custom Status', color: 'bg-slate-100 text-slate-700', icon: '⚪' };
     };
 
-    const selectedEEF = EEF_STRATEGIES.find((s) => s.id === formData.eef_strategy);
+    const selectedEEF = eefStrategies.find((s) => s.id === formData.eef_strategy);
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
@@ -611,7 +611,7 @@ export default function EnhancedActionModal({
                                         <SelectValue placeholder="Select an EEF strategy..." />
                                     </SelectTrigger>
                                     <SelectContent className="max-h-60">
-                                        {EEF_STRATEGIES.map((strategy) => (
+                                        {eefStrategies.map((strategy) => (
                                             <SelectItem key={strategy.id} value={strategy.id}>
                                                 <div className="flex items-center gap-2">
                                                     <span>{strategy.name}</span>

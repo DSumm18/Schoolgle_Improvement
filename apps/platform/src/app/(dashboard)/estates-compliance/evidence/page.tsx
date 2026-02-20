@@ -1,5 +1,8 @@
 'use client';
 
+// Force dynamic rendering to avoid build errors
+export const dynamic = 'force-dynamic';
+
 /**
  * Evidence Library Page
  *

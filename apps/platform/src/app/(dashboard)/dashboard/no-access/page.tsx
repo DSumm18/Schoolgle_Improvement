@@ -1,5 +1,8 @@
 "use client";
 
+// Force dynamic rendering to avoid build errors
+export const dynamic = 'force-dynamic';
+
 import React from 'react';
 import { motion } from 'framer-motion';
 import { ShieldAlert, ArrowLeft, Home } from 'lucide-react';

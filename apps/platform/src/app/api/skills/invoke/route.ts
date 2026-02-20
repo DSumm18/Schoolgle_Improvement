@@ -14,9 +14,6 @@ import {
     createHelpdeskTicket,
     updateHelpdeskTicket,
 } from '@/lib/skills';
-import { SkillRunner } from '@schoolgle/ed-agents';
-import { CommunicationRouter } from '@schoolgle/ed-agents/src/communication/communication-router';
-import { createCreditManager } from '@schoolgle/ed-agents/src/credit/manager';
 
 /**
  * POST /api/skills/invoke
@@ -37,7 +34,7 @@ import { createCreditManager } from '@schoolgle/ed-agents/src/credit/manager';
  * }
  */
 import { getSkillTier, queueForApproval, getUserRole, canRoleExecuteSkill } from '@/lib/skills/approvals';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 
 export async function POST(request: NextRequest) {
@@ -53,8 +50,20 @@ export async function POST(request: NextRequest) {
         }
 
         const orgId = parameters.organization_id || parameters.orgId;
-        const supabase = createRouteHandlerClient({ cookies });
-        const { data: { user } } = await supabase.auth.getUser();
+
+        // Create Supabase client for auth check
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+        const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+        const supabase = createClient(supabaseUrl, supabaseKey);
+
+        // Get user from authorization header
+        const authHeader = request.headers.get('authorization');
+        let user = null;
+        if (authHeader) {
+            const token = authHeader.replace('Bearer ', '');
+            const { data } = await supabase.auth.getUser(token);
+            user = data.user;
+        }
 
         if (orgId && user) {
             const userRole = await getUserRole(orgId, user.id);
@@ -206,6 +215,82 @@ export async function POST(request: NextRequest) {
 
             case 'update_helpdesk_ticket':
                 result = await updateHelpdeskTicket(parameters);
+                break;
+
+            // Form Helper (Privacy-first form filling with translation)
+            case 'detect_forms':
+                const { detectFormsOnPage } = await import('@/lib/skills/form-helper-handler');
+                result = await detectFormsOnPage(parameters);
+                break;
+
+            case 'start_form_session':
+                const { createFormSession, generateFieldQuestion } = await import('@/lib/skills/form-helper-handler');
+                // Create session and generate first question
+                const session = createFormSession(parameters);
+                const firstField = session.form.fields[0];
+                const question = await generateFieldQuestion({
+                    field: firstField,
+                    userLanguage: session.userLanguage,
+                });
+                result = {
+                    success: true,
+                    data: {
+                        sessionId: session.sessionId,
+                        fieldIndex: 0,
+                        totalFields: session.form.fieldCount,
+                        field: firstField,
+                        question: question.question,
+                        questionEnglish: question.questionEnglish,
+                    }
+                };
+                break;
+
+            case 'ask_field_question':
+                const { generateFieldQuestion: genQuestion } = await import('@/lib/skills/form-helper-handler');
+                result = await genQuestion(parameters);
+                break;
+
+            case 'verify_field_response':
+                const { processUserResponse } = await import('@/lib/skills/form-helper-handler');
+                result = await processUserResponse(parameters);
+                break;
+
+            case 'complete_form_session':
+                const { completeSession: completeSession } = await import('@/lib/skills/form-helper-handler');
+                const sessionResult = completeSession(parameters);
+                result = { success: true, data: sessionResult };
+                break;
+
+            // Form Helper - Edit/Change Mode
+            case 'request_change':
+                const { parseChangeRequest } = await import('@/lib/skills/form-helper-handler');
+                result = await parseChangeRequest(parameters);
+                break;
+
+            case 'update_field':
+                const { updateFieldResponse, generateChangeConfirmation } = await import('@/lib/skills/form-helper-handler');
+                // Update field and generate confirmation
+                const updated = updateFieldResponse(parameters.session, parameters.fieldIndex, parameters.newValue);
+                const confirmation = await generateChangeConfirmation({
+                    field: parameters.field,
+                    oldValue: parameters.oldValue,
+                    newValue: parameters.newValue.userResponse,
+                  userLanguage: parameters.userLanguage,
+                });
+                result = {
+                    success: true,
+                  data: {
+                    updated: true,
+                    fieldIndex: parameters.fieldIndex,
+                    confirmation: confirmation.message,
+                    confirmationEnglish: confirmation.messageEnglish,
+                  }
+                };
+                break;
+
+            case 'get_field_summary':
+                const { getFieldSummary } = await import('@/lib/skills/form-helper-handler');
+                result = await getFieldSummary(parameters.field, parameters.currentValue);
                 break;
 
             default:
