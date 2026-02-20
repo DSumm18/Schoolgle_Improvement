@@ -18,7 +18,8 @@ import {
     ClipboardList,
     Briefcase,
     HelpCircle,
-    Zap
+    Zap,
+    Gamepad2
 } from 'lucide-react';
 
 export type Role = 'admin' | 'headteacher' | 'slt' | 'teacher' | 'governor' | 'caretaker' | 'viewer';
@@ -212,6 +213,15 @@ export const APPS: AppDefinition[] = [
         shortDescription: 'Track support impact.',
         requiredPermissions: ['admin', 'headteacher', 'slt', 'teacher']
     },
+    {
+        id: 'sim-studio',
+        moduleId: 'teaching-learning',
+        name: 'Sim Studio',
+        route: '/sim-studio',
+        icon: Gamepad2,
+        shortDescription: 'Interactive simulations & assessment quests.',
+        requiredPermissions: ['admin', 'headteacher', 'slt', 'teacher']
+    },
 
     // HR Apps
     {
@@ -315,6 +325,7 @@ export function getModuleByPath(path: string): ModuleDefinition | undefined {
     if (path.startsWith('/timeline')) return MODULES.find(m => m.id === 'improvement');
     if (path.startsWith('/dashboard/sef')) return MODULES.find(m => m.id === 'improvement');
     if (path.startsWith('/dashboard/sdp')) return MODULES.find(m => m.id === 'improvement');
+    if (path.startsWith('/sim-studio')) return MODULES.find(m => m.id === 'teaching-learning');
 
     return undefined;
 }
