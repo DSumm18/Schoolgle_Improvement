@@ -249,6 +249,14 @@ export class Particle3D {
     }
   }
 
+  /**
+   * Morph to flag shape - legacy compatibility, no-op in new solar system mode
+   */
+  public morphToFlag(_flagColors: string[], _languageCode?: string): void {
+    // Flag morphing removed in solar system mode - no-op for compatibility
+    console.log('[Particle3D] morphToFlag called - no-op in solar system mode');
+  }
+
   public start(): void {
     if (this._isRunning) return;
     

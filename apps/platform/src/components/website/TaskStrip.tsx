@@ -14,13 +14,13 @@ const tasks = [
 
 const TaskStrip = () => {
     return (
-        <section className="py-12 bg-slate-900 overflow-hidden relative">
+        <section className="py-12 bg-slate-900 dark:bg-black/50 overflow-hidden relative border-y border-white/5">
             <div className="container mx-auto max-w-7xl px-6 relative z-10">
                 <div className="flex flex-col md:flex-row items-center justify-between gap-8">
                     <div className="flex-shrink-0">
                         <h2 className="text-lg font-black text-white uppercase tracking-tight">
                             Got a task you’re stuck on? <br />
-                            <span className="text-slate-500 italic lowercase font-medium">Ed can fix that.</span>
+                            <span className="text-slate-500 dark:text-slate-400 italic lowercase font-medium">Ed can fix that.</span>
                         </h2>
                     </div>
 

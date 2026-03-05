@@ -1,4 +1,5 @@
-import { calculateAIRating, OFSTED_FRAMEWORK, type Category } from './ofsted-framework';
+import { OFSTED_FRAMEWORK_DATA, type Category } from './ofsted/framework-data';
+import { OFSTED_SUBCATEGORIES } from './ofsted/types';
 import type { EvidenceMatch } from './ai-evidence-matcher';
 
 // --- Types ---
@@ -143,7 +144,7 @@ export function updateAssessmentsFromEvidence(
     const groupedMatches = groupBySubcategory(evidenceMatches);
 
     // Process each subcategory that has evidence  
-    OFSTED_FRAMEWORK.forEach(category => {
+    OFSTED_FRAMEWORK_DATA.forEach(category => {
         category.subcategories.forEach(subcategory => {
             const matchesForSubcategory = groupedMatches.get(subcategory.id) || [];
 
@@ -155,7 +156,14 @@ export function updateAssessmentsFromEvidence(
                 const requiredCount = subcategory.evidenceRequired.length;
 
                 // Calculate AI rating based on evidence percentage
-                const aiRating = calculateAIRating(evidenceCount, requiredCount);
+                const ratio = evidenceCount / requiredCount;
+                let aiRating: 'exceptional' | 'strong_standard' | 'expected_standard' | 'needs_attention' | 'urgent_improvement' | 'not_assessed';
+                if (ratio >= 1.0) aiRating = 'exceptional';
+                else if (ratio >= 0.8) aiRating = 'strong_standard';
+                else if (ratio >= 0.6) aiRating = 'expected_standard';
+                else if (ratio >= 0.4) aiRating = 'needs_attention';
+                else if (ratio > 0) aiRating = 'urgent_improvement';
+                else aiRating = 'not_assessed';
 
                 // Generate rationale
                 const aiRationale = generateRationale(
@@ -195,7 +203,7 @@ export function generateCategorySummaries(
 ): CategorySummary[] {
     const summaries: CategorySummary[] = [];
 
-    OFSTED_FRAMEWORK.forEach(category => {
+    OFSTED_FRAMEWORK_DATA.forEach(category => {
         const subcategoryIds = category.subcategories.map(s => s.id);
         const updatedSubcategories = subcategoryIds.filter(id => assessmentUpdates[id]);
 
@@ -315,7 +323,7 @@ export function generateSummaryReport(
     // Detailed breakdowns
     report += `## Detailed Evidence Analysis\n\n`;
 
-    OFSTED_FRAMEWORK.forEach(category => {
+    OFSTED_FRAMEWORK_DATA.forEach(category => {
         const hasUpdates = category.subcategories.some(s => assessmentUpdates[s.id]);
 
         if (hasUpdates) {

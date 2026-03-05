@@ -24,13 +24,13 @@ const features: Feature[] = [
 
 const WhatSchoolgleDoes = () => {
     return (
-        <section className="py-24 bg-white">
+        <section className="py-24 bg-white dark:bg-background transition-colors duration-500">
             <div className="max-w-7xl mx-auto px-6">
                 <div className="text-center mb-16">
-                    <h2 className="text-4xl md:text-5xl font-medium text-gray-900 mb-6 tracking-tight">
+                    <h2 className="text-4xl md:text-5xl font-medium text-gray-900 dark:text-white mb-6 tracking-tight">
                         Built for every team in your school
                     </h2>
-                    <p className="text-xl text-gray-500 max-w-3xl mx-auto">
+                    <p className="text-xl text-gray-500 dark:text-gray-400 max-w-3xl mx-auto">
                         Different roles, same problem: too much admin. Schoolgle supports everyone without adding yet another system to learn.
                     </p>
                 </div>
@@ -45,14 +45,14 @@ const WhatSchoolgleDoes = () => {
                                 whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true }}
                                 transition={{ delay: index * 0.1 }}
-                                className="flex flex-col items-start gap-4 p-8 rounded-3xl bg-gray-50 hover:bg-gray-100 transition-all hover:shadow-lg hover:-translate-y-1 duration-300"
+                                className="flex flex-col items-start gap-4 p-8 rounded-3xl bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 transition-all hover:shadow-lg hover:-translate-y-1 duration-300 border border-transparent dark:border-white/5 hover:dark:border-white/20"
                             >
-                                <div className="w-12 h-12 rounded-xl bg-white shadow-sm flex items-center justify-center text-blue-600">
+                                <div className="w-12 h-12 rounded-xl bg-white dark:bg-slate-900 shadow-sm flex items-center justify-center text-blue-600 dark:text-blue-400">
                                     <IconComponent size={24} />
                                 </div>
                                 <div>
-                                    <h3 className="font-medium text-xl text-gray-900 mb-2">{feature.label}</h3>
-                                    <p className="text-gray-500 leading-relaxed">{feature.desc}</p>
+                                    <h3 className="font-medium text-xl text-gray-900 dark:text-white mb-2">{feature.label}</h3>
+                                    <p className="text-gray-500 dark:text-gray-400 leading-relaxed">{feature.desc}</p>
                                 </div>
                             </motion.div>
                         );

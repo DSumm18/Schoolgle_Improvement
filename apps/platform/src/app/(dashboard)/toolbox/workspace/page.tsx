@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { 
-    Search, X, ExternalLink, 
+import {
+    Search, X, ExternalLink,
     Wrench, ChevronLeft, ChevronRight,
     Globe, Home, MessageCircle
 } from 'lucide-react';
@@ -11,6 +11,7 @@ import Link from 'next/link';
 import { Tool } from '@/components/ToolCard';
 import EdWidgetWrapper from '@/components/EdWidgetWrapper';
 import toolsData from '@/data/tools.json';
+import { useAuth } from '@/context/SupabaseAuthContext';
 
 // Tool expertise data for Ed's context - keys MUST match tool IDs from tools.json
 const TOOL_EXPERTISE: Record<string, string[]> = {
@@ -37,6 +38,7 @@ interface ActiveTool {
 }
 
 export default function ToolboxWorkspacePage() {
+    const { organizationId } = useAuth();
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState<Category>('All');
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -72,9 +74,9 @@ export default function ToolboxWorkspacePage() {
         if (selectedCategory !== 'All' && tool.category !== selectedCategory) return false;
         if (searchQuery.trim()) {
             const query = searchQuery.toLowerCase();
-            return tool.name.toLowerCase().includes(query) || 
-                   tool.summary.toLowerCase().includes(query) ||
-                   tool.tags.some(tag => tag.toLowerCase().includes(query));
+            return tool.name.toLowerCase().includes(query) ||
+                tool.summary.toLowerCase().includes(query) ||
+                tool.tags.some(tag => tag.toLowerCase().includes(query));
         }
         return true;
     });
@@ -106,7 +108,7 @@ export default function ToolboxWorkspacePage() {
         const windowFeatures = `width=${popupWidth},height=${popupHeight},left=${popupLeft},top=${popupTop},menubar=no,toolbar=no,location=yes,status=no,resizable=yes,scrollbars=yes`;
 
         const newWindow = window.open(activeTool.tool.url, `schoolgle_workspace_${activeTool.tool.id}`, windowFeatures);
-        
+
         if (newWindow && !newWindow.closed) {
             setActiveTool({ tool: activeTool.tool, windowRef: newWindow });
         }
@@ -191,11 +193,10 @@ export default function ToolboxWorkspacePage() {
                                 <button
                                     key={cat}
                                     onClick={() => setSelectedCategory(cat)}
-                                    className={`px-2 py-1 text-xs rounded-md transition-colors ${
-                                        selectedCategory === cat
-                                            ? 'bg-emerald-600 text-white'
-                                            : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-                                    }`}
+                                    className={`px-2 py-1 text-xs rounded-md transition-colors ${selectedCategory === cat
+                                        ? 'bg-emerald-600 text-white'
+                                        : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                                        }`}
                                 >
                                     {cat}
                                 </button>
@@ -292,7 +293,7 @@ export default function ToolboxWorkspacePage() {
                             <p className="text-gray-400 mb-6">
                                 {activeTool.tool.summary}
                             </p>
-                            
+
                             {activeTool.windowRef ? (
                                 <div className="flex items-center justify-center gap-3 mb-6">
                                     <button
@@ -319,7 +320,7 @@ export default function ToolboxWorkspacePage() {
                                     </button>
                                 </div>
                             )}
-                            
+
                             <div className="pt-4 border-t border-gray-800">
                                 <p className="text-sm text-gray-500 mb-3">Ed can help you with this tool:</p>
                                 <button
@@ -340,7 +341,7 @@ export default function ToolboxWorkspacePage() {
                                 Welcome to Toolbox Workspace
                             </h3>
                             <p className="text-gray-400 mb-2">
-                                Select a tool from the sidebar to launch it in a popup window. 
+                                Select a tool from the sidebar to launch it in a popup window.
                                 Schoolgle stays open here so you can quickly switch between tools.
                             </p>
                             <p className="text-gray-500 text-sm">
@@ -357,6 +358,7 @@ export default function ToolboxWorkspacePage() {
                     isMinimized={edMinimized}
                     onToggleMinimize={() => setEdMinimized(!edMinimized)}
                     mode="user"
+                    organizationId={organizationId}
                 />
             </main>
         </div>
@@ -364,14 +366,14 @@ export default function ToolboxWorkspacePage() {
 }
 
 // Compact tool list item for sidebar
-function ToolListItem({ 
-    tool, 
-    collapsed, 
-    isActive, 
-    onLaunch 
-}: { 
-    tool: Tool; 
-    collapsed: boolean; 
+function ToolListItem({
+    tool,
+    collapsed,
+    isActive,
+    onLaunch
+}: {
+    tool: Tool;
+    collapsed: boolean;
     isActive: boolean;
     onLaunch: () => void;
 }) {
@@ -381,18 +383,17 @@ function ToolListItem({
     return (
         <button
             onClick={onLaunch}
-            className={`w-full flex items-center gap-3 p-2 rounded-lg transition-colors mb-1 ${
-                isActive 
-                    ? 'bg-emerald-600/20 border border-emerald-500/30' 
-                    : 'hover:bg-gray-800'
-            }`}
+            className={`w-full flex items-center gap-3 p-2 rounded-lg transition-colors mb-1 ${isActive
+                ? 'bg-emerald-600/20 border border-emerald-500/30'
+                : 'hover:bg-gray-800'
+                }`}
             title={collapsed ? tool.name : undefined}
         >
             <div className="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center flex-shrink-0">
                 {!faviconError ? (
-                    <img 
-                        src={faviconUrl} 
-                        alt="" 
+                    <img
+                        src={faviconUrl}
+                        alt=""
                         className="w-5 h-5"
                         onError={() => setFaviconError(true)}
                     />

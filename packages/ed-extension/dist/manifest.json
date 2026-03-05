@@ -49,8 +49,7 @@
     {
       "resources": [
         "ed-widget/ed-widget.iife.js",
-        "ed-widget/ed-widget.css",
-        "content/inject-page.js"
+        "ed-widget/ed-widget.css"
       ],
       "matches": [
         "<all_urls>"

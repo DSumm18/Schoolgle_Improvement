@@ -24,7 +24,8 @@ import { logger, createOperationLogger } from "@/lib/logger";
 interface ScanRequest {
     provider: 'google.com' | 'microsoft.com';
     accessToken: string;
-    folderId: string;
+    folderId?: string; // Single folder (deprecated, use folderIds)
+    folderIds?: string[]; // Multiple folders
     organizationId: string; // Mandatory for multi-tenancy
     userId?: string;
     authId?: string;
@@ -182,6 +183,7 @@ export async function POST(req: NextRequest) {
                         provider,
                         accessToken,
                         folderId,
+                        folderIds,
                         organizationId,
                         userId,
                         authId,
@@ -190,7 +192,12 @@ export async function POST(req: NextRequest) {
                         useAI
                     } = validation.data;
 
-                    sendUpdate({ type: 'progress', message: 'Initializing scan...', stats: { totalFiles: 0, processedFiles: 0, evidenceMatches: 0, skippedFiles: 0, failedFiles: 0 } });
+                    // Determine which folders to scan
+                    const foldersToScan = folderIds && folderIds.length > 0
+                        ? folderIds
+                        : (folderId ? [folderId] : ['root']);
+
+                    sendUpdate({ type: 'progress', message: `Initializing scan of ${foldersToScan.length} folder${foldersToScan.length !== 1 ? 's' : ''}...`, stats: { totalFiles: 0, processedFiles: 0, evidenceMatches: 0, skippedFiles: 0, failedFiles: 0 } });
 
                     // Initialize Supabase
                     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -201,7 +208,7 @@ export async function POST(req: NextRequest) {
                         supabase = createClient(supabaseUrl, supabaseKey);
                     }
 
-                    // Scan folder structure
+                    // Scan folder structure - support multiple folders
                     let allFiles: FileMetadataExtended[] = [];
 
                     sendUpdate({ type: 'progress', message: 'Scanning folder structure...' });
@@ -211,20 +218,41 @@ export async function POST(req: NextRequest) {
                             ? listGoogleFilesRecursive
                             : listOneDriveFilesRecursive;
 
-                        allFiles = await scanFunc(accessToken, folderId, (progress: ScanProgress) => {
-                            sendUpdate({ type: 'progress', message: `Scanning folders: Found ${progress.totalFiles} files` });
-                        });
+                        // Scan each folder and collect all files
+                        for (let i = 0; i < foldersToScan.length; i++) {
+                            const currentFolderId = foldersToScan[i];
+                            sendUpdate({ type: 'progress', message: `Scanning folder ${i + 1}/${foldersToScan.length}...` });
+
+                            const folderFiles = await scanFunc(accessToken, currentFolderId, (progress: ScanProgress) => {
+                                sendUpdate({ type: 'progress', message: `Scanning: Found ${progress.totalFiles} files so far` });
+                            });
+
+                            // Add folder info to distinguish files from different folders
+                            const filesWithFolderInfo = folderFiles.map(f => ({
+                                ...f,
+                                folderPath: currentFolderId === 'root' ? (f.folderPath || 'Root') : `${currentFolderId}/${f.folderPath || ''}`
+                            }));
+
+                            allFiles.push(...filesWithFolderInfo);
+                        }
                     } else {
                         const { listGoogleFiles, listOneDriveFiles } = await import("@/lib/cloud-service");
-                        const files = provider === 'google.com'
-                            ? await listGoogleFiles(accessToken, folderId)
-                            : await listOneDriveFiles(accessToken, folderId);
 
-                        allFiles = files.map(f => ({
-                            ...f,
-                            folderPath: 'Root',
-                            isFolder: false
-                        }));
+                        // Scan each folder non-recursively
+                        for (let i = 0; i < foldersToScan.length; i++) {
+                            const currentFolderId = foldersToScan[i];
+                            const files = provider === 'google.com'
+                                ? await listGoogleFiles(accessToken, currentFolderId)
+                                : await listOneDriveFiles(accessToken, currentFolderId);
+
+                            const filesWithInfo = files.map(f => ({
+                                ...f,
+                                folderPath: currentFolderId === 'root' ? 'Root' : currentFolderId,
+                                isFolder: false
+                            }));
+
+                            allFiles.push(...filesWithInfo);
+                        }
                     }
 
                     const filesToProcess = allFiles

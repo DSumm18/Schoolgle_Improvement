@@ -64,7 +64,8 @@ export const confidenceSchema = z.number().min(0).max(1);
 export const scanRequestSchema = z.object({
   provider: cloudProviderSchema,
   accessToken: nonEmptyString(2048),
-  folderId: nonEmptyString(512),
+  folderId: z.string().optional(), // Deprecated: use folderIds
+  folderIds: z.array(z.string()).optional(), // Multiple folders to scan
   organizationId: uuidSchema, // Mandatory for tenant isolation
   userId: z.string().optional(), // Legacy text ID
   authId: uuidSchema.optional(), // Canonical UUID

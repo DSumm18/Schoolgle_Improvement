@@ -12,3 +12,5 @@ export * from './prompts/it-tech-specialist';
 export * from './prompts/procurement-specialist';
 export * from './prompts/governance-specialist';
 export * from './prompts/communications-specialist';
+export * from './skills-agent';
+export * from './contextual-greeting';

@@ -14,19 +14,19 @@ const VOICE_MAP: Record<string, string> = {
   // UK English - Professional voices
   'en-GB': 'en-GB-RyanNeural',      // Male, professional
   'en-US': 'en-US-GuyNeural',
-  
+
   // European languages
   'pl': 'pl-PL-MarekNeural',         // Polish
   'ro': 'ro-RO-EmilNeural',          // Romanian
   'es': 'es-ES-AlvaroNeural',        // Spanish
   'pt': 'pt-PT-DuarteNeural',        // Portuguese
   'fr': 'fr-FR-HenriNeural',         // French
-  
+
   // Asian languages
   'zh': 'zh-CN-YunxiNeural',         // Chinese (Mandarin)
   'ar': 'ar-SA-HamedNeural',         // Arabic
   'pa': 'pa-IN-GaganNeural',         // Punjabi
-  
+
   // Note: Bengali (bn), Urdu (ur), Somali (so) may need fallback
 };
 
@@ -43,7 +43,7 @@ export class AzureNeuralVoice {
   private apiKey: string;
   private region: string;
   private audioCache: Map<string, string> = new Map();
-  
+
   // Usage tracking
   private monthlyCharCount = 0;
   private lastResetDate = new Date().getMonth();
@@ -58,25 +58,25 @@ export class AzureNeuralVoice {
    */
   private checkUsage(textLength: number): { withinFree: boolean; estimatedCost: number } {
     const currentMonth = new Date().getMonth();
-    
+
     // Reset counter on new month
     if (currentMonth !== this.lastResetDate) {
       this.monthlyCharCount = 0;
       this.lastResetDate = currentMonth;
     }
-    
+
     this.monthlyCharCount += textLength;
-    
+
     const FREE_TIER = 500000; // 500K chars/month
     const withinFree = this.monthlyCharCount <= FREE_TIER;
-    
+
     // Calculate cost
     let cost = 0;
     if (!withinFree) {
       const overageChars = this.monthlyCharCount - FREE_TIER;
       cost = (overageChars / 1000000) * 12; // £12 per 1M chars
     }
-    
+
     return { withinFree, estimatedCost: cost };
   }
 
@@ -232,7 +232,7 @@ export class AzureNeuralVoice {
     const FREE_TIER = 500000;
     const charsInFree = Math.min(this.monthlyCharCount, FREE_TIER);
     const remaining = Math.max(FREE_TIER - this.monthlyCharCount, 0);
-    
+
     let cost = 0;
     if (this.monthlyCharCount > FREE_TIER) {
       const overage = this.monthlyCharCount - FREE_TIER;

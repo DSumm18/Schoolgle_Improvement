@@ -1,5 +1,8 @@
 "use client";
 
+// Force dynamic rendering to avoid useSearchParams() build errors
+export const dynamic = 'force-dynamic';
+
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Copy, Linkedin, Check } from 'lucide-react';

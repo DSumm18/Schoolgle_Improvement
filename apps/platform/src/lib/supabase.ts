@@ -1,21 +1,34 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { safeAuthLog } from "./auth-safety";
+
+/**
+ * Helper to get the current session token for API requests
+ * This bridges the gap between localStorage (client) and cookies (server)
+ */
+export async function getSessionToken() {
+  if (typeof window === 'undefined') return null;
+
+  const { data } = await supabase.auth.getSession();
+  return data.session?.access_token || null;
+}
+
+// Get environment variables with fallback
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
 // Debug: Log environment variable status (only in browser)
 if (typeof window !== 'undefined') {
   console.log('[Supabase Init] Environment check:', {
-    hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-    hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    urlPreview: process.env.NEXT_PUBLIC_SUPABASE_URL 
-      ? `${process.env.NEXT_PUBLIC_SUPABASE_URL.substring(0, 30)}...` 
+    hasUrl: !!supabaseUrl,
+    hasAnonKey: !!supabaseAnonKey,
+    urlPreview: supabaseUrl
+      ? `${supabaseUrl.substring(0, 30)}...`
       : 'MISSING',
-    anonKeyPreview: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-      ? `${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.substring(0, 20)}...`
+    anonKeyPreview: supabaseAnonKey
+      ? `${supabaseAnonKey.substring(0, 20)}...`
       : 'MISSING'
   });
 }
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 let supabase: SupabaseClient;
 
@@ -23,10 +36,10 @@ if (!supabaseUrl || !supabaseAnonKey) {
   const missing = [];
   if (!supabaseUrl) missing.push('NEXT_PUBLIC_SUPABASE_URL');
   if (!supabaseAnonKey) missing.push('NEXT_PUBLIC_SUPABASE_ANON_KEY');
-  
+
   console.error('[Supabase Init] ❌ Missing required environment variables:', missing);
   console.error('[Supabase Init] Make sure these are set in .env.local and restart the dev server');
-  
+
   // Create a dummy client to prevent crashes, but it won't work
   // This allows the app to load and show error messages
   supabase = createClient(
@@ -49,6 +62,11 @@ if (!supabaseUrl || !supabaseAnonKey) {
       autoRefreshToken: true,
       detectSessionInUrl: true,
       storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+      // Disable Navigator Lock API to prevent AbortError in React Strict Mode
+      // The lock mechanism causes timeouts when components remount quickly
+      lock: false,
+      // Disable debug logging for cleaner console
+      debug: false,
     },
     global: {
       headers: {
@@ -56,14 +74,14 @@ if (!supabaseUrl || !supabaseAnonKey) {
       },
     },
   });
-  
+
   if (typeof window !== 'undefined') {
     console.log('[Supabase Init] ✅ Client initialized successfully');
-    
+
     // Verify the client can access the session and set up auto-refresh
     supabase.auth.getSession().then(({ data, error }) => {
       if (error) {
-        console.error('[Supabase Init] Error getting session:', error);
+        safeAuthLog('[Supabase Init] Error getting session', error);
       } else if (data.session) {
         console.log('[Supabase Init] ✅ Session found:', {
           userId: data.session.user.id,
@@ -74,7 +92,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
           access_token: data.session.access_token,
           refresh_token: data.session.refresh_token || '',
         }).catch((err) => {
-          console.error('[Supabase Init] Error setting session:', err);
+          safeAuthLog('[Supabase Init] Error setting session', err);
         });
       } else {
         console.log('[Supabase Init] No active session');

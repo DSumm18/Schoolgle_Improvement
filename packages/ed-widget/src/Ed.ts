@@ -10,6 +10,7 @@ import { VoiceInput } from './components/VoiceInput';
 import { StatusPill } from './components/StatusPill';
 import { EmojiTester } from './components/EmojiTester';
 import { GeminiClient } from './ai/gemini';
+import { EdAPIClient } from './ai/api-client';
 import { getPersona, personas } from './ai/prompts';
 import { languages, getLanguage } from './utils/flags';
 import { FormFiller } from './features/formFill';
@@ -49,6 +50,7 @@ export class Ed {
   private chat: Chat | null = null;
   private voice: VoiceInput | null = null;
   private ai: GeminiClient | null = null;
+  private apiClient: EdAPIClient | null = null; // API client for /api/ed/chat
   private formFiller: FormFiller | null = null;
   private proactive: ProactiveService | null = null;
   private fishVoice: FishAudioVoice | null = null;
@@ -62,6 +64,7 @@ export class Ed {
   private currentTheme: string;
   private showKeyboard = false;
   private toolContext: { name: string; category: string; url?: string; expertise: string[] } | null = null;
+  private mode: 'website' | 'support' | 'school' = 'school'; // website = public visitors, support = pre-login, school = logged-in
 
   constructor(config: Partial<EdConfig> = {}) {
     // Read from window.ED_CONFIG if available (extension context)
@@ -90,7 +93,27 @@ export class Ed {
     this.currentLanguage = getLanguage(this.config.language);
     this.currentPersona = this.config.persona;
     this.currentTheme = this.config.theme;
-    
+
+    // Determine mode from config (website = public visitors, support = pre-login help, school = logged-in staff)
+    const configuredMode = (this.config as any).mode;
+    if (configuredMode) {
+      this.mode = configuredMode;
+    } else if ((this.config as any).isWebsiteEmbed) {
+      this.mode = 'website';
+    } else if ((this.config as any).organizationId) {
+      this.mode = 'school';
+    } else {
+      this.mode = 'support';
+    }
+
+    // Log mode
+    const modeNames = {
+      'website': '🌐 Website mode (public visitors - parents, students)',
+      'support': '🔓 Support mode (pre-login help)',
+      'school': '🏫 School mode (logged-in staff support)'
+    };
+    console.log(`[Ed] Mode: ${this.mode} - ${modeNames[this.mode]}`);
+
     // Log configuration
     if (edConfig) {
       console.log('[Ed] Provider:', edConfig.provider || 'not set');
@@ -128,13 +151,27 @@ export class Ed {
   }
 
   private initComponents(): void {
-    const provider = (this.config as any).provider || 'gemini'; // Default to gemini for backward compat
+    const provider = (this.config as any).provider || 'api'; // Default to 'api' for Schoolgle
     const enableAI = (this.config as any).enableAI !== false; // Default to true
     const enableTTS = (this.config as any).enableTTS !== false; // Default to true
     const ttsProvider = (this.config as any).ttsProvider || 'browser';
-    
-    // AI Client - only initialize if AI is enabled and provider is selected
-    if (enableAI) {
+
+    // Log mode
+    console.log(`[Ed] Mode: ${this.mode} (${this.mode === 'support' ? 'pre-login support' : 'logged-in school support'})`);
+
+    // API Client - uses /api/ed/chat endpoint (preferred for Schoolgle)
+    if (provider === 'api' || (this.config as any).organizationId) {
+      const apiBaseUrl = (this.config as any).apiBaseUrl || '/api/ed/chat';
+      this.apiClient = new EdAPIClient(
+        apiBaseUrl,
+        (this.config as any).organizationId,
+        (this.config as any).userId
+      );
+      console.log('[Ed] ✅ API client initialized for', apiBaseUrl);
+    }
+
+    // AI Client - fallback to Gemini if API client not available
+    if (enableAI && !this.apiClient) {
       if (provider === 'gemini' && this.config.geminiApiKey) {
         try {
           this.ai = new GeminiClient(this.config.geminiApiKey);
@@ -162,7 +199,7 @@ export class Ed {
           console.debug('[Ed] OpenRouter provider selected but API key not set. AI features disabled.');
         }
       }
-    } else {
+    } else if (!this.apiClient) {
       console.log('[Ed] AI disabled in configuration');
     }
 
@@ -388,28 +425,47 @@ export class Ed {
       localStorage.setItem('ed-visited', 'true');
     }
 
-    // Detect page context
-    const forms = this.formFiller?.detectForms() || [];
-    const hasForm = forms.length > 0;
-    const isAdmissionsPage = window.location.pathname.toLowerCase().includes('admission') ||
-      window.location.pathname.toLowerCase().includes('apply') ||
-      window.location.pathname.toLowerCase().includes('enrol');
-
-    // Get engaging intro with emotions (if Fish Audio available)
+    // Get greeting based on mode (website, support, or school)
     let greeting: string;
-    if (this.fishVoice) {
-      // Use emotion-rich intro script
-      greeting = getIntroForPersona(this.currentPersona, {
-        hasForm,
-        isAdmissionsPage,
-        isFirstVisit,
-      });
+
+    if (this.mode === 'website') {
+      // Website mode - public-facing for parents/students/visitors
+      const schoolName = (this.config as any).schoolName || 'the school';
+      greeting = `Hi! Welcome to ${schoolName}. I'm Ed, here to help.
+
+I can help you with:
+• School information and contact details
+• Term dates and calendar events
+• Admissions and enrolment enquiries
+• General questions about our school
+
+What can I help you find today?`;
+    } else if (this.apiClient) {
+      // Use mode-based greeting from API client
+      greeting = this.apiClient.getGreeting(this.mode, (this.config as any).userName);
+    } else if (this.mode === 'support') {
+      // Pre-login support mode
+      greeting = `Hi! I'm Ed, the Schoolgle support assistant.
+
+I can help you:
+• Log in to your account
+• Reset your password
+• Troubleshoot access issues
+• Learn about Schoolgle
+
+What do you need help with?`;
     } else {
-      // Fallback to simple greeting
-      greeting = this.getLocalizedGreeting();
-      if (hasForm) {
-        greeting += ` I can see you're on an admissions page. Would you like help filling out the form?`;
-      }
+      // Logged-in school support mode
+      greeting = `Hi! I'm Ed, your Schoolgle assistant.
+
+I can help you with:
+• School improvement tasks
+• Compliance guidance
+• HR questions
+• Staff directory
+• Using Schoolgle features
+
+What work task can I help you with today?`;
     }
 
     // Display greeting (clean for chat, but keep original for voice)
@@ -853,10 +909,8 @@ export class Ed {
   }
 
   private async getAIResponse(text: string): Promise<string> {
-    // Smart fallback responses based on context
+    // Form filling intent - handle before anything else
     const lowerText = text.toLowerCase();
-
-    // Form filling intent
     if (lowerText.includes('form') || lowerText.includes('fill')) {
       const forms = this.formFiller?.detectForms();
       if (forms && forms.length > 0 && this.formFiller) {
@@ -865,29 +919,26 @@ export class Ed {
           return `Great! I've found a form. I'll help you fill it out. The first field is ${field.label}. What should I type?`;
         }
       }
-      return "I don't see any forms on this page. Are you looking for the admissions form?";
+      if (this.mode === 'support') {
+        return "I don't see any forms on this page. If you're having trouble with the login form, I can help troubleshoot.";
+      }
+      return "I don't see any forms on this page. Would you like me to help you find something?";
     }
 
-    // Admissions queries
-    if (lowerText.includes('admission') || lowerText.includes('enrol') || lowerText.includes('apply')) {
-      return "I can help with admissions! This school typically has deadlines in January for Reception class. You can fill out the enquiry form on this page, or I can guide you through the local authority application process. What would you like to know?";
+    // Use API client if available (preferred for Schoolgle)
+    if (this.apiClient) {
+      try {
+        return await this.apiClient.chat(text);
+      } catch (error) {
+        console.error('[Ed] API client error:', error);
+      }
     }
 
-    // Open days
-    if (lowerText.includes('open day') || lowerText.includes('visit') || lowerText.includes('tour')) {
-      return "According to the page, the next virtual tour is on Saturday, 12th December at 10:00 AM. Would you like me to help you register for it?";
-    }
-
-    // Contact info
-    if (lowerText.includes('contact') || lowerText.includes('phone') || lowerText.includes('email')) {
-      return "You can contact the school at:\n📧 admin@greenwoodhigh.edu\n📞 +44 (0) 20 7946 0123\n\nWould you like me to help you draft an email?";
-    }
-
-    // Try AI if available
+    // Try Gemini AI as fallback
     if (this.ai) {
       try {
         const persona = getPersona(this.currentPersona);
-        
+
         // Extract page context for AI
         let pageContext: string | undefined;
         try {
@@ -904,7 +955,7 @@ Summary: ${pageContent.mainContent.substring(0, 300)}`;
           pageContext = `Current page: ${document.title}
 URL: ${window.location.href}`;
         }
-        
+
         return await this.ai.chat(text, {
           persona,
           language: this.currentLanguage,
@@ -917,13 +968,33 @@ URL: ${window.location.href}`;
       }
     }
 
-    // Generic fallback
-    const fallbacks = [
-      "I'm here to help! Could you tell me more about what you're looking for?",
-      "That's a great question. I can help with admissions, forms, open days, and general school information. What would you like to know?",
-      "I'd be happy to assist! You can ask me about admissions, filling out forms, term dates, or contacting the school.",
+    // Mode-based fallback responses
+    if (this.mode === 'website') {
+      // Website mode - public visitors
+      const websiteFallbacks = [
+        "I'm happy to help with information about our school! What would you like to know?",
+        "I can help with admissions, term dates, contact details, and general school information. What do you need?",
+        "Welcome! How can I help you today? I can share information about our school.",
+      ];
+      return websiteFallbacks[Math.floor(Math.random() * websiteFallbacks.length)];
+    }
+
+    if (this.mode === 'support') {
+      const supportFallbacks = [
+        "I'm here to help with login issues! What problem are you having?",
+        "I can help you log in, reset your password, or troubleshoot access issues. What do you need?",
+        "For help with Schoolgle, I can assist with account access. What's the issue?",
+      ];
+      return supportFallbacks[Math.floor(Math.random() * supportFallbacks.length)];
+    }
+
+    // School mode fallback
+    const schoolFallbacks = [
+      "I'm here to help with work tasks! What can I help you with?",
+      "I can help with school improvement tasks, compliance, HR questions, and more. What do you need?",
+      "I'm your school support assistant. What work task can I help with?",
     ];
-    return fallbacks[Math.floor(Math.random() * fallbacks.length)];
+    return schoolFallbacks[Math.floor(Math.random() * schoolFallbacks.length)];
   }
 
   private handleProactiveNudge(message: string): void {

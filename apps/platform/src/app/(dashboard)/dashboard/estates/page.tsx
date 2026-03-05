@@ -129,8 +129,8 @@ export default function EstatesAuditHome() {
                             title: 'Compliance Checks',
                             desc: 'Statutory compliance tracking and document storage.',
                             icon: ShieldCheck,
-                            href: '/dashboard/estates/compliance',
-                            badge: 'Coming Soon'
+                            href: '/estates-compliance',
+                            badge: 'Available Now'
                         },
                         {
                             title: 'Energy & Utilities',

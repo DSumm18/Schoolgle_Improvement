@@ -82,6 +82,14 @@ import {
   COMMUNICATIONS_QUALIFICATIONS,
 } from './prompts/communications-specialist';
 
+import {
+  FORM_SPECIALIST_PROMPT,
+  FORM_SPECIALIST_ID,
+  FORM_DOMAIN,
+  FORM_KEYWORDS,
+  FORM_QUALIFICATIONS,
+} from './prompts/form-specialist';
+
 /**
  * Ed's base prompt when no specialist is needed
  */
@@ -297,6 +305,24 @@ export const AGENTS: Record<SpecialistId, AgentDefinition> = {
     ],
     systemPrompt: ED_GENERAL_PROMPT,
   },
+
+  'form-specialist': {
+    id: FORM_SPECIALIST_ID,
+    name: 'Form Specialist',
+    domain: FORM_DOMAIN,
+    qualifications: FORM_QUALIFICATIONS,
+    capabilities: [
+      'Form field explanations',
+      'Professional wording suggestions',
+      'RIDDOR reporting guidance',
+      'Safeguarding form help',
+      'SEND EHCP applications',
+      'Free school meals forms',
+      'Red flag identification',
+      'Step-by-step form guidance',
+    ],
+    systemPrompt: FORM_SPECIALIST_PROMPT,
+  },
 };
 
 /**
@@ -313,6 +339,7 @@ export const DOMAIN_KEYWORDS: Record<Domain, string[]> = {
   governance: GOVERNANCE_KEYWORDS,
   communications: COMMUNICATIONS_KEYWORDS,
   general: [],
+  // Form keywords are handled separately via detectFormRequest()
 };
 
 /**

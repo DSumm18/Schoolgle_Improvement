@@ -179,7 +179,7 @@ export class FishAudioVoice {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
-      
+
       // Only send Authorization header if NOT using proxy (direct API call)
       // Proxy baseUrl is '/api/fish-audio', direct API is 'https://api.fish.audio'
       if (!this.baseUrl.startsWith('/api/')) {

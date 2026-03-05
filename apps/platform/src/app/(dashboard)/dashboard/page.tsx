@@ -5,7 +5,30 @@ import { motion } from "framer-motion";
 import dynamic from 'next/dynamic';
 import useSWR from 'swr';
 import { useAuth } from "@/context/SupabaseAuthContext";
-import { AlertTriangle, TrendingDown, TrendingUp, Minus, Sparkles, Brain, Clock } from "lucide-react";
+import ErrorBoundary from "@/components/common/ErrorBoundary";
+import {
+  AlertTriangle,
+  TrendingDown,
+  TrendingUp,
+  Minus,
+  Sparkles,
+  Brain,
+  Clock,
+  Newspaper,
+  Wrench,
+  CheckSquare,
+  Building2,
+  CheckCircle2,
+  BookOpen,
+  GraduationCap,
+  Users,
+  FileText,
+  Shield,
+  Target,
+  ClipboardCheck,
+  ChevronUp,
+  X,
+} from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { fetcher } from "@/lib/fetchers";
 import { MODULES, canUserAccess, Role } from "@/lib/modules/registry";
@@ -17,6 +40,21 @@ const InterventionTimeline = dynamic(() => import("@/components/InterventionTime
 
 const MorningBriefing = dynamic(() => import("@/components/MorningBriefing"), {
   loading: () => <div className="h-40 bg-slate-100 dark:bg-slate-800 animate-pulse rounded-2xl" />,
+  ssr: false
+});
+
+const SchoolNewsTicker = dynamic(() => import("@/components/dashboard/SchoolNewsTicker").then(mod => ({ default: mod.SchoolNewsTicker })), {
+  loading: () => <div className="h-12 bg-slate-100 dark:bg-slate-800 animate-pulse rounded-2xl" />,
+  ssr: true // Enable SSR for faster initial render
+});
+
+const WeatherWidget = dynamic(() => import("@/components/dashboard/WeatherWidget").then(mod => ({ default: mod.WeatherWidget })), {
+  loading: () => <div className="h-12 w-32 bg-slate-100 dark:bg-slate-800 animate-pulse rounded-2xl" />,
+  ssr: true // Enable SSR for faster initial render
+});
+
+const MyTasksWidget = dynamic(() => import("@/components/dashboard/MyTasksWidget").then(mod => ({ default: mod.MyTasksWidget })), {
+  loading: () => <div className="h-64 bg-slate-100 dark:bg-slate-800 animate-pulse rounded-2xl" />,
   ssr: false
 });
 
@@ -51,17 +89,30 @@ interface RiskProfile {
 export default function DashboardPage() {
   const { user, organization } = useAuth();
 
-  // Risk Profile SWR
+  // Risk Profile SWR - only fetch if we have a URN, otherwise use null so it doesn't block
   const { data: riskProfile, error: riskError, isLoading: riskLoading } = useSWR(
     organization?.urn ? ['/api/risk/profile', organization.urn] : null,
     async ([url, urn]) => {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ urn }),
-      });
-      if (!res.ok) throw new Error('Failed to fetch risk profile');
-      return res.json() as Promise<RiskProfile>;
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ urn }),
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+
+        if (!res.ok) return null; // Return null instead of throwing to prevent blocking
+        return res.json() as Promise<RiskProfile>;
+      } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') {
+          console.warn('Risk profile fetch timed out');
+        }
+        return null;
+      }
     },
     { revalidateOnFocus: false, dedupingInterval: 60000 }
   );
@@ -70,41 +121,80 @@ export default function DashboardPage() {
   const { data: analytics, isLoading: analyticsLoading } = useSWR(
     organization?.id ? ['dashboard-analytics', organization.id] : null,
     async ([, orgId]) => {
-      const [evidence, assessments, sdp, recent] = await Promise.all([
-        supabase.from('evidence_matches').select('id', { count: 'exact', head: true }).eq('organization_id', orgId),
-        supabase.from('ofsted_assessments').select('category_id').eq('organization_id', orgId),
-        supabase.from('sdp_documents').select('priorities').eq('organization_id', orgId).order('created_at', { ascending: false }).limit(1),
-        supabase.from('evidence_matches').select('document_name, created_at').eq('organization_id', orgId).order('created_at', { ascending: false }).limit(3)
-      ]);
+      try {
+        // Shorter timeout to prevent hanging - 8 seconds
+        const result = await Promise.race([
+          Promise.all([
+            supabase.from('evidence_matches').select('id', { count: 'exact', head: true }).eq('organization_id', orgId),
+            supabase.from('ofsted_assessments').select('category_id').eq('organization_id', orgId),
+            supabase.from('sdp_documents').select('priorities').eq('organization_id', orgId).order('created_at', { ascending: false }).limit(1),
+            supabase.from('evidence_matches').select('document_name, created_at').eq('organization_id', orgId).order('created_at', { ascending: false }).limit(3)
+          ]),
+          new Promise((resolve) =>
+            setTimeout(() => resolve(null), 8000) // 8s timeout, returns null instead of rejecting
+          )
+        ]);
 
-      const coverageMap = (assessments.data || []).reduce((acc: any, curr: any) => {
-        const cat = curr.category_id || 'unassigned';
-        acc[cat] = (acc[cat] || 0) + 1;
-        return acc;
-      }, {});
+        // If timeout occurred, return empty data
+        if (!result || !result[0]) {
+          return {
+            evidenceCount: 0,
+            matchedAreas: 0,
+            recentMatches: [],
+            activePriorities: [],
+            coverage: [],
+            dynamicRecommendations: []
+          };
+        }
 
-      // Identify gaps for recommendations
-      const lowRated = (assessments.data || []).filter((a: any) =>
-        ['needs_attention', 'urgent_improvement'].includes(a.school_rating)
-      );
+        const [evidence, assessments, sdp, recent] = result;
 
-      const gaps = lowRated.slice(0, 2).map((a: any) =>
-        `Address identified gaps in ${a.category_id.replace(/-/g, ' ')} area`
-      );
+        const coverageMap = (assessments.data || []).reduce((acc: any, curr: any) => {
+          const cat = curr.category_id || 'unassigned';
+          acc[cat] = (acc[cat] || 0) + 1;
+          return acc;
+        }, {});
 
-      return {
-        evidenceCount: evidence.count || 0,
-        matchedAreas: assessments.data?.length || 0,
-        recentMatches: recent.data || [],
-        activePriorities: sdp.data?.[0]?.priorities?.slice(0, 2) || [],
-        coverage: Object.entries(coverageMap).map(([id, count]) => ({ id, count: count as number })),
-        dynamicRecommendations: gaps
-      };
+        // Identify gaps for recommendations
+        const lowRated = (assessments.data || []).filter((a: any) =>
+          ['needs_attention', 'urgent_improvement'].includes(a.school_rating)
+        );
+
+        const gaps = lowRated.slice(0, 2).map((a: any) =>
+          `Address identified gaps in ${a.category_id.replace(/-/g, ' ')} area`
+        );
+
+        return {
+          evidenceCount: evidence.count || 0,
+          matchedAreas: assessments.data?.length || 0,
+          recentMatches: recent.data || [],
+          activePriorities: sdp.data?.[0]?.priorities?.slice(0, 2) || [],
+          coverage: Object.entries(coverageMap).map(([id, count]) => ({ id, count: count as number })),
+          dynamicRecommendations: gaps
+        };
+      } catch (error) {
+        // Silently return empty data on error - no console spam
+        return {
+          evidenceCount: 0,
+          matchedAreas: 0,
+          recentMatches: [],
+          activePriorities: [],
+          coverage: [],
+          dynamicRecommendations: []
+        };
+      }
     },
-    { revalidateOnFocus: false, dedupingInterval: 30000 }
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 30000,
+      onError: (err) => {
+        // Suppress error logging
+        console.debug('Analytics fetch failed (handled gracefully)');
+      }
+    }
   );
 
-  const loading = riskLoading || analyticsLoading;
+  const loading = analyticsLoading; // Don't block on risk profile
   const error = riskError;
 
   const getGreeting = () => {
@@ -131,6 +221,19 @@ export default function DashboardPage() {
   return (
     <div className="p-8 space-y-10 animated-mesh min-h-screen max-w-[1600px] mx-auto">
 
+      {/* School News Ticker */}
+      {organization?.id && (
+        <ErrorBoundary name="SchoolNewsTicker" fallback={<div />}>
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="relative z-20"
+          >
+            <SchoolNewsTicker organizationId={organization.id} />
+          </motion.div>
+        </ErrorBoundary>
+      )}
+
       {/* Welcome Header */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -150,14 +253,26 @@ export default function DashboardPage() {
             <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">
               {getGreeting()}, {userName}
             </h1>
-            <p className="text-slate-500 dark:text-slate-400 font-medium flex items-center gap-2">
+            <p className="text-slate-500 dark:text-slate-400 font-medium flex items-center gap-2 flex-wrap">
               <Clock size={16} />
               {currentTime} • {riskProfile?.schoolName || organization?.name}
               {riskProfile?.urn && <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-[10px] font-bold">URN {riskProfile.urn}</span>}
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-3 items-center">
+            {/* Weather Widget - show with default location if not set */}
+            <ErrorBoundary name="WeatherWidget" fallback={<div className="px-3 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl text-sm text-slate-400">Weather</div>}>
+              <WeatherWidget
+                schoolName={organization?.name}
+                schoolLocation={organization?.location || {
+                  lat: 51.5074,
+                  lon: -0.1278,
+                  town: organization?.name || 'London'
+                }}
+              />
+            </ErrorBoundary>
+
             {riskProfile?.lastInspection?.date && (
               <Badge
                 label="Last Inspection"
@@ -174,7 +289,7 @@ export default function DashboardPage() {
             )}
             <Badge
               label="Role"
-              value={organization?.organization_type?.replace('_', ' ') || 'Member'}
+              value={organization?.role?.replace('_', ' ') || 'Member'}
               color="slate"
             />
           </div>
@@ -185,9 +300,18 @@ export default function DashboardPage() {
         {/* Main Feed */}
         <div className="lg:col-span-2 space-y-8">
 
-          <MorningBriefing organizationId={organization?.id || null} />
+          {/* My Tasks - Always shown, filtered by role */}
+          {organization?.id && user?.id && (
+            <ErrorBoundary name="MyTasksWidget">
+              <MyTasksWidget limit={5} />
+            </ErrorBoundary>
+          )}
 
-          {/* Risk Profile Card */}
+          <ErrorBoundary name="MorningBriefing">
+            <MorningBriefing organizationId={organization?.id || null} />
+          </ErrorBoundary>
+
+          {/* Risk Profile Card - Only show to leadership roles */}
           {riskProfile && canUserAccess(MODULES.find(m => m.id === 'improvement')?.requiredPermissions || [], organization?.role as Role) && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -289,15 +413,43 @@ export default function DashboardPage() {
 
           {/* Intervention Timeline */}
           {organization?.id && (
-            <div className="space-y-4">
-              <h2 className="text-2xl font-black text-slate-900 dark:text-white px-2">Intervention Landscape</h2>
-              <InterventionTimeline organizationId={organization.id} />
-            </div>
+            <ErrorBoundary name="InterventionTimeline">
+              <div className="space-y-4">
+                <h2 className="text-2xl font-black text-slate-900 dark:text-white px-2">Intervention Landscape</h2>
+                <InterventionTimeline organizationId={organization.id} />
+              </div>
+            </ErrorBoundary>
           )}
         </div>
 
-        {/* Sidebar / Recommended */}
+        {/* Sidebar / Role-Based Quick Actions */}
         <div className="space-y-8">
+          {/* Role-Specific Quick Actions */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="glass-card rounded-3xl p-8 border border-slate-100 dark:border-slate-800"
+          >
+            <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-6">Quick Actions</h3>
+            <div className="space-y-3">
+              {getRoleQuickActions(organization?.role as Role).map((action, i) => (
+                <a
+                  key={i}
+                  href={action.href}
+                  className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all group"
+                >
+                  <div className={`p-2 rounded-lg ${action.color}`}>
+                    <action.icon size={18} />
+                  </div>
+                  <div className="flex-1">
+                    <span className="text-sm font-bold text-slate-900 dark:text-white">{action.title}</span>
+                    <p className="text-xs text-slate-500">{action.description}</p>
+                  </div>
+                </a>
+              ))}
+            </div>
+          </motion.div>
+
           {riskProfile?.recommendations && canUserAccess(MODULES.find(m => m.id === 'improvement')?.requiredPermissions || [], organization?.role as Role) && (
             <motion.div
               initial={{ opacity: 0, x: 20 }}
@@ -366,6 +518,146 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+// Role-specific quick actions helper
+const getRoleQuickActions = (role: Role) => {
+  const actions: Array<{
+    title: string;
+    description: string;
+    href: string;
+    icon: React.ComponentType<{ className?: string }>;
+    color: string;
+  }> = [];
+
+  switch (role) {
+    case 'caretaker':
+      actions.push(
+        {
+          title: 'Log Maintenance Issue',
+          description: 'Report a facilities problem',
+          href: '/estates-compliance/helpdesk',
+          icon: Wrench,
+          color: 'bg-amber-100 text-amber-600'
+        },
+        {
+          title: 'Compliance Checklist',
+          description: 'View daily tasks',
+          href: '/estates-compliance/routines',
+          icon: CheckSquare,
+          color: 'bg-emerald-100 text-emerald-600'
+        },
+        {
+          title: 'Asset Register',
+          description: 'View school assets',
+          href: '/estates-compliance/assets',
+          icon: Building2,
+          color: 'bg-blue-100 text-blue-600'
+        }
+      );
+      break;
+
+    case 'teacher':
+      actions.push(
+        {
+          title: 'My Class Actions',
+          description: 'View improvement tasks',
+          href: '/dashboard/actions-hub',
+          icon: CheckCircle2,
+          color: 'bg-emerald-100 text-emerald-600'
+        },
+        {
+          title: 'Teaching Resources',
+          description: 'Access planning materials',
+          href: '/dashboard/teaching-learning',
+          icon: BookOpen,
+          color: 'bg-blue-100 text-blue-600'
+        },
+        {
+          title: 'My CPD',
+          description: 'Professional development',
+          href: '/dashboard/hr/people',
+          icon: GraduationCap,
+          color: 'bg-purple-100 text-purple-600'
+        }
+      );
+      break;
+
+    case 'governor':
+      actions.push(
+        {
+          title: 'Board Meetings',
+          description: 'Upcoming and past meetings',
+          href: '/dashboard/governance/meetings',
+          icon: Users,
+          color: 'bg-purple-100 text-purple-600'
+        },
+        {
+          title: 'Policies Review',
+          description: 'Statutory policy tracker',
+          href: '/dashboard/governance/policies',
+          icon: FileText,
+          color: 'bg-blue-100 text-blue-600'
+        },
+        {
+          title: 'Governance Dashboard',
+          description: 'School oversight',
+          href: '/dashboard/governance',
+          icon: Shield,
+          color: 'bg-emerald-100 text-emerald-600'
+        }
+      );
+      break;
+
+    case 'headteacher':
+    case 'slt':
+    case 'admin':
+      actions.push(
+        {
+          title: 'School Improvement Plan',
+          description: 'View SDP progress',
+          href: '/dashboard/sdp',
+          icon: Target,
+          color: 'bg-blue-100 text-blue-600'
+        },
+        {
+          title: 'Staff Directory',
+          description: 'Manage team',
+          href: '/dashboard/hr/people',
+          icon: Users,
+          color: 'bg-emerald-100 text-emerald-600'
+        },
+        {
+          title: 'Ofsted Readiness',
+          description: 'Inspection preparation',
+          href: '/dashboard/ofsted-readiness',
+          icon: ClipboardCheck,
+          color: 'bg-purple-100 text-purple-600'
+        }
+      );
+      break;
+
+    default:
+      // Viewer role - show general actions
+      actions.push(
+        {
+          title: 'View Evidence',
+          description: 'Browse school documents',
+          href: '/dashboard/evidence',
+          icon: FileText,
+          color: 'bg-blue-100 text-blue-600'
+        },
+        {
+          title: 'School Policies',
+          description: 'Read statutory documents',
+          href: '/dashboard/governance/policies',
+          icon: BookOpen,
+          color: 'bg-emerald-100 text-emerald-600'
+        }
+      );
+  }
+
+  return actions.slice(0, 3);
+};
 
 const Badge = ({ label, value, color }: { label: string; value: string; color: string }) => {
   const styles: any = {

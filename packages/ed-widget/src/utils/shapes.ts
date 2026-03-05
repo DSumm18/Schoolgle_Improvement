@@ -185,17 +185,17 @@ export function generateStarPoints(count: number): Float32Array {
  */
 export function generateThumbsUpPoints(count: number): Float32Array {
   const positions = new Float32Array(count * 3);
-  
+
   for (let i = 0; i < count; i++) {
     const t = i / count;
-    
+
     if (t < 0.3) {
       // Thumb (vertical)
       const thumbT = t / 0.3;
       const x = -0.3 + Math.random() * 0.3;
       const y = 0.2 + thumbT * 0.8;
       const z = (Math.random() - 0.5) * 0.2;
-      
+
       positions[i * 3] = x;
       positions[i * 3 + 1] = y;
       positions[i * 3 + 2] = z;
@@ -204,13 +204,13 @@ export function generateThumbsUpPoints(count: number): Float32Array {
       const fistT = (t - 0.3) / 0.7;
       const angle = fistT * Math.PI * 2;
       const radius = 0.4 + Math.random() * 0.1;
-      
+
       positions[i * 3] = Math.cos(angle) * radius + 0.2;
       positions[i * 3 + 1] = Math.sin(angle) * radius * 0.6 - 0.4;
       positions[i * 3 + 2] = (Math.random() - 0.5) * 0.2;
     }
   }
-  
+
   return positions;
 }
 
@@ -219,10 +219,10 @@ export function generateThumbsUpPoints(count: number): Float32Array {
  */
 export function generateCheckmarkPoints(count: number): Float32Array {
   const positions = new Float32Array(count * 3);
-  
+
   for (let i = 0; i < count; i++) {
     const t = i / count;
-    
+
     let x, y;
     if (t < 0.4) {
       // Short stroke
@@ -235,14 +235,14 @@ export function generateCheckmarkPoints(count: number): Float32Array {
       x = 0.1 + strokeT * 0.8;
       y = -0.7 + strokeT * 1.3;
     }
-    
+
     // Add thickness
     const offset = (Math.random() - 0.5) * 0.1;
     positions[i * 3] = x + offset;
     positions[i * 3 + 1] = y + offset;
     positions[i * 3 + 2] = (Math.random() - 0.5) * 0.15;
   }
-  
+
   return positions;
 }
 
@@ -251,15 +251,15 @@ export function generateCheckmarkPoints(count: number): Float32Array {
  */
 export function generateSmileyPoints(count: number): Float32Array {
   const positions = new Float32Array(count * 3);
-  
+
   for (let i = 0; i < count; i++) {
     const t = i / count;
-    
+
     if (t < 0.6) {
       // Circle outline
       const angle = (t / 0.6) * Math.PI * 2;
       const radius = 0.8 + Math.random() * 0.1;
-      
+
       positions[i * 3] = Math.cos(angle) * radius;
       positions[i * 3 + 1] = Math.sin(angle) * radius;
       positions[i * 3 + 2] = (Math.random() - 0.5) * 0.1;
@@ -267,7 +267,7 @@ export function generateSmileyPoints(count: number): Float32Array {
       // Left eye
       const eyeT = (t - 0.6) / 0.15;
       const angle = eyeT * Math.PI * 2;
-      
+
       positions[i * 3] = -0.3 + Math.cos(angle) * 0.1;
       positions[i * 3 + 1] = 0.2 + Math.sin(angle) * 0.15;
       positions[i * 3 + 2] = (Math.random() - 0.5) * 0.1;
@@ -275,7 +275,7 @@ export function generateSmileyPoints(count: number): Float32Array {
       // Right eye
       const eyeT = (t - 0.75) / 0.15;
       const angle = eyeT * Math.PI * 2;
-      
+
       positions[i * 3] = 0.3 + Math.cos(angle) * 0.1;
       positions[i * 3 + 1] = 0.2 + Math.sin(angle) * 0.15;
       positions[i * 3 + 2] = (Math.random() - 0.5) * 0.1;
@@ -283,13 +283,13 @@ export function generateSmileyPoints(count: number): Float32Array {
       // Smile
       const smileT = (t - 0.9) / 0.1;
       const angle = Math.PI + smileT * Math.PI;
-      
+
       positions[i * 3] = Math.cos(angle) * 0.4;
       positions[i * 3 + 1] = Math.sin(angle) * 0.4 - 0.1;
       positions[i * 3 + 2] = (Math.random() - 0.5) * 0.1;
     }
   }
-  
+
   return positions;
 }
 
@@ -307,16 +307,16 @@ export function generateLogoPoints(
 // Essential new shapes - Improved procedural generators for better recognition
 export function generateBookPoints(count: number): Float32Array {
   const positions = new Float32Array(count * 3);
-  
+
   for (let i = 0; i < count; i++) {
     const t = i / count;
-    
+
     if (t < 0.7) {
       // Book cover (rectangular with rounded spine)
       const coverT = t / 0.7;
       const angle = coverT * Math.PI * 2;
       const isSpine = Math.abs(coverT - 0.5) < 0.1;
-      
+
       if (isSpine) {
         // Spine area - vertical curve
         const spineY = (Math.random() - 0.5) * 1.2;
@@ -338,19 +338,19 @@ export function generateBookPoints(count: number): Float32Array {
       positions[i * 3] = x;
       positions[i * 3 + 1] = y;
     }
-    
+
     positions[i * 3 + 2] = (Math.random() - 0.5) * 0.25;
   }
-  
+
   return positions;
 }
 
 export function generateClockPoints(count: number): Float32Array {
   const positions = new Float32Array(count * 3);
-  
+
   for (let i = 0; i < count; i++) {
     const t = i / count;
-    
+
     if (t < 0.7) {
       // Clock face (circle)
       const angle = (t / 0.7) * Math.PI * 2;
@@ -368,24 +368,24 @@ export function generateClockPoints(count: number): Float32Array {
       positions[i * 3] = 0.1 + handT * 0.5;
       positions[i * 3 + 1] = (Math.random() - 0.5) * 0.05;
     }
-    
+
     positions[i * 3 + 2] = (Math.random() - 0.5) * 0.2;
   }
-  
+
   return positions;
 }
 
 export function generateWarningPoints(count: number): Float32Array {
   const positions = new Float32Array(count * 3);
-  
+
   for (let i = 0; i < count; i++) {
     const t = i / count;
-    
+
     if (t < 0.7) {
       // Triangle outline
       const triT = t / 0.7;
       let x: number, y: number;
-      
+
       if (triT < 0.33) {
         // Top to right
         const segT = triT / 0.33;
@@ -402,7 +402,7 @@ export function generateWarningPoints(count: number): Float32Array {
         x = -0.7 + segT * 0.7;
         y = 0.8 - segT * 1.7;
       }
-      
+
       positions[i * 3] = x;
       positions[i * 3 + 1] = y;
     } else if (t < 0.9) {
@@ -416,19 +416,19 @@ export function generateWarningPoints(count: number): Float32Array {
       positions[i * 3] = Math.cos(angle) * 0.1;
       positions[i * 3 + 1] = 0.3 + Math.sin(angle) * 0.1;
     }
-    
+
     positions[i * 3 + 2] = (Math.random() - 0.5) * 0.15;
   }
-  
+
   return positions;
 }
 
 export function generateQuestionPoints(count: number): Float32Array {
   const positions = new Float32Array(count * 3);
-  
+
   for (let i = 0; i < count; i++) {
     const t = i / count;
-    
+
     if (t < 0.5) {
       // Question mark curve (top loop)
       const curveT = t / 0.5;
@@ -447,19 +447,19 @@ export function generateQuestionPoints(count: number): Float32Array {
       positions[i * 3] = Math.cos(angle) * 0.08;
       positions[i * 3 + 1] = 0.7 + Math.sin(angle) * 0.08;
     }
-    
+
     positions[i * 3 + 2] = (Math.random() - 0.5) * 0.2;
   }
-  
+
   return positions;
 }
 
 export function generateLoadingPoints(count: number): Float32Array {
   const positions = new Float32Array(count * 3);
-  
+
   for (let i = 0; i < count; i++) {
     const t = i / count;
-    
+
     if (t < 0.5) {
       // Top half (hourglass)
       const topT = t / 0.5;
@@ -475,19 +475,19 @@ export function generateLoadingPoints(count: number): Float32Array {
       positions[i * 3] = Math.cos(angle) * radius;
       positions[i * 3 + 1] = -0.3 + botT * 0.6;
     }
-    
+
     positions[i * 3 + 2] = (Math.random() - 0.5) * 0.2;
   }
-  
+
   return positions;
 }
 
 export function generateCalendarPoints(count: number): Float32Array {
   const positions = new Float32Array(count * 3);
-  
+
   for (let i = 0; i < count; i++) {
     const t = i / count;
-    
+
     if (t < 0.3) {
       // Top binding (spiral)
       const bindT = t / 0.3;
@@ -499,7 +499,7 @@ export function generateCalendarPoints(count: number): Float32Array {
       const pageT = (t - 0.3) / 0.4;
       const x = (Math.random() - 0.5) * 0.8;
       const y = 0.3 - pageT * 0.6;
-      
+
       // Add grid lines
       if (Math.abs(x) < 0.05 || Math.abs(y + 0.3) < 0.05) {
         positions[i * 3] = x;
@@ -514,19 +514,19 @@ export function generateCalendarPoints(count: number): Float32Array {
       positions[i * 3] = (Math.random() - 0.5) * 0.8;
       positions[i * 3 + 1] = -0.3 - edgeT * 0.1;
     }
-    
+
     positions[i * 3 + 2] = (Math.random() - 0.5) * 0.15;
   }
-  
+
   return positions;
 }
 
 export function generateSearchPoints(count: number): Float32Array {
   const positions = new Float32Array(count * 3);
-  
+
   for (let i = 0; i < count; i++) {
     const t = i / count;
-    
+
     if (t < 0.6) {
       // Magnifying glass circle
       const angle = (t / 0.6) * Math.PI * 2;
@@ -541,25 +541,25 @@ export function generateSearchPoints(count: number): Float32Array {
       positions[i * 3] = 0.4 + Math.cos(angle) * length;
       positions[i * 3 + 1] = 0.4 + Math.sin(angle) * length;
     }
-    
+
     positions[i * 3 + 2] = (Math.random() - 0.5) * 0.2;
   }
-  
+
   return positions;
 }
 
 export function generatePhonePoints(count: number): Float32Array {
   const positions = new Float32Array(count * 3);
-  
+
   for (let i = 0; i < count; i++) {
     const t = i / count;
-    
+
     if (t < 0.7) {
       // Phone body (rounded rectangle)
       const bodyT = t / 0.7;
       const angle = bodyT * Math.PI * 2;
       const isCorner = Math.abs(Math.cos(angle)) > 0.7 || Math.abs(Math.sin(angle)) > 0.7;
-      
+
       if (isCorner) {
         // Rounded corners
         const cornerAngle = Math.floor(bodyT * 4) * Math.PI / 2;
@@ -579,19 +579,19 @@ export function generatePhonePoints(count: number): Float32Array {
       positions[i * 3] = Math.cos(angle) * 0.3;
       positions[i * 3 + 1] = 0.8 + Math.sin(angle) * 0.2;
     }
-    
+
     positions[i * 3 + 2] = (Math.random() - 0.5) * 0.2;
   }
-  
+
   return positions;
 }
 
 export function generateLocationPoints(count: number): Float32Array {
   const positions = new Float32Array(count * 3);
-  
+
   for (let i = 0; i < count; i++) {
     const t = i / count;
-    
+
     if (t < 0.4) {
       // Pin head (circle)
       const angle = (t / 0.4) * Math.PI * 2;
@@ -611,10 +611,10 @@ export function generateLocationPoints(count: number): Float32Array {
       positions[i * 3] = (Math.random() - 0.5) * 0.1;
       positions[i * 3 + 1] = 0.5 + pointT * 0.3;
     }
-    
+
     positions[i * 3 + 2] = (Math.random() - 0.5) * 0.2;
   }
-  
+
   return positions;
 }
 
@@ -690,7 +690,7 @@ export function generateFromSVGPath(
   const positions = new Float32Array(count * 3);
   const pathPoints: number[][] = [];
   const featurePoints: number[][] = [];
-  
+
   // Collect all path points
   emojiRef.svgPaths.forEach((path) => {
     if (path.type === 'feature' || path.type === 'detail') {
@@ -703,7 +703,7 @@ export function generateFromSVGPath(
   // Calculate total path length for distribution
   let totalLength = 0;
   const pathSegments: Array<{ start: number[]; end: number[]; length: number }> = [];
-  
+
   emojiRef.svgPaths.forEach((path) => {
     for (let i = 0; i < path.points.length - 1; i++) {
       const start = path.points[i];
@@ -740,7 +740,7 @@ export function generateFromSVGPath(
 
     for (let i = 0; i < baseParticleCount && particleIndex < count; i++) {
       const targetLength = i * targetSpacing;
-      
+
       // Find segment containing target length
       let accumulatedLength = 0;
       for (const segment of pathSegments) {
@@ -748,14 +748,14 @@ export function generateFromSVGPath(
           const t = (targetLength - accumulatedLength) / segment.length;
           const x = segment.start[0] + (segment.end[0] - segment.start[0]) * t;
           const y = segment.start[1] + (segment.end[1] - segment.start[1]) * t;
-          
+
           // Add depth variation
           const z = (Math.random() - 0.5) * depthVariation;
-          
+
           positions[particleIndex * 3] = x;
           positions[particleIndex * 3 + 1] = y;
           positions[particleIndex * 3 + 2] = z;
-          
+
           particleIndex++;
           break;
         }
@@ -767,7 +767,7 @@ export function generateFromSVGPath(
   // Fill remaining with feature points and random distribution
   while (particleIndex < count) {
     let x: number, y: number;
-    
+
     if (featurePoints.length > 0 && Math.random() < 0.3) {
       // Use feature point
       const feature = featurePoints[Math.floor(Math.random() * featurePoints.length)];
@@ -783,13 +783,13 @@ export function generateFromSVGPath(
       x = (Math.random() - 0.5) * 1.6;
       y = (Math.random() - 0.5) * 1.6;
     }
-    
+
     const z = (Math.random() - 0.5) * depthVariation;
-    
+
     positions[particleIndex * 3] = x;
     positions[particleIndex * 3 + 1] = y;
     positions[particleIndex * 3 + 2] = z;
-    
+
     particleIndex++;
   }
 

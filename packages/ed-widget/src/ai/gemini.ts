@@ -41,7 +41,7 @@ export class GeminiClient {
     this.apiKey = apiKey;
     // Default to gemini-2.5-flash (fast, reliable, widely available)
     this.model = model || 'gemini-2.5-flash';
-    
+
     // Log API key info (masked for security)
     const maskedKey = apiKey.substring(0, 10) + '...' + apiKey.substring(apiKey.length - 4);
     console.log(`[Gemini] Initialized with API key: ${maskedKey}, model: ${this.model}`);
@@ -65,13 +65,13 @@ export class GeminiClient {
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models?key=${this.apiKey}`
       );
-      
+
       if (!response.ok) {
         const error = await response.json().catch(() => ({}));
         console.error('[Gemini] Failed to list models:', error);
         return [];
       }
-      
+
       const data = await response.json();
       const models = data.models?.map((m: any) => m.name?.replace('models/', '') || '') || [];
       console.log('[Gemini] Available models:', models);
@@ -93,12 +93,12 @@ export class GeminiClient {
 
     // Try current model first, then fallback models
     const modelsToTry = [this.model, ...this.modelsToTry.filter(m => m !== this.model)];
-    
+
     for (const model of modelsToTry) {
       try {
         // All models use v1beta API now
         let response = await this.tryRequest(model, systemPrompt, true);
-        
+
         // If v1beta fails with 404, try v1 API
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
@@ -130,18 +130,19 @@ export class GeminiClient {
         } else {
           const errorData = await response.json().catch(() => ({}));
           const errorMessage = errorData.error?.message || `HTTP ${response.status}`;
+          const logUrl = this.getBaseUrl(model).split('?')[0];
           console.error(`[Gemini] Model ${model} failed:`, {
             model,
             status: response.status,
             error: errorMessage,
-            url: baseUrl.split('?')[0], // Log URL without key
+            url: logUrl, // Log URL without key
           });
-          
+
           // If it's an authentication/authorization error, stop trying
           if (response.status === 401 || response.status === 403) {
             throw new Error(`API key authentication failed (${response.status}). Check your API key is valid.`);
           }
-          
+
           continue; // Try next model
         }
       } catch (error) {
@@ -166,16 +167,16 @@ export class GeminiClient {
       '- Check that billing is enabled for your project',
       '- Try calling listAvailableModels() to see what models you have access to',
     ].join('\n');
-    
+
     console.error('[Gemini]', errorDetails);
     throw new Error(errorDetails);
   }
 
   private async tryRequest(model: string, systemPrompt: string, useV1Beta: boolean): Promise<Response> {
     const baseUrl = useV1Beta ? this.getBaseUrl(model) : this.getBaseUrlV1(model);
-    
+
     console.log(`[Gemini] Attempting ${model} via ${useV1Beta ? 'v1beta' : 'v1'} API...`);
-    
+
     return await fetch(`${baseUrl}?key=${this.apiKey}`, {
       method: 'POST',
       headers: {

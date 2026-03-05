@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import { OFSTED_FRAMEWORK, type Category } from './ofsted-framework';
+import { OFSTED_FRAMEWORK_DATA, type Category } from './ofsted/framework-data';
 
 // --- Configuration ---
 
@@ -141,7 +141,7 @@ export function selectModel(metadata: DocumentMetadata): string {
 function formatFrameworkForPrompt(): string {
     let formatted = '';
 
-    OFSTED_FRAMEWORK.forEach(category => {
+    OFSTED_FRAMEWORK_DATA.forEach(category => {
         formatted += `\n## ${category.name}\n`;
         category.subcategories.forEach(sub => {
             formatted += `\n### ${sub.name}\n`;
@@ -206,8 +206,8 @@ Return a JSON object with this exact structure:
 {
   "matches": [
     {
-      "category_id": "quality_of_education",
-      "subcategory_id": "curriculum_intent",
+      "category_id": "quality-of-education",
+      "subcategory_id": "education-curriculum",
       "evidence_item": "Curriculum policy documents",
       "confidence": 0.95,
       "confidence_level": "HIGH",
@@ -251,7 +251,7 @@ function parseAIResponse(
         // Convert to EvidenceMatch format
         return parsed.matches.map(match => {
             // Find category and subcategory names
-            const category = OFSTED_FRAMEWORK.find(c => c.id === match.category_id);
+            const category = OFSTED_FRAMEWORK_DATA.find(c => c.id === match.category_id);
             const subcategory = category?.subcategories.find(s => s.id === match.subcategory_id);
 
             // Infer confidence level if missing
@@ -428,7 +428,7 @@ export function matchDocumentToCategories(text: string): {
     const matches: any[] = [];
 
     // Simple keyword matching as fallback
-    OFSTED_FRAMEWORK.forEach(category => {
+    OFSTED_FRAMEWORK_DATA.forEach(category => {
         category.subcategories.forEach(sub => {
             sub.evidenceRequired.forEach(evidence => {
                 const keywords = evidence.name.toLowerCase().split(' ').filter(w => w.length > 3);

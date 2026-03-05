@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import path from "path";
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
 });
@@ -30,7 +31,6 @@ const nextConfig: NextConfig = {
         fs: false,
       };
     }
-    const path = require('path');
     config.resolve.alias = {
       ...config.resolve.alias,
       '@schoolgle/ed-widget': path.resolve(__dirname, 'src/lib/ed-widget-stub.ts'),
@@ -41,6 +41,8 @@ const nextConfig: NextConfig = {
   turbopack: {
     resolveAlias: {
       '@schoolgle/ed-widget': './src/lib/ed-widget-stub.ts',
+      '@schoolgle/ed-agents': '../../packages/ed-agents/src',
+      '@schoolgle/ed-agents/*': '../../packages/ed-agents/src/*',
     },
   },
 } as NextConfig;

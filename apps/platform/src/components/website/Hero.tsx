@@ -8,7 +8,7 @@ import { useAnalytics } from '@/hooks/useAnalytics';
 const Hero = () => {
     const { track } = useAnalytics();
     return (
-        <section className="relative min-h-screen flex flex-col pt-12 px-4 md:px-8 pb-20 overflow-hidden">
+        <section className="relative min-h-screen flex flex-col pt-12 px-4 md:px-8 pb-20 overflow-hidden bg-background transition-colors duration-500">
             <div className="container mx-auto max-w-7xl relative z-10">
 
                 {/* Header Text */}
@@ -19,7 +19,7 @@ const Hero = () => {
                         transition={{ duration: 0.6 }}
                         className="flex flex-col items-center justify-center gap-4"
                     >
-                        <span className="px-4 py-1.5 rounded-full bg-blue-50 text-blue-700 text-xs font-bold uppercase tracking-widest border border-blue-100 italic">
+                        <span className="px-4 py-1.5 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-xs font-bold uppercase tracking-widest border border-blue-100 dark:border-blue-800/50 italic">
                             Built by school leaders, for school leaders
                         </span>
                     </motion.div>
@@ -28,16 +28,16 @@ const Hero = () => {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.6, delay: 0.1 }}
-                        className="text-6xl md:text-7xl lg:text-8xl font-black tracking-tight text-gray-900 text-balance leading-none max-w-6xl mx-auto"
+                        className="text-6xl md:text-7xl lg:text-8xl font-black tracking-tight text-gray-900 dark:text-white text-balance leading-none max-w-6xl mx-auto"
                     >
-                        Always be ready for <span className="text-blue-600">Inspection.</span>
+                        Always be ready for <span className="text-blue-600 dark:text-blue-400">Inspection.</span>
                     </motion.h1>
 
                     <motion.p
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.6, delay: 0.15 }}
-                        className="text-xl md:text-2xl text-gray-500 max-w-3xl mx-auto leading-relaxed font-medium"
+                        className="text-xl md:text-2xl text-gray-500 dark:text-gray-400 max-w-3xl mx-auto leading-relaxed font-medium"
                     >
                         Schoolgle is the AI-powered operations engine for UK primary schools. Automatically map evidence, track improvement actions, and generate inspection-ready reports in seconds.
                     </motion.p>

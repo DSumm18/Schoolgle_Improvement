@@ -82,6 +82,14 @@ export class CreditManager {
   }
 
   /**
+   * Track communication cost
+   */
+  trackCommunication(channel: string, cost: number): void {
+    this.state.sessionUsage += cost;
+    console.log(`[CreditManager] Tracked ${cost} credits for ${channel}. Total session usage: ${this.state.sessionUsage}`);
+  }
+
+  /**
    * Get credit usage summary
    */
   getSummary(): {
