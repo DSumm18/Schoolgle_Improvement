@@ -1,0 +1,38 @@
+{
+  "name": "@schoolgle/core-ai",
+  "version": "1.0.0",
+  "description": "Shared AI engine, voice processing, and agent system for Schoolgle applications",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "exports": {
+    "./ai-engine": "./ai-engine.ts",
+    "./voice-engine": "./voice-engine.ts",
+    "./types": "./types.ts",
+    "./agents/ed": "./agents/ed.ts",
+    "./agents/hugh": "./agents/hugh.ts",
+    "./agents/kate": "./agents/kate.ts",
+    "./agents/agent": "./agents/agent.ts",
+    "./actions/actionRegistry": "./actions/actionRegistry.ts",
+    "./providers/gemini": "./providers/gemini.ts",
+    "./providers/openrouter": "./providers/openrouter.ts",
+    "./tts-providers/gemini-tts": "./tts-providers/gemini-tts.ts",
+    "./tts-providers/google-tts": "./tts-providers/google-tts.ts",
+    "./utils/logger": "./utils/logger.ts",
+    "./config/voiceProfiles": "./config/voiceProfiles.ts"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.0",
+    "@google/genai": "^1.4.0",
+    "dotenv": "^16.5.0"
+  },
+  "devDependencies": {
+    "typescript": "^5"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0"
+  }
+}
