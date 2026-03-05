@@ -51,7 +51,7 @@ npm run test:formfill:headed  # Run tests with browser UI
 npm run test:formfill:ci      # Run tests with CI reporter
 ```
 
-**Important**: Node.js 20.x is required (see `package.json` `engines`).
+**Important**: Node.js 20.x is required (see `package.json` `engines`). Use `nvm use 20` or `nodeenv -n 20` to ensure correct version.
 
 ---
 
@@ -183,6 +183,7 @@ Models configured in `apps/platform/src/lib/ai-evidence-matcher.ts`:
 - **Purpose**: Statutory compliance tracking with source attribution
 - **Key Differentiator**: Separates statutory requirements from good practice/contractor suggestions
 - **Features**: Asset register, contractor management, task scheduling, helpdesk, budget planning
+- **Estates Evolution (NEW)**: Hierarchical locations, mobile inspections, harmonized AI skills
 - **API**: `/api/estates/*` - Full CRUD for assets, contractors, tasks, helpdesk
 - **Skills**: `estates-supervisor`, `compliance-legionella`
 - **Documentation**: See `docs/modules/estates-compliance/SUMMARY.md` for complete details
@@ -191,6 +192,20 @@ Models configured in `apps/platform/src/lib/ai-evidence-matcher.ts`:
 - **Purpose**: Governor portal with board meetings, training tracking, policy management
 - **Features**: Governor directory, meeting scheduling, visit tracking, training matrix
 - **API**: `/api/governance/*` - Board, governors, meetings, training, policies, visits
+
+### Ed Form Helper (NEW - ~80% Complete)
+- **Purpose**: AI-powered form filling assistant with voice intelligence for non-English speakers
+- **Key Features**: Multi-language voice input (17 languages), privacy-first design, adaptive UX based on user experience
+- **Components**:
+  - Backend skills: `apps/platform/src/lib/skills/form-helper*.ts`
+  - API endpoints: `/api/ed/form-helper/*`, `/api/form-templates/*`
+  - Browser automation: `packages/ed-extension/src/content/automation/`
+  - UI components: `apps/platform/src/components/form-helper/`
+- **AI Models**: Qwen 2.5 VL 72B (form detection), Gemini 2.0 Flash Lite (translation), Web Speech API (voice)
+- **Database Schema**: `form_templates`, `form_template_fields`, `form_template_values`, `form_helper_sessions`
+- **Privacy Guarantees**: Zero data retention, anonymous analytics only, no password/credit card forms
+- **Documentation**: `docs/ED_FORM_HELPER_SUMMARY.md` - Complete implementation guide
+- **Status**: Ready for integration testing and extension build
 
 ---
 
@@ -255,7 +270,15 @@ NEXT_PUBLIC_MICROSOFT_CLIENT_ID=
 - **API**: `POST /api/skills/invoke` - Unified skill execution endpoint
 - **Discovery**: `GET /api/skills/invoke` - List all available functions
 - **Categories**: School Management, Governance & Compliance, Estates & Facilities, Research & Analysis
-- **Current Skills**: staff-directory, actions-hub, estates-supervisor, compliance-legionella, deep-research, guardian-privacy
+- **Current Skills**: staff-directory, actions-hub, estates-supervisor, compliance-legionella, deep-research, guardian-privacy, ed-form-helper
+
+**Adding a New Skill**:
+1. Create skill directory: `.agent/skills/your-skill/`
+2. Create `SKILL.md` with frontmatter (name, description, category, triggers)
+3. Register in `.agent/skills/INDEX.md`
+4. Add function schemas in `apps/platform/src/lib/skills/`
+5. Implement API endpoints in `apps/platform/src/app/api/`
+6. Test with the skills invoke endpoint
 
 ### Skills Lab
 - `skills-lab/` - Knowledge-based skills system
@@ -275,7 +298,12 @@ NEXT_PUBLIC_MICROSOFT_CLIENT_ID=
 ## Git Repository Notes
 
 - Main branch: `main`
-- Recent work: Antigravity-style redesign with planet logo and interactive effects
+- Current branch: `feature/estates-evolution` (as of session start)
+- Recent commits:
+  - `feat(ed): implement Ed Form Helper with voice intelligence and learning mode`
+  - `feat(estates): implement Estates Evolution - hierarchical locations, mobile inspections, and harmonized AI skills`
+  - `chore: add additional Radix UI primitives for component library`
+- Design: Antigravity-style redesign with planet logo and interactive effects
 - Untracked files in `apps/platform/src/app/api/drive/`, `/api/ofsted/` - Google Drive/Ofsted integration in progress
 
 ---
@@ -339,7 +367,163 @@ The API is organized by domain under `apps/platform/src/app/api/`:
 
 ## Troubleshooting
 
+### Build Issues
 - **Build fails with Turbopack**: Run with `npm run dev --webpack` (uses webpack instead)
 - **ed-widget errors**: The widget is stubbed out for marketing pages - only import in dashboard routes
 - **Type errors during build**: Currently ignored in config, but run `npm run typecheck` to see them
+- **Module resolution errors**: Check webpack aliases in `next.config.ts`, restart dev server after changes
+
+### Database Issues
 - **Supabase migrations**: Use `supabase db push` or manually run SQL in Supabase dashboard
+- **RLS policy errors**: Check Supabase dashboard for policy details, ensure organization_id is set
+- **Connection errors**: Verify `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` in `.env.local`
+
+### AI/Model Issues
+- **OpenRouter rate limits**: Check usage at openrouter.ai/keys, consider upgrading plan
+- **Model failures**: Fallback logic automatically retries with alternative models
+- **High AI costs**: Review `ai-evidence-matcher.ts`, consider switching to cheaper models
+
+### Authentication Issues
+- **Firebase auth errors**: Check Firebase console for API key restrictions
+- **Supabase auth errors**: Verify RLS policies, check `SUPABASE_SERVICE_ROLE_KEY` for admin operations
+- **OAuth failures**: Verify callback URLs in Firebase console match your domain
+
+### Testing Issues
+- **Test files not found**: Ensure `*.test.ts` or `*.test.tsx` suffix, check vitest.config.ts
+- **jsdom errors**: Check `vitest.config.ts` environment is set to `jsdom`
+- **Playwright failures**: Ensure browsers installed: `npx playwright install`
+
+---
+
+## Development Patterns & Conventions
+
+### File Organization
+- **Route groups**: Use `(dashboard)`, `(marketing)`, `(auth)` for logical organization without affecting URL structure
+- **API routes**: Organized by domain under `/api/{domain}/*` (e.g., `/api/staff/*`, `/api/estates/*`)
+- **Components**: Organized by feature/domain in `src/components/{domain}/`
+- **Libraries**: Core business logic in `src/lib/`, organized by domain
+
+### Component Patterns
+- **Server Components**: Default for all pages (Next.js 16)
+- **Client Components**: Mark with `"use client"` directive only when needed (interactivity, hooks, browser APIs)
+- **UI Primitives**: Prefer Radix UI over browser native elements for accessibility
+- **Styling**: Use Tailwind CSS with class-variance-authority for component variants
+- **Icons**: Use Lucide React consistently
+
+### State Management
+- **Server State**: Use React Server Components and Server Actions
+- **Client State**: Use React Context API for global state (auth, theme)
+- **Form State**: Use React Hook Form or native FormData with Server Actions
+- **Remote State**: Use SWR for data fetching (already in dependencies)
+
+### Database Patterns
+- **Supabase Client**: Use `@supabase/ssr` for server-side, `@supabase/supabase-js` for client-side
+- **Row Level Security (RLS)**: Enable for all tables, use organization-based access control
+- **Migrations**: Store in `apps/platform/supabase/migrations/` with timestamp prefix
+- **Type Safety**: Generate TypeScript types from Supabase schema
+
+### AI Integration Patterns
+- **OpenRouter**: Primary AI model provider (multi-model support)
+- **Model Selection**: Choose based on cost vs quality tradeoffs (see AI Model Stack section)
+- **Function Calling**: Use structured schemas in `src/lib/skills/` for AI skill execution
+- **Error Handling**: Always implement fallback logic for AI model failures
+- **Cost Monitoring**: Track token usage and costs, especially for DeepSeek V3
+
+### Testing Strategy
+- **Unit Tests**: Vitest with jsdom environment, test files co-located with source
+- **Integration Tests**: API route tests using Vitest
+- **E2E Tests**: Playwright for form filling and user workflows
+- **Test Naming**: Use `*.test.ts` or `*.test.tsx` suffix
+- **Coverage**: Run with `npm run test:coverage`
+
+### Git Workflow
+- **Feature Branches**: Use `feature/` prefix for new features
+- **Commit Messages**: Conventional Commits format (feat:, fix:, chore:, docs:)
+- **Pull Requests**: Required before merging to main
+- **Code Review**: At least one approval required
+
+---
+
+## Quick Reference
+
+### Common Development Tasks
+
+**Create a new API route**:
+```bash
+# Create file at apps/platform/src/app/api/your-domain/route.ts
+# Export async function GET/POST/PUT/DELETE handlers
+```
+
+**Create a new page**:
+```bash
+# For dashboard: apps/platform/src/app/(dashboard)/your-page/page.tsx
+# For marketing: apps/platform/src/app/(marketing)/your-page/page.tsx
+```
+
+**Add a new AI skill**:
+```bash
+# 1. Create .agent/skills/your-skill/SKILL.md
+# 2. Add to .agent/skills/INDEX.md
+# 3. Add schemas to apps/platform/src/lib/skills/
+# 4. Create API endpoints
+```
+
+**Run database migration**:
+```bash
+# Create migration file in apps/platform/supabase/migrations/
+# Run: supabase db push
+# Or manually execute in Supabase dashboard
+```
+
+**Add a new module/app**:
+```bash
+# Update apps/platform/src/lib/modules/registry.ts
+# Add module definition with accent color and icon
+# Add app definition with access control
+```
+
+### Useful File Paths
+
+| Purpose | Path |
+|---------|------|
+| Environment variables | `.env.local` (root) |
+| Main app config | `apps/platform/next.config.ts` |
+| TypeScript config | `apps/platform/tsconfig.json` |
+| Tailwind config | `apps/platform/tailwind.config.ts` |
+| Supabase migrations | `apps/platform/supabase/migrations/` |
+| AI model config | `apps/platform/src/lib/ai-evidence-matcher.ts` |
+| Skills registry | `.agent/skills/INDEX.md` |
+| Module registry | `apps/platform/src/lib/modules/registry.ts` |
+| Auth context | `apps/platform/src/context/SupabaseAuthContext.tsx` |
+| API routes | `apps/platform/src/app/api/` |
+| Components | `apps/platform/src/components/` |
+| Auto memory | `.claude/projects/C--Git-Schoolgle-Improvement/memory/` |
+
+---
+
+## Memory System
+
+This repository has an auto memory system that persists information across conversations at `.claude/projects/C--Git-Schoolgle-Improvement/memory/`.
+
+**When to save memories**:
+- Confirm patterns across multiple interactions (not single occurrences)
+- Document architectural decisions and rationale
+- Save user preferences for workflow and tools
+- Record solutions to recurring problems
+
+**What NOT to save**:
+- Session-specific context (current task details, in-progress work)
+- Information that might be incomplete (verify against project docs first)
+- Anything duplicating CLAUDE.md instructions
+- Speculative conclusions
+
+**Searching past context**:
+```bash
+# Search memory files
+Grep with pattern="<search term>" path=".claude/projects/C--Git-Schoolgle-Improvement/memory/" glob="*.md"
+
+# Search session transcripts (last resort)
+Grep with pattern="<search term>" path="C:\Git\Schoolgle_Improvement/" glob="*.jsonl"
+```
+
+---
