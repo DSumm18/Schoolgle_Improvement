@@ -8,7 +8,7 @@ chrome.storage.local.set({
   ed_config: {
     provider: 'gemini', // Changed to 'gemini' for Gemini 3 Flash
     geminiApiKey: 'YOUR_GEMINI_API_KEY_HERE', // ⚠️ ADD YOUR GEMINI API KEY
-    openRouterApiKey: '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',
+    openRouterApiKey: 'YOUR_OPENROUTER_API_KEY_HERE',
     fishAudioApiKey: '979fa335474b48d8af6bbe56cc171ec6',
     enableAI: true,
     enableTTS: true,

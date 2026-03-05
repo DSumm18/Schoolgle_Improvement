@@ -68,3 +68,9 @@ apps/platform/src/components/brand/tmpclaude-*
 # Local scratch
 audit_script.ps1
 *.old.css
+
+# Environment files with secrets
+.env.local
+.env.*.local
+.env.production
+*.env
