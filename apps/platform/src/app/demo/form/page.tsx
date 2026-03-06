@@ -49,6 +49,13 @@ export default function FormDemoPage() {
     else unloadEd();
   }
 
+  // Auto-load Ed when script is ready
+  useEffect(() => {
+    if (scriptReady && !edLoaded) {
+      loadEd();
+    }
+  }, [scriptReady]);
+
   function loadEd() {
     if (edLoaded || !scriptReady) return;
     const EdWidget = (window as any).EdWidget;

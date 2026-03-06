@@ -52,6 +52,13 @@ export default function SchoolDemoPage() {
     }
   }
 
+  // Auto-load Ed when script is ready
+  useEffect(() => {
+    if (scriptReady && !edLoaded) {
+      loadEd();
+    }
+  }, [scriptReady]);
+
   function loadEd() {
     if (edLoaded || !scriptReady) return;
 
