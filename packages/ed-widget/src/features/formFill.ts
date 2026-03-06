@@ -219,23 +219,123 @@ export class FormFiller {
       else return false; // Ambiguous — ask again
     }
 
-    // Select/dropdown: fuzzy option matching
+    // Email: parse spoken email ("the summer scales at hotmail dot co dot uk")
+    if (field.type === "email address") {
+      value = this.parseSpokenEmail(cleanText);
+    }
+
+    // Phone: extract digits from spoken number ("oh seven seven zero one...")
+    if (field.type === "phone number") {
+      value = this.parseSpokenPhone(cleanText);
+    }
+
+    // Select/dropdown: fuzzy option matching with scored ranking
     if (
       field.type === "dropdown" &&
       field.element instanceof HTMLSelectElement
     ) {
-      const options = Array.from(field.element.options);
-      const match = options.find(
-        (opt) =>
-          opt.text.toLowerCase().includes(cleanText.toLowerCase()) ||
-          opt.value.toLowerCase() === cleanText.toLowerCase(),
+      const options = Array.from(field.element.options).filter(
+        (o) => o.value && o.value !== "",
       );
-      if (match) value = match.value;
+      const lower = cleanText.toLowerCase();
+
+      // 1. Exact value match
+      let match = options.find((o) => o.value.toLowerCase() === lower);
+      // 2. Exact text match
+      if (!match) match = options.find((o) => o.text.toLowerCase() === lower);
+      // 3. Text starts with input
+      if (!match)
+        match = options.find((o) => o.text.toLowerCase().startsWith(lower));
+      // 4. Text contains input
+      if (!match)
+        match = options.find((o) => o.text.toLowerCase().includes(lower));
+      // 5. Input contains option text (voice may add filler words)
+      if (!match)
+        match = options.find(
+          (o) => o.text.length > 2 && lower.includes(o.text.toLowerCase()),
+        );
+
+      if (match) {
+        value = match.value;
+      } else {
+        return false; // No match found — ask again
+      }
     }
 
     this.session.values.set(this.session.currentIndex, value);
     this.fillFieldAnimated(field, value);
     return true;
+  }
+
+  /**
+   * Parse a spoken email address into a valid format
+   * "the summer scales at hotmail dot co dot uk" → "thesummerscales@hotmail.co.uk"
+   * "john dot smith at gmail dot com" → "john.smith@gmail.com"
+   */
+  private parseSpokenEmail(text: string): string {
+    let email = text.toLowerCase().trim();
+    // Remove filler words
+    email = email.replace(/^(my email is|it's|its|email is|the)\s+/i, "");
+    // "at" → @
+    email = email.replace(/\s+at\s+/g, "@");
+    // "dot" → .
+    email = email.replace(/\s+dot\s+/g, ".");
+    // "underscore" → _
+    email = email.replace(/\s+underscore\s+/g, "_");
+    // "dash" / "hyphen" → -
+    email = email.replace(/\s+(dash|hyphen)\s+/g, "-");
+    // Remove remaining spaces
+    email = email.replace(/\s+/g, "");
+    // If it already looks like an email, return as-is
+    if (email.includes("@") && email.includes(".")) return email;
+    // Return original if we can't parse it
+    return text.trim();
+  }
+
+  /**
+   * Parse spoken phone number into digits
+   * "oh seven seven zero one two three four five six" → "07701234567"
+   * "zero seven seven zero one" → "07701"
+   */
+  private parseSpokenPhone(text: string): string {
+    let phone = text.toLowerCase().trim();
+    // Remove filler
+    phone = phone.replace(
+      /^(my number is|it's|its|number is|the number is|phone number is)\s+/i,
+      "",
+    );
+    // Spoken digit words → digits
+    const wordMap: Record<string, string> = {
+      zero: "0",
+      oh: "0",
+      o: "0",
+      one: "1",
+      two: "2",
+      three: "3",
+      four: "4",
+      five: "5",
+      six: "6",
+      seven: "7",
+      eight: "8",
+      nine: "9",
+      double: "",
+      triple: "", // handled below
+    };
+    // Handle "double seven" → "77", "triple zero" → "000"
+    phone = phone.replace(/double\s+(\w+)/gi, (_, w) => {
+      const d = wordMap[w.toLowerCase()];
+      return d !== undefined ? d + d : w + w;
+    });
+    phone = phone.replace(/triple\s+(\w+)/gi, (_, w) => {
+      const d = wordMap[w.toLowerCase()];
+      return d !== undefined ? d + d + d : w + w + w;
+    });
+    // Replace remaining word digits
+    const words = phone.split(/[\s,]+/);
+    const digits = words.map((w) => wordMap[w] ?? w).join("");
+    // Extract only digits and +
+    const cleaned = digits.replace(/[^0-9+]/g, "");
+    return cleaned || text.trim();
   }
 
   /**

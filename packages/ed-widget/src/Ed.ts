@@ -1264,21 +1264,9 @@ export class Ed {
       language: this.currentLanguage.code,
     };
 
-    // If language is not English, add English translation
+    // Only show language switch button if user is in a non-English language
     if (this.currentLanguage.code !== "en-GB") {
-      // In production, use proper translation API
-      // For now, we'll add quick reply buttons for language switching
-      assistantMessage.quickReplies = [
-        `${this.currentLanguage.nativeName} ${this.currentLanguage.flag}`,
-        "English 🇬🇧",
-      ];
-    } else {
-      // Add language quick reply buttons for English
-      assistantMessage.quickReplies = [
-        "Polski PL 🇵🇱",
-        "Română RO 🇷🇴",
-        "Español ES 🇪🇸",
-      ];
+      assistantMessage.quickReplies = ["English 🇬🇧"];
     }
 
     this.addMessage(assistantMessage);
@@ -1370,7 +1358,7 @@ export class Ed {
     if (lower === "back" || lower === "go back" || lower === "previous") {
       const prev = this.formFiller.previousField();
       if (prev) {
-        return `Going back. **${prev.label}** currently has: "${this.formFiller.getSummary().find((s) => s.index === this.formFiller!.getProgress().current - 1)?.value || ""}"\n\nWhat should it be?`;
+        return `Going back to ${prev.label}. What should it be?`;
       }
       return "We're already at the first field.";
     }
@@ -1396,7 +1384,7 @@ export class Ed {
       if (fieldIndex >= 0) {
         const field = this.formFiller.goToField(fieldIndex);
         if (field) {
-          return `Editing **${field.label}** (currently: "${summary[fieldIndex].value}").\n\nWhat should the new value be?`;
+          return `Editing ${field.label} (currently: "${summary[fieldIndex].value}"). What should it be?`;
         }
       }
       return "I couldn't find that field. Say 'change field 1' or 'change email' to edit a specific field.";
@@ -1409,10 +1397,8 @@ export class Ed {
       )
     ) {
       const summary = this.formFiller.getSummary();
-      const lines = summary.map(
-        (s, i) => `${i + 1}. **${s.label}**: ${s.value}`,
-      );
-      return `Here's what I've filled so far:\n\n${lines.join("\n")}\n\nSay 'change [field name]' to edit, 'submit' to send, or 'cancel' to stop.`;
+      const lines = summary.map((s, i) => `${i + 1}. ${s.label}: ${s.value}`);
+      return `Here's what I've filled:\n\n${lines.join("\n")}\n\nSay "change [field]", "submit", or "cancel".`;
     }
 
     // Submit request
@@ -1470,7 +1456,8 @@ export class Ed {
     if (currentField) {
       const filled = this.formFiller.fillFieldByVoice(text);
       if (!filled) {
-        return `I wasn't sure about that answer for **${currentField.label}**. Could you try again? ${currentField.type === "checkbox" ? '(Say "yes" or "no")' : ""}`;
+        const hint = this.getFieldHint(currentField);
+        return `I didn't catch that for ${currentField.label}. Could you try again?${hint}`;
       }
 
       // Move to next
@@ -1478,20 +1465,41 @@ export class Ed {
       if (nextField) {
         const progress = this.formFiller.getProgress();
         const required = nextField.required ? " (required)" : "";
+        const hint = this.getFieldHint(nextField);
         this.particle3D?.morphTo("pencil");
-        return `Got it. ${progress.current}/${progress.total} done.\n\nNext: **${nextField.label}**${required}\nWhat should I put?`;
+        return `Got it (${progress.current}/${progress.total}). ${nextField.label}${required}${hint}`;
       }
 
       // All fields done — show summary
       const summary = this.formFiller.getSummary();
-      const lines = summary.map(
-        (s, i) => `${i + 1}. **${s.label}**: ${s.value}`,
-      );
+      const lines = summary.map((s, i) => `${i + 1}. ${s.label}: ${s.value}`);
       this.particle3D?.morphTo("checkmark");
-      return `All fields filled! Here's a summary:\n\n${lines.join("\n")}\n\nSay 'submit' to send, 'change [field]' to edit, or 'cancel' to stop.`;
+      return `All done! Here's what I've filled:\n\n${lines.join("\n")}\n\nSay "submit", "change [field]", or "cancel".`;
     }
 
     return null; // Fall through to normal AI processing
+  }
+
+  /**
+   * Get a short hint for a form field type (shown when asking user)
+   */
+  private getFieldHint(field: import("./types").FormField): string {
+    if (
+      field.type === "dropdown" &&
+      field.element instanceof HTMLSelectElement
+    ) {
+      const opts = Array.from(field.element.options)
+        .filter((o) => o.value && o.value !== "")
+        .map((o) => o.text)
+        .slice(0, 5);
+      if (opts.length > 0) {
+        const more = field.element.options.length - opts.length;
+        return `\nOptions: ${opts.join(", ")}${more > 0 ? `, +${more} more` : ""}`;
+      }
+    }
+    if (field.type === "checkbox") return '\nSay "yes" or "no".';
+    if (field.type === "date") return "\nE.g. 15/06/2024";
+    return "";
   }
 
   /**
@@ -1535,7 +1543,8 @@ export class Ed {
           this.particle3D?.morphTo("pencil");
           const progress = this.formFiller.getProgress();
           const required = field.required ? " (required)" : "";
-          return `I found a form: "${detected.title}" with ${progress.total} fields.\n\nLet's fill it together. I'll ask one field at a time.\n\nFirst up: **${field.label}**${required}\nWhat should I put?`;
+          const hint = this.getFieldHint(field);
+          return `Found "${detected.title}" with ${progress.total} fields. Let's go through them.\n\n${field.label}${required}${hint}`;
         }
       }
       if (this.mode === "support") {
@@ -1675,6 +1684,15 @@ URL: ${window.location.href}`;
       text
         // Remove emotion tags like (happy), (excited), etc.
         .replace(/\([^)]+\)/g, "")
+        // Strip markdown: **bold** → bold, *italic* → italic
+        .replace(/\*\*(.+?)\*\*/g, "$1")
+        .replace(/\*(.+?)\*/g, "$1")
+        .replace(/__(.+?)__/g, "$1")
+        .replace(/_(.+?)_/g, "$1")
+        // Strip markdown headers: ### Heading → Heading
+        .replace(/^#{1,6}\s+/gm, "")
+        // Strip markdown bullet points: - item → item
+        .replace(/^[-*]\s+/gm, "")
         // Remove emojis (keep text only for display)
         .replace(/[\u{1F300}-\u{1F9FF}]/gu, "")
         .replace(/[\u{2600}-\u{26FF}]/gu, "")

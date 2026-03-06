@@ -24,9 +24,41 @@ Guidelines:
 You are the public face of the school. Be helpful, warm, and accurate.
 Never use markdown formatting, asterisks, bold, italic, bullet points, or special characters in your responses. Write in plain conversational text only. Your responses will be read aloud by text-to-speech.`;
 
+// Vision-capable models (support image input)
+const VISION_MODELS = [
+  "google/gemini-2.0-flash-001",
+  "google/gemini-2.0-flash-lite-001",
+];
+
+// Text-only models (cheaper, used when no image)
+const TEXT_MODELS = [
+  "google/gemini-2.0-flash-lite-001",
+  "google/gemini-2.0-flash-001",
+  "deepseek/deepseek-chat",
+];
+
+function buildUserMessage(
+  question: string,
+  image?: string,
+):
+  | string
+  | Array<{ type: string; text?: string; image_url?: { url: string } }> {
+  if (!image) return question;
+
+  // Build multimodal message for vision models
+  const imageUrl = image.startsWith("data:")
+    ? image
+    : `data:image/jpeg;base64,${image}`;
+
+  return [
+    { type: "text", text: question },
+    { type: "image_url", image_url: { url: imageUrl } },
+  ];
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const { question } = await request.json();
+    const { question, image } = await request.json();
     if (!question) {
       return NextResponse.json(
         { error: "Question is required" },
@@ -46,19 +78,18 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Try multiple models in case one is unavailable
-    const models = [
-      "google/gemini-2.0-flash-lite-001",
-      "google/gemini-2.0-flash-001",
-      "deepseek/deepseek-chat",
-    ];
+    // Use vision models if image provided, text models otherwise
+    const models = image ? VISION_MODELS : TEXT_MODELS;
+    const userContent = buildUserMessage(question, image);
 
     let lastError = "";
     let answer = "";
 
     for (const model of models) {
       try {
-        console.log(`[Demo Chat] Trying model: ${model}`);
+        console.log(
+          `[Demo Chat] Trying model: ${model}${image ? " (vision)" : ""}`,
+        );
         const response = await fetch(
           "https://openrouter.ai/api/v1/chat/completions",
           {
@@ -73,7 +104,7 @@ export async function POST(request: NextRequest) {
               model,
               messages: [
                 { role: "system", content: SYSTEM_PROMPT },
-                { role: "user", content: question },
+                { role: "user", content: userContent },
               ],
               temperature: 0.7,
               max_tokens: 512,
