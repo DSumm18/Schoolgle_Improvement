@@ -180,6 +180,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Vision AI: Detect room scan / image analysis requests
+    const isVisionRequest = detectVisionRequest(question, image);
+    if (isVisionRequest && image) {
+      console.log(
+        "[Ed Chat API] Vision request detected, routing to Vision AI",
+      );
+      return await handleVisionRequest(body, supabase);
+    }
+
     // Check learned knowledge patterns first (self-improving)
     const knowledgeResult = await searchLearnedKnowledge(
       supabase,
@@ -877,6 +886,158 @@ function analyzeResponseForFormHints(
   }
 
   return result;
+}
+
+/**
+ * Detect if a request is a vision / room scan request
+ */
+function detectVisionRequest(question: string, image?: string): boolean {
+  if (!image) return false;
+
+  const lowerQuestion = question.toLowerCase();
+  const visionKeywords = [
+    "scan",
+    "check this room",
+    "room check",
+    "what do you see",
+    "analyse",
+    "analyze",
+    "inspect",
+    "look at",
+    "review this",
+    "what's wrong",
+    "compliance",
+    "safety check",
+    "morning check",
+    "opening check",
+    "closing check",
+    "coshh",
+    "fire safety",
+    "hazard",
+    "damage",
+    "asset",
+    "room",
+    "classroom",
+    "corridor",
+    "hall",
+    "toilet",
+  ];
+
+  return visionKeywords.some((keyword) => lowerQuestion.includes(keyword));
+}
+
+/**
+ * Handle vision / room scan requests via Ed
+ */
+async function handleVisionRequest(
+  body: ChatRequest,
+  supabase: any,
+): Promise<NextResponse> {
+  const { question, image, context } = body;
+
+  try {
+    // Get user
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    const { data: orgData } = await supabase
+      .from("organizations")
+      .select("id")
+      .eq("user_id", user?.id)
+      .single();
+
+    const organizationId = orgData?.id;
+    if (!organizationId || !image) {
+      return NextResponse.json({
+        id: crypto.randomUUID(),
+        answer:
+          "I need you to be signed in and share an image for me to analyse a room. Could you try again?",
+        confidence: 0.5,
+        source: "fallback" as const,
+      });
+    }
+
+    // Call Vision AI endpoint
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const analysisRes = await fetch(`${baseUrl}/api/vision/analyze`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contextType: "room-assessment",
+        organizationId,
+        mediaType: "image",
+        media: image,
+        mimeType: "image/jpeg",
+        metadata: {
+          capturedAt: new Date().toISOString(),
+          checkType: "ad_hoc",
+          userId: user?.id,
+        },
+      }),
+    });
+
+    const analysisData = await analysisRes.json();
+
+    if (!analysisRes.ok) {
+      throw new Error(analysisData.error || "Vision analysis failed");
+    }
+
+    const result = analysisData.result;
+    const dispatches = result.dispatches ?? [];
+    const issues = result.compliance?.issues ?? [];
+
+    // Build Ed's conversational summary
+    let summary = `I've analysed the image. Here's what I found:\n\n`;
+    summary += `**${result.summary}**\n\n`;
+
+    if (result.items && result.items.length > 0) {
+      summary += `I detected ${result.items.length} item(s).\n\n`;
+    }
+
+    if (issues.length > 0) {
+      summary += `**${issues.length} issue(s) flagged:**\n`;
+      for (const issue of issues) {
+        summary += `- ${issue.description} (${issue.severity})\n`;
+      }
+      summary += "\n";
+    } else {
+      summary += "No compliance issues detected.\n\n";
+    }
+
+    if (dispatches.length > 0) {
+      summary += "**Actions dispatched:**\n";
+      for (const d of dispatches) {
+        summary += `- ${d.module.replace("_", " ")}: ${d.detail}\n`;
+      }
+      summary += "\n";
+    }
+
+    summary +=
+      "Would you like me to log this as a formal room check, or is there anything specific you'd like me to look at more closely?";
+
+    const response: ChatResponse = {
+      id: crypto.randomUUID(),
+      answer: summary,
+      confidence: 0.9,
+      source: "ai",
+      suggestions: [
+        "Log this as an AM opening check",
+        "Log this as a PM closing check",
+        "Show me the full report",
+      ],
+    };
+
+    return NextResponse.json(response);
+  } catch (err) {
+    console.error("[Ed Chat API] Vision analysis error:", err);
+    return NextResponse.json({
+      id: crypto.randomUUID(),
+      answer:
+        "I had trouble analysing that image. Could you try again with a clearer photo? Make sure the room is well-lit.",
+      confidence: 0.3,
+      source: "fallback" as const,
+    });
+  }
 }
 
 /**
