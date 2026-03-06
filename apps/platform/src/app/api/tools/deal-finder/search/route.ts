@@ -254,6 +254,16 @@ export async function POST(request: NextRequest) {
       {
         alternatives,
         bulk_suggestions: bulkSuggestions,
+        _debug: {
+          supabase_url: supabaseUrl ? supabaseUrl.substring(0, 40) : "MISSING",
+          supabase_key_set: !!supabaseKey,
+          supabase_key_len: supabaseKey?.length || 0,
+          category_sent: body.category || "general",
+          supplier_alts_count: supplierAlts?.length ?? 0,
+          supplier_err: supplierErr?.message ?? null,
+          similar_count: similarProducts?.length ?? 0,
+          deduped_count: dedupedAlts.length,
+        },
         stats: {
           total_products: totalProducts || 0,
           total_searches: totalSearches || 0,
