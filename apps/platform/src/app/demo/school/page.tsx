@@ -73,6 +73,13 @@ export default function SchoolDemoPage() {
       "website";
 
     try {
+      // Clear any stub instance from root layout's EdWidgetWrapper
+      if ((window as any).__ED_INSTANCE__) {
+        try {
+          (window as any).__ED_INSTANCE__.destroy?.();
+        } catch {}
+        delete (window as any).__ED_INSTANCE__;
+      }
       log("Initialising Ed...");
       const ed = EdWidget.init({
         schoolId: "aurora-primary",

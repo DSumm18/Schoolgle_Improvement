@@ -677,11 +677,10 @@ export class Ed {
   }
 
   private async handleUserInput(text: string): Promise<void> {
-    // Auto-detect language from user input
+    // Auto-detect language from user input (switch silently — no system message)
     const detectedLang = this.detectLanguage(text);
     if (detectedLang && detectedLang.code !== this.currentLanguage.code) {
-      // Switch language and morph to flag
-      this.setLanguage(detectedLang.code);
+      this.setLanguage(detectedLang.code, true);
     }
 
     // ── Form Filling Mode ────────────────────────────────────
@@ -1987,7 +1986,7 @@ URL: ${window.location.href}`;
     this.setLanguage(languages[nextIndex].code);
   }
 
-  public setLanguage(code: string): void {
+  public setLanguage(code: string, silent = false): void {
     this.currentLanguage = getLanguage(code);
     this.voice?.setLanguage(this.currentLanguage.voiceLang);
 
@@ -1997,14 +1996,16 @@ URL: ${window.location.href}`;
       this.currentLanguage.code,
     );
 
-    // Announce language change
-    const message = `${this.currentLanguage.nativeName} ${this.currentLanguage.flag}`;
-    this.addMessage({
-      id: crypto.randomUUID(),
-      role: "system",
-      content: message,
-      timestamp: new Date(),
-    });
+    // Only announce language change if explicitly selected (not auto-detected)
+    if (!silent) {
+      const message = `${this.currentLanguage.nativeName} ${this.currentLanguage.flag}`;
+      this.addMessage({
+        id: crypto.randomUUID(),
+        role: "system",
+        content: message,
+        timestamp: new Date(),
+      });
+    }
 
     // Speak confirmation - use Fish Audio if available
     if (this.config.features.voice) {
