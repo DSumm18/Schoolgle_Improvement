@@ -1690,8 +1690,8 @@ URL: ${window.location.href}`;
   }
 
   private addMessage(message: Message): void {
-    // Ensure message content is clean for display (no emotion tags)
-    if (message.content) {
+    // Clean AI response text (remove emotion tags, etc.) but leave system messages intact
+    if (message.content && message.role !== "system") {
       message.content = this.cleanTextForDisplay(message.content);
     }
     this.messages.push(message);

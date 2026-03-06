@@ -74,20 +74,21 @@ export default function SchoolDemoPage() {
 
     try {
       log("Initialising Ed...");
-      EdWidget.init({
+      const ed = EdWidget.init({
         schoolId: "aurora-primary",
         schoolName: "Aurora Primary School",
         theme: "standard",
         position: "bottom-right",
         language: "en-GB",
         mode,
+        provider: "api",
+        apiBaseUrl: "/api/ed/demo-chat",
         enableTTS: true,
         ttsProvider: "fish",
         fishAudioApiKey: "proxy",
         fishAudioVoiceIds: {
           ed: "400b2a2c4aa44afc87b6d14adf0dd13c",
           edwina: "72e3a3135204461ba041df787dc5c834",
-          santa: "2e56aeff1a7a4cc9b904971cd5bd9794",
         },
         features: {
           admissions: true,
@@ -98,6 +99,10 @@ export default function SchoolDemoPage() {
           voice: true,
         },
       });
+      // Auto-open Ed so he's visible immediately
+      if (ed && typeof ed.open === "function") {
+        setTimeout(() => ed.open(), 500);
+      }
       setEdLoaded(true);
       log("Ed is live! Mode: " + mode);
       if (!logVisible) setLogVisible(true);
