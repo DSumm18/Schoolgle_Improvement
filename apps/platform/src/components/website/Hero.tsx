@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Monitor, MessageCircle, Eye } from "lucide-react";
 import SchoolgleAnimatedLogo from "@/components/SchoolgleAnimatedLogo";
+import SchoolglePlanetMark from "@/components/brand/SchoolglePlanetMark";
 import HeroShowcase from "@/components/website/HeroShowcase";
 import Link from "next/link";
 
@@ -22,13 +23,23 @@ const ED_CAPABILITIES = [
 
 const Hero = () => {
   const [wordIndex, setWordIndex] = useState(0);
+  const [reducedMotion, setReducedMotion] = useState(false);
 
   useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setReducedMotion(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+
+  useEffect(() => {
+    if (reducedMotion) return;
     const interval = setInterval(() => {
       setWordIndex((i) => (i + 1) % ROTATING_WORDS.length);
     }, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, [reducedMotion]);
 
   return (
     <section className="relative flex flex-col items-center px-4 md:px-8 overflow-hidden">
@@ -36,16 +47,24 @@ const Hero = () => {
       <div className="container mx-auto max-w-6xl relative z-10 flex flex-col items-center pt-16 md:pt-24">
         {/* Animated Planet Logo - compact */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
+          initial={reducedMotion ? false : { opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+          transition={
+            reducedMotion
+              ? { duration: 0 }
+              : { duration: 1.2, ease: [0.16, 1, 0.3, 1] }
+          }
           className="mb-6"
         >
-          <SchoolgleAnimatedLogo
-            size={180}
-            showText={false}
-            className="mx-auto"
-          />
+          {reducedMotion ? (
+            <SchoolglePlanetMark size={140} className="mx-auto" />
+          ) : (
+            <SchoolgleAnimatedLogo
+              size={180}
+              showText={false}
+              className="mx-auto"
+            />
+          )}
         </motion.div>
 
         {/* Tagline badge */}
@@ -69,18 +88,24 @@ const Hero = () => {
         >
           Always ready for{" "}
           <span className="relative inline-block">
-            <AnimatePresence mode="wait">
-              <motion.span
-                key={wordIndex}
-                initial={{ y: 40, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: -40, opacity: 0 }}
-                transition={{ duration: 0.4, ease: "easeInOut" }}
-                className="text-primary inline-block"
-              >
-                {ROTATING_WORDS[wordIndex]}.
-              </motion.span>
-            </AnimatePresence>
+            {reducedMotion ? (
+              <span className="text-primary inline-block">
+                {ROTATING_WORDS[0]}.
+              </span>
+            ) : (
+              <AnimatePresence mode="wait">
+                <motion.span
+                  key={wordIndex}
+                  initial={{ y: 40, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: -40, opacity: 0 }}
+                  transition={{ duration: 0.4, ease: "easeInOut" }}
+                  className="text-primary inline-block"
+                >
+                  {ROTATING_WORDS[wordIndex]}.
+                </motion.span>
+              </AnimatePresence>
+            )}
           </span>
         </motion.h1>
 

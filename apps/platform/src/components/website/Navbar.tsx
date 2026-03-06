@@ -20,6 +20,7 @@ import {
   Wrench,
 } from "lucide-react";
 import ThemeToggle from "@/components/effects/ThemeToggle";
+import SchoolglePlanetMark from "@/components/brand/SchoolglePlanetMark";
 import SchoolgleAnimatedLogo from "@/components/SchoolgleAnimatedLogo";
 
 const modules = [
@@ -301,11 +302,7 @@ const Navbar = () => {
           href="/"
           className="flex items-center gap-3 group transition-transform hover:scale-105 active:scale-95"
         >
-          <SchoolgleAnimatedLogo
-            size={48}
-            showText={false}
-            className="flex-shrink-0"
-          />
+          <SchoolglePlanetMark size={36} className="flex-shrink-0" />
           <span className="text-xl font-black tracking-tight text-foreground hidden sm:block">
             Schoolgle
           </span>
@@ -344,6 +341,12 @@ const Navbar = () => {
             className="px-4 py-2 text-sm font-semibold text-muted-foreground hover:text-foreground transition-all rounded-lg hover:bg-muted/50"
           >
             Toolbox
+          </Link>
+          <Link
+            href="/demo"
+            className="px-4 py-2 text-sm font-semibold text-muted-foreground hover:text-foreground transition-all rounded-lg hover:bg-muted/50"
+          >
+            Demo
           </Link>
         </div>
 
@@ -416,6 +419,13 @@ const Navbar = () => {
                 className="block text-base font-bold text-muted-foreground hover:text-foreground transition-colors py-2"
               >
                 Toolbox
+              </Link>
+              <Link
+                href="/demo"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="block text-base font-bold text-muted-foreground hover:text-foreground transition-colors py-2"
+              >
+                Demo
               </Link>
 
               <div className="pt-4 border-t border-border space-y-3">
