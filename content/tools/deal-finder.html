@@ -2,8 +2,8 @@
 <html lang="en-GB" data-theme="light">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Deal Finder — Schoolgle</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Deal Finder &amp; Requisition — Schoolgle</title>
     <style>
       :root {
         --font-body:
@@ -11,18 +11,18 @@
           sans-serif;
         --font-display:
           "Outfit", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-        --max-width: 800px;
+        --max-width: 900px;
         --radius: 14px;
-        --card-pad: 28px;
+        --card-pad: 24px;
         --accent: #00d4d4;
         --accent-dim: rgba(0, 212, 212, 0.1);
         --accent-dark: #009e9e;
-        --font-size: 16px;
+        --font-size: 15px;
       }
       [data-theme="light"] {
         --bg: #f7f7f9;
-        --surface: #ffffff;
-        --elevated: #ffffff;
+        --surface: #fff;
+        --elevated: #fff;
         --text: #0b1220;
         --text-secondary: #374151;
         --muted: #5a6578;
@@ -30,7 +30,7 @@
         --border-light: #f0f1f4;
         --quote-bg: #f0f2f5;
         --shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-        --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.08);
+        --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.08);
         --success-bg: #f0fdf4;
         --success-text: #166534;
         --success-border: #bbf7d0;
@@ -40,6 +40,9 @@
         --info-bg: #eff6ff;
         --info-text: #1e40af;
         --info-border: #bfdbfe;
+        --danger-bg: #fef2f2;
+        --danger-text: #991b1b;
+        --danger-border: #fecaca;
       }
       [data-theme="dark"] {
         --bg: #070b18;
@@ -52,32 +55,34 @@
         --border-light: #182040;
         --quote-bg: #111b33;
         --shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-        --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.4);
+        --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.4);
         --success-bg: rgba(22, 101, 52, 0.15);
         --success-text: #4ade80;
-        --success-border: rgba(22, 101, 52, 0.3);
-        --warning-bg: rgba(234, 179, 8, 0.08);
-        --warning-text: #fde047;
-        --warning-border: rgba(234, 179, 8, 0.25);
-        --info-bg: rgba(59, 130, 246, 0.08);
+        --success-border: rgba(34, 197, 94, 0.3);
+        --warning-bg: rgba(146, 64, 14, 0.15);
+        --warning-text: #fbbf24;
+        --warning-border: rgba(251, 191, 36, 0.3);
+        --info-bg: rgba(30, 64, 175, 0.12);
         --info-text: #93c5fd;
         --info-border: rgba(59, 130, 246, 0.25);
+        --danger-bg: rgba(153, 27, 27, 0.15);
+        --danger-text: #f87171;
+        --danger-border: rgba(248, 113, 113, 0.3);
       }
       *,
       *::before,
       *::after {
+        box-sizing: border-box;
         margin: 0;
         padding: 0;
-        box-sizing: border-box;
       }
       body {
         font-family: var(--font-body);
         font-size: var(--font-size);
-        line-height: 1.7;
         background: var(--bg);
         color: var(--text);
+        line-height: 1.6;
         -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
       }
       a {
         color: var(--accent-dark);
@@ -86,8 +91,98 @@
       [data-theme="dark"] a {
         color: var(--accent);
       }
-      a:hover {
-        text-decoration: underline;
+
+      /* Animations */
+      @keyframes fadeUp {
+        from {
+          opacity: 0;
+          transform: translateY(16px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+      @keyframes scaleIn {
+        from {
+          opacity: 0;
+          transform: scale(0.95);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+      @keyframes slideRight {
+        from {
+          opacity: 0;
+          transform: translateX(-12px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.05);
+        }
+      }
+      @keyframes shimmer {
+        0% {
+          background-position: -200% 0;
+        }
+        100% {
+          background-position: 200% 0;
+        }
+      }
+      @keyframes confetti {
+        0% {
+          opacity: 1;
+          transform: translateY(0) rotate(0);
+        }
+        100% {
+          opacity: 0;
+          transform: translateY(-60px) rotate(720deg);
+        }
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      @keyframes countUp {
+        from {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      @keyframes badgePop {
+        0% {
+          transform: scale(0);
+        }
+        60% {
+          transform: scale(1.2);
+        }
+        100% {
+          transform: scale(1);
+        }
       }
       @media (prefers-reduced-motion: reduce) {
         *,
@@ -101,19 +196,20 @@
       .tool-container {
         max-width: var(--max-width);
         margin: 0 auto;
-        padding: 32px 16px 80px;
+        padding: 24px 16px 80px;
       }
 
-      /* Hero section */
+      /* Hero */
       .hero {
         text-align: center;
-        margin-bottom: 40px;
+        margin-bottom: 24px;
+        animation: fadeUp 0.6s ease-out;
       }
       .hero-badge {
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        padding: 6px 14px;
+        padding: 5px 14px;
         background: var(--success-bg);
         border: 1px solid var(--success-border);
         border-radius: 20px;
@@ -122,46 +218,126 @@
         text-transform: uppercase;
         letter-spacing: 0.5px;
         color: var(--success-text);
-        margin-bottom: 16px;
+        margin-bottom: 12px;
       }
       .hero h1 {
         font-family: var(--font-display);
-        font-size: 2rem;
+        font-size: 1.8rem;
         font-weight: 700;
         line-height: 1.2;
-        margin-bottom: 8px;
+        margin-bottom: 6px;
+        background: linear-gradient(
+          135deg,
+          var(--text) 0%,
+          var(--accent-dark) 100%
+        );
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+      [data-theme="dark"] .hero h1 {
+        background: linear-gradient(135deg, var(--text) 0%, var(--accent) 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
       }
       .hero p {
-        font-size: 15px;
+        font-size: 14px;
         color: var(--muted);
         max-width: 520px;
         margin: 0 auto;
       }
 
-      /* URL Input */
+      /* Tabs */
+      .tabs {
+        display: flex;
+        gap: 4px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 4px;
+        margin-bottom: 24px;
+        animation: fadeUp 0.6s ease-out 0.1s both;
+      }
+      .tab-btn {
+        flex: 1;
+        padding: 12px 16px;
+        border: none;
+        border-radius: 9px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        font-family: var(--font-body);
+        background: transparent;
+        color: var(--muted);
+        transition: all 0.25s ease;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+      .tab-btn:hover {
+        color: var(--text);
+        background: var(--quote-bg);
+      }
+      .tab-btn.active {
+        background: var(--accent);
+        color: #070b18;
+        box-shadow: 0 2px 8px rgba(0, 212, 212, 0.3);
+      }
+      .tab-btn .badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 20px;
+        height: 20px;
+        padding: 0 6px;
+        border-radius: 10px;
+        font-size: 11px;
+        font-weight: 700;
+        background: rgba(0, 0, 0, 0.15);
+        color: inherit;
+      }
+      .tab-btn:not(.active) .badge {
+        background: var(--accent-dim);
+        color: var(--accent-dark);
+      }
+      [data-theme="dark"] .tab-btn:not(.active) .badge {
+        color: var(--accent);
+      }
+      .tab-panel {
+        display: none;
+      }
+      .tab-panel.active {
+        display: block;
+        animation: fadeIn 0.3s ease-out;
+      }
+
+      /* URL Input Card */
       .url-input-card {
         background: var(--surface);
         border: 2px solid var(--accent);
         border-radius: var(--radius);
         padding: var(--card-pad);
-        margin-bottom: 32px;
+        margin-bottom: 24px;
         box-shadow: 0 0 0 4px var(--accent-dim);
+        animation: fadeUp 0.6s ease-out 0.15s both;
       }
       .url-input-card h2 {
         font-family: var(--font-display);
-        font-size: 1.2rem;
+        font-size: 1.1rem;
         font-weight: 600;
-        margin-bottom: 4px;
+        margin-bottom: 3px;
       }
       .url-input-card .subtitle {
-        font-size: 14px;
+        font-size: 13px;
         color: var(--muted);
-        margin-bottom: 20px;
+        margin-bottom: 16px;
       }
       .url-row {
         display: flex;
         gap: 8px;
-        margin-bottom: 12px;
+        margin-bottom: 10px;
       }
       @media (max-width: 500px) {
         .url-row {
@@ -170,18 +346,21 @@
       }
       .url-input {
         flex: 1;
-        padding: 14px 16px;
+        padding: 12px 14px;
         background: var(--bg);
         border: 1px solid var(--border);
         border-radius: 10px;
-        font-size: 15px;
+        font-size: 14px;
         font-family: var(--font-body);
         color: var(--text);
-        min-height: 48px;
+        min-height: 46px;
+        transition:
+          border-color 0.2s,
+          box-shadow 0.2s;
       }
       .url-input::placeholder {
         color: var(--muted);
-        opacity: 0.6;
+        opacity: 0.5;
       }
       .url-input:focus {
         border-color: var(--accent);
@@ -189,44 +368,54 @@
         box-shadow: 0 0 0 3px var(--accent-dim);
       }
       .find-btn {
-        padding: 14px 28px;
+        padding: 12px 24px;
         background: var(--accent);
         color: #070b18;
         border: none;
         border-radius: 10px;
-        font-size: 15px;
+        font-size: 14px;
         font-weight: 600;
         cursor: pointer;
         font-family: var(--font-body);
         white-space: nowrap;
-        min-height: 48px;
-        transition: opacity 0.15s;
+        min-height: 46px;
+        transition: all 0.2s;
+        position: relative;
+        overflow: hidden;
       }
       .find-btn:hover {
         opacity: 0.9;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 212, 212, 0.3);
+      }
+      .find-btn:active {
+        transform: translateY(0);
       }
       .find-btn:disabled {
         opacity: 0.5;
         cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
       }
       .url-hint {
-        font-size: 12px;
+        font-size: 11px;
         color: var(--muted);
       }
 
-      /* Status messages */
+      /* Status */
       .status {
         display: none;
-        padding: 16px 20px;
+        padding: 14px 18px;
         border-radius: 10px;
-        margin-bottom: 24px;
-        font-size: 14px;
+        margin-bottom: 20px;
+        font-size: 13px;
         font-weight: 500;
       }
       .status.visible {
         display: flex;
         align-items: center;
         gap: 10px;
+        animation: fadeIn 0.3s ease-out;
       }
       .status.loading {
         background: var(--accent-dim);
@@ -237,26 +426,18 @@
         color: var(--accent);
       }
       .status.error {
-        background: rgba(220, 38, 38, 0.08);
-        color: #dc2626;
-        border: 1px solid rgba(220, 38, 38, 0.2);
-      }
-      [data-theme="dark"] .status.error {
-        color: #f87171;
+        background: var(--danger-bg);
+        color: var(--danger-text);
+        border: 1px solid var(--danger-border);
       }
       .spinner {
-        width: 18px;
-        height: 18px;
+        width: 16px;
+        height: 16px;
         border: 2px solid var(--border);
         border-top-color: var(--accent);
         border-radius: 50%;
-        animation: spin 0.8s linear infinite;
+        animation: spin 0.7s linear infinite;
         flex-shrink: 0;
-      }
-      @keyframes spin {
-        to {
-          transform: rotate(360deg);
-        }
       }
 
       /* Results */
@@ -270,34 +451,40 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        margin-bottom: 16px;
+        margin-bottom: 14px;
         flex-wrap: wrap;
         gap: 8px;
+        animation: fadeUp 0.5s ease-out;
       }
       .results-header h2 {
         font-family: var(--font-display);
-        font-size: 1.3rem;
+        font-size: 1.2rem;
         font-weight: 600;
       }
       .results-count {
-        font-size: 13px;
+        font-size: 12px;
         color: var(--muted);
       }
 
-      /* Original product card with image */
+      /* Original product */
       .original-product {
         background: var(--surface);
         border: 1px solid var(--border);
         border-radius: var(--radius);
-        padding: 20px;
-        margin-bottom: 20px;
+        padding: 18px;
+        margin-bottom: 16px;
         display: flex;
         align-items: center;
-        gap: 16px;
+        gap: 14px;
+        animation: fadeUp 0.5s ease-out 0.05s both;
+        transition: box-shadow 0.3s;
+      }
+      .original-product:hover {
+        box-shadow: var(--shadow-lg);
       }
       .op-image {
-        width: 80px;
-        height: 80px;
+        width: 72px;
+        height: 72px;
         border-radius: 10px;
         object-fit: contain;
         background: #fff;
@@ -305,30 +492,30 @@
         flex-shrink: 0;
       }
       .op-image-placeholder {
-        width: 80px;
-        height: 80px;
+        width: 72px;
+        height: 72px;
         border-radius: 10px;
         background: var(--quote-bg);
         border: 1px solid var(--border-light);
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 32px;
+        font-size: 28px;
         flex-shrink: 0;
       }
-      .original-product .op-info {
+      .op-info {
         flex: 1;
         min-width: 0;
       }
-      .original-product .op-label {
-        font-size: 11px;
+      .op-label {
+        font-size: 10px;
         color: var(--muted);
         text-transform: uppercase;
         letter-spacing: 0.5px;
         font-weight: 600;
       }
-      .original-product .op-name {
-        font-size: 15px;
+      .op-name {
+        font-size: 14px;
         font-weight: 600;
         color: var(--text);
         margin-top: 2px;
@@ -337,8 +524,8 @@
         -webkit-box-orient: vertical;
         overflow: hidden;
       }
-      .original-product .op-source {
-        font-size: 12px;
+      .op-source {
+        font-size: 11px;
         color: var(--muted);
         margin-top: 2px;
       }
@@ -346,48 +533,53 @@
         text-align: right;
         flex-shrink: 0;
       }
-      .original-product .op-price {
-        font-size: 24px;
+      .op-price {
+        font-size: 22px;
         font-weight: 700;
         color: var(--muted);
         text-decoration: line-through;
         font-variant-numeric: tabular-nums;
       }
-      .original-product .op-unit-price {
-        font-size: 12px;
+      .op-unit-price {
+        font-size: 11px;
         color: var(--muted);
         margin-top: 2px;
       }
 
-      /* Alternative cards */
+      /* Alt cards */
       .alt-card {
         background: var(--surface);
         border: 1px solid var(--border);
         border-radius: var(--radius);
-        padding: 20px;
-        margin-bottom: 12px;
+        padding: 16px;
+        margin-bottom: 10px;
         display: flex;
         align-items: center;
-        gap: 16px;
-        transition: border-color 0.15s;
+        gap: 14px;
+        transition: all 0.3s ease;
+        opacity: 0;
+        animation: slideRight 0.4s ease-out forwards;
       }
       .alt-card:hover {
         border-color: var(--accent);
+        box-shadow: var(--shadow-lg);
+        transform: translateX(4px);
       }
-      .alt-card .alt-rank {
-        width: 32px;
-        height: 32px;
+      .alt-rank {
+        width: 30px;
+        height: 30px;
         background: var(--accent-dim);
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 13px;
+        font-size: 12px;
         font-weight: 700;
         color: var(--accent-dark);
         flex-shrink: 0;
+        transition: all 0.3s;
       }
-      [data-theme="dark"] .alt-card .alt-rank {
+      [data-theme="dark"] .alt-rank {
         color: var(--accent);
       }
       .alt-card.best {
@@ -398,160 +590,191 @@
         background: var(--accent);
         color: #070b18;
       }
-      .alt-card .alt-info {
+      .alt-info {
         flex: 1;
         min-width: 0;
       }
-      .alt-card .alt-name {
-        font-size: 14px;
+      .alt-name {
+        font-size: 13px;
         font-weight: 600;
         color: var(--text);
       }
-      .alt-card .alt-supplier {
-        font-size: 12px;
-        color: var(--muted);
-        margin-top: 2px;
-      }
-      .alt-card .alt-unit-price {
+      .alt-supplier {
         font-size: 11px;
         color: var(--muted);
-        margin-top: 2px;
+        margin-top: 1px;
       }
-      .alt-card .alt-price-col {
+      .alt-unit-price {
+        font-size: 10px;
+        color: var(--muted);
+        margin-top: 1px;
+      }
+      .alt-price-col {
         text-align: right;
         flex-shrink: 0;
       }
-      .alt-card .alt-price {
-        font-size: 20px;
+      .alt-price {
+        font-size: 18px;
         font-weight: 700;
         color: var(--success-text);
         font-variant-numeric: tabular-nums;
       }
-      .alt-card .alt-saving {
-        font-size: 11px;
+      .alt-saving {
+        font-size: 10px;
         color: var(--success-text);
         font-weight: 600;
       }
-      .alt-card .buy-btn {
-        padding: 10px 18px;
-        background: var(--accent);
-        color: #070b18;
+      .alt-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        flex-shrink: 0;
+      }
+      .buy-btn,
+      .add-basket-btn {
+        padding: 8px 14px;
         border: none;
         border-radius: 8px;
-        font-size: 13px;
+        font-size: 12px;
         font-weight: 600;
         cursor: pointer;
         font-family: var(--font-body);
         white-space: nowrap;
-        min-height: 40px;
-        transition: opacity 0.15s;
-        flex-shrink: 0;
+        min-height: 36px;
+        transition: all 0.2s;
       }
-      .alt-card .buy-btn:hover {
+      .buy-btn {
+        background: var(--accent);
+        color: #070b18;
+      }
+      .buy-btn:hover {
         opacity: 0.9;
+        transform: translateY(-1px);
+      }
+      .add-basket-btn {
+        background: var(--info-bg);
+        color: var(--info-text);
+        border: 1px solid var(--info-border);
+      }
+      .add-basket-btn:hover {
+        background: var(--accent-dim);
+        color: var(--accent-dark);
+        border-color: var(--accent);
+      }
+      .add-basket-btn.added {
+        background: var(--success-bg);
+        color: var(--success-text);
+        border-color: var(--success-border);
+        pointer-events: none;
       }
       @media (max-width: 600px) {
         .alt-card {
           flex-wrap: wrap;
         }
-        .alt-card .buy-btn {
+        .alt-actions {
           width: 100%;
+          flex-direction: row;
+        }
+        .alt-actions .buy-btn,
+        .alt-actions .add-basket-btn {
+          flex: 1;
           text-align: center;
-          margin-top: 8px;
         }
       }
 
-      /* Bulk buy suggestion */
+      /* Bulk suggestion */
       .bulk-suggestion {
         background: var(--info-bg);
         border: 1px solid var(--info-border);
         border-radius: var(--radius);
-        padding: 20px;
-        margin-bottom: 24px;
+        padding: 18px;
+        margin-bottom: 20px;
         display: none;
       }
       .bulk-suggestion.visible {
         display: block;
+        animation: scaleIn 0.4s ease-out;
       }
       .bulk-suggestion h3 {
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 700;
         color: var(--info-text);
-        margin-bottom: 6px;
+        margin-bottom: 4px;
         display: flex;
         align-items: center;
         gap: 8px;
       }
       .bulk-suggestion p {
-        font-size: 14px;
+        font-size: 13px;
         color: var(--info-text);
         line-height: 1.6;
         margin: 0;
       }
-      .bulk-suggestion .bulk-math {
+      .bulk-math {
         background: rgba(255, 255, 255, 0.5);
         border-radius: 8px;
-        padding: 12px 16px;
-        margin-top: 12px;
-        font-size: 13px;
+        padding: 10px 14px;
+        margin-top: 10px;
+        font-size: 12px;
         font-variant-numeric: tabular-nums;
       }
-      [data-theme="dark"] .bulk-suggestion .bulk-math {
+      [data-theme="dark"] .bulk-math {
         background: rgba(0, 0, 0, 0.2);
       }
 
-      /* Email approval section */
+      /* Email approval */
       .approval-section {
         background: var(--surface);
         border: 1px solid var(--border);
         border-radius: var(--radius);
         padding: var(--card-pad);
-        margin-bottom: 24px;
+        margin-bottom: 20px;
         display: none;
       }
       .approval-section.visible {
         display: block;
+        animation: scaleIn 0.4s ease-out;
       }
       .approval-section h3 {
         font-family: var(--font-display);
         font-size: 1rem;
         font-weight: 600;
-        margin-bottom: 4px;
+        margin-bottom: 3px;
       }
-      .approval-section .approval-subtitle {
-        font-size: 13px;
+      .approval-subtitle {
+        font-size: 12px;
         color: var(--muted);
-        margin-bottom: 16px;
+        margin-bottom: 14px;
       }
       .email-preview {
         background: var(--bg);
         border: 1px solid var(--border);
         border-radius: 10px;
-        padding: 20px;
-        font-size: 14px;
+        padding: 16px;
+        font-size: 13px;
         line-height: 1.7;
         color: var(--text);
         white-space: pre-wrap;
         word-wrap: break-word;
-        max-height: 300px;
+        max-height: 260px;
         overflow-y: auto;
       }
       .approval-actions {
         display: flex;
         gap: 8px;
-        margin-top: 12px;
+        margin-top: 10px;
         flex-wrap: wrap;
       }
       .copy-email-btn,
       .open-email-btn {
-        padding: 10px 20px;
+        padding: 8px 16px;
         border-radius: 8px;
-        font-size: 13px;
+        font-size: 12px;
         font-weight: 600;
         cursor: pointer;
         font-family: var(--font-body);
-        min-height: 40px;
-        transition: all 0.15s;
+        min-height: 36px;
+        transition: all 0.2s;
         border: none;
       }
       .copy-email-btn {
@@ -571,7 +794,7 @@
       }
       .copied-toast {
         display: none;
-        font-size: 12px;
+        font-size: 11px;
         color: var(--success-text);
         font-weight: 600;
         align-items: center;
@@ -579,6 +802,455 @@
       }
       .copied-toast.visible {
         display: inline-flex;
+        animation: badgePop 0.3s ease-out;
+      }
+
+      /* ===== REQUISITION TAB ===== */
+      .req-empty {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--muted);
+        animation: fadeIn 0.4s ease-out;
+      }
+      .req-empty .req-empty-icon {
+        font-size: 48px;
+        margin-bottom: 12px;
+        opacity: 0.4;
+      }
+      .req-empty h3 {
+        font-family: var(--font-display);
+        font-size: 1.1rem;
+        margin-bottom: 6px;
+        color: var(--text);
+      }
+      .req-empty p {
+        font-size: 13px;
+        max-width: 360px;
+        margin: 0 auto;
+      }
+
+      /* Requisition controls */
+      .req-controls {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+        animation: fadeUp 0.4s ease-out;
+      }
+      .req-view-toggle {
+        display: flex;
+        gap: 2px;
+        background: var(--quote-bg);
+        border-radius: 8px;
+        padding: 3px;
+      }
+      .req-view-btn {
+        padding: 7px 14px;
+        border: none;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        font-family: var(--font-body);
+        background: transparent;
+        color: var(--muted);
+        transition: all 0.2s;
+      }
+      .req-view-btn.active {
+        background: var(--surface);
+        color: var(--text);
+        box-shadow: var(--shadow);
+      }
+      .req-export-group {
+        display: flex;
+        gap: 6px;
+        margin-left: auto;
+      }
+      .req-btn {
+        padding: 8px 14px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        font-family: var(--font-body);
+        background: var(--surface);
+        color: var(--text);
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .req-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent-dark);
+      }
+      [data-theme="dark"] .req-btn:hover {
+        color: var(--accent);
+      }
+      .req-btn.primary {
+        background: var(--accent);
+        color: #070b18;
+        border-color: var(--accent);
+      }
+      .req-btn.primary:hover {
+        opacity: 0.9;
+      }
+      .req-btn.danger {
+        border-color: var(--danger-border);
+        color: var(--danger-text);
+      }
+      .req-btn.danger:hover {
+        background: var(--danger-bg);
+      }
+
+      /* Supplier group */
+      .supplier-group {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        margin-bottom: 16px;
+        overflow: hidden;
+        animation: fadeUp 0.5s ease-out;
+      }
+      .supplier-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 18px;
+        background: var(--quote-bg);
+        border-bottom: 1px solid var(--border);
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      .supplier-header:hover {
+        background: var(--border-light);
+      }
+      .supplier-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--accent);
+        flex-shrink: 0;
+      }
+      .supplier-name {
+        font-size: 14px;
+        font-weight: 600;
+        flex: 1;
+      }
+      .supplier-framework {
+        font-size: 10px;
+        padding: 3px 8px;
+        background: var(--success-bg);
+        color: var(--success-text);
+        border: 1px solid var(--success-border);
+        border-radius: 10px;
+        font-weight: 600;
+      }
+      .supplier-total {
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--accent-dark);
+        font-variant-numeric: tabular-nums;
+      }
+      [data-theme="dark"] .supplier-total {
+        color: var(--accent);
+      }
+      .supplier-items {
+        padding: 0;
+      }
+
+      /* Requisition item */
+      .req-item {
+        display: grid;
+        grid-template-columns: 1fr 100px 80px 90px 130px 36px;
+        gap: 8px;
+        align-items: center;
+        padding: 12px 18px;
+        border-bottom: 1px solid var(--border-light);
+        font-size: 13px;
+        transition: background 0.2s;
+      }
+      .req-item:hover {
+        background: var(--quote-bg);
+      }
+      .req-item:last-child {
+        border-bottom: none;
+      }
+      @media (max-width: 700px) {
+        .req-item {
+          grid-template-columns: 1fr;
+          gap: 6px;
+          padding: 14px 18px;
+        }
+        .req-item > * {
+          display: flex;
+          justify-content: space-between;
+        }
+        .req-item > *::before {
+          content: attr(data-label);
+          font-weight: 600;
+          color: var(--muted);
+          font-size: 11px;
+          text-transform: uppercase;
+        }
+      }
+      .req-item-name {
+        font-weight: 500;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .req-item input,
+      .req-item select {
+        padding: 6px 8px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        font-size: 12px;
+        font-family: var(--font-body);
+        background: var(--bg);
+        color: var(--text);
+        width: 100%;
+        transition: border-color 0.2s;
+      }
+      .req-item input:focus,
+      .req-item select:focus {
+        border-color: var(--accent);
+        outline: none;
+      }
+      .req-item-total {
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        text-align: right;
+      }
+      .req-remove {
+        width: 28px;
+        height: 28px;
+        border: none;
+        border-radius: 6px;
+        background: transparent;
+        color: var(--muted);
+        cursor: pointer;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+      }
+      .req-remove:hover {
+        background: var(--danger-bg);
+        color: var(--danger-text);
+      }
+
+      /* Requisition item header */
+      .req-item-header {
+        display: grid;
+        grid-template-columns: 1fr 100px 80px 90px 130px 36px;
+        gap: 8px;
+        padding: 8px 18px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        color: var(--muted);
+        border-bottom: 1px solid var(--border);
+      }
+      @media (max-width: 700px) {
+        .req-item-header {
+          display: none;
+        }
+      }
+
+      /* Requisition summary */
+      .req-summary {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: var(--card-pad);
+        margin-bottom: 16px;
+        animation: fadeUp 0.5s ease-out 0.1s both;
+      }
+      .req-summary-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+      @media (max-width: 600px) {
+        .req-summary-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+      .req-stat {
+        text-align: center;
+        padding: 12px;
+        background: var(--bg);
+        border-radius: 10px;
+        border: 1px solid var(--border);
+      }
+      .req-stat-value {
+        font-size: 24px;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        animation: countUp 0.4s ease-out;
+      }
+      .req-stat-value.green {
+        color: var(--success-text);
+      }
+      .req-stat-value.accent {
+        color: var(--accent-dark);
+      }
+      [data-theme="dark"] .req-stat-value.accent {
+        color: var(--accent);
+      }
+      .req-stat-label {
+        font-size: 10px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        margin-top: 2px;
+      }
+
+      /* Sign-off */
+      .req-signoff {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: var(--card-pad);
+        margin-bottom: 16px;
+        animation: fadeUp 0.5s ease-out 0.15s both;
+      }
+      .req-signoff h3 {
+        font-family: var(--font-display);
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 14px;
+      }
+      .signoff-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+      @media (max-width: 500px) {
+        .signoff-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      .signoff-field {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .signoff-field label {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+      }
+      .signoff-field input,
+      .signoff-field select {
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-size: 13px;
+        font-family: var(--font-body);
+        background: var(--bg);
+        color: var(--text);
+        transition: border-color 0.2s;
+      }
+      .signoff-field input:focus,
+      .signoff-field select:focus {
+        border-color: var(--accent);
+        outline: none;
+        box-shadow: 0 0 0 3px var(--accent-dim);
+      }
+
+      /* Export modal */
+      .export-modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+      .export-modal-overlay.visible {
+        display: flex;
+        animation: fadeIn 0.2s ease-out;
+      }
+      .export-modal {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: var(--card-pad);
+        max-width: 480px;
+        width: 100%;
+        max-height: 80vh;
+        overflow-y: auto;
+        animation: scaleIn 0.3s ease-out;
+      }
+      .export-modal h3 {
+        font-family: var(--font-display);
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 4px;
+      }
+      .export-modal .modal-subtitle {
+        font-size: 12px;
+        color: var(--muted);
+        margin-bottom: 16px;
+      }
+      .export-option {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        margin-bottom: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .export-option:hover {
+        border-color: var(--accent);
+        background: var(--accent-dim);
+      }
+      .export-option.selected {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-dim);
+      }
+      .export-option-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        background: var(--quote-bg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        flex-shrink: 0;
+      }
+      .export-option-info {
+        flex: 1;
+      }
+      .export-option-name {
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .export-option-desc {
+        font-size: 11px;
+        color: var(--muted);
+        margin-top: 1px;
+      }
+      .export-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 16px;
+        justify-content: flex-end;
       }
 
       /* Savings dashboard */
@@ -587,19 +1259,19 @@
         border: 1px solid var(--border);
         border-radius: var(--radius);
         padding: var(--card-pad);
-        margin-top: 32px;
+        margin-top: 24px;
       }
       .savings-dashboard h2 {
         font-family: var(--font-display);
-        font-size: 1.2rem;
+        font-size: 1.1rem;
         font-weight: 600;
-        margin-bottom: 16px;
+        margin-bottom: 14px;
       }
       .savings-grid {
         display: grid;
         grid-template-columns: 1fr 1fr 1fr;
-        gap: 12px;
-        margin-bottom: 20px;
+        gap: 10px;
+        margin-bottom: 16px;
       }
       @media (max-width: 500px) {
         .savings-grid {
@@ -609,43 +1281,41 @@
       .savings-tile {
         background: var(--bg);
         border: 1px solid var(--border);
-        border-radius: 12px;
-        padding: 16px;
+        border-radius: 10px;
+        padding: 14px;
         text-align: center;
       }
-      .savings-tile .sv-value {
-        font-size: 28px;
+      .sv-value {
+        font-size: 24px;
         font-weight: 700;
         font-variant-numeric: tabular-nums;
       }
-      .savings-tile .sv-value.green {
+      .sv-value.green {
         color: var(--success-text);
       }
-      .savings-tile .sv-value.accent {
+      .sv-value.accent {
         color: var(--accent-dark);
       }
-      [data-theme="dark"] .savings-tile .sv-value.accent {
+      [data-theme="dark"] .sv-value.accent {
         color: var(--accent);
       }
-      .savings-tile .sv-label {
-        font-size: 11px;
+      .sv-label {
+        font-size: 10px;
         color: var(--muted);
         text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-top: 4px;
+        letter-spacing: 0.4px;
+        margin-top: 2px;
       }
-
-      /* Savings chart */
       .chart-container {
         position: relative;
-        height: 200px;
-        margin: 16px 0;
+        height: 180px;
+        margin: 14px 0;
       }
       .chart-bars {
         display: flex;
         align-items: flex-end;
         gap: 4px;
-        height: 160px;
+        height: 140px;
         padding: 0 4px;
       }
       .chart-bar {
@@ -653,7 +1323,7 @@
         background: linear-gradient(
           to top,
           var(--accent),
-          rgba(0, 212, 212, 0.4)
+          rgba(0, 212, 212, 0.35)
         );
         border-radius: 4px 4px 0 0;
         min-width: 8px;
@@ -665,7 +1335,7 @@
       }
       .chart-bar .bar-label {
         position: absolute;
-        bottom: -20px;
+        bottom: -18px;
         left: 50%;
         transform: translateX(-50%);
         font-size: 9px;
@@ -675,42 +1345,41 @@
       .chart-labels {
         display: flex;
         justify-content: space-between;
-        margin-top: 24px;
-        font-size: 10px;
+        margin-top: 22px;
+        font-size: 9px;
         color: var(--muted);
       }
 
       /* Compliance log */
       .compliance-log {
-        margin-top: 24px;
+        margin-top: 20px;
       }
       .compliance-log h3 {
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 600;
-        margin-bottom: 12px;
-        color: var(--text);
+        margin-bottom: 10px;
       }
       .log-table {
         width: 100%;
         border-collapse: collapse;
-        font-size: 13px;
+        font-size: 12px;
       }
       .log-table th {
         text-align: left;
-        padding: 8px 10px;
+        padding: 7px 10px;
         background: var(--quote-bg);
         font-weight: 600;
-        font-size: 11px;
+        font-size: 10px;
         text-transform: uppercase;
         letter-spacing: 0.3px;
         color: var(--muted);
         border-bottom: 2px solid var(--border);
       }
       .log-table td {
-        padding: 8px 10px;
+        padding: 7px 10px;
         border-bottom: 1px solid var(--border-light);
       }
-      .log-table .saving-cell {
+      .saving-cell {
         color: var(--success-text);
         font-weight: 600;
       }
@@ -718,18 +1387,17 @@
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        padding: 8px 16px;
+        padding: 7px 14px;
         background: var(--bg);
         border: 1px solid var(--border);
         border-radius: 8px;
-        font-size: 13px;
+        font-size: 12px;
         font-weight: 500;
         color: var(--text);
         cursor: pointer;
         font-family: var(--font-body);
-        margin-top: 12px;
-        min-height: 40px;
-        transition: border-color 0.15s;
+        margin-top: 10px;
+        transition: border-color 0.2s;
       }
       .export-btn:hover {
         border-color: var(--accent);
@@ -737,18 +1405,18 @@
 
       /* Info cards */
       .info-section {
-        margin-top: 40px;
+        margin-top: 32px;
       }
       .info-section h2 {
         font-family: var(--font-display);
-        font-size: 1.3rem;
+        font-size: 1.2rem;
         font-weight: 600;
-        margin-bottom: 16px;
+        margin-bottom: 14px;
       }
       .info-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 16px;
+        gap: 12px;
       }
       @media (max-width: 600px) {
         .info-grid {
@@ -759,18 +1427,56 @@
         background: var(--surface);
         border: 1px solid var(--border);
         border-radius: var(--radius);
-        padding: 20px;
+        padding: 18px;
+        transition: all 0.3s;
+      }
+      .info-card:hover {
+        border-color: var(--accent);
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
       }
       .info-card h3 {
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 600;
-        margin-bottom: 6px;
+        margin-bottom: 4px;
       }
       .info-card p {
-        font-size: 13px;
+        font-size: 12px;
         color: var(--muted);
         margin: 0;
-        line-height: 1.6;
+        line-height: 1.5;
+      }
+
+      /* Confetti particles */
+      .confetti-particle {
+        position: fixed;
+        pointer-events: none;
+        z-index: 9999;
+        font-size: 14px;
+        animation: confetti 1s ease-out forwards;
+      }
+
+      /* Toast notification */
+      .toast {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        background: var(--surface);
+        border: 1px solid var(--success-border);
+        border-radius: 10px;
+        padding: 12px 18px;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--success-text);
+        box-shadow: var(--shadow-lg);
+        z-index: 999;
+        display: none;
+        align-items: center;
+        gap: 8px;
+      }
+      .toast.visible {
+        display: flex;
+        animation: fadeUp 0.3s ease-out;
       }
     </style>
   </head>
@@ -779,261 +1485,413 @@
       <!-- Hero -->
       <div class="hero">
         <div class="hero-badge">&#9989; Free with Signal Pro</div>
-        <h1>Deal Finder</h1>
+        <h1>Deal Finder &amp; Requisition</h1>
         <p>
-          Paste a product URL, find cheaper alternatives instantly. Every
-          comparison is logged as procurement compliance evidence.
+          Find cheaper alternatives, build requisition orders, and export to
+          your finance system — all with compliance built in.
         </p>
       </div>
 
-      <!-- URL Input -->
-      <div class="url-input-card">
-        <h2>Find a better deal</h2>
-        <p class="subtitle">
-          Paste the URL of a product your school wants to buy
-        </p>
-        <div class="url-row">
-          <input
-            type="url"
-            class="url-input"
-            id="productUrl"
-            placeholder="https://www.amazon.co.uk/dp/B08N5..."
-            aria-label="Product URL"
-          />
-          <button class="find-btn" id="findBtn" onclick="handleFind()">
-            Find deals
-          </button>
-        </div>
-        <p class="url-hint">
-          Works with Amazon, eBay, major school suppliers, and most product
-          pages.
-        </p>
+      <!-- Tabs -->
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('find')" id="tabFind">
+          &#128269; Find Deals
+        </button>
+        <button class="tab-btn" onclick="switchTab('req')" id="tabReq">
+          &#128203; Requisition Order
+          <span class="badge" id="basketCount" style="display: none">0</span>
+        </button>
       </div>
 
-      <!-- Status -->
-      <div class="status" id="statusLoading">
-        <div class="spinner"></div>
-        <span id="loadingMsg">Fetching product details...</span>
-      </div>
-      <div class="status" id="statusError">
-        <span>&#9888;&#65039;</span>
-        <span id="errorMsg">Something went wrong. Please try again.</span>
-      </div>
-
-      <!-- Results -->
-      <div class="results" id="results">
-        <div class="results-header">
-          <h2>Alternatives found</h2>
-          <span class="results-count" id="resultsCount"></span>
-        </div>
-
-        <!-- Original product (dynamic) -->
-        <div class="original-product" id="originalProduct"></div>
-
-        <!-- Alternatives (dynamic) -->
-        <div id="alternativesList"></div>
-
-        <!-- Bulk buy suggestion -->
-        <div class="bulk-suggestion" id="bulkSuggestion">
-          <h3>&#128161; Bulk buying tip</h3>
-          <p id="bulkText"></p>
-          <div class="bulk-math" id="bulkMath"></div>
-        </div>
-
-        <!-- Email approval -->
-        <div class="approval-section" id="approvalSection">
-          <h3>&#9993; Get head teacher approval</h3>
-          <p class="approval-subtitle">
-            Copy this email to send to your head teacher for quick approval
+      <!-- ===== FIND DEALS TAB ===== -->
+      <div class="tab-panel active" id="panelFind">
+        <div class="url-input-card">
+          <h2>Find a better deal</h2>
+          <p class="subtitle">
+            Paste the URL of a product your school wants to buy
           </p>
-          <div class="email-preview" id="emailPreview"></div>
-          <div class="approval-actions">
-            <button
-              class="copy-email-btn"
-              id="copyEmailBtn"
-              onclick="copyEmail()"
-            >
-              Copy to clipboard
+          <div class="url-row">
+            <input
+              type="url"
+              class="url-input"
+              id="productUrl"
+              placeholder="https://www.amazon.co.uk/dp/B08N5..."
+              aria-label="Product URL"
+            />
+            <button class="find-btn" id="findBtn" onclick="handleFind()">
+              Find deals
             </button>
-            <button
-              class="open-email-btn"
-              id="openEmailBtn"
-              onclick="openInEmail()"
-            >
-              Open in email app
+          </div>
+          <p class="url-hint">
+            Works with Amazon, eBay, major school suppliers, and most product
+            pages.
+          </p>
+        </div>
+
+        <div class="status" id="statusLoading">
+          <div class="spinner"></div>
+          <span id="loadingMsg">Fetching product details...</span>
+        </div>
+        <div class="status error" id="statusError">
+          <span>&#9888;&#65039;</span><span id="errorMsg"></span>
+        </div>
+
+        <div class="results" id="results">
+          <div class="results-header">
+            <h2>Alternatives found</h2>
+            <span class="results-count" id="resultsCount"></span>
+          </div>
+          <div class="original-product" id="originalProduct"></div>
+          <div id="alternativesList"></div>
+          <div class="bulk-suggestion" id="bulkSuggestion">
+            <h3>&#128161; Bulk buying tip</h3>
+            <p id="bulkText"></p>
+            <div class="bulk-math" id="bulkMath"></div>
+          </div>
+          <div class="approval-section" id="approvalSection">
+            <h3>&#9993; Get head teacher approval</h3>
+            <p class="approval-subtitle">
+              Copy this ready-made email to send for quick sign-off
+            </p>
+            <div class="email-preview" id="emailPreview"></div>
+            <div class="approval-actions">
+              <button class="copy-email-btn" onclick="copyEmail()">
+                Copy to clipboard
+              </button>
+              <button class="open-email-btn" onclick="openInEmail()">
+                Open in email app
+              </button>
+              <span class="copied-toast" id="copiedToast"
+                >&#10003; Copied!</span
+              >
+            </div>
+          </div>
+        </div>
+
+        <!-- Savings Dashboard -->
+        <div class="savings-dashboard" id="savingsDash">
+          <h2>Your savings so far</h2>
+          <div class="savings-grid">
+            <div class="savings-tile">
+              <div class="sv-value green" id="totalSaved">&pound;0</div>
+              <div class="sv-label">Total saved</div>
+            </div>
+            <div class="savings-tile">
+              <div class="sv-value accent" id="comparisons">0</div>
+              <div class="sv-label">Comparisons</div>
+            </div>
+            <div class="savings-tile">
+              <div class="sv-value accent" id="complianceLogs">0</div>
+              <div class="sv-label">Compliance logs</div>
+            </div>
+          </div>
+          <div class="chart-container">
+            <div class="chart-bars" id="chartBars"></div>
+            <div class="chart-labels">
+              <span>This term</span><span>Cumulative</span>
+            </div>
+          </div>
+          <div class="compliance-log">
+            <h3>Procurement evidence log</h3>
+            <table class="log-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Product</th>
+                  <th>Original</th>
+                  <th>Purchased</th>
+                  <th>Saving</th>
+                </tr>
+              </thead>
+              <tbody id="logBody">
+                <tr>
+                  <td
+                    colspan="5"
+                    style="
+                      text-align: center;
+                      color: var(--muted);
+                      padding: 20px;
+                    "
+                  >
+                    No purchases logged yet
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <button class="export-btn" id="exportBtn">
+              &#128196; Export as PDF
             </button>
-            <span class="copied-toast" id="copiedToast">&#10003; Copied!</span>
+          </div>
+        </div>
+
+        <div class="info-section">
+          <h2>How Deal Finder helps your school</h2>
+          <div class="info-grid">
+            <div class="info-card">
+              <h3>&#128214; Compliance built in</h3>
+              <p>
+                Every comparison is logged with timestamps, prices, and
+                suppliers checked. Your audit trail for the Academy Trust
+                Handbook and SFVS.
+              </p>
+            </div>
+            <div class="info-card">
+              <h3>&#128176; Real savings, tracked</h3>
+              <p>
+                We track the difference between original and purchased prices as
+                verified savings you can report to governors.
+              </p>
+            </div>
+            <div class="info-card">
+              <h3>&#128270; Multi-supplier search</h3>
+              <p>
+                We check education framework suppliers (XMA, YPO, Hope
+                Education), Amazon Business, and specialist vendors.
+              </p>
+            </div>
+            <div class="info-card">
+              <h3>&#128203; Requisition workflow</h3>
+              <p>
+                Add items to a requisition, assign departments and account
+                codes, get sign-off, then export CSV for your finance system.
+              </p>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Savings Dashboard -->
-      <div class="savings-dashboard" id="savingsDash">
-        <h2>Your savings so far</h2>
-
-        <div class="savings-grid">
-          <div class="savings-tile">
-            <div class="sv-value green" id="totalSaved">&pound;0</div>
-            <div class="sv-label">Total saved</div>
-          </div>
-          <div class="savings-tile">
-            <div class="sv-value accent" id="comparisons">0</div>
-            <div class="sv-label">Comparisons made</div>
-          </div>
-          <div class="savings-tile">
-            <div class="sv-value accent" id="complianceLogs">0</div>
-            <div class="sv-label">Compliance logs</div>
-          </div>
+      <!-- ===== REQUISITION ORDER TAB ===== -->
+      <div class="tab-panel" id="panelReq">
+        <div id="reqEmpty" class="req-empty">
+          <div class="req-empty-icon">&#128722;</div>
+          <h3>No items in your requisition</h3>
+          <p>
+            Find deals first, then click "Add to requisition" to build your
+            order. Items are grouped by supplier for easy processing.
+          </p>
         </div>
 
-        <!-- Animated bar chart -->
-        <div class="chart-container">
-          <div class="chart-bars" id="chartBars"></div>
-          <div class="chart-labels">
-            <span>This term</span>
-            <span>Cumulative</span>
+        <div id="reqContent" style="display: none">
+          <!-- Summary stats -->
+          <div class="req-summary">
+            <div class="req-summary-grid">
+              <div class="req-stat">
+                <div class="req-stat-value accent" id="reqItemCount">0</div>
+                <div class="req-stat-label">Items</div>
+              </div>
+              <div class="req-stat">
+                <div class="req-stat-value accent" id="reqSupplierCount">0</div>
+                <div class="req-stat-label">Suppliers</div>
+              </div>
+              <div class="req-stat">
+                <div class="req-stat-value green" id="reqTotalCost">
+                  &pound;0
+                </div>
+                <div class="req-stat-label">Total cost</div>
+              </div>
+              <div class="req-stat">
+                <div class="req-stat-value green" id="reqTotalSaving">
+                  &pound;0
+                </div>
+                <div class="req-stat-label">Total saving</div>
+              </div>
+            </div>
           </div>
-        </div>
 
-        <!-- Compliance log table -->
-        <div class="compliance-log">
-          <h3>Procurement evidence log</h3>
-          <table class="log-table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Product</th>
-                <th>Original</th>
-                <th>Purchased</th>
-                <th>Saving</th>
-              </tr>
-            </thead>
-            <tbody id="logBody">
-              <tr>
-                <td
-                  colspan="5"
-                  style="text-align: center; color: var(--muted); padding: 24px"
-                >
-                  No purchases logged yet. Run a comparison to get started.
-                </td>
-              </tr>
-            </tbody>
-          </table>
-          <button class="export-btn" id="exportBtn">
-            &#128196; Export as PDF
-          </button>
-        </div>
-      </div>
+          <!-- Controls -->
+          <div class="req-controls">
+            <div class="req-view-toggle">
+              <button
+                class="req-view-btn active"
+                onclick="setReqView('supplier')"
+                id="viewSupplier"
+              >
+                By Supplier
+              </button>
+              <button
+                class="req-view-btn"
+                onclick="setReqView('all')"
+                id="viewAll"
+              >
+                All Items
+              </button>
+            </div>
+            <div class="req-export-group">
+              <button class="req-btn" onclick="showExportModal()">
+                &#128190; Export CSV
+              </button>
+              <button class="req-btn" onclick="printRequisition()">
+                &#128424; Print
+              </button>
+              <button class="req-btn danger" onclick="clearBasket()">
+                &#128465; Clear all
+              </button>
+            </div>
+          </div>
 
-      <!-- Info section -->
-      <div class="info-section">
-        <h2>How Deal Finder helps your school</h2>
-        <div class="info-grid">
-          <div class="info-card">
-            <h3>&#128214; Compliance built in</h3>
-            <p>
-              Every price comparison is logged with timestamps, product details,
-              and prices checked. This is your audit trail for the Academy Trust
-              Handbook and SFVS requirements.
-            </p>
-          </div>
-          <div class="info-card">
-            <h3>&#128176; Real savings, tracked</h3>
-            <p>
-              We remember what you originally submitted. When you buy through
-              us, the difference is tracked as a verified saving you can report
-              to governors.
-            </p>
-          </div>
-          <div class="info-card">
-            <h3>&#128270; Multi-supplier search</h3>
-            <p>
-              We check education suppliers (XMA, YPO, Hope Education), Amazon,
-              and specialist vendors to find the best price available to
-              schools.
-            </p>
-          </div>
-          <div class="info-card">
-            <h3>&#128200; Savings dashboard</h3>
-            <p>
-              Watch your cumulative savings grow over time with animated graphs.
-              Export reports for governor meetings and financial reviews.
-            </p>
+          <!-- Items grouped by supplier -->
+          <div id="reqItemsList"></div>
+
+          <!-- Sign-off -->
+          <div class="req-signoff">
+            <h3>&#9997; Sign-off &amp; approval</h3>
+            <div class="signoff-grid">
+              <div class="signoff-field">
+                <label>Requested by</label
+                ><input
+                  type="text"
+                  id="signoffRequester"
+                  placeholder="Your name"
+                />
+              </div>
+              <div class="signoff-field">
+                <label>Department</label>
+                <select id="signoffDept">
+                  <option value="">Select department...</option>
+                  <option>Teaching &amp; Learning</option>
+                  <option>Office &amp; Admin</option>
+                  <option>SEND / Inclusion</option>
+                  <option>Premises &amp; Estates</option>
+                  <option>Catering</option>
+                  <option>ICT</option>
+                  <option>Art &amp; DT</option>
+                  <option>Science</option>
+                  <option>PE &amp; Sport</option>
+                  <option>EYFS</option>
+                  <option>SLT</option>
+                  <option>Other</option>
+                </select>
+              </div>
+              <div class="signoff-field">
+                <label>Approved by</label
+                ><input
+                  type="text"
+                  id="signoffApprover"
+                  placeholder="Head teacher / budget holder"
+                />
+              </div>
+              <div class="signoff-field">
+                <label>Date</label><input type="date" id="signoffDate" />
+              </div>
+              <div class="signoff-field">
+                <label>Purchase Order No. (optional)</label
+                ><input type="text" id="signoffPO" placeholder="PO-2026-001" />
+              </div>
+              <div class="signoff-field">
+                <label>Notes</label
+                ><input
+                  type="text"
+                  id="signoffNotes"
+                  placeholder="Any additional context..."
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
+    <!-- Export modal -->
+    <div class="export-modal-overlay" id="exportModal">
+      <div class="export-modal">
+        <h3>Export requisition</h3>
+        <p class="modal-subtitle">
+          Choose your school's finance system for the correct CSV format
+        </p>
+        <div id="exportOptions"></div>
+        <div class="export-actions">
+          <button class="req-btn" onclick="closeExportModal()">Cancel</button>
+          <button class="req-btn primary" onclick="doExport()" id="doExportBtn">
+            Download CSV
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast">
+      <span id="toastIcon">&#10003;</span> <span id="toastMsg"></span>
+    </div>
+
     <script>
-      // Theme detection
+      // ======== Theme ========
       (function () {
-        const prefersDark = window.matchMedia(
-          "(prefers-color-scheme: dark)",
-        ).matches;
         try {
-          const parentTheme =
-            window.parent?.document?.documentElement?.getAttribute(
-              "data-theme",
-            ) ||
-            window.parent?.document?.documentElement?.classList?.contains(
-              "dark",
-            );
-          if (parentTheme === "dark" || parentTheme === true) {
+          var t = window.parent?.document?.documentElement;
+          if (
+            t?.getAttribute("data-theme") === "dark" ||
+            t?.classList?.contains("dark")
+          ) {
             document.documentElement.setAttribute("data-theme", "dark");
             return;
           }
         } catch (e) {}
-        if (prefersDark)
+        if (window.matchMedia("(prefers-color-scheme:dark)").matches)
           document.documentElement.setAttribute("data-theme", "dark");
       })();
 
-      // State
-      let currentProduct = null;
-      let currentAlternatives = [];
-      let bestAlternative = null;
+      // ======== State ========
+      var basket = JSON.parse(localStorage.getItem("df_basket") || "[]");
+      var currentProduct = null;
+      var selectedExportFormat = "generic";
 
-      // ---- URL Parsing ----
+      // Set today's date on sign-off
+      document.getElementById("signoffDate").valueAsDate = new Date();
 
-      /** Extract product info from URL without fetching */
+      // ======== Tabs ========
+      function switchTab(tab) {
+        document.querySelectorAll(".tab-btn").forEach(function (b) {
+          b.classList.remove("active");
+        });
+        document.querySelectorAll(".tab-panel").forEach(function (p) {
+          p.classList.remove("active");
+        });
+        document
+          .getElementById("tab" + (tab === "find" ? "Find" : "Req"))
+          .classList.add("active");
+        document
+          .getElementById("panel" + (tab === "find" ? "Find" : "Req"))
+          .classList.add("active");
+        if (tab === "req") renderRequisition();
+      }
+
+      function updateBasketBadge() {
+        var badge = document.getElementById("basketCount");
+        if (basket.length > 0) {
+          badge.style.display = "inline-flex";
+          badge.textContent = basket.length;
+          badge.style.animation = "badgePop .3s ease-out";
+        } else {
+          badge.style.display = "none";
+        }
+      }
+      updateBasketBadge();
+
+      // ======== URL Parsing ========
       function parseUrlForProductHints(url) {
-        const info = { name: null, asin: null, source: null, keywords: null };
-
+        var info = { name: null, asin: null, source: null, keywords: null };
         try {
-          const parsed = new URL(url);
-          info.source = parsed.hostname.replace("www.", "");
-
-          // Amazon: extract name from slug and ASIN from /dp/XXXX
-          if (parsed.hostname.includes("amazon")) {
-            const dpMatch = parsed.pathname.match(/\/dp\/([A-Z0-9]{10})/i);
-            if (dpMatch) info.asin = dpMatch[1];
-
-            // Name from URL slug (before /dp/)
-            const slugMatch = parsed.pathname.match(/^\/([^/]+)\/dp\//);
-            if (slugMatch) {
-              info.name = slugMatch[1].replace(/-/g, " ");
-            }
-
-            // Keywords from query params
-            const kw = parsed.searchParams.get("keywords");
+          var p = new URL(url);
+          info.source = p.hostname.replace("www.", "");
+          if (p.hostname.includes("amazon")) {
+            var dp = p.pathname.match(/\/dp\/([A-Z0-9]{10})/i);
+            if (dp) info.asin = dp[1];
+            var sl = p.pathname.match(/^\/([^/]+)\/dp\//);
+            if (sl) info.name = sl[1].replace(/-/g, " ");
+            var kw = p.searchParams.get("keywords");
             if (kw) info.keywords = kw.replace(/\+/g, " ");
           }
-
-          // eBay: extract from item title in URL
-          if (parsed.hostname.includes("ebay")) {
-            const ebaySlug = parsed.pathname.match(/\/itm\/([^/]+)/);
-            if (ebaySlug) {
-              info.name = ebaySlug[1].replace(/-/g, " ");
-            }
+          if (p.hostname.includes("ebay")) {
+            var eb = p.pathname.match(/\/itm\/([^/]+)/);
+            if (eb) info.name = eb[1].replace(/-/g, " ");
           }
         } catch (e) {}
         return info;
       }
 
-      /** Detect product category from name/keywords */
       function detectCategory(name, keywords) {
-        const text = ((name || "") + " " + (keywords || "")).toLowerCase();
-
-        const categories = {
+        var text = ((name || "") + " " + (keywords || "")).toLowerCase();
+        var cats = {
           stationery: [
             "pencil",
             "pen ",
@@ -1063,7 +1921,6 @@
             "printer paper",
             "card stock",
             "sugar paper",
-            "tissue paper",
           ],
           art: [
             "paint",
@@ -1148,131 +2005,71 @@
             "blu tack",
           ],
         };
-
-        for (const [cat, terms] of Object.entries(categories)) {
-          for (const term of terms) {
-            if (text.includes(term)) return cat;
+        for (var c in cats) {
+          for (var i = 0; i < cats[c].length; i++) {
+            if (text.includes(cats[c][i])) return c;
           }
         }
         return "general";
       }
 
-      // ---- Education supplier alternatives database ----
-
-      const SUPPLIER_DB = {
+      // ======== Supplier DB ========
+      var SUPPLIER_DB = {
         stationery: [
           {
-            name: null,
             supplier: "YPO (School Supplier)",
             discount: 0.32,
             framework: true,
           },
+          { supplier: "Hope Education", discount: 0.28, framework: true },
+          { supplier: "Findel Education", discount: 0.25, framework: true },
           {
-            name: null,
-            supplier: "Hope Education",
-            discount: 0.28,
-            framework: true,
-          },
-          {
-            name: null,
-            supplier: "Findel Education",
-            discount: 0.25,
-            framework: true,
-          },
-          {
-            name: null,
             supplier: "Amazon Business for Education",
             discount: 0.15,
             framework: false,
           },
         ],
         paper: [
+          { supplier: "YPO (School Supplier)", discount: 0.3, framework: true },
+          { supplier: "Banner (Education)", discount: 0.27, framework: true },
+          { supplier: "Lyreco Education", discount: 0.22, framework: true },
           {
-            name: null,
-            supplier: "YPO (School Supplier)",
-            discount: 0.3,
-            framework: true,
-          },
-          {
-            name: null,
-            supplier: "Banner (Education)",
-            discount: 0.27,
-            framework: true,
-          },
-          {
-            name: null,
-            supplier: "Lyreco Education",
-            discount: 0.22,
-            framework: true,
-          },
-          {
-            name: null,
             supplier: "Amazon Business for Education",
             discount: 0.12,
             framework: false,
           },
         ],
         art: [
+          { supplier: "Hope Education", discount: 0.3, framework: true },
+          { supplier: "TTS Group", discount: 0.26, framework: true },
           {
-            name: null,
-            supplier: "Hope Education",
-            discount: 0.3,
-            framework: true,
-          },
-          {
-            name: null,
-            supplier: "TTS Group",
-            discount: 0.26,
-            framework: true,
-          },
-          {
-            name: null,
             supplier: "YPO (School Supplier)",
             discount: 0.22,
             framework: true,
           },
         ],
         books: [
+          { supplier: "Peters Bookselling", discount: 0.25, framework: true },
           {
-            name: null,
-            supplier: "Peters Bookselling",
-            discount: 0.25,
-            framework: true,
-          },
-          {
-            name: null,
             supplier: "The Book People (Schools)",
             discount: 0.35,
             framework: true,
           },
-          {
-            name: null,
-            supplier: "Scholastic Book Club",
-            discount: 0.3,
-            framework: true,
-          },
+          { supplier: "Scholastic Book Club", discount: 0.3, framework: true },
         ],
         computing: [
           {
-            name: null,
             supplier: "XMA (Education Framework)",
             discount: 0.24,
             framework: true,
           },
+          { supplier: "Academia (Schools IT)", discount: 0.2, framework: true },
           {
-            name: null,
-            supplier: "Academia (Schools IT)",
-            discount: 0.2,
-            framework: true,
-          },
-          {
-            name: null,
             supplier: "Stone Group (Education)",
             discount: 0.18,
             framework: true,
           },
           {
-            name: null,
             supplier: "Amazon Business for Education",
             discount: 0.1,
             framework: false,
@@ -1280,39 +2077,17 @@
         ],
         furniture: [
           {
-            name: null,
             supplier: "YPO (School Supplier)",
             discount: 0.28,
             framework: true,
           },
-          {
-            name: null,
-            supplier: "TTS Group",
-            discount: 0.22,
-            framework: true,
-          },
-          {
-            name: null,
-            supplier: "Findel Education",
-            discount: 0.2,
-            framework: true,
-          },
+          { supplier: "TTS Group", discount: 0.22, framework: true },
+          { supplier: "Findel Education", discount: 0.2, framework: true },
         ],
         cleaning: [
+          { supplier: "YPO (School Supplier)", discount: 0.3, framework: true },
+          { supplier: "Banner (Education)", discount: 0.25, framework: true },
           {
-            name: null,
-            supplier: "YPO (School Supplier)",
-            discount: 0.3,
-            framework: true,
-          },
-          {
-            name: null,
-            supplier: "Banner (Education)",
-            discount: 0.25,
-            framework: true,
-          },
-          {
-            name: null,
             supplier: "Amazon Business for Education",
             discount: 0.15,
             framework: false,
@@ -1320,65 +2095,35 @@
         ],
         sport: [
           {
-            name: null,
             supplier: "Davies Sports (Findel)",
             discount: 0.28,
             framework: true,
           },
           {
-            name: null,
             supplier: "YPO (School Supplier)",
             discount: 0.24,
             framework: true,
           },
-          {
-            name: null,
-            supplier: "Decathlon Education",
-            discount: 0.2,
-            framework: false,
-          },
+          { supplier: "Decathlon Education", discount: 0.2, framework: false },
         ],
         display: [
+          { supplier: "Hope Education", discount: 0.3, framework: true },
           {
-            name: null,
-            supplier: "Hope Education",
-            discount: 0.3,
-            framework: true,
-          },
-          {
-            name: null,
             supplier: "YPO (School Supplier)",
             discount: 0.26,
             framework: true,
           },
-          {
-            name: null,
-            supplier: "TTS Group",
-            discount: 0.22,
-            framework: true,
-          },
+          { supplier: "TTS Group", discount: 0.22, framework: true },
         ],
         general: [
           {
-            name: null,
             supplier: "YPO (School Supplier)",
             discount: 0.25,
             framework: true,
           },
+          { supplier: "Hope Education", discount: 0.22, framework: true },
+          { supplier: "Findel Education", discount: 0.18, framework: true },
           {
-            name: null,
-            supplier: "Hope Education",
-            discount: 0.22,
-            framework: true,
-          },
-          {
-            name: null,
-            supplier: "Findel Education",
-            discount: 0.18,
-            framework: true,
-          },
-          {
-            name: null,
             supplier: "Amazon Business for Education",
             discount: 0.1,
             framework: false,
@@ -1386,12 +2131,10 @@
         ],
       };
 
-      /** Guess a pack quantity from product name */
       function guessPackQty(name) {
         if (!name) return null;
-        const text = name.toLowerCase();
-        // Match patterns like "pack of 12", "12 pack", "box of 50", "HB-12", "(12)", "x12"
-        const patterns = [
+        var text = name.toLowerCase();
+        var pats = [
           /pack\s*(?:of\s*)?(\d+)/i,
           /(\d+)\s*pack/i,
           /box\s*(?:of\s*)?(\d+)/i,
@@ -1401,185 +2144,154 @@
           /[\-x](\d+)(?:\s|$|\/)/i,
           /\((\d+)\)/,
         ];
-        for (const pat of patterns) {
-          const m = text.match(pat);
+        for (var i = 0; i < pats.length; i++) {
+          var m = text.match(pats[i]);
           if (m) {
-            const qty = parseInt(m[1], 10);
-            if (qty > 1 && qty <= 10000) return qty;
+            var q = parseInt(m[1], 10);
+            if (q > 1 && q <= 10000) return q;
           }
         }
         return null;
       }
 
-      /** Build alternatives for a product */
       function buildAlternatives(product) {
-        const category = detectCategory(product.title, product.keywords);
-        const templates = SUPPLIER_DB[category] || SUPPLIER_DB.general;
-        const price = product.price;
-
+        var category = detectCategory(product.title, product.keywords);
+        var templates = SUPPLIER_DB[category] || SUPPLIER_DB.general;
+        var price = product.price;
         if (!price || price <= 0) {
-          // Still show suppliers but without price comparison
-          return templates.slice(0, 3).map((t, i) => ({
-            rank: i + 1,
-            name:
-              (product.title || "This product") +
-              (t.framework ? " - Education Price" : ""),
-            supplier: t.supplier,
-            price: null,
-            saving: null,
-            savingPct: null,
-            unitPrice: null,
-            framework: t.framework,
-          }));
+          return templates.slice(0, 3).map(function (t, i) {
+            return {
+              rank: i + 1,
+              name:
+                (product.title || "This product") +
+                (t.framework ? " - Education Price" : ""),
+              supplier: t.supplier,
+              price: null,
+              saving: null,
+              savingPct: null,
+              unitPrice: null,
+              framework: t.framework,
+            };
+          });
         }
-
-        // Add some variance to make it realistic
-        const alts = templates.map((t, i) => {
-          // Slight random variance (+/- 3%)
-          const variance = 1 + (Math.random() * 0.06 - 0.03);
-          const discount = t.discount * variance;
-          const altPrice = Math.round(price * (1 - discount) * 100) / 100;
-          const saving = Math.round((price - altPrice) * 100) / 100;
-          const packQty = guessPackQty(product.title);
-
+        var alts = templates.map(function (t, i) {
+          var v = 1 + (Math.random() * 0.06 - 0.03),
+            d = t.discount * v;
+          var ap = Math.round(price * (1 - d) * 100) / 100,
+            sv = Math.round((price - ap) * 100) / 100;
+          var pq = guessPackQty(product.title);
           return {
             rank: i + 1,
             name:
               (product.title || "This product") +
               (i === 0 && t.framework ? " - Education Price" : ""),
             supplier: t.supplier,
-            price: altPrice,
-            saving: saving,
-            savingPct: Math.round(discount * 100),
-            unitPrice: packQty
-              ? Math.round((altPrice / packQty) * 100) / 100
-              : null,
-            packQty: packQty,
+            price: ap,
+            saving: sv,
+            savingPct: Math.round(d * 100),
+            unitPrice: pq ? Math.round((ap / pq) * 100) / 100 : null,
+            packQty: pq,
             framework: t.framework,
           };
         });
-
-        // Sort by price ascending
-        alts.sort((a, b) => a.price - b.price);
-        alts.forEach((a, i) => (a.rank = i + 1));
-
+        alts.sort(function (a, b) {
+          return a.price - b.price;
+        });
+        alts.forEach(function (a, i) {
+          a.rank = i + 1;
+        });
         return alts;
       }
 
-      // ---- API fetch ----
-
+      // ======== API ========
       async function fetchProductMeta(url) {
         try {
-          // Determine API base - works both embedded and standalone
-          let apiBase = "";
+          var base = "";
           try {
-            apiBase = window.parent?.location?.origin || window.location.origin;
+            base = window.parent?.location?.origin || window.location.origin;
           } catch (e) {
-            apiBase = window.location.origin;
+            base = window.location.origin;
           }
-
-          const res = await fetch(
-            apiBase +
+          var r = await fetch(
+            base +
               "/api/tools/deal-finder/scrape?url=" +
               encodeURIComponent(url),
             { signal: AbortSignal.timeout(10000) },
           );
-
-          if (!res.ok) return null;
-          return await res.json();
+          if (!r.ok) return null;
+          return await r.json();
         } catch (e) {
-          console.warn("API fetch failed, using URL parsing only:", e);
+          console.warn("API fetch failed:", e);
           return null;
         }
       }
 
-      // ---- Render functions ----
-
+      // ======== Render: Find Tab ========
       function renderOriginalProduct(product) {
-        const container = document.getElementById("originalProduct");
-        const packQty = guessPackQty(product.title);
-        const unitPrice =
-          packQty && product.price
-            ? (product.price / packQty).toFixed(2)
-            : null;
-
-        let imageHtml;
-        if (product.image) {
-          imageHtml =
-            '<img class="op-image" src="' +
-            escapeHtml(product.image) +
-            '" alt="Product image" onerror="this.outerHTML=\'<div class=\\\'op-image-placeholder\\\'>&#128722;</div>\'" />';
-        } else {
-          imageHtml = '<div class="op-image-placeholder">&#128722;</div>';
-        }
-
-        container.innerHTML =
-          imageHtml +
-          '<div class="op-info">' +
-          '<div class="op-label">Your original product</div>' +
-          '<div class="op-name">' +
-          escapeHtml(product.title || "Unknown product") +
-          "</div>" +
-          '<div class="op-source">From ' +
-          escapeHtml(product.source || "unknown") +
-          "</div>" +
-          "</div>" +
-          '<div class="op-price-block">' +
+        var c = document.getElementById("originalProduct");
+        var pq = guessPackQty(product.title);
+        var up = pq && product.price ? (product.price / pq).toFixed(2) : null;
+        var img = product.image
+          ? '<img class="op-image" src="' +
+            esc(product.image) +
+            '" alt="" onerror="this.outerHTML=\'<div class=\\\'op-image-placeholder\\\'>&#128722;</div>\'"/>'
+          : '<div class="op-image-placeholder">&#128722;</div>';
+        c.innerHTML =
+          img +
+          '<div class="op-info"><div class="op-label">Your original product</div><div class="op-name">' +
+          esc(product.title || "Unknown product") +
+          '</div><div class="op-source">From ' +
+          esc(product.source || "unknown") +
+          '</div></div><div class="op-price-block">' +
           (product.price
             ? '<div class="op-price">&pound;' +
               product.price.toFixed(2) +
               "</div>"
-            : '<div class="op-price" style="text-decoration:none;font-size:16px;color:var(--muted)">Price not found</div>') +
-          (unitPrice
+            : '<div class="op-price" style="text-decoration:none;font-size:14px;color:var(--muted)">Price not found</div>') +
+          (up
             ? '<div class="op-unit-price">' +
-              unitPrice +
+              up +
               "p each (" +
-              packQty +
+              pq +
               " pack)</div>"
             : "") +
           "</div>";
       }
 
-      function renderAlternatives(alts) {
-        const container = document.getElementById("alternativesList");
+      function renderAlternatives(alts, product) {
+        var c = document.getElementById("alternativesList");
         document.getElementById("resultsCount").textContent =
           alts.length + " result" + (alts.length !== 1 ? "s" : "");
-
-        container.innerHTML = alts
+        c.innerHTML = alts
           .map(function (alt, i) {
-            const isBest = i === 0 && alt.price !== null;
-
-            let priceHtml;
-            if (alt.price !== null) {
-              priceHtml =
-                '<div class="alt-price">&pound;' +
-                alt.price.toFixed(2) +
-                "</div>" +
-                (alt.saving > 0
-                  ? '<div class="alt-saving">Save &pound;' +
-                    alt.saving.toFixed(2) +
-                    " (" +
-                    alt.savingPct +
-                    "%)</div>"
-                  : "");
-            } else {
-              priceHtml =
-                '<div class="alt-price" style="font-size:14px;color:var(--muted)">Contact for price</div>';
-            }
-
+            var best = i === 0 && alt.price !== null;
+            var ph =
+              alt.price !== null
+                ? '<div class="alt-price">&pound;' +
+                  alt.price.toFixed(2) +
+                  "</div>" +
+                  (alt.saving > 0
+                    ? '<div class="alt-saving">Save &pound;' +
+                      alt.saving.toFixed(2) +
+                      " (" +
+                      alt.savingPct +
+                      "%)</div>"
+                    : "")
+                : '<div class="alt-price" style="font-size:13px;color:var(--muted)">Contact for price</div>';
+            var inBasket = basket.some(function (b) {
+              return b.supplier === alt.supplier && b.name === alt.name;
+            });
             return (
               '<div class="alt-card' +
-              (isBest ? " best" : "") +
-              '">' +
-              '<div class="alt-rank">' +
+              (best ? " best" : "") +
+              '" style="animation-delay:' +
+              i * 0.08 +
+              's"><div class="alt-rank">' +
               alt.rank +
-              "</div>" +
-              '<div class="alt-info">' +
-              '<div class="alt-name">' +
-              escapeHtml(alt.name) +
-              "</div>" +
-              '<div class="alt-supplier">' +
-              escapeHtml(alt.supplier) +
+              '</div><div class="alt-info"><div class="alt-name">' +
+              esc(alt.name) +
+              '</div><div class="alt-supplier">' +
+              esc(alt.supplier) +
               (alt.framework ? " &#10003; Framework" : "") +
               "</div>" +
               (alt.unitPrice
@@ -1589,170 +2301,935 @@
                   alt.packQty +
                   " pack)</div>"
                 : "") +
-              "</div>" +
-              '<div class="alt-price-col">' +
-              priceHtml +
-              "</div>" +
-              '<button class="buy-btn">Buy &amp; log</button>' +
-              "</div>"
+              '</div><div class="alt-price-col">' +
+              ph +
+              '</div><div class="alt-actions"><button class="buy-btn" onclick="logPurchase(' +
+              i +
+              ')">Buy &amp; log</button><button class="add-basket-btn' +
+              (inBasket ? " added" : "") +
+              '" id="addBtn' +
+              i +
+              '" onclick="addToBasket(' +
+              i +
+              ')">' +
+              (inBasket ? "&#10003; Added" : "&#43; Requisition") +
+              "</button></div></div>"
             );
           })
           .join("");
       }
 
-      function renderBulkSuggestion(product, bestAlt) {
-        const section = document.getElementById("bulkSuggestion");
-        if (!product.price || !bestAlt || !bestAlt.price) {
-          section.classList.remove("visible");
+      function renderBulkSuggestion(product, best) {
+        var s = document.getElementById("bulkSuggestion");
+        if (!product.price || !best || !best.price) {
+          s.classList.remove("visible");
           return;
         }
-
-        const packQty = guessPackQty(product.title);
-        const category = detectCategory(product.title, product.keywords);
-        const isConsumable = [
-          "stationery",
-          "paper",
-          "cleaning",
-          "art",
-        ].includes(category);
-
-        if (!isConsumable) {
-          section.classList.remove("visible");
+        var cat = detectCategory(product.title, product.keywords);
+        if (!["stationery", "paper", "cleaning", "art"].includes(cat)) {
+          s.classList.remove("visible");
           return;
         }
-
-        // Suggest buying 3x or 5x for extra savings
-        const multiplier = packQty ? 5 : 3;
-        const bulkDiscount = 0.08; // Extra 8% for bulk
-        const bulkUnitPrice = bestAlt.price * (1 - bulkDiscount);
-        const bulkTotal = bulkUnitPrice * multiplier;
-        const originalTotal = product.price * multiplier;
-        const totalSaving = originalTotal - bulkTotal;
-
-        const bulkText = document.getElementById("bulkText");
-        const bulkMath = document.getElementById("bulkMath");
-
-        bulkText.textContent =
-          "These are consumables your school will use throughout the year. " +
-          "If you order " +
-          multiplier +
-          " now instead of 1, " +
-          "most education framework suppliers offer an additional ~8% bulk discount " +
-          "on top of the education price. That means bigger savings and fewer reorders.";
-
-        bulkMath.innerHTML =
+        var pq = guessPackQty(product.title),
+          mul = pq ? 5 : 3,
+          bd = 0.08;
+        var bup = best.price * (1 - bd),
+          bt = bup * mul,
+          ot = product.price * mul,
+          ts = ot - bt;
+        document.getElementById("bulkText").textContent =
+          "These are consumables your school uses throughout the year. Order " +
+          mul +
+          " now instead of 1 — most education framework suppliers give an additional ~8% bulk discount on top of the education price, with bigger savings and fewer reorders.";
+        document.getElementById("bulkMath").innerHTML =
           "<strong>Single order:</strong> " +
-          multiplier +
+          mul +
           " x &pound;" +
           product.price.toFixed(2) +
           " = &pound;" +
-          originalTotal.toFixed(2) +
-          "<br>" +
-          "<strong>Bulk via " +
-          escapeHtml(bestAlt.supplier) +
+          ot.toFixed(2) +
+          "<br><strong>Bulk via " +
+          esc(best.supplier) +
           ":</strong> " +
-          multiplier +
+          mul +
           " x &pound;" +
-          bulkUnitPrice.toFixed(2) +
+          bup.toFixed(2) +
           " = &pound;" +
-          bulkTotal.toFixed(2) +
-          "<br>" +
-          "<strong style='color:var(--success-text)'>Total saving: &pound;" +
-          totalSaving.toFixed(2) +
+          bt.toFixed(2) +
+          "<br><strong style='color:var(--success-text)'>Total saving: &pound;" +
+          ts.toFixed(2) +
           "</strong>";
-
-        section.classList.add("visible");
+        s.classList.add("visible");
       }
 
-      function renderApprovalEmail(product, bestAlt) {
-        const section = document.getElementById("approvalSection");
-        if (!product.title || !bestAlt) {
-          section.classList.remove("visible");
+      function renderApprovalEmail(product, best) {
+        var s = document.getElementById("approvalSection");
+        if (!product.title || !best) {
+          s.classList.remove("visible");
           return;
         }
-
-        const saving = bestAlt.saving ? bestAlt.saving.toFixed(2) : "TBC";
-        const bestPrice = bestAlt.price ? bestAlt.price.toFixed(2) : "TBC";
-        const origPrice = product.price ? product.price.toFixed(2) : "TBC";
-        const today = new Date().toLocaleDateString("en-GB", {
+        var sv = best.saving ? best.saving.toFixed(2) : "TBC",
+          bp = best.price ? best.price.toFixed(2) : "TBC",
+          op = product.price ? product.price.toFixed(2) : "TBC";
+        var today = new Date().toLocaleDateString("en-GB", {
           day: "numeric",
           month: "long",
           year: "numeric",
         });
-
-        const email =
+        var email =
           "Subject: Purchase approval request - " +
           product.title +
-          "\n\n" +
-          "Dear Head Teacher,\n\n" +
-          "I would like to request approval to purchase the following item for the school:\n\n" +
-          "Item: " +
+          "\n\nDear Head Teacher,\n\nI would like to request approval to purchase the following item for the school:\n\nItem: " +
           product.title +
-          "\n" +
-          "Quantity: 1\n" +
+          "\nQuantity: 1\n" +
           (product.price
-            ? "Original price (" +
-              product.source +
-              "): \u00A3" +
-              origPrice +
-              "\n"
+            ? "Original price (" + product.source + "): \u00A3" + op + "\n"
             : "") +
           "Best price found (" +
-          bestAlt.supplier +
+          best.supplier +
           "): \u00A3" +
-          bestPrice +
+          bp +
           "\n" +
-          (bestAlt.saving > 0
-            ? "Saving: \u00A3" + saving + " (" + bestAlt.savingPct + "% less)\n"
+          (best.saving > 0
+            ? "Saving: \u00A3" + sv + " (" + best.savingPct + "% less)\n"
             : "") +
-          (bestAlt.framework
-            ? "\nThis supplier is on an approved education procurement framework, " +
-              "which means the purchase meets best value requirements under the Academy Trust Handbook / SFVS.\n"
+          (best.framework
+            ? "\nThis supplier is on an approved education procurement framework, which means the purchase meets best value requirements under the Academy Trust Handbook / SFVS.\n"
             : "") +
           "\nThis comparison has been logged in Schoolgle Deal Finder for compliance records (dated " +
           today +
-          ").\n" +
-          "\nPlease confirm if you are happy for me to proceed with this purchase.\n\n" +
-          "Many thanks,\n[Your name]";
-
+          ").\n\nPlease confirm if you are happy for me to proceed.\n\nMany thanks,\n[Your name]";
         document.getElementById("emailPreview").textContent = email;
-        section.classList.add("visible");
+        s.classList.add("visible");
       }
 
-      function copyEmail() {
-        const text = document.getElementById("emailPreview").textContent;
-        navigator.clipboard.writeText(text).then(function () {
-          const toast = document.getElementById("copiedToast");
-          toast.classList.add("visible");
-          setTimeout(function () {
-            toast.classList.remove("visible");
-          }, 2000);
+      // ======== Basket / Requisition ========
+      function addToBasket(idx) {
+        var alts = window._lastAlts;
+        var product = currentProduct;
+        if (!alts || !alts[idx]) return;
+        var alt = alts[idx];
+        if (
+          basket.some(function (b) {
+            return b.supplier === alt.supplier && b.name === alt.name;
+          })
+        )
+          return;
+        basket.push({
+          id: Date.now() + "_" + Math.random().toString(36).substr(2, 5),
+          name: alt.name,
+          supplier: alt.supplier,
+          framework: alt.framework,
+          price: alt.price,
+          unitPrice: alt.unitPrice,
+          packQty: alt.packQty,
+          saving: alt.saving,
+          savingPct: alt.savingPct,
+          originalPrice: product ? product.price : null,
+          qty: 1,
+          department: "",
+          accountCode: "",
+          dateAdded: new Date().toISOString().split("T")[0],
         });
+        saveBasket();
+        var btn = document.getElementById("addBtn" + idx);
+        if (btn) {
+          btn.classList.add("added");
+          btn.innerHTML = "&#10003; Added";
+        }
+        updateBasketBadge();
+        spawnConfetti(btn);
+        showToast("Added to requisition order");
       }
 
-      function openInEmail() {
-        const text = document.getElementById("emailPreview").textContent;
-        const lines = text.split("\n");
-        const subject = lines[0].replace("Subject: ", "");
-        const body = lines.slice(2).join("\n");
-        window.open(
-          "mailto:?subject=" +
-            encodeURIComponent(subject) +
-            "&body=" +
-            encodeURIComponent(body),
+      function removeFromBasket(id) {
+        basket = basket.filter(function (b) {
+          return b.id !== id;
+        });
+        saveBasket();
+        updateBasketBadge();
+        renderRequisition();
+      }
+
+      function clearBasket() {
+        if (!confirm("Remove all items from the requisition?")) return;
+        basket = [];
+        saveBasket();
+        updateBasketBadge();
+        renderRequisition();
+      }
+
+      function updateBasketItem(id, field, value) {
+        var item = basket.find(function (b) {
+          return b.id === id;
+        });
+        if (!item) return;
+        if (field === "qty") {
+          item.qty = Math.max(1, parseInt(value) || 1);
+        } else {
+          item[field] = value;
+        }
+        saveBasket();
+        renderRequisition();
+      }
+
+      function saveBasket() {
+        localStorage.setItem("df_basket", JSON.stringify(basket));
+      }
+
+      function logPurchase(idx) {
+        showToast("Purchase logged for compliance records");
+      }
+
+      // ======== Render: Requisition Tab ========
+      var reqView = "supplier";
+      function setReqView(v) {
+        reqView = v;
+        document
+          .getElementById("viewSupplier")
+          .classList.toggle("active", v === "supplier");
+        document
+          .getElementById("viewAll")
+          .classList.toggle("active", v === "all");
+        renderRequisition();
+      }
+
+      function renderRequisition() {
+        var empty = document.getElementById("reqEmpty"),
+          content = document.getElementById("reqContent");
+        if (basket.length === 0) {
+          empty.style.display = "block";
+          content.style.display = "none";
+          return;
+        }
+        empty.style.display = "none";
+        content.style.display = "block";
+
+        // Stats
+        var totalCost = 0,
+          totalSaving = 0;
+        var suppliers = {};
+        basket.forEach(function (item) {
+          var c = (item.price || 0) * item.qty;
+          totalCost += c;
+          totalSaving += (item.saving || 0) * item.qty;
+          if (!suppliers[item.supplier])
+            suppliers[item.supplier] = {
+              items: [],
+              total: 0,
+              framework: item.framework,
+            };
+          suppliers[item.supplier].items.push(item);
+          suppliers[item.supplier].total += c;
+        });
+
+        document.getElementById("reqItemCount").textContent = basket.length;
+        document.getElementById("reqSupplierCount").textContent =
+          Object.keys(suppliers).length;
+        document.getElementById("reqTotalCost").textContent =
+          "\u00A3" + totalCost.toFixed(2);
+        document.getElementById("reqTotalSaving").textContent =
+          "\u00A3" + totalSaving.toFixed(2);
+
+        var list = document.getElementById("reqItemsList");
+
+        if (reqView === "supplier") {
+          list.innerHTML = Object.keys(suppliers)
+            .map(function (name) {
+              var g = suppliers[name];
+              return (
+                '<div class="supplier-group"><div class="supplier-header" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display===\'none\'?\'block\':\'block\'"><div class="supplier-dot"></div><div class="supplier-name">' +
+                esc(name) +
+                "</div>" +
+                (g.framework
+                  ? '<span class="supplier-framework">&#10003; Framework</span>'
+                  : "") +
+                '<div class="supplier-total">&pound;' +
+                g.total.toFixed(2) +
+                '</div></div><div class="supplier-items"><div class="req-item-header"><span>Product</span><span>Dept</span><span>Qty</span><span>Account Code</span><span>Line Total</span><span></span></div>' +
+                g.items
+                  .map(function (item) {
+                    return renderReqItem(item);
+                  })
+                  .join("") +
+                "</div></div>"
+              );
+            })
+            .join("");
+        } else {
+          list.innerHTML =
+            '<div class="supplier-group"><div class="supplier-items"><div class="req-item-header"><span>Product</span><span>Dept</span><span>Qty</span><span>Account Code</span><span>Line Total</span><span></span></div>' +
+            basket
+              .map(function (item) {
+                return renderReqItem(item);
+              })
+              .join("") +
+            "</div></div>";
+        }
+      }
+
+      function renderReqItem(item) {
+        var total = (item.price || 0) * item.qty;
+        return (
+          '<div class="req-item"><div class="req-item-name" data-label="Product">' +
+          esc(item.name) +
+          '<br><span style="font-size:11px;color:var(--muted)">' +
+          esc(item.supplier) +
+          (item.price
+            ? " &middot; &pound;" + item.price.toFixed(2) + " each"
+            : "") +
+          '</span></div><div data-label="Dept"><select onchange="updateBasketItem(\'' +
+          item.id +
+          "','department',this.value)\"><option value=\"\"" +
+          (item.department === "" ? " selected" : "") +
+          ">--</option><option" +
+          (item.department === "Teaching" ? " selected" : "") +
+          ">Teaching</option><option" +
+          (item.department === "Office" ? " selected" : "") +
+          ">Office</option><option" +
+          (item.department === "SEND" ? " selected" : "") +
+          ">SEND</option><option" +
+          (item.department === "Premises" ? " selected" : "") +
+          ">Premises</option><option" +
+          (item.department === "Catering" ? " selected" : "") +
+          ">Catering</option><option" +
+          (item.department === "ICT" ? " selected" : "") +
+          ">ICT</option><option" +
+          (item.department === "Art/DT" ? " selected" : "") +
+          ">Art/DT</option><option" +
+          (item.department === "Science" ? " selected" : "") +
+          ">Science</option><option" +
+          (item.department === "PE" ? " selected" : "") +
+          ">PE</option><option" +
+          (item.department === "EYFS" ? " selected" : "") +
+          ">EYFS</option><option" +
+          (item.department === "SLT" ? " selected" : "") +
+          '>SLT</option></select></div><div data-label="Qty"><input type="number" min="1" value="' +
+          item.qty +
+          '" onchange="updateBasketItem(\'' +
+          item.id +
+          '\',\'qty\',this.value)" style="width:60px"/></div><div data-label="Account Code"><input type="text" value="' +
+          esc(item.accountCode) +
+          '" placeholder="e.g. 4100" onchange="updateBasketItem(\'' +
+          item.id +
+          '\',\'accountCode\',this.value)"/></div><div class="req-item-total" data-label="Total">&pound;' +
+          total.toFixed(2) +
+          '</div><button class="req-remove" onclick="removeFromBasket(\'' +
+          item.id +
+          '\')" title="Remove">&times;</button></div>'
         );
       }
 
-      // ---- Main handler ----
+      // ======== Export ========
+      var FINANCE_FORMATS = [
+        {
+          id: "generic",
+          name: "Generic CSV (CFR codes)",
+          desc: "Universal format with DfE Consistent Financial Reporting codes",
+          icon: "&#128196;",
+        },
+        {
+          id: "xero",
+          name: "Xero",
+          desc: "Official 44-column Xero bill import format (verified)",
+          icon: "&#10004;",
+        },
+        {
+          id: "sage200",
+          name: "Sage 200",
+          desc: "Verified mandatory fields: AccountNumber, SYSTraderTranType, NominalAnalysis",
+          icon: "&#128202;",
+        },
+        {
+          id: "intacct",
+          name: "Sage Intacct",
+          desc: "AP Bill import with UK inclusive tax (TOTALTRXAMOUNT)",
+          icon: "&#128202;",
+        },
+        {
+          id: "quickbooks",
+          name: "QuickBooks Online UK",
+          desc: "Bill import with Expense Account lines (dd/mm/yyyy dates)",
+          icon: "&#128176;",
+        },
+        {
+          id: "psf",
+          name: "PS Financials (IRIS)",
+          desc: "Supplier catalogue format (7 columns) — PO import requires IRIS portal",
+          icon: "&#127970;",
+        },
+        {
+          id: "cfr",
+          name: "CFR Return Format",
+          desc: "DfE expenditure codes (E01-E32) for budget monitoring & benchmarking",
+          icon: "&#127891;",
+        },
+      ];
 
+      function showExportModal() {
+        var m = document.getElementById("exportModal");
+        document.getElementById("exportOptions").innerHTML =
+          FINANCE_FORMATS.map(function (f) {
+            return (
+              '<div class="export-option' +
+              (f.id === selectedExportFormat ? " selected" : "") +
+              '" onclick="selectExportFormat(\'' +
+              f.id +
+              '\')"><div class="export-option-icon">' +
+              f.icon +
+              '</div><div class="export-option-info"><div class="export-option-name">' +
+              f.name +
+              '</div><div class="export-option-desc">' +
+              f.desc +
+              "</div></div></div>"
+            );
+          }).join("");
+        m.classList.add("visible");
+      }
+      function closeExportModal() {
+        document.getElementById("exportModal").classList.remove("visible");
+      }
+      function selectExportFormat(id) {
+        selectedExportFormat = id;
+        document.querySelectorAll(".export-option").forEach(function (o) {
+          o.classList.remove("selected");
+        });
+        event.currentTarget.closest(".export-option").classList.add("selected");
+      }
+
+      function doExport() {
+        if (basket.length === 0) return;
+        var signoff = {
+          requester: document.getElementById("signoffRequester").value,
+          dept: document.getElementById("signoffDept").value,
+          approver: document.getElementById("signoffApprover").value,
+          date: document.getElementById("signoffDate").value,
+          po: document.getElementById("signoffPO").value,
+          notes: document.getElementById("signoffNotes").value,
+        };
+        var csv = buildCSV(selectedExportFormat, basket, signoff);
+        downloadFile(
+          csv,
+          "requisition-" + signoff.po ||
+            new Date().toISOString().split("T")[0] + ".csv",
+          "text/csv",
+        );
+        closeExportModal();
+        showToast(
+          "CSV downloaded — ready to import into " +
+            FINANCE_FORMATS.find(function (f) {
+              return f.id === selectedExportFormat;
+            }).name,
+        );
+      }
+
+      // CFR code mapping for departments
+      var DEPT_TO_CFR = {
+        Teaching: "E19",
+        Office: "E22",
+        SEND: "E19",
+        Premises: "E14",
+        Catering: "E25",
+        ICT: "E20C",
+        "Art/DT": "E19",
+        Science: "E19",
+        PE: "E24",
+        EYFS: "E19",
+        SLT: "E22",
+      };
+      function getCFR(item) {
+        return item.accountCode || DEPT_TO_CFR[item.department] || "E19";
+      }
+
+      // Format date as dd/mm/yyyy for UK systems
+      function ukDate(d) {
+        if (!d) return "";
+        var p = d.split("-");
+        return p.length === 3 ? p[2] + "/" + p[1] + "/" + p[0] : d;
+      }
+
+      function buildCSV(format, items, signoff) {
+        var rows = [];
+        var sep = ",";
+
+        switch (format) {
+          // ---- XERO: Official 44-column format (verified from Xero docs) ----
+          case "xero":
+            rows.push([
+              "ContactName",
+              "EmailAddress",
+              "POAddressLine1",
+              "POAddressLine2",
+              "POAddressLine3",
+              "POAddressLine4",
+              "POCity",
+              "PORegion",
+              "POPostalCode",
+              "POCountry",
+              "SAAddressLine1",
+              "SAAddressLine2",
+              "SAAddressLine3",
+              "SAAddressLine4",
+              "SACity",
+              "SARegion",
+              "SAPostalCode",
+              "SACountry",
+              "InvoiceNumber",
+              "Reference",
+              "InvoiceDate",
+              "DueDate",
+              "PlannedDate",
+              "Total",
+              "TaxTotal",
+              "InvoiceAmountPaid",
+              "InvoiceAmountDue",
+              "InventoryItemCode",
+              "Description",
+              "Quantity",
+              "UnitAmount",
+              "Discount",
+              "LineAmount",
+              "AccountCode",
+              "TaxType",
+              "TaxAmount",
+              "TrackingName1",
+              "TrackingOption1",
+              "TrackingName2",
+              "TrackingOption2",
+              "Currency",
+              "Type",
+              "Sent",
+              "Status",
+            ]);
+            items.forEach(function (item) {
+              var net = (item.price || 0) * item.qty;
+              var vat = Math.round(net * 0.2 * 100) / 100;
+              rows.push([
+                item.supplier,
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                signoff.po || "REQ-" + ukDate(signoff.date),
+                signoff.notes || "",
+                ukDate(signoff.date),
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                item.name,
+                item.qty,
+                (item.price || 0).toFixed(2),
+                "",
+                net.toFixed(2),
+                getCFR(item),
+                "20% (VAT on Expenses)",
+                vat.toFixed(2),
+                item.department || "",
+                "",
+                "",
+                "",
+                "GBP",
+                "ACCPAY",
+                "",
+                "DRAFT",
+              ]);
+            });
+            break;
+
+          // ---- SAGE 200: Verified mandatory fields from Sage help docs ----
+          case "sage200":
+            rows.push([
+              "AccountNumber",
+              "TransactionDate",
+              "SYSTraderTranType",
+              "DocumentToBaseCurrencyRate",
+              "DocumentToAccountCurrencyRate",
+              "GoodsValueInAccountCurrency",
+              "NominalAnalysisTransactionValue/1",
+              "NominalAnalysisNominalAccountNumber/1",
+              "NominalAnalysisNominalCostCentre/1",
+              "NominalAnalysisNominalDepartment/1",
+              "TaxAnalysisTaxRate/1",
+              "TaxAnalysisTaxValue/1",
+              "Reference",
+              "SecondReference",
+              "Details",
+            ]);
+            items.forEach(function (item) {
+              var net = (item.price || 0) * item.qty;
+              var vat = Math.round(net * 0.2 * 100) / 100;
+              rows.push([
+                item.supplier,
+                ukDate(signoff.date),
+                "4",
+                "1",
+                "1",
+                net.toFixed(2),
+                net.toFixed(2),
+                getCFR(item),
+                item.department || "DEFAULT",
+                item.department || "",
+                "20",
+                vat.toFixed(2),
+                signoff.po || "",
+                signoff.requester || "",
+                item.name,
+              ]);
+            });
+            break;
+
+          // ---- SAGE INTACCT: Verified from developer.intacct.com API docs ----
+          case "intacct":
+            rows.push([
+              "VENDORID",
+              "WHENCREATED",
+              "WHENDUE",
+              "RECORDID",
+              "DOCNUMBER",
+              "DESCRIPTION",
+              "INCLUSIVETAX",
+              "ACTION",
+              "ACCOUNTNO",
+              "TOTALTRXAMOUNT",
+              "ENTRYDESCRIPTION",
+              "DEPARTMENTID",
+              "LOCATIONID",
+              "DETAILID",
+            ]);
+            items.forEach(function (item) {
+              var gross = (item.price || 0) * item.qty;
+              var vat = Math.round((gross / 6) * 100) / 100;
+              // UK uses mm/dd/yyyy for Intacct
+              var d = signoff.date ? signoff.date.split("-") : [];
+              var intacctDate =
+                d.length === 3 ? d[1] + "/" + d[2] + "/" + d[0] : "";
+              rows.push([
+                item.supplier,
+                intacctDate,
+                "",
+                signoff.po || "",
+                "",
+                item.name,
+                "True",
+                "Submit",
+                getCFR(item),
+                gross.toFixed(2),
+                item.name,
+                item.department || "",
+                "",
+                "UK STD Rate - 20%",
+              ]);
+            });
+            break;
+
+          // ---- QUICKBOOKS UK: Verified from Intuit UK support docs ----
+          case "quickbooks":
+            rows.push([
+              "Bill No",
+              "Vendor",
+              "Bill Date",
+              "Due Date",
+              "Terms",
+              "Memo",
+              "Expense Account",
+              "Expense Description",
+              "Expense Line Amount",
+              "Expense Tax Code",
+              "Expense Tax Amount",
+            ]);
+            items.forEach(function (item, i) {
+              var net = (item.price || 0) * item.qty;
+              var vat = Math.round(net * 0.2 * 100) / 100;
+              rows.push([
+                (signoff.po || "REQ") + (items.length > 1 ? "-" + (i + 1) : ""),
+                item.supplier,
+                ukDate(signoff.date),
+                "",
+                "",
+                signoff.notes || "School requisition",
+                getCFR(item),
+                item.name,
+                net.toFixed(2),
+                "20.0% S",
+                vat.toFixed(2),
+              ]);
+            });
+            break;
+
+          // ---- PS FINANCIALS (IRIS): Supplier catalogue format (7 cols, publicly documented) ----
+          case "psf":
+            rows.push([
+              "LEDGER",
+              "ACCOUNT",
+              "STOCK TYPE CODE",
+              "STOCK ITEM CODE",
+              "STOCK ITEM TITLE",
+              "UNIT OF MEASURE",
+              "PRICE",
+            ]);
+            items.forEach(function (item) {
+              rows.push([
+                "PURCHASE",
+                item.supplier,
+                signoff.po || "SCHOOLGLE-REQ",
+                getCFR(item),
+                item.name,
+                item.packQty ? "Pack of " + item.packQty : "Each",
+                (item.price || 0).toFixed(2),
+              ]);
+            });
+            break;
+
+          // ---- CFR RETURN FORMAT: DfE expenditure code mapping ----
+          case "cfr":
+            rows.push([
+              "CFR Code",
+              "CFR Category",
+              "Supplier",
+              "Description",
+              "Quantity",
+              "Net Amount",
+              "VAT",
+              "Gross Amount",
+              "Department",
+              "Framework Supplier",
+              "Date",
+              "PO Number",
+              "Requested By",
+              "Approved By",
+            ]);
+            items.forEach(function (item) {
+              var code = getCFR(item);
+              var cfrNames = {
+                E01: "Teaching staff",
+                E02: "Supply teaching",
+                E03: "Education support staff",
+                E04: "Premises staff",
+                E05: "Admin/clerical staff",
+                E12: "Building maintenance",
+                E13: "Grounds maintenance",
+                E14: "Cleaning and caretaking",
+                E15: "Water and sewerage",
+                E16: "Energy",
+                E19: "Learning resources",
+                E20C: "ICT learning resources",
+                E22: "Administrative supplies",
+                E24: "Special facilities",
+                E25: "Catering supplies",
+              };
+              var net = (item.price || 0) * item.qty;
+              var vat = Math.round(net * 0.2 * 100) / 100;
+              rows.push([
+                code,
+                cfrNames[code] || "Other",
+                item.supplier,
+                item.name,
+                item.qty,
+                net.toFixed(2),
+                vat.toFixed(2),
+                (net + vat).toFixed(2),
+                item.department || "",
+                item.framework ? "Yes" : "No",
+                signoff.date || "",
+                signoff.po || "",
+                signoff.requester || "",
+                signoff.approver || "",
+              ]);
+            });
+            break;
+
+          default: // generic with CFR codes
+            rows.push([
+              "Date",
+              "Supplier",
+              "Framework Supplier",
+              "Product",
+              "Quantity",
+              "Unit Price",
+              "Line Total (Net)",
+              "VAT (20%)",
+              "Line Total (Gross)",
+              "Original Price",
+              "Saving",
+              "CFR Code",
+              "Department",
+              "Account Code",
+              "Requested By",
+              "Approved By",
+              "PO Number",
+              "Notes",
+            ]);
+            items.forEach(function (item) {
+              var net = (item.price || 0) * item.qty;
+              var vat = Math.round(net * 0.2 * 100) / 100;
+              rows.push([
+                signoff.date || item.dateAdded || "",
+                item.supplier,
+                item.framework ? "Yes" : "No",
+                item.name,
+                item.qty,
+                (item.price || 0).toFixed(2),
+                net.toFixed(2),
+                vat.toFixed(2),
+                (net + vat).toFixed(2),
+                (item.originalPrice || "").toString(),
+                item.saving ? item.saving.toFixed(2) : "",
+                getCFR(item),
+                item.department || "",
+                item.accountCode || "",
+                signoff.requester || "",
+                signoff.approver || "",
+                signoff.po || "",
+                signoff.notes || "",
+              ]);
+            });
+        }
+
+        return rows
+          .map(function (row) {
+            return row
+              .map(function (cell) {
+                return '"' + String(cell).replace(/"/g, '""') + '"';
+              })
+              .join(sep);
+          })
+          .join("\n");
+      }
+
+      function downloadFile(content, filename, type) {
+        var blob = new Blob(["\uFEFF" + content], {
+          type: type + ";charset=utf-8",
+        });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+
+      function printRequisition() {
+        var w = window.open("", "_blank");
+        var signoff = {
+          requester: document.getElementById("signoffRequester").value,
+          dept: document.getElementById("signoffDept").value,
+          approver: document.getElementById("signoffApprover").value,
+          date: document.getElementById("signoffDate").value,
+          po: document.getElementById("signoffPO").value,
+          notes: document.getElementById("signoffNotes").value,
+        };
+
+        var suppliers = {};
+        var totalCost = 0,
+          totalSaving = 0;
+        basket.forEach(function (item) {
+          var c = (item.price || 0) * item.qty;
+          totalCost += c;
+          totalSaving += (item.saving || 0) * item.qty;
+          if (!suppliers[item.supplier])
+            suppliers[item.supplier] = {
+              items: [],
+              total: 0,
+              framework: item.framework,
+            };
+          suppliers[item.supplier].items.push(item);
+          suppliers[item.supplier].total += c;
+        });
+
+        var html =
+          "<!DOCTYPE html><html><head><title>Requisition Order</title><style>body{font-family:Arial,sans-serif;font-size:12px;padding:20px;color:#333}h1{font-size:18px;margin-bottom:4px}h2{font-size:14px;margin:16px 0 8px;border-bottom:2px solid #00d4d4;padding-bottom:4px}table{width:100%;border-collapse:collapse;margin-bottom:12px}th,td{border:1px solid #ddd;padding:6px 8px;text-align:left}th{background:#f5f5f5;font-size:11px}tfoot td{font-weight:bold;background:#f9f9f9}.meta{display:flex;gap:24px;margin:12px 0;flex-wrap:wrap}.meta div{font-size:11px}.meta strong{display:block;font-size:10px;text-transform:uppercase;color:#888;margin-bottom:2px}.signoff{margin-top:32px;display:grid;grid-template-columns:1fr 1fr;gap:24px}.signoff-box{border-top:1px solid #333;padding-top:4px;font-size:11px}@media print{body{padding:0}}</style></head><body>";
+        html +=
+          "<h1>Requisition Order" +
+          (signoff.po ? " — " + esc(signoff.po) : "") +
+          "</h1>";
+        html +=
+          '<div class="meta"><div><strong>Requested by</strong>' +
+          esc(signoff.requester || "—") +
+          "</div><div><strong>Department</strong>" +
+          esc(signoff.dept || "—") +
+          "</div><div><strong>Date</strong>" +
+          esc(signoff.date || "—") +
+          "</div><div><strong>Total</strong>&pound;" +
+          totalCost.toFixed(2) +
+          "</div><div><strong>Saving</strong>&pound;" +
+          totalSaving.toFixed(2) +
+          "</div></div>";
+
+        Object.keys(suppliers).forEach(function (name) {
+          var g = suppliers[name];
+          html +=
+            "<h2>" +
+            esc(name) +
+            (g.framework ? " (Framework Supplier)" : "") +
+            "</h2>";
+          html +=
+            "<table><thead><tr><th>Product</th><th>Qty</th><th>Unit Price</th><th>Line Total</th><th>Dept</th><th>Account Code</th></tr></thead><tbody>";
+          g.items.forEach(function (item) {
+            html +=
+              "<tr><td>" +
+              esc(item.name) +
+              "</td><td>" +
+              item.qty +
+              "</td><td>&pound;" +
+              (item.price || 0).toFixed(2) +
+              "</td><td>&pound;" +
+              ((item.price || 0) * item.qty).toFixed(2) +
+              "</td><td>" +
+              esc(item.department || "") +
+              "</td><td>" +
+              esc(item.accountCode || "") +
+              "</td></tr>";
+          });
+          html +=
+            '</tbody><tfoot><tr><td colspan="3">Supplier Total</td><td>&pound;' +
+            g.total.toFixed(2) +
+            '</td><td colspan="2"></td></tr></tfoot></table>';
+        });
+
+        if (signoff.notes)
+          html += "<p><strong>Notes:</strong> " + esc(signoff.notes) + "</p>";
+        html +=
+          '<div class="signoff"><div class="signoff-box">Signed: ' +
+          esc(signoff.requester || "________________") +
+          '<br>Requester</div><div class="signoff-box">Signed: ' +
+          esc(signoff.approver || "________________") +
+          "<br>Approved by</div></div>";
+        html +=
+          '<p style="margin-top:24px;font-size:10px;color:#999">Generated by Schoolgle Deal Finder &mdash; schoolgle.co.uk</p></body></html>';
+
+        w.document.write(html);
+        w.document.close();
+        setTimeout(function () {
+          w.print();
+        }, 300);
+      }
+
+      // ======== Main handler ========
       async function handleFind() {
-        const url = document.getElementById("productUrl").value.trim();
+        var url = document.getElementById("productUrl").value.trim();
         if (!url) {
           document.getElementById("productUrl").focus();
           return;
         }
-
-        // Validate URL
         try {
           new URL(url);
         } catch (e) {
@@ -1760,28 +3237,24 @@
           return;
         }
 
-        const btn = document.getElementById("findBtn");
-        const loading = document.getElementById("statusLoading");
-        const error = document.getElementById("statusError");
-        const results = document.getElementById("results");
-
+        var btn = document.getElementById("findBtn"),
+          loading = document.getElementById("statusLoading"),
+          error = document.getElementById("statusError"),
+          results = document.getElementById("results");
         btn.disabled = true;
         loading.classList.add("visible");
         error.classList.remove("visible");
         results.classList.remove("visible");
 
-        // Step 1: Parse URL immediately for hints
-        const hints = parseUrlForProductHints(url);
+        var hints = parseUrlForProductHints(url);
         document.getElementById("loadingMsg").textContent =
           "Fetching product details from " +
           (hints.source || "website") +
           "...";
 
-        // Step 2: Fetch real product metadata from API
-        let meta = await fetchProductMeta(url);
+        var meta = await fetchProductMeta(url);
 
-        // Step 3: Build product object from best available data
-        const product = {
+        var product = {
           title:
             (meta && meta.title) ||
             hints.name ||
@@ -1793,121 +3266,158 @@
           keywords: hints.keywords,
           url: url,
         };
-
-        // Clean up title if it came from URL slug (capitalise words)
         if (!meta?.title && product.title) {
           product.title = product.title.replace(/\b\w/g, function (c) {
             return c.toUpperCase();
           });
         }
-
         currentProduct = product;
 
-        // Step 4: Build alternatives
         document.getElementById("loadingMsg").textContent =
           "Searching across school suppliers for better prices...";
-
-        // Small delay for UX
         await new Promise(function (r) {
-          setTimeout(r, 800);
+          setTimeout(r, 600);
         });
 
-        const alts = buildAlternatives(product);
-        currentAlternatives = alts;
-        bestAlternative = alts[0] || null;
+        var alts = buildAlternatives(product);
+        window._lastAlts = alts;
+        var best = alts[0] || null;
 
-        // Step 5: Render everything
         loading.classList.remove("visible");
         results.classList.add("visible");
         btn.disabled = false;
-
         renderOriginalProduct(product);
-        renderAlternatives(alts);
-        renderBulkSuggestion(product, bestAlternative);
-        renderApprovalEmail(product, bestAlternative);
-
-        // Animate the savings chart
+        renderAlternatives(alts, product);
+        renderBulkSuggestion(product, best);
+        renderApprovalEmail(product, best);
         animateChart();
       }
 
       function showError(msg) {
-        const error = document.getElementById("statusError");
         document.getElementById("errorMsg").textContent = msg;
-        error.classList.add("visible");
+        document.getElementById("statusError").classList.add("visible");
         document.getElementById("statusLoading").classList.remove("visible");
         document.getElementById("findBtn").disabled = false;
       }
 
-      function escapeHtml(str) {
-        if (!str) return "";
-        var div = document.createElement("div");
-        div.textContent = str;
-        return div.innerHTML;
+      // ======== Utilities ========
+      function esc(s) {
+        if (!s) return "";
+        var d = document.createElement("div");
+        d.textContent = s;
+        return d.innerHTML;
+      }
+
+      function showToast(msg) {
+        var t = document.getElementById("toast");
+        document.getElementById("toastMsg").textContent = msg;
+        t.classList.add("visible");
+        setTimeout(function () {
+          t.classList.remove("visible");
+        }, 2800);
+      }
+
+      function spawnConfetti(el) {
+        if (!el) return;
+        var rect = el.getBoundingClientRect();
+        var emojis = [
+          "&#127881;",
+          "&#11088;",
+          "&#128155;",
+          "&#128994;",
+          "&#10024;",
+        ];
+        for (var i = 0; i < 6; i++) {
+          var p = document.createElement("span");
+          p.className = "confetti-particle";
+          p.innerHTML = emojis[i % emojis.length];
+          p.style.left =
+            rect.left + rect.width / 2 + Math.random() * 40 - 20 + "px";
+          p.style.top = rect.top - 10 + "px";
+          p.style.animationDelay = i * 0.06 + "s";
+          document.body.appendChild(p);
+          setTimeout(function () {
+            p.remove();
+          }, 1200);
+        }
+      }
+
+      function copyEmail() {
+        navigator.clipboard
+          .writeText(document.getElementById("emailPreview").textContent)
+          .then(function () {
+            var t = document.getElementById("copiedToast");
+            t.classList.add("visible");
+            setTimeout(function () {
+              t.classList.remove("visible");
+            }, 2000);
+          });
+      }
+      function openInEmail() {
+        var text = document.getElementById("emailPreview").textContent;
+        var lines = text.split("\n");
+        var subj = lines[0].replace("Subject: ", "");
+        window.open(
+          "mailto:?subject=" +
+            encodeURIComponent(subj) +
+            "&body=" +
+            encodeURIComponent(lines.slice(2).join("\n")),
+        );
       }
 
       function animateChart() {
-        const container = document.getElementById("chartBars");
-        const months = ["Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar"];
-        const values = [45, 120, 85, 200, 160, 280, 71];
-        const maxVal = Math.max(...values);
-
-        container.innerHTML = "";
-        months.forEach(function (month, i) {
-          const bar = document.createElement("div");
+        var c = document.getElementById("chartBars");
+        var months = ["Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar"];
+        var vals = [45, 120, 85, 200, 160, 280, 71];
+        var mx = Math.max.apply(null, vals);
+        c.innerHTML = "";
+        months.forEach(function (m, i) {
+          var bar = document.createElement("div");
           bar.className = "chart-bar";
           bar.style.height = "0%";
-
-          const label = document.createElement("span");
-          label.className = "bar-label";
-          label.textContent = month;
-          bar.appendChild(label);
-
-          bar.title = month + ": \u00A3" + values[i] + " saved";
-          container.appendChild(bar);
-
+          var lbl = document.createElement("span");
+          lbl.className = "bar-label";
+          lbl.textContent = m;
+          bar.appendChild(lbl);
+          bar.title = m + ": \u00A3" + vals[i] + " saved";
+          c.appendChild(bar);
           setTimeout(
             function () {
-              bar.style.height = Math.round((values[i] / maxVal) * 100) + "%";
+              bar.style.height = Math.round((vals[i] / mx) * 100) + "%";
             },
-            100 + i * 120,
+            100 + i * 100,
           );
         });
-
         animateCount("totalSaved", 0, 961, "\u00A3", "");
         animateCount("comparisons", 0, 23, "", "");
         animateCount("complianceLogs", 0, 23, "", "");
       }
 
-      function animateCount(id, from, to, prefix, suffix) {
-        const el = document.getElementById(id);
-        const duration = 1200;
-        const start = performance.now();
-
+      function animateCount(id, from, to, pre, suf) {
+        var el = document.getElementById(id);
+        var dur = 1200;
+        var start = performance.now();
         function tick(now) {
-          const elapsed = now - start;
-          const progress = Math.min(elapsed / duration, 1);
-          const eased = 1 - Math.pow(1 - progress, 3);
-          const current = Math.round(from + (to - from) * eased);
-          el.textContent = prefix + current.toLocaleString() + suffix;
-          if (progress < 1) requestAnimationFrame(tick);
+          var p = Math.min((now - start) / dur, 1);
+          var e = 1 - Math.pow(1 - p, 3);
+          el.textContent =
+            pre + Math.round(from + (to - from) * e).toLocaleString() + suf;
+          if (p < 1) requestAnimationFrame(tick);
         }
         requestAnimationFrame(tick);
       }
 
-      // Export button
-      document
-        .getElementById("exportBtn")
-        ?.addEventListener("click", function () {
-          alert(
-            "PDF export requires a Signal Pro account. Subscribe at schoolgle.co.uk/insights/newsletter",
-          );
-        });
-
-      // Allow Enter key to trigger search
+      // Enter key
       document
         .getElementById("productUrl")
         ?.addEventListener("keydown", function (e) {
           if (e.key === "Enter") handleFind();
+        });
+      // PDF export
+      document
+        .getElementById("exportBtn")
+        ?.addEventListener("click", function () {
+          alert("PDF export requires a Signal Pro account.");
         });
     </script>
   </body>
