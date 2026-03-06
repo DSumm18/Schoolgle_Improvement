@@ -23,6 +23,8 @@ import {
   Church,
   Lock,
   FileEdit,
+  MessageSquare,
+  BarChart3,
 } from "lucide-react";
 
 export type Role =
@@ -117,6 +119,14 @@ export const MODULES: ModuleDefinition[] = [
     color: "rose",
     icon: Heart,
     description: "EHCP and provision mapping.",
+    requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
+  },
+  {
+    id: "surveys",
+    name: "Surveys & Feedback",
+    color: "cyan",
+    icon: MessageSquare,
+    description: "Create surveys and collect stakeholder feedback.",
     requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
   },
 ];
@@ -444,6 +454,35 @@ export const APPS: AppDefinition[] = [
     shortDescription: "Monitor usage & costs.",
     requiredPermissions: ["admin", "headteacher", "slt", "caretaker"],
   },
+
+  // Survey Apps
+  {
+    id: "surveys-home",
+    moduleId: "surveys",
+    name: "Surveys",
+    route: "/dashboard/surveys",
+    icon: MessageSquare,
+    shortDescription: "Create and manage surveys.",
+    requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
+  },
+  {
+    id: "survey-templates",
+    moduleId: "surveys",
+    name: "Templates",
+    route: "/dashboard/surveys/templates",
+    icon: ClipboardList,
+    shortDescription: "Pre-built survey templates.",
+    requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
+  },
+  {
+    id: "survey-analytics",
+    moduleId: "surveys",
+    name: "Analytics",
+    route: "/dashboard/surveys/analytics",
+    icon: BarChart3,
+    shortDescription: "Cross-survey analytics and insights.",
+    requiredPermissions: ["admin", "headteacher", "slt"],
+  },
 ];
 
 export const NAVBAR_CONFIG = [
@@ -514,6 +553,8 @@ export function getModuleByPath(path: string): ModuleDefinition | undefined {
     return MODULES.find((m) => m.id === "improvement");
   if (path.startsWith("/dashboard/tasks"))
     return MODULES.find((m) => m.id === "improvement");
+  if (path.startsWith("/dashboard/surveys"))
+    return MODULES.find((m) => m.id === "surveys");
 
   return undefined;
 }

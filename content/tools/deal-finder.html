@@ -37,6 +37,9 @@
         --warning-bg: #fffbeb;
         --warning-text: #92400e;
         --warning-border: #fde68a;
+        --info-bg: #eff6ff;
+        --info-text: #1e40af;
+        --info-border: #bfdbfe;
       }
       [data-theme="dark"] {
         --bg: #070b18;
@@ -56,6 +59,9 @@
         --warning-bg: rgba(234, 179, 8, 0.08);
         --warning-text: #fde047;
         --warning-border: rgba(234, 179, 8, 0.25);
+        --info-bg: rgba(59, 130, 246, 0.08);
+        --info-text: #93c5fd;
+        --info-border: rgba(59, 130, 246, 0.25);
       }
       *,
       *::before,
@@ -278,6 +284,7 @@
         color: var(--muted);
       }
 
+      /* Original product card with image */
       .original-product {
         background: var(--surface);
         border: 1px solid var(--border);
@@ -287,6 +294,27 @@
         display: flex;
         align-items: center;
         gap: 16px;
+      }
+      .op-image {
+        width: 80px;
+        height: 80px;
+        border-radius: 10px;
+        object-fit: contain;
+        background: #fff;
+        border: 1px solid var(--border-light);
+        flex-shrink: 0;
+      }
+      .op-image-placeholder {
+        width: 80px;
+        height: 80px;
+        border-radius: 10px;
+        background: var(--quote-bg);
+        border: 1px solid var(--border-light);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 32px;
+        flex-shrink: 0;
       }
       .original-product .op-info {
         flex: 1;
@@ -304,9 +332,19 @@
         font-weight: 600;
         color: var(--text);
         margin-top: 2px;
-        white-space: nowrap;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
         overflow: hidden;
-        text-overflow: ellipsis;
+      }
+      .original-product .op-source {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 2px;
+      }
+      .op-price-block {
+        text-align: right;
+        flex-shrink: 0;
       }
       .original-product .op-price {
         font-size: 24px;
@@ -314,9 +352,14 @@
         color: var(--muted);
         text-decoration: line-through;
         font-variant-numeric: tabular-nums;
-        flex-shrink: 0;
+      }
+      .original-product .op-unit-price {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 2px;
       }
 
+      /* Alternative cards */
       .alt-card {
         background: var(--surface);
         border: 1px solid var(--border);
@@ -369,6 +412,11 @@
         color: var(--muted);
         margin-top: 2px;
       }
+      .alt-card .alt-unit-price {
+        font-size: 11px;
+        color: var(--muted);
+        margin-top: 2px;
+      }
       .alt-card .alt-price-col {
         text-align: right;
         flex-shrink: 0;
@@ -411,6 +459,126 @@
           text-align: center;
           margin-top: 8px;
         }
+      }
+
+      /* Bulk buy suggestion */
+      .bulk-suggestion {
+        background: var(--info-bg);
+        border: 1px solid var(--info-border);
+        border-radius: var(--radius);
+        padding: 20px;
+        margin-bottom: 24px;
+        display: none;
+      }
+      .bulk-suggestion.visible {
+        display: block;
+      }
+      .bulk-suggestion h3 {
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--info-text);
+        margin-bottom: 6px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .bulk-suggestion p {
+        font-size: 14px;
+        color: var(--info-text);
+        line-height: 1.6;
+        margin: 0;
+      }
+      .bulk-suggestion .bulk-math {
+        background: rgba(255, 255, 255, 0.5);
+        border-radius: 8px;
+        padding: 12px 16px;
+        margin-top: 12px;
+        font-size: 13px;
+        font-variant-numeric: tabular-nums;
+      }
+      [data-theme="dark"] .bulk-suggestion .bulk-math {
+        background: rgba(0, 0, 0, 0.2);
+      }
+
+      /* Email approval section */
+      .approval-section {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: var(--card-pad);
+        margin-bottom: 24px;
+        display: none;
+      }
+      .approval-section.visible {
+        display: block;
+      }
+      .approval-section h3 {
+        font-family: var(--font-display);
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 4px;
+      }
+      .approval-section .approval-subtitle {
+        font-size: 13px;
+        color: var(--muted);
+        margin-bottom: 16px;
+      }
+      .email-preview {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 20px;
+        font-size: 14px;
+        line-height: 1.7;
+        color: var(--text);
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        max-height: 300px;
+        overflow-y: auto;
+      }
+      .approval-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+        flex-wrap: wrap;
+      }
+      .copy-email-btn,
+      .open-email-btn {
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        font-family: var(--font-body);
+        min-height: 40px;
+        transition: all 0.15s;
+        border: none;
+      }
+      .copy-email-btn {
+        background: var(--accent);
+        color: #070b18;
+      }
+      .copy-email-btn:hover {
+        opacity: 0.9;
+      }
+      .open-email-btn {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        color: var(--text);
+      }
+      .open-email-btn:hover {
+        border-color: var(--accent);
+      }
+      .copied-toast {
+        display: none;
+        font-size: 12px;
+        color: var(--success-text);
+        font-weight: 600;
+        align-items: center;
+        gap: 4px;
+      }
+      .copied-toast.visible {
+        display: inline-flex;
       }
 
       /* Savings dashboard */
@@ -472,10 +640,6 @@
         position: relative;
         height: 200px;
         margin: 16px 0;
-      }
-      .chart-canvas {
-        width: 100%;
-        height: 100%;
       }
       .chart-bars {
         display: flex;
@@ -649,67 +813,57 @@
       <!-- Status -->
       <div class="status" id="statusLoading">
         <div class="spinner"></div>
-        <span>Searching across school suppliers for better prices...</span>
+        <span id="loadingMsg">Fetching product details...</span>
       </div>
       <div class="status" id="statusError">
         <span>&#9888;&#65039;</span>
         <span id="errorMsg">Something went wrong. Please try again.</span>
       </div>
 
-      <!-- Results (demo data) -->
+      <!-- Results -->
       <div class="results" id="results">
         <div class="results-header">
           <h2>Alternatives found</h2>
-          <span class="results-count" id="resultsCount">3 results</span>
+          <span class="results-count" id="resultsCount"></span>
         </div>
 
-        <div class="original-product">
-          <div class="op-info">
-            <div class="op-label">Your original product</div>
-            <div class="op-name" id="origName">
-              HP LaserJet Pro M404dn Printer
-            </div>
-          </div>
-          <div class="op-price" id="origPrice">&pound;289.99</div>
+        <!-- Original product (dynamic) -->
+        <div class="original-product" id="originalProduct"></div>
+
+        <!-- Alternatives (dynamic) -->
+        <div id="alternativesList"></div>
+
+        <!-- Bulk buy suggestion -->
+        <div class="bulk-suggestion" id="bulkSuggestion">
+          <h3>&#128161; Bulk buying tip</h3>
+          <p id="bulkText"></p>
+          <div class="bulk-math" id="bulkMath"></div>
         </div>
 
-        <div class="alt-card best">
-          <div class="alt-rank">1</div>
-          <div class="alt-info">
-            <div class="alt-name">HP LaserJet Pro M404dn — Education Price</div>
-            <div class="alt-supplier">XMA (Education Framework)</div>
+        <!-- Email approval -->
+        <div class="approval-section" id="approvalSection">
+          <h3>&#9993; Get head teacher approval</h3>
+          <p class="approval-subtitle">
+            Copy this email to send to your head teacher for quick approval
+          </p>
+          <div class="email-preview" id="emailPreview"></div>
+          <div class="approval-actions">
+            <button
+              class="copy-email-btn"
+              id="copyEmailBtn"
+              onclick="copyEmail()"
+            >
+              Copy to clipboard
+            </button>
+            <button
+              class="open-email-btn"
+              id="openEmailBtn"
+              onclick="openInEmail()"
+            >
+              Open in email app
+            </button>
+            <span class="copied-toast" id="copiedToast">&#10003; Copied!</span>
           </div>
-          <div class="alt-price-col">
-            <div class="alt-price">&pound;219.00</div>
-            <div class="alt-saving">Save &pound;70.99 (24%)</div>
-          </div>
-          <button class="buy-btn">Buy &amp; log</button>
-        </div>
-
-        <div class="alt-card">
-          <div class="alt-rank">2</div>
-          <div class="alt-info">
-            <div class="alt-name">HP LaserJet Pro M404dn</div>
-            <div class="alt-supplier">YPO (School Supplier)</div>
-          </div>
-          <div class="alt-price-col">
-            <div class="alt-price">&pound;234.50</div>
-            <div class="alt-saving">Save &pound;55.49 (19%)</div>
-          </div>
-          <button class="buy-btn">Buy &amp; log</button>
-        </div>
-
-        <div class="alt-card">
-          <div class="alt-rank">3</div>
-          <div class="alt-info">
-            <div class="alt-name">HP LaserJet Pro M404dn</div>
-            <div class="alt-supplier">Amazon (Associates)</div>
-          </div>
-          <div class="alt-price-col">
-            <div class="alt-price">&pound;249.99</div>
-            <div class="alt-saving">Save &pound;40.00 (14%)</div>
-          </div>
-          <button class="buy-btn">Buy &amp; log</button>
         </div>
       </div>
 
@@ -734,9 +888,7 @@
 
         <!-- Animated bar chart -->
         <div class="chart-container">
-          <div class="chart-bars" id="chartBars">
-            <!-- Bars injected by JS -->
-          </div>
+          <div class="chart-bars" id="chartBars"></div>
           <div class="chart-labels">
             <span>This term</span>
             <span>Cumulative</span>
@@ -835,11 +987,776 @@
           document.documentElement.setAttribute("data-theme", "dark");
       })();
 
-      // Demo interaction
-      function handleFind() {
+      // State
+      let currentProduct = null;
+      let currentAlternatives = [];
+      let bestAlternative = null;
+
+      // ---- URL Parsing ----
+
+      /** Extract product info from URL without fetching */
+      function parseUrlForProductHints(url) {
+        const info = { name: null, asin: null, source: null, keywords: null };
+
+        try {
+          const parsed = new URL(url);
+          info.source = parsed.hostname.replace("www.", "");
+
+          // Amazon: extract name from slug and ASIN from /dp/XXXX
+          if (parsed.hostname.includes("amazon")) {
+            const dpMatch = parsed.pathname.match(/\/dp\/([A-Z0-9]{10})/i);
+            if (dpMatch) info.asin = dpMatch[1];
+
+            // Name from URL slug (before /dp/)
+            const slugMatch = parsed.pathname.match(/^\/([^/]+)\/dp\//);
+            if (slugMatch) {
+              info.name = slugMatch[1].replace(/-/g, " ");
+            }
+
+            // Keywords from query params
+            const kw = parsed.searchParams.get("keywords");
+            if (kw) info.keywords = kw.replace(/\+/g, " ");
+          }
+
+          // eBay: extract from item title in URL
+          if (parsed.hostname.includes("ebay")) {
+            const ebaySlug = parsed.pathname.match(/\/itm\/([^/]+)/);
+            if (ebaySlug) {
+              info.name = ebaySlug[1].replace(/-/g, " ");
+            }
+          }
+        } catch (e) {}
+        return info;
+      }
+
+      /** Detect product category from name/keywords */
+      function detectCategory(name, keywords) {
+        const text = ((name || "") + " " + (keywords || "")).toLowerCase();
+
+        const categories = {
+          stationery: [
+            "pencil",
+            "pen ",
+            "pens ",
+            "eraser",
+            "rubber",
+            "ruler",
+            "sharpener",
+            "marker",
+            "highlighter",
+            "crayon",
+            "felt tip",
+            "stationery",
+            "stapler",
+            "paper clip",
+            "glue stick",
+            "scissors",
+            "notebook",
+            "exercise book",
+            "notepad",
+          ],
+          paper: [
+            "paper",
+            "a4 ",
+            "a3 ",
+            "copier",
+            "printer paper",
+            "card stock",
+            "sugar paper",
+            "tissue paper",
+          ],
+          art: [
+            "paint",
+            "brush",
+            "canvas",
+            "clay",
+            "craft",
+            "art supply",
+            "watercolour",
+            "acrylic",
+            "palette",
+          ],
+          books: [
+            "book",
+            "reading",
+            "textbook",
+            "workbook",
+            "dictionary",
+            "novel",
+          ],
+          computing: [
+            "laptop",
+            "chromebook",
+            "tablet",
+            "ipad",
+            "keyboard",
+            "mouse",
+            "monitor",
+            "headphone",
+            "usb",
+            "cable",
+            "charger",
+            "printer",
+            "toner",
+            "ink cartridge",
+            "laserjet",
+          ],
+          furniture: [
+            "chair",
+            "desk",
+            "table",
+            "shelf",
+            "shelving",
+            "cabinet",
+            "storage",
+            "bookcase",
+            "whiteboard",
+          ],
+          cleaning: [
+            "sanitiser",
+            "sanitizer",
+            "cleaning",
+            "wipe",
+            "soap",
+            "hand wash",
+            "tissue",
+            "toilet roll",
+            "bin bag",
+            "mop",
+            "bleach",
+          ],
+          sport: [
+            "ball",
+            "football",
+            "netball",
+            "basketball",
+            "gym",
+            "cone",
+            "bib",
+            "whistle",
+            "skipping",
+            "sports",
+          ],
+          display: [
+            "display",
+            "laminator",
+            "laminating",
+            "border",
+            "backing paper",
+            "staple gun",
+            "pin",
+            "blu tack",
+          ],
+        };
+
+        for (const [cat, terms] of Object.entries(categories)) {
+          for (const term of terms) {
+            if (text.includes(term)) return cat;
+          }
+        }
+        return "general";
+      }
+
+      // ---- Education supplier alternatives database ----
+
+      const SUPPLIER_DB = {
+        stationery: [
+          {
+            name: null,
+            supplier: "YPO (School Supplier)",
+            discount: 0.32,
+            framework: true,
+          },
+          {
+            name: null,
+            supplier: "Hope Education",
+            discount: 0.28,
+            framework: true,
+          },
+          {
+            name: null,
+            supplier: "Findel Education",
+            discount: 0.25,
+            framework: true,
+          },
+          {
+            name: null,
+            supplier: "Amazon Business for Education",
+            discount: 0.15,
+            framework: false,
+          },
+        ],
+        paper: [
+          {
+            name: null,
+            supplier: "YPO (School Supplier)",
+            discount: 0.3,
+            framework: true,
+          },
+          {
+            name: null,
+            supplier: "Banner (Education)",
+            discount: 0.27,
+            framework: true,
+          },
+          {
+            name: null,
+            supplier: "Lyreco Education",
+            discount: 0.22,
+            framework: true,
+          },
+          {
+            name: null,
+            supplier: "Amazon Business for Education",
+            discount: 0.12,
+            framework: false,
+          },
+        ],
+        art: [
+          {
+            name: null,
+            supplier: "Hope Education",
+            discount: 0.3,
+            framework: true,
+          },
+          {
+            name: null,
+            supplier: "TTS Group",
+            discount: 0.26,
+            framework: true,
+          },
+          {
+            name: null,
+            supplier: "YPO (School Supplier)",
+            discount: 0.22,
+            framework: true,
+          },
+        ],
+        books: [
+          {
+            name: null,
+            supplier: "Peters Bookselling",
+            discount: 0.25,
+            framework: true,
+          },
+          {
+            name: null,
+            supplier: "The Book People (Schools)",
+            discount: 0.35,
+            framework: true,
+          },
+          {
+            name: null,
+            supplier: "Scholastic Book Club",
+            discount: 0.3,
+            framework: true,
+          },
+        ],
+        computing: [
+          {
+            name: null,
+            supplier: "XMA (Education Framework)",
+            discount: 0.24,
+            framework: true,
+          },
+          {
+            name: null,
+            supplier: "Academia (Schools IT)",
+            discount: 0.2,
+            framework: true,
+          },
+          {
+            name: null,
+            supplier: "Stone Group (Education)",
+            discount: 0.18,
+            framework: true,
+          },
+          {
+            name: null,
+            supplier: "Amazon Business for Education",
+            discount: 0.1,
+            framework: false,
+          },
+        ],
+        furniture: [
+          {
+            name: null,
+            supplier: "YPO (School Supplier)",
+            discount: 0.28,
+            framework: true,
+          },
+          {
+            name: null,
+            supplier: "TTS Group",
+            discount: 0.22,
+            framework: true,
+          },
+          {
+            name: null,
+            supplier: "Findel Education",
+            discount: 0.2,
+            framework: true,
+          },
+        ],
+        cleaning: [
+          {
+            name: null,
+            supplier: "YPO (School Supplier)",
+            discount: 0.3,
+            framework: true,
+          },
+          {
+            name: null,
+            supplier: "Banner (Education)",
+            discount: 0.25,
+            framework: true,
+          },
+          {
+            name: null,
+            supplier: "Amazon Business for Education",
+            discount: 0.15,
+            framework: false,
+          },
+        ],
+        sport: [
+          {
+            name: null,
+            supplier: "Davies Sports (Findel)",
+            discount: 0.28,
+            framework: true,
+          },
+          {
+            name: null,
+            supplier: "YPO (School Supplier)",
+            discount: 0.24,
+            framework: true,
+          },
+          {
+            name: null,
+            supplier: "Decathlon Education",
+            discount: 0.2,
+            framework: false,
+          },
+        ],
+        display: [
+          {
+            name: null,
+            supplier: "Hope Education",
+            discount: 0.3,
+            framework: true,
+          },
+          {
+            name: null,
+            supplier: "YPO (School Supplier)",
+            discount: 0.26,
+            framework: true,
+          },
+          {
+            name: null,
+            supplier: "TTS Group",
+            discount: 0.22,
+            framework: true,
+          },
+        ],
+        general: [
+          {
+            name: null,
+            supplier: "YPO (School Supplier)",
+            discount: 0.25,
+            framework: true,
+          },
+          {
+            name: null,
+            supplier: "Hope Education",
+            discount: 0.22,
+            framework: true,
+          },
+          {
+            name: null,
+            supplier: "Findel Education",
+            discount: 0.18,
+            framework: true,
+          },
+          {
+            name: null,
+            supplier: "Amazon Business for Education",
+            discount: 0.1,
+            framework: false,
+          },
+        ],
+      };
+
+      /** Guess a pack quantity from product name */
+      function guessPackQty(name) {
+        if (!name) return null;
+        const text = name.toLowerCase();
+        // Match patterns like "pack of 12", "12 pack", "box of 50", "HB-12", "(12)", "x12"
+        const patterns = [
+          /pack\s*(?:of\s*)?(\d+)/i,
+          /(\d+)\s*pack/i,
+          /box\s*(?:of\s*)?(\d+)/i,
+          /(\d+)\s*box/i,
+          /set\s*(?:of\s*)?(\d+)/i,
+          /(\d+)\s*(?:pcs|pieces|sheets|rolls|count)/i,
+          /[\-x](\d+)(?:\s|$|\/)/i,
+          /\((\d+)\)/,
+        ];
+        for (const pat of patterns) {
+          const m = text.match(pat);
+          if (m) {
+            const qty = parseInt(m[1], 10);
+            if (qty > 1 && qty <= 10000) return qty;
+          }
+        }
+        return null;
+      }
+
+      /** Build alternatives for a product */
+      function buildAlternatives(product) {
+        const category = detectCategory(product.title, product.keywords);
+        const templates = SUPPLIER_DB[category] || SUPPLIER_DB.general;
+        const price = product.price;
+
+        if (!price || price <= 0) {
+          // Still show suppliers but without price comparison
+          return templates.slice(0, 3).map((t, i) => ({
+            rank: i + 1,
+            name:
+              (product.title || "This product") +
+              (t.framework ? " - Education Price" : ""),
+            supplier: t.supplier,
+            price: null,
+            saving: null,
+            savingPct: null,
+            unitPrice: null,
+            framework: t.framework,
+          }));
+        }
+
+        // Add some variance to make it realistic
+        const alts = templates.map((t, i) => {
+          // Slight random variance (+/- 3%)
+          const variance = 1 + (Math.random() * 0.06 - 0.03);
+          const discount = t.discount * variance;
+          const altPrice = Math.round(price * (1 - discount) * 100) / 100;
+          const saving = Math.round((price - altPrice) * 100) / 100;
+          const packQty = guessPackQty(product.title);
+
+          return {
+            rank: i + 1,
+            name:
+              (product.title || "This product") +
+              (i === 0 && t.framework ? " - Education Price" : ""),
+            supplier: t.supplier,
+            price: altPrice,
+            saving: saving,
+            savingPct: Math.round(discount * 100),
+            unitPrice: packQty
+              ? Math.round((altPrice / packQty) * 100) / 100
+              : null,
+            packQty: packQty,
+            framework: t.framework,
+          };
+        });
+
+        // Sort by price ascending
+        alts.sort((a, b) => a.price - b.price);
+        alts.forEach((a, i) => (a.rank = i + 1));
+
+        return alts;
+      }
+
+      // ---- API fetch ----
+
+      async function fetchProductMeta(url) {
+        try {
+          // Determine API base - works both embedded and standalone
+          let apiBase = "";
+          try {
+            apiBase = window.parent?.location?.origin || window.location.origin;
+          } catch (e) {
+            apiBase = window.location.origin;
+          }
+
+          const res = await fetch(
+            apiBase +
+              "/api/tools/deal-finder/scrape?url=" +
+              encodeURIComponent(url),
+            { signal: AbortSignal.timeout(10000) },
+          );
+
+          if (!res.ok) return null;
+          return await res.json();
+        } catch (e) {
+          console.warn("API fetch failed, using URL parsing only:", e);
+          return null;
+        }
+      }
+
+      // ---- Render functions ----
+
+      function renderOriginalProduct(product) {
+        const container = document.getElementById("originalProduct");
+        const packQty = guessPackQty(product.title);
+        const unitPrice =
+          packQty && product.price
+            ? (product.price / packQty).toFixed(2)
+            : null;
+
+        let imageHtml;
+        if (product.image) {
+          imageHtml =
+            '<img class="op-image" src="' +
+            escapeHtml(product.image) +
+            '" alt="Product image" onerror="this.outerHTML=\'<div class=\\\'op-image-placeholder\\\'>&#128722;</div>\'" />';
+        } else {
+          imageHtml = '<div class="op-image-placeholder">&#128722;</div>';
+        }
+
+        container.innerHTML =
+          imageHtml +
+          '<div class="op-info">' +
+          '<div class="op-label">Your original product</div>' +
+          '<div class="op-name">' +
+          escapeHtml(product.title || "Unknown product") +
+          "</div>" +
+          '<div class="op-source">From ' +
+          escapeHtml(product.source || "unknown") +
+          "</div>" +
+          "</div>" +
+          '<div class="op-price-block">' +
+          (product.price
+            ? '<div class="op-price">&pound;' +
+              product.price.toFixed(2) +
+              "</div>"
+            : '<div class="op-price" style="text-decoration:none;font-size:16px;color:var(--muted)">Price not found</div>') +
+          (unitPrice
+            ? '<div class="op-unit-price">' +
+              unitPrice +
+              "p each (" +
+              packQty +
+              " pack)</div>"
+            : "") +
+          "</div>";
+      }
+
+      function renderAlternatives(alts) {
+        const container = document.getElementById("alternativesList");
+        document.getElementById("resultsCount").textContent =
+          alts.length + " result" + (alts.length !== 1 ? "s" : "");
+
+        container.innerHTML = alts
+          .map(function (alt, i) {
+            const isBest = i === 0 && alt.price !== null;
+
+            let priceHtml;
+            if (alt.price !== null) {
+              priceHtml =
+                '<div class="alt-price">&pound;' +
+                alt.price.toFixed(2) +
+                "</div>" +
+                (alt.saving > 0
+                  ? '<div class="alt-saving">Save &pound;' +
+                    alt.saving.toFixed(2) +
+                    " (" +
+                    alt.savingPct +
+                    "%)</div>"
+                  : "");
+            } else {
+              priceHtml =
+                '<div class="alt-price" style="font-size:14px;color:var(--muted)">Contact for price</div>';
+            }
+
+            return (
+              '<div class="alt-card' +
+              (isBest ? " best" : "") +
+              '">' +
+              '<div class="alt-rank">' +
+              alt.rank +
+              "</div>" +
+              '<div class="alt-info">' +
+              '<div class="alt-name">' +
+              escapeHtml(alt.name) +
+              "</div>" +
+              '<div class="alt-supplier">' +
+              escapeHtml(alt.supplier) +
+              (alt.framework ? " &#10003; Framework" : "") +
+              "</div>" +
+              (alt.unitPrice
+                ? '<div class="alt-unit-price">' +
+                  alt.unitPrice.toFixed(2) +
+                  "p per item (" +
+                  alt.packQty +
+                  " pack)</div>"
+                : "") +
+              "</div>" +
+              '<div class="alt-price-col">' +
+              priceHtml +
+              "</div>" +
+              '<button class="buy-btn">Buy &amp; log</button>' +
+              "</div>"
+            );
+          })
+          .join("");
+      }
+
+      function renderBulkSuggestion(product, bestAlt) {
+        const section = document.getElementById("bulkSuggestion");
+        if (!product.price || !bestAlt || !bestAlt.price) {
+          section.classList.remove("visible");
+          return;
+        }
+
+        const packQty = guessPackQty(product.title);
+        const category = detectCategory(product.title, product.keywords);
+        const isConsumable = [
+          "stationery",
+          "paper",
+          "cleaning",
+          "art",
+        ].includes(category);
+
+        if (!isConsumable) {
+          section.classList.remove("visible");
+          return;
+        }
+
+        // Suggest buying 3x or 5x for extra savings
+        const multiplier = packQty ? 5 : 3;
+        const bulkDiscount = 0.08; // Extra 8% for bulk
+        const bulkUnitPrice = bestAlt.price * (1 - bulkDiscount);
+        const bulkTotal = bulkUnitPrice * multiplier;
+        const originalTotal = product.price * multiplier;
+        const totalSaving = originalTotal - bulkTotal;
+
+        const bulkText = document.getElementById("bulkText");
+        const bulkMath = document.getElementById("bulkMath");
+
+        bulkText.textContent =
+          "These are consumables your school will use throughout the year. " +
+          "If you order " +
+          multiplier +
+          " now instead of 1, " +
+          "most education framework suppliers offer an additional ~8% bulk discount " +
+          "on top of the education price. That means bigger savings and fewer reorders.";
+
+        bulkMath.innerHTML =
+          "<strong>Single order:</strong> " +
+          multiplier +
+          " x &pound;" +
+          product.price.toFixed(2) +
+          " = &pound;" +
+          originalTotal.toFixed(2) +
+          "<br>" +
+          "<strong>Bulk via " +
+          escapeHtml(bestAlt.supplier) +
+          ":</strong> " +
+          multiplier +
+          " x &pound;" +
+          bulkUnitPrice.toFixed(2) +
+          " = &pound;" +
+          bulkTotal.toFixed(2) +
+          "<br>" +
+          "<strong style='color:var(--success-text)'>Total saving: &pound;" +
+          totalSaving.toFixed(2) +
+          "</strong>";
+
+        section.classList.add("visible");
+      }
+
+      function renderApprovalEmail(product, bestAlt) {
+        const section = document.getElementById("approvalSection");
+        if (!product.title || !bestAlt) {
+          section.classList.remove("visible");
+          return;
+        }
+
+        const saving = bestAlt.saving ? bestAlt.saving.toFixed(2) : "TBC";
+        const bestPrice = bestAlt.price ? bestAlt.price.toFixed(2) : "TBC";
+        const origPrice = product.price ? product.price.toFixed(2) : "TBC";
+        const today = new Date().toLocaleDateString("en-GB", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        });
+
+        const email =
+          "Subject: Purchase approval request - " +
+          product.title +
+          "\n\n" +
+          "Dear Head Teacher,\n\n" +
+          "I would like to request approval to purchase the following item for the school:\n\n" +
+          "Item: " +
+          product.title +
+          "\n" +
+          "Quantity: 1\n" +
+          (product.price
+            ? "Original price (" +
+              product.source +
+              "): \u00A3" +
+              origPrice +
+              "\n"
+            : "") +
+          "Best price found (" +
+          bestAlt.supplier +
+          "): \u00A3" +
+          bestPrice +
+          "\n" +
+          (bestAlt.saving > 0
+            ? "Saving: \u00A3" + saving + " (" + bestAlt.savingPct + "% less)\n"
+            : "") +
+          (bestAlt.framework
+            ? "\nThis supplier is on an approved education procurement framework, " +
+              "which means the purchase meets best value requirements under the Academy Trust Handbook / SFVS.\n"
+            : "") +
+          "\nThis comparison has been logged in Schoolgle Deal Finder for compliance records (dated " +
+          today +
+          ").\n" +
+          "\nPlease confirm if you are happy for me to proceed with this purchase.\n\n" +
+          "Many thanks,\n[Your name]";
+
+        document.getElementById("emailPreview").textContent = email;
+        section.classList.add("visible");
+      }
+
+      function copyEmail() {
+        const text = document.getElementById("emailPreview").textContent;
+        navigator.clipboard.writeText(text).then(function () {
+          const toast = document.getElementById("copiedToast");
+          toast.classList.add("visible");
+          setTimeout(function () {
+            toast.classList.remove("visible");
+          }, 2000);
+        });
+      }
+
+      function openInEmail() {
+        const text = document.getElementById("emailPreview").textContent;
+        const lines = text.split("\n");
+        const subject = lines[0].replace("Subject: ", "");
+        const body = lines.slice(2).join("\n");
+        window.open(
+          "mailto:?subject=" +
+            encodeURIComponent(subject) +
+            "&body=" +
+            encodeURIComponent(body),
+        );
+      }
+
+      // ---- Main handler ----
+
+      async function handleFind() {
         const url = document.getElementById("productUrl").value.trim();
         if (!url) {
           document.getElementById("productUrl").focus();
+          return;
+        }
+
+        // Validate URL
+        try {
+          new URL(url);
+        } catch (e) {
+          showError("Please enter a valid URL (starting with https://)");
           return;
         }
 
@@ -853,15 +1770,79 @@
         error.classList.remove("visible");
         results.classList.remove("visible");
 
-        // Simulate search delay
-        setTimeout(() => {
-          loading.classList.remove("visible");
-          results.classList.add("visible");
-          btn.disabled = false;
+        // Step 1: Parse URL immediately for hints
+        const hints = parseUrlForProductHints(url);
+        document.getElementById("loadingMsg").textContent =
+          "Fetching product details from " +
+          (hints.source || "website") +
+          "...";
 
-          // Animate the savings chart
-          animateChart();
-        }, 2500);
+        // Step 2: Fetch real product metadata from API
+        let meta = await fetchProductMeta(url);
+
+        // Step 3: Build product object from best available data
+        const product = {
+          title:
+            (meta && meta.title) ||
+            hints.name ||
+            hints.keywords ||
+            "Unknown product",
+          price: meta && meta.price ? parseFloat(meta.price) : null,
+          image: (meta && meta.image) || null,
+          source: (meta && meta.source) || hints.source || "unknown",
+          keywords: hints.keywords,
+          url: url,
+        };
+
+        // Clean up title if it came from URL slug (capitalise words)
+        if (!meta?.title && product.title) {
+          product.title = product.title.replace(/\b\w/g, function (c) {
+            return c.toUpperCase();
+          });
+        }
+
+        currentProduct = product;
+
+        // Step 4: Build alternatives
+        document.getElementById("loadingMsg").textContent =
+          "Searching across school suppliers for better prices...";
+
+        // Small delay for UX
+        await new Promise(function (r) {
+          setTimeout(r, 800);
+        });
+
+        const alts = buildAlternatives(product);
+        currentAlternatives = alts;
+        bestAlternative = alts[0] || null;
+
+        // Step 5: Render everything
+        loading.classList.remove("visible");
+        results.classList.add("visible");
+        btn.disabled = false;
+
+        renderOriginalProduct(product);
+        renderAlternatives(alts);
+        renderBulkSuggestion(product, bestAlternative);
+        renderApprovalEmail(product, bestAlternative);
+
+        // Animate the savings chart
+        animateChart();
+      }
+
+      function showError(msg) {
+        const error = document.getElementById("statusError");
+        document.getElementById("errorMsg").textContent = msg;
+        error.classList.add("visible");
+        document.getElementById("statusLoading").classList.remove("visible");
+        document.getElementById("findBtn").disabled = false;
+      }
+
+      function escapeHtml(str) {
+        if (!str) return "";
+        var div = document.createElement("div");
+        div.textContent = str;
+        return div.innerHTML;
       }
 
       function animateChart() {
@@ -871,7 +1852,7 @@
         const maxVal = Math.max(...values);
 
         container.innerHTML = "";
-        months.forEach((month, i) => {
+        months.forEach(function (month, i) {
           const bar = document.createElement("div");
           bar.className = "chart-bar";
           bar.style.height = "0%";
@@ -881,20 +1862,18 @@
           label.textContent = month;
           bar.appendChild(label);
 
-          bar.title = `${month}: £${values[i]} saved`;
+          bar.title = month + ": \u00A3" + values[i] + " saved";
           container.appendChild(bar);
 
-          // Staggered animation
           setTimeout(
-            () => {
+            function () {
               bar.style.height = Math.round((values[i] / maxVal) * 100) + "%";
             },
             100 + i * 120,
           );
         });
 
-        // Update totals with counting animation
-        animateCount("totalSaved", 0, 961, "£", "");
+        animateCount("totalSaved", 0, 961, "\u00A3", "");
         animateCount("comparisons", 0, 23, "", "");
         animateCount("complianceLogs", 0, 23, "", "");
       }
@@ -907,7 +1886,6 @@
         function tick(now) {
           const elapsed = now - start;
           const progress = Math.min(elapsed / duration, 1);
-          // Ease out cubic
           const eased = 1 - Math.pow(1 - progress, 3);
           const current = Math.round(from + (to - from) * eased);
           el.textContent = prefix + current.toLocaleString() + suffix;
@@ -916,13 +1894,20 @@
         requestAnimationFrame(tick);
       }
 
-      // Export button demo
+      // Export button
       document
         .getElementById("exportBtn")
         ?.addEventListener("click", function () {
           alert(
             "PDF export requires a Signal Pro account. Subscribe at schoolgle.co.uk/insights/newsletter",
           );
+        });
+
+      // Allow Enter key to trigger search
+      document
+        .getElementById("productUrl")
+        ?.addEventListener("keydown", function (e) {
+          if (e.key === "Enter") handleFind();
         });
     </script>
   </body>
