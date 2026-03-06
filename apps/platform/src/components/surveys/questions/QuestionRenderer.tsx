@@ -11,6 +11,16 @@ import { LikertScale } from "./LikertScale";
 import { YesNo } from "./YesNo";
 import { OpinionScale } from "./OpinionScale";
 import { Statement } from "./Statement";
+import { NPS } from "./NPS";
+import { Matrix } from "./Matrix";
+import { Ranking } from "./Ranking";
+import { Slider } from "./Slider";
+import { DatePicker } from "./DatePicker";
+import { FileUpload } from "./FileUpload";
+import { ImageChoice } from "./ImageChoice";
+import { ContinuousSum } from "./ContinuousSum";
+import { SemanticDifferential } from "./SemanticDifferential";
+import { ContactInfo } from "./ContactInfo";
 
 export interface QuestionComponentProps {
   question: SurveyQuestion;
@@ -34,6 +44,16 @@ const QUESTION_COMPONENT_MAP: Partial<
   yes_no: YesNo,
   opinion_scale: OpinionScale,
   statement: Statement,
+  nps: NPS,
+  matrix: Matrix,
+  ranking: Ranking,
+  slider: Slider,
+  date_picker: DatePicker,
+  file_upload: FileUpload,
+  image_choice: ImageChoice,
+  continuous_sum: ContinuousSum,
+  semantic_differential: SemanticDifferential,
+  contact_info: ContactInfo,
 };
 
 export function QuestionRenderer({

@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { cn } from '@/lib/utils';
-import { useState, useEffect } from 'react';
+import { cn } from "@/lib/utils";
+import { useState, useEffect } from "react";
 
 interface MagicCardProps {
   children: React.ReactNode;
@@ -16,7 +16,7 @@ export function MagicCard({
   children,
   className,
   gradientSize = 200,
-  gradientColor = '#1e1b4b',
+  gradientColor = "#1e1b4b",
   gradientOpacity = 0.8,
   spotlight = true,
 }: MagicCardProps) {
@@ -40,23 +40,29 @@ export function MagicCard({
     if (isHovered && cardSize.width > 0) {
       const spotlightX = (mousePosition.x / cardSize.width) * 100;
       const spotlightY = (mousePosition.y / cardSize.height) * 100;
-      document.documentElement.style.setProperty('--spotlight-x', `${spotlightX}%`);
-      document.documentElement.style.setProperty('--spotlight-y', `${spotlightY}%`);
+      document.documentElement.style.setProperty(
+        "--spotlight-x",
+        `${spotlightX}%`,
+      );
+      document.documentElement.style.setProperty(
+        "--spotlight-y",
+        `${spotlightY}%`,
+      );
     }
   }, [isHovered, mousePosition, cardSize]);
 
   return (
     <div
       className={cn(
-        'group relative overflow-hidden rounded-xl border bg-white dark:bg-gray-900 transition-all duration-300',
-        'hover:shadow-2xl hover:shadow-indigo-500/20',
+        "group relative overflow-hidden rounded-xl border bg-white dark:bg-gray-900 transition-all duration-300",
+        "hover:shadow-2xl hover:shadow-slate-500/10",
         className,
       )}
       style={
         {
-          '--gradient-size': `${gradientSize}px`,
-          '--gradient-color': gradientColor,
-          '--gradient-opacity': gradientOpacity,
+          "--gradient-size": `${gradientSize}px`,
+          "--gradient-color": gradientColor,
+          "--gradient-opacity": gradientOpacity,
         } as React.CSSProperties
       }
       onMouseMove={spotlight ? handleMouseMove : undefined}
@@ -67,8 +73,8 @@ export function MagicCard({
       {spotlight && (
         <div
           className={cn(
-            'pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500',
-            'group-hover:opacity-100',
+            "pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500",
+            "group-hover:opacity-100",
           )}
           style={{
             background: `radial-gradient(
@@ -76,7 +82,7 @@ export function MagicCard({
               var(--gradient-color),
               transparent 70%
             )`,
-            opacity: isHovered ? 'var(--gradient-opacity)' : 0,
+            opacity: isHovered ? "var(--gradient-opacity)" : 0,
           }}
         />
       )}
@@ -84,18 +90,19 @@ export function MagicCard({
       {/* Border highlight on hover */}
       <div
         className={cn(
-          'pointer-events-none absolute inset-0 rounded-xl transition-opacity duration-500',
-          'group-hover:opacity-100 opacity-0',
+          "pointer-events-none absolute inset-0 rounded-xl transition-opacity duration-500",
+          "group-hover:opacity-100 opacity-0",
         )}
         style={{
-          background: 'linear-gradient(90deg, #6366f1, #a855f7, #6366f1)',
-          backgroundSize: '200% 100%',
-          padding: '2px',
-          mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-          WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-          maskComposite: 'exclude',
-          WebkitMaskComposite: 'xor',
-          animation: isHovered ? 'border-dance 2s linear infinite' : 'none',
+          background: "linear-gradient(90deg, #6366f1, #a855f7, #6366f1)",
+          backgroundSize: "200% 100%",
+          padding: "2px",
+          mask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
+          WebkitMask:
+            "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
+          maskComposite: "exclude",
+          WebkitMaskComposite: "xor",
+          animation: isHovered ? "border-dance 2s linear infinite" : "none",
         }}
       />
 

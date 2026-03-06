@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * Evidence Upload Page
@@ -11,9 +11,9 @@
  * - Expiry date tracking for certificates
  */
 
-import { useState, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { useState, useCallback } from "react";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   ArrowLeft,
   Upload,
@@ -30,19 +30,19 @@ import {
   Image as ImageIcon,
   File,
   ExternalLink,
-} from 'lucide-react';
+} from "lucide-react";
 import {
   DOMAIN_METADATA,
   getChecksForDomain,
   type ComplianceDomain,
-} from '@/lib/estates-compliance/statutory-checks';
+} from "@/lib/estates-compliance/statutory-checks";
 
 interface UploadedFile {
   file: File;
   id: string;
-  category: 'certificate' | 'report' | 'photo' | 'document';
+  category: "certificate" | "report" | "photo" | "document";
   progress: number;
-  status: 'uploading' | 'complete' | 'error';
+  status: "uploading" | "complete" | "error";
   error?: string;
 }
 
@@ -50,7 +50,7 @@ interface ExternalLink {
   id: string;
   url: string;
   title: string;
-  category: 'link';
+  category: "link";
 }
 
 export default function EvidenceUploadPage() {
@@ -61,8 +61,8 @@ export default function EvidenceUploadPage() {
 
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [externalLinks, setExternalLinks] = useState<ExternalLink[]>([]);
-  const [newLinkUrl, setNewLinkUrl] = useState('');
-  const [newLinkTitle, setNewLinkTitle] = useState('');
+  const [newLinkUrl, setNewLinkUrl] = useState("");
+  const [newLinkTitle, setNewLinkTitle] = useState("");
   const [dragActive, setDragActive] = useState(false);
   const [uploading, setUploading] = useState(false);
 
@@ -74,9 +74,9 @@ export default function EvidenceUploadPage() {
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (e.type === 'dragenter' || e.type === 'dragover') {
+    if (e.type === "dragenter" || e.type === "dragover") {
       setDragActive(true);
-    } else if (e.type === 'dragleave') {
+    } else if (e.type === "dragleave") {
       setDragActive(false);
     }
   }, []);
@@ -102,9 +102,9 @@ export default function EvidenceUploadPage() {
     const newFiles: UploadedFile[] = Array.from(files).map((file) => ({
       file,
       id: Math.random().toString(36).substr(2, 9),
-      category: 'document',
+      category: "document",
       progress: 0,
-      status: 'uploading',
+      status: "uploading",
     }));
 
     setUploadedFiles((prev) => [...prev, ...newFiles]);
@@ -124,12 +124,14 @@ export default function EvidenceUploadPage() {
         clearInterval(interval);
         setUploadedFiles((prev) =>
           prev.map((f) =>
-            f.id === fileId ? { ...f, progress: 100, status: 'complete' as const } : f
-          )
+            f.id === fileId
+              ? { ...f, progress: 100, status: "complete" as const }
+              : f,
+          ),
         );
       } else {
         setUploadedFiles((prev) =>
-          prev.map((f) => (f.id === fileId ? { ...f, progress } : f))
+          prev.map((f) => (f.id === fileId ? { ...f, progress } : f)),
         );
       }
     }, 500);
@@ -139,8 +141,13 @@ export default function EvidenceUploadPage() {
     setUploadedFiles((prev) => prev.filter((f) => f.id !== id));
   };
 
-  const updateFileCategory = (id: string, category: UploadedFile['category']) => {
-    setUploadedFiles((prev) => prev.map((f) => (f.id === id ? { ...f, category } : f)));
+  const updateFileCategory = (
+    id: string,
+    category: UploadedFile["category"],
+  ) => {
+    setUploadedFiles((prev) =>
+      prev.map((f) => (f.id === id ? { ...f, category } : f)),
+    );
   };
 
   const addExternalLink = () => {
@@ -151,11 +158,11 @@ export default function EvidenceUploadPage() {
           id: Math.random().toString(36).substr(2, 9),
           url: newLinkUrl,
           title: newLinkTitle,
-          category: 'link',
+          category: "link",
         },
       ]);
-      setNewLinkUrl('');
-      setNewLinkTitle('');
+      setNewLinkUrl("");
+      setNewLinkTitle("");
     }
   };
 
@@ -171,25 +178,25 @@ export default function EvidenceUploadPage() {
     router.push(`/estates-compliance/${domainSlug}/${checkId}`);
   };
 
-  const getCategoryIcon = (category: UploadedFile['category'] | 'link') => {
+  const getCategoryIcon = (category: UploadedFile["category"] | "link") => {
     switch (category) {
-      case 'certificate':
+      case "certificate":
         return <FileCheck className="w-6 h-6 text-amber-600" />;
-      case 'report':
+      case "report":
         return <FileText className="w-6 h-6 text-blue-600" />;
-      case 'photo':
+      case "photo":
         return <ImageIcon className="w-6 h-6 text-green-600" />;
-      case 'document':
+      case "document":
         return <File className="w-6 h-6 text-gray-600" />;
-      case 'link':
+      case "link":
         return <LinkIcon className="w-6 h-6 text-purple-600" />;
     }
   };
 
   const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
   };
 
   if (!check) {
@@ -197,8 +204,13 @@ export default function EvidenceUploadPage() {
       <div className="flex items-center justify-center py-24">
         <div className="text-center">
           <AlertCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Check Not Found</h2>
-          <Link href={`/estates-compliance/${domainSlug}`} className="text-indigo-600 dark:text-indigo-400 hover:underline">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+            Check Not Found
+          </h2>
+          <Link
+            href={`/estates-compliance/${domainSlug}`}
+            className="text-teal-600 dark:text-teal-400 hover:underline"
+          >
             Return to {metadata.name}
           </Link>
         </div>
@@ -222,7 +234,9 @@ export default function EvidenceUploadPage() {
           <div className="flex items-center gap-3 mb-2">
             <span className="text-3xl">{metadata.icon}</span>
             <div>
-              <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Upload Evidence</h1>
+              <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
+                Upload Evidence
+              </h1>
               <p className="text-gray-600 dark:text-gray-400 font-medium mt-1">
                 {metadata.name} • {check.name}
               </p>
@@ -232,7 +246,7 @@ export default function EvidenceUploadPage() {
       </div>
 
       {/* Drag and Drop Upload Area */}
-      <div className="rounded-xl border-2 border-dashed border-indigo-400 dark:border-indigo-600 bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-950/20 dark:to-blue-950/20 p-12 text-center shadow-lg">
+      <div className="rounded-xl border-2 border-dashed border-teal-400 dark:border-teal-600 bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-950/20 dark:to-cyan-950/20 p-12 text-center shadow-lg">
         <div
           className="space-y-6"
           onDragEnter={handleDrag}
@@ -240,22 +254,30 @@ export default function EvidenceUploadPage() {
           onDragOver={handleDrag}
           onDrop={handleDrop}
         >
-          <div className={`w-24 h-24 mx-auto rounded-full flex items-center justify-center transition-all ${dragActive ? 'bg-indigo-200 dark:bg-indigo-900 scale-110' : 'bg-indigo-100 dark:bg-indigo-900/50'}`}>
-            <Upload className="w-12 h-12 text-indigo-600 dark:text-indigo-400" />
+          <div
+            className={`w-24 h-24 mx-auto rounded-full flex items-center justify-center transition-all ${dragActive ? "bg-teal-200 dark:bg-teal-900 scale-110" : "bg-teal-100 dark:bg-teal-900/50"}`}
+          >
+            <Upload className="w-12 h-12 text-teal-600 dark:text-teal-400" />
           </div>
           <div>
             <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-              {dragActive ? 'Drop files here' : 'Upload Evidence Documents'}
+              {dragActive ? "Drop files here" : "Upload Evidence Documents"}
             </h3>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              Drag and drop files here, or click to browse. Supports PDF, images, Word, and Excel files.
+              Drag and drop files here, or click to browse. Supports PDF,
+              images, Word, and Excel files.
             </p>
           </div>
 
-          <label className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 font-bold text-lg shadow-lg hover:shadow-xl transition-all cursor-pointer">
+          <label className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-teal-600 text-white hover:bg-teal-700 font-bold text-lg shadow-lg hover:shadow-xl transition-all cursor-pointer">
             <Upload className="w-5 h-5" />
             Choose Files
-            <input type="file" multiple className="hidden" onChange={handleChange} />
+            <input
+              type="file"
+              multiple
+              className="hidden"
+              onChange={handleChange}
+            />
           </label>
 
           <div className="flex flex-wrap justify-center gap-4 text-sm text-gray-600 dark:text-gray-400">
@@ -286,7 +308,9 @@ export default function EvidenceUploadPage() {
             <LinkIcon className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             Add External Links
           </h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Link to external documents or cloud storage</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Link to external documents or cloud storage
+          </p>
         </div>
         <div className="p-6 space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
@@ -295,14 +319,14 @@ export default function EvidenceUploadPage() {
               placeholder="https://example.com/document.pdf"
               value={newLinkUrl}
               onChange={(e) => setNewLinkUrl(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-semibold focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full px-4 py-3 rounded-lg border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-semibold focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
             />
             <input
               type="text"
               placeholder="Document title"
               value={newLinkTitle}
               onChange={(e) => setNewLinkTitle(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-semibold focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full px-4 py-3 rounded-lg border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-semibold focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
             />
           </div>
           <button
@@ -322,10 +346,14 @@ export default function EvidenceUploadPage() {
                   key={link.id}
                   className="flex items-center gap-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-900/50 border-2 border-gray-300 dark:border-gray-700"
                 >
-                  {getCategoryIcon('link')}
+                  {getCategoryIcon("link")}
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-900 dark:text-white truncate">{link.title}</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 truncate">{link.url}</p>
+                    <p className="font-semibold text-gray-900 dark:text-white truncate">
+                      {link.title}
+                    </p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
+                      {link.url}
+                    </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <a
@@ -360,57 +388,82 @@ export default function EvidenceUploadPage() {
           </div>
           <div className="divide-y divide-gray-200 dark:divide-gray-700">
             {uploadedFiles.map((file) => (
-              <div key={file.id} className="p-5 hover:bg-gray-50 dark:hover:bg-gray-900/30 transition-colors">
+              <div
+                key={file.id}
+                className="p-5 hover:bg-gray-50 dark:hover:bg-gray-900/30 transition-colors"
+              >
                 <div className="flex items-start gap-4">
-                  <div className="p-3 rounded-lg bg-gray-100 dark:bg-gray-800">{getCategoryIcon(file.category)}</div>
+                  <div className="p-3 rounded-lg bg-gray-100 dark:bg-gray-800">
+                    {getCategoryIcon(file.category)}
+                  </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <p className="font-semibold text-gray-900 dark:text-white truncate">{file.file.name}</p>
-                      {file.status === 'complete' && (
+                      <p className="font-semibold text-gray-900 dark:text-white truncate">
+                        {file.file.name}
+                      </p>
+                      {file.status === "complete" && (
                         <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
                       )}
-                      {file.status === 'error' && (
+                      {file.status === "error" && (
                         <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
                       )}
                     </div>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {formatFileSize(file.file.size)} • {file.file.type || 'Unknown type'}
+                      {formatFileSize(file.file.size)} •{" "}
+                      {file.file.type || "Unknown type"}
                     </p>
 
                     {/* Progress Bar */}
-                    {file.status === 'uploading' && (
+                    {file.status === "uploading" && (
                       <div className="mt-2">
                         <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                           <div
-                            className="bg-indigo-600 h-2 rounded-full transition-all duration-300"
+                            className="bg-teal-600 h-2 rounded-full transition-all duration-300"
                             style={{ width: `${file.progress}%` }}
                           />
                         </div>
-                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{Math.round(file.progress)}% uploaded</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                          {Math.round(file.progress)}% uploaded
+                        </p>
                       </div>
                     )}
 
                     {/* Category Selection (only show after upload complete) */}
-                    {file.status === 'complete' && (
+                    {file.status === "complete" && (
                       <div className="mt-3">
                         <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 block">
                           Document Type:
                         </label>
                         <div className="flex flex-wrap gap-2">
-                          {(['certificate', 'report', 'photo', 'document'] as const).map((cat) => (
+                          {(
+                            [
+                              "certificate",
+                              "report",
+                              "photo",
+                              "document",
+                            ] as const
+                          ).map((cat) => (
                             <button
                               key={cat}
                               onClick={() => updateFileCategory(file.id, cat)}
                               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold border-2 transition-all ${
                                 file.category === cat
-                                  ? 'bg-indigo-600 text-white border-indigo-700'
-                                  : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+                                  ? "bg-teal-600 text-white border-teal-700"
+                                  : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
                               }`}
                             >
-                              {cat === 'certificate' && <FileCheck className="w-4 h-4" />}
-                              {cat === 'report' && <FileText className="w-4 h-4" />}
-                              {cat === 'photo' && <ImageIcon className="w-4 h-4" />}
-                              {cat === 'document' && <File className="w-4 h-4" />}
+                              {cat === "certificate" && (
+                                <FileCheck className="w-4 h-4" />
+                              )}
+                              {cat === "report" && (
+                                <FileText className="w-4 h-4" />
+                              )}
+                              {cat === "photo" && (
+                                <ImageIcon className="w-4 h-4" />
+                              )}
+                              {cat === "document" && (
+                                <File className="w-4 h-4" />
+                              )}
                               {cat.charAt(0).toUpperCase() + cat.slice(1)}
                             </button>
                           ))}
@@ -437,7 +490,9 @@ export default function EvidenceUploadPage() {
           <div className="flex justify-center">
             <button
               onClick={handleSaveAll}
-              disabled={uploading || uploadedFiles.some((f) => f.status === 'uploading')}
+              disabled={
+                uploading || uploadedFiles.some((f) => f.status === "uploading")
+              }
               className="inline-flex items-center gap-3 px-8 py-4 rounded-xl bg-green-600 text-white hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-bold text-lg shadow-lg hover:shadow-xl transition-all"
             >
               {uploading ? (

@@ -18,6 +18,10 @@ import {
   Link2,
   Sparkles,
   Filter,
+  Copy,
+  Wand2,
+  Share2,
+  Loader2,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -43,6 +47,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import type {
   Survey,
@@ -51,6 +56,15 @@ import type {
   AudienceType,
 } from "@/lib/surveys/types";
 import { getStatusColor, getStatusLabel } from "@/lib/surveys/survey-utils";
+import dynamic from "next/dynamic";
+
+const ShareDialog = dynamic(
+  () =>
+    import("@/components/surveys/distribution/ShareDialog").then(
+      (m) => m.ShareDialog,
+    ),
+  { ssr: false },
+);
 
 export default function SurveysDashboard() {
   const { organization, user } = useAuth();
@@ -66,6 +80,12 @@ export default function SurveysDashboard() {
   const [newType, setNewType] = useState<SurveyType>("standard");
   const [newAudience, setNewAudience] = useState<AudienceType>("mixed");
   const [creating, setCreating] = useState(false);
+  const [showAIDialog, setShowAIDialog] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [shareDialogSurveyId, setShareDialogSurveyId] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     if (orgId) fetchSurveys();
@@ -127,6 +147,56 @@ export default function SurveysDashboard() {
     }
   }
 
+  async function duplicateSurvey(id: string) {
+    try {
+      const res = await fetch(`/api/surveys/${id}/duplicate`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success("Survey duplicated");
+        router.push(`/dashboard/surveys/${data.id}/edit`);
+      } else {
+        toast.error(data.error || "Failed to duplicate");
+      }
+    } catch {
+      toast.error("Failed to duplicate survey");
+    }
+  }
+
+  async function generateWithAI() {
+    if (!aiPrompt.trim()) {
+      toast.error("Please describe the survey you want to create");
+      return;
+    }
+    setAiGenerating(true);
+    try {
+      const res = await fetch("/api/surveys/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: aiPrompt,
+          organizationId: orgId,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(
+          `Survey created with ${data.questionCount} questions across ${data.pageCount} pages`,
+        );
+        setShowAIDialog(false);
+        setAiPrompt("");
+        router.push(`/dashboard/surveys/${data.surveyId}/edit`);
+      } else {
+        toast.error(data.error || "AI generation failed");
+      }
+    } catch {
+      toast.error("Failed to generate survey");
+    } finally {
+      setAiGenerating(false);
+    }
+  }
+
   const filtered = surveys.filter((s) => {
     const matchesSearch = s.title.toLowerCase().includes(search.toLowerCase());
     const matchesStatus = statusFilter === "all" || s.status === statusFilter;
@@ -165,13 +235,19 @@ export default function SurveysDashboard() {
             </h1>
           </div>
         </div>
-        <Button
-          onClick={() => setShowCreateDialog(true)}
-          className="bg-cyan-600 hover:bg-cyan-700 text-white"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          New Survey
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setShowAIDialog(true)}>
+            <Wand2 className="w-4 h-4 mr-2" />
+            AI Generate
+          </Button>
+          <Button
+            onClick={() => setShowCreateDialog(true)}
+            className="bg-cyan-600 hover:bg-cyan-700 text-white"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            New Survey
+          </Button>
+        </div>
       </motion.div>
 
       {/* Stats */}
@@ -329,6 +405,15 @@ export default function SurveysDashboard() {
                             <BarChart3 className="w-4 h-4 mr-2" />
                             Results
                           </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShareDialogSurveyId(survey.id);
+                            }}
+                          >
+                            <Share2 className="w-4 h-4 mr-2" />
+                            Share
+                          </DropdownMenuItem>
                           {survey.slug && (
                             <DropdownMenuItem
                               onClick={(e) => {
@@ -343,6 +428,15 @@ export default function SurveysDashboard() {
                               Copy Link
                             </DropdownMenuItem>
                           )}
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              duplicateSurvey(survey.id);
+                            }}
+                          >
+                            <Copy className="w-4 h-4 mr-2" />
+                            Duplicate
+                          </DropdownMenuItem>
                           <DropdownMenuItem
                             className="text-red-600"
                             onClick={(e) => {
@@ -464,6 +558,80 @@ export default function SurveysDashboard() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* AI Generate Dialog */}
+      <Dialog open={showAIDialog} onOpenChange={setShowAIDialog}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Wand2 className="w-5 h-5 text-cyan-600" />
+              AI Survey Generator
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <p className="text-sm text-slate-500">
+              Describe the survey you want and AI will generate questions,
+              pages, and settings automatically.
+            </p>
+            <div>
+              <Label>What kind of survey do you need?</Label>
+              <Textarea
+                placeholder="e.g. A parent satisfaction survey for a primary school covering teaching quality, communication, safety, and extra-curricular activities. Include a mix of rating scales, multiple choice, and open-ended questions."
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+                rows={5}
+                className="mt-1"
+              />
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              {[
+                "Parent satisfaction survey",
+                "Staff wellbeing pulse check",
+                "Student voice questionnaire",
+                "Governor self-assessment",
+                "Post-event feedback form",
+              ].map((suggestion) => (
+                <button
+                  key={suggestion}
+                  type="button"
+                  className="text-xs px-3 py-1.5 rounded-full bg-cyan-50 text-cyan-700 hover:bg-cyan-100 transition-colors"
+                  onClick={() => setAiPrompt(suggestion)}
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+            <Button
+              onClick={generateWithAI}
+              disabled={aiGenerating}
+              className="w-full bg-cyan-600 hover:bg-cyan-700 text-white"
+            >
+              {aiGenerating ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Generating survey...
+                </>
+              ) : (
+                <>
+                  <Wand2 className="w-4 h-4 mr-2" />
+                  Generate Survey
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Share Dialog */}
+      {shareDialogSurveyId && (
+        <ShareDialog
+          surveyId={shareDialogSurveyId}
+          open={!!shareDialogSurveyId}
+          onOpenChange={(open) => {
+            if (!open) setShareDialogSurveyId(null);
+          }}
+        />
+      )}
     </div>
   );
 }

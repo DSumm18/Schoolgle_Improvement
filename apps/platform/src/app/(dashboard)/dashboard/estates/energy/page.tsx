@@ -1,69 +1,88 @@
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Zap, ArrowLeft, TrendingDown, Leaf } from "lucide-react";
-import Link from "next/link";
+"use client";
+
+import { Zap, TrendingDown, Leaf } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  ModulePageHeader,
+  ModuleFeatureBanner,
+  getModuleColors,
+} from "@/components/ui/module-page-header";
 
 export default function EnergyPage() {
-    return (
-        <div className="p-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <div className="flex items-center gap-4">
-                <Link href="/dashboard/estates">
-                    <Button variant="ghost" size="icon" className="rounded-full">
-                        <ArrowLeft className="h-5 w-5" />
-                    </Button>
-                </Link>
-                <div>
-                    <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Energy & Utilities</h1>
-                    <p className="text-slate-500 font-medium">Monitor consumption, carbon footprint, and costs.</p>
-                </div>
+  const colors = getModuleColors("estates");
+
+  return (
+    <div className="p-6 md:p-8 space-y-6 min-h-screen max-w-[1600px] mx-auto">
+      <ModulePageHeader
+        moduleId="estates"
+        icon={Zap}
+        label="Estates Management"
+        title="Energy & Utilities"
+        description="Monitor consumption, carbon footprint, and costs."
+        badge="Preview"
+      />
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className={`p-2.5 ${colors.iconBg} rounded-xl`}>
+                <Zap className={`w-5 h-5 ${colors.iconText}`} />
+              </div>
+              <Badge
+                variant="secondary"
+                className="bg-teal-50 text-teal-700 dark:bg-teal-900/20 dark:text-teal-400"
+              >
+                Live Monitoring
+              </Badge>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <Card className="border-0 shadow-2xl rounded-[3rem] bg-slate-900 text-white overflow-hidden relative">
-                    <div className="absolute top-0 right-0 p-10 opacity-10">
-                        <Zap size={140} />
-                    </div>
-                    <CardHeader className="p-10 pb-4">
-                        <Badge className="bg-amber-500 text-white w-fit mb-4">Live Monitoring</Badge>
-                        <CardTitle className="text-4xl font-black tracking-tighter">£4,281.20</CardTitle>
-                        <CardDescription className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Estimated billing this month</CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-10 pt-0">
-                        <div className="flex items-center gap-2 text-emerald-400 font-black text-sm">
-                            <TrendingDown size={16} /> -12% vs last month
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card className="border-0 shadow-2xl rounded-[3rem] bg-indigo-600 text-white overflow-hidden relative">
-                    <div className="absolute top-0 right-0 p-10 opacity-20">
-                        <Leaf size={140} />
-                    </div>
-                    <CardHeader className="p-10 pb-4">
-                        <Badge className="bg-emerald-500 text-white w-fit mb-4">Sustainability</Badge>
-                        <CardTitle className="text-4xl font-black tracking-tighter">14.2 Tons</CardTitle>
-                        <CardDescription className="text-indigo-200 font-bold uppercase tracking-widest text-[10px]">CO2 Footprint (Current QTR)</CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-10 pt-0 text-indigo-100 font-medium italic">
-                        "Your school is performing 8% better than the regional average for energy efficiency."
-                    </CardContent>
-                </Card>
+            <p className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
+              £4,281.20
+            </p>
+            <p className="text-xs text-slate-500 uppercase tracking-wider mt-1">
+              Estimated billing this month
+            </p>
+            <div className="flex items-center gap-1.5 mt-3 text-emerald-600 dark:text-emerald-400 text-sm font-medium">
+              <TrendingDown className="w-4 h-4" />
+              -12% vs last month
             </div>
+          </CardContent>
+        </Card>
 
-            <div className="text-center py-12">
-                <p className="text-slate-400 font-black uppercase tracking-widest text-[10px]">Upcoming Insights</p>
-                <p className="text-slate-500 font-medium mt-2 max-w-sm mx-auto">
-                    Smart meter integration and billing automation tools are being finalized for the next release.
-                </p>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-2.5 bg-emerald-50 dark:bg-emerald-900/10 rounded-xl">
+                <Leaf className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <Badge
+                variant="secondary"
+                className="bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400"
+              >
+                Sustainability
+              </Badge>
             </div>
-        </div>
-    );
-}
+            <p className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
+              14.2 Tons
+            </p>
+            <p className="text-xs text-slate-500 uppercase tracking-wider mt-1">
+              CO2 Footprint (Current Quarter)
+            </p>
+            <p className="text-sm text-slate-600 dark:text-slate-400 mt-3 leading-relaxed">
+              Your school is performing 8% better than the regional average for
+              energy efficiency.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
 
-function Badge({ children, className }: { children: React.ReactNode, className?: string }) {
-    return (
-        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold leading-none ${className}`}>
-            {children}
-        </span>
-    );
+      <ModuleFeatureBanner
+        moduleId="estates"
+        icon={Zap}
+        title="Smart Meter Integration Coming Soon"
+        description="Smart meter integration and billing automation tools are being finalized for the next release."
+      />
+    </div>
+  );
 }

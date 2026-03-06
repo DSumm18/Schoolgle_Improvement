@@ -25,6 +25,7 @@ import {
   FileEdit,
   MessageSquare,
   BarChart3,
+  ClipboardCheck,
 } from "lucide-react";
 
 export type Role =
@@ -59,7 +60,7 @@ export const MODULES: ModuleDefinition[] = [
   {
     id: "governance",
     name: "Governance",
-    color: "gray",
+    color: "amber",
     icon: ShieldCheck,
     description: "Strategic oversight and governor portal.",
     requiredPermissions: ["admin", "headteacher", "slt", "governor"],
@@ -67,7 +68,7 @@ export const MODULES: ModuleDefinition[] = [
   {
     id: "improvement",
     name: "Inspection Readiness",
-    color: "rose",
+    color: "sky",
     icon: Shield,
     description: "Ofsted and SIAMS assessment tools.",
     requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
@@ -75,7 +76,7 @@ export const MODULES: ModuleDefinition[] = [
   {
     id: "teaching-learning",
     name: "Teaching & Learning",
-    color: "blue",
+    color: "pink",
     icon: GraduationCap,
     description: "Classroom tools and pedagogy support.",
     requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
@@ -108,7 +109,7 @@ export const MODULES: ModuleDefinition[] = [
   {
     id: "hr",
     name: "HR & People",
-    color: "indigo",
+    color: "blue",
     icon: Users,
     description: "Staff performance and wellbeing.",
     requiredPermissions: ["admin", "headteacher", "slt"],
@@ -116,7 +117,7 @@ export const MODULES: ModuleDefinition[] = [
   {
     id: "send",
     name: "SEND",
-    color: "rose",
+    color: "emerald",
     icon: Heart,
     description: "EHCP and provision mapping.",
     requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
@@ -407,6 +408,15 @@ export const APPS: AppDefinition[] = [
     shortDescription: "Search and view staff records.",
     requiredPermissions: ["admin", "headteacher", "slt"],
   },
+  {
+    id: "meeting-companion",
+    moduleId: "hr",
+    name: "Meeting Companion",
+    route: "/dashboard/hr/meetings",
+    icon: ClipboardCheck,
+    shortDescription: "AI-guided HR meeting management.",
+    requiredPermissions: ["admin", "headteacher", "slt"],
+  },
 
   // Estates Apps
   {
@@ -453,6 +463,50 @@ export const APPS: AppDefinition[] = [
     icon: Zap,
     shortDescription: "Monitor usage & costs.",
     requiredPermissions: ["admin", "headteacher", "slt", "caretaker"],
+  },
+
+  // Finance Apps
+  {
+    id: "finance-home",
+    moduleId: "finance",
+    name: "Finance Hub",
+    route: "/dashboard/finance",
+    icon: PoundSterling,
+    shortDescription: "Budget overview and decision engine.",
+    requiredPermissions: ["admin", "headteacher", "slt"],
+  },
+  {
+    id: "budget-engine",
+    moduleId: "finance",
+    name: "Budget Decisions",
+    route: "/dashboard/finance/decisions",
+    icon: TrendingUp,
+    shortDescription: "AI-powered budget decision cards.",
+    requiredPermissions: ["admin", "headteacher", "slt"],
+  },
+  {
+    id: "budget-monitor",
+    moduleId: "finance",
+    name: "Budget Monitor",
+    route: "/dashboard/finance/monitor",
+    icon: BarChart3,
+    shortDescription: "Real-time spend tracking by CFR code.",
+    requiredPermissions: ["admin", "headteacher", "slt"],
+  },
+  {
+    id: "deal-finder",
+    moduleId: "finance",
+    name: "Deal Finder",
+    route: "/toolbox/deal-finder",
+    icon: Briefcase,
+    shortDescription: "Find best prices and raise requisitions.",
+    requiredPermissions: [
+      "admin",
+      "headteacher",
+      "slt",
+      "teacher",
+      "caretaker",
+    ],
   },
 
   // Survey Apps

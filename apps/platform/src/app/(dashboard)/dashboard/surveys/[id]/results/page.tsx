@@ -11,6 +11,12 @@ import {
   ArrowLeft,
   Download,
   Sparkles,
+  Brain,
+  AlertTriangle,
+  Loader2,
+  TrendingUp,
+  Target,
+  Shield,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -62,6 +68,8 @@ export default function SurveyResultsPage({
   const [responses, setResponses] = useState<SurveyResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
+  const [aiAnalysis, setAiAnalysis] = useState<any>(null);
+  const [aiLoading, setAiLoading] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -81,6 +89,20 @@ export default function SurveyResultsPage({
       toast.error("Failed to load results");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function fetchAIAnalysis() {
+    setAiLoading(true);
+    try {
+      const res = await fetch(`/api/surveys/${id}/analyze`);
+      const data = await res.json();
+      if (res.ok) setAiAnalysis(data);
+      else toast.error("Failed to load AI analysis");
+    } catch {
+      toast.error("Failed to load AI analysis");
+    } finally {
+      setAiLoading(false);
     }
   }
 
@@ -346,6 +368,15 @@ export default function SurveyResultsPage({
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger
+            value="ai-analysis"
+            onClick={() => {
+              if (!aiAnalysis && !aiLoading) fetchAIAnalysis();
+            }}
+          >
+            <Brain className="w-4 h-4 mr-1" />
+            AI Analysis
+          </TabsTrigger>
           <TabsTrigger value="individual">Individual Responses</TabsTrigger>
         </TabsList>
 
@@ -496,6 +527,258 @@ export default function SurveyResultsPage({
                 </motion.div>
               );
             })}
+        </TabsContent>
+
+        <TabsContent value="ai-analysis" className="space-y-4">
+          {aiLoading ? (
+            <Card className="border-0 shadow-sm">
+              <CardContent className="p-12 flex flex-col items-center justify-center">
+                <Loader2 className="w-8 h-8 animate-spin text-cyan-600 mb-4" />
+                <p className="text-slate-500">Analysing responses with AI...</p>
+              </CardContent>
+            </Card>
+          ) : aiAnalysis ? (
+            <>
+              {/* Safeguarding Alerts */}
+              {aiAnalysis.safeguardingFlags?.length > 0 && (
+                <Card className="border-red-200 bg-red-50 dark:bg-red-900/10 shadow-sm">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-red-700 flex items-center gap-2">
+                      <Shield className="w-5 h-5" />
+                      Safeguarding Concerns Detected (
+                      {aiAnalysis.safeguardingFlags.length})
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {aiAnalysis.safeguardingFlags.map(
+                      (flag: any, i: number) => (
+                        <div
+                          key={i}
+                          className="p-3 bg-white dark:bg-slate-800 rounded-lg border border-red-200"
+                        >
+                          <div className="flex items-center gap-2 mb-1">
+                            <Badge
+                              className={
+                                flag.severity === "high"
+                                  ? "bg-red-100 text-red-700"
+                                  : flag.severity === "medium"
+                                    ? "bg-orange-100 text-orange-700"
+                                    : "bg-yellow-100 text-yellow-700"
+                              }
+                            >
+                              {flag.severity}
+                            </Badge>
+                            <span className="text-sm font-medium">
+                              {flag.questionTitle}
+                            </span>
+                          </div>
+                          <p className="text-sm text-slate-600 dark:text-slate-400">
+                            Keywords: {flag.matchedKeywords.join(", ")}
+                          </p>
+                        </div>
+                      ),
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* AI Summary */}
+              {aiAnalysis.aiAnalysis && (
+                <>
+                  <Card className="border-0 shadow-sm">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="flex items-center gap-2">
+                        <Brain className="w-5 h-5 text-cyan-600" />
+                        AI Summary
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-slate-700 dark:text-slate-300 mb-4">
+                        {aiAnalysis.aiAnalysis.summary}
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-slate-500">
+                          Sentiment:
+                        </span>
+                        <Badge
+                          className={
+                            aiAnalysis.aiAnalysis.sentiment === "positive"
+                              ? "bg-green-100 text-green-700"
+                              : aiAnalysis.aiAnalysis.sentiment === "negative"
+                                ? "bg-red-100 text-red-700"
+                                : "bg-slate-100 text-slate-700"
+                          }
+                        >
+                          {aiAnalysis.aiAnalysis.sentiment}
+                        </Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Key Findings */}
+                  {aiAnalysis.aiAnalysis.keyFindings?.length > 0 && (
+                    <Card className="border-0 shadow-sm">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="flex items-center gap-2">
+                          <TrendingUp className="w-5 h-5 text-cyan-600" />
+                          Key Findings
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <ul className="space-y-2">
+                          {aiAnalysis.aiAnalysis.keyFindings.map(
+                            (finding: string, i: number) => (
+                              <li
+                                key={i}
+                                className="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-300"
+                              >
+                                <span className="text-cyan-600 mt-1 shrink-0">
+                                  {i + 1}.
+                                </span>
+                                {finding}
+                              </li>
+                            ),
+                          )}
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Strengths & Areas for Improvement */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {aiAnalysis.aiAnalysis.strengths?.length > 0 && (
+                      <Card className="border-0 shadow-sm">
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-green-700 text-base">
+                            Strengths
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <ul className="space-y-1">
+                            {aiAnalysis.aiAnalysis.strengths.map(
+                              (s: string, i: number) => (
+                                <li
+                                  key={i}
+                                  className="text-sm text-slate-700 dark:text-slate-300 flex items-start gap-1"
+                                >
+                                  <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
+                                  {s}
+                                </li>
+                              ),
+                            )}
+                          </ul>
+                        </CardContent>
+                      </Card>
+                    )}
+                    {aiAnalysis.aiAnalysis.areasForImprovement?.length > 0 && (
+                      <Card className="border-0 shadow-sm">
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-amber-700 text-base">
+                            Areas for Improvement
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <ul className="space-y-1">
+                            {aiAnalysis.aiAnalysis.areasForImprovement.map(
+                              (a: string, i: number) => (
+                                <li
+                                  key={i}
+                                  className="text-sm text-slate-700 dark:text-slate-300 flex items-start gap-1"
+                                >
+                                  <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+                                  {a}
+                                </li>
+                              ),
+                            )}
+                          </ul>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
+
+                  {/* Recommended Actions */}
+                  {aiAnalysis.aiAnalysis.recommendedActions?.length > 0 && (
+                    <Card className="border-0 shadow-sm">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="flex items-center gap-2">
+                          <Target className="w-5 h-5 text-cyan-600" />
+                          Recommended Actions
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2">
+                          {aiAnalysis.aiAnalysis.recommendedActions.map(
+                            (action: any, i: number) => (
+                              <div
+                                key={i}
+                                className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg"
+                              >
+                                <Badge
+                                  className={
+                                    action.priority === "high"
+                                      ? "bg-red-100 text-red-700"
+                                      : action.priority === "medium"
+                                        ? "bg-amber-100 text-amber-700"
+                                        : "bg-green-100 text-green-700"
+                                  }
+                                >
+                                  {action.priority}
+                                </Badge>
+                                <div className="flex-1">
+                                  <p className="text-sm text-slate-700 dark:text-slate-300">
+                                    {action.action}
+                                  </p>
+                                  {action.ofstedArea && (
+                                    <p className="text-xs text-slate-400 mt-1">
+                                      Ofsted: {action.ofstedArea}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            ),
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </>
+              )}
+
+              {/* Stats summary if no AI */}
+              {!aiAnalysis.aiAnalysis && (
+                <Card className="border-0 shadow-sm">
+                  <CardContent className="p-8 text-center">
+                    <Brain className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                    <p className="text-slate-500">
+                      {responses.length < 3
+                        ? "AI analysis requires at least 3 completed responses."
+                        : "AI analysis is not available. Check your API configuration."}
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </>
+          ) : (
+            <Card className="border-0 shadow-sm">
+              <CardContent className="p-12 text-center">
+                <Brain className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-slate-700 mb-2">
+                  AI-Powered Analysis
+                </h3>
+                <p className="text-slate-500 mb-4">
+                  Get sentiment analysis, key themes, safeguarding detection,
+                  and actionable recommendations.
+                </p>
+                <Button
+                  onClick={fetchAIAnalysis}
+                  className="bg-cyan-600 hover:bg-cyan-700 text-white"
+                >
+                  <Brain className="w-4 h-4 mr-2" />
+                  Run Analysis
+                </Button>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="individual" className="space-y-4">

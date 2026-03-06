@@ -3,7 +3,14 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Users, TrendingUp, Lightbulb, ExternalLink, Info } from "lucide-react";
+import {
+  BookOpen,
+  Users,
+  TrendingUp,
+  Lightbulb,
+  ExternalLink,
+  Info,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ResearchData {
@@ -35,7 +42,7 @@ export function AppHoverTooltip({
   targetUsers,
   benefits,
   children,
-  className
+  className,
 }: AppHoverTooltipProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0 });
@@ -45,12 +52,14 @@ export function AppHoverTooltip({
   const updatePosition = () => {
     if (triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
-      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-      const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
-      
+      const scrollTop =
+        window.pageYOffset || document.documentElement.scrollTop;
+      const scrollLeft =
+        window.pageXOffset || document.documentElement.scrollLeft;
+
       setPosition({
         top: rect.bottom + scrollTop + 8,
-        left: rect.left + scrollLeft
+        left: rect.left + scrollLeft,
       });
     }
   };
@@ -60,13 +69,13 @@ export function AppHoverTooltip({
       updatePosition();
       const handleScroll = () => updatePosition();
       const handleResize = () => updatePosition();
-      
-      window.addEventListener('scroll', handleScroll);
-      window.addEventListener('resize', handleResize);
-      
+
+      window.addEventListener("scroll", handleScroll);
+      window.addEventListener("resize", handleResize);
+
       return () => {
-        window.removeEventListener('scroll', handleScroll);
-        window.removeEventListener('resize', handleResize);
+        window.removeEventListener("scroll", handleScroll);
+        window.removeEventListener("resize", handleResize);
       };
     }
   }, [isVisible]);
@@ -80,14 +89,14 @@ export function AppHoverTooltip({
   };
 
   return (
-    <div 
+    <div
       ref={triggerRef}
       className={cn("relative", className)}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
       {children}
-      
+
       {isVisible && (
         <div
           ref={tooltipRef}
@@ -97,7 +106,7 @@ export function AppHoverTooltip({
             left: position.left,
           }}
         >
-          <Card className="bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 shadow-2xl">
+          <Card className="bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 shadow-lg">
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2 mb-2">
                 <Info className="h-4 w-4 text-blue-600" />
@@ -119,7 +128,10 @@ export function AppHoverTooltip({
                 </h4>
                 <ol className="space-y-1">
                   {howToUse.slice(0, 3).map((step, index) => (
-                    <li key={index} className="text-xs text-slate-600 dark:text-slate-400 flex items-start gap-2">
+                    <li
+                      key={index}
+                      className="text-xs text-slate-600 dark:text-slate-400 flex items-start gap-2"
+                    >
                       <span className="flex-shrink-0 w-4 h-4 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 text-xs font-medium flex items-center justify-center mt-0.5">
                         {index + 1}
                       </span>
@@ -141,7 +153,11 @@ export function AppHoverTooltip({
                 </h4>
                 <div className="flex flex-wrap gap-1">
                   {keyFeatures.slice(0, 4).map((feature, index) => (
-                    <Badge key={index} variant="secondary" className="text-xs px-2 py-0.5">
+                    <Badge
+                      key={index}
+                      variant="secondary"
+                      className="text-xs px-2 py-0.5"
+                    >
                       {feature}
                     </Badge>
                   ))}
@@ -173,7 +189,10 @@ export function AppHoverTooltip({
                 </h4>
                 <ul className="space-y-1">
                   {benefits.slice(0, 2).map((benefit, index) => (
-                    <li key={index} className="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-2">
+                    <li
+                      key={index}
+                      className="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-2"
+                    >
                       <div className="w-1 h-1 rounded-full bg-green-500"></div>
                       {benefit}
                     </li>
@@ -194,7 +213,10 @@ export function AppHoverTooltip({
                 </h4>
                 <div className="space-y-2">
                   {researchData.slice(0, 2).map((research, index) => (
-                    <div key={index} className="p-2 bg-slate-50 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700">
+                    <div
+                      key={index}
+                      className="p-2 bg-slate-50 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700"
+                    >
                       <div className="flex items-start justify-between gap-1">
                         <div className="flex-1">
                           <h5 className="text-xs font-medium text-slate-800 dark:text-slate-200 mb-1">

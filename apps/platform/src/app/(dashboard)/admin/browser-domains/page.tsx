@@ -11,7 +11,7 @@
  * - View domain usage statistics
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 import {
   Globe,
   Plus,
@@ -27,9 +27,15 @@ import {
   Clock,
   ExternalLink,
   RefreshCw,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 // ============================================================================
 // TYPES
@@ -39,7 +45,7 @@ interface ApprovedDomain {
   id: string;
   domain: string;
   description: string | null;
-  category: 'government' | 'internal' | 'vendor' | 'other';
+  category: "government" | "internal" | "vendor" | "other";
   requires_auth: boolean;
   auth_method: string | null;
   auth_config: Record<string, any>;
@@ -63,56 +69,68 @@ interface DomainStats {
 
 const mockDomains: ApprovedDomain[] = [
   {
-    id: '1',
-    domain: 'hse.gov.uk',
-    description: 'Health & Safety Executive - RIDDOR reporting',
-    category: 'government',
+    id: "1",
+    domain: "hse.gov.uk",
+    description: "Health & Safety Executive - RIDDOR reporting",
+    category: "government",
     requires_auth: true,
-    auth_method: 'headers',
+    auth_method: "headers",
     auth_config: {},
-    allowed_paths: ['/riddor/**'],
+    allowed_paths: ["/riddor/**"],
     denied_paths: [],
     max_session_duration: 1800,
-    created_at: '2026-01-15T10:00:00Z',
-    updated_at: '2026-01-15T10:00:00Z',
+    created_at: "2026-01-15T10:00:00Z",
+    updated_at: "2026-01-15T10:00:00Z",
     is_active: true,
   },
   {
-    id: '2',
-    domain: 'gov.uk',
-    description: 'UK Government services - Pupil Premium, FSM applications',
-    category: 'government',
+    id: "2",
+    domain: "gov.uk",
+    description: "UK Government services - Pupil Premium, FSM applications",
+    category: "government",
     requires_auth: false,
-    auth_method: 'none',
+    auth_method: "none",
     auth_config: {},
-    allowed_paths: ['/**'],
+    allowed_paths: ["/**"],
     denied_paths: [],
     max_session_duration: 1800,
-    created_at: '2026-01-10T09:00:00Z',
-    updated_at: '2026-01-10T09:00:00Z',
+    created_at: "2026-01-10T09:00:00Z",
+    updated_at: "2026-01-10T09:00:00Z",
     is_active: true,
   },
   {
-    id: '3',
-    domain: 'schoolgle.co.uk',
-    description: 'Internal Schoolgle platform',
-    category: 'internal',
+    id: "3",
+    domain: "schoolgle.co.uk",
+    description: "Internal Schoolgle platform",
+    category: "internal",
     requires_auth: false,
-    auth_method: 'none',
+    auth_method: "none",
     auth_config: {},
-    allowed_paths: ['/**'],
+    allowed_paths: ["/**"],
     denied_paths: [],
     max_session_duration: 3600,
-    created_at: '2026-01-01T00:00:00Z',
-    updated_at: '2026-01-01T00:00:00Z',
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
     is_active: true,
   },
 ];
 
 const mockStats: Record<string, DomainStats> = {
-  '1': { totalSessions: 45, activeSessions: 2, lastUsed: '2026-01-23T10:30:00Z' },
-  '2': { totalSessions: 128, activeSessions: 5, lastUsed: '2026-01-23T09:15:00Z' },
-  '3': { totalSessions: 892, activeSessions: 12, lastUsed: '2026-01-23T11:00:00Z' },
+  "1": {
+    totalSessions: 45,
+    activeSessions: 2,
+    lastUsed: "2026-01-23T10:30:00Z",
+  },
+  "2": {
+    totalSessions: 128,
+    activeSessions: 5,
+    lastUsed: "2026-01-23T09:15:00Z",
+  },
+  "3": {
+    totalSessions: 892,
+    activeSessions: 12,
+    lastUsed: "2026-01-23T11:00:00Z",
+  },
 };
 
 // ============================================================================
@@ -121,43 +139,47 @@ const mockStats: Record<string, DomainStats> = {
 
 export default function BrowserDomainsAdmin() {
   const [domains, setDomains] = useState<ApprovedDomain[]>(mockDomains);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [showAddModal, setShowAddModal] = useState(false);
-  const [editingDomain, setEditingDomain] = useState<ApprovedDomain | null>(null);
+  const [editingDomain, setEditingDomain] = useState<ApprovedDomain | null>(
+    null,
+  );
   const [loading, setLoading] = useState(false);
 
   const filteredDomains = domains.filter((domain) => {
     const matchesSearch =
       domain.domain.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (domain.description?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
-    const matchesCategory = categoryFilter === 'all' || domain.category === categoryFilter;
+      (domain.description?.toLowerCase().includes(searchQuery.toLowerCase()) ??
+        false);
+    const matchesCategory =
+      categoryFilter === "all" || domain.category === categoryFilter;
     return matchesSearch && matchesCategory;
   });
 
   const getCategoryColor = (category: string) => {
     switch (category) {
-      case 'government':
-        return 'bg-blue-100 text-blue-700';
-      case 'internal':
-        return 'bg-green-100 text-green-700';
-      case 'vendor':
-        return 'bg-purple-100 text-purple-700';
+      case "government":
+        return "bg-blue-100 text-blue-700";
+      case "internal":
+        return "bg-green-100 text-green-700";
+      case "vendor":
+        return "bg-purple-100 text-purple-700";
       default:
-        return 'bg-gray-100 text-gray-700';
+        return "bg-gray-100 text-gray-700";
     }
   };
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
-      case 'government':
-        return '🏛️';
-      case 'internal':
-        return '🏢';
-      case 'vendor':
-        return '🏪';
+      case "government":
+        return "🏛️";
+      case "internal":
+        return "🏢";
+      case "vendor":
+        return "🏪";
       default:
-        return '🌐';
+        return "🌐";
     }
   };
 
@@ -166,14 +188,14 @@ export default function BrowserDomainsAdmin() {
     // TODO: Call API to toggle domain active status
     setDomains((prev) =>
       prev.map((d) =>
-        d.id === domain.id ? { ...d, is_active: !d.is_active } : d
-      )
+        d.id === domain.id ? { ...d, is_active: !d.is_active } : d,
+      ),
     );
     setLoading(false);
   };
 
   const handleDelete = async (domainId: string) => {
-    if (!confirm('Are you sure you want to remove this approved domain?')) {
+    if (!confirm("Are you sure you want to remove this approved domain?")) {
       return;
     }
     setLoading(true);
@@ -189,7 +211,7 @@ export default function BrowserDomainsAdmin() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center">
-              <Globe className="w-5 h-5 text-indigo-600" />
+              <Globe className="w-5 h-5 text-sky-600" />
             </div>
             <div>
               <h1 className="text-xl font-bold text-gray-900">
@@ -212,7 +234,7 @@ export default function BrowserDomainsAdmin() {
             <Button
               size="sm"
               onClick={() => setShowAddModal(true)}
-              className="bg-indigo-600 hover:bg-indigo-700"
+              className="bg-sky-600 hover:bg-sky-700"
             >
               <Plus className="w-4 h-4 mr-2" />
               Add Domain
@@ -226,15 +248,15 @@ export default function BrowserDomainsAdmin() {
         <Card className="border-indigo-200 bg-indigo-50">
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
-              <Shield className="w-5 h-5 text-indigo-600 mt-0.5" />
+              <Shield className="w-5 h-5 text-sky-600 mt-0.5" />
               <div className="flex-1">
-                <h3 className="font-semibold text-indigo-900">
+                <h3 className="font-semibold text-sky-900">
                   Security Reminder
                 </h3>
-                <p className="text-sm text-indigo-700 mt-1">
-                  Only add domains that your organization explicitly trusts. Ed will
-                  only be able to navigate and interact with approved domains.
-                  All browser sessions are logged for audit purposes.
+                <p className="text-sm text-sky-700 mt-1">
+                  Only add domains that your organization explicitly trusts. Ed
+                  will only be able to navigate and interact with approved
+                  domains. All browser sessions are logged for audit purposes.
                 </p>
               </div>
             </div>
@@ -250,7 +272,7 @@ export default function BrowserDomainsAdmin() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search domains..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent"
             />
           </div>
           <select
@@ -271,14 +293,17 @@ export default function BrowserDomainsAdmin() {
           {filteredDomains.map((domain) => {
             const stats = mockStats[domain.id];
             return (
-              <Card key={domain.id} className="hover:shadow-md transition-shadow">
+              <Card
+                key={domain.id}
+                className="hover:shadow-md transition-shadow"
+              >
                 <CardContent className="p-5">
                   <div className="flex items-start justify-between">
                     <div className="flex items-start gap-4 flex-1">
                       {/* Icon */}
                       <div
                         className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${getCategoryColor(
-                          domain.category
+                          domain.category,
                         )} bg-opacity-50`}
                       >
                         {getCategoryIcon(domain.category)}
@@ -302,7 +327,7 @@ export default function BrowserDomainsAdmin() {
                         <div className="flex items-center gap-2 mt-2">
                           <span
                             className={`px-2 py-1 rounded text-xs font-medium ${getCategoryColor(
-                              domain.category
+                              domain.category,
                             )}`}
                           >
                             {domain.category}
@@ -333,7 +358,7 @@ export default function BrowserDomainsAdmin() {
 
                         {/* Session Duration */}
                         <p className="text-xs text-gray-500 mt-2">
-                          Max session duration:{' '}
+                          Max session duration:{" "}
                           {Math.floor(domain.max_session_duration / 60)} minutes
                         </p>
 
@@ -342,14 +367,14 @@ export default function BrowserDomainsAdmin() {
                           domain.denied_paths.length > 0) && (
                           <div className="mt-2 text-xs">
                             {domain.allowed_paths.length > 0 &&
-                              domain.allowed_paths[0] !== '/**' && (
+                              domain.allowed_paths[0] !== "/**" && (
                                 <div className="text-green-600">
-                                  Allowed: {domain.allowed_paths.join(', ')}
+                                  Allowed: {domain.allowed_paths.join(", ")}
                                 </div>
                               )}
                             {domain.denied_paths.length > 0 && (
                               <div className="text-red-600">
-                                Denied: {domain.denied_paths.join(', ')}
+                                Denied: {domain.denied_paths.join(", ")}
                               </div>
                             )}
                           </div>
@@ -364,7 +389,9 @@ export default function BrowserDomainsAdmin() {
                           <p className="text-lg font-semibold text-gray-900">
                             {stats.totalSessions}
                           </p>
-                          <p className="text-xs text-gray-500">Total Sessions</p>
+                          <p className="text-xs text-gray-500">
+                            Total Sessions
+                          </p>
                         </div>
                         {stats.activeSessions > 0 && (
                           <div className="text-center">
@@ -376,9 +403,7 @@ export default function BrowserDomainsAdmin() {
                         )}
                         {stats.lastUsed && (
                           <div className="text-center">
-                            <p className="text-xs text-gray-500">
-                              Last used
-                            </p>
+                            <p className="text-xs text-gray-500">Last used</p>
                             <p className="text-xs text-gray-600">
                               {new Date(stats.lastUsed).toLocaleDateString()}
                             </p>
@@ -401,7 +426,7 @@ export default function BrowserDomainsAdmin() {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleToggleActive(domain)}
-                        title={domain.is_active ? 'Deactivate' : 'Activate'}
+                        title={domain.is_active ? "Deactivate" : "Activate"}
                       >
                         {domain.is_active ? (
                           <X className="w-4 h-4" />
@@ -433,11 +458,11 @@ export default function BrowserDomainsAdmin() {
                   No domains found
                 </h3>
                 <p className="text-sm text-gray-500 mb-4">
-                  {searchQuery || categoryFilter !== 'all'
-                    ? 'Try adjusting your filters'
-                    : 'Add your first approved domain to get started'}
+                  {searchQuery || categoryFilter !== "all"
+                    ? "Try adjusting your filters"
+                    : "Add your first approved domain to get started"}
                 </p>
-                {!searchQuery && categoryFilter === 'all' && (
+                {!searchQuery && categoryFilter === "all" && (
                   <Button onClick={() => setShowAddModal(true)}>
                     <Plus className="w-4 h-4 mr-2" />
                     Add Domain
@@ -460,7 +485,7 @@ export default function BrowserDomainsAdmin() {
           onSave={(savedDomain) => {
             if (editingDomain) {
               setDomains((prev) =>
-                prev.map((d) => (d.id === editingDomain.id ? savedDomain : d))
+                prev.map((d) => (d.id === editingDomain.id ? savedDomain : d)),
               );
             } else {
               setDomains((prev) => [...prev, savedDomain]);
@@ -487,13 +512,13 @@ interface DomainModalProps {
 function DomainModal({ domain, onClose, onSave }: DomainModalProps) {
   const isEditing = !!domain;
   const [formData, setFormData] = useState({
-    domain: domain?.domain || '',
-    description: domain?.description || '',
-    category: domain?.category || 'other',
+    domain: domain?.domain || "",
+    description: domain?.description || "",
+    category: domain?.category || "other",
     requires_auth: domain?.requires_auth || false,
-    auth_method: domain?.auth_method || 'none',
-    allowed_paths: domain?.allowed_paths.join(', ') || '/**',
-    denied_paths: domain?.denied_paths.join(', ') || '',
+    auth_method: domain?.auth_method || "none",
+    allowed_paths: domain?.allowed_paths.join(", ") || "/**",
+    denied_paths: domain?.denied_paths.join(", ") || "",
     max_session_duration: domain?.max_session_duration || 1800,
   });
 
@@ -509,11 +534,11 @@ function DomainModal({ domain, onClose, onSave }: DomainModalProps) {
       auth_method: formData.auth_method,
       auth_config: {},
       allowed_paths: formData.allowed_paths
-        .split(',')
+        .split(",")
         .map((p) => p.trim())
         .filter(Boolean),
       denied_paths: formData.denied_paths
-        .split(',')
+        .split(",")
         .map((p) => p.trim())
         .filter(Boolean),
       max_session_duration: formData.max_session_duration,
@@ -530,7 +555,7 @@ function DomainModal({ domain, onClose, onSave }: DomainModalProps) {
       <Card className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <CardHeader>
           <CardTitle>
-            {isEditing ? 'Edit Approved Domain' : 'Add Approved Domain'}
+            {isEditing ? "Edit Approved Domain" : "Add Approved Domain"}
           </CardTitle>
           <CardDescription>
             Configure which domains Ed can access for browser automation
@@ -551,7 +576,7 @@ function DomainModal({ domain, onClose, onSave }: DomainModalProps) {
                   setFormData({ ...formData, domain: e.target.value })
                 }
                 placeholder="e.g., hse.gov.uk"
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent"
               />
               <p className="text-xs text-gray-500 mt-1">
                 Enter just the domain (e.g., hse.gov.uk), not the full URL
@@ -570,7 +595,7 @@ function DomainModal({ domain, onClose, onSave }: DomainModalProps) {
                   setFormData({ ...formData, description: e.target.value })
                 }
                 placeholder="e.g., Health & Safety Executive - RIDDOR reporting"
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent"
               />
             </div>
 
@@ -584,7 +609,7 @@ function DomainModal({ domain, onClose, onSave }: DomainModalProps) {
                 onChange={(e) =>
                   setFormData({ ...formData, category: e.target.value })
                 }
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent"
               >
                 <option value="government">Government</option>
                 <option value="internal">Internal</option>
@@ -602,7 +627,7 @@ function DomainModal({ domain, onClose, onSave }: DomainModalProps) {
                 onChange={(e) =>
                   setFormData({ ...formData, requires_auth: e.target.checked })
                 }
-                className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                className="rounded border-gray-300 text-sky-600 focus:ring-sky-500"
               />
               <label htmlFor="requires_auth" className="text-sm text-gray-700">
                 Requires authentication
@@ -619,7 +644,7 @@ function DomainModal({ domain, onClose, onSave }: DomainModalProps) {
                   onChange={(e) =>
                     setFormData({ ...formData, auth_method: e.target.value })
                   }
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent"
                 >
                   <option value="none">None</option>
                   <option value="sso">SSO</option>
@@ -641,7 +666,7 @@ function DomainModal({ domain, onClose, onSave }: DomainModalProps) {
                   setFormData({ ...formData, allowed_paths: e.target.value })
                 }
                 placeholder="/** or /path1/**, /path2/**"
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent"
               />
               <p className="text-xs text-gray-500 mt-1">
                 Comma-separated glob patterns. Use /** for all paths.
@@ -660,7 +685,7 @@ function DomainModal({ domain, onClose, onSave }: DomainModalProps) {
                   setFormData({ ...formData, denied_paths: e.target.value })
                 }
                 placeholder="/admin/**, /settings/**"
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent"
               />
               <p className="text-xs text-gray-500 mt-1">
                 Comma-separated glob patterns to explicitly block
@@ -683,21 +708,17 @@ function DomainModal({ domain, onClose, onSave }: DomainModalProps) {
                     max_session_duration: parseInt(e.target.value) * 60,
                   })
                 }
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent"
               />
             </div>
 
             {/* Actions */}
             <div className="flex items-center justify-end gap-3 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onClose}
-              >
+              <Button type="button" variant="outline" onClick={onClose}>
                 Cancel
               </Button>
-              <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700">
-                {isEditing ? 'Save Changes' : 'Add Domain'}
+              <Button type="submit" className="bg-sky-600 hover:bg-sky-700">
+                {isEditing ? "Save Changes" : "Add Domain"}
               </Button>
             </div>
           </form>

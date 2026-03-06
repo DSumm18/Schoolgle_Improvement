@@ -13,7 +13,7 @@
  * - Bottom sheet design for mobile
  */
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
   Send,
   Mic,
@@ -27,17 +27,17 @@ import {
   User,
   Volume2,
   VolumeX,
-} from 'lucide-react';
-import { useEdwinaVoice, TTSMessage } from '@/lib/edwina-voice';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { FormPreview } from './FormPreview';
+} from "lucide-react";
+import { useEdwinaVoice, TTSMessage } from "@/lib/edwina-voice";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { FormPreview } from "./FormPreview";
 import type {
   LanguageCode,
   TranslationResult,
-} from '@/lib/translation-service';
-import type { FormFieldData } from './FormPreview';
-import { SUPPORTED_LANGUAGES } from '@/lib/translation-service';
+} from "@/lib/translation-service";
+import type { FormFieldData } from "./FormPreview";
+import { SUPPORTED_LANGUAGES } from "@/lib/translation-service";
 
 // ============================================================================
 // TYPES
@@ -45,7 +45,7 @@ import { SUPPORTED_LANGUAGES } from '@/lib/translation-service';
 
 export interface ChatMessage {
   id: string;
-  role: 'user' | 'assistant' | 'system';
+  role: "user" | "assistant" | "system";
   content: string;
   translatedContent?: string; // For system messages - shown in English
   timestamp: Date;
@@ -60,7 +60,7 @@ export interface ChatMessage {
 
 export interface ApprovalCard {
   id: string;
-  type: 'form_submit' | 'navigate' | 'fill' | 'click';
+  type: "form_submit" | "navigate" | "fill" | "click";
   title: string;
   description: string;
   details: Record<string, any>;
@@ -97,7 +97,7 @@ export interface EdChatbotProps {
 // ============================================================================
 
 export function EdChatbotMobile({
-  initialLanguage = 'en',
+  initialLanguage = "en",
   sessionId,
   currentUrl,
   onSendMessage,
@@ -110,24 +110,35 @@ export function EdChatbotMobile({
 }: EdChatbotProps) {
   // State
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState("");
   const [isListening, setIsListening] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedLanguage, setSelectedLanguage] = useState<LanguageCode>(initialLanguage);
+  const [selectedLanguage, setSelectedLanguage] =
+    useState<LanguageCode>(initialLanguage);
   const [showLanguageMenu, setShowLanguageMenu] = useState(false);
   const [showFormPreview, setShowFormPreview] = useState(false);
-  const [pendingApproval, setPendingApproval] = useState<ApprovalCard | null>(null);
+  const [pendingApproval, setPendingApproval] = useState<ApprovalCard | null>(
+    null,
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
-  const [currentPlayingMessageId, setCurrentPlayingMessageId] = useState<string | null>(null);
+  const [currentPlayingMessageId, setCurrentPlayingMessageId] = useState<
+    string | null
+  >(null);
 
   // Edwina Voice Hook
-  const { isPlaying, isLoading: isVoiceLoading, speak, stop, isConfigured: voiceConfigured } = useEdwinaVoice({
+  const {
+    isPlaying,
+    isLoading: isVoiceLoading,
+    speak,
+    stop,
+    isConfigured: voiceConfigured,
+  } = useEdwinaVoice({
     autoPlay: true, // Auto-play messages
     onEnd: () => {
       setCurrentPlayingMessageId(null);
     },
-    onError: (error) => console.error('Voice error:', error),
+    onError: (error) => console.error("Voice error:", error),
   });
 
   // Refs
@@ -137,13 +148,13 @@ export function EdChatbotMobile({
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, pendingApproval]);
 
   // Add welcome message on mount
   useEffect(() => {
     if (messages.length === 0) {
-      addMessage('assistant', welcomeMessage);
+      addMessage("assistant", welcomeMessage);
     }
   }, []);
 
@@ -152,9 +163,9 @@ export function EdChatbotMobile({
   // ==========================================================================
 
   function addMessage(
-    role: 'user' | 'assistant' | 'system',
+    role: "user" | "assistant" | "system",
     content: string,
-    metadata?: ChatMessage['metadata']
+    metadata?: ChatMessage["metadata"],
   ) {
     const message: ChatMessage = {
       id: crypto.randomUUID(),
@@ -166,7 +177,7 @@ export function EdChatbotMobile({
     setMessages((prev) => [...prev, message]);
 
     // Auto-speak if it's an assistant message and voice is enabled
-    if (role === 'assistant' && voiceEnabled && voiceConfigured) {
+    if (role === "assistant" && voiceEnabled && voiceConfigured) {
       setTimeout(() => {
         speak(content);
       }, 500); // Small delay to ensure message is rendered
@@ -179,11 +190,11 @@ export function EdChatbotMobile({
     const text = input.trim();
     if (!text || isLoading) return;
 
-    setInput('');
+    setInput("");
     setIsLoading(true);
 
     // Add user message
-    addMessage('user', text);
+    addMessage("user", text);
 
     try {
       // Call parent handler if provided
@@ -194,7 +205,7 @@ export function EdChatbotMobile({
         await mockAIResponse(text);
       }
     } catch (error) {
-      addMessage('system', 'Sorry, I encountered an error. Please try again.');
+      addMessage("system", "Sorry, I encountered an error. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -207,22 +218,44 @@ export function EdChatbotMobile({
     // Simple pattern matching for demo
     const lowerMessage = userMessage.toLowerCase();
 
-    if (lowerMessage.includes('form') || lowerMessage.includes('fill')) {
-      addMessage('assistant', 'I can help you fill out a form. What form would you like to complete?');
-    } else if (lowerMessage.includes('pupil premium') || lowerMessage.includes('free school meals')) {
+    if (lowerMessage.includes("form") || lowerMessage.includes("fill")) {
+      addMessage(
+        "assistant",
+        "I can help you fill out a form. What form would you like to complete?",
+      );
+    } else if (
+      lowerMessage.includes("pupil premium") ||
+      lowerMessage.includes("free school meals")
+    ) {
       // Show form preview for Pupil Premium
       setPendingApproval({
         id: crypto.randomUUID(),
-        type: 'form_submit',
-        title: 'Pupil Premium Application',
-        description: "I've collected the information for the Pupil Premium application. Please review before I submit it.",
+        type: "form_submit",
+        title: "Pupil Premium Application",
+        description:
+          "I've collected the information for the Pupil Premium application. Please review before I submit it.",
         details: {
-          domain: 'gov.uk',
+          domain: "gov.uk",
           fields: [
-            { ref: 'e1', name: 'Full Name', value: 'Jan Kowalski', required: true },
-            { ref: 'e2', name: 'Email', value: 'jan.kowalski@example.com', required: true },
-            { ref: 'e3', name: 'Postcode', value: 'B1 1AA', required: true },
-            { ref: 'e4', name: 'Number of Children', value: '2', required: true },
+            {
+              ref: "e1",
+              name: "Full Name",
+              value: "Jan Kowalski",
+              required: true,
+            },
+            {
+              ref: "e2",
+              name: "Email",
+              value: "jan.kowalski@example.com",
+              required: true,
+            },
+            { ref: "e3", name: "Postcode", value: "B1 1AA", required: true },
+            {
+              ref: "e4",
+              name: "Number of Children",
+              value: "2",
+              required: true,
+            },
           ],
         },
         onApprove: handleApproveForm,
@@ -230,7 +263,10 @@ export function EdChatbotMobile({
         onEdit: () => setShowFormPreview(true),
       });
     } else {
-      addMessage('assistant', 'I understand. Let me help you with that. Could you provide more details?');
+      addMessage(
+        "assistant",
+        "I understand. Let me help you with that. Could you provide more details?",
+      );
     }
   }
 
@@ -245,9 +281,15 @@ export function EdChatbotMobile({
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
       setPendingApproval(null);
-      addMessage('assistant', '✅ Form submitted successfully! You should receive a confirmation soon.');
+      addMessage(
+        "assistant",
+        "✅ Form submitted successfully! You should receive a confirmation soon.",
+      );
     } catch (error) {
-      addMessage('system', '❌ Form submission failed. Please try again or contact support.');
+      addMessage(
+        "system",
+        "❌ Form submission failed. Please try again or contact support.",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -255,7 +297,10 @@ export function EdChatbotMobile({
 
   function handleEditField(fieldRef: string) {
     // Focus the field for editing
-    addMessage('assistant', `What would you like to change about the ${fieldRef} field?`);
+    addMessage(
+      "assistant",
+      `What would you like to change about the ${fieldRef} field?`,
+    );
     setPendingApproval(null);
     setShowFormPreview(false);
     inputRef.current?.focus();
@@ -266,7 +311,7 @@ export function EdChatbotMobile({
   // ==========================================================================
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
@@ -289,12 +334,15 @@ export function EdChatbotMobile({
       setIsLoading(true);
       try {
         await onImageUpload(file);
-        addMessage('user', '[Image uploaded]', {
+        addMessage("user", "[Image uploaded]", {
           imageUrl: URL.createObjectURL(file),
         });
-        addMessage('assistant', "I can see the image. Let me analyze it for you...");
+        addMessage(
+          "assistant",
+          "I can see the image. Let me analyze it for you...",
+        );
       } catch (error) {
-        addMessage('system', 'Failed to upload image. Please try again.');
+        addMessage("system", "Failed to upload image. Please try again.");
       } finally {
         setIsLoading(false);
       }
@@ -314,7 +362,7 @@ export function EdChatbotMobile({
         <div className="flex items-center justify-between">
           {/* Left: Bot info */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-sky-500 to-purple-600 flex items-center justify-center">
               <Robot className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -340,10 +388,10 @@ export function EdChatbotMobile({
                 disabled={isVoiceLoading}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors ${
                   voiceEnabled
-                    ? 'bg-purple-100 text-purple-700 hover:bg-purple-200'
-                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                    ? "bg-purple-100 text-purple-700 hover:bg-purple-200"
+                    : "bg-gray-100 text-gray-500 hover:bg-gray-200"
                 } disabled:opacity-50`}
-                title={voiceEnabled ? 'Voice enabled' : 'Voice disabled'}
+                title={voiceEnabled ? "Voice enabled" : "Voice disabled"}
               >
                 {isVoiceLoading ? (
                   <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
@@ -359,50 +407,54 @@ export function EdChatbotMobile({
 
             {/* Language selector */}
             {showLanguageSelector && (
-            <div className="relative">
-              <button
-                onClick={() => setShowLanguageMenu(!showLanguageMenu)}
-                className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-              >
-                <Globe className="w-4 h-4 text-gray-600" />
-                <span className="text-sm font-medium text-gray-700">
-                  {currentLanguage?.nativeName}
-                </span>
-                <ChevronDown className="w-4 h-4 text-gray-500" />
-              </button>
+              <div className="relative">
+                <button
+                  onClick={() => setShowLanguageMenu(!showLanguageMenu)}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                >
+                  <Globe className="w-4 h-4 text-gray-600" />
+                  <span className="text-sm font-medium text-gray-700">
+                    {currentLanguage?.nativeName}
+                  </span>
+                  <ChevronDown className="w-4 h-4 text-gray-500" />
+                </button>
 
-              {/* Language Dropdown */}
-              {showLanguageMenu && (
-                <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-                  <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">
-                    Select Language
-                  </div>
-                  {Object.values(SUPPORTED_LANGUAGES).map((lang) => (
-                    <button
-                      key={lang.code}
-                      onClick={() => {
-                        setSelectedLanguage(lang.code);
-                        setShowLanguageMenu(false);
-                      }}
-                      className={`w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2 ${
-                        lang.code === selectedLanguage ? 'bg-indigo-50' : ''
-                      }`}
-                    >
-                      <span className="text-lg">{lang.name === 'English' ? '🇬🇧' : '🌐'}</span>
-                      <div className="flex-1">
-                        <div className="text-sm font-medium text-gray-900">
-                          {lang.nativeName}
+                {/* Language Dropdown */}
+                {showLanguageMenu && (
+                  <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+                    <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">
+                      Select Language
+                    </div>
+                    {Object.values(SUPPORTED_LANGUAGES).map((lang) => (
+                      <button
+                        key={lang.code}
+                        onClick={() => {
+                          setSelectedLanguage(lang.code);
+                          setShowLanguageMenu(false);
+                        }}
+                        className={`w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2 ${
+                          lang.code === selectedLanguage ? "bg-sky-50" : ""
+                        }`}
+                      >
+                        <span className="text-lg">
+                          {lang.name === "English" ? "🇬🇧" : "🌐"}
+                        </span>
+                        <div className="flex-1">
+                          <div className="text-sm font-medium text-gray-900">
+                            {lang.nativeName}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {lang.name}
+                          </div>
                         </div>
-                        <div className="text-xs text-gray-500">{lang.name}</div>
-                      </div>
-                      {lang.code === selectedLanguage && (
-                        <Check className="w-4 h-4 text-indigo-600" />
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+                        {lang.code === selectedLanguage && (
+                          <Check className="w-4 h-4 text-sky-600" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -412,7 +464,7 @@ export function EdChatbotMobile({
           <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
             <span>Navigating to:</span>
             <span className="font-mono bg-gray-100 px-2 py-0.5 rounded">
-              {currentUrl.replace(/^https?:\/\//, '').split('/')[0]}
+              {currentUrl.replace(/^https?:\/\//, "").split("/")[0]}
             </span>
           </div>
         )}
@@ -423,34 +475,38 @@ export function EdChatbotMobile({
         {messages.map((message) => (
           <div
             key={message.id}
-            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
           >
             <div
               className={`max-w-[85%] rounded-2xl ${
-                message.role === 'user'
-                  ? 'bg-indigo-600 text-white'
-                  : message.role === 'system'
-                  ? 'bg-amber-50 text-amber-900 border border-amber-200'
-                  : 'bg-white text-gray-900 border border-gray-200'
+                message.role === "user"
+                  ? "bg-sky-600 text-white"
+                  : message.role === "system"
+                    ? "bg-amber-50 text-amber-900 border border-amber-200"
+                    : "bg-white text-gray-900 border border-gray-200"
               }`}
             >
               {/* Message header */}
-              {message.role !== 'user' && (
-                <div className={`flex items-center gap-2 px-4 py-2 border-b ${
-                  message.role === 'system' ? 'border-amber-200' : 'border-gray-100'
-                }`}>
-                  {message.role === 'assistant' ? (
-                    <Robot className="w-4 h-4 text-indigo-600" />
+              {message.role !== "user" && (
+                <div
+                  className={`flex items-center gap-2 px-4 py-2 border-b ${
+                    message.role === "system"
+                      ? "border-amber-200"
+                      : "border-gray-100"
+                  }`}
+                >
+                  {message.role === "assistant" ? (
+                    <Robot className="w-4 h-4 text-sky-600" />
                   ) : (
                     <AlertCircle className="w-4 h-4 text-amber-600" />
                   )}
                   <span className="text-xs font-semibold">
-                    {message.role === 'assistant' ? 'Ed' : 'System'}
+                    {message.role === "assistant" ? "Ed" : "System"}
                   </span>
                   <span className="text-xs opacity-60">
                     {new Date(message.timestamp).toLocaleTimeString([], {
-                      hour: '2-digit',
-                      minute: '2-digit',
+                      hour: "2-digit",
+                      minute: "2-digit",
                     })}
                   </span>
                 </div>
@@ -459,13 +515,18 @@ export function EdChatbotMobile({
               {/* Message content */}
               <div className="px-4 py-3">
                 <div className="flex items-start gap-2">
-                  <p className="text-sm whitespace-pre-wrap flex-1">{message.content}</p>
+                  <p className="text-sm whitespace-pre-wrap flex-1">
+                    {message.content}
+                  </p>
 
                   {/* Voice control for assistant messages */}
-                  {message.role === 'assistant' && voiceConfigured && (
+                  {message.role === "assistant" && voiceConfigured && (
                     <button
                       onClick={() => {
-                        if (isPlaying && currentPlayingMessageId === message.id) {
+                        if (
+                          isPlaying &&
+                          currentPlayingMessageId === message.id
+                        ) {
                           stop();
                         } else {
                           speak(message.content);
@@ -475,14 +536,21 @@ export function EdChatbotMobile({
                       disabled={isVoiceLoading}
                       className={`p-1 rounded-lg transition-colors flex-shrink-0 ${
                         isPlaying && currentPlayingMessageId === message.id
-                          ? 'bg-purple-100 text-purple-600'
-                          : 'text-gray-400 hover:text-purple-600 hover:bg-purple-50'
+                          ? "bg-purple-100 text-purple-600"
+                          : "text-gray-400 hover:text-purple-600 hover:bg-purple-50"
                       } disabled:opacity-50`}
-                      title={isPlaying && currentPlayingMessageId === message.id ? 'Stop speaking' : 'Listen to this message'}
+                      title={
+                        isPlaying && currentPlayingMessageId === message.id
+                          ? "Stop speaking"
+                          : "Listen to this message"
+                      }
                     >
-                      {isVoiceLoading && isPlaying && currentPlayingMessageId === message.id ? (
+                      {isVoiceLoading &&
+                      isPlaying &&
+                      currentPlayingMessageId === message.id ? (
                         <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                      ) : isPlaying && currentPlayingMessageId === message.id ? (
+                      ) : isPlaying &&
+                        currentPlayingMessageId === message.id ? (
                         <Volume2 className="w-4 h-4 animate-pulse" />
                       ) : (
                         <Volume2 className="w-4 h-4" />
@@ -492,13 +560,14 @@ export function EdChatbotMobile({
                 </div>
 
                 {/* Translated content for system messages */}
-                {message.translatedContent && message.translatedContent !== message.content && (
-                  <div className="mt-2 pt-2 border-t border-amber-200">
-                    <p className="text-xs text-amber-700 italic">
-                      "{message.translatedContent}"
-                    </p>
-                  </div>
-                )}
+                {message.translatedContent &&
+                  message.translatedContent !== message.content && (
+                    <div className="mt-2 pt-2 border-t border-amber-200">
+                      <p className="text-xs text-amber-700 italic">
+                        "{message.translatedContent}"
+                      </p>
+                    </div>
+                  )}
 
                 {/* Image attachment */}
                 {message.metadata?.imageUrl && (
@@ -515,27 +584,37 @@ export function EdChatbotMobile({
 
         {/* Approval Card */}
         {pendingApproval && (
-          <Card className="border-2 border-indigo-200 bg-indigo-50">
+          <Card className="border-2 border-sky-200 bg-sky-50">
             <div className="p-4">
               <div className="flex items-start gap-3 mb-3">
-                <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
-                  <AlertCircle className="w-4 h-4 text-indigo-600" />
+                <div className="w-8 h-8 rounded-full bg-sky-100 flex items-center justify-center flex-shrink-0">
+                  <AlertCircle className="w-4 h-4 text-sky-600" />
                 </div>
                 <div className="flex-1">
-                  <h4 className="font-semibold text-indigo-900">{pendingApproval.title}</h4>
-                  <p className="text-sm text-indigo-700 mt-1">{pendingApproval.description}</p>
+                  <h4 className="font-semibold text-sky-900">
+                    {pendingApproval.title}
+                  </h4>
+                  <p className="text-sm text-sky-700 mt-1">
+                    {pendingApproval.description}
+                  </p>
                 </div>
               </div>
 
               {/* Details */}
               {pendingApproval.details.fields && (
                 <div className="mb-3 space-y-2">
-                  {pendingApproval.details.fields.map((field: FormFieldData) => (
-                    <div key={field.ref} className="text-sm">
-                      <span className="font-medium text-gray-700">{field.name}:</span>
-                      <span className="ml-2 text-gray-900">{field.value}</span>
-                    </div>
-                  ))}
+                  {pendingApproval.details.fields.map(
+                    (field: FormFieldData) => (
+                      <div key={field.ref} className="text-sm">
+                        <span className="font-medium text-gray-700">
+                          {field.name}:
+                        </span>
+                        <span className="ml-2 text-gray-900">
+                          {field.value}
+                        </span>
+                      </div>
+                    ),
+                  )}
                 </div>
               )}
 
@@ -567,7 +646,7 @@ export function EdChatbotMobile({
                   className="flex-1 bg-green-600 hover:bg-green-700"
                 >
                   {isSubmitting ? (
-                    'Submitting...'
+                    "Submitting..."
                   ) : (
                     <>
                       <Check className="w-4 h-4 mr-1" />
@@ -614,16 +693,18 @@ export function EdChatbotMobile({
             </div>
             <div className="p-4">
               <FormPreview
-                formUrl={currentUrl || 'https://example.com'}
-                domain={new URL(currentUrl || 'https://example.com').hostname}
+                formUrl={currentUrl || "https://example.com"}
+                domain={new URL(currentUrl || "https://example.com").hostname}
                 fields={pendingApproval.details.fields}
                 userLanguage={selectedLanguage}
-                nativeLanguageName={currentLanguage?.nativeName || 'English'}
-                conversationHistory={messages.filter(m => m.role !== 'system').map(m => ({
-                  role: m.role,
-                  content: m.content,
-                  timestamp: m.timestamp,
-                }))}
+                nativeLanguageName={currentLanguage?.nativeName || "English"}
+                conversationHistory={messages
+                  .filter((m) => m.role !== "system")
+                  .map((m) => ({
+                    role: m.role,
+                    content: m.content,
+                    timestamp: m.timestamp,
+                  }))}
                 onConfirm={handleApproveForm}
                 onCancel={() => {
                   setShowFormPreview(false);
@@ -666,11 +747,11 @@ export function EdChatbotMobile({
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={`Message in ${currentLanguage?.nativeName || 'English'}...`}
+              placeholder={`Message in ${currentLanguage?.nativeName || "English"}...`}
               disabled={isLoading}
               rows={1}
-              className="w-full px-4 py-2 pr-10 border border-gray-200 rounded-xl resize-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-gray-50"
-              style={{ minHeight: '44px', maxHeight: '120px' }}
+              className="w-full px-4 py-2 pr-10 border border-gray-200 rounded-xl resize-none focus:ring-2 focus:ring-sky-500 focus:border-transparent disabled:bg-gray-50"
+              style={{ minHeight: "44px", maxHeight: "120px" }}
             />
           </div>
 
@@ -681,10 +762,10 @@ export function EdChatbotMobile({
               disabled={isLoading}
               className={`p-2 rounded-lg transition-colors ${
                 isListening
-                  ? 'bg-red-100 text-red-600 hover:bg-red-200'
-                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                  ? "bg-red-100 text-red-600 hover:bg-red-200"
+                  : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
               } disabled:opacity-50`}
-              title={isListening ? 'Stop recording' : 'Voice input'}
+              title={isListening ? "Stop recording" : "Voice input"}
             >
               <Mic className="w-5 h-5" />
             </button>
@@ -694,7 +775,7 @@ export function EdChatbotMobile({
           <button
             onClick={handleSend}
             disabled={isLoading || !input.trim()}
-            className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="p-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             title="Send message"
           >
             <Send className="w-5 h-5" />
@@ -703,7 +784,8 @@ export function EdChatbotMobile({
 
         {/* Helper text */}
         <p className="text-xs text-gray-400 mt-2 text-center">
-          Ed can help fill forms in your language. All data is translated to English for submission.
+          Ed can help fill forms in your language. All data is translated to
+          English for submission.
         </p>
       </div>
     </div>

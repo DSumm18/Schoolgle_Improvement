@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * Individual Check Detail Page - Redesigned
@@ -18,10 +18,10 @@
  * @version 2.0 - Fixed imports
  */
 
-import { useState, useEffect } from 'react';
-import { useParams, notFound, useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { useAuth } from '@/context/SupabaseAuthContext';
+import { useState, useEffect } from "react";
+import { useParams, notFound, useRouter } from "next/navigation";
+import Link from "next/link";
+import { useAuth } from "@/context/SupabaseAuthContext";
 import {
   ArrowLeft,
   Check,
@@ -44,7 +44,7 @@ import {
   Hourglass,
   Plus,
   ChevronRight,
-} from 'lucide-react';
+} from "lucide-react";
 import {
   DOMAIN_METADATA,
   STATUTORY_CHECKS,
@@ -52,13 +52,13 @@ import {
   type ComplianceDomain,
   type StatutoryCheck,
   type CheckStatus,
-} from '@/lib/estates-compliance/statutory-checks';
-import { supabase } from '@/lib/supabase';
-import { MagicCard } from '@/components/magicui/magic-card';
-import { ShimmerButton } from '@/components/magicui/shimmer-button';
-import { BorderBeam } from '@/components/magicui/border-beam';
-import { BlurFade } from '@/components/magicui/blur-fade';
-import { motion, AnimatePresence } from 'framer-motion';
+} from "@/lib/estates-compliance/statutory-checks";
+import { supabase } from "@/lib/supabase";
+import { MagicCard } from "@/components/magicui/magic-card";
+import { ShimmerButton } from "@/components/magicui/shimmer-button";
+import { BorderBeam } from "@/components/magicui/border-beam";
+import { BlurFade } from "@/components/magicui/blur-fade";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface CompletionRecord {
   id: string;
@@ -67,7 +67,7 @@ interface CompletionRecord {
   status: CheckStatus;
   completion_notes: string;
   next_due: string;
-  rag_status?: 'red' | 'amber' | 'green';
+  rag_status?: "red" | "amber" | "green";
 }
 
 export default function CheckDetailPage() {
@@ -80,97 +80,140 @@ export default function CheckDetailPage() {
   const [check, setCheck] = useState<StatutoryCheck | null>(null);
   const [completions, setCompletions] = useState<CompletionRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'history'>('overview');
+  const [activeTab, setActiveTab] = useState<"overview" | "history">(
+    "overview",
+  );
   const [debugInfo, setDebugInfo] = useState({
-    step: 'Initializing...',
-    organizationId: organizationId || 'none',
+    step: "Initializing...",
+    organizationId: organizationId || "none",
     hasCheck: false,
     completionsCount: 0,
   });
 
   useEffect(() => {
-    console.log('[CHECK DETAIL] Page loaded, params:', { domainSlug, checkId, organizationId });
+    console.log("[CHECK DETAIL] Page loaded, params:", {
+      domainSlug,
+      checkId,
+      organizationId,
+    });
     let timeoutId: NodeJS.Timeout;
 
     async function initializeData() {
-      setDebugInfo({ step: 'Starting...', organizationId: organizationId || 'none', hasCheck: false, completionsCount: 0 });
+      setDebugInfo({
+        step: "Starting...",
+        organizationId: organizationId || "none",
+        hasCheck: false,
+        completionsCount: 0,
+      });
 
       // Timeout to prevent infinite loading
       timeoutId = setTimeout(() => {
-        console.warn('[CHECK DETAIL] Loading timeout - forcing ready state');
-        setDebugInfo(prev => ({ ...prev, step: 'TIMEOUT - forcing ready' }));
+        console.warn("[CHECK DETAIL] Loading timeout - forcing ready state");
+        setDebugInfo((prev) => ({ ...prev, step: "TIMEOUT - forcing ready" }));
         setLoading(false);
       }, 5000);
 
       // Validate domain
       if (!domainSlug || !DOMAIN_METADATA[domainSlug]) {
-        console.log('[CHECK DETAIL] Invalid domain, calling notFound');
-        setDebugInfo(prev => ({ ...prev, step: 'Invalid domain' }));
+        console.log("[CHECK DETAIL] Invalid domain, calling notFound");
+        setDebugInfo((prev) => ({ ...prev, step: "Invalid domain" }));
         clearTimeout(timeoutId);
         notFound();
         return;
       }
 
-      setDebugInfo(prev => ({ ...prev, step: 'Domain validated, finding check...' }));
+      setDebugInfo((prev) => ({
+        ...prev,
+        step: "Domain validated, finding check...",
+      }));
 
       // Find the check
       const domainChecks = getChecksForDomain(domainSlug);
       const foundCheck = domainChecks.find((c) => c.id === checkId);
 
       if (!foundCheck) {
-        console.log('[CHECK DETAIL] Check not found:', checkId, 'in domain:', domainSlug);
-        setDebugInfo(prev => ({ ...prev, step: 'Check NOT found!' }));
+        console.log(
+          "[CHECK DETAIL] Check not found:",
+          checkId,
+          "in domain:",
+          domainSlug,
+        );
+        setDebugInfo((prev) => ({ ...prev, step: "Check NOT found!" }));
         clearTimeout(timeoutId);
         notFound();
         return;
       }
 
-      console.log('[CHECK DETAIL] Check found:', foundCheck.name);
+      console.log("[CHECK DETAIL] Check found:", foundCheck.name);
       setCheck(foundCheck);
-      setDebugInfo(prev => ({ ...prev, step: 'Check found: ' + foundCheck.name, hasCheck: true }));
+      setDebugInfo((prev) => ({
+        ...prev,
+        step: "Check found: " + foundCheck.name,
+        hasCheck: true,
+      }));
 
       // Fetch real completions from Supabase
       if (organizationId) {
-        setDebugInfo(prev => ({ ...prev, step: 'Fetching from Supabase...' }));
+        setDebugInfo((prev) => ({
+          ...prev,
+          step: "Fetching from Supabase...",
+        }));
         try {
-          console.log('[CHECK DETAIL] Fetching completions for:', { organizationId, checkId, domainSlug });
+          console.log("[CHECK DETAIL] Fetching completions for:", {
+            organizationId,
+            checkId,
+            domainSlug,
+          });
 
           const { data, error } = await supabase
-            .from('estates_statutory_completions')
-            .select('*')
-            .eq('organization_id', organizationId)
-            .eq('check_id', checkId)
-            .eq('compliance_domain', domainSlug)
-            .order('completed_at', { ascending: false, nullsFirst: false });
+            .from("estates_statutory_completions")
+            .select("*")
+            .eq("organization_id", organizationId)
+            .eq("check_id", checkId)
+            .eq("compliance_domain", domainSlug)
+            .order("completed_at", { ascending: false, nullsFirst: false });
 
-          console.log('[CHECK DETAIL] Result:', {
+          console.log("[CHECK DETAIL] Result:", {
             count: data?.length || 0,
             error: error?.message,
             firstItem: data?.[0],
-            allCheckIds: data?.map(d => d.check_id),
-            allDomains: data?.map(d => d.compliance_domain),
+            allCheckIds: data?.map((d) => d.check_id),
+            allDomains: data?.map((d) => d.compliance_domain),
           });
 
           if (error) {
-            console.error('[CHECK DETAIL ERROR]', error);
-            setDebugInfo(prev => ({ ...prev, step: 'ERROR: ' + error.message }));
+            console.error("[CHECK DETAIL ERROR]", error);
+            setDebugInfo((prev) => ({
+              ...prev,
+              step: "ERROR: " + error.message,
+            }));
           } else {
             setCompletions(data || []);
-            setDebugInfo(prev => ({ ...prev, step: 'Loaded ' + (data?.length || 0) + ' completions', completionsCount: data?.length || 0 }));
+            setDebugInfo((prev) => ({
+              ...prev,
+              step: "Loaded " + (data?.length || 0) + " completions",
+              completionsCount: data?.length || 0,
+            }));
           }
         } catch (error) {
-          console.error('[CHECK DETAIL ERROR]', error);
-          setDebugInfo(prev => ({ ...prev, step: 'CATCH ERROR: ' + String(error) }));
+          console.error("[CHECK DETAIL ERROR]", error);
+          setDebugInfo((prev) => ({
+            ...prev,
+            step: "CATCH ERROR: " + String(error),
+          }));
         }
       } else {
-        console.log('[CHECK DETAIL] No organizationId, skipping fetch');
-        setDebugInfo(prev => ({ ...prev, step: 'No organizationId - showing without data' }));
+        console.log("[CHECK DETAIL] No organizationId, skipping fetch");
+        setDebugInfo((prev) => ({
+          ...prev,
+          step: "No organizationId - showing without data",
+        }));
       }
 
       clearTimeout(timeoutId);
       setLoading(false);
-      setDebugInfo(prev => ({ ...prev, step: 'DONE - Page ready' }));
-      console.log('[CHECK DETAIL] Initialization complete');
+      setDebugInfo((prev) => ({ ...prev, step: "DONE - Page ready" }));
+      console.log("[CHECK DETAIL] Initialization complete");
     }
 
     initializeData();
@@ -181,120 +224,129 @@ export default function CheckDetailPage() {
   }, [domainSlug, checkId, organizationId]);
 
   const getCurrentStatus = (): CheckStatus => {
-    return completions[0]?.status || 'pending';
+    return completions[0]?.status || "pending";
   };
 
   const getStatusInfo = (status: CheckStatus) => {
     switch (status) {
-      case 'completed':
+      case "completed":
         return {
-          label: 'Completed',
-          description: 'All documentation received',
-          color: '#10b981',
-          bg: 'bg-emerald-50 dark:bg-emerald-950/20',
+          label: "Completed",
+          description: "All documentation received",
+          color: "#10b981",
+          bg: "bg-emerald-50 dark:bg-emerald-950/20",
           icon: <Check className="w-4 h-4" />,
         };
-      case 'awaiting_documentation':
+      case "awaiting_documentation":
         return {
-          label: 'Awaiting Docs',
-          description: 'Check done, waiting for documents',
-          color: '#f59e0b',
-          bg: 'bg-amber-50 dark:bg-amber-950/20',
+          label: "Awaiting Docs",
+          description: "Check done, waiting for documents",
+          color: "#f59e0b",
+          bg: "bg-amber-50 dark:bg-amber-950/20",
           icon: <Hourglass className="w-4 h-4" />,
         };
-      case 'pending':
+      case "pending":
         return {
-          label: 'Pending',
-          description: 'Not yet started',
-          color: '#6b7280',
-          bg: 'bg-gray-50 dark:bg-gray-950/20',
+          label: "Pending",
+          description: "Not yet started",
+          color: "#6b7280",
+          bg: "bg-gray-50 dark:bg-gray-950/20",
           icon: <Clock className="w-4 h-4" />,
         };
-      case 'overdue':
+      case "overdue":
         return {
-          label: 'Overdue',
-          description: 'Past due date',
-          color: '#ef4444',
-          bg: 'bg-red-50 dark:bg-red-950/20',
+          label: "Overdue",
+          description: "Past due date",
+          color: "#ef4444",
+          bg: "bg-red-50 dark:bg-red-950/20",
           icon: <AlertTriangle className="w-4 h-4" />,
         };
-      case 'in_progress':
+      case "in_progress":
         return {
-          label: 'In Progress',
-          description: 'Currently being completed',
-          color: '#3b82f6',
-          bg: 'bg-blue-50 dark:bg-blue-950/20',
+          label: "In Progress",
+          description: "Currently being completed",
+          color: "#3b82f6",
+          bg: "bg-blue-50 dark:bg-blue-950/20",
           icon: <Clock className="w-4 h-4" />,
         };
       default:
         return {
-          label: 'Unknown',
-          description: 'Status unknown',
-          color: '#6b7280',
-          bg: 'bg-gray-50 dark:bg-gray-950/20',
+          label: "Unknown",
+          description: "Status unknown",
+          color: "#6b7280",
+          bg: "bg-gray-50 dark:bg-gray-950/20",
           icon: <Clock className="w-4 h-4" />,
         };
     }
   };
 
   const formatDate = (dateStr?: string) => {
-    if (!dateStr) return 'Never';
-    return new Date(dateStr).toLocaleDateString('en-GB', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
+    if (!dateStr) return "Never";
+    return new Date(dateStr).toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
     });
   };
 
   const formatDateTime = (dateStr?: string) => {
-    if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleDateString('en-GB', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+    if (!dateStr) return "-";
+    return new Date(dateStr).toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
   const getDaysUntil = (dateStr?: string) => {
-    if (!dateStr) return '-';
-    const days = Math.ceil((new Date(dateStr).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    if (!dateStr) return "-";
+    const days = Math.ceil(
+      (new Date(dateStr).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+    );
     if (days < 0) return `${Math.abs(days)}d overdue`;
-    if (days === 0) return 'Today';
-    if (days === 1) return 'Tomorrow';
+    if (days === 0) return "Today";
+    if (days === 1) return "Tomorrow";
     return `${days}d left`;
   };
 
   const handleMarkComplete = async () => {
     if (!organizationId) {
-      alert('You must be logged in to complete a check');
+      alert("You must be logged in to complete a check");
       return;
     }
 
     try {
       // Get auth session for API call
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       };
       if (session?.access_token) {
-        headers['Authorization'] = `Bearer ${session.access_token}`;
+        headers["Authorization"] = `Bearer ${session.access_token}`;
       }
 
-      console.log('[CHECK DETAIL] Completing check:', { checkId, domainSlug, hasToken: !!session?.access_token });
+      console.log("[CHECK DETAIL] Completing check:", {
+        checkId,
+        domainSlug,
+        hasToken: !!session?.access_token,
+      });
 
-      const response = await fetch('/api/estates/statutory-completions', {
-        method: 'POST',
+      const response = await fetch("/api/estates/statutory-completions", {
+        method: "POST",
         headers,
         body: JSON.stringify({
           organization_id: organizationId,
-          action: 'complete',
+          action: "complete",
           check_id: checkId,
           check_data: {
             compliance_domain: domainSlug,
-            status: 'completed',
-            completion_notes: 'Documents received and verified. Check marked as complete.',
+            status: "completed",
+            completion_notes:
+              "Documents received and verified. Check marked as complete.",
             documents_received: true,
             evidence_ids: [],
           },
@@ -303,48 +355,60 @@ export default function CheckDetailPage() {
 
       if (!response.ok) {
         const error = await response.json();
-        console.error('[CHECK DETAIL] Complete failed:', response.status, error);
-        throw new Error(error.error || 'Failed to mark as complete');
+        console.error(
+          "[CHECK DETAIL] Complete failed:",
+          response.status,
+          error,
+        );
+        throw new Error(error.error || "Failed to mark as complete");
       }
 
       const result = await response.json();
-      console.log('[CHECK DETAIL] Complete success:', result);
+      console.log("[CHECK DETAIL] Complete success:", result);
 
-      alert('✅ Check marked as complete with all documentation received!');
+      alert("✅ Check marked as complete with all documentation received!");
       router.refresh();
-
     } catch (error) {
-      console.error('[COMPLETION ERROR]', error);
-      alert(`❌ Error: ${error instanceof Error ? error.message : 'Failed to save completion'}`);
+      console.error("[COMPLETION ERROR]", error);
+      alert(
+        `❌ Error: ${error instanceof Error ? error.message : "Failed to save completion"}`,
+      );
     }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-indigo-950 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-teal-50 dark:from-gray-950 dark:via-gray-900 dark:to-teal-950 flex items-center justify-center">
         <div className="text-center">
           <motion.div
             animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-            className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full mx-auto"
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            className="w-12 h-12 border-4 border-teal-200 border-t-teal-600 rounded-full mx-auto"
           />
-          <p className="mt-4 text-gray-600 dark:text-gray-400 font-medium">Loading check details...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400 font-medium">
+            Loading check details...
+          </p>
 
           {/* Debug Panel - Visible for user without console access */}
-          <div className="mt-6 mx-auto max-w-md text-left bg-white dark:bg-gray-800 rounded-lg border-2 border-indigo-200 dark:border-indigo-800 p-4 shadow-lg">
-            <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400 mb-2">🔍 DEBUG INFO:</p>
+          <div className="mt-6 mx-auto max-w-md text-left bg-white dark:bg-gray-800 rounded-lg border-2 border-teal-200 dark:border-teal-800 p-4 shadow-lg">
+            <p className="text-xs font-bold text-teal-600 dark:text-teal-400 mb-2">
+              🔍 DEBUG INFO:
+            </p>
             <div className="space-y-1 text-xs font-mono">
               <p className="text-gray-700 dark:text-gray-300">
                 <span className="font-semibold">Step:</span> {debugInfo.step}
               </p>
               <p className="text-gray-700 dark:text-gray-300">
-                <span className="font-semibold">Organization ID:</span> {debugInfo.organizationId?.substring(0, 8) || 'none'}...
+                <span className="font-semibold">Organization ID:</span>{" "}
+                {debugInfo.organizationId?.substring(0, 8) || "none"}...
               </p>
               <p className="text-gray-700 dark:text-gray-300">
-                <span className="font-semibold">Check Found:</span> {debugInfo.hasCheck ? '✅ Yes' : '❌ No'}
+                <span className="font-semibold">Check Found:</span>{" "}
+                {debugInfo.hasCheck ? "✅ Yes" : "❌ No"}
               </p>
               <p className="text-gray-700 dark:text-gray-300">
-                <span className="font-semibold">Completions:</span> {debugInfo.completionsCount}
+                <span className="font-semibold">Completions:</span>{" "}
+                {debugInfo.completionsCount}
               </p>
             </div>
           </div>
@@ -364,7 +428,7 @@ export default function CheckDetailPage() {
   const currentCompletion = completions[0];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-indigo-950">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-teal-50 dark:from-gray-950 dark:via-gray-900 dark:to-teal-950">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
         {/* Header */}
         <BlurFade delay={0} duration={0.5}>
@@ -402,12 +466,14 @@ export default function CheckDetailPage() {
             >
               <div
                 className="p-2 rounded-lg"
-                style={{ backgroundColor: statusInfo.color, color: '#fff' }}
+                style={{ backgroundColor: statusInfo.color, color: "#fff" }}
               >
                 {statusInfo.icon}
               </div>
               <div>
-                <p className="text-xs font-semibold text-gray-600 dark:text-gray-400">Status</p>
+                <p className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+                  Status
+                </p>
                 <p className="text-sm font-bold text-gray-900 dark:text-white">
                   {statusInfo.label}
                 </p>
@@ -419,37 +485,69 @@ export default function CheckDetailPage() {
         {/* Key Stats - Compact Row */}
         <BlurFade delay={0.2} duration={0.5}>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-            <MagicCard className="p-3 text-center" gradientColor="#3b82f6" gradientOpacity={0.05}>
-              <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Next Due</p>
-              <p className="text-lg font-bold text-gray-900 dark:text-white">
-                {currentCompletion?.next_due ? formatDate(currentCompletion.next_due) : 'Not set'}
+            <MagicCard
+              className="p-3 text-center"
+              gradientColor="#3b82f6"
+              gradientOpacity={0.05}
+            >
+              <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
+                Next Due
               </p>
-              <p className={`text-xs font-semibold ${currentCompletion && new Date(currentCompletion.next_due) < new Date()
-                ? 'text-red-600 dark:text-red-400'
-                : 'text-gray-500 dark:text-gray-400'
-                }`}>
+              <p className="text-lg font-bold text-gray-900 dark:text-white">
+                {currentCompletion?.next_due
+                  ? formatDate(currentCompletion.next_due)
+                  : "Not set"}
+              </p>
+              <p
+                className={`text-xs font-semibold ${
+                  currentCompletion &&
+                  new Date(currentCompletion.next_due) < new Date()
+                    ? "text-red-600 dark:text-red-400"
+                    : "text-gray-500 dark:text-gray-400"
+                }`}
+              >
                 {getDaysUntil(currentCompletion?.next_due)}
               </p>
             </MagicCard>
 
-            <MagicCard className="p-3 text-center" gradientColor="#8b5cf6" gradientOpacity={0.05}>
-              <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Frequency</p>
+            <MagicCard
+              className="p-3 text-center"
+              gradientColor="#8b5cf6"
+              gradientOpacity={0.05}
+            >
+              <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
+                Frequency
+              </p>
               <p className="text-lg font-bold text-gray-900 dark:text-white capitalize">
-                {check.frequency.replace('_', ' ')}
+                {check.frequency.replace("_", " ")}
               </p>
             </MagicCard>
 
-            <MagicCard className="p-3 text-center" gradientColor="#10b981" gradientOpacity={0.05}>
-              <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Last Done</p>
+            <MagicCard
+              className="p-3 text-center"
+              gradientColor="#10b981"
+              gradientOpacity={0.05}
+            >
+              <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
+                Last Done
+              </p>
               <p className="text-lg font-bold text-gray-900 dark:text-white">
-                {currentCompletion ? formatDate(currentCompletion.completed_at) : 'Never'}
+                {currentCompletion
+                  ? formatDate(currentCompletion.completed_at)
+                  : "Never"}
               </p>
             </MagicCard>
 
-            <MagicCard className="p-3 text-center" gradientColor="#f59e0b" gradientOpacity={0.05}>
-              <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Category</p>
+            <MagicCard
+              className="p-3 text-center"
+              gradientColor="#f59e0b"
+              gradientOpacity={0.05}
+            >
+              <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
+                Category
+              </p>
               <p className="text-lg font-bold text-gray-900 dark:text-white capitalize">
-                {check.category === 'statutory' ? 'Required' : 'Advisory'}
+                {check.category === "statutory" ? "Required" : "Advisory"}
               </p>
             </MagicCard>
           </div>
@@ -459,16 +557,25 @@ export default function CheckDetailPage() {
         <BlurFade delay={0.3} duration={0.5}>
           <div className="flex gap-2 mb-6 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl">
             {[
-              { id: 'overview', label: 'Overview', icon: <FileText className="w-4 h-4" /> },
-              { id: 'history', label: 'History', icon: <History className="w-4 h-4" /> },
+              {
+                id: "overview",
+                label: "Overview",
+                icon: <FileText className="w-4 h-4" />,
+              },
+              {
+                id: "history",
+                label: "History",
+                icon: <History className="w-4 h-4" />,
+              },
             ].map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${activeTab === tab.id
-                  ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                  }`}
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                  activeTab === tab.id
+                    ? "bg-white dark:bg-gray-700 text-teal-600 dark:text-teal-400 shadow-sm"
+                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+                }`}
               >
                 {tab.icon}
                 {tab.label}
@@ -480,7 +587,7 @@ export default function CheckDetailPage() {
         {/* Tab Content */}
         <AnimatePresence mode="wait">
           {/* Overview Tab */}
-          {activeTab === 'overview' && (
+          {activeTab === "overview" && (
             <motion.div
               key="overview"
               initial={{ opacity: 0, y: 10 }}
@@ -490,9 +597,13 @@ export default function CheckDetailPage() {
               className="space-y-4"
             >
               {/* Regulation Card */}
-              <MagicCard className="p-5" gradientColor="#6366f1" gradientOpacity={0.08}>
+              <MagicCard
+                className="p-5"
+                gradientColor="#6366f1"
+                gradientOpacity={0.08}
+              >
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                  <FileText className="w-5 h-5 text-teal-600 dark:text-teal-400" />
                   Regulation & Requirements
                 </h3>
                 <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
@@ -504,7 +615,7 @@ export default function CheckDetailPage() {
                     <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
                       Regulatory Reference
                     </p>
-                    <p className="font-mono text-sm text-indigo-700 dark:text-indigo-400 font-bold">
+                    <p className="font-mono text-sm text-teal-700 dark:text-teal-400 font-bold">
                       {check.reference}
                     </p>
                   </div>
@@ -515,7 +626,7 @@ export default function CheckDetailPage() {
                     href={check.referenceUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 font-semibold text-sm transition-colors"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-teal-600 text-white hover:bg-teal-700 font-semibold text-sm transition-colors"
                   >
                     <ExternalLink className="w-4 h-4" />
                     View Official Guidance
@@ -536,7 +647,11 @@ export default function CheckDetailPage() {
 
               {/* Evidence Required */}
               {check.evidenceRequired && check.evidenceRequired.length > 0 && (
-                <MagicCard className="p-5" gradientColor="#10b981" gradientOpacity={0.05}>
+                <MagicCard
+                  className="p-5"
+                  gradientColor="#10b981"
+                  gradientOpacity={0.05}
+                >
                   <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
                     <FileCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                     Required Evidence
@@ -545,7 +660,9 @@ export default function CheckDetailPage() {
                     {check.evidenceRequired.map((evidence, idx) => (
                       <li key={idx} className="flex items-start gap-2">
                         <Check className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
-                        <span className="text-sm text-gray-700 dark:text-gray-300">{evidence}</span>
+                        <span className="text-sm text-gray-700 dark:text-gray-300">
+                          {evidence}
+                        </span>
                       </li>
                     ))}
                   </ul>
@@ -555,7 +672,7 @@ export default function CheckDetailPage() {
           )}
 
           {/* History Tab */}
-          {activeTab === 'history' && (
+          {activeTab === "history" && (
             <motion.div
               key="history"
               initial={{ opacity: 0, y: 10 }}
@@ -596,12 +713,15 @@ export default function CheckDetailPage() {
                           </div>
                           <span
                             className="px-2 py-0.5 rounded-md text-xs font-semibold text-white"
-                            style={{ backgroundColor: getStatusInfo(record.status).color }}
+                            style={{
+                              backgroundColor: getStatusInfo(record.status)
+                                .color,
+                            }}
                           >
                             {getStatusInfo(record.status).label}
                           </span>
                           {idx === 0 && (
-                            <span className="px-2 py-0.5 rounded-md text-xs font-semibold bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300">
+                            <span className="px-2 py-0.5 rounded-md text-xs font-semibold bg-teal-100 dark:bg-teal-900/50 text-teal-700 dark:text-teal-300">
                               Current
                             </span>
                           )}
@@ -609,7 +729,10 @@ export default function CheckDetailPage() {
 
                         <div className="space-y-1">
                           <p className="text-xs text-gray-600 dark:text-gray-400">
-                            By <span className="font-semibold text-gray-900 dark:text-gray-200">{record.completed_by}</span>
+                            By{" "}
+                            <span className="font-semibold text-gray-900 dark:text-gray-200">
+                              {record.completed_by}
+                            </span>
                           </p>
                           <p className="text-xs text-gray-600 dark:text-gray-400">
                             {formatDateTime(record.completed_at)}
@@ -623,14 +746,22 @@ export default function CheckDetailPage() {
                       </div>
 
                       <div className="shrink-0 text-right">
-                        <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Next Due</p>
-                        <p className="text-sm font-bold text-gray-900 dark:text-white">
-                          {record.next_due ? formatDate(record.next_due) : 'Not set'}
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                          Next Due
                         </p>
-                        <p className={`text-xs font-semibold ${record.next_due && new Date(record.next_due) < new Date()
-                          ? 'text-red-600 dark:text-red-400'
-                          : 'text-gray-500 dark:text-gray-400'
-                          }`}>
+                        <p className="text-sm font-bold text-gray-900 dark:text-white">
+                          {record.next_due
+                            ? formatDate(record.next_due)
+                            : "Not set"}
+                        </p>
+                        <p
+                          className={`text-xs font-semibold ${
+                            record.next_due &&
+                            new Date(record.next_due) < new Date()
+                              ? "text-red-600 dark:text-red-400"
+                              : "text-gray-500 dark:text-gray-400"
+                          }`}
+                        >
                           {getDaysUntil(record.next_due)}
                         </p>
                       </div>
@@ -646,7 +777,7 @@ export default function CheckDetailPage() {
         <BlurFade delay={0.4} duration={0.5}>
           <div className="sticky bottom-4 mt-6">
             <div className="flex flex-wrap justify-center gap-3 p-4 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700">
-              {currentStatus === 'awaiting_documentation' && (
+              {currentStatus === "awaiting_documentation" && (
                 <div className="relative overflow-hidden rounded-full">
                   <BorderBeam size={300} duration={8} delay={0} />
                   <ShimmerButton
@@ -659,12 +790,12 @@ export default function CheckDetailPage() {
                 </div>
               )}
 
-              {(currentStatus === 'pending' || currentStatus === 'overdue') && (
+              {(currentStatus === "pending" || currentStatus === "overdue") && (
                 <div className="relative overflow-hidden rounded-full">
                   <BorderBeam size={300} duration={8} delay={0} />
                   <ShimmerButton
                     onClick={handleMarkComplete}
-                    className="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+                    className="px-5 py-2.5 bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800"
                   >
                     <Check className="w-4 h-4 mr-2" />
                     Complete Check
@@ -676,14 +807,27 @@ export default function CheckDetailPage() {
         </BlurFade>
 
         {/* Debug Footer - Always visible for troubleshooting */}
-        <div className="fixed bottom-0 left-0 right-0 bg-indigo-600 text-white text-xs py-2 px-4 font-mono z-50">
+        <div className="fixed bottom-0 left-0 right-0 bg-teal-600 text-white text-xs py-2 px-4 font-mono z-50">
           <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-1">
-            <span>🔍 <strong>Step:</strong> {debugInfo.step}</span>
-            <span><strong>Domain:</strong> {domainSlug}</span>
-            <span><strong>CheckID:</strong> {checkId}</span>
-            <span><strong>Org:</strong> {debugInfo.organizationId?.substring(0, 8) || 'none'}...</span>
-            <span><strong>Check:</strong> {debugInfo.hasCheck ? '✅' : '❌'}</span>
-            <span><strong>Completions:</strong> {debugInfo.completionsCount}</span>
+            <span>
+              🔍 <strong>Step:</strong> {debugInfo.step}
+            </span>
+            <span>
+              <strong>Domain:</strong> {domainSlug}
+            </span>
+            <span>
+              <strong>CheckID:</strong> {checkId}
+            </span>
+            <span>
+              <strong>Org:</strong>{" "}
+              {debugInfo.organizationId?.substring(0, 8) || "none"}...
+            </span>
+            <span>
+              <strong>Check:</strong> {debugInfo.hasCheck ? "✅" : "❌"}
+            </span>
+            <span>
+              <strong>Completions:</strong> {debugInfo.completionsCount}
+            </span>
           </div>
         </div>
       </div>

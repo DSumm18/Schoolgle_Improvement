@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * Domain Detail Page - Redesigned
@@ -15,9 +15,9 @@
  * @version 2.0 - Fixed imports
  */
 
-import { useState, useEffect } from 'react';
-import { useParams, notFound } from 'next/navigation';
-import Link from 'next/link';
+import { useState, useEffect } from "react";
+import { useParams, notFound } from "next/navigation";
+import Link from "next/link";
 import {
   ArrowLeft,
   Check,
@@ -29,9 +29,9 @@ import {
   Filter,
   Search,
   ChevronRight,
-} from 'lucide-react';
-import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/context/SupabaseAuthContext';
+} from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/context/SupabaseAuthContext";
 import {
   DOMAIN_METADATA,
   getChecksForDomain,
@@ -40,11 +40,11 @@ import {
   type StatutoryCheck,
   type CheckStatus,
   type CheckCategory,
-} from '@/lib/estates-compliance/statutory-checks';
-import { MagicCard } from '@/components/magicui/magic-card';
-import { ShimmerButton } from '@/components/magicui/shimmer-button';
-import { BlurFade } from '@/components/magicui/blur-fade';
-import { motion, AnimatePresence } from 'framer-motion';
+} from "@/lib/estates-compliance/statutory-checks";
+import { MagicCard } from "@/components/magicui/magic-card";
+import { ShimmerButton } from "@/components/magicui/shimmer-button";
+import { BlurFade } from "@/components/magicui/blur-fade";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface CheckCompletion {
   checkId: string;
@@ -52,36 +52,50 @@ interface CheckCompletion {
   lastCompleted?: string;
   nextDue?: string;
   completedBy?: string;
-  ragStatus?: 'red' | 'amber' | 'green';
+  ragStatus?: "red" | "amber" | "green";
   notes?: string;
 }
 
 const getStatusColor = (status: CheckStatus): string => {
   switch (status) {
-    case 'completed': return '#10b981';
-    case 'pending': return '#f59e0b';
-    case 'overdue': return '#ef4444';
-    case 'in_progress': return '#3b82f6';
-    default: return '#6b7280';
+    case "completed":
+      return "#10b981";
+    case "pending":
+      return "#f59e0b";
+    case "overdue":
+      return "#ef4444";
+    case "in_progress":
+      return "#3b82f6";
+    default:
+      return "#6b7280";
   }
 };
 
 const getStatusBg = (status: CheckStatus): string => {
   switch (status) {
-    case 'completed': return 'bg-emerald-50 dark:bg-emerald-950/20';
-    case 'pending': return 'bg-amber-50 dark:bg-amber-950/20';
-    case 'overdue': return 'bg-red-50 dark:bg-red-950/20';
-    case 'in_progress': return 'bg-blue-50 dark:bg-blue-950/20';
-    default: return 'bg-gray-50 dark:bg-gray-950/20';
+    case "completed":
+      return "bg-emerald-50 dark:bg-emerald-950/20";
+    case "pending":
+      return "bg-amber-50 dark:bg-amber-950/20";
+    case "overdue":
+      return "bg-red-50 dark:bg-red-950/20";
+    case "in_progress":
+      return "bg-blue-50 dark:bg-blue-950/20";
+    default:
+      return "bg-gray-50 dark:bg-gray-950/20";
   }
 };
 
 const getCategoryColor = (category: CheckCategory): string => {
   switch (category) {
-    case 'statutory': return '#dc2626';
-    case 'good_practice': return '#d97706';
-    case 'custom': return '#2563eb';
-    default: return '#6b7280';
+    case "statutory":
+      return "#dc2626";
+    case "good_practice":
+      return "#d97706";
+    case "custom":
+      return "#2563eb";
+    default:
+      return "#6b7280";
   }
 };
 
@@ -98,10 +112,14 @@ export default function DomainPage() {
   const metadata = DOMAIN_METADATA[domainSlug];
   const checks = getChecksForDomain(domainSlug);
 
-  const [completions, setCompletions] = useState<Record<string, CheckCompletion>>({});
-  const [filterStatus, setFilterStatus] = useState<CheckStatus | 'all'>('all');
-  const [filterCategory, setFilterCategory] = useState<CheckCategory | 'all'>('all');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [completions, setCompletions] = useState<
+    Record<string, CheckCompletion>
+  >({});
+  const [filterStatus, setFilterStatus] = useState<CheckStatus | "all">("all");
+  const [filterCategory, setFilterCategory] = useState<CheckCategory | "all">(
+    "all",
+  );
+  const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -119,7 +137,7 @@ export default function DomainPage() {
 
     // Global timeout for entire fetch process
     const globalTimeoutId = setTimeout(() => {
-      console.warn('[DomainPage] ⏱️ GLOBAL TIMEOUT - forcing ready state');
+      console.warn("[DomainPage] ⏱️ GLOBAL TIMEOUT - forcing ready state");
       ensureLoadingCleared();
     }, 35000); // 35 second max
 
@@ -133,26 +151,31 @@ export default function DomainPage() {
       setLoading(true);
 
       // Add timeout to prevent hanging requests
-      const timeoutId = setTimeout(() => controller.abort('Request timed out'), 25000);
+      const timeoutId = setTimeout(
+        () => controller.abort("Request timed out"),
+        25000,
+      );
 
       try {
-        console.log('[DomainPage] Fetching completions for:', domainSlug);
+        console.log("[DomainPage] Fetching completions for:", domainSlug);
 
         // Get auth session for API call
-        const { data: { session } } = await supabase.auth.getSession();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
         const headers: Record<string, string> = {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         };
         if (session?.access_token) {
-          headers['Authorization'] = `Bearer ${session.access_token}`;
+          headers["Authorization"] = `Bearer ${session.access_token}`;
         }
 
         const response = await fetch(
           `/api/estates/statutory-completions?organization_id=${organizationId}&domain=${domainSlug}`,
           {
             headers,
-            signal: controller.signal
-          }
+            signal: controller.signal,
+          },
         );
 
         clearTimeout(timeoutId);
@@ -166,7 +189,7 @@ export default function DomainPage() {
 
         if (mounted) {
           const data = result.completions || [];
-          console.log('[DomainPage] Fetched', data.length, 'completions');
+          console.log("[DomainPage] Fetched", data.length, "completions");
 
           // Group by check_id and get the latest completion
           const completionsMap: Record<string, CheckCompletion> = {};
@@ -176,7 +199,7 @@ export default function DomainPage() {
             if (!completionsMap[checkId]) {
               completionsMap[checkId] = {
                 checkId,
-                status: completion.status || 'pending',
+                status: completion.status || "pending",
                 lastCompleted: completion.completed_at,
                 compleatedBy: completion.completed_by,
                 ragStatus: completion.rag_status,
@@ -190,10 +213,13 @@ export default function DomainPage() {
       } catch (error: any) {
         clearTimeout(timeoutId);
         if (mounted) {
-          if (error.name === 'AbortError' || error?.message?.includes('aborted')) {
-            console.warn('[DomainPage] Request timed out');
+          if (
+            error.name === "AbortError" ||
+            error?.message?.includes("aborted")
+          ) {
+            console.warn("[DomainPage] Request timed out");
           } else {
-            console.error('[DomainPage] Completion fetch error:', error);
+            console.error("[DomainPage] Completion fetch error:", error);
           }
         }
       } finally {
@@ -213,8 +239,11 @@ export default function DomainPage() {
 
   const filteredChecks = checks.filter((check) => {
     const completion = completions[check.id];
-    const statusMatch = filterStatus === 'all' || (completion?.status || 'pending') === filterStatus;
-    const categoryMatch = filterCategory === 'all' || check.category === filterCategory;
+    const statusMatch =
+      filterStatus === "all" ||
+      (completion?.status || "pending") === filterStatus;
+    const categoryMatch =
+      filterCategory === "all" || check.category === filterCategory;
     const searchMatch =
       !searchQuery ||
       check.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -223,25 +252,41 @@ export default function DomainPage() {
   });
 
   const formatDate = (dateStr?: string) => {
-    if (!dateStr) return 'Never';
-    return new Date(dateStr).toLocaleDateString('en-GB', {
-      day: 'numeric',
-      month: 'short',
+    if (!dateStr) return "Never";
+    return new Date(dateStr).toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "short",
     });
   };
 
-  const completedCount = Object.values(completions).filter((c) => c.status === 'completed').length;
-  const overdueCount = Object.values(completions).filter((c) => c.status === 'overdue').length;
+  const completedCount = Object.values(completions).filter(
+    (c) => c.status === "completed",
+  ).length;
+  const overdueCount = Object.values(completions).filter(
+    (c) => c.status === "overdue",
+  ).length;
 
   const stats = [
-    { label: 'Total', value: checks.length, color: 'from-slate-500 to-slate-600' },
-    { label: 'Done', value: completedCount, color: 'from-emerald-500 to-emerald-600' },
-    { label: 'Pending', value: checks.length - completedCount - overdueCount, color: 'from-amber-500 to-amber-600' },
-    { label: 'Overdue', value: overdueCount, color: 'from-red-500 to-red-600' },
+    {
+      label: "Total",
+      value: checks.length,
+      color: "from-slate-500 to-slate-600",
+    },
+    {
+      label: "Done",
+      value: completedCount,
+      color: "from-emerald-500 to-emerald-600",
+    },
+    {
+      label: "Pending",
+      value: checks.length - completedCount - overdueCount,
+      color: "from-amber-500 to-amber-600",
+    },
+    { label: "Overdue", value: overdueCount, color: "from-red-500 to-red-600" },
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-indigo-950">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-teal-50 dark:from-gray-950 dark:via-gray-900 dark:to-teal-950">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
         {/* Header */}
         <BlurFade delay={0} duration={0.5}>
@@ -276,7 +321,7 @@ export default function DomainPage() {
             >
               <ShimmerButton
                 shimmerColor="#ffffff"
-                className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+                className="px-4 py-2 bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Add Check
@@ -301,7 +346,9 @@ export default function DomainPage() {
                   <p className="text-xs font-semibold text-white/90 uppercase tracking-wide">
                     {stat.label}
                   </p>
-                  <p className="text-2xl sm:text-3xl font-bold text-white">{stat.value}</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-white">
+                    {stat.value}
+                  </p>
                 </div>
               </motion.div>
             ))}
@@ -314,8 +361,10 @@ export default function DomainPage() {
             <Filter className="w-4 h-4 text-gray-500 dark:text-gray-400 shrink-0" />
             <select
               value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value as CheckStatus | 'all')}
-              className="px-3 py-1.5 rounded-lg bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              onChange={(e) =>
+                setFilterStatus(e.target.value as CheckStatus | "all")
+              }
+              className="px-3 py-1.5 rounded-lg bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-teal-500 focus:border-transparent"
             >
               <option value="all">All Statuses</option>
               <option value="completed">Completed</option>
@@ -326,8 +375,10 @@ export default function DomainPage() {
 
             <select
               value={filterCategory}
-              onChange={(e) => setFilterCategory(e.target.value as CheckCategory | 'all')}
-              className="px-3 py-1.5 rounded-lg bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              onChange={(e) =>
+                setFilterCategory(e.target.value as CheckCategory | "all")
+              }
+              className="px-3 py-1.5 rounded-lg bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-teal-500 focus:border-transparent"
             >
               <option value="all">All Categories</option>
               <option value="statutory">Statutory</option>
@@ -342,7 +393,7 @@ export default function DomainPage() {
                 placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-3 py-1.5 rounded-lg bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-sm font-medium text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full pl-9 pr-3 py-1.5 rounded-lg bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-sm font-medium text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:ring-2 focus:ring-teal-500 focus:border-transparent"
               />
             </div>
           </div>
@@ -353,10 +404,12 @@ export default function DomainPage() {
           <div className="flex flex-col items-center justify-center py-20">
             <motion.div
               animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-              className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full"
+              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+              className="w-10 h-10 border-4 border-teal-200 border-t-teal-600 rounded-full"
             />
-            <p className="mt-4 text-gray-600 dark:text-gray-400 font-medium">Loading checks...</p>
+            <p className="mt-4 text-gray-600 dark:text-gray-400 font-medium">
+              Loading checks...
+            </p>
           </div>
         ) : filteredChecks.length === 0 ? (
           <BlurFade delay={0.4} duration={0.5}>
@@ -370,11 +423,11 @@ export default function DomainPage() {
               </p>
               <button
                 onClick={() => {
-                  setFilterStatus('all');
-                  setFilterCategory('all');
-                  setSearchQuery('');
+                  setFilterStatus("all");
+                  setFilterCategory("all");
+                  setSearchQuery("");
                 }}
-                className="px-4 py-2 rounded-lg bg-indigo-600 text-white font-medium text-sm hover:bg-indigo-700 transition-colors"
+                className="px-4 py-2 rounded-lg bg-teal-600 text-white font-medium text-sm hover:bg-teal-700 transition-colors"
               >
                 Clear Filters
               </button>
@@ -385,11 +438,17 @@ export default function DomainPage() {
             <AnimatePresence mode="popLayout">
               {filteredChecks.map((check, index) => {
                 const completion = completions[check.id];
-                const status = completion?.status || 'pending';
+                const status = completion?.status || "pending";
 
                 return (
-                  <BlurFade key={check.id} delay={0.4 + index * 0.05} duration={0.4}>
-                    <Link href={`/estates-compliance/${domainSlug}/${check.id}`}>
+                  <BlurFade
+                    key={check.id}
+                    delay={0.4 + index * 0.05}
+                    duration={0.4}
+                  >
+                    <Link
+                      href={`/estates-compliance/${domainSlug}/${check.id}`}
+                    >
                       <MagicCard
                         className="p-4 cursor-pointer hover:scale-[1.01] transition-transform duration-200"
                         gradientColor={getStatusColor(status)}
@@ -404,11 +463,24 @@ export default function DomainPage() {
                               color: getStatusColor(status),
                             }}
                           >
-                            {status === 'completed' && <Check className="w-5 h-5" />}
-                            {status === 'pending' && <Clock className="w-5 h-5" />}
-                            {status === 'overdue' && <AlertTriangle className="w-5 h-5" />}
-                            {status === 'in_progress' && <Clock className="w-5 h-5" />}
-                            {!['completed', 'pending', 'overdue', 'in_progress'].includes(status) && <Clock className="w-5 h-5" />}
+                            {status === "completed" && (
+                              <Check className="w-5 h-5" />
+                            )}
+                            {status === "pending" && (
+                              <Clock className="w-5 h-5" />
+                            )}
+                            {status === "overdue" && (
+                              <AlertTriangle className="w-5 h-5" />
+                            )}
+                            {status === "in_progress" && (
+                              <Clock className="w-5 h-5" />
+                            )}
+                            {![
+                              "completed",
+                              "pending",
+                              "overdue",
+                              "in_progress",
+                            ].includes(status) && <Clock className="w-5 h-5" />}
                           </div>
 
                           {/* Content */}
@@ -429,12 +501,15 @@ export default function DomainPage() {
                               <span
                                 className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold text-white"
                                 style={{
-                                  backgroundColor: getCategoryColor(check.category),
+                                  backgroundColor: getCategoryColor(
+                                    check.category,
+                                  ),
                                 }}
                               >
-                                {check.category === 'statutory' && 'Required'}
-                                {check.category === 'good_practice' && 'Good Practice'}
-                                {check.category === 'custom' && 'Custom'}
+                                {check.category === "statutory" && "Required"}
+                                {check.category === "good_practice" &&
+                                  "Good Practice"}
+                                {check.category === "custom" && "Custom"}
                               </span>
 
                               <span
@@ -443,7 +518,7 @@ export default function DomainPage() {
                                   backgroundColor: getStatusColor(status),
                                 }}
                               >
-                                {status.replace('_', ' ').toUpperCase()}
+                                {status.replace("_", " ").toUpperCase()}
                               </span>
 
                               <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">

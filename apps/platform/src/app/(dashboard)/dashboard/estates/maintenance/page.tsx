@@ -1,79 +1,110 @@
+"use client";
+
+import { Hammer, Clock, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Hammer, ArrowLeft, Clock, AlertCircle } from "lucide-react";
-import Link from "next/link";
+import {
+  ModulePageHeader,
+  getModuleColors,
+} from "@/components/ui/module-page-header";
 
 export default function MaintenancePage() {
-    return (
-        <div className="p-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <div className="flex items-center gap-4">
-                <Link href="/dashboard/estates">
-                    <Button variant="ghost" size="icon" className="rounded-full">
-                        <ArrowLeft className="h-5 w-5" />
-                    </Button>
-                </Link>
-                <div>
-                    <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Maintenance & Helpdesk</h1>
-                    <p className="text-slate-500 font-medium">Manage reactive repairs and planned preventative maintenance.</p>
-                </div>
-            </div>
+  const colors = getModuleColors("estates");
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Card className="border-0 shadow-lg shadow-slate-200/50 rounded-[2rem] bg-amber-50 dark:bg-amber-900/10 border-l-4 border-amber-500">
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-black uppercase tracking-widest text-amber-600">Pending Tasks</CardTitle>
-                        <CardTitle className="text-3xl font-black text-amber-900">12</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-xs font-bold text-amber-700/60 uppercase">4 high priority</p>
-                    </CardContent>
-                </Card>
-                <Card className="border-0 shadow-lg shadow-slate-200/50 rounded-[2rem] bg-indigo-50 dark:bg-indigo-900/10 border-l-4 border-indigo-500">
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-black uppercase tracking-widest text-indigo-600">Active PPM</CardTitle>
-                        <CardTitle className="text-3xl font-black text-indigo-900">18</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-xs font-bold text-indigo-700/60 uppercase">Scheduled this month</p>
-                    </CardContent>
-                </Card>
-                <Card className="border-0 shadow-lg shadow-slate-200/50 rounded-[2rem] bg-emerald-50 dark:bg-emerald-900/10 border-l-4 border-emerald-500">
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-black uppercase tracking-widest text-emerald-600">Completed</CardTitle>
-                        <CardTitle className="text-3xl font-black text-emerald-900">45</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-xs font-bold text-emerald-700/60 uppercase">Last 30 days</p>
-                    </CardContent>
-                </Card>
-            </div>
+  return (
+    <div className="p-6 md:p-8 space-y-6 min-h-screen max-w-[1600px] mx-auto">
+      <ModulePageHeader
+        moduleId="estates"
+        icon={Hammer}
+        label="Estates Management"
+        title="Maintenance & Helpdesk"
+        description="Manage reactive repairs and planned preventative maintenance."
+      />
 
-            <Card className="border-0 shadow-xl rounded-[2.5rem] overflow-hidden">
-                <CardHeader className="bg-slate-900 text-white p-8">
-                    <div className="flex justify-between items-center">
-                        <div>
-                            <CardTitle className="text-2xl font-black">Reactive Maintenance Log</CardTitle>
-                            <CardDescription className="text-slate-400 font-medium">Recent helpdesk tickets and repair requests.</CardDescription>
-                        </div>
-                        <Button className="bg-indigo-600 hover:bg-indigo-700 font-bold rounded-xl px-6">
-                            Raise New Ticket
-                        </Button>
-                    </div>
-                </CardHeader>
-                <CardContent className="p-0">
-                    <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
-                        <div className="w-16 h-16 rounded-3xl bg-slate-100 flex items-center justify-center text-slate-400">
-                            <Clock size={32} />
-                        </div>
-                        <div className="space-y-1">
-                            <p className="font-black text-slate-900">Feature Coming Soon</p>
-                            <p className="text-slate-500 text-sm max-w-xs mx-auto font-medium">
-                                We're building the most advanced school maintenance helpdesk ever seen. Stay tuned for the pilot.
-                            </p>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
-        </div >
-    );
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="p-5">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-2 bg-amber-50 dark:bg-amber-900/10 rounded-xl">
+                <AlertCircle className="w-5 h-5 text-amber-600" />
+              </div>
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Pending Tasks
+              </span>
+            </div>
+            <p className="text-3xl font-bold text-slate-900 dark:text-white">
+              12
+            </p>
+            <p className="text-xs text-slate-500 mt-1">4 high priority</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-5">
+            <div className="flex items-center gap-3 mb-3">
+              <div className={`p-2 ${colors.iconBg} rounded-xl`}>
+                <Clock className={`w-5 h-5 ${colors.iconText}`} />
+              </div>
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Active PPM
+              </span>
+            </div>
+            <p className="text-3xl font-bold text-slate-900 dark:text-white">
+              18
+            </p>
+            <p className="text-xs text-slate-500 mt-1">Scheduled this month</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-5">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-2 bg-emerald-50 dark:bg-emerald-900/10 rounded-xl">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+              </div>
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Completed
+              </span>
+            </div>
+            <p className="text-3xl font-bold text-slate-900 dark:text-white">
+              45
+            </p>
+            <p className="text-xs text-slate-500 mt-1">Last 30 days</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg">
+                Reactive Maintenance Log
+              </CardTitle>
+              <p className="text-sm text-slate-500 mt-1">
+                Recent helpdesk tickets and repair requests.
+              </p>
+            </div>
+            <Button className="bg-teal-600 hover:bg-teal-700 text-white">
+              Raise New Ticket
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
+            <div
+              className={`w-14 h-14 rounded-2xl ${colors.iconBg} flex items-center justify-center`}
+            >
+              <Clock className={`w-7 h-7 ${colors.iconText}`} />
+            </div>
+            <p className="font-semibold text-slate-900 dark:text-white">
+              Coming Soon
+            </p>
+            <p className="text-slate-500 text-sm max-w-sm">
+              We're building an advanced school maintenance helpdesk. Stay tuned
+              for the pilot.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
 }
