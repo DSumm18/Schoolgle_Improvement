@@ -2204,24 +2204,52 @@
       }
 
       // ======== API ========
+      function getApiBase() {
+        try {
+          return window.parent?.location?.origin || window.location.origin;
+        } catch (e) {
+          return window.location.origin;
+        }
+      }
+
       async function fetchProductMeta(url) {
         try {
-          var base = "";
-          try {
-            base = window.parent?.location?.origin || window.location.origin;
-          } catch (e) {
-            base = window.location.origin;
-          }
           var r = await fetch(
-            base +
+            getApiBase() +
               "/api/tools/deal-finder/scrape?url=" +
               encodeURIComponent(url),
-            { signal: AbortSignal.timeout(10000) },
+            { signal: AbortSignal.timeout(12000) },
           );
           if (!r.ok) return null;
           return await r.json();
         } catch (e) {
-          console.warn("API fetch failed:", e);
+          console.warn("Scrape failed:", e);
+          return null;
+        }
+      }
+
+      async function searchDatabase(product) {
+        try {
+          var r = await fetch(getApiBase() + "/api/tools/deal-finder/search", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              title: product.title,
+              price: product.price,
+              category: detectCategory(product.title, product.keywords),
+              brand: product.brand || null,
+              image: product.image,
+              description: null,
+              source_url: product.url,
+              source_domain: product.source,
+              pack_qty: guessPackQty(product.title),
+            }),
+            signal: AbortSignal.timeout(10000),
+          });
+          if (!r.ok) return null;
+          return await r.json();
+        } catch (e) {
+          console.warn("Search API failed:", e);
           return null;
         }
       }
@@ -2260,105 +2288,225 @@
 
       function renderAlternatives(alts, product) {
         var c = document.getElementById("alternativesList");
+        if (!alts || alts.length === 0) {
+          document.getElementById("resultsCount").textContent = "0 results";
+          c.innerHTML =
+            '<div style="text-align:center;padding:24px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:16px">' +
+            '<p style="font-size:14px;font-weight:600;margin-bottom:4px">No alternatives found yet</p>' +
+            '<p style="font-size:13px;color:var(--muted)">Your product has been added to our database. As more schools search, alternatives will appear.</p></div>';
+          return;
+        }
         document.getElementById("resultsCount").textContent =
           alts.length + " result" + (alts.length !== 1 ? "s" : "");
         c.innerHTML = alts
           .map(function (alt, i) {
-            var best = i === 0 && alt.price !== null;
-            var ph =
-              alt.price !== null
-                ? '<div class="alt-price">&pound;' +
-                  alt.price.toFixed(2) +
-                  "</div>" +
-                  (alt.saving > 0
-                    ? '<div class="alt-saving">Save &pound;' +
-                      alt.saving.toFixed(2) +
-                      " (" +
-                      alt.savingPct +
-                      "%)</div>"
-                    : "")
-                : '<div class="alt-price" style="font-size:13px;color:var(--muted)">Contact for price</div>';
+            var best = i === 0 && alt.price !== null && alt.saving > 0;
+
+            // Badges
+            var badges = "";
+            if (alt.is_preferred) {
+              badges +=
+                '<span style="display:inline-flex;align-items:center;gap:3px;padding:1px 8px;border-radius:100px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.3px;background:var(--warning-bg);color:var(--warning-text);border:1px solid var(--warning-border)">&#11088; Preferred</span> ';
+            }
+            if (alt.is_education_supplier) {
+              badges +=
+                '<span style="display:inline-flex;align-items:center;gap:3px;padding:1px 8px;border-radius:100px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.3px;background:#f5f3ff;color:#5b21b6;border:1px solid #ddd6fe">&#127891; Edu Supplier</span> ';
+            }
+            if (alt.supplier_framework) {
+              badges +=
+                '<span style="display:inline-flex;align-items:center;gap:3px;padding:1px 8px;border-radius:100px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.3px;background:var(--success-bg);color:var(--success-text);border:1px solid var(--success-border)">&#10003; ' +
+                esc(alt.supplier_framework) +
+                "</span> ";
+            }
+            if (alt.is_bulk_option) {
+              badges +=
+                '<span style="display:inline-flex;align-items:center;gap:3px;padding:1px 8px;border-radius:100px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.3px;background:var(--info-bg);color:var(--info-text);border:1px solid var(--info-border)">&#128230; Bulk Buy</span> ';
+            }
+            if (!alt.is_education_supplier && alt.search_count > 1) {
+              badges +=
+                '<span style="display:inline-flex;align-items:center;gap:3px;padding:1px 8px;border-radius:100px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.3px;background:var(--info-bg);color:var(--info-text);border:1px solid var(--info-border)">&#128101; ' +
+                alt.search_count +
+                " schools searched</span> ";
+            }
+
+            // Price
+            var ph;
+            if (alt.price !== null) {
+              ph =
+                '<div class="alt-price">&pound;' +
+                alt.price.toFixed(2) +
+                "</div>";
+              if (alt.saving > 0) {
+                ph +=
+                  '<div class="alt-saving">Save &pound;' +
+                  alt.saving.toFixed(2) +
+                  " (" +
+                  alt.saving_pct +
+                  "%)</div>";
+              } else if (alt.saving !== null && alt.saving < 0) {
+                ph +=
+                  '<div style="font-size:11px;color:var(--warning-text);font-weight:600">&pound;' +
+                  Math.abs(alt.saving).toFixed(2) +
+                  " more</div>";
+              }
+              if (
+                alt.unit_saving_pct &&
+                alt.unit_saving_pct > 0 &&
+                alt.is_bulk_option
+              ) {
+                ph +=
+                  '<div style="font-size:10px;color:var(--info-text);font-weight:600;margin-top:2px">' +
+                  alt.unit_saving_pct +
+                  "% cheaper per unit</div>";
+              }
+            } else {
+              ph =
+                '<div class="alt-price" style="font-size:13px;color:var(--muted)">See website</div>';
+            }
+
+            // Unit price
+            var unitHtml = "";
+            if (alt.unit_price && alt.pack_qty) {
+              unitHtml =
+                '<div class="alt-unit-price">&pound;' +
+                alt.unit_price
+                  .toFixed(4)
+                  .replace(/0+$/, "")
+                  .replace(/\.$/, "") +
+                " each (" +
+                alt.pack_qty +
+                " pack)</div>";
+            }
+
+            var visitUrl = alt.source_url || "#";
             var inBasket = basket.some(function (b) {
-              return b.supplier === alt.supplier && b.name === alt.name;
+              return b.supplier === alt.supplier && b.name === alt.title;
             });
+
             return (
               '<div class="alt-card' +
               (best ? " best" : "") +
               '" style="animation-delay:' +
               i * 0.08 +
-              's"><div class="alt-rank">' +
-              alt.rank +
-              '</div><div class="alt-info"><div class="alt-name">' +
-              esc(alt.name) +
-              '</div><div class="alt-supplier">' +
-              esc(alt.supplier) +
-              (alt.framework ? " &#10003; Framework" : "") +
+              's">' +
+              '<div class="alt-rank">' +
+              (i + 1) +
               "</div>" +
-              (alt.unitPrice
-                ? '<div class="alt-unit-price">' +
-                  alt.unitPrice.toFixed(2) +
-                  "p per item (" +
-                  alt.packQty +
-                  " pack)</div>"
-                : "") +
-              '</div><div class="alt-price-col">' +
+              '<div class="alt-info">' +
+              '<div class="alt-name">' +
+              esc(alt.title) +
+              "</div>" +
+              '<div class="alt-supplier">' +
+              esc(alt.supplier) +
+              " " +
+              badges +
+              "</div>" +
+              unitHtml +
+              "</div>" +
+              '<div class="alt-price-col">' +
               ph +
-              '</div><div class="alt-actions"><button class="buy-btn" onclick="logPurchase(' +
-              i +
-              ')">Buy &amp; log</button><button class="add-basket-btn' +
+              "</div>" +
+              '<div class="alt-actions">' +
+              '<a class="buy-btn" href="' +
+              esc(visitUrl) +
+              '" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center;gap:4px">Visit &#8599;</a>' +
+              '<button class="add-basket-btn' +
               (inBasket ? " added" : "") +
               '" id="addBtn' +
               i +
-              '" onclick="addToBasket(' +
+              '" onclick="addToBasketFromDb(' +
               i +
               ')">' +
               (inBasket ? "&#10003; Added" : "&#43; Requisition") +
-              "</button></div></div>"
+              "</button>" +
+              "</div></div>"
             );
           })
           .join("");
       }
 
-      function renderBulkSuggestion(product, best) {
+      function addToBasketFromDb(idx) {
+        var alts = window._lastDbAlts;
+        if (!alts || !alts[idx]) return;
+        var alt = alts[idx];
+        if (
+          basket.some(function (b) {
+            return b.supplier === alt.supplier && b.name === alt.title;
+          })
+        )
+          return;
+        basket.push({
+          id: Date.now() + "_" + Math.random().toString(36).substr(2, 5),
+          name: alt.title,
+          supplier: alt.supplier,
+          framework: alt.supplier_framework || "",
+          price: alt.price,
+          unitPrice: alt.unit_price,
+          packQty: alt.pack_qty,
+          saving: alt.saving,
+          savingPct: alt.saving_pct,
+          originalPrice: currentProduct ? currentProduct.price : null,
+          qty: 1,
+          department: "",
+          accountCode: "",
+          dateAdded: new Date().toISOString().split("T")[0],
+        });
+        saveBasket();
+        var btn = document.getElementById("addBtn" + idx);
+        if (btn) {
+          btn.classList.add("added");
+          btn.innerHTML = "&#10003; Added";
+        }
+        updateBasketBadge();
+        spawnConfetti(btn);
+        showToast("Added to requisition order");
+      }
+
+      function renderBulkSuggestions(bulkSuggestions) {
         var s = document.getElementById("bulkSuggestion");
-        if (!product.price || !best || !best.price) {
+        if (!bulkSuggestions || bulkSuggestions.length === 0) {
           s.classList.remove("visible");
           return;
         }
-        var cat = detectCategory(product.title, product.keywords);
-        if (!["stationery", "paper", "cleaning", "art"].includes(cat)) {
-          s.classList.remove("visible");
-          return;
-        }
-        var pq = guessPackQty(product.title),
-          mul = pq ? 5 : 3,
-          bd = 0.08;
-        var bup = best.price * (1 - bd),
-          bt = bup * mul,
-          ot = product.price * mul,
-          ts = ot - bt;
-        document.getElementById("bulkText").textContent =
-          "These are consumables your school uses throughout the year. Order " +
-          mul +
-          " now instead of 1 — most education framework suppliers give an additional ~8% bulk discount on top of the education price, with bigger savings and fewer reorders.";
-        document.getElementById("bulkMath").innerHTML =
-          "<strong>Single order:</strong> " +
-          mul +
-          " x &pound;" +
-          product.price.toFixed(2) +
-          " = &pound;" +
-          ot.toFixed(2) +
-          "<br><strong>Bulk via " +
+        var best = bulkSuggestions[0];
+        document.getElementById("bulkText").innerHTML =
+          (best.is_preferred
+            ? '<span style="color:var(--warning-text);font-weight:700">&#11088; Preferred supplier</span> &mdash; '
+            : "") +
+          "<strong>" +
+          esc(best.reason) +
+          "</strong><br>" +
+          "Buy the <strong>" +
+          esc(best.title) +
+          "</strong> from <strong>" +
           esc(best.supplier) +
-          ":</strong> " +
-          mul +
-          " x &pound;" +
-          bup.toFixed(2) +
-          " = &pound;" +
-          bt.toFixed(2) +
-          "<br><strong style='color:var(--success-text)'>Total saving: &pound;" +
-          ts.toFixed(2) +
-          "</strong>";
+          "</strong> instead. " +
+          "At &pound;" +
+          best.unit_price.toFixed(4).replace(/0+$/, "").replace(/\.$/, "") +
+          " per unit, " +
+          "you save <strong>" +
+          best.saving_per_unit_pct +
+          "% per item</strong>.";
+        document.getElementById("bulkMath").innerHTML =
+          "<strong>Your product:</strong> &pound;" +
+          (currentProduct.price ? currentProduct.price.toFixed(2) : "?") +
+          (guessPackQty(currentProduct.title)
+            ? " (" + guessPackQty(currentProduct.title) + " pack)"
+            : "") +
+          "<br><strong>Bulk option:</strong> &pound;" +
+          best.price.toFixed(2) +
+          " (" +
+          best.pack_qty +
+          " pack)" +
+          '<br><strong style="color:var(--success-text)">Estimated annual saving: &pound;' +
+          best.annual_saving_estimate.toFixed(2) +
+          "</strong>" +
+          '<span style="font-size:11px;color:var(--muted);margin-left:6px">(based on 6 reorders/year)</span>' +
+          (best.source_url
+            ? '<br><a href="' +
+              esc(best.source_url) +
+              '" target="_blank" rel="noopener" style="color:var(--accent-dark);font-weight:600;font-size:13px;margin-top:6px;display:inline-block">View bulk option &#8599;</a>'
+            : "");
         s.classList.add("visible");
       }
 
@@ -3274,22 +3422,53 @@
         currentProduct = product;
 
         document.getElementById("loadingMsg").textContent =
-          "Searching across school suppliers for better prices...";
-        await new Promise(function (r) {
-          setTimeout(r, 600);
-        });
+          "Searching education suppliers and school pricing database...";
 
-        var alts = buildAlternatives(product);
-        window._lastAlts = alts;
-        var best = alts[0] || null;
+        var searchResult = await searchDatabase(product);
 
         loading.classList.remove("visible");
         results.classList.add("visible");
         btn.disabled = false;
         renderOriginalProduct(product);
-        renderAlternatives(alts, product);
-        renderBulkSuggestion(product, best);
-        renderApprovalEmail(product, best);
+
+        if (searchResult && searchResult.alternatives) {
+          var dbAlts = searchResult.alternatives;
+          window._lastDbAlts = dbAlts;
+          var best =
+            dbAlts.find(function (a) {
+              return a.saving > 0;
+            }) ||
+            dbAlts[0] ||
+            null;
+          renderAlternatives(dbAlts, product);
+          renderBulkSuggestions(searchResult.bulk_suggestions);
+          renderApprovalEmail(product, best);
+        } else {
+          // Fallback to local alternatives if API unavailable
+          var alts = buildAlternatives(product);
+          window._lastAlts = alts;
+          window._lastDbAlts = alts.map(function (a) {
+            return {
+              title: a.name,
+              price: a.price,
+              pack_qty: a.packQty,
+              unit_price: a.unitPrice,
+              supplier: a.supplier,
+              source_url: null,
+              source_domain: "",
+              is_education_supplier: true,
+              is_preferred: a.supplier.indexOf("YPO") !== -1,
+              supplier_framework: a.framework ? "Education Framework" : null,
+              saving: a.saving,
+              saving_pct: a.savingPct,
+              unit_saving_pct: null,
+              is_bulk_option: false,
+              search_count: 0,
+            };
+          });
+          renderAlternatives(window._lastDbAlts, product);
+          renderApprovalEmail(product, alts[0] || null);
+        }
         animateChart();
       }
 
