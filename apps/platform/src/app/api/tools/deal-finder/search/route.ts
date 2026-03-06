@@ -43,34 +43,20 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabase();
 
-    // Debug: log connection info
-    console.log(
-      "[deal-finder] supabase url:",
-      supabaseUrl ? supabaseUrl.substring(0, 30) + "..." : "MISSING",
-    );
-    console.log(
-      "[deal-finder] supabase key:",
-      supabaseKey ? "set (" + supabaseKey.length + " chars)" : "MISSING",
-    );
-
     // 1. Store or update the searched product
     const unitPrice =
       body.price && body.pack_qty && body.pack_qty > 1
         ? body.price / body.pack_qty
         : body.price;
 
-    const { data: existing, error: existingErr } = await supabase
+    const { data: existing } = await supabase
       .from("deal_finder_products")
       .select("id, search_count")
       .eq("source_url", body.source_url)
       .single();
 
-    if (existingErr && existingErr.code !== "PGRST116") {
-      console.error("[deal-finder] lookup error:", existingErr);
-    }
-
     if (existing) {
-      const { error: updateErr } = await supabase
+      await supabase
         .from("deal_finder_products")
         .update({
           search_count: (existing.search_count || 1) + 1,
@@ -79,31 +65,27 @@ export async function POST(request: NextRequest) {
           ...(body.title ? { title: body.title } : {}),
         })
         .eq("id", existing.id);
-      if (updateErr) console.error("[deal-finder] update error:", updateErr);
     } else {
-      const { error: insertErr } = await supabase
-        .from("deal_finder_products")
-        .insert({
-          title: body.title,
-          category: body.category || "general",
-          brand: body.brand,
-          description: body.description,
-          image_url: body.image,
-          price: body.price,
-          pack_qty: body.pack_qty,
-          unit_price: unitPrice,
-          source_url: body.source_url,
-          source_domain: body.source_domain,
-          source_type: "retail",
-          is_education_supplier: false,
-          keywords: extractKeywords(body.title),
-        });
-      if (insertErr) console.error("[deal-finder] insert error:", insertErr);
+      await supabase.from("deal_finder_products").insert({
+        title: body.title,
+        category: body.category || "general",
+        brand: body.brand,
+        description: body.description,
+        image_url: body.image,
+        price: body.price,
+        pack_qty: body.pack_qty,
+        unit_price: unitPrice,
+        source_url: body.source_url,
+        source_domain: body.source_domain,
+        source_type: "retail",
+        is_education_supplier: false,
+        keywords: extractKeywords(body.title),
+      });
     }
 
     // 2. Find education supplier alternatives in the same category
     //    Preferred suppliers come first
-    const { data: supplierAlts, error: supplierErr } = await supabase
+    const { data: supplierAlts } = await supabase
       .from("deal_finder_products")
       .select("*")
       .eq("category", body.category || "general")
@@ -113,21 +95,12 @@ export async function POST(request: NextRequest) {
       .order("price", { ascending: true })
       .limit(10);
 
-    console.log(
-      "[deal-finder] category:",
-      body.category || "general",
-      "supplierAlts:",
-      supplierAlts?.length ?? 0,
-      "err:",
-      supplierErr?.message ?? "none",
-    );
-
     // 3. Full-text search for similar products from other sources
     const searchTerms = extractKeywords(body.title).slice(0, 3).join(" & ");
     let similarProducts: typeof supplierAlts = [];
 
     if (searchTerms) {
-      const { data: similar, error: similarErr } = await supabase
+      const { data: similar } = await supabase
         .from("deal_finder_products")
         .select("*")
         .textSearch("search_vector", searchTerms, { type: "websearch" })
@@ -137,14 +110,6 @@ export async function POST(request: NextRequest) {
         .order("price", { ascending: true })
         .limit(10);
 
-      if (similarErr)
-        console.error("[deal-finder] similar search error:", similarErr);
-      console.log(
-        "[deal-finder] similar search terms:",
-        searchTerms,
-        "results:",
-        similar?.length ?? 0,
-      );
       similarProducts = similar;
     }
 
@@ -254,16 +219,6 @@ export async function POST(request: NextRequest) {
       {
         alternatives,
         bulk_suggestions: bulkSuggestions,
-        _debug: {
-          supabase_url: supabaseUrl ? supabaseUrl.substring(0, 40) : "MISSING",
-          supabase_key_set: !!supabaseKey,
-          supabase_key_len: supabaseKey?.length || 0,
-          category_sent: body.category || "general",
-          supplier_alts_count: supplierAlts?.length ?? 0,
-          supplier_err: supplierErr?.message ?? null,
-          similar_count: similarProducts?.length ?? 0,
-          deduped_count: dedupedAlts.length,
-        },
         stats: {
           total_products: totalProducts || 0,
           total_searches: totalSearches || 0,
