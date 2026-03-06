@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
 
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) {
+      console.error("[Demo Chat] OPENROUTER_API_KEY not set");
       return NextResponse.json({
         id: crypto.randomUUID(),
         answer:
@@ -44,42 +45,69 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const response = await fetch(
-      "https://openrouter.ai/api/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-          "HTTP-Referer": "https://schoolgle.co.uk",
-          "X-Title": "Schoolgle Ed Demo",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.0-flash-lite-001",
-          messages: [
-            { role: "system", content: SYSTEM_PROMPT },
-            { role: "user", content: question },
-          ],
-          temperature: 0.7,
-          max_tokens: 512,
-        }),
-      },
-    );
+    // Try multiple models in case one is unavailable
+    const models = [
+      "google/gemini-2.0-flash-lite-001",
+      "google/gemini-2.0-flash-001",
+      "deepseek/deepseek-chat",
+    ];
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(
-        "[Demo Chat] OpenRouter error:",
-        response.status,
-        errorText,
-      );
-      throw new Error(`OpenRouter ${response.status}`);
+    let lastError = "";
+    let answer = "";
+
+    for (const model of models) {
+      try {
+        console.log(`[Demo Chat] Trying model: ${model}`);
+        const response = await fetch(
+          "https://openrouter.ai/api/v1/chat/completions",
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              "Content-Type": "application/json",
+              "HTTP-Referer": "https://schoolgle.co.uk",
+              "X-Title": "Schoolgle Ed Demo",
+            },
+            body: JSON.stringify({
+              model,
+              messages: [
+                { role: "system", content: SYSTEM_PROMPT },
+                { role: "user", content: question },
+              ],
+              temperature: 0.7,
+              max_tokens: 512,
+            }),
+          },
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(
+            `[Demo Chat] Model ${model} failed:`,
+            response.status,
+            errorText,
+          );
+          lastError = `${model}: ${response.status}`;
+          continue;
+        }
+
+        const data = await response.json();
+        answer = data.choices?.[0]?.message?.content || "";
+
+        if (answer) {
+          console.log(`[Demo Chat] Success with model: ${model}`);
+          break;
+        }
+      } catch (err) {
+        console.error(`[Demo Chat] Model ${model} exception:`, err);
+        lastError = `${model}: ${err}`;
+        continue;
+      }
     }
 
-    const data = await response.json();
-    const answer =
-      data.choices?.[0]?.message?.content ||
-      "I'm sorry, I couldn't process that. Could you try again?";
+    if (!answer) {
+      throw new Error(`All models failed. Last error: ${lastError}`);
+    }
 
     return NextResponse.json({
       id: crypto.randomUUID(),
