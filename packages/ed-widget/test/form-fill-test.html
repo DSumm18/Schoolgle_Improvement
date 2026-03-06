@@ -1,0 +1,621 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ed Form Fill Test</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #f8fafc;
+        color: #1e293b;
+        padding: 40px 20px;
+        min-height: 100vh;
+      }
+      .container {
+        max-width: 640px;
+        margin: 0 auto;
+      }
+
+      h1 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 8px;
+        color: #0f172a;
+      }
+      .subtitle {
+        color: #64748b;
+        font-size: 0.875rem;
+        margin-bottom: 32px;
+      }
+
+      /* ── Test Tabs ─────────────────────────────────── */
+      .tabs {
+        display: flex;
+        gap: 4px;
+        margin-bottom: 24px;
+        border-bottom: 2px solid #e2e8f0;
+        padding-bottom: 0;
+      }
+      .tab {
+        padding: 10px 20px;
+        cursor: pointer;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #64748b;
+        border: none;
+        background: none;
+        border-bottom: 2px solid transparent;
+        margin-bottom: -2px;
+        transition: all 0.2s;
+      }
+      .tab:hover {
+        color: #0f172a;
+      }
+      .tab.active {
+        color: #0ea5e9;
+        border-bottom-color: #0ea5e9;
+      }
+      .tab-content {
+        display: none;
+      }
+      .tab-content.active {
+        display: block;
+      }
+
+      /* ── Form Styles ──────────────────────────────── */
+      .form-card {
+        background: white;
+        border-radius: 12px;
+        padding: 28px;
+        box-shadow:
+          0 1px 3px rgba(0, 0, 0, 0.1),
+          0 1px 2px rgba(0, 0, 0, 0.06);
+        border: 1px solid #e2e8f0;
+      }
+      .form-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #f1f5f9;
+      }
+      .form-group {
+        margin-bottom: 16px;
+      }
+      .form-group label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 6px;
+      }
+      .form-group label .required {
+        color: #ef4444;
+        margin-left: 2px;
+      }
+      .form-group input,
+      .form-group select,
+      .form-group textarea {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        color: #1e293b;
+        background: white;
+        transition:
+          border-color 0.2s,
+          box-shadow 0.2s;
+      }
+      .form-group input:focus,
+      .form-group select:focus,
+      .form-group textarea:focus {
+        outline: none;
+        border-color: #0ea5e9;
+        box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+      }
+      .form-group textarea {
+        resize: vertical;
+        min-height: 80px;
+      }
+
+      .checkbox-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .checkbox-group input[type="checkbox"] {
+        width: auto;
+      }
+
+      .radio-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .radio-option {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .radio-option input {
+        width: auto;
+      }
+
+      .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+
+      .btn-submit {
+        margin-top: 20px;
+        padding: 10px 24px;
+        background: #0ea5e9;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      .btn-submit:hover {
+        background: #0284c7;
+      }
+
+      /* ── Test Log ──────────────────────────────────── */
+      .test-log {
+        margin-top: 32px;
+        background: #0f172a;
+        border-radius: 12px;
+        padding: 16px;
+        font-family: "SF Mono", "Fira Code", monospace;
+        font-size: 0.75rem;
+        color: #94a3b8;
+        max-height: 240px;
+        overflow-y: auto;
+      }
+      .test-log .log-entry {
+        padding: 2px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      }
+      .test-log .log-success {
+        color: #22c55e;
+      }
+      .test-log .log-error {
+        color: #ef4444;
+      }
+      .test-log .log-info {
+        color: #38bdf8;
+      }
+
+      /* ── Instructions ─────────────────────────────── */
+      .instructions {
+        background: #f0f9ff;
+        border: 1px solid #bae6fd;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 24px;
+        font-size: 0.8125rem;
+        color: #0369a1;
+        line-height: 1.6;
+      }
+      .instructions strong {
+        color: #0c4a6e;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Ed Form Fill Test</h1>
+      <p class="subtitle">
+        Test Ed's form filling, vision, and conversational capabilities
+      </p>
+
+      <div class="instructions">
+        <strong>How to test:</strong> Open the Ed widget (bottom-right), then
+        say: <br />"Help me fill this form" or "Fill the form" to start
+        <br />"back" to go to the previous field <br />"change email" to edit a
+        specific field <br />"review" to see all values <br />"submit" when done
+        <br />"cancel" to stop
+      </div>
+
+      <div class="tabs">
+        <button class="tab active" data-tab="basic">Basic Form</button>
+        <button class="tab" data-tab="contact">Contact Form</button>
+        <button class="tab" data-tab="admission">Admissions</button>
+        <button class="tab" data-tab="noform">No Form Container</button>
+      </div>
+
+      <!-- ── Basic Form ──────────────────────────────── -->
+      <div class="tab-content active" id="tab-basic">
+        <div class="form-card">
+          <h2 class="form-title">Staff Registration</h2>
+          <form id="basic-form" onsubmit="logSubmit(event, 'basic-form')">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="first-name"
+                  >First Name <span class="required">*</span></label
+                >
+                <input
+                  type="text"
+                  id="first-name"
+                  name="firstName"
+                  required
+                  placeholder="e.g. John"
+                />
+              </div>
+              <div class="form-group">
+                <label for="last-name"
+                  >Last Name <span class="required">*</span></label
+                >
+                <input
+                  type="text"
+                  id="last-name"
+                  name="lastName"
+                  required
+                  placeholder="e.g. Smith"
+                />
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="email"
+                >Email Address <span class="required">*</span></label
+              >
+              <input
+                type="email"
+                id="email"
+                name="email"
+                required
+                placeholder="e.g. john@school.edu"
+              />
+            </div>
+            <div class="form-group">
+              <label for="phone">Phone Number</label>
+              <input
+                type="tel"
+                id="phone"
+                name="phone"
+                placeholder="e.g. 07700 900000"
+              />
+            </div>
+            <div class="form-group">
+              <label for="role">Role</label>
+              <select id="role" name="role">
+                <option value="">-- Select --</option>
+                <option value="teacher">Teacher</option>
+                <option value="ta">Teaching Assistant</option>
+                <option value="admin">Admin</option>
+                <option value="slt">Senior Leadership</option>
+                <option value="caretaker">Caretaker</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="start-date">Start Date</label>
+              <input type="date" id="start-date" name="startDate" />
+            </div>
+            <div class="form-group checkbox-group">
+              <input type="checkbox" id="dbs-check" name="dbsCheck" />
+              <label for="dbs-check">DBS check completed</label>
+            </div>
+            <button type="submit" class="btn-submit">
+              Register Staff Member
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- ── Contact Form ────────────────────────────── -->
+      <div class="tab-content" id="tab-contact">
+        <div class="form-card">
+          <h2 class="form-title">Contact the School</h2>
+          <form id="contact-form" onsubmit="logSubmit(event, 'contact-form')">
+            <div class="form-group">
+              <label for="contact-name"
+                >Your Name <span class="required">*</span></label
+              >
+              <input type="text" id="contact-name" name="name" required />
+            </div>
+            <div class="form-group">
+              <label for="contact-email"
+                >Your Email <span class="required">*</span></label
+              >
+              <input type="email" id="contact-email" name="email" required />
+            </div>
+            <div class="form-group">
+              <label for="contact-subject">Subject</label>
+              <select id="contact-subject" name="subject">
+                <option value="">-- Choose a topic --</option>
+                <option value="admissions">Admissions Enquiry</option>
+                <option value="absence">Report an Absence</option>
+                <option value="complaint">Complaint</option>
+                <option value="general">General Enquiry</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="contact-message"
+                >Message <span class="required">*</span></label
+              >
+              <textarea
+                id="contact-message"
+                name="message"
+                required
+                placeholder="How can we help?"
+              ></textarea>
+            </div>
+            <div class="form-group">
+              <label>Preferred Contact Method</label>
+              <div class="radio-group">
+                <div class="radio-option">
+                  <input
+                    type="radio"
+                    id="contact-email-pref"
+                    name="contactMethod"
+                    value="email"
+                  />
+                  <label for="contact-email-pref">Email</label>
+                </div>
+                <div class="radio-option">
+                  <input
+                    type="radio"
+                    id="contact-phone-pref"
+                    name="contactMethod"
+                    value="phone"
+                  />
+                  <label for="contact-phone-pref">Phone</label>
+                </div>
+                <div class="radio-option">
+                  <input
+                    type="radio"
+                    id="contact-either-pref"
+                    name="contactMethod"
+                    value="either"
+                  />
+                  <label for="contact-either-pref">Either</label>
+                </div>
+              </div>
+            </div>
+            <button type="submit" class="btn-submit">Send Message</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- ── Admissions Form (Complex) ───────────────── -->
+      <div class="tab-content" id="tab-admission">
+        <div class="form-card">
+          <h2 class="form-title">Pupil Admission Application</h2>
+          <form
+            id="admission-form"
+            onsubmit="logSubmit(event, 'admission-form')"
+          >
+            <div class="form-row">
+              <div class="form-group">
+                <label for="pupil-first"
+                  >Pupil First Name <span class="required">*</span></label
+                >
+                <input
+                  type="text"
+                  id="pupil-first"
+                  name="pupilFirstName"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label for="pupil-last"
+                  >Pupil Last Name <span class="required">*</span></label
+                >
+                <input
+                  type="text"
+                  id="pupil-last"
+                  name="pupilLastName"
+                  required
+                />
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="pupil-dob"
+                >Date of Birth <span class="required">*</span></label
+              >
+              <input type="date" id="pupil-dob" name="pupilDob" required />
+            </div>
+            <div class="form-group">
+              <label for="pupil-gender">Gender</label>
+              <select id="pupil-gender" name="gender">
+                <option value="">-- Select --</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
+                <option value="prefer-not">Prefer not to say</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="year-group"
+                >Year Group Applying For <span class="required">*</span></label
+              >
+              <select id="year-group" name="yearGroup" required>
+                <option value="">-- Select --</option>
+                <option value="reception">Reception</option>
+                <option value="year1">Year 1</option>
+                <option value="year2">Year 2</option>
+                <option value="year3">Year 3</option>
+                <option value="year4">Year 4</option>
+                <option value="year5">Year 5</option>
+                <option value="year6">Year 6</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="parent-name"
+                >Parent/Guardian Name <span class="required">*</span></label
+              >
+              <input type="text" id="parent-name" name="parentName" required />
+            </div>
+            <div class="form-group">
+              <label for="parent-email"
+                >Parent Email <span class="required">*</span></label
+              >
+              <input
+                type="email"
+                id="parent-email"
+                name="parentEmail"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="parent-phone"
+                >Parent Phone <span class="required">*</span></label
+              >
+              <input type="tel" id="parent-phone" name="parentPhone" required />
+            </div>
+            <div class="form-group">
+              <label for="address">Home Address</label>
+              <textarea id="address" name="address" rows="3"></textarea>
+            </div>
+            <div class="form-group checkbox-group">
+              <input type="checkbox" id="sen" name="sen" />
+              <label for="sen">Child has Special Educational Needs (SEN)</label>
+            </div>
+            <div class="form-group checkbox-group">
+              <input type="checkbox" id="fsm" name="fsm" />
+              <label for="fsm">Eligible for Free School Meals</label>
+            </div>
+            <div class="form-group">
+              <label for="additional-info">Additional Information</label>
+              <textarea
+                id="additional-info"
+                name="additionalInfo"
+                placeholder="Any other information you'd like us to know..."
+              ></textarea>
+            </div>
+            <button type="submit" class="btn-submit">Submit Application</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- ── No Form Container (loose inputs) ────────── -->
+      <div class="tab-content" id="tab-noform">
+        <div class="form-card">
+          <h2 class="form-title">Quick Feedback (no &lt;form&gt; tag)</h2>
+          <p style="color: #64748b; font-size: 0.8125rem; margin-bottom: 16px">
+            This tests Ed's ability to detect inputs without a &lt;form&gt;
+            wrapper.
+          </p>
+          <div class="form-group">
+            <label for="feedback-name">Your Name</label>
+            <input type="text" id="feedback-name" name="feedbackName" />
+          </div>
+          <div class="form-group">
+            <label for="feedback-rating">Rating</label>
+            <select id="feedback-rating" name="rating">
+              <option value="">-- Rate us --</option>
+              <option value="5">Excellent</option>
+              <option value="4">Good</option>
+              <option value="3">Average</option>
+              <option value="2">Below Average</option>
+              <option value="1">Poor</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="feedback-comment">Comment</label>
+            <textarea
+              id="feedback-comment"
+              name="comment"
+              placeholder="Tell us what you think..."
+            ></textarea>
+          </div>
+          <div class="form-group checkbox-group">
+            <input type="checkbox" id="feedback-contact" name="canContact" />
+            <label for="feedback-contact"
+              >You may contact me about this feedback</label
+            >
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Test Log ────────────────────────────────── -->
+      <div class="test-log" id="test-log">
+        <div class="log-entry log-info">
+          Ready. Open Ed and say "fill the form".
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Tab switching
+      document.querySelectorAll(".tab").forEach((tab) => {
+        tab.addEventListener("click", () => {
+          document
+            .querySelectorAll(".tab")
+            .forEach((t) => t.classList.remove("active"));
+          document
+            .querySelectorAll(".tab-content")
+            .forEach((t) => t.classList.remove("active"));
+          tab.classList.add("active");
+          document
+            .getElementById("tab-" + tab.dataset.tab)
+            .classList.add("active");
+          log("info", "Switched to: " + tab.textContent);
+        });
+      });
+
+      // Form submit handler
+      function logSubmit(e, formId) {
+        e.preventDefault();
+        const form = document.getElementById(formId);
+        const data = new FormData(form);
+        const entries = Object.fromEntries(data.entries());
+        log("success", "FORM SUBMITTED: " + formId);
+        Object.entries(entries).forEach(([k, v]) => {
+          if (v) log("info", `  ${k}: ${v}`);
+        });
+      }
+
+      // Test log
+      function log(type, message) {
+        const logEl = document.getElementById("test-log");
+        const entry = document.createElement("div");
+        entry.className = "log-entry log-" + type;
+        entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+        logEl.appendChild(entry);
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+
+      // Monitor form field changes (to see Ed filling them)
+      document.querySelectorAll("input, select, textarea").forEach((el) => {
+        el.addEventListener("change", () => {
+          const label =
+            el.closest(".form-group")?.querySelector("label")?.textContent ||
+            el.name ||
+            el.id;
+          log("success", `Field changed: ${label.trim()} = "${el.value}"`);
+        });
+        el.addEventListener("input", () => {
+          // Only log for significant changes (not every keystroke)
+        });
+      });
+
+      // Check if Ed widget is loaded
+      setTimeout(() => {
+        if (document.getElementById("ed-widget-container")) {
+          log("success", "Ed widget detected on page");
+        } else {
+          log(
+            "error",
+            "Ed widget NOT found. Load it via the extension or embed script.",
+          );
+          log(
+            "info",
+            'To test standalone, add: <script src="../dist/ed-widget.iife.js"><\/script>',
+          );
+        }
+      }, 1000);
+    </script>
+  </body>
+</html>

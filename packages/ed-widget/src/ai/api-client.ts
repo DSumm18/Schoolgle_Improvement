@@ -4,10 +4,14 @@
  * This provides the correct school support prompts for logged-in users
  */
 
-import type { ChatContext } from './types';
+// ChatContext type - inlined to avoid cross-package dependency
+type ChatContext = Record<string, unknown>;
+
+declare const chrome: any; // Chrome extension API (available in extension context)
 
 interface ChatRequest {
   question: string;
+  image?: string; // Base64 image data (screenshot or user upload)
   context?: {
     url: string;
     hostname: string;
@@ -30,12 +34,7 @@ interface ChatResponse {
   answer: string;
   suggestions?: string[];
   confidence: number;
-  source: 'ai' | 'cache' | 'fallback' | 'automation';
-}
-
-interface WebsiteKnowledgeQuery {
-  question: string;
-  organizationId: string;
+  source: "ai" | "cache" | "fallback" | "automation";
 }
 
 interface WebsiteKnowledgeResponse {
@@ -52,9 +51,15 @@ export class EdAPIClient {
   private baseUrl: string;
   private organizationId?: string;
   private userId?: string;
-  private mode: 'website' | 'support' | 'school' = 'school';
+  private mode: "website" | "support" | "school" = "school";
+  private screenStream: MediaStream | null = null; // Live screen share stream
+  private screenVideo: HTMLVideoElement | null = null;
 
-  constructor(baseUrl: string = '/api/ed/chat', organizationId?: string, userId?: string) {
+  constructor(
+    baseUrl: string = "/api/ed/chat",
+    organizationId?: string,
+    userId?: string,
+  ) {
     this.baseUrl = baseUrl;
     this.organizationId = organizationId;
     this.userId = userId;
@@ -63,22 +68,24 @@ export class EdAPIClient {
   /**
    * Set the mode for this client
    */
-  setMode(mode: 'website' | 'support' | 'school'): void {
+  setMode(mode: "website" | "support" | "school"): void {
     this.mode = mode;
   }
 
   /**
    * Query website knowledge base for visitor questions
    */
-  async queryWebsiteKnowledge(question: string): Promise<WebsiteKnowledgeResponse | null> {
-    if (!this.organizationId || this.mode !== 'website') {
+  async queryWebsiteKnowledge(
+    question: string,
+  ): Promise<WebsiteKnowledgeResponse | null> {
+    if (!this.organizationId || this.mode !== "website") {
       return null;
     }
 
     try {
-      const response = await fetch('/api/ed/website-knowledge', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/ed/website-knowledge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           question,
           organizationId: this.organizationId,
@@ -89,7 +96,7 @@ export class EdAPIClient {
         return await response.json();
       }
     } catch (error) {
-      console.error('[EdAPIClient] Website knowledge query error:', error);
+      console.error("[EdAPIClient] Website knowledge query error:", error);
     }
 
     return null;
@@ -99,34 +106,41 @@ export class EdAPIClient {
    * Send chat message to /api/ed/chat endpoint
    * This uses the Ed Agents Orchestrator with proper school support prompts
    */
-  async chat(userMessage: string, context?: ChatContext): Promise<string> {
+  async chat(
+    userMessage: string,
+    _context?: ChatContext,
+    image?: string,
+  ): Promise<string> {
     try {
       // Build page context
       const pageContext = {
         url: window.location.href,
         hostname: window.location.hostname,
         title: document.title,
-        visibleText: document.body?.innerText?.substring(0, 5000) || '',
-        headings: Array.from(document.querySelectorAll('h1, h2, h3, h4, h5, h6'))
-          .map(h => ({
+        visibleText: document.body?.innerText?.substring(0, 5000) || "",
+        headings: Array.from(
+          document.querySelectorAll("h1, h2, h3, h4, h5, h6"),
+        )
+          .map((h) => ({
             level: parseInt(h.tagName[1]),
-            text: h.textContent?.trim() || ''
+            text: h.textContent?.trim() || "",
           }))
-          .filter(h => h.text)
+          .filter((h) => h.text)
           .slice(0, 20),
       };
 
       const requestBody: ChatRequest = {
         question: userMessage,
+        image, // Base64 screenshot or user-uploaded image
         context: pageContext,
         organizationId: this.organizationId,
         userId: this.userId,
       };
 
       const response = await fetch(this.baseUrl, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(requestBody),
       });
@@ -137,10 +151,11 @@ export class EdAPIClient {
 
       const data: ChatResponse = await response.json();
 
-      return data.answer || "I'm sorry, I couldn't get a response. Please try again.";
-
+      return (
+        data.answer || "I'm sorry, I couldn't get a response. Please try again."
+      );
     } catch (error) {
-      console.error('[EdAPIClient] Error:', error);
+      console.error("[EdAPIClient] Error:", error);
 
       // Fallback responses based on mode
       if (this.organizationId) {
@@ -156,45 +171,132 @@ export class EdAPIClient {
   /**
    * Get greeting based on mode (website, support, or school)
    */
-  getGreeting(mode: 'website' | 'support' | 'school' = 'school', userName?: string): string {
-    if (mode === 'website') {
-      // Website mode - public visitors (parents, students)
-      return `Hi! Welcome to our school. I'm Ed, here to help.
-
-I can help you with:
-• School information and contact details
-• Term dates and calendar events
-• Admissions and enrolment enquiries
-• General questions about our school
-
-What can I help you find today?`;
+  getGreeting(
+    mode: "website" | "support" | "school" = "school",
+    userName?: string,
+  ): string {
+    if (mode === "website") {
+      return `Hi! I'm Ed, the school assistant. How can I help you today?`;
     }
 
-    if (mode === 'support') {
-      // Pre-login greeting - support mode
-      return `Hi! I'm Ed, the Schoolgle support assistant.
-
-I can help you:
-• Log in to your account
-• Reset your password
-• Troubleshoot access issues
-• Learn about Schoolgle
-
-What do you need help with?`;
+    if (mode === "support") {
+      return `Hi! I'm Ed. Need help logging in or finding something?`;
     }
 
-    // Post-login greeting - school support mode
-    const name = userName ? ` ${userName}` : '';
-    return `Hi${name}! I'm Ed, your Schoolgle assistant.
+    const name = userName ? ` ${userName}` : "";
+    return `Hi${name}! I'm Ed, your school assistant. What can I help with?`;
+  }
 
-I can help you with:
-• School improvement tasks
-• Compliance guidance
-• HR questions
-• Staff directory
-• Using Schoolgle features
+  /**
+   * Start screen sharing — user grants permission once, then Ed can see
+   * their screen on every message. Uses getDisplayMedia (works in all browsers).
+   * GDPR: frames are captured in-memory, sent with the request, never stored.
+   */
+  async startScreenShare(): Promise<boolean> {
+    try {
+      if (this.screenStream) return true; // Already sharing
 
-What work task can I help you with today?`;
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false,
+      });
+
+      this.screenStream = stream;
+
+      // Create hidden video element to draw frames from
+      const video = document.createElement("video");
+      video.srcObject = stream;
+      video.muted = true;
+      video.playsInline = true;
+      video.style.position = "fixed";
+      video.style.top = "-9999px";
+      document.body.appendChild(video);
+      await video.play();
+      this.screenVideo = video;
+
+      // Clean up when user stops sharing via browser UI
+      stream.getVideoTracks()[0].addEventListener("ended", () => {
+        this.stopScreenShare();
+      });
+
+      console.log("[EdAPIClient] Screen sharing started");
+      return true;
+    } catch (error) {
+      console.error("[EdAPIClient] Screen share failed:", error);
+      return false;
+    }
+  }
+
+  /**
+   * Stop screen sharing and clean up resources
+   */
+  stopScreenShare(): void {
+    if (this.screenStream) {
+      this.screenStream.getTracks().forEach((t) => t.stop());
+      this.screenStream = null;
+    }
+    if (this.screenVideo) {
+      this.screenVideo.remove();
+      this.screenVideo = null;
+    }
+    console.log("[EdAPIClient] Screen sharing stopped");
+  }
+
+  /**
+   * Is screen sharing currently active?
+   */
+  get isScreenSharing(): boolean {
+    return !!this.screenStream && this.screenStream.active;
+  }
+
+  /**
+   * Grab a single frame from the live screen share stream.
+   * Returns base64 data URL or null if not sharing.
+   */
+  captureFrame(): string | null {
+    if (!this.screenVideo || !this.screenStream?.active) return null;
+
+    try {
+      const canvas = document.createElement("canvas");
+      canvas.width = this.screenVideo.videoWidth || 1280;
+      canvas.height = this.screenVideo.videoHeight || 720;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return null;
+      ctx.drawImage(this.screenVideo, 0, 0, canvas.width, canvas.height);
+      // Use JPEG at 0.7 quality to keep payload small (~100-200KB)
+      return canvas.toDataURL("image/jpeg", 0.7);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Capture a screenshot — tries screen share first, then extension API.
+   * GDPR: image is never stored, only sent for this request.
+   */
+  async captureScreen(): Promise<string | null> {
+    // 1. If screen sharing is active, grab a frame instantly
+    const frame = this.captureFrame();
+    if (frame) return frame;
+
+    // 2. Fallback: try Chrome extension's captureVisibleTab
+    try {
+      if (typeof chrome !== "undefined" && chrome.runtime?.sendMessage) {
+        return new Promise((resolve) => {
+          chrome.runtime.sendMessage(
+            { type: "CAPTURE_SCREENSHOT" },
+            (response: any) => {
+              resolve(response?.screenshot || null);
+            },
+          );
+          setTimeout(() => resolve(null), 3000);
+        });
+      }
+    } catch {
+      // Extension not available
+    }
+
+    return null;
   }
 
   /**

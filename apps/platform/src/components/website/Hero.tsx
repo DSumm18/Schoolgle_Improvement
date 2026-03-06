@@ -1,81 +1,176 @@
 "use client";
 
-import React from 'react';
-import { motion } from 'framer-motion';
-import { ChevronRight } from 'lucide-react';
-import { useAnalytics } from '@/hooks/useAnalytics';
+import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ArrowRight, Monitor, MessageCircle, Eye } from "lucide-react";
+import SchoolgleAnimatedLogo from "@/components/SchoolgleAnimatedLogo";
+import HeroShowcase from "@/components/website/HeroShowcase";
+import Link from "next/link";
+
+const ROTATING_WORDS = [
+  "Inspection",
+  "Compliance",
+  "Governance",
+  "Safeguarding",
+];
+
+const ED_CAPABILITIES = [
+  { icon: MessageCircle, text: "Ask Ed anything about your school" },
+  { icon: Eye, text: "Ed can see your screen and guide you" },
+  { icon: Monitor, text: "Works with Arbor, SIMS, Bromcom & more" },
+];
 
 const Hero = () => {
-    const { track } = useAnalytics();
-    return (
-        <section className="relative min-h-screen flex flex-col pt-12 px-4 md:px-8 pb-20 overflow-hidden bg-background transition-colors duration-500">
-            <div className="container mx-auto max-w-7xl relative z-10">
+  const [wordIndex, setWordIndex] = useState(0);
 
-                {/* Header Text */}
-                <div className="text-center mb-16 space-y-10">
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6 }}
-                        className="flex flex-col items-center justify-center gap-4"
-                    >
-                        <span className="px-4 py-1.5 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-xs font-bold uppercase tracking-widest border border-blue-100 dark:border-blue-800/50 italic">
-                            Built by school leaders, for school leaders
-                        </span>
-                    </motion.div>
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setWordIndex((i) => (i + 1) % ROTATING_WORDS.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
 
-                    <motion.h1
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6, delay: 0.1 }}
-                        className="text-6xl md:text-7xl lg:text-8xl font-black tracking-tight text-gray-900 dark:text-white text-balance leading-none max-w-6xl mx-auto"
-                    >
-                        Always be ready for <span className="text-blue-600 dark:text-blue-400">Inspection.</span>
-                    </motion.h1>
+  return (
+    <section className="relative flex flex-col items-center px-4 md:px-8 overflow-hidden">
+      {/* Top section: Logo + Headline + CTAs */}
+      <div className="container mx-auto max-w-6xl relative z-10 flex flex-col items-center pt-16 md:pt-24">
+        {/* Animated Planet Logo - compact */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+          className="mb-6"
+        >
+          <SchoolgleAnimatedLogo
+            size={180}
+            showText={false}
+            className="mx-auto"
+          />
+        </motion.div>
 
-                    <motion.p
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6, delay: 0.15 }}
-                        className="text-xl md:text-2xl text-gray-500 dark:text-gray-400 max-w-3xl mx-auto leading-relaxed font-medium"
-                    >
-                        Schoolgle is the AI-powered operations engine for UK primary schools. Automatically map evidence, track improvement actions, and generate inspection-ready reports in seconds.
-                    </motion.p>
+        {/* Tagline badge */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.3 }}
+        >
+          <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-semibold uppercase tracking-widest border border-primary/20">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            Built by school leaders, for school leaders
+          </span>
+        </motion.div>
 
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6, delay: 0.2 }}
-                        className="flex flex-col items-center gap-8 pt-4"
-                    >
-                        <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
-                            <a
-                                href="#early-access"
-                                onClick={() => track('cta_click', { location: 'hero_primary', label: 'Request early access' })}
-                                className="px-10 py-5 bg-blue-600 text-white rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] hover:bg-blue-700 transition-all shadow-[0_20px_40px_rgba(37,99,235,0.2)] hover:scale-105"
-                            >
-                                Request early access
-                            </a>
-                            <a
-                                href="#insights"
-                                onClick={() => track('cta_click', { location: 'hero_secondary', label: 'Learn more' })}
-                                className="text-gray-400 hover:text-gray-900 font-bold uppercase tracking-widest text-xs transition-colors flex items-center gap-2"
-                            >
-                                Learn more <ChevronRight size={16} />
-                            </a>
-                        </div>
+        {/* Main Headline */}
+        <motion.h1
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.5 }}
+          className="mt-8 text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight text-foreground text-center leading-[0.95] max-w-5xl"
+        >
+          Always ready for{" "}
+          <span className="relative inline-block">
+            <AnimatePresence mode="wait">
+              <motion.span
+                key={wordIndex}
+                initial={{ y: 40, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: -40, opacity: 0 }}
+                transition={{ duration: 0.4, ease: "easeInOut" }}
+                className="text-primary inline-block"
+              >
+                {ROTATING_WORDS[wordIndex]}.
+              </motion.span>
+            </AnimatePresence>
+          </span>
+        </motion.h1>
 
-                        <div className="flex items-center gap-8 opacity-40 grayscale pointer-events-none">
-                            <span className="text-[10px] font-black uppercase tracking-widest">Designed for DfE Compliance</span>
-                            <span className="text-[10px] font-black uppercase tracking-widest">GDPR Secure</span>
-                            <span className="text-[10px] font-black uppercase tracking-widest">UK Cloud Hosted</span>
-                        </div>
-                    </motion.div>
-                </div>
-            </div>
-        </section>
-    );
+        {/* Sub-headline */}
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.7 }}
+          className="mt-6 text-base md:text-lg text-muted-foreground max-w-2xl mx-auto text-center leading-relaxed"
+        >
+          The AI-powered operations engine for UK schools. Meet{" "}
+          <strong className="text-foreground">Ed</strong> — your assistant that
+          works across every system, sees your screen, and keeps your school
+          running smoothly.
+        </motion.p>
+
+        {/* CTAs */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.9 }}
+          className="mt-8 flex flex-col sm:flex-row items-center gap-4"
+        >
+          <Link
+            href="#early-access"
+            className="group px-8 py-4 bg-primary text-primary-foreground rounded-full font-bold text-sm uppercase tracking-widest hover:brightness-110 transition-all shadow-lg shadow-primary/20 flex items-center gap-2"
+          >
+            Request Access
+            <ArrowRight
+              size={16}
+              className="group-hover:translate-x-1 transition-transform"
+            />
+          </Link>
+          <Link
+            href="#meet-ed"
+            className="px-8 py-4 rounded-full font-bold text-sm uppercase tracking-widest text-muted-foreground hover:text-foreground border border-border hover:border-foreground/20 transition-all"
+          >
+            Meet Ed
+          </Link>
+        </motion.div>
+
+        {/* Ed capability pills */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.8, delay: 1.1 }}
+          className="mt-10 flex flex-wrap items-center justify-center gap-3"
+        >
+          {ED_CAPABILITIES.map((cap, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 1.2 + i * 0.15 }}
+              className="flex items-center gap-2 px-4 py-2 rounded-full bg-card/50 backdrop-blur-sm border border-border text-sm text-muted-foreground"
+            >
+              <cap.icon size={14} className="text-primary" />
+              <span>{cap.text}</span>
+            </motion.div>
+          ))}
+        </motion.div>
+      </div>
+
+      {/* Hero Showcase Player */}
+      <motion.div
+        initial={{ opacity: 0, y: 40 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8, delay: 1.4 }}
+        className="container mx-auto max-w-6xl relative z-10 mt-16 mb-8 px-4"
+      >
+        <HeroShowcase />
+      </motion.div>
+
+      {/* Trust strip */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.8, delay: 1.8 }}
+        className="flex items-center gap-6 text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/50 pb-16"
+      >
+        <span>UK Cloud Hosted</span>
+        <span className="w-1 h-1 rounded-full bg-muted-foreground/20" />
+        <span>GDPR Compliant</span>
+        <span className="w-1 h-1 rounded-full bg-muted-foreground/20" />
+        <span>DfE Aligned</span>
+        <span className="w-1 h-1 rounded-full bg-muted-foreground/20" />
+        <span>No Data Stored by Ed</span>
+      </motion.div>
+    </section>
+  );
 };
 
 export default Hero;
-

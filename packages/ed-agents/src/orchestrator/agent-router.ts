@@ -8,52 +8,63 @@ import type {
   SpecialistId,
   AgentResponse,
   SchoolContext,
-} from '../types';
-import { AGENTS, getAgent } from '../agents';
-import { getSkillTools, executeSkill } from '../agents/skills-agent';
-import { classifyIntent } from './intent-classifier';
-import { queryKnowledgeBase } from '../knowledge-base/query';
-import { getModelRouter } from '../models';
-import { buildEnrichedPrompt, getTypeSpecificGuidance, buildSchoolContextBlock } from './context-loader';
+} from "../types";
+import { AGENTS, getAgent } from "../agents";
+import { getSkillTools, executeSkill } from "../agents/skills-agent";
+import { classifyIntent } from "./intent-classifier";
+import { queryKnowledgeBase } from "../knowledge-base/query";
+import { getModelRouter } from "../models";
+import {
+  buildEnrichedPrompt,
+  getTypeSpecificGuidance,
+  buildSchoolContextBlock,
+} from "./context-loader";
 
 /**
  * Route question to appropriate specialist and get response
  */
 export async function routeToSpecialist(
   question: string,
-  context: AppContext
+  context: AppContext,
+  options?: { screenshot?: string },
 ): Promise<AgentResponse> {
   // 1. Classify intent
   const classification = classifyIntent(
     question,
     context.activeApp,
-    context.userRole
+    context.userRole,
   );
 
   // 2. Check if user has access to this feature
   if (!hasFeatureAccess(context, classification.domain)) {
     return {
-      agentId: 'ed-general',
+      agentId: "ed-general",
       content: getUpgradeMessage(classification.domain),
-      confidence: 'HIGH',
+      confidence: "HIGH",
       requiresHuman: false,
-      metadata: { blocked: 'feature_access' },
+      metadata: { blocked: "feature_access" },
     };
   }
 
   // 3. Check knowledge base first (for high-confidence factual queries)
   if (classification.confidence > 0.7 && classification.isWorkRelated) {
-    const cached = await queryKnowledgeBase(context.supabase, question, classification.domain);
-    if (cached && cached.confidence === 'HIGH') {
+    const cached = await queryKnowledgeBase(
+      context.supabase,
+      question,
+      classification.domain,
+    );
+    if (cached && cached.confidence === "HIGH") {
       return {
         agentId: classification.specialist,
         content: formatCachedResponse(cached),
-        sources: [{
-          name: cached.sourceName,
-          url: cached.sourceUrl,
-          type: cached.sourceType,
-          lastVerified: cached.lastVerified,
-        }],
+        sources: [
+          {
+            name: cached.sourceName,
+            url: cached.sourceUrl,
+            type: cached.sourceType,
+            lastVerified: cached.lastVerified,
+          },
+        ],
         confidence: cached.confidence,
         metadata: { cached: true, knowledgeId: cached.id },
       };
@@ -70,26 +81,35 @@ export async function routeToSpecialist(
   const enrichedPrompt = buildSpecialistPrompt(
     agent.systemPrompt,
     context.schoolData,
-    question
+    question,
   );
 
   // 6. Call LLM via OpenRouter with Tools
   const modelRouter = getModelRouter(context.openRouterApiKey);
-  const model = modelRouter.selectModel('specialist-response', context);
+
+  // Use vision model if screenshot provided
+  const hasVision = !!options?.screenshot;
+  const model = hasVision
+    ? modelRouter.selectModel("ui-analysis", context)
+    : modelRouter.selectModel("specialist-response", context);
 
   // Get skill tools for the LLM
   const tools = getSkillTools();
 
+  // Build user message (multimodal if screenshot)
+  const userMessage = hasVision
+    ? modelRouter.buildVisionMessage(question, options.screenshot)
+    : { role: "user" as const, content: question };
+
   try {
-    const llmResponse = await modelRouter.chat(
-      enrichedPrompt,
-      question,
+    const llmResponse = await modelRouter.chatMessages(
+      [{ role: "system", content: enrichedPrompt }, userMessage],
       {
         model: model.id,
         temperature: 0.7,
         maxTokens: 2048,
-        tools: tools, // Pass available tools
-      }
+        tools: tools,
+      },
     );
 
     // 7. Check for Tool Calls
@@ -101,7 +121,7 @@ export async function routeToSpecialist(
       try {
         args = JSON.parse(toolCall.function.arguments);
       } catch (e) {
-        console.error('[Agent Router] Error parsing tool arguments:', e);
+        console.error("[Agent Router] Error parsing tool arguments:", e);
       }
 
       // Execute the skill
@@ -110,11 +130,13 @@ export async function routeToSpecialist(
       return {
         agentId: classification.specialist,
         content: skillResult.response,
-        sources: [{
-          name: `${agent.name} (Action: ${functionName})`,
-          type: 'AI Action',
-        }],
-        confidence: 'HIGH',
+        sources: [
+          {
+            name: `${agent.name} (Action: ${functionName})`,
+            type: "AI Action",
+          },
+        ],
+        confidence: "HIGH",
         requiresHuman: !skillResult.success,
         metadata: {
           classification,
@@ -122,7 +144,7 @@ export async function routeToSpecialist(
           toolCall: {
             name: functionName,
             arguments: args,
-            success: skillResult.success
+            success: skillResult.success,
           },
           tokensUsed: {
             input: llmResponse.usage.promptTokens,
@@ -137,11 +159,13 @@ export async function routeToSpecialist(
     return {
       agentId: classification.specialist,
       content: llmResponse.content,
-      sources: [{
-        name: `${agent.name} (AI)`,
-        type: 'AI Specialist',
-      }],
-      confidence: 'MEDIUM',
+      sources: [
+        {
+          name: `${agent.name} (AI)`,
+          type: "AI Specialist",
+        },
+      ],
+      confidence: "MEDIUM",
       metadata: {
         classification,
         modelUsed: model.id,
@@ -152,18 +176,17 @@ export async function routeToSpecialist(
         },
       },
     };
-
   } catch (error) {
     // Handle LLM errors gracefully
     return {
       agentId: classification.specialist,
       content: getErrorMessage(error),
-      confidence: 'LOW',
+      confidence: "LOW",
       requiresHuman: true,
       metadata: {
         classification,
         modelUsed: model.id,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
       },
     };
   }
@@ -175,7 +198,7 @@ export async function routeToSpecialist(
 function buildSpecialistPrompt(
   basePrompt: string,
   schoolContext: SchoolContext | null | undefined,
-  question: string
+  question: string,
 ): string {
   let prompt = basePrompt;
 
@@ -187,7 +210,7 @@ function buildSpecialistPrompt(
     // Add type-specific guidance
     const typeGuidance = getTypeSpecificGuidance(schoolContext);
     if (typeGuidance.length > 0) {
-      prompt = `${prompt}\n\n## Additional Context for This School\n\n${typeGuidance.join('\n')}`;
+      prompt = `${prompt}\n\n## Additional Context for This School\n\n${typeGuidance.join("\n")}`;
     }
   }
 
@@ -198,12 +221,12 @@ function buildSpecialistPrompt(
  * Check if user has access to the feature/domain
  */
 function hasFeatureAccess(context: AppContext, domain: string): boolean {
-  if (context.subscription.plan === 'free') {
-    return ['general', 'it-tech'].includes(domain);
+  if (context.subscription.plan === "free") {
+    return ["general", "it-tech"].includes(domain);
   }
 
-  if (context.subscription.plan === 'schools') {
-    return !['procurement', 'governance'].includes(domain);
+  if (context.subscription.plan === "schools") {
+    return !["procurement", "governance"].includes(domain);
   }
 
   return true;
@@ -214,17 +237,25 @@ function hasFeatureAccess(context: AppContext, domain: string): boolean {
  */
 function getUpgradeMessage(domain: string): string {
   const upgradeMessages: Record<string, string> = {
-    estates: 'Estates Compliance support is available on the Schools plan. Upgrade to access RIDDOR, fire safety, and compliance guidance.',
-    hr: 'HR support is available on the Schools plan. Upgrade to access sickness, absence, and employment guidance.',
-    send: 'SEND support is available on the Schools plan. Upgrade to access EHCP and SEND guidance.',
-    data: 'Data support is available on the Schools plan. Upgrade to access census and data protection guidance.',
-    curriculum: 'Curriculum support is available on the Schools plan. Upgrade to access Ofsted and curriculum guidance.',
-    procurement: 'Procurement support is available on the Trusts plan. Upgrade to access framework and procurement guidance.',
-    governance: 'Governance support is available on the Trusts plan. Upgrade to access trust governance guidance.',
-    communications: 'Communications support is available on the Schools plan. Upgrade to access parent and media guidance.',
+    estates:
+      "Estates Compliance support is available on the Schools plan. Upgrade to access RIDDOR, fire safety, and compliance guidance.",
+    hr: "HR support is available on the Schools plan. Upgrade to access sickness, absence, and employment guidance.",
+    send: "SEND support is available on the Schools plan. Upgrade to access EHCP and SEND guidance.",
+    data: "Data support is available on the Schools plan. Upgrade to access census and data protection guidance.",
+    curriculum:
+      "Curriculum support is available on the Schools plan. Upgrade to access Ofsted and curriculum guidance.",
+    procurement:
+      "Procurement support is available on the Trusts plan. Upgrade to access framework and procurement guidance.",
+    governance:
+      "Governance support is available on the Trusts plan. Upgrade to access trust governance guidance.",
+    communications:
+      "Communications support is available on the Schools plan. Upgrade to access parent and media guidance.",
   };
 
-  return upgradeMessages[domain] || 'This feature is not available on your current plan.';
+  return (
+    upgradeMessages[domain] ||
+    "This feature is not available on your current plan."
+  );
 }
 
 /**
@@ -248,5 +279,5 @@ function getErrorMessage(error: unknown): string {
 
 Please try again in a moment. If this continues, please contact support.`;
   }
-  return 'I encountered an error processing your request. Please try again.';
+  return "I encountered an error processing your request. Please try again.";
 }

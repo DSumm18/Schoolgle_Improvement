@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="en-GB" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Schoolgle Signal — Week 11 — 3 March 2026</title>
+<style>
+:root {
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-display: 'Outfit', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --max-width: 720px;
+  --radius: 14px;
+  --card-pad: 28px;
+  --accent: #00D4D4;
+  --accent-dim: rgba(0,212,212,0.10);
+  --accent-dark: #009E9E;
+  --font-size: 16px;
+  --chip-finance: #10B981;
+  --chip-compliance: #EAB308;
+  --chip-safeguarding: #EF4444;
+  --chip-send: #F59E0B;
+  --chip-hr: #8B5CF6;
+  --chip-estates: #14B8A6;
+  --chip-leadership: #0EA5E9;
+  --chip-teaching: #3B82F6;
+  --chip-ai: #F43F5E;
+  --chip-ops: #0EA5E9;
+}
+[data-theme="light"] {
+  --bg: #F7F7F9; --surface: #FFFFFF; --elevated: #FFFFFF;
+  --text: #0B1220; --text-secondary: #374151; --muted: #5A6578;
+  --border: #E5E7EB; --border-light: #F0F1F4; --quote-bg: #F0F2F5;
+  --shadow: 0 1px 3px rgba(0,0,0,0.06); --shadow-lg: 0 4px 16px rgba(0,0,0,0.08);
+  --error-bg: #FEF2F2; --error-text: #DC2626; --error-border: #FECACA;
+  --success-bg: #F0FDF4; --success-text: #166534;
+}
+[data-theme="dark"] {
+  --bg: #070B18; --surface: #0E1529; --elevated: #141D35;
+  --text: #EAF0FF; --text-secondary: #C5CFEA; --muted: #8B99BC;
+  --border: #1E2A4A; --border-light: #182040; --quote-bg: #111B33;
+  --shadow: 0 1px 3px rgba(0,0,0,0.3); --shadow-lg: 0 4px 16px rgba(0,0,0,0.4);
+  --error-bg: rgba(220,38,38,0.1); --error-text: #F87171; --error-border: #7F1D1D;
+  --success-bg: rgba(22,101,52,0.1); --success-text: #4ADE80;
+}
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: var(--font-body); font-size: var(--font-size); line-height: 1.7;
+  background: var(--bg); color: var(--text);
+  transition: background 0.25s ease, color 0.25s ease;
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+}
+a { color: var(--accent-dark); text-decoration: none; }
+[data-theme="dark"] a { color: var(--accent); }
+a:hover { text-decoration: underline; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
+
+.issue-header {
+  position: sticky; top: 0; z-index: 100;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow); padding: 12px 20px;
+}
+.issue-header-inner {
+  max-width: 960px; margin: 0 auto;
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+}
+.issue-header-title { font-family: var(--font-display); font-size: 15px; font-weight: 600; color: var(--text); }
+.issue-header-title span { color: var(--accent); }
+.issue-header-right { display: flex; align-items: center; gap: 12px; }
+.issue-header-date { font-size: 13px; color: var(--muted); }
+.listen-btn { display: inline-flex; align-items: center; gap: 5px; padding: 6px 14px; background: var(--accent); color: #070B18; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: var(--font-body); min-height: 36px; }
+.listen-btn:hover { opacity: 0.9; }
+
+.layout-wrapper { display: flex; max-width: 1060px; margin: 0 auto; padding: 0 16px; gap: 0; }
+.toc-rail { width: 160px; flex-shrink: 0; position: relative; }
+.toc-sticky { position: sticky; top: 60px; padding: 24px 0; max-height: calc(100vh - 80px); overflow-y: auto; }
+.toc-sticky nav { display: flex; flex-direction: column; gap: 2px; }
+.toc-link { display: block; padding: 6px 12px; font-size: 12px; color: var(--muted); text-decoration: none; border-radius: 6px; line-height: 1.4; border-left: 2px solid transparent; transition: color 0.15s, border-color 0.15s; }
+.toc-link:hover { color: var(--text); text-decoration: none; }
+.toc-link.active { color: var(--accent-dark); border-left-color: var(--accent); font-weight: 600; }
+[data-theme="dark"] .toc-link.active { color: var(--accent); }
+@media (max-width: 900px) { .toc-rail { display: none; } .layout-wrapper { padding: 0 16px; } }
+.main-content { flex: 1; max-width: var(--max-width); margin: 0 auto; padding: 32px 0 80px; min-width: 0; }
+
+.page-header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; margin-bottom: 36px; padding-bottom: 24px; border-bottom: 2px solid var(--border); }
+.page-header h1 { font-family: var(--font-display); font-size: 28px; font-weight: 300; color: var(--text); line-height: 1.2; letter-spacing: -0.3px; }
+.page-header h1 span { color: var(--accent); font-weight: 700; }
+.header-meta { display: flex; flex-direction: column; gap: 2px; }
+.header-meta .date { font-size: 14px; color: var(--muted); }
+.header-meta .issue { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+.controls { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ctrl-group { display: flex; gap: 2px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 2px; }
+.ctrl-btn { display: inline-flex; align-items: center; justify-content: center; min-width: 36px; min-height: 36px; padding: 6px 10px; background: transparent; border: none; border-radius: 6px; color: var(--muted); font-size: 13px; font-weight: 500; cursor: pointer; transition: background 0.15s, color 0.15s; font-family: var(--font-body); }
+.ctrl-btn:hover { background: var(--surface); color: var(--text); }
+.ctrl-btn:focus-visible { box-shadow: 0 0 0 2px var(--accent); outline: none; }
+.ctrl-btn.active { background: var(--surface); color: var(--accent); box-shadow: var(--shadow); }
+
+.audio-player { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px var(--card-pad); margin-bottom: 28px; box-shadow: var(--shadow); }
+.audio-top { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.audio-play-btn { width: 44px; height: 44px; border-radius: 50%; background: var(--accent); color: #070B18; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 18px; }
+.audio-play-btn:hover { opacity: 0.9; }
+.audio-info { flex: 1; min-width: 150px; }
+.audio-info .audio-title { font-size: 14px; font-weight: 600; color: var(--text); }
+.audio-info .audio-time { font-size: 12px; color: var(--muted); }
+.audio-progress { flex: 1; min-width: 180px; display: flex; align-items: center; gap: 10px; }
+.audio-track { flex: 1; height: 4px; background: var(--border); border-radius: 2px; position: relative; cursor: pointer; }
+.audio-track-fill { width: 0%; height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.1s; }
+.audio-track-dot { position: absolute; top: 50%; left: 0%; transform: translate(-50%, -50%); width: 12px; height: 12px; background: var(--accent); border-radius: 50%; box-shadow: 0 0 4px rgba(0,212,212,0.4); }
+.audio-time-label { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.audio-speed { display: flex; gap: 2px; background: var(--bg); border-radius: 6px; padding: 2px; }
+.speed-btn { padding: 4px 8px; font-size: 11px; font-weight: 600; border: none; background: transparent; color: var(--muted); cursor: pointer; border-radius: 4px; font-family: var(--font-body); }
+.speed-btn.active { background: var(--surface); color: var(--accent); }
+.transcript-section { margin-top: 12px; border-top: 1px solid var(--border-light); }
+.transcript-toggle { display: flex; align-items: center; gap: 6px; padding: 10px 0 0; font-size: 13px; color: var(--accent-dark); background: none; border: none; cursor: pointer; font-family: var(--font-body); font-weight: 500; }
+[data-theme="dark"] .transcript-toggle { color: var(--accent); }
+.transcript-body { display: none; margin-top: 10px; padding: 16px; background: var(--quote-bg); border-radius: 8px; font-size: 14px; color: var(--muted); line-height: 1.7; }
+.transcript-body.open { display: block; }
+
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--card-pad); margin-bottom: 24px; box-shadow: var(--shadow); }
+.chip { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+.chip-finance { background: rgba(16,185,129,0.12); color: #047857; }
+.chip-compliance { background: rgba(234,179,8,0.12); color: #92400E; }
+.chip-safeguarding { background: rgba(239,68,68,0.12); color: #B91C1C; }
+.chip-send { background: rgba(245,158,11,0.12); color: #92400E; }
+.chip-hr { background: rgba(139,92,246,0.12); color: #5B21B6; }
+.chip-estates { background: rgba(20,184,166,0.12); color: #0F766E; }
+.chip-leadership { background: rgba(14,165,233,0.12); color: #0369A1; }
+.chip-teaching { background: rgba(59,130,246,0.12); color: #1D4ED8; }
+.chip-ai { background: rgba(244,63,94,0.12); color: #BE123C; }
+.chip-ops { background: rgba(14,165,233,0.12); color: #0369A1; }
+[data-theme="dark"] .chip-finance { color: #34D399; }
+[data-theme="dark"] .chip-compliance { color: #FDE047; }
+[data-theme="dark"] .chip-safeguarding { color: #FCA5A5; }
+[data-theme="dark"] .chip-send { color: #FCD34D; }
+[data-theme="dark"] .chip-hr { color: #C4B5FD; }
+[data-theme="dark"] .chip-estates { color: #5EEAD4; }
+[data-theme="dark"] .chip-leadership { color: #7DD3FC; }
+[data-theme="dark"] .chip-teaching { color: #93C5FD; }
+[data-theme="dark"] .chip-ai { color: #FDA4AF; }
+[data-theme="dark"] .chip-ops { color: #7DD3FC; }
+.card h2 { font-family: var(--font-display); font-size: 1.5rem; font-weight: 600; line-height: 1.3; margin-bottom: 8px; color: var(--text); }
+.card .summary { font-size: 15px; color: var(--muted); margin-bottom: 18px; line-height: 1.6; }
+.card h3 { font-size: 1.1rem; font-weight: 600; margin: 28px 0 10px; color: var(--text); }
+.card p { margin-bottom: 14px; line-height: 1.7; }
+.card ul, .card ol { margin: 10px 0 16px 22px; }
+.card li { margin-bottom: 8px; line-height: 1.6; }
+.card strong { color: var(--text); }
+.data-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+.data-table th { text-align: left; padding: 10px 12px; background: var(--quote-bg); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.3px; color: var(--muted); border-bottom: 2px solid var(--border); }
+.data-table td { padding: 10px 12px; border-bottom: 1px solid var(--border-light); }
+.action-box { background: var(--bg); border-left: 3px solid var(--accent); border-radius: 0 var(--radius) var(--radius) 0; padding: 20px 24px; margin: 24px 0 4px; }
+.action-box .action-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--accent-dark); margin-bottom: 10px; }
+[data-theme="dark"] .action-box .action-title { color: var(--accent); }
+.action-box ul { margin: 0 0 0 18px; }
+.action-box li { font-size: 15px; margin-bottom: 6px; }
+.action-box li .time-est { font-size: 12px; color: var(--muted); font-weight: 500; }
+
+.tool-card { background: var(--surface); border: 2px solid var(--accent); border-radius: var(--radius); padding: var(--card-pad); margin-bottom: 24px; position: relative; box-shadow: 0 0 0 4px var(--accent-dim); }
+.tool-badge { position: absolute; top: -12px; left: 24px; background: var(--accent); color: #070B18; font-size: 10px; font-weight: 700; letter-spacing: 1px; padding: 4px 12px; border-radius: 4px; text-transform: uppercase; }
+.tool-card h2 { font-family: var(--font-display); font-size: 1.5rem; font-weight: 600; margin-top: 8px; margin-bottom: 4px; }
+.tool-card .summary { font-size: 15px; color: var(--muted); margin-bottom: 24px; }
+.tool-input-group { margin-bottom: 20px; }
+.tool-input-group label { display: block; font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+.tool-slider-row { display: flex; align-items: center; gap: 12px; }
+.tool-slider-row input[type="range"] { flex: 1; height: 6px; -webkit-appearance: none; appearance: none; background: var(--border); border-radius: 3px; outline: none; }
+.tool-slider-row input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); cursor: pointer; box-shadow: 0 0 8px rgba(0,212,212,0.3); }
+.tool-slider-row input[type="range"]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: var(--accent); cursor: pointer; border: none; }
+.tool-slider-row input[type="range"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.tool-value { min-width: 90px; padding: 10px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; font-size: 16px; font-weight: 600; text-align: center; color: var(--text); font-family: var(--font-body); }
+.tool-value:focus-visible { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-dim); }
+.results-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 24px 0; }
+@media (max-width: 480px) { .results-grid { grid-template-columns: 1fr; } }
+.result-tile { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+.result-tile .rlabel { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; font-weight: 500; }
+.result-tile .rvalue { font-size: 24px; font-weight: 700; font-family: var(--font-body); font-variant-numeric: tabular-nums; }
+.result-tile.hero { grid-column: 1 / -1; border-color: var(--accent); background: var(--accent-dim); }
+.result-tile.hero .rvalue { color: var(--accent-dark); font-size: 32px; }
+[data-theme="dark"] .result-tile.hero .rvalue { color: var(--accent); }
+.comparison-panel { margin: 24px 0; padding: 20px; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; }
+.comparison-title { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 16px; }
+.bench-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 13px; }
+.bench-label { width: 140px; color: var(--muted); font-size: 12px; flex-shrink: 0; }
+.bench-track { flex: 1; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+.bench-fill { height: 100%; border-radius: 4px; transition: width 0.4s ease; }
+.bench-val { width: 50px; text-align: right; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.assumptions-details { margin: 20px 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.assumptions-details summary { padding: 14px 18px; font-size: 14px; font-weight: 600; color: var(--muted); cursor: pointer; list-style: none; display: flex; align-items: center; gap: 8px; min-height: 44px; }
+.assumptions-details summary::-webkit-details-marker { display: none; }
+.assumptions-details summary::before { content: '▸'; transition: transform 0.2s; }
+.assumptions-details[open] summary::before { transform: rotate(90deg); }
+.assumptions-details summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.assumptions-inner { padding: 0 18px 18px; font-size: 14px; color: var(--muted); line-height: 1.7; }
+.assumptions-inner ul { margin: 8px 0 8px 18px; }
+.assumptions-inner li { margin-bottom: 4px; }
+.confidence-tabs { margin: 20px 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.tab-header { display: flex; border-bottom: 1px solid var(--border); }
+.tab-btn { flex: 1; padding: 12px 16px; font-size: 14px; font-weight: 600; border: none; background: var(--bg); color: var(--muted); cursor: pointer; font-family: var(--font-body); min-height: 44px; transition: background 0.15s, color 0.15s; }
+.tab-btn.active { background: var(--surface); color: var(--accent-dark); border-bottom: 2px solid var(--accent); }
+[data-theme="dark"] .tab-btn.active { color: var(--accent); }
+.tab-btn:hover:not(.active) { background: var(--surface); }
+.tab-content { display: none; padding: 20px; }
+.tab-content.active { display: block; }
+.lock-overlay { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.lock-icon { font-size: 32px; opacity: 0.5; }
+.lock-features { list-style: none; margin: 12px 0; padding: 0; font-size: 13px; text-align: left; }
+.lock-features li { padding: 4px 0; }
+.lock-features li::before { content: '✓ '; color: var(--accent); font-weight: 700; }
+.cta-panel { margin: 24px 0; padding: 24px; background: linear-gradient(135deg, var(--accent-dim), rgba(0,212,212,0.03)); border: 1px solid rgba(0,212,212,0.25); border-radius: var(--radius); text-align: center; }
+.cta-panel h3 { margin: 0 0 16px; font-size: 1.1rem; }
+.cta-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px; }
+.cta-btn-primary { display: inline-flex; align-items: center; gap: 6px; padding: 12px 24px; background: var(--accent); color: #070B18; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: var(--font-body); min-height: 44px; }
+.cta-btn-primary:hover { opacity: 0.9; }
+.cta-btn-secondary { display: inline-flex; align-items: center; gap: 6px; padding: 12px 24px; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: var(--font-body); min-height: 44px; }
+.cta-btn-secondary:hover { border-color: var(--accent); }
+.pro-strip { display: flex; flex-wrap: wrap; gap: 12px 20px; justify-content: center; font-size: 13px; color: var(--muted); }
+.pro-strip span::before { content: '✓ '; color: var(--accent); font-weight: 700; }
+.save-share { display: flex; gap: 10px; flex-wrap: wrap; margin: 16px 0; }
+.share-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--text); cursor: pointer; font-family: var(--font-body); min-height: 40px; }
+.share-btn:hover { border-color: var(--accent); }
+.share-btn .pro-badge { font-size: 9px; font-weight: 700; background: var(--accent); color: #070B18; padding: 2px 6px; border-radius: 3px; letter-spacing: 0.3px; }
+
+.poll-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--card-pad); margin-bottom: 24px; box-shadow: var(--shadow); }
+.poll-card h2 { font-family: var(--font-display); font-size: 1.3rem; font-weight: 600; margin-bottom: 16px; }
+.poll-options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+@media (max-width: 500px) { .poll-options { grid-template-columns: 1fr; } }
+.poll-option { background: var(--bg); border: 2px solid var(--border); border-radius: 12px; padding: 18px 16px; cursor: pointer; font-size: 14px; font-weight: 500; transition: border-color 0.15s, background 0.15s; min-height: 44px; display: flex; align-items: center; justify-content: center; text-align: center; line-height: 1.4; }
+.poll-option:hover { border-color: var(--accent); background: var(--accent-dim); }
+.poll-option.selected { border-color: var(--accent); background: var(--accent-dim); font-weight: 700; }
+.poll-option:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.poll-region { margin-bottom: 16px; }
+.poll-region label { font-size: 13px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px; }
+.tool-select { width: 100%; padding: 10px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; font-size: 15px; color: var(--text); font-family: var(--font-body); cursor: pointer; -webkit-appearance: none; appearance: none; background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%235A6578' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+.tool-select:focus-visible { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-dim); }
+.poll-submit { display: inline-flex; align-items: center; gap: 6px; padding: 12px 24px; background: var(--accent); color: #070B18; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: var(--font-body); min-height: 44px; opacity: 0.5; pointer-events: none; }
+.poll-submit.enabled { opacity: 1; pointer-events: auto; }
+.poll-submit:hover { opacity: 0.9; }
+.poll-thanks { display: none; text-align: center; padding: 24px; font-size: 16px; font-weight: 600; color: var(--success-text); }
+.poll-thanks.visible { display: block; }
+.poll-form.hidden { display: none; }
+.prior-poll { background: var(--quote-bg); border-radius: 10px; padding: 16px 20px; margin-bottom: 8px; font-size: 14px; color: var(--muted); line-height: 1.6; }
+.prior-poll strong { color: var(--text); }
+
+.mid-cta { background: var(--surface); border: 1px solid var(--accent); border-radius: var(--radius); padding: 32px var(--card-pad); text-align: center; margin: 32px 0; box-shadow: var(--shadow); }
+.mid-cta h2 { font-family: var(--font-display); font-size: 1.3rem; margin-bottom: 8px; }
+.mid-cta p { color: var(--muted); font-size: 15px; margin-bottom: 16px; }
+.email-capture { display: flex; gap: 8px; max-width: 400px; margin: 0 auto; }
+.email-capture input { flex: 1; padding: 12px 16px; border: 1px solid var(--border); border-radius: 8px; font-size: 15px; font-family: var(--font-body); background: var(--bg); color: var(--text); min-height: 44px; }
+.email-capture input:focus-visible { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-dim); }
+.email-capture button { padding: 12px 20px; background: var(--accent); color: #070B18; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: var(--font-body); white-space: nowrap; min-height: 44px; }
+
+.todo { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; }
+.todo input[type="checkbox"] { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--accent); flex-shrink: 0; cursor: pointer; }
+.todo label { font-size: 15px; cursor: pointer; }
+.time-saved { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; font-size: 13px; color: var(--success-text); background: var(--success-bg); border-radius: 8px; font-weight: 600; margin-top: 16px; }
+
+.page-footer { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 36px var(--card-pad); margin-top: 32px; box-shadow: var(--shadow); }
+.footer-pro { margin-bottom: 28px; padding-bottom: 24px; border-bottom: 1px solid var(--border); }
+.footer-pro h3 { font-family: var(--font-display); font-size: 1.2rem; margin-bottom: 16px; }
+.footer-pro-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 14px; }
+@media (max-width: 480px) { .footer-pro-grid { grid-template-columns: 1fr; } }
+.footer-pro-grid .pro-item { display: flex; align-items: flex-start; gap: 8px; }
+.footer-pro-grid .pro-item::before { content: '✓'; color: var(--accent); font-weight: 700; flex-shrink: 0; }
+.footer-subscribe { text-align: center; margin-bottom: 28px; padding-bottom: 24px; border-bottom: 1px solid var(--border); }
+.footer-subscribe h3 { font-family: var(--font-display); font-size: 1.1rem; margin-bottom: 12px; }
+.footer-subscribe .cta-btn-primary { margin-top: 8px; text-decoration: none; display: inline-flex; }
+.footer-brand { text-align: center; font-size: 13px; color: var(--muted); }
+.footer-brand .brand-line { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+.footer-sources { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-light); }
+.footer-sources h4 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 8px; }
+.footer-sources ul { list-style: none; padding: 0; margin: 0; font-size: 12px; }
+.footer-sources li { padding: 3px 0; }
+.footer-sources a { color: var(--muted); }
+.footer-sources a:hover { color: var(--accent); }
+
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
+.modal-overlay.open { display: flex; }
+.modal { background: var(--surface); border-radius: var(--radius); padding: 36px; max-width: 440px; width: 100%; box-shadow: var(--shadow-lg); position: relative; }
+.modal-close { position: absolute; top: 12px; right: 16px; background: none; border: none; font-size: 20px; color: var(--muted); cursor: pointer; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; }
+.modal h3 { font-family: var(--font-display); font-size: 1.2rem; margin-bottom: 8px; }
+.modal p { font-size: 14px; color: var(--muted); margin-bottom: 20px; line-height: 1.6; }
+.modal input[type="email"] { width: 100%; padding: 12px 16px; border: 1px solid var(--border); border-radius: 8px; font-size: 15px; font-family: var(--font-body); background: var(--bg); color: var(--text); margin-bottom: 12px; min-height: 44px; }
+.modal input[type="email"]:focus-visible { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-dim); }
+.modal .modal-submit { width: 100%; padding: 12px; background: var(--accent); color: #070B18; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: var(--font-body); min-height: 44px; }
+.modal .modal-disclaimer { font-size: 12px; color: var(--muted); text-align: center; margin-top: 12px; }
+.modal .modal-success { display: none; text-align: center; padding: 24px 0; font-size: 18px; font-weight: 600; color: var(--success-text); }
+
+@media print {
+  .issue-header, .toc-rail, .controls, .audio-player, .cta-panel, .mid-cta, .modal-overlay, .save-share, .poll-card { display: none; }
+  body { background: #fff; color: #000; font-size: 12pt; }
+  .card, .tool-card, .page-footer { box-shadow: none; border: 1px solid #ddd; }
+}
+</style>
+</head>
+<body>
+
+<!-- ===== STICKY ISSUE HEADER ===== -->
+<div class="issue-header">
+  <div class="issue-header-inner">
+    <div class="issue-header-title">The Schoolgle <span>Signal</span> — Week 11 — 3 March 2026</div>
+    <div class="issue-header-right">
+      <span class="issue-header-date">Issue #11</span>
+      <button class="listen-btn" onclick="document.getElementById('audio-section').scrollIntoView({behavior:'smooth'})">🎧 Listen</button>
+    </div>
+  </div>
+</div>
+
+<div class="layout-wrapper">
+  <aside class="toc-rail">
+    <div class="toc-sticky">
+      <nav aria-label="Table of contents">
+        <a href="#sixty-seconds" class="toc-link" data-section="sixty-seconds">This week</a>
+        <a href="#deep-dive" class="toc-link" data-section="deep-dive">Pay affordability</a>
+        <a href="#ehcp-tool" class="toc-link" data-section="ehcp-tool">EHCP Snapshot</a>
+        <a href="#radar" class="toc-link" data-section="radar">Radar</a>
+        <a href="#ops-checklist" class="toc-link" data-section="ops-checklist">Ops checklist</a>
+        <a href="#poll-section" class="toc-link" data-section="poll-section">Your vote</a>
+        <a href="#the-question" class="toc-link" data-section="the-question">The question</a>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="main-content">
+
+    <header class="page-header">
+      <div>
+        <h1>The Schoolgle <span>Signal</span></h1>
+        <div class="header-meta">
+          <span class="date">Week of 3 March 2026</span>
+          <span class="issue">Issue #11</span>
+        </div>
+      </div>
+      <div class="controls">
+        <div class="ctrl-group">
+          <button class="ctrl-btn active" onclick="setTheme('light')" id="btn-light" aria-label="Light mode" title="Light mode">☀️</button>
+          <button class="ctrl-btn" onclick="setTheme('dark')" id="btn-dark" aria-label="Dark mode" title="Dark mode">🌙</button>
+          <button class="ctrl-btn" onclick="setTheme('system')" id="btn-system" aria-label="System theme" title="System theme">⚙️</button>
+        </div>
+        <div class="ctrl-group">
+          <button class="ctrl-btn" onclick="adjustFont(-1)" aria-label="Decrease text size" title="Smaller text">A−</button>
+          <button class="ctrl-btn" onclick="adjustFont(0)" aria-label="Default text size" title="Default text">A</button>
+          <button class="ctrl-btn" onclick="adjustFont(1)" aria-label="Increase text size" title="Larger text">A+</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- PERSONAL TOUCH -->
+    <div class="card" style="border-left: 3px solid var(--accent); background: var(--accent-dim);">
+      <p style="margin:0; font-size: 15px; font-style: italic; color: var(--text);">March. Budget season. The month where spreadsheets determine whether schools can afford both pay rises and functioning boilers. Breathe. ☕</p>
+    </div>
+
+    <!-- AUDIO -->
+    <div class="audio-player" id="audio-section">
+      <div class="audio-top">
+        <button class="audio-play-btn" id="playBtn" aria-label="Play audio" onclick="togglePlay()">▶</button>
+        <div class="audio-info">
+          <div class="audio-title">Listen to this issue (8 mins)</div>
+          <div class="audio-time">The Schoolgle Signal — Week 11</div>
+        </div>
+        <div class="audio-progress">
+          <span class="audio-time-label" id="audioCurrentTime">0:00</span>
+          <div class="audio-track" onclick="seekAudio(event)">
+            <div class="audio-track-fill" id="audioFill"></div>
+            <div class="audio-track-dot" id="audioDot"></div>
+          </div>
+          <span class="audio-time-label" id="audioTotalTime">8:12</span>
+        </div>
+        <div class="audio-speed">
+          <button class="speed-btn active" onclick="setSpeed(1, this)">1×</button>
+          <button class="speed-btn" onclick="setSpeed(1.5, this)">1.5×</button>
+          <button class="speed-btn" onclick="setSpeed(2, this)">2×</button>
+        </div>
+      </div>
+      <div class="transcript-section">
+        <button class="transcript-toggle" onclick="this.nextElementSibling.classList.toggle('open'); this.querySelector('.arrow').textContent = this.nextElementSibling.classList.contains('open') ? '▾' : '▸'">
+          <span class="arrow">▸</span> Show transcript
+        </button>
+        <div class="transcript-body">
+          <p>This week: the DfE says schools can only afford a 2.7% pay rise — but wants 6.5% over three years. We break down what that means for your budget. Plus: the White Paper has landed with complaints reforms, area missions, and inclusion bases. And we've built an EHCP Readiness Snapshot tool. All practical, all actionable.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 60 SECONDS -->
+    <div class="card" id="sixty-seconds">
+      <h2>This week in 60 seconds</h2>
+      <ul>
+        <li><strong>Pay</strong> — DfE estimates schools can afford just 2.7% pay rises over next two years. They're recommending 6.5% over three. The maths doesn't add up without savings elsewhere.</li>
+        <li><strong>White Paper</strong> — It's here. Digital complaints platform, "Mission North East", "Mission Coastal", inclusion bases for every secondary, 6,500 teacher delivery plan published.</li>
+        <li><strong>Complaints</strong> — New digital platform coming to stop parents escalating through multiple channels simultaneously. But lawyers warn it lacks enforcement powers.</li>
+        <li><strong>SEND</strong> — Special schools sharing inclusion expertise with mainstream settings. Government expects all secondaries to have SEND inclusion bases.</li>
+        <li><strong>Tool of the week</strong> — <a href="#ehcp-tool">EHCP Readiness Snapshot</a>. Assess your caseload risk in 2 minutes.</li>
+      </ul>
+    </div>
+
+    <!-- DEEP DIVE: PAY -->
+    <div class="card" id="deep-dive">
+      <span class="chip chip-finance">Finance</span>
+      <h2>The pay reality: 2.7% headroom, 6.5% ambition</h2>
+      <p class="summary">The DfE's own numbers show schools can afford less than half the pay increase the government is recommending. Here's what it means for your budget.</p>
+
+      <h3>What the DfE actually said</h3>
+      <p>In its <a href="https://assets.publishing.service.gov.uk/media/69a5c57e46e50eda5c46b5b5/Schools_costs_technical_note_2025_to_2029_.pdf" target="_blank" rel="noopener">annual school costs technical note</a>, the department forecasts schools will have around <strong>£1 billion of "headroom"</strong> over the next two years. That sounds generous until you do the division: every 1 percentage point pay increase costs schools £330 million nationally.</p>
+      <p>So £1 billion ÷ £330 million = <strong>roughly 3 percentage points</strong>. Spread across two years, that's the 2.7% figure. And only £250 million of that headroom falls in 2026-27 — making next year "more challenging" than 2027-28.</p>
+
+      <h3>The gap</h3>
+      <p>The DfE has recommended 6.5% over three years to the School Teachers' Review Body. Assuming 2.7% is absorbed in years one and two, that leaves <strong>3.9% needed in year three</strong> — with no confirmed funding source yet. The DfE's own words: schools will need to "realise and sustain better value from existing spending."</p>
+      <p>The NEU's Daniel Kebede was blunt: <em>"After 15 years of austerity, there are no easy savings to be made. To call this a 'manageable ask' is not only ludicrous but insulting."</em></p>
+
+      <h3>What this means for your budget</h3>
+      <table class="data-table">
+        <thead><tr><th>Scenario</th><th>Cost impact (avg primary, 30 teachers)</th></tr></thead>
+        <tbody>
+          <tr><td>1% pay rise (all staff)</td><td>~£33,000 additional cost</td></tr>
+          <tr><td>2.7% over 2 years</td><td>~£89,000 additional cost</td></tr>
+          <tr><td>6.5% over 3 years</td><td>~£215,000 additional cost</td></tr>
+        </tbody>
+      </table>
+      <p>Add to this the SEND provision cost increase the DfE estimates at <strong>£880 million nationally</strong> over two years. Over £4 billion has been promised for inclusion — but the DfE explicitly excluded this from its affordability calculations.</p>
+
+      <div class="action-box">
+        <div class="action-title">Do this next</div>
+        <ul>
+          <li>Model a 1.5% pay rise scenario for 2026-27 using last week's <a href="week-10.html#workforce-tool">Workforce Calculator</a>. <span class="time-est">(15 mins)</span></li>
+          <li>Identify your three largest non-staff cost lines. Can any reduce by 5%? <span class="time-est">(20 mins)</span></li>
+          <li>Brief your finance committee: the gap between affordable and recommended is real. <span class="time-est">(30 mins)</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ===== EHCP READINESS SNAPSHOT TOOL ===== -->
+    <div class="tool-card" id="ehcp-tool">
+      <div class="tool-badge">Interactive Tool</div>
+      <h2 style="margin-top:16px;">EHCP Readiness Snapshot</h2>
+      <p class="summary">Enter your SEND caseload data to get an instant risk rating and priority action plan. Takes 2 minutes.</p>
+
+      <div class="tool-input-group">
+        <label for="ehcp-total">Total EHCP pupils</label>
+        <div class="tool-slider-row">
+          <input type="range" id="ehcp-total" min="1" max="100" value="15" aria-label="Total EHCP pupils">
+          <input type="number" class="tool-value" id="ehcp-total-val" value="15" min="1" max="500" aria-label="Total EHCP pupils value">
+        </div>
+      </div>
+
+      <div class="tool-input-group">
+        <label for="ehcp-reviews-30">Annual reviews due in next 30 days</label>
+        <div class="tool-slider-row">
+          <input type="range" id="ehcp-reviews-30" min="0" max="30" value="3" aria-label="Reviews due 30 days">
+          <input type="number" class="tool-value" id="ehcp-reviews-30-val" value="3" min="0" max="100" aria-label="Reviews due 30 days value">
+        </div>
+      </div>
+
+      <div class="tool-input-group">
+        <label for="ehcp-reviews-60">Annual reviews due in next 60 days</label>
+        <div class="tool-slider-row">
+          <input type="range" id="ehcp-reviews-60" min="0" max="30" value="5" aria-label="Reviews due 60 days">
+          <input type="number" class="tool-value" id="ehcp-reviews-60-val" value="5" min="0" max="100" aria-label="Reviews due 60 days value">
+        </div>
+      </div>
+
+      <div class="tool-input-group">
+        <label for="ehcp-overdue">Open actions older than 14 days</label>
+        <div class="tool-slider-row">
+          <input type="range" id="ehcp-overdue" min="0" max="50" value="4" aria-label="Overdue actions">
+          <input type="number" class="tool-value" id="ehcp-overdue-val" value="4" min="0" max="200" aria-label="Overdue actions value">
+        </div>
+      </div>
+
+      <div class="tool-input-group">
+        <label for="senco-hours">SENCO capacity (hours/week available for EHCP work)</label>
+        <div class="tool-slider-row">
+          <input type="range" id="senco-hours" min="1" max="40" value="10" aria-label="SENCO hours per week">
+          <input type="number" class="tool-value" id="senco-hours-val" value="10" min="1" max="60" aria-label="SENCO hours per week value">
+        </div>
+      </div>
+
+      <div class="tool-input-group">
+        <label for="ehcp-parent-complaints">Parent complaints/concerns (last 30 days)</label>
+        <div class="tool-slider-row">
+          <input type="range" id="ehcp-parent-complaints" min="0" max="20" value="2" aria-label="Parent complaints">
+          <input type="number" class="tool-value" id="ehcp-parent-complaints-val" value="2" min="0" max="50" aria-label="Parent complaints value">
+        </div>
+      </div>
+
+      <!-- Results -->
+      <div class="results-grid" id="ehcp-results">
+        <div class="result-tile hero">
+          <div class="rlabel">Overall risk rating</div>
+          <div class="rvalue" id="er-rating">🟡 AMBER</div>
+        </div>
+        <div class="result-tile">
+          <div class="rlabel">Reviews per SENCO hour (monthly)</div>
+          <div class="rvalue" id="er-load">0.8</div>
+        </div>
+        <div class="result-tile">
+          <div class="rlabel">Overdue action rate</div>
+          <div class="rvalue" id="er-overdue-rate">27%</div>
+        </div>
+        <div class="result-tile">
+          <div class="rlabel">Hours needed per pupil/week</div>
+          <div class="rvalue" id="er-hours-pupil">0.67</div>
+        </div>
+        <div class="result-tile">
+          <div class="rlabel">Capacity headroom</div>
+          <div class="rvalue" id="er-headroom">+2.0 hrs</div>
+        </div>
+        <div class="result-tile">
+          <div class="rlabel">Tribunal risk indicator</div>
+          <div class="rvalue" id="er-tribunal">Low</div>
+        </div>
+      </div>
+
+      <!-- Benchmarks -->
+      <div class="comparison-panel">
+        <div class="comparison-title">Your school vs recommended benchmarks</div>
+        <div class="bench-row">
+          <span class="bench-label">Recommended max reviews/month</span>
+          <div class="bench-track"><div class="bench-fill" style="width:40%;background:var(--accent);"></div></div>
+          <span class="bench-val">4</span>
+        </div>
+        <div class="bench-row">
+          <span class="bench-label">Your reviews (30-day)</span>
+          <div class="bench-track"><div class="bench-fill" id="b-your-reviews" style="width:30%;background:var(--chip-send);"></div></div>
+          <span class="bench-val" id="bv-your-reviews">3</span>
+        </div>
+        <div style="margin-top:16px;"></div>
+        <div class="bench-row">
+          <span class="bench-label">Max overdue actions (%)</span>
+          <div class="bench-track"><div class="bench-fill" style="width:15%;background:var(--accent);"></div></div>
+          <span class="bench-val">15%</span>
+        </div>
+        <div class="bench-row">
+          <span class="bench-label" style="font-weight:700;color:var(--text);">Your overdue rate</span>
+          <div class="bench-track"><div class="bench-fill" id="b-your-overdue" style="width:27%;background:var(--error-text);"></div></div>
+          <span class="bench-val" id="bv-your-overdue" style="font-weight:700;">27%</span>
+        </div>
+      </div>
+
+      <!-- Action plan output -->
+      <div class="action-box" id="ehcp-action-plan">
+        <div class="action-title">Your 7-day action plan</div>
+        <ul id="ehcp-actions">
+          <li>Clear overdue actions first — assign one owner per action by end of today</li>
+          <li>Schedule reviews due within 30 days — block SENCO time this week</li>
+          <li>Set up a weekly 20-minute SEND risk huddle with SLT</li>
+          <li>Draft a parent update template for high-risk cases</li>
+        </ul>
+      </div>
+
+      <!-- Assumptions -->
+      <details class="assumptions-details">
+        <summary>How this is calculated (assumptions)</summary>
+        <div class="assumptions-inner">
+          <ul>
+            <li>Risk rating based on: overdue action rate, review backlog vs capacity, and parent complaint frequency</li>
+            <li>GREEN: overdue &lt;15%, reviews manageable within SENCO hours, &lt;1 complaint/month</li>
+            <li>AMBER: overdue 15-30%, reviews stretching capacity, 1-3 complaints/month</li>
+            <li>RED: overdue &gt;30%, reviews exceeding capacity, &gt;3 complaints/month or any tribunal risk</li>
+            <li>Hours per pupil estimate: 0.5-1.0 hrs/week recommended for active EHCP management</li>
+            <li>Tribunal risk increases when overdue actions exceed 30% AND parent complaints are rising</li>
+            <li><strong>These are planning estimates. Every school's SEND context is different.</strong></li>
+          </ul>
+        </div>
+      </details>
+
+      <!-- Confidence tabs -->
+      <div class="confidence-tabs">
+        <div class="tab-header">
+          <button class="tab-btn active" onclick="switchTab('quick', this)">Quick Snapshot ✅</button>
+          <button class="tab-btn" onclick="switchTab('pro', this)">Full SEND Audit 🔒</button>
+        </div>
+        <div class="tab-content active" id="tab-quick">
+          <p style="font-size:14px;color:var(--muted);margin:0;">You're using the <strong>Quick Snapshot</strong> — a high-level risk indicator based on caseload pressure and capacity. Good for SLT conversations and governor updates.</p>
+        </div>
+        <div class="tab-content" id="tab-pro">
+          <div class="lock-overlay">
+            <div class="lock-icon">🔒</div>
+            <p style="font-weight:600;font-size:15px;margin:0 0 8px;">Full SEND Audit — Schoolgle Pro</p>
+            <p style="font-size:13px;margin:0 0 12px;">Individual pupil tracking, deadline management, parent communication logs, and tribunal risk modelling.</p>
+            <ul class="lock-features">
+              <li>Individual EHCP pupil tracker with deadline alerts</li>
+              <li>Automated parent communication templates</li>
+              <li>Annual review scheduling with reminders</li>
+              <li>Tribunal risk scoring per case</li>
+              <li>Governor-ready SEND report (PDF)</li>
+            </ul>
+            <button class="cta-btn-primary" style="margin-top:12px;">Unlock Pro →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- CTA -->
+      <div class="cta-panel">
+        <h3>Save this snapshot</h3>
+        <div class="cta-buttons">
+          <button class="cta-btn-primary" onclick="openEmailModal()">📧 Email me this result</button>
+          <button class="cta-btn-secondary" onclick="void(0)">🔓 Unlock Pro: Full SEND audit + tracking</button>
+        </div>
+        <div class="pro-strip">
+          <span>Individual pupil tracking</span>
+          <span>Deadline management</span>
+          <span>Parent comms templates</span>
+          <span>Tribunal risk scoring</span>
+          <span>Governor-ready reports</span>
+        </div>
+      </div>
+
+      <div class="save-share">
+        <button class="share-btn" onclick="copySummary()">📋 Copy summary</button>
+        <button class="share-btn">📄 Download PDF <span class="pro-badge">PRO</span></button>
+        <button class="share-btn">🔗 Share link <span class="pro-badge">PRO</span></button>
+      </div>
+
+      <div class="time-saved">⏱ Time saved using this tool: ~2 hours of manual caseload analysis</div>
+    </div>
+
+    <!-- RADAR -->
+    <div class="card" id="radar">
+      <span class="chip chip-leadership">Leadership</span>
+      <h2>Radar</h2>
+
+      <h3>Complaints: the new digital platform</h3>
+      <p>The White Paper announces a "digital, accessible solution" for parental complaints. More than 5 million complaints were made last year. Headteachers report sleepless nights. AI-generated complaints are rising. The new platform aims to stop parents escalating through Ofsted, the school, and the DfE simultaneously.</p>
+      <p>But legal experts warn the "minimum expectations" framework may be <strong>advisory rather than compulsory</strong>, with no enforcement mechanism when parents don't follow the process.</p>
+      <div class="action-box">
+        <div class="action-title">Do this next</div>
+        <ul>
+          <li>Review your complaints policy — is it clear, accessible, and published on your website? <span class="time-est">(20 mins)</span></li>
+          <li>Log complaint volumes this term. You'll want baseline data when the digital platform arrives. <span class="time-est">(15 mins)</span></li>
+        </ul>
+      </div>
+
+      <h3>Mission North East and Mission Coastal</h3>
+      <p>Two place-based improvement programmes modelled on the London Challenge. Target: entrenched disadvantage and outcomes for white working-class children. Funding amounts and delivery leadership remain unconfirmed. Schools North East warns it "risks becoming symbolic rather than structural" without concrete resources.</p>
+      <div class="action-box">
+        <div class="action-title">Do this next</div>
+        <ul><li>If you're in the North East or a coastal community, register interest with your local Schools Alliance or TSA. Early participants will likely shape the programme. <span class="time-est">(10 mins)</span></li></ul>
+      </div>
+
+      <h3>6,500 teachers: the delivery plan</h3>
+      <p>The government's plan to grow the workforce is published. Key moves: anonymised ITT applications to reduce ethnic disparities, doubled maternity pay (4 weeks → 8), and a new CPD entitlement focused on SEND and leadership. The workforce grew by 2,346 against the target baseline. But experts warn retention, not recruitment, is the real challenge — and the physics teacher shortage alone stands at 3,500.</p>
+      <div class="action-box">
+        <div class="action-title">Do this next</div>
+        <ul><li>Audit your staff retention: who is at risk of leaving? What would keep them? Have those conversations before Easter. <span class="time-est">(45 mins)</span></li></ul>
+      </div>
+    </div>
+
+    <!-- OPS CHECKLIST -->
+    <div class="card" id="ops-checklist">
+      <span class="chip chip-compliance">Compliance</span>
+      <h2>Ops checklist: week of 3 March</h2>
+
+      <h3>Budget</h3>
+      <div class="todo"><input type="checkbox" id="t1"><label for="t1">Model 1.5% and 2.7% pay rise scenarios for 2026-27</label></div>
+      <div class="todo"><input type="checkbox" id="t2"><label for="t2">Identify top 3 non-staff cost reduction opportunities</label></div>
+      <div class="todo"><input type="checkbox" id="t3"><label for="t3">Brief finance committee on pay affordability gap</label></div>
+
+      <h3>SEND</h3>
+      <div class="todo"><input type="checkbox" id="t4"><label for="t4">Run EHCP Readiness Snapshot (above) and share with SLT</label></div>
+      <div class="todo"><input type="checkbox" id="t5"><label for="t5">Clear all overdue EHCP actions older than 14 days</label></div>
+      <div class="todo"><input type="checkbox" id="t6"><label for="t6">Confirm annual review dates for next 60 days — block SENCO diary</label></div>
+      <div class="todo"><input type="checkbox" id="t7"><label for="t7">Standardise parent update template for SEND cases</label></div>
+
+      <h3>Complaints</h3>
+      <div class="todo"><input type="checkbox" id="t8"><label for="t8">Review complaints policy — is it published on website?</label></div>
+      <div class="todo"><input type="checkbox" id="t9"><label for="t9">Start logging complaint volumes this term for baseline data</label></div>
+
+      <h3>Workforce</h3>
+      <div class="todo"><input type="checkbox" id="t10"><label for="t10">Identify 3 staff members at retention risk — have 1:1 conversations</label></div>
+    </div>
+
+    <!-- MID CTA -->
+    <div class="mid-cta">
+      <h2>Get next week's tool delivered to your inbox</h2>
+      <p>Free weekly intelligence for school leaders. No spam. Unsubscribe anytime.</p>
+      <div class="email-capture">
+        <input type="email" placeholder="your@school.sch.uk" aria-label="Email address">
+        <button onclick="handleMidSubscribe(this)">Subscribe</button>
+      </div>
+    </div>
+
+    <!-- POLL -->
+    <div class="poll-card" id="poll-section">
+      <div class="prior-poll">
+        <strong>📊 Last week's workforce poll results:</strong> "Retaining experienced staff" and "TA pay vs supermarket wages" were neck and neck — reflecting the dual pressure schools face: losing senior teachers to burnout and losing TAs to better-paid retail jobs. Full breakdown coming in a future issue.
+      </div>
+
+      <h2>🗳️ Your vote this week</h2>
+      <p style="color:var(--muted);font-size:15px;margin-bottom:20px;">How confident are you that your school can afford the recommended pay rises without cutting provision?</p>
+
+      <div class="poll-form" id="poll-form">
+        <div class="poll-options" id="poll-options">
+          <div class="poll-option" tabindex="0" role="button" aria-pressed="false" data-value="confident" onclick="selectPoll(this)">Confident — our budget can absorb it</div>
+          <div class="poll-option" tabindex="0" role="button" aria-pressed="false" data-value="stretch" onclick="selectPoll(this)">It'll stretch us but we'll manage</div>
+          <div class="poll-option" tabindex="0" role="button" aria-pressed="false" data-value="cuts" onclick="selectPoll(this)">We'll have to cut provision or staff</div>
+          <div class="poll-option" tabindex="0" role="button" aria-pressed="false" data-value="crisis" onclick="selectPoll(this)">We're already in deficit — this tips us over</div>
+        </div>
+
+        <div class="poll-region">
+          <label for="poll-region-select">Where are you from? (optional)</label>
+          <select class="tool-select" id="poll-region-select" aria-label="Region">
+            <option value="">— Prefer not to say —</option>
+            <option value="east">East of England</option>
+            <option value="em">East Midlands</option>
+            <option value="london">London</option>
+            <option value="ne">North East</option>
+            <option value="nw">North West</option>
+            <option value="se">South East</option>
+            <option value="sw">South West</option>
+            <option value="wm">West Midlands</option>
+            <option value="yh">Yorkshire and the Humber</option>
+          </select>
+        </div>
+
+        <button class="poll-submit" id="poll-submit" onclick="submitPoll()">Submit vote</button>
+      </div>
+
+      <div class="poll-thanks" id="poll-thanks">
+        ✅ Thanks for voting! We'll share results next week.
+      </div>
+    </div>
+
+    <!-- THE QUESTION -->
+    <div class="card" id="the-question">
+      <h2>The question leaders should ask out loud</h2>
+      <p><strong>If the DfE's own analysis shows schools can afford 2.7% but needs 6.5% — who pays the difference?</strong></p>
+      <p>The answer, buried in the technical note, is you. "Schools will need to realise and sustain better value from existing spending." After 15 years of efficiency savings, that's not a strategy — it's a prayer. The real question isn't whether schools can find savings. It's whether the savings they find come from the things that matter most: teaching assistants, pastoral support, curriculum breadth, or the mental health provision that's already stretched to breaking point.</p>
+      <p>When the pay award lands, will your governors understand the trade-offs? Because that conversation is coming. Better to have it now than in July.</p>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="page-footer">
+      <div class="footer-pro">
+        <h3>What you get in Schoolgle Pro</h3>
+        <div class="footer-pro-grid">
+          <div class="pro-item">Full EHCP pupil tracking + alerts</div>
+          <div class="pro-item">Multi-school SEND dashboard (trust-wide)</div>
+          <div class="pro-item">Export PDF/CSV reports</div>
+          <div class="pro-item">Governor-ready paragraphs (AI-written)</div>
+          <div class="pro-item">Pay modelling with on-costs</div>
+          <div class="pro-item">Complaints tracker + analytics</div>
+          <div class="pro-item">Benchmarking against similar schools</div>
+          <div class="pro-item">Scenario planning for budgets</div>
+        </div>
+      </div>
+      <div class="footer-subscribe">
+        <h3>Never miss an issue</h3>
+        <p style="color:var(--muted);font-size:14px;">Weekly intelligence for school leaders. Free.</p>
+        <a href="https://schoolgle.co.uk" class="cta-btn-primary" style="text-decoration:none;">Sign up — it's free</a>
+      </div>
+      <div class="footer-brand">
+        <div class="brand-line">Built by Schoolgle — the operating system for schools</div>
+        <p>The Schoolgle Signal — weekly intelligence for school leaders, with the practical context to act on it.</p>
+        <p style="margin-top:8px;">© 2026 <a href="https://schoolgle.co.uk">Schoolgle</a></p>
+        <div class="footer-sources">
+          <h4>Data sources</h4>
+          <ul>
+            <li><a href="https://assets.publishing.service.gov.uk/media/69a5c57e46e50eda5c46b5b5/Schools_costs_technical_note_2025_to_2029_.pdf" target="_blank" rel="noopener">DfE School Costs Technical Note 2025-2029</a> — GOV.UK, March 2026</li>
+            <li><a href="https://schoolsweek.co.uk/schools-can-only-afford-a-2-7-pay-rise-over-two-years-says-dfe/" target="_blank" rel="noopener">Schools can only afford 2.7% pay rise — DfE</a> — Schools Week</li>
+            <li><a href="https://schoolsweek.co.uk/complaints-reforms-welcomed-but-greater-powers-needed/" target="_blank" rel="noopener">Complaints reforms welcomed but greater powers needed</a> — Schools Week</li>
+            <li><a href="https://schoolsweek.co.uk/funding-and-leadership-questions-over-new-area-missions/" target="_blank" rel="noopener">Funding and leadership questions over new area missions</a> — Schools Week</li>
+            <li><a href="https://schoolsweek.co.uk/diversity-and-flexibility-push-in-dfes-6500-teachers-plan/" target="_blank" rel="noopener">6,500 teachers delivery plan</a> — Schools Week</li>
+            <li><a href="https://schoolsweek.co.uk/sharing-not-siloed-the-special-schools-bringing-inclusion-into-the-mainstream/" target="_blank" rel="noopener">Special schools bringing inclusion into mainstream</a> — Schools Week</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- EMAIL MODAL -->
+<div class="modal-overlay" id="emailModal" role="dialog" aria-modal="true" aria-label="Email capture">
+  <div class="modal">
+    <button class="modal-close" onclick="closeEmailModal()" aria-label="Close">&times;</button>
+    <div id="modal-form">
+      <h3>Get this snapshot in your inbox</h3>
+      <p>We'll send your EHCP readiness results to your email — plus next week's tool.</p>
+      <input type="email" id="modal-email" placeholder="your@school.sch.uk" aria-label="Email address">
+      <button class="modal-submit" onclick="submitEmail()">Send</button>
+      <div class="modal-disclaimer">Free. No spam. Unsubscribe anytime.</div>
+    </div>
+    <div class="modal-success" id="modal-success">✓ Check your inbox</div>
+  </div>
+</div>
+
+<div id="copy-toast" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;z-index:1001;box-shadow:var(--shadow-lg);">✓ Copied to clipboard</div>
+
+<script>
+// THEME
+function setTheme(mode) {
+  document.querySelectorAll('#btn-light,#btn-dark,#btn-system').forEach(function(b){b.classList.remove('active');});
+  if(mode==='system'){var sys=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',sys);document.getElementById('btn-system').classList.add('active');localStorage.setItem('signal-theme','system');}else{document.documentElement.setAttribute('data-theme',mode);document.getElementById('btn-'+mode).classList.add('active');localStorage.setItem('signal-theme',mode);}
+}
+(function(){var s=localStorage.getItem('signal-theme')||'light';setTheme(s);})();
+
+var fontSizes=[14,16,19];var fontIdx=1;
+function adjustFont(dir){if(dir===0)fontIdx=1;else fontIdx=Math.max(0,Math.min(2,fontIdx+dir));document.documentElement.style.setProperty('--font-size',fontSizes[fontIdx]+'px');}
+
+var isPlaying=false;
+function togglePlay(){isPlaying=!isPlaying;document.getElementById('playBtn').textContent=isPlaying?'⏸':'▶';}
+function seekAudio(e){}
+function setSpeed(s,btn){document.querySelectorAll('.speed-btn').forEach(function(b){b.classList.remove('active');});btn.classList.add('active');}
+
+// EHCP READINESS CALCULATOR
+var ehcpInputs = [
+  {s:'ehcp-total',v:'ehcp-total-val'},
+  {s:'ehcp-reviews-30',v:'ehcp-reviews-30-val'},
+  {s:'ehcp-reviews-60',v:'ehcp-reviews-60-val'},
+  {s:'ehcp-overdue',v:'ehcp-overdue-val'},
+  {s:'senco-hours',v:'senco-hours-val'},
+  {s:'ehcp-parent-complaints',v:'ehcp-parent-complaints-val'}
+];
+
+function syncPair(sid,vid){
+  var sl=document.getElementById(sid),vl=document.getElementById(vid);
+  sl.addEventListener('input',function(){vl.value=sl.value;calcEHCP();});
+  vl.addEventListener('input',function(){var n=parseInt(vl.value);if(!isNaN(n)){sl.value=Math.min(parseInt(sl.max),Math.max(parseInt(sl.min),n));}calcEHCP();});
+}
+ehcpInputs.forEach(function(i){syncPair(i.s,i.v);});
+
+function calcEHCP(){
+  var total=parseFloat(document.getElementById('ehcp-total-val').value)||1;
+  var r30=parseFloat(document.getElementById('ehcp-reviews-30-val').value)||0;
+  var r60=parseFloat(document.getElementById('ehcp-reviews-60-val').value)||0;
+  var overdue=parseFloat(document.getElementById('ehcp-overdue-val').value)||0;
+  var sencoHrs=parseFloat(document.getElementById('senco-hours-val').value)||1;
+  var complaints=parseFloat(document.getElementById('ehcp-parent-complaints-val').value)||0;
+
+  // Calculate metrics
+  var overdueRate=total>0?((overdue/total)*100):0;
+  var hrsPerPupil=sencoHrs/total;
+  var reviewLoad=sencoHrs>0?(r30/(sencoHrs/2.5)):0; // ~2.5 hrs per review
+  var hoursNeeded=total*0.67; // 0.67 hrs/pupil/week baseline
+  var headroom=sencoHrs-hoursNeeded;
+
+  // Risk rating
+  var riskScore=0;
+  if(overdueRate>30) riskScore+=3; else if(overdueRate>15) riskScore+=2; else riskScore+=1;
+  if(r30>sencoHrs/2.5) riskScore+=3; else if(r30>sencoHrs/5) riskScore+=2; else riskScore+=1;
+  if(complaints>3) riskScore+=3; else if(complaints>1) riskScore+=2; else riskScore+=1;
+  if(headroom<0) riskScore+=2;
+
+  var rating, ratingColor;
+  if(riskScore>=8){rating='🔴 RED';ratingColor='var(--error-text)';}
+  else if(riskScore>=5){rating='🟡 AMBER';ratingColor='var(--chip-send)';}
+  else{rating='🟢 GREEN';ratingColor='var(--accent)';}
+
+  // Tribunal risk
+  var tribunalRisk='Low';
+  if(overdueRate>30 && complaints>2) tribunalRisk='High';
+  else if(overdueRate>20 || complaints>2) tribunalRisk='Medium';
+
+  // Update display
+  document.getElementById('er-rating').textContent=rating;
+  document.getElementById('er-rating').style.color=ratingColor;
+  document.getElementById('er-load').textContent=reviewLoad.toFixed(1);
+  document.getElementById('er-overdue-rate').textContent=Math.round(overdueRate)+'%';
+  document.getElementById('er-hours-pupil').textContent=hrsPerPupil.toFixed(2);
+  document.getElementById('er-headroom').textContent=(headroom>=0?'+':'')+headroom.toFixed(1)+' hrs';
+  document.getElementById('er-headroom').style.color=headroom<0?'var(--error-text)':'var(--success-text)';
+  document.getElementById('er-tribunal').textContent=tribunalRisk;
+  document.getElementById('er-tribunal').style.color=tribunalRisk==='High'?'var(--error-text)':tribunalRisk==='Medium'?'var(--chip-send)':'var(--success-text)';
+
+  // Benchmarks
+  document.getElementById('b-your-reviews').style.width=Math.min(r30/10*100,100)+'%';
+  document.getElementById('bv-your-reviews').textContent=r30;
+  document.getElementById('b-your-overdue').style.width=Math.min(overdueRate,100)+'%';
+  document.getElementById('bv-your-overdue').textContent=Math.round(overdueRate)+'%';
+  document.getElementById('b-your-overdue').style.background=overdueRate>15?'var(--error-text)':'var(--accent)';
+
+  // Dynamic action plan
+  var actions=[];
+  if(overdue>0) actions.push('Clear '+overdue+' overdue action'+(overdue>1?'s':'')+' — assign one owner per action by end of today');
+  if(r30>0) actions.push('Schedule '+r30+' annual review'+(r30>1?'s':'')+' due within 30 days — block SENCO time this week');
+  if(headroom<0) actions.push('SENCO capacity is '+(Math.abs(headroom).toFixed(1))+' hours short — consider TA delegation or SLT support');
+  if(complaints>1) actions.push(''+complaints+' parent concerns in 30 days — draft proactive update to all SEND parents');
+  actions.push('Set up a weekly 20-minute SEND risk huddle with SLT');
+  if(tribunalRisk!=='Low') actions.push('Review documentation for highest-risk cases — ensure evidence is audit-ready');
+  document.getElementById('ehcp-actions').innerHTML=actions.map(function(a){return '<li>'+a+'</li>';}).join('');
+}
+calcEHCP();
+
+// TABS
+function switchTab(tab,btn){document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});document.querySelectorAll('.tab-content').forEach(function(c){c.classList.remove('active');});btn.classList.add('active');document.getElementById('tab-'+tab).classList.add('active');}
+
+// POLL
+var selectedPoll=null;
+function selectPoll(el){document.querySelectorAll('.poll-option').forEach(function(o){o.classList.remove('selected');o.setAttribute('aria-pressed','false');});el.classList.add('selected');el.setAttribute('aria-pressed','true');selectedPoll=el.getAttribute('data-value');document.getElementById('poll-submit').classList.add('enabled');}
+function submitPoll(){if(!selectedPoll)return;var r=document.getElementById('poll-region-select').value;try{localStorage.setItem('signal-poll-w11',JSON.stringify({week:11,vote:selectedPoll,region:r,ts:Date.now()}));}catch(e){}document.getElementById('poll-form').classList.add('hidden');document.getElementById('poll-thanks').classList.add('visible');}
+(function(){try{if(localStorage.getItem('signal-poll-w11')){document.getElementById('poll-form').classList.add('hidden');document.getElementById('poll-thanks').classList.add('visible');}}catch(e){}})();
+
+// EMAIL MODAL
+function openEmailModal(){document.getElementById('emailModal').classList.add('open');document.getElementById('modal-form').style.display='block';document.getElementById('modal-success').style.display='none';setTimeout(function(){document.getElementById('modal-email').focus();},100);}
+function closeEmailModal(){document.getElementById('emailModal').classList.remove('open');}
+function submitEmail(){var e=document.getElementById('modal-email').value;if(e&&e.includes('@')){document.getElementById('modal-form').style.display='none';document.getElementById('modal-success').style.display='block';setTimeout(closeEmailModal,2000);}}
+document.getElementById('emailModal').addEventListener('click',function(e){if(e.target===this)closeEmailModal();});
+
+// COPY
+function copySummary(){
+  var rating=document.getElementById('er-rating').textContent;
+  var overdue=document.getElementById('er-overdue-rate').textContent;
+  var headroom=document.getElementById('er-headroom').textContent;
+  var tribunal=document.getElementById('er-tribunal').textContent;
+  var text='EHCP Readiness Snapshot — Schoolgle Signal Week 11\nRisk Rating: '+rating+'\nOverdue Action Rate: '+overdue+'\nSENCO Capacity Headroom: '+headroom+'\nTribunal Risk: '+tribunal+'\nEstimate only — every school\'s SEND context is different.\nhttps://schoolgle.co.uk';
+  navigator.clipboard.writeText(text).then(function(){var t=document.getElementById('copy-toast');t.style.display='block';setTimeout(function(){t.style.display='none';},2000);});
+}
+
+function handleMidSubscribe(btn){var i=btn.previousElementSibling;if(i.value&&i.value.includes('@')){btn.textContent='✓ Subscribed';btn.style.background='#10B981';setTimeout(function(){btn.textContent='Subscribe';btn.style.background='';},3000);}}
+
+// TOC
+(function(){var tl=document.querySelectorAll('.toc-link');if(!tl.length)return;var o=new IntersectionObserver(function(entries){entries.forEach(function(e){if(e.isIntersecting){var id=e.target.getAttribute('id');tl.forEach(function(l){l.classList.toggle('active',l.getAttribute('data-section')===id);});}});},{rootMargin:'-80px 0px -60% 0px',threshold:0});tl.forEach(function(l){var t=document.getElementById(l.getAttribute('data-section'));if(t)o.observe(t);});})();
+
+document.querySelectorAll('a[href^="#"]').forEach(function(a){a.addEventListener('click',function(e){var t=document.querySelector(this.getAttribute('href'));if(t){e.preventDefault();t.scrollIntoView({behavior:'smooth',block:'start'});}});});
+</script>
+</body>
+</html>

@@ -1,0 +1,929 @@
+<!doctype html>
+<html lang="en-GB" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Deal Finder — Schoolgle</title>
+    <style>
+      :root {
+        --font-body:
+          "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
+          sans-serif;
+        --font-display:
+          "Outfit", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+        --max-width: 800px;
+        --radius: 14px;
+        --card-pad: 28px;
+        --accent: #00d4d4;
+        --accent-dim: rgba(0, 212, 212, 0.1);
+        --accent-dark: #009e9e;
+        --font-size: 16px;
+      }
+      [data-theme="light"] {
+        --bg: #f7f7f9;
+        --surface: #ffffff;
+        --elevated: #ffffff;
+        --text: #0b1220;
+        --text-secondary: #374151;
+        --muted: #5a6578;
+        --border: #e5e7eb;
+        --border-light: #f0f1f4;
+        --quote-bg: #f0f2f5;
+        --shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+        --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.08);
+        --success-bg: #f0fdf4;
+        --success-text: #166534;
+        --success-border: #bbf7d0;
+        --warning-bg: #fffbeb;
+        --warning-text: #92400e;
+        --warning-border: #fde68a;
+      }
+      [data-theme="dark"] {
+        --bg: #070b18;
+        --surface: #0e1529;
+        --elevated: #141d35;
+        --text: #eaf0ff;
+        --text-secondary: #c5cfea;
+        --muted: #8b99bc;
+        --border: #1e2a4a;
+        --border-light: #182040;
+        --quote-bg: #111b33;
+        --shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.4);
+        --success-bg: rgba(22, 101, 52, 0.15);
+        --success-text: #4ade80;
+        --success-border: rgba(22, 101, 52, 0.3);
+        --warning-bg: rgba(234, 179, 8, 0.08);
+        --warning-text: #fde047;
+        --warning-border: rgba(234, 179, 8, 0.25);
+      }
+      *,
+      *::before,
+      *::after {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: var(--font-body);
+        font-size: var(--font-size);
+        line-height: 1.7;
+        background: var(--bg);
+        color: var(--text);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+      a {
+        color: var(--accent-dark);
+        text-decoration: none;
+      }
+      [data-theme="dark"] a {
+        color: var(--accent);
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          transition: none !important;
+          animation: none !important;
+        }
+      }
+
+      .tool-container {
+        max-width: var(--max-width);
+        margin: 0 auto;
+        padding: 32px 16px 80px;
+      }
+
+      /* Hero section */
+      .hero {
+        text-align: center;
+        margin-bottom: 40px;
+      }
+      .hero-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 14px;
+        background: var(--success-bg);
+        border: 1px solid var(--success-border);
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--success-text);
+        margin-bottom: 16px;
+      }
+      .hero h1 {
+        font-family: var(--font-display);
+        font-size: 2rem;
+        font-weight: 700;
+        line-height: 1.2;
+        margin-bottom: 8px;
+      }
+      .hero p {
+        font-size: 15px;
+        color: var(--muted);
+        max-width: 520px;
+        margin: 0 auto;
+      }
+
+      /* URL Input */
+      .url-input-card {
+        background: var(--surface);
+        border: 2px solid var(--accent);
+        border-radius: var(--radius);
+        padding: var(--card-pad);
+        margin-bottom: 32px;
+        box-shadow: 0 0 0 4px var(--accent-dim);
+      }
+      .url-input-card h2 {
+        font-family: var(--font-display);
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: 4px;
+      }
+      .url-input-card .subtitle {
+        font-size: 14px;
+        color: var(--muted);
+        margin-bottom: 20px;
+      }
+      .url-row {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+      @media (max-width: 500px) {
+        .url-row {
+          flex-direction: column;
+        }
+      }
+      .url-input {
+        flex: 1;
+        padding: 14px 16px;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        font-size: 15px;
+        font-family: var(--font-body);
+        color: var(--text);
+        min-height: 48px;
+      }
+      .url-input::placeholder {
+        color: var(--muted);
+        opacity: 0.6;
+      }
+      .url-input:focus {
+        border-color: var(--accent);
+        outline: none;
+        box-shadow: 0 0 0 3px var(--accent-dim);
+      }
+      .find-btn {
+        padding: 14px 28px;
+        background: var(--accent);
+        color: #070b18;
+        border: none;
+        border-radius: 10px;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        font-family: var(--font-body);
+        white-space: nowrap;
+        min-height: 48px;
+        transition: opacity 0.15s;
+      }
+      .find-btn:hover {
+        opacity: 0.9;
+      }
+      .find-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .url-hint {
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      /* Status messages */
+      .status {
+        display: none;
+        padding: 16px 20px;
+        border-radius: 10px;
+        margin-bottom: 24px;
+        font-size: 14px;
+        font-weight: 500;
+      }
+      .status.visible {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .status.loading {
+        background: var(--accent-dim);
+        color: var(--accent-dark);
+        border: 1px solid rgba(0, 212, 212, 0.2);
+      }
+      [data-theme="dark"] .status.loading {
+        color: var(--accent);
+      }
+      .status.error {
+        background: rgba(220, 38, 38, 0.08);
+        color: #dc2626;
+        border: 1px solid rgba(220, 38, 38, 0.2);
+      }
+      [data-theme="dark"] .status.error {
+        color: #f87171;
+      }
+      .spinner {
+        width: 18px;
+        height: 18px;
+        border: 2px solid var(--border);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        flex-shrink: 0;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* Results */
+      .results {
+        display: none;
+      }
+      .results.visible {
+        display: block;
+      }
+      .results-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .results-header h2 {
+        font-family: var(--font-display);
+        font-size: 1.3rem;
+        font-weight: 600;
+      }
+      .results-count {
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .original-product {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 20px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .original-product .op-info {
+        flex: 1;
+        min-width: 0;
+      }
+      .original-product .op-label {
+        font-size: 11px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 600;
+      }
+      .original-product .op-name {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--text);
+        margin-top: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .original-product .op-price {
+        font-size: 24px;
+        font-weight: 700;
+        color: var(--muted);
+        text-decoration: line-through;
+        font-variant-numeric: tabular-nums;
+        flex-shrink: 0;
+      }
+
+      .alt-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 20px;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        transition: border-color 0.15s;
+      }
+      .alt-card:hover {
+        border-color: var(--accent);
+      }
+      .alt-card .alt-rank {
+        width: 32px;
+        height: 32px;
+        background: var(--accent-dim);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--accent-dark);
+        flex-shrink: 0;
+      }
+      [data-theme="dark"] .alt-card .alt-rank {
+        color: var(--accent);
+      }
+      .alt-card.best {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-dim);
+      }
+      .alt-card.best .alt-rank {
+        background: var(--accent);
+        color: #070b18;
+      }
+      .alt-card .alt-info {
+        flex: 1;
+        min-width: 0;
+      }
+      .alt-card .alt-name {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text);
+      }
+      .alt-card .alt-supplier {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 2px;
+      }
+      .alt-card .alt-price-col {
+        text-align: right;
+        flex-shrink: 0;
+      }
+      .alt-card .alt-price {
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--success-text);
+        font-variant-numeric: tabular-nums;
+      }
+      .alt-card .alt-saving {
+        font-size: 11px;
+        color: var(--success-text);
+        font-weight: 600;
+      }
+      .alt-card .buy-btn {
+        padding: 10px 18px;
+        background: var(--accent);
+        color: #070b18;
+        border: none;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        font-family: var(--font-body);
+        white-space: nowrap;
+        min-height: 40px;
+        transition: opacity 0.15s;
+        flex-shrink: 0;
+      }
+      .alt-card .buy-btn:hover {
+        opacity: 0.9;
+      }
+      @media (max-width: 600px) {
+        .alt-card {
+          flex-wrap: wrap;
+        }
+        .alt-card .buy-btn {
+          width: 100%;
+          text-align: center;
+          margin-top: 8px;
+        }
+      }
+
+      /* Savings dashboard */
+      .savings-dashboard {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: var(--card-pad);
+        margin-top: 32px;
+      }
+      .savings-dashboard h2 {
+        font-family: var(--font-display);
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: 16px;
+      }
+      .savings-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 12px;
+        margin-bottom: 20px;
+      }
+      @media (max-width: 500px) {
+        .savings-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      .savings-tile {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px;
+        text-align: center;
+      }
+      .savings-tile .sv-value {
+        font-size: 28px;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+      }
+      .savings-tile .sv-value.green {
+        color: var(--success-text);
+      }
+      .savings-tile .sv-value.accent {
+        color: var(--accent-dark);
+      }
+      [data-theme="dark"] .savings-tile .sv-value.accent {
+        color: var(--accent);
+      }
+      .savings-tile .sv-label {
+        font-size: 11px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-top: 4px;
+      }
+
+      /* Savings chart */
+      .chart-container {
+        position: relative;
+        height: 200px;
+        margin: 16px 0;
+      }
+      .chart-canvas {
+        width: 100%;
+        height: 100%;
+      }
+      .chart-bars {
+        display: flex;
+        align-items: flex-end;
+        gap: 4px;
+        height: 160px;
+        padding: 0 4px;
+      }
+      .chart-bar {
+        flex: 1;
+        background: linear-gradient(
+          to top,
+          var(--accent),
+          rgba(0, 212, 212, 0.4)
+        );
+        border-radius: 4px 4px 0 0;
+        min-width: 8px;
+        transition: height 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+        position: relative;
+      }
+      .chart-bar:hover {
+        opacity: 0.8;
+      }
+      .chart-bar .bar-label {
+        position: absolute;
+        bottom: -20px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 9px;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+      .chart-labels {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 24px;
+        font-size: 10px;
+        color: var(--muted);
+      }
+
+      /* Compliance log */
+      .compliance-log {
+        margin-top: 24px;
+      }
+      .compliance-log h3 {
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 12px;
+        color: var(--text);
+      }
+      .log-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      .log-table th {
+        text-align: left;
+        padding: 8px 10px;
+        background: var(--quote-bg);
+        font-weight: 600;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        color: var(--muted);
+        border-bottom: 2px solid var(--border);
+      }
+      .log-table td {
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--border-light);
+      }
+      .log-table .saving-cell {
+        color: var(--success-text);
+        font-weight: 600;
+      }
+      .export-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 16px;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text);
+        cursor: pointer;
+        font-family: var(--font-body);
+        margin-top: 12px;
+        min-height: 40px;
+        transition: border-color 0.15s;
+      }
+      .export-btn:hover {
+        border-color: var(--accent);
+      }
+
+      /* Info cards */
+      .info-section {
+        margin-top: 40px;
+      }
+      .info-section h2 {
+        font-family: var(--font-display);
+        font-size: 1.3rem;
+        font-weight: 600;
+        margin-bottom: 16px;
+      }
+      .info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+      @media (max-width: 600px) {
+        .info-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      .info-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 20px;
+      }
+      .info-card h3 {
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 6px;
+      }
+      .info-card p {
+        font-size: 13px;
+        color: var(--muted);
+        margin: 0;
+        line-height: 1.6;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="tool-container">
+      <!-- Hero -->
+      <div class="hero">
+        <div class="hero-badge">&#9989; Free with Signal Pro</div>
+        <h1>Deal Finder</h1>
+        <p>
+          Paste a product URL, find cheaper alternatives instantly. Every
+          comparison is logged as procurement compliance evidence.
+        </p>
+      </div>
+
+      <!-- URL Input -->
+      <div class="url-input-card">
+        <h2>Find a better deal</h2>
+        <p class="subtitle">
+          Paste the URL of a product your school wants to buy
+        </p>
+        <div class="url-row">
+          <input
+            type="url"
+            class="url-input"
+            id="productUrl"
+            placeholder="https://www.amazon.co.uk/dp/B08N5..."
+            aria-label="Product URL"
+          />
+          <button class="find-btn" id="findBtn" onclick="handleFind()">
+            Find deals
+          </button>
+        </div>
+        <p class="url-hint">
+          Works with Amazon, eBay, major school suppliers, and most product
+          pages.
+        </p>
+      </div>
+
+      <!-- Status -->
+      <div class="status" id="statusLoading">
+        <div class="spinner"></div>
+        <span>Searching across school suppliers for better prices...</span>
+      </div>
+      <div class="status" id="statusError">
+        <span>&#9888;&#65039;</span>
+        <span id="errorMsg">Something went wrong. Please try again.</span>
+      </div>
+
+      <!-- Results (demo data) -->
+      <div class="results" id="results">
+        <div class="results-header">
+          <h2>Alternatives found</h2>
+          <span class="results-count" id="resultsCount">3 results</span>
+        </div>
+
+        <div class="original-product">
+          <div class="op-info">
+            <div class="op-label">Your original product</div>
+            <div class="op-name" id="origName">
+              HP LaserJet Pro M404dn Printer
+            </div>
+          </div>
+          <div class="op-price" id="origPrice">&pound;289.99</div>
+        </div>
+
+        <div class="alt-card best">
+          <div class="alt-rank">1</div>
+          <div class="alt-info">
+            <div class="alt-name">HP LaserJet Pro M404dn — Education Price</div>
+            <div class="alt-supplier">XMA (Education Framework)</div>
+          </div>
+          <div class="alt-price-col">
+            <div class="alt-price">&pound;219.00</div>
+            <div class="alt-saving">Save &pound;70.99 (24%)</div>
+          </div>
+          <button class="buy-btn">Buy &amp; log</button>
+        </div>
+
+        <div class="alt-card">
+          <div class="alt-rank">2</div>
+          <div class="alt-info">
+            <div class="alt-name">HP LaserJet Pro M404dn</div>
+            <div class="alt-supplier">YPO (School Supplier)</div>
+          </div>
+          <div class="alt-price-col">
+            <div class="alt-price">&pound;234.50</div>
+            <div class="alt-saving">Save &pound;55.49 (19%)</div>
+          </div>
+          <button class="buy-btn">Buy &amp; log</button>
+        </div>
+
+        <div class="alt-card">
+          <div class="alt-rank">3</div>
+          <div class="alt-info">
+            <div class="alt-name">HP LaserJet Pro M404dn</div>
+            <div class="alt-supplier">Amazon (Associates)</div>
+          </div>
+          <div class="alt-price-col">
+            <div class="alt-price">&pound;249.99</div>
+            <div class="alt-saving">Save &pound;40.00 (14%)</div>
+          </div>
+          <button class="buy-btn">Buy &amp; log</button>
+        </div>
+      </div>
+
+      <!-- Savings Dashboard -->
+      <div class="savings-dashboard" id="savingsDash">
+        <h2>Your savings so far</h2>
+
+        <div class="savings-grid">
+          <div class="savings-tile">
+            <div class="sv-value green" id="totalSaved">&pound;0</div>
+            <div class="sv-label">Total saved</div>
+          </div>
+          <div class="savings-tile">
+            <div class="sv-value accent" id="comparisons">0</div>
+            <div class="sv-label">Comparisons made</div>
+          </div>
+          <div class="savings-tile">
+            <div class="sv-value accent" id="complianceLogs">0</div>
+            <div class="sv-label">Compliance logs</div>
+          </div>
+        </div>
+
+        <!-- Animated bar chart -->
+        <div class="chart-container">
+          <div class="chart-bars" id="chartBars">
+            <!-- Bars injected by JS -->
+          </div>
+          <div class="chart-labels">
+            <span>This term</span>
+            <span>Cumulative</span>
+          </div>
+        </div>
+
+        <!-- Compliance log table -->
+        <div class="compliance-log">
+          <h3>Procurement evidence log</h3>
+          <table class="log-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Product</th>
+                <th>Original</th>
+                <th>Purchased</th>
+                <th>Saving</th>
+              </tr>
+            </thead>
+            <tbody id="logBody">
+              <tr>
+                <td
+                  colspan="5"
+                  style="text-align: center; color: var(--muted); padding: 24px"
+                >
+                  No purchases logged yet. Run a comparison to get started.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <button class="export-btn" id="exportBtn">
+            &#128196; Export as PDF
+          </button>
+        </div>
+      </div>
+
+      <!-- Info section -->
+      <div class="info-section">
+        <h2>How Deal Finder helps your school</h2>
+        <div class="info-grid">
+          <div class="info-card">
+            <h3>&#128214; Compliance built in</h3>
+            <p>
+              Every price comparison is logged with timestamps, product details,
+              and prices checked. This is your audit trail for the Academy Trust
+              Handbook and SFVS requirements.
+            </p>
+          </div>
+          <div class="info-card">
+            <h3>&#128176; Real savings, tracked</h3>
+            <p>
+              We remember what you originally submitted. When you buy through
+              us, the difference is tracked as a verified saving you can report
+              to governors.
+            </p>
+          </div>
+          <div class="info-card">
+            <h3>&#128270; Multi-supplier search</h3>
+            <p>
+              We check education suppliers (XMA, YPO, Hope Education), Amazon,
+              and specialist vendors to find the best price available to
+              schools.
+            </p>
+          </div>
+          <div class="info-card">
+            <h3>&#128200; Savings dashboard</h3>
+            <p>
+              Watch your cumulative savings grow over time with animated graphs.
+              Export reports for governor meetings and financial reviews.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Theme detection
+      (function () {
+        const prefersDark = window.matchMedia(
+          "(prefers-color-scheme: dark)",
+        ).matches;
+        try {
+          const parentTheme =
+            window.parent?.document?.documentElement?.getAttribute(
+              "data-theme",
+            ) ||
+            window.parent?.document?.documentElement?.classList?.contains(
+              "dark",
+            );
+          if (parentTheme === "dark" || parentTheme === true) {
+            document.documentElement.setAttribute("data-theme", "dark");
+            return;
+          }
+        } catch (e) {}
+        if (prefersDark)
+          document.documentElement.setAttribute("data-theme", "dark");
+      })();
+
+      // Demo interaction
+      function handleFind() {
+        const url = document.getElementById("productUrl").value.trim();
+        if (!url) {
+          document.getElementById("productUrl").focus();
+          return;
+        }
+
+        const btn = document.getElementById("findBtn");
+        const loading = document.getElementById("statusLoading");
+        const error = document.getElementById("statusError");
+        const results = document.getElementById("results");
+
+        btn.disabled = true;
+        loading.classList.add("visible");
+        error.classList.remove("visible");
+        results.classList.remove("visible");
+
+        // Simulate search delay
+        setTimeout(() => {
+          loading.classList.remove("visible");
+          results.classList.add("visible");
+          btn.disabled = false;
+
+          // Animate the savings chart
+          animateChart();
+        }, 2500);
+      }
+
+      function animateChart() {
+        const container = document.getElementById("chartBars");
+        const months = ["Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar"];
+        const values = [45, 120, 85, 200, 160, 280, 71];
+        const maxVal = Math.max(...values);
+
+        container.innerHTML = "";
+        months.forEach((month, i) => {
+          const bar = document.createElement("div");
+          bar.className = "chart-bar";
+          bar.style.height = "0%";
+
+          const label = document.createElement("span");
+          label.className = "bar-label";
+          label.textContent = month;
+          bar.appendChild(label);
+
+          bar.title = `${month}: £${values[i]} saved`;
+          container.appendChild(bar);
+
+          // Staggered animation
+          setTimeout(
+            () => {
+              bar.style.height = Math.round((values[i] / maxVal) * 100) + "%";
+            },
+            100 + i * 120,
+          );
+        });
+
+        // Update totals with counting animation
+        animateCount("totalSaved", 0, 961, "£", "");
+        animateCount("comparisons", 0, 23, "", "");
+        animateCount("complianceLogs", 0, 23, "", "");
+      }
+
+      function animateCount(id, from, to, prefix, suffix) {
+        const el = document.getElementById(id);
+        const duration = 1200;
+        const start = performance.now();
+
+        function tick(now) {
+          const elapsed = now - start;
+          const progress = Math.min(elapsed / duration, 1);
+          // Ease out cubic
+          const eased = 1 - Math.pow(1 - progress, 3);
+          const current = Math.round(from + (to - from) * eased);
+          el.textContent = prefix + current.toLocaleString() + suffix;
+          if (progress < 1) requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+      }
+
+      // Export button demo
+      document
+        .getElementById("exportBtn")
+        ?.addEventListener("click", function () {
+          alert(
+            "PDF export requires a Signal Pro account. Subscribe at schoolgle.co.uk/insights/newsletter",
+          );
+        });
+    </script>
+  </body>
+</html>

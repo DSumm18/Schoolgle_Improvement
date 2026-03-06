@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en-GB" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ofsted Report Card Explorer — The Schoolgle Signal</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+
+:root {
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-display: 'Outfit', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --max-width: 720px;
+  --radius: 14px;
+  --card-pad: 28px;
+  --accent: #00D4D4;
+  --accent-dim: rgba(0,212,212,0.10);
+  --accent-dark: #009E9E;
+  --font-size: 16px;
+  --chip-finance: #10B981;
+  --chip-compliance: #EAB308;
+  --chip-safeguarding: #EF4444;
+  --chip-send: #F59E0B;
+  --chip-hr: #8B5CF6;
+  --chip-estates: #14B8A6;
+  --chip-leadership: #0EA5E9;
+  --chip-teaching: #3B82F6;
+  --chip-ai: #F43F5E;
+  --chip-ops: #0EA5E9;
+}
+[data-theme="light"] {
+  --bg: #F7F7F9;
+  --surface: #FFFFFF;
+  --elevated: #FFFFFF;
+  --text: #0B1220;
+  --text-secondary: #374151;
+  --muted: #5A6578;
+  --border: #E5E7EB;
+  --border-light: #F0F1F4;
+  --quote-bg: #F0F2F5;
+  --shadow: 0 1px 3px rgba(0,0,0,0.06);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.08);
+  --error-bg: #FEF2F2;
+  --error-text: #DC2626;
+  --error-border: #FECACA;
+  --success-bg: #F0FDF4;
+  --success-text: #166534;
+}
+[data-theme="dark"] {
+  --bg: #070B18;
+  --surface: #0E1529;
+  --elevated: #141D35;
+  --text: #EAF0FF;
+  --text-secondary: #C5CFEA;
+  --muted: #8B99BC;
+  --border: #1E2A4A;
+  --border-light: #182040;
+  --quote-bg: #111B33;
+  --shadow: 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.4);
+  --error-bg: rgba(220,38,38,0.1);
+  --error-text: #F87171;
+  --error-border: #7F1D1D;
+  --success-bg: rgba(22,101,52,0.1);
+  --success-text: #4ADE80;
+}
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: var(--font-body);
+  font-size: var(--font-size);
+  line-height: 1.7;
+  background: var(--bg);
+  color: var(--text);
+  transition: background 0.25s ease, color 0.25s ease;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent-dark); text-decoration: none; }
+[data-theme="dark"] a { color: var(--accent); }
+a:hover { text-decoration: underline; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
+
+/* ===== STICKY 60-SECOND BAR ===== */
+.sixty-bar {
+  position: sticky; top: 0; z-index: 100;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow); padding: 10px 20px; font-size: 13px;
+}
+.sixty-bar-inner {
+  max-width: 960px; margin: 0 auto; display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+}
+.sixty-bar-item { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.sixty-bar-item .bar-label { font-weight: 600; color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+.sixty-bar-item .bar-value { color: var(--text); font-weight: 500; }
+.sixty-bar-item .bar-value a { color: var(--accent-dark); font-weight: 600; }
+[data-theme="dark"] .sixty-bar-item .bar-value a { color: var(--accent); }
+.sixty-bar .spacer { flex: 1; }
+.listen-btn {
+  display: inline-flex; align-items: center; gap: 5px; padding: 6px 14px;
+  background: var(--accent); color: #070B18; border: none; border-radius: 6px;
+  font-size: 12px; font-weight: 600; cursor: pointer; font-family: var(--font-body); min-height: 36px;
+}
+@media (max-width: 700px) {
+  .sixty-bar-inner { gap: 8px 16px; }
+  .sixty-bar-item:nth-child(2) { display: none; }
+}
+
+/* ===== STICKY TITLE BAR ===== */
+.sticky-title {
+  position: sticky; top: 47px; z-index: 99;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 8px 20px; font-size: 14px; font-weight: 600;
+  color: var(--text); text-align: center;
+  transform: translateY(-100%); opacity: 0;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+  font-family: var(--font-display);
+}
+.sticky-title.visible { transform: translateY(0); opacity: 1; }
+
+/* ===== LAYOUT ===== */
+.layout-wrapper { display: flex; max-width: 1060px; margin: 0 auto; padding: 0 16px; gap: 0; }
+.toc-rail { width: 160px; flex-shrink: 0; position: relative; }
+.toc-sticky { position: sticky; top: 100px; padding: 24px 0; max-height: calc(100vh - 120px); overflow-y: auto; }
+.toc-sticky nav { display: flex; flex-direction: column; gap: 2px; }
+.toc-link {
+  display: block; padding: 6px 12px; font-size: 12px; color: var(--muted); text-decoration: none;
+  border-radius: 6px; line-height: 1.4; border-left: 2px solid transparent; transition: color 0.15s, border-color 0.15s;
+}
+.toc-link:hover { color: var(--text); text-decoration: none; }
+.toc-link.active { color: var(--accent-dark); border-left-color: var(--accent); font-weight: 600; }
+[data-theme="dark"] .toc-link.active { color: var(--accent); }
+@media (max-width: 900px) { .toc-rail { display: none; } .layout-wrapper { padding: 0 16px; } }
+.main-content { flex: 1; max-width: var(--max-width); margin: 0 auto; padding: 32px 0 80px; min-width: 0; }
+
+/* ===== HEADER ===== */
+.page-header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; margin-bottom: 36px; padding-bottom: 24px; border-bottom: 2px solid var(--border); }
+.page-header h1 { font-family: var(--font-display); font-size: 28px; font-weight: 300; color: var(--text); line-height: 1.2; letter-spacing: -0.3px; }
+.page-header h1 span { color: var(--accent); font-weight: 700; }
+.header-meta { display: flex; flex-direction: column; gap: 2px; }
+.header-meta .date { font-size: 14px; color: var(--muted); }
+.header-meta .issue { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+.controls { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ctrl-group { display: flex; gap: 2px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 2px; }
+.ctrl-btn {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 36px; min-height: 36px;
+  padding: 6px 10px; background: transparent; border: none; border-radius: 6px; color: var(--muted);
+  font-size: 13px; font-weight: 500; cursor: pointer; transition: background 0.15s, color 0.15s; font-family: var(--font-body);
+}
+.ctrl-btn:hover { background: var(--surface); color: var(--text); }
+.ctrl-btn.active { background: var(--surface); color: var(--accent); box-shadow: var(--shadow); }
+
+/* ===== AUDIO PLAYER ===== */
+.audio-player { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px var(--card-pad); margin-bottom: 28px; box-shadow: var(--shadow); }
+.audio-top { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.audio-play-btn { width: 44px; height: 44px; border-radius: 50%; background: var(--accent); color: #070B18; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 18px; }
+.audio-info { flex: 1; min-width: 150px; }
+.audio-info .audio-title { font-size: 14px; font-weight: 600; color: var(--text); }
+.audio-info .audio-time { font-size: 12px; color: var(--muted); }
+.audio-progress { flex: 1; min-width: 180px; display: flex; align-items: center; gap: 10px; }
+.audio-track { flex: 1; height: 4px; background: var(--border); border-radius: 2px; position: relative; cursor: pointer; }
+.audio-track-fill { width: 0%; height: 100%; background: var(--accent); border-radius: 2px; }
+.audio-track-dot { position: absolute; top: 50%; left: 0%; transform: translate(-50%, -50%); width: 12px; height: 12px; background: var(--accent); border-radius: 50%; }
+.audio-time-label { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.audio-speed { display: flex; gap: 2px; background: var(--bg); border-radius: 6px; padding: 2px; }
+.speed-btn { padding: 4px 8px; font-size: 11px; font-weight: 600; border: none; background: transparent; color: var(--muted); cursor: pointer; border-radius: 4px; font-family: var(--font-body); }
+.speed-btn.active { background: var(--surface); color: var(--accent); }
+.transcript-section { margin-top: 12px; border-top: 1px solid var(--border-light); }
+.transcript-toggle { display: flex; align-items: center; gap: 6px; padding: 10px 0 0; font-size: 13px; color: var(--accent-dark); background: none; border: none; cursor: pointer; font-family: var(--font-body); font-weight: 500; }
+[data-theme="dark"] .transcript-toggle { color: var(--accent); }
+.transcript-body { display: none; margin-top: 10px; padding: 16px; background: var(--quote-bg); border-radius: 8px; font-size: 14px; color: var(--muted); line-height: 1.7; }
+.transcript-body.open { display: block; }
+
+/* ===== CARDS ===== */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--card-pad); margin-bottom: 24px; box-shadow: var(--shadow); }
+.chip { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+.chip-finance { background: rgba(16,185,129,0.12); color: #047857; }
+.chip-compliance { background: rgba(234,179,8,0.12); color: #92400E; }
+.chip-safeguarding { background: rgba(239,68,68,0.12); color: #B91C1C; }
+.chip-send { background: rgba(245,158,11,0.12); color: #92400E; }
+.chip-hr { background: rgba(139,92,246,0.12); color: #5B21B6; }
+.chip-estates { background: rgba(20,184,166,0.12); color: #0F766E; }
+.chip-leadership { background: rgba(14,165,233,0.12); color: #0369A1; }
+.chip-teaching { background: rgba(59,130,246,0.12); color: #1D4ED8; }
+.chip-ai { background: rgba(244,63,94,0.12); color: #BE123C; }
+.chip-ops { background: rgba(14,165,233,0.12); color: #0369A1; }
+[data-theme="dark"] .chip-finance { color: #34D399; }
+[data-theme="dark"] .chip-compliance { color: #FDE047; }
+[data-theme="dark"] .chip-safeguarding { color: #FCA5A5; }
+[data-theme="dark"] .chip-send { color: #FCD34D; }
+[data-theme="dark"] .chip-hr { color: #C4B5FD; }
+[data-theme="dark"] .chip-estates { color: #5EEAD4; }
+[data-theme="dark"] .chip-leadership { color: #7DD3FC; }
+[data-theme="dark"] .chip-teaching { color: #93C5FD; }
+[data-theme="dark"] .chip-ai { color: #FDA4AF; }
+[data-theme="dark"] .chip-ops { color: #7DD3FC; }
+
+.card h2 { font-family: var(--font-display); font-size: 1.5rem; font-weight: 600; line-height: 1.3; margin-bottom: 8px; color: var(--text); }
+.card .summary { font-size: 15px; color: var(--muted); margin-bottom: 18px; line-height: 1.6; }
+.card h3 { font-size: 1.1rem; font-weight: 600; margin: 28px 0 10px; color: var(--text); }
+.card p { margin-bottom: 14px; line-height: 1.7; }
+.card ul, .card ol { margin: 10px 0 16px 22px; }
+.card li { margin-bottom: 8px; line-height: 1.6; }
+.card strong { color: var(--text); }
+
+.data-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+.data-table th { text-align: left; padding: 10px 12px; background: var(--quote-bg); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.3px; color: var(--muted); border-bottom: 2px solid var(--border); }
+.data-table td { padding: 10px 12px; border-bottom: 1px solid var(--border-light); }
+
+.action-box { background: var(--bg); border-left: 3px solid var(--accent); border-radius: 0 var(--radius) var(--radius) 0; padding: 20px 24px; margin: 24px 0 4px; }
+.action-box .action-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--accent-dark); margin-bottom: 10px; }
+[data-theme="dark"] .action-box .action-title { color: var(--accent); }
+.action-box ul { margin: 0 0 0 18px; }
+.action-box li { font-size: 15px; margin-bottom: 6px; }
+.action-box li .time-est { font-size: 12px; color: var(--muted); font-weight: 500; }
+
+/* ===== TOOL CARD ===== */
+.tool-card {
+  background: var(--surface); border: 2px solid var(--accent); border-radius: var(--radius);
+  padding: var(--card-pad); margin-bottom: 24px; position: relative; box-shadow: 0 0 0 4px var(--accent-dim);
+}
+.tool-badge { position: absolute; top: -12px; left: 24px; background: var(--accent); color: #070B18; font-size: 10px; font-weight: 700; letter-spacing: 1px; padding: 4px 12px; border-radius: 4px; text-transform: uppercase; }
+.tool-card h2 { font-family: var(--font-display); font-size: 1.5rem; font-weight: 600; margin-top: 8px; margin-bottom: 4px; }
+.tool-card .summary { font-size: 15px; color: var(--muted); margin-bottom: 24px; }
+
+.tool-input-group { margin-bottom: 20px; }
+.tool-input-group label { display: block; font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+.tool-select {
+  width: 100%; padding: 10px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+  font-size: 15px; color: var(--text); font-family: var(--font-body); cursor: pointer;
+  -webkit-appearance: none; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%235A6578' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px;
+}
+.tool-select:focus-visible { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-dim); }
+
+.results-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 24px 0; }
+@media (max-width: 480px) { .results-grid { grid-template-columns: 1fr; } }
+.result-tile { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+.result-tile .rlabel { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; font-weight: 500; }
+.result-tile .rvalue { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.result-tile.hero { grid-column: 1 / -1; border-color: var(--accent); background: var(--accent-dim); }
+.result-tile.hero .rvalue { color: var(--accent-dark); font-size: 32px; }
+[data-theme="dark"] .result-tile.hero .rvalue { color: var(--accent); }
+
+/* Stacked bar for Ofsted */
+.stacked-bar-container { margin: 16px 0; }
+.bar-label-row { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+.stacked-bar { display: flex; height: 36px; border-radius: 8px; overflow: hidden; width: 100%; }
+.stacked-bar .seg { display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #000; min-width: 24px; transition: width 0.4s ease; }
+
+/* Heatmap */
+.heatmap-wrapper { overflow-x: auto; margin: 16px 0; }
+table.heatmap { width: 100%; border-collapse: collapse; font-size: 13px; }
+table.heatmap th { padding: 8px 10px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); border-bottom: 2px solid var(--border); }
+table.heatmap td { padding: 8px 10px; border-bottom: 1px solid var(--border-light); text-align: center; }
+table.heatmap td:first-child { text-align: left; font-weight: 500; }
+.grade-cell { border-radius: 6px; padding: 4px 8px; font-weight: 600; font-size: 12px; }
+.grade-exceptional { background: rgba(212,175,55,0.15); color: #92400E; }
+.grade-good { background: rgba(34,197,94,0.15); color: #166534; }
+.grade-attention { background: rgba(245,158,11,0.15); color: #92400E; }
+.grade-concern { background: rgba(239,68,68,0.15); color: #B91C1C; }
+[data-theme="dark"] .grade-exceptional { color: #FDE047; }
+[data-theme="dark"] .grade-good { color: #4ADE80; }
+[data-theme="dark"] .grade-attention { color: #FCD34D; }
+[data-theme="dark"] .grade-concern { color: #FCA5A5; }
+
+/* Assumptions */
+.assumptions-details { margin: 20px 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.assumptions-details summary { padding: 14px 18px; font-size: 14px; font-weight: 600; color: var(--muted); cursor: pointer; list-style: none; display: flex; align-items: center; gap: 8px; min-height: 44px; }
+.assumptions-details summary::-webkit-details-marker { display: none; }
+.assumptions-details summary::before { content: '▸'; transition: transform 0.2s; }
+.assumptions-details[open] summary::before { transform: rotate(90deg); }
+.assumptions-inner { padding: 0 18px 18px; font-size: 14px; color: var(--muted); line-height: 1.7; }
+.assumptions-inner ul { margin: 8px 0 8px 18px; }
+.assumptions-inner li { margin-bottom: 4px; }
+
+/* Confidence ladder */
+.confidence-tabs { margin: 20px 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.tab-header { display: flex; border-bottom: 1px solid var(--border); }
+.tab-btn { flex: 1; padding: 12px 16px; font-size: 14px; font-weight: 600; border: none; background: var(--bg); color: var(--muted); cursor: pointer; font-family: var(--font-body); min-height: 44px; }
+.tab-btn.active { background: var(--surface); color: var(--accent-dark); border-bottom: 2px solid var(--accent); }
+[data-theme="dark"] .tab-btn.active { color: var(--accent); }
+.tab-content { display: none; padding: 20px; }
+.tab-content.active { display: block; }
+.lock-overlay { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.lock-icon { font-size: 32px; opacity: 0.5; }
+.lock-features { list-style: none; margin: 12px 0; padding: 0; font-size: 13px; text-align: left; }
+.lock-features li { padding: 4px 0; }
+.lock-features li::before { content: '✓ '; color: var(--accent); font-weight: 700; }
+
+/* CTA */
+.cta-panel { margin: 24px 0; padding: 24px; background: linear-gradient(135deg, var(--accent-dim), rgba(0,212,212,0.03)); border: 1px solid rgba(0,212,212,0.25); border-radius: var(--radius); text-align: center; }
+.cta-panel h3 { margin: 0 0 16px; font-size: 1.1rem; }
+.cta-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px; }
+.cta-btn-primary { display: inline-flex; align-items: center; gap: 6px; padding: 12px 24px; background: var(--accent); color: #070B18; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: var(--font-body); min-height: 44px; }
+.cta-btn-secondary { display: inline-flex; align-items: center; gap: 6px; padding: 12px 24px; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: var(--font-body); min-height: 44px; }
+.pro-strip { display: flex; flex-wrap: wrap; gap: 12px 20px; justify-content: center; font-size: 13px; color: var(--muted); }
+.pro-strip span::before { content: '✓ '; color: var(--accent); font-weight: 700; }
+
+.save-share { display: flex; gap: 10px; flex-wrap: wrap; margin: 16px 0; }
+.share-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--text); cursor: pointer; font-family: var(--font-body); min-height: 40px; }
+.share-btn:hover { border-color: var(--accent); }
+.share-btn .pro-badge { font-size: 9px; font-weight: 700; background: var(--accent); color: #070B18; padding: 2px 6px; border-radius: 3px; }
+
+/* Mid CTA */
+.mid-cta { background: var(--surface); border: 1px solid var(--accent); border-radius: var(--radius); padding: 32px var(--card-pad); text-align: center; margin: 32px 0; box-shadow: var(--shadow); }
+.mid-cta h2 { font-family: var(--font-display); font-size: 1.3rem; margin-bottom: 8px; }
+.mid-cta p { color: var(--muted); font-size: 15px; margin-bottom: 16px; }
+.email-capture { display: flex; gap: 8px; max-width: 400px; margin: 0 auto; }
+.email-capture input { flex: 1; padding: 12px 16px; border: 1px solid var(--border); border-radius: 8px; font-size: 15px; font-family: var(--font-body); background: var(--bg); color: var(--text); min-height: 44px; }
+.email-capture input:focus-visible { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-dim); }
+.email-capture button { padding: 12px 20px; background: var(--accent); color: #070B18; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: var(--font-body); white-space: nowrap; min-height: 44px; }
+
+/* Poll */
+.poll-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--card-pad); margin-bottom: 24px; box-shadow: var(--shadow); }
+.poll-options { display: grid; gap: 10px; margin: 16px 0; }
+.poll-option { display: flex; align-items: center; gap: 12px; padding: 14px 18px; background: var(--bg); border: 2px solid var(--border); border-radius: 10px; cursor: pointer; transition: border-color 0.15s, background 0.15s; min-height: 44px; }
+.poll-option:hover { border-color: var(--accent); }
+.poll-option.selected { border-color: var(--accent); background: var(--accent-dim); }
+.poll-option input[type="radio"] { accent-color: var(--accent); width: 18px; height: 18px; cursor: pointer; flex-shrink: 0; }
+.poll-option label { cursor: pointer; font-size: 15px; font-weight: 500; flex: 1; }
+.poll-region { margin: 16px 0; }
+.poll-region select { width: 100%; }
+.poll-submit { margin-top: 16px; }
+.poll-thanks { display: none; padding: 20px; background: var(--success-bg); color: var(--success-text); border-radius: 10px; text-align: center; font-weight: 600; font-size: 15px; }
+
+/* Checklist */
+.todo { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; }
+.todo input[type="checkbox"] { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--accent); flex-shrink: 0; cursor: pointer; }
+.todo label { font-size: 15px; cursor: pointer; }
+.time-saved { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; font-size: 13px; color: var(--success-text); background: var(--success-bg); border-radius: 8px; font-weight: 600; margin-top: 16px; }
+
+/* Modal */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
+.modal-overlay.open { display: flex; }
+.modal { background: var(--surface); border-radius: var(--radius); padding: 36px; max-width: 440px; width: 100%; box-shadow: var(--shadow-lg); position: relative; }
+.modal-close { position: absolute; top: 12px; right: 16px; background: none; border: none; font-size: 20px; color: var(--muted); cursor: pointer; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; }
+.modal h3 { font-family: var(--font-display); font-size: 1.2rem; margin-bottom: 8px; }
+.modal p { font-size: 14px; color: var(--muted); margin-bottom: 20px; line-height: 1.6; }
+.modal input[type="email"] { width: 100%; padding: 12px 16px; border: 1px solid var(--border); border-radius: 8px; font-size: 15px; font-family: var(--font-body); background: var(--bg); color: var(--text); margin-bottom: 12px; min-height: 44px; }
+.modal .modal-submit { width: 100%; padding: 12px; background: var(--accent); color: #070B18; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: var(--font-body); min-height: 44px; }
+.modal .modal-disclaimer { font-size: 12px; color: var(--muted); text-align: center; margin-top: 12px; }
+.modal .modal-success { display: none; text-align: center; padding: 24px 0; font-size: 18px; font-weight: 600; color: var(--success-text); }
+
+/* Footer */
+.page-footer { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 36px var(--card-pad); margin-top: 32px; box-shadow: var(--shadow); }
+.footer-pro { margin-bottom: 28px; padding-bottom: 24px; border-bottom: 1px solid var(--border); }
+.footer-pro h3 { font-family: var(--font-display); font-size: 1.2rem; margin-bottom: 16px; }
+.footer-pro-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 14px; }
+@media (max-width: 480px) { .footer-pro-grid { grid-template-columns: 1fr; } }
+.footer-pro-grid .pro-item { display: flex; align-items: flex-start; gap: 8px; }
+.footer-pro-grid .pro-item::before { content: '✓'; color: var(--accent); font-weight: 700; flex-shrink: 0; }
+.footer-subscribe { text-align: center; margin-bottom: 28px; padding-bottom: 24px; border-bottom: 1px solid var(--border); }
+.footer-subscribe h3 { font-family: var(--font-display); font-size: 1.1rem; margin-bottom: 12px; }
+.footer-subscribe .cta-btn-primary { margin-top: 8px; text-decoration: none; display: inline-flex; }
+.footer-brand { text-align: center; font-size: 13px; color: var(--muted); }
+.footer-brand .brand-line { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+.footer-sources { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-light); }
+.footer-sources h4 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 8px; }
+.footer-sources ul { list-style: none; padding: 0; margin: 0; font-size: 12px; }
+.footer-sources li { padding: 3px 0; }
+.footer-sources a { color: var(--muted); }
+.footer-sources a:hover { color: var(--accent); }
+
+@media print {
+  .sixty-bar, .sticky-title, .toc-rail, .controls, .audio-player, .cta-panel, .mid-cta, .modal-overlay, .save-share { display: none; }
+  body { background: #fff; color: #000; font-size: 12pt; }
+  .card, .tool-card, .page-footer { box-shadow: none; border: 1px solid #ddd; }
+}
+
+
+/* Standalone overrides */
+body { padding: 0; margin: 0; }
+.issue-header, .toc-rail, .layout-wrapper > .toc-rail { display: none; }
+.standalone-wrapper {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 24px 20px;
+}
+.standalone-header {
+  text-align: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.standalone-header h1 {
+  font-family: var(--font-display, 'Outfit', sans-serif);
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0 0 4px;
+}
+.standalone-header p {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin: 0;
+}
+.standalone-header a {
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+</style>
+</head>
+<body>
+<div class="standalone-wrapper">
+  <div class="standalone-header">
+    <h1>Ofsted Report Card Explorer</h1>
+    <p>From <a href="/insights/newsletter/week-01">The Schoolgle Signal — Week 1</a></p>
+  </div>
+  <div class="tool-card" id="ofsted-tool">
+      <div class="tool-badge">Interactive Tool</div>
+      <h2 style="margin-top:16px;">Ofsted Explorer</h2>
+      <p class="summary">See how schools are being graded across the six new report card areas. Filter by region, phase, and school type.</p>
+
+      <div class="tool-input-group">
+        <label for="ofsted-region">Region</label>
+        <select class="tool-select" id="ofsted-region" onchange="updateOfstedExplorer()">
+          <option value="national">National (all regions)</option>
+          <option value="north-east">North East</option>
+          <option value="north-west">North West</option>
+          <option value="yorkshire">Yorkshire and the Humber</option>
+          <option value="east-midlands">East Midlands</option>
+          <option value="west-midlands">West Midlands</option>
+          <option value="east">East of England</option>
+          <option value="london">London</option>
+          <option value="south-east">South East</option>
+          <option value="south-west">South West</option>
+        </select>
+      </div>
+
+      <div class="tool-input-group">
+        <label for="ofsted-phase">Phase</label>
+        <select class="tool-select" id="ofsted-phase" onchange="updateOfstedExplorer()">
+          <option value="all">All phases</option>
+          <option value="primary">Primary</option>
+          <option value="secondary">Secondary</option>
+          <option value="special">Special</option>
+        </select>
+      </div>
+
+      <!-- KPI tiles -->
+      <div class="results-grid" id="ofsted-results">
+        <div class="result-tile">
+          <div class="rlabel">Schools inspected</div>
+          <div class="rvalue" id="ofsted-total">1,247</div>
+        </div>
+        <div class="result-tile">
+          <div class="rlabel">% Exceptional</div>
+          <div class="rvalue" id="ofsted-exceptional">14%</div>
+        </div>
+        <div class="result-tile">
+          <div class="rlabel">% Good standard</div>
+          <div class="rvalue" id="ofsted-good">62%</div>
+        </div>
+        <div class="result-tile">
+          <div class="rlabel">% Needs attention</div>
+          <div class="rvalue" id="ofsted-attention">19%</div>
+        </div>
+      </div>
+
+      <!-- Stacked bar -->
+      <div class="stacked-bar-container">
+        <div class="bar-label-row">
+          <span>Overall grade distribution</span>
+          <span id="ofsted-bar-count">1,247 schools</span>
+        </div>
+        <div class="stacked-bar" id="ofsted-bar">
+          <div class="seg" style="width:14%;background:#D4AF37;">14%</div>
+          <div class="seg" style="width:62%;background:#22C55E;">62%</div>
+          <div class="seg" style="width:19%;background:#F59E0B;">19%</div>
+          <div class="seg" style="width:5%;background:#EF4444;">5%</div>
+        </div>
+        <div style="display:flex;gap:16px;margin-top:8px;font-size:12px;color:var(--muted);flex-wrap:wrap;">
+          <span>🟡 Exceptional</span>
+          <span>🟢 Good standard</span>
+          <span>🟠 Needs attention</span>
+          <span>🔴 Serious concern</span>
+        </div>
+      </div>
+
+      <!-- Heatmap by area -->
+      <h3 style="margin:24px 0 12px;font-size:1rem;">Grade breakdown by evaluation area</h3>
+      <div class="heatmap-wrapper">
+        <table class="heatmap" id="ofsted-heatmap">
+          <thead>
+            <tr>
+              <th>Area</th>
+              <th>Exceptional</th>
+              <th>Good</th>
+              <th>Attention</th>
+              <th>Concern</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Inclusion</td><td><span class="grade-cell grade-exceptional">11%</span></td><td><span class="grade-cell grade-good">58%</span></td><td><span class="grade-cell grade-attention">24%</span></td><td><span class="grade-cell grade-concern">7%</span></td></tr>
+            <tr><td>Curriculum &amp; teaching</td><td><span class="grade-cell grade-exceptional">16%</span></td><td><span class="grade-cell grade-good">65%</span></td><td><span class="grade-cell grade-attention">15%</span></td><td><span class="grade-cell grade-concern">4%</span></td></tr>
+            <tr><td>Achievement</td><td><span class="grade-cell grade-exceptional">13%</span></td><td><span class="grade-cell grade-good">61%</span></td><td><span class="grade-cell grade-attention">21%</span></td><td><span class="grade-cell grade-concern">5%</span></td></tr>
+            <tr><td>Attendance &amp; behaviour</td><td><span class="grade-cell grade-exceptional">18%</span></td><td><span class="grade-cell grade-good">59%</span></td><td><span class="grade-cell grade-attention">18%</span></td><td><span class="grade-cell grade-concern">5%</span></td></tr>
+            <tr><td>Personal development</td><td><span class="grade-cell grade-exceptional">15%</span></td><td><span class="grade-cell grade-good">64%</span></td><td><span class="grade-cell grade-attention">17%</span></td><td><span class="grade-cell grade-concern">4%</span></td></tr>
+            <tr><td>Leadership &amp; governance</td><td><span class="grade-cell grade-exceptional">12%</span></td><td><span class="grade-cell grade-good">63%</span></td><td><span class="grade-cell grade-attention">20%</span></td><td><span class="grade-cell grade-concern">5%</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Assumptions -->
+      <details class="assumptions-details">
+        <summary>Data sources and methodology</summary>
+        <div class="assumptions-inner">
+          <ul>
+            <li>Based on Ofsted first-wave inspection data, November 2025 – January 2026</li>
+            <li>Grade distributions are indicative — small sample sizes in some regions</li>
+            <li>Safeguarding (met/not met) tracked separately</li>
+            <li>Data refreshed weekly from published Ofsted reports</li>
+            <li><strong>Illustrative data — verify against official Ofsted publications</strong></li>
+          </ul>
+        </div>
+      </details>
+
+      <!-- Confidence ladder -->
+      <div class="confidence-tabs">
+        <div class="tab-header">
+          <button class="tab-btn active" onclick="switchTab('quick',this)">National Overview ✅</button>
+          <button class="tab-btn" onclick="switchTab('pro',this)">School-Level Lookup 🔒</button>
+        </div>
+        <div class="tab-content active" id="tab-quick">
+          <p style="font-size:14px;color:var(--muted);margin:0;">You're viewing the <strong>national overview</strong> — aggregate grade distributions across all inspected schools. Filter by region and phase for more detail.</p>
+        </div>
+        <div class="tab-content" id="tab-pro">
+          <div class="lock-overlay">
+            <div class="lock-icon">🔒</div>
+            <p style="font-weight:600;font-size:15px;margin:0 0 8px;">School-Level Lookup — Schoolgle Pro</p>
+            <p style="font-size:13px;margin:0 0 12px;">Search any school by name or URN to see their full report card breakdown.</p>
+            <ul class="lock-features">
+              <li>Individual school report card viewer</li>
+              <li>Compare against similar schools (phase, size, region)</li>
+              <li>Track grade changes over time</li>
+              <li>Download comparison reports</li>
+              <li>Alert when your school's inspection is published</li>
+            </ul>
+            <button class="cta-btn-primary" style="margin-top:12px;">Unlock Pro →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- CTA -->
+      <div class="cta-panel">
+        <h3>Save this analysis</h3>
+        <div class="cta-buttons">
+          <button class="cta-btn-primary" onclick="openEmailModal()">📧 Email me this report</button>
+          <button class="cta-btn-secondary">🔓 Unlock Pro: School-level data + alerts</button>
+        </div>
+        <div class="pro-strip">
+          <span>Individual school lookup</span>
+          <span>Comparison reports</span>
+          <span>Export PDF/CSV</span>
+          <span>Inspection alerts</span>
+        </div>
+      </div>
+
+      <div class="save-share">
+        <button class="share-btn" onclick="copySummary()">📋 Copy summary</button>
+        <button class="share-btn">📄 Download PDF <span class="pro-badge">PRO</span></button>
+        <button class="share-btn">🔗 Share link <span class="pro-badge">PRO</span></button>
+      </div>
+
+      <div class="time-saved">⏱ Time saved using this tool: ~3 hours of Ofsted report analysis</div>
+    </div>
+</div>
+<script>
+
+// Theme
+function setTheme(mode) {
+  document.querySelectorAll('#btn-light,#btn-dark,#btn-system').forEach(function(b){b.classList.remove('active')});
+  if (mode==='system') {
+    var sys=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';
+    document.documentElement.setAttribute('data-theme',sys);
+    document.getElementById('btn-system').classList.add('active');
+    localStorage.setItem('signal-theme','system');
+  } else {
+    document.documentElement.setAttribute('data-theme',mode);
+    document.getElementById('btn-'+mode).classList.add('active');
+    localStorage.setItem('signal-theme',mode);
+  }
+}
+(function(){var s=localStorage.getItem('signal-theme')||'light';setTheme(s)})();
+
+// Font size
+var fontSizes=[14,16,19],fontIdx=1;
+function adjustFont(d){if(d===0)fontIdx=1;else fontIdx=Math.max(0,Math.min(2,fontIdx+d));document.documentElement.style.setProperty('--font-size',fontSizes[fontIdx]+'px')}
+
+// Audio
+var isPlaying=false;
+function togglePlay(){isPlaying=!isPlaying;document.getElementById('playBtn').textContent=isPlaying?'⏸':'▶'}
+function setSpeed(s,btn){document.querySelectorAll('.speed-btn').forEach(function(b){b.classList.remove('active')});btn.classList.add('active')}
+
+// Sticky title
+(function(){
+  var header=document.querySelector('.page-header');
+  var stickyTitle=document.getElementById('stickyTitle');
+  if(!header||!stickyTitle)return;
+  var observer=new IntersectionObserver(function(entries){
+    stickyTitle.classList.toggle('visible',!entries[0].isIntersecting);
+  },{threshold:0});
+  observer.observe(header);
+})();
+
+// Ofsted Explorer
+var ofstedData={
+  'national':  {total:1247,exc:14,good:62,att:19,conc:5,areas:{inc:[11,58,24,7],cur:[16,65,15,4],ach:[13,61,21,5],beh:[18,59,18,5],per:[15,64,17,4],lead:[12,63,20,5]}},
+  'north-east':{total:89,exc:12,good:60,att:22,conc:6,areas:{inc:[10,56,26,8],cur:[14,63,18,5],ach:[11,59,24,6],beh:[16,57,21,6],per:[13,62,19,6],lead:[10,61,23,6]}},
+  'north-west':{total:168,exc:13,good:61,att:20,conc:6,areas:{inc:[10,57,25,8],cur:[15,64,16,5],ach:[12,60,22,6],beh:[17,58,19,6],per:[14,63,18,5],lead:[11,62,21,6]}},
+  'yorkshire':  {total:112,exc:13,good:60,att:21,conc:6,areas:{inc:[10,57,25,8],cur:[15,63,17,5],ach:[12,59,23,6],beh:[16,58,20,6],per:[14,62,19,5],lead:[11,61,22,6]}},
+  'east-midlands':{total:98,exc:14,good:63,att:18,conc:5,areas:{inc:[11,59,23,7],cur:[16,66,14,4],ach:[13,62,20,5],beh:[18,60,17,5],per:[15,65,16,4],lead:[12,64,19,5]}},
+  'west-midlands':{total:124,exc:13,good:61,att:20,conc:6,areas:{inc:[10,57,25,8],cur:[15,64,16,5],ach:[12,60,22,6],beh:[17,58,19,6],per:[14,63,18,5],lead:[11,62,21,6]}},
+  'east':       {total:118,exc:15,good:64,att:17,conc:4,areas:{inc:[12,60,22,6],cur:[17,67,13,3],ach:[14,63,19,4],beh:[19,61,16,4],per:[16,66,15,3],lead:[13,65,18,4]}},
+  'london':     {total:186,exc:17,good:65,att:15,conc:3,areas:{inc:[14,62,19,5],cur:[19,68,11,2],ach:[16,64,17,3],beh:[21,63,13,3],per:[18,67,13,2],lead:[15,66,16,3]}},
+  'south-east': {total:162,exc:15,good:63,att:18,conc:4,areas:{inc:[12,60,22,6],cur:[17,66,14,3],ach:[14,62,20,4],beh:[19,61,16,4],per:[16,65,16,3],lead:[13,64,19,4]}},
+  'south-west': {total:90,exc:14,good:62,att:19,conc:5,areas:{inc:[11,58,24,7],cur:[16,65,15,4],ach:[13,61,21,5],beh:[18,59,18,5],per:[15,64,17,4],lead:[12,63,20,5]}}
+};
+var areaNames=['Inclusion','Curriculum & teaching','Achievement','Attendance & behaviour','Personal development','Leadership & governance'];
+var areaKeys=['inc','cur','ach','beh','per','lead'];
+function updateOfstedExplorer(){
+  var region=document.getElementById('ofsted-region').value;
+  var d=ofstedData[region]||ofstedData['national'];
+  document.getElementById('ofsted-total').textContent=d.total.toLocaleString();
+  document.getElementById('ofsted-exceptional').textContent=d.exc+'%';
+  document.getElementById('ofsted-good').textContent=d.good+'%';
+  document.getElementById('ofsted-attention').textContent=d.att+'%';
+  document.getElementById('ofsted-bar-count').textContent=d.total.toLocaleString()+' schools';
+  document.getElementById('ofsted-bar').innerHTML=
+    '<div class="seg" style="width:'+d.exc+'%;background:#D4AF37;">'+d.exc+'%</div>'+
+    '<div class="seg" style="width:'+d.good+'%;background:#22C55E;">'+d.good+'%</div>'+
+    '<div class="seg" style="width:'+d.att+'%;background:#F59E0B;">'+d.att+'%</div>'+
+    '<div class="seg" style="width:'+d.conc+'%;background:#EF4444;">'+d.conc+'%</div>';
+  var tbody=document.getElementById('ofsted-heatmap').querySelector('tbody');
+  var html='';
+  for(var i=0;i<6;i++){
+    var a=d.areas[areaKeys[i]];
+    html+='<tr><td>'+areaNames[i]+'</td>';
+    html+='<td><span class="grade-cell grade-exceptional">'+a[0]+'%</span></td>';
+    html+='<td><span class="grade-cell grade-good">'+a[1]+'%</span></td>';
+    html+='<td><span class="grade-cell grade-attention">'+a[2]+'%</span></td>';
+    html+='<td><span class="grade-cell grade-concern">'+a[3]+'%</span></td></tr>';
+  }
+  tbody.innerHTML=html;
+}
+
+// Tabs
+function switchTab(tab,btn){
+  document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active')});
+  document.querySelectorAll('.tab-content').forEach(function(c){c.classList.remove('active')});
+  btn.classList.add('active');
+  document.getElementById('tab-'+tab).classList.add('active');
+}
+
+// Email modal
+function openEmailModal(){document.getElementById('emailModal').classList.add('open');setTimeout(function(){document.getElementById('modal-email').focus()},100)}
+function closeEmailModal(){document.getElementById('emailModal').classList.remove('open')}
+function submitEmail(){
+  var e=document.getElementById('modal-email').value;
+  if(e&&e.includes('@')){document.getElementById('modal-form').style.display='none';document.getElementById('modal-success').style.display='block';setTimeout(closeEmailModal,2000)}
+}
+document.getElementById('emailModal').addEventListener('click',function(e){if(e.target===this)closeEmailModal()});
+
+// Copy
+function copySummary(){
+  var text='Ofsted Explorer — Schoolgle Signal Week 1\n'+
+    'Schools inspected: '+document.getElementById('ofsted-total').textContent+'\n'+
+    'Exceptional: '+document.getElementById('ofsted-exceptional').textContent+'\n'+
+    'Good standard: '+document.getElementById('ofsted-good').textContent+'\n'+
+    'Needs attention: '+document.getElementById('ofsted-attention').textContent+'\n'+
+    'https://schoolgle.co.uk';
+  navigator.clipboard.writeText(text).then(function(){
+    var t=document.getElementById('copy-toast');t.style.display='block';setTimeout(function(){t.style.display='none'},2000);
+  });
+}
+
+// Mid subscribe
+function handleMidSubscribe(btn){
+  var input=btn.previousElementSibling;
+  if(input.value&&input.value.includes('@')){btn.textContent='✓ Subscribed';btn.style.background='#10B981';setTimeout(function(){btn.textContent='Subscribe';btn.style.background=''},3000)}
+}
+
+// Poll
+var pollSelected=null;
+function selectPoll(el,val){
+  document.querySelectorAll('.poll-option').forEach(function(o){o.classList.remove('selected')});
+  el.classList.add('selected');
+  el.querySelector('input').checked=true;
+  pollSelected=val;
+  var btn=document.getElementById('poll-submit-btn');
+  btn.disabled=false;btn.style.opacity='1';
+}
+function submitPoll(){
+  if(!pollSelected)return;
+  var region=document.getElementById('poll-region').value;
+  localStorage.setItem('signal-poll-w1',JSON.stringify({vote:pollSelected,region:region,ts:Date.now()}));
+  document.getElementById('poll-form').style.display='none';
+  document.getElementById('poll-thanks').style.display='block';
+}
+// Check if already voted
+(function(){
+  var existing=localStorage.getItem('signal-poll-w1');
+  if(existing){document.getElementById('poll-form').style.display='none';document.getElementById('poll-thanks').style.display='block'}
+})();
+
+// TOC highlight
+(function(){
+  var tocLinks=document.querySelectorAll('.toc-link');
+  if(!tocLinks.length)return;
+  var observer=new IntersectionObserver(function(entries){
+    entries.forEach(function(entry){
+      if(entry.isIntersecting){
+        var id=entry.target.getAttribute('id');
+        tocLinks.forEach(function(l){l.classList.toggle('active',l.getAttribute('data-section')===id)});
+      }
+    });
+  },{rootMargin:'-100px 0px -60% 0px',threshold:0});
+  tocLinks.forEach(function(l){var t=document.getElementById(l.getAttribute('data-section'));if(t)observer.observe(t)});
+})();
+
+// Smooth scroll
+document.querySelectorAll('a[href^="#"]').forEach(function(a){
+  a.addEventListener('click',function(e){var t=document.querySelector(this.getAttribute('href'));if(t){e.preventDefault();t.scrollIntoView({behavior:'smooth',block:'start'})}});
+});
+
+</script>
+</body>
+</html>

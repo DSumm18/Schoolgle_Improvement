@@ -1,0 +1,1182 @@
+{
+  "national": {
+    "total": 129540,
+    "outstanding": 21251,
+    "outstanding_pct": 16.4,
+    "good": 93370,
+    "good_pct": 72.1,
+    "requires_improvement": 11494,
+    "ri_pct": 8.9,
+    "inadequate": 3425,
+    "inadequate_pct": 2.6,
+    "good_or_outstanding_pct": 88.5,
+    "phases": {
+      "Nursery": {
+        "total": 2300,
+        "outstanding": 1397,
+        "outstanding_pct": 60.7,
+        "good": 856,
+        "good_pct": 37.2,
+        "requires_improvement": 41,
+        "ri_pct": 1.8,
+        "inadequate": 6,
+        "inadequate_pct": 0.3,
+        "good_or_outstanding_pct": 98.0
+      },
+      "PRU": {
+        "total": 1958,
+        "outstanding": 355,
+        "outstanding_pct": 18.1,
+        "good": 1326,
+        "good_pct": 67.7,
+        "requires_improvement": 173,
+        "ri_pct": 8.8,
+        "inadequate": 104,
+        "inadequate_pct": 5.3,
+        "good_or_outstanding_pct": 85.9
+      },
+      "Primary": {
+        "total": 99176,
+        "outstanding": 13838,
+        "outstanding_pct": 14.0,
+        "good": 75206,
+        "good_pct": 75.8,
+        "requires_improvement": 8138,
+        "ri_pct": 8.2,
+        "inadequate": 1994,
+        "inadequate_pct": 2.0,
+        "good_or_outstanding_pct": 89.8
+      },
+      "Secondary": {
+        "total": 19906,
+        "outstanding": 3430,
+        "outstanding_pct": 17.2,
+        "good": 12619,
+        "good_pct": 63.4,
+        "requires_improvement": 2801,
+        "ri_pct": 14.1,
+        "inadequate": 1056,
+        "inadequate_pct": 5.3,
+        "good_or_outstanding_pct": 80.6
+      },
+      "Special": {
+        "total": 6200,
+        "outstanding": 2231,
+        "outstanding_pct": 36.0,
+        "good": 3363,
+        "good_pct": 54.2,
+        "requires_improvement": 341,
+        "ri_pct": 5.5,
+        "inadequate": 265,
+        "inadequate_pct": 4.3,
+        "good_or_outstanding_pct": 90.2
+      }
+    },
+    "trends": {
+      "2019": {
+        "total": 12858,
+        "good_plus_pct": 73.5,
+        "outstanding_pct": 9.2,
+        "ri_pct": 20.7,
+        "inadequate_pct": 5.7
+      },
+      "2020": {
+        "total": 4507,
+        "good_plus_pct": 66.4,
+        "outstanding_pct": 4.4,
+        "ri_pct": 25.7,
+        "inadequate_pct": 7.9
+      },
+      "2021": {
+        "total": 1996,
+        "good_plus_pct": 72.5,
+        "outstanding_pct": 7.3,
+        "ri_pct": 21.0,
+        "inadequate_pct": 6.5
+      },
+      "2022": {
+        "total": 8972,
+        "good_plus_pct": 75.3,
+        "outstanding_pct": 4.8,
+        "ri_pct": 19.3,
+        "inadequate_pct": 5.3
+      },
+      "2023": {
+        "total": 11160,
+        "good_plus_pct": 78.4,
+        "outstanding_pct": 8.5,
+        "ri_pct": 18.9,
+        "inadequate_pct": 2.6
+      },
+      "2024": {
+        "total": 5963,
+        "good_plus_pct": 82.5,
+        "outstanding_pct": 18.5,
+        "ri_pct": 15.8,
+        "inadequate_pct": 1.7
+      }
+    }
+  },
+  "London": {
+    "total": 15248,
+    "outstanding": 4310,
+    "outstanding_pct": 28.3,
+    "good": 10122,
+    "good_pct": 66.4,
+    "requires_improvement": 664,
+    "ri_pct": 4.4,
+    "inadequate": 152,
+    "inadequate_pct": 1.0,
+    "good_or_outstanding_pct": 94.6,
+    "phases": {
+      "Nursery": {
+        "total": 464,
+        "outstanding": 319,
+        "outstanding_pct": 68.8,
+        "good": 136,
+        "good_pct": 29.3,
+        "requires_improvement": 9,
+        "ri_pct": 1.9,
+        "inadequate": 0,
+        "inadequate_pct": 0.0,
+        "good_or_outstanding_pct": 98.1
+      },
+      "PRU": {
+        "total": 320,
+        "outstanding": 75,
+        "outstanding_pct": 23.4,
+        "good": 235,
+        "good_pct": 73.4,
+        "requires_improvement": 9,
+        "ri_pct": 2.8,
+        "inadequate": 1,
+        "inadequate_pct": 0.3,
+        "good_or_outstanding_pct": 96.9
+      },
+      "Primary": {
+        "total": 10628,
+        "outstanding": 2634,
+        "outstanding_pct": 24.8,
+        "good": 7495,
+        "good_pct": 70.5,
+        "requires_improvement": 426,
+        "ri_pct": 4.0,
+        "inadequate": 73,
+        "inadequate_pct": 0.7,
+        "good_or_outstanding_pct": 95.3
+      },
+      "Secondary": {
+        "total": 2938,
+        "outstanding": 885,
+        "outstanding_pct": 30.1,
+        "good": 1791,
+        "good_pct": 61.0,
+        "requires_improvement": 199,
+        "ri_pct": 6.8,
+        "inadequate": 63,
+        "inadequate_pct": 2.1,
+        "good_or_outstanding_pct": 91.1
+      },
+      "Special": {
+        "total": 898,
+        "outstanding": 397,
+        "outstanding_pct": 44.2,
+        "good": 465,
+        "good_pct": 51.8,
+        "requires_improvement": 21,
+        "ri_pct": 2.3,
+        "inadequate": 15,
+        "inadequate_pct": 1.7,
+        "good_or_outstanding_pct": 96.0
+      }
+    },
+    "trends": {
+      "2019": {
+        "total": 1426,
+        "good_plus_pct": 86.0,
+        "outstanding_pct": 25.5,
+        "ri_pct": 11.4,
+        "inadequate_pct": 2.6
+      },
+      "2020": {
+        "total": 274,
+        "good_plus_pct": 75.9,
+        "outstanding_pct": 6.6,
+        "ri_pct": 18.6,
+        "inadequate_pct": 5.5
+      },
+      "2021": {
+        "total": 149,
+        "good_plus_pct": 91.3,
+        "outstanding_pct": 18.8,
+        "ri_pct": 5.4,
+        "inadequate_pct": 3.4
+      },
+      "2022": {
+        "total": 880,
+        "good_plus_pct": 87.0,
+        "outstanding_pct": 15.5,
+        "ri_pct": 10.5,
+        "inadequate_pct": 2.5
+      },
+      "2023": {
+        "total": 1361,
+        "good_plus_pct": 90.5,
+        "outstanding_pct": 20.9,
+        "ri_pct": 9.3,
+        "inadequate_pct": 0.2
+      },
+      "2024": {
+        "total": 706,
+        "good_plus_pct": 91.8,
+        "outstanding_pct": 41.9,
+        "ri_pct": 7.8,
+        "inadequate_pct": 0.4
+      }
+    }
+  },
+  "South East": {
+    "total": 19938,
+    "outstanding": 3282,
+    "outstanding_pct": 16.5,
+    "good": 14828,
+    "good_pct": 74.4,
+    "requires_improvement": 1382,
+    "ri_pct": 6.9,
+    "inadequate": 446,
+    "inadequate_pct": 2.2,
+    "good_or_outstanding_pct": 90.8,
+    "phases": {
+      "Nursery": {
+        "total": 252,
+        "outstanding": 167,
+        "outstanding_pct": 66.3,
+        "good": 85,
+        "good_pct": 33.7,
+        "requires_improvement": 0,
+        "ri_pct": 0.0,
+        "inadequate": 0,
+        "inadequate_pct": 0.0,
+        "good_or_outstanding_pct": 100.0
+      },
+      "PRU": {
+        "total": 258,
+        "outstanding": 65,
+        "outstanding_pct": 25.2,
+        "good": 173,
+        "good_pct": 67.1,
+        "requires_improvement": 9,
+        "ri_pct": 3.5,
+        "inadequate": 11,
+        "inadequate_pct": 4.3,
+        "good_or_outstanding_pct": 92.2
+      },
+      "Primary": {
+        "total": 15381,
+        "outstanding": 2105,
+        "outstanding_pct": 13.7,
+        "good": 11966,
+        "good_pct": 77.8,
+        "requires_improvement": 1038,
+        "ri_pct": 6.7,
+        "inadequate": 272,
+        "inadequate_pct": 1.8,
+        "good_or_outstanding_pct": 91.5
+      },
+      "Secondary": {
+        "total": 2979,
+        "outstanding": 550,
+        "outstanding_pct": 18.5,
+        "good": 2034,
+        "good_pct": 68.3,
+        "requires_improvement": 290,
+        "ri_pct": 9.7,
+        "inadequate": 105,
+        "inadequate_pct": 3.5,
+        "good_or_outstanding_pct": 86.7
+      },
+      "Special": {
+        "total": 1068,
+        "outstanding": 395,
+        "outstanding_pct": 37.0,
+        "good": 570,
+        "good_pct": 53.4,
+        "requires_improvement": 45,
+        "ri_pct": 4.2,
+        "inadequate": 58,
+        "inadequate_pct": 5.4,
+        "good_or_outstanding_pct": 90.4
+      }
+    },
+    "trends": {
+      "2019": {
+        "total": 2032,
+        "good_plus_pct": 79.8,
+        "outstanding_pct": 8.0,
+        "ri_pct": 14.8,
+        "inadequate_pct": 5.5
+      },
+      "2020": {
+        "total": 533,
+        "good_plus_pct": 70.2,
+        "outstanding_pct": 13.5,
+        "ri_pct": 23.6,
+        "inadequate_pct": 6.2
+      },
+      "2021": {
+        "total": 279,
+        "good_plus_pct": 78.5,
+        "outstanding_pct": 16.1,
+        "ri_pct": 17.9,
+        "inadequate_pct": 3.6
+      },
+      "2022": {
+        "total": 1384,
+        "good_plus_pct": 74.5,
+        "outstanding_pct": 6.1,
+        "ri_pct": 18.4,
+        "inadequate_pct": 7.2
+      },
+      "2023": {
+        "total": 1557,
+        "good_plus_pct": 78.0,
+        "outstanding_pct": 11.3,
+        "ri_pct": 19.7,
+        "inadequate_pct": 2.3
+      },
+      "2024": {
+        "total": 756,
+        "good_plus_pct": 83.1,
+        "outstanding_pct": 17.7,
+        "ri_pct": 13.8,
+        "inadequate_pct": 3.2
+      }
+    }
+  },
+  "Yorkshire and the Humber": {
+    "total": 13257,
+    "outstanding": 1804,
+    "outstanding_pct": 13.6,
+    "good": 9569,
+    "good_pct": 72.2,
+    "requires_improvement": 1436,
+    "ri_pct": 10.8,
+    "inadequate": 448,
+    "inadequate_pct": 3.4,
+    "good_or_outstanding_pct": 85.8,
+    "phases": {
+      "Nursery": {
+        "total": 161,
+        "outstanding": 94,
+        "outstanding_pct": 58.4,
+        "good": 67,
+        "good_pct": 41.6,
+        "requires_improvement": 0,
+        "ri_pct": 0.0,
+        "inadequate": 0,
+        "inadequate_pct": 0.0,
+        "good_or_outstanding_pct": 100.0
+      },
+      "PRU": {
+        "total": 207,
+        "outstanding": 25,
+        "outstanding_pct": 12.1,
+        "good": 158,
+        "good_pct": 76.3,
+        "requires_improvement": 20,
+        "ri_pct": 9.7,
+        "inadequate": 4,
+        "inadequate_pct": 1.9,
+        "good_or_outstanding_pct": 88.4
+      },
+      "Primary": {
+        "total": 10520,
+        "outstanding": 1220,
+        "outstanding_pct": 11.6,
+        "good": 7902,
+        "good_pct": 75.1,
+        "requires_improvement": 1113,
+        "ri_pct": 10.6,
+        "inadequate": 285,
+        "inadequate_pct": 2.7,
+        "good_or_outstanding_pct": 86.7
+      },
+      "Secondary": {
+        "total": 1877,
+        "outstanding": 314,
+        "outstanding_pct": 16.7,
+        "good": 1157,
+        "good_pct": 61.6,
+        "requires_improvement": 265,
+        "ri_pct": 14.1,
+        "inadequate": 141,
+        "inadequate_pct": 7.5,
+        "good_or_outstanding_pct": 78.4
+      },
+      "Special": {
+        "total": 492,
+        "outstanding": 151,
+        "outstanding_pct": 30.7,
+        "good": 285,
+        "good_pct": 57.9,
+        "requires_improvement": 38,
+        "ri_pct": 7.7,
+        "inadequate": 18,
+        "inadequate_pct": 3.7,
+        "good_or_outstanding_pct": 88.6
+      }
+    },
+    "trends": {
+      "2019": {
+        "total": 1569,
+        "good_plus_pct": 67.8,
+        "outstanding_pct": 6.5,
+        "ri_pct": 26.0,
+        "inadequate_pct": 6.2
+      },
+      "2020": {
+        "total": 605,
+        "good_plus_pct": 68.8,
+        "outstanding_pct": 2.0,
+        "ri_pct": 23.8,
+        "inadequate_pct": 7.4
+      },
+      "2021": {
+        "total": 227,
+        "good_plus_pct": 67.4,
+        "outstanding_pct": 10.6,
+        "ri_pct": 20.3,
+        "inadequate_pct": 12.3
+      },
+      "2022": {
+        "total": 1021,
+        "good_plus_pct": 78.6,
+        "outstanding_pct": 5.6,
+        "ri_pct": 16.6,
+        "inadequate_pct": 4.9
+      },
+      "2023": {
+        "total": 1225,
+        "good_plus_pct": 77.7,
+        "outstanding_pct": 6.8,
+        "ri_pct": 19.6,
+        "inadequate_pct": 2.7
+      },
+      "2024": {
+        "total": 633,
+        "good_plus_pct": 83.3,
+        "outstanding_pct": 15.2,
+        "ri_pct": 15.5,
+        "inadequate_pct": 1.3
+      }
+    }
+  },
+  "West Midlands": {
+    "total": 14255,
+    "outstanding": 2174,
+    "outstanding_pct": 15.3,
+    "good": 10156,
+    "good_pct": 71.2,
+    "requires_improvement": 1476,
+    "ri_pct": 10.4,
+    "inadequate": 449,
+    "inadequate_pct": 3.1,
+    "good_or_outstanding_pct": 86.5,
+    "phases": {
+      "Nursery": {
+        "total": 336,
+        "outstanding": 226,
+        "outstanding_pct": 67.3,
+        "good": 107,
+        "good_pct": 31.8,
+        "requires_improvement": 3,
+        "ri_pct": 0.9,
+        "inadequate": 0,
+        "inadequate_pct": 0.0,
+        "good_or_outstanding_pct": 99.1
+      },
+      "PRU": {
+        "total": 241,
+        "outstanding": 17,
+        "outstanding_pct": 7.1,
+        "good": 168,
+        "good_pct": 69.7,
+        "requires_improvement": 36,
+        "ri_pct": 14.9,
+        "inadequate": 20,
+        "inadequate_pct": 8.3,
+        "good_or_outstanding_pct": 76.8
+      },
+      "Primary": {
+        "total": 10490,
+        "outstanding": 1413,
+        "outstanding_pct": 13.5,
+        "good": 7812,
+        "good_pct": 74.5,
+        "requires_improvement": 999,
+        "ri_pct": 9.5,
+        "inadequate": 266,
+        "inadequate_pct": 2.5,
+        "good_or_outstanding_pct": 87.9
+      },
+      "Secondary": {
+        "total": 2455,
+        "outstanding": 352,
+        "outstanding_pct": 14.3,
+        "good": 1629,
+        "good_pct": 66.4,
+        "requires_improvement": 365,
+        "ri_pct": 14.9,
+        "inadequate": 109,
+        "inadequate_pct": 4.4,
+        "good_or_outstanding_pct": 80.7
+      },
+      "Special": {
+        "total": 733,
+        "outstanding": 166,
+        "outstanding_pct": 22.6,
+        "good": 440,
+        "good_pct": 60.0,
+        "requires_improvement": 73,
+        "ri_pct": 10.0,
+        "inadequate": 54,
+        "inadequate_pct": 7.4,
+        "good_or_outstanding_pct": 82.7
+      }
+    },
+    "trends": {
+      "2019": {
+        "total": 1366,
+        "good_plus_pct": 68.2,
+        "outstanding_pct": 10.5,
+        "ri_pct": 26.4,
+        "inadequate_pct": 5.4
+      },
+      "2020": {
+        "total": 531,
+        "good_plus_pct": 63.3,
+        "outstanding_pct": 1.1,
+        "ri_pct": 26.6,
+        "inadequate_pct": 10.2
+      },
+      "2021": {
+        "total": 271,
+        "good_plus_pct": 65.7,
+        "outstanding_pct": 4.4,
+        "ri_pct": 29.9,
+        "inadequate_pct": 4.4
+      },
+      "2022": {
+        "total": 1016,
+        "good_plus_pct": 70.5,
+        "outstanding_pct": 5.3,
+        "ri_pct": 23.5,
+        "inadequate_pct": 6.0
+      },
+      "2023": {
+        "total": 1241,
+        "good_plus_pct": 77.4,
+        "outstanding_pct": 6.8,
+        "ri_pct": 18.5,
+        "inadequate_pct": 4.1
+      },
+      "2024": {
+        "total": 660,
+        "good_plus_pct": 79.4,
+        "outstanding_pct": 14.4,
+        "ri_pct": 19.8,
+        "inadequate_pct": 0.8
+      }
+    }
+  },
+  "North West": {
+    "total": 18867,
+    "outstanding": 3287,
+    "outstanding_pct": 17.4,
+    "good": 13457,
+    "good_pct": 71.3,
+    "requires_improvement": 1618,
+    "ri_pct": 8.6,
+    "inadequate": 505,
+    "inadequate_pct": 2.7,
+    "good_or_outstanding_pct": 88.7,
+    "phases": {
+      "Nursery": {
+        "total": 383,
+        "outstanding": 219,
+        "outstanding_pct": 57.2,
+        "good": 150,
+        "good_pct": 39.2,
+        "requires_improvement": 13,
+        "ri_pct": 3.4,
+        "inadequate": 1,
+        "inadequate_pct": 0.3,
+        "good_or_outstanding_pct": 96.3
+      },
+      "PRU": {
+        "total": 290,
+        "outstanding": 67,
+        "outstanding_pct": 23.1,
+        "good": 190,
+        "good_pct": 65.5,
+        "requires_improvement": 27,
+        "ri_pct": 9.3,
+        "inadequate": 6,
+        "inadequate_pct": 2.1,
+        "good_or_outstanding_pct": 88.6
+      },
+      "Primary": {
+        "total": 14479,
+        "outstanding": 2155,
+        "outstanding_pct": 14.9,
+        "good": 11079,
+        "good_pct": 76.5,
+        "requires_improvement": 981,
+        "ri_pct": 6.8,
+        "inadequate": 264,
+        "inadequate_pct": 1.8,
+        "good_or_outstanding_pct": 91.4
+      },
+      "Secondary": {
+        "total": 2712,
+        "outstanding": 340,
+        "outstanding_pct": 12.5,
+        "good": 1615,
+        "good_pct": 59.6,
+        "requires_improvement": 552,
+        "ri_pct": 20.4,
+        "inadequate": 205,
+        "inadequate_pct": 7.6,
+        "good_or_outstanding_pct": 72.1
+      },
+      "Special": {
+        "total": 1003,
+        "outstanding": 506,
+        "outstanding_pct": 50.4,
+        "good": 423,
+        "good_pct": 42.2,
+        "requires_improvement": 45,
+        "ri_pct": 4.5,
+        "inadequate": 29,
+        "inadequate_pct": 2.9,
+        "good_or_outstanding_pct": 92.6
+      }
+    },
+    "trends": {
+      "2019": {
+        "total": 1696,
+        "good_plus_pct": 75.4,
+        "outstanding_pct": 9.6,
+        "ri_pct": 18.2,
+        "inadequate_pct": 6.4
+      },
+      "2020": {
+        "total": 811,
+        "good_plus_pct": 66.0,
+        "outstanding_pct": 2.2,
+        "ri_pct": 22.8,
+        "inadequate_pct": 11.2
+      },
+      "2021": {
+        "total": 249,
+        "good_plus_pct": 66.7,
+        "outstanding_pct": 6.4,
+        "ri_pct": 28.9,
+        "inadequate_pct": 4.4
+      },
+      "2022": {
+        "total": 1081,
+        "good_plus_pct": 76.5,
+        "outstanding_pct": 3.6,
+        "ri_pct": 20.2,
+        "inadequate_pct": 3.3
+      },
+      "2023": {
+        "total": 1580,
+        "good_plus_pct": 75.1,
+        "outstanding_pct": 6.8,
+        "ri_pct": 20.0,
+        "inadequate_pct": 4.9
+      },
+      "2024": {
+        "total": 908,
+        "good_plus_pct": 77.0,
+        "outstanding_pct": 18.1,
+        "ri_pct": 20.8,
+        "inadequate_pct": 2.2
+      }
+    }
+  },
+  "North East": {
+    "total": 6764,
+    "outstanding": 1104,
+    "outstanding_pct": 16.3,
+    "good": 4986,
+    "good_pct": 73.7,
+    "requires_improvement": 532,
+    "ri_pct": 7.9,
+    "inadequate": 142,
+    "inadequate_pct": 2.1,
+    "good_or_outstanding_pct": 90.0,
+    "phases": {
+      "Nursery": {
+        "total": 178,
+        "outstanding": 115,
+        "outstanding_pct": 64.6,
+        "good": 59,
+        "good_pct": 33.1,
+        "requires_improvement": 2,
+        "ri_pct": 1.1,
+        "inadequate": 2,
+        "inadequate_pct": 1.1,
+        "good_or_outstanding_pct": 97.8
+      },
+      "PRU": {
+        "total": 106,
+        "outstanding": 9,
+        "outstanding_pct": 8.5,
+        "good": 83,
+        "good_pct": 78.3,
+        "requires_improvement": 10,
+        "ri_pct": 9.4,
+        "inadequate": 4,
+        "inadequate_pct": 3.8,
+        "good_or_outstanding_pct": 86.8
+      },
+      "Primary": {
+        "total": 5102,
+        "outstanding": 732,
+        "outstanding_pct": 14.3,
+        "good": 4027,
+        "good_pct": 78.9,
+        "requires_improvement": 302,
+        "ri_pct": 5.9,
+        "inadequate": 41,
+        "inadequate_pct": 0.8,
+        "good_or_outstanding_pct": 93.3
+      },
+      "Secondary": {
+        "total": 1009,
+        "outstanding": 145,
+        "outstanding_pct": 14.4,
+        "good": 592,
+        "good_pct": 58.7,
+        "requires_improvement": 187,
+        "ri_pct": 18.5,
+        "inadequate": 85,
+        "inadequate_pct": 8.4,
+        "good_or_outstanding_pct": 73.0
+      },
+      "Special": {
+        "total": 369,
+        "outstanding": 103,
+        "outstanding_pct": 27.9,
+        "good": 225,
+        "good_pct": 61.0,
+        "requires_improvement": 31,
+        "ri_pct": 8.4,
+        "inadequate": 10,
+        "inadequate_pct": 2.7,
+        "good_or_outstanding_pct": 88.9
+      }
+    },
+    "trends": {
+      "2019": {
+        "total": 727,
+        "good_plus_pct": 72.8,
+        "outstanding_pct": 2.5,
+        "ri_pct": 22.3,
+        "inadequate_pct": 5.0
+      },
+      "2020": {
+        "total": 208,
+        "good_plus_pct": 80.8,
+        "outstanding_pct": 0.0,
+        "ri_pct": 13.9,
+        "inadequate_pct": 5.3
+      },
+      "2021": {
+        "total": 145,
+        "good_plus_pct": 78.6,
+        "outstanding_pct": 9.0,
+        "ri_pct": 18.6,
+        "inadequate_pct": 2.8
+      },
+      "2022": {
+        "total": 450,
+        "good_plus_pct": 78.7,
+        "outstanding_pct": 5.8,
+        "ri_pct": 17.3,
+        "inadequate_pct": 4.0
+      },
+      "2023": {
+        "total": 490,
+        "good_plus_pct": 81.0,
+        "outstanding_pct": 10.0,
+        "ri_pct": 17.6,
+        "inadequate_pct": 1.4
+      },
+      "2024": {
+        "total": 316,
+        "good_plus_pct": 86.7,
+        "outstanding_pct": 12.7,
+        "ri_pct": 11.4,
+        "inadequate_pct": 1.9
+      }
+    }
+  },
+  "South West": {
+    "total": 13922,
+    "outstanding": 1655,
+    "outstanding_pct": 11.9,
+    "good": 10147,
+    "good_pct": 72.9,
+    "requires_improvement": 1603,
+    "ri_pct": 11.5,
+    "inadequate": 517,
+    "inadequate_pct": 3.7,
+    "good_or_outstanding_pct": 84.8,
+    "phases": {
+      "Nursery": {
+        "total": 106,
+        "outstanding": 44,
+        "outstanding_pct": 41.5,
+        "good": 54,
+        "good_pct": 50.9,
+        "requires_improvement": 5,
+        "ri_pct": 4.7,
+        "inadequate": 3,
+        "inadequate_pct": 2.8,
+        "good_or_outstanding_pct": 92.5
+      },
+      "PRU": {
+        "total": 199,
+        "outstanding": 27,
+        "outstanding_pct": 13.6,
+        "good": 126,
+        "good_pct": 63.3,
+        "requires_improvement": 23,
+        "ri_pct": 11.6,
+        "inadequate": 23,
+        "inadequate_pct": 11.6,
+        "good_or_outstanding_pct": 76.9
+      },
+      "Primary": {
+        "total": 11104,
+        "outstanding": 1260,
+        "outstanding_pct": 11.3,
+        "good": 8288,
+        "good_pct": 74.6,
+        "requires_improvement": 1223,
+        "ri_pct": 11.0,
+        "inadequate": 333,
+        "inadequate_pct": 3.0,
+        "good_or_outstanding_pct": 86.0
+      },
+      "Secondary": {
+        "total": 1986,
+        "outstanding": 237,
+        "outstanding_pct": 11.9,
+        "good": 1299,
+        "good_pct": 65.4,
+        "requires_improvement": 320,
+        "ri_pct": 16.1,
+        "inadequate": 130,
+        "inadequate_pct": 6.5,
+        "good_or_outstanding_pct": 77.3
+      },
+      "Special": {
+        "total": 527,
+        "outstanding": 87,
+        "outstanding_pct": 16.5,
+        "good": 380,
+        "good_pct": 72.1,
+        "requires_improvement": 32,
+        "ri_pct": 6.1,
+        "inadequate": 28,
+        "inadequate_pct": 5.3,
+        "good_or_outstanding_pct": 88.6
+      }
+    },
+    "trends": {
+      "2019": {
+        "total": 1314,
+        "good_plus_pct": 66.8,
+        "outstanding_pct": 4.8,
+        "ri_pct": 24.6,
+        "inadequate_pct": 8.6
+      },
+      "2020": {
+        "total": 552,
+        "good_plus_pct": 59.6,
+        "outstanding_pct": 1.1,
+        "ri_pct": 34.2,
+        "inadequate_pct": 6.2
+      },
+      "2021": {
+        "total": 238,
+        "good_plus_pct": 61.8,
+        "outstanding_pct": 0.0,
+        "ri_pct": 24.8,
+        "inadequate_pct": 13.4
+      },
+      "2022": {
+        "total": 1073,
+        "good_plus_pct": 73.0,
+        "outstanding_pct": 1.0,
+        "ri_pct": 19.9,
+        "inadequate_pct": 7.2
+      },
+      "2023": {
+        "total": 1372,
+        "good_plus_pct": 75.3,
+        "outstanding_pct": 5.0,
+        "ri_pct": 22.7,
+        "inadequate_pct": 2.0
+      },
+      "2024": {
+        "total": 691,
+        "good_plus_pct": 76.1,
+        "outstanding_pct": 9.3,
+        "ri_pct": 21.9,
+        "inadequate_pct": 2.0
+      }
+    }
+  },
+  "East of England": {
+    "total": 15043,
+    "outstanding": 2180,
+    "outstanding_pct": 14.5,
+    "good": 11006,
+    "good_pct": 73.2,
+    "requires_improvement": 1450,
+    "ri_pct": 9.6,
+    "inadequate": 407,
+    "inadequate_pct": 2.7,
+    "good_or_outstanding_pct": 87.7,
+    "phases": {
+      "Nursery": {
+        "total": 228,
+        "outstanding": 127,
+        "outstanding_pct": 55.7,
+        "good": 94,
+        "good_pct": 41.2,
+        "requires_improvement": 7,
+        "ri_pct": 3.1,
+        "inadequate": 0,
+        "inadequate_pct": 0.0,
+        "good_or_outstanding_pct": 96.9
+      },
+      "PRU": {
+        "total": 219,
+        "outstanding": 49,
+        "outstanding_pct": 22.4,
+        "good": 119,
+        "good_pct": 54.3,
+        "requires_improvement": 27,
+        "ri_pct": 12.3,
+        "inadequate": 24,
+        "inadequate_pct": 11.0,
+        "good_or_outstanding_pct": 76.7
+      },
+      "Primary": {
+        "total": 11734,
+        "outstanding": 1418,
+        "outstanding_pct": 12.1,
+        "good": 9021,
+        "good_pct": 76.9,
+        "requires_improvement": 1035,
+        "ri_pct": 8.8,
+        "inadequate": 260,
+        "inadequate_pct": 2.2,
+        "good_or_outstanding_pct": 89.0
+      },
+      "Secondary": {
+        "total": 2252,
+        "outstanding": 386,
+        "outstanding_pct": 17.1,
+        "good": 1446,
+        "good_pct": 64.2,
+        "requires_improvement": 334,
+        "ri_pct": 14.8,
+        "inadequate": 86,
+        "inadequate_pct": 3.8,
+        "good_or_outstanding_pct": 81.3
+      },
+      "Special": {
+        "total": 610,
+        "outstanding": 200,
+        "outstanding_pct": 32.8,
+        "good": 326,
+        "good_pct": 53.4,
+        "requires_improvement": 47,
+        "ri_pct": 7.7,
+        "inadequate": 37,
+        "inadequate_pct": 6.1,
+        "good_or_outstanding_pct": 86.2
+      }
+    },
+    "trends": {
+      "2019": {
+        "total": 1597,
+        "good_plus_pct": 72.6,
+        "outstanding_pct": 9.0,
+        "ri_pct": 21.4,
+        "inadequate_pct": 5.9
+      },
+      "2020": {
+        "total": 497,
+        "good_plus_pct": 63.6,
+        "outstanding_pct": 7.2,
+        "ri_pct": 29.4,
+        "inadequate_pct": 7.0
+      },
+      "2021": {
+        "total": 211,
+        "good_plus_pct": 74.4,
+        "outstanding_pct": 3.8,
+        "ri_pct": 16.6,
+        "inadequate_pct": 9.0
+      },
+      "2022": {
+        "total": 1137,
+        "good_plus_pct": 74.8,
+        "outstanding_pct": 1.0,
+        "ri_pct": 20.2,
+        "inadequate_pct": 4.9
+      },
+      "2023": {
+        "total": 1234,
+        "good_plus_pct": 75.9,
+        "outstanding_pct": 3.8,
+        "ri_pct": 21.2,
+        "inadequate_pct": 2.9
+      },
+      "2024": {
+        "total": 760,
+        "good_plus_pct": 84.6,
+        "outstanding_pct": 20.0,
+        "ri_pct": 14.1,
+        "inadequate_pct": 1.3
+      }
+    }
+  },
+  "East Midlands": {
+    "total": 12246,
+    "outstanding": 1455,
+    "outstanding_pct": 11.9,
+    "good": 9099,
+    "good_pct": 74.3,
+    "requires_improvement": 1333,
+    "ri_pct": 10.9,
+    "inadequate": 359,
+    "inadequate_pct": 2.9,
+    "good_or_outstanding_pct": 86.2,
+    "phases": {
+      "Nursery": {
+        "total": 192,
+        "outstanding": 86,
+        "outstanding_pct": 44.8,
+        "good": 104,
+        "good_pct": 54.2,
+        "requires_improvement": 2,
+        "ri_pct": 1.0,
+        "inadequate": 0,
+        "inadequate_pct": 0.0,
+        "good_or_outstanding_pct": 99.0
+      },
+      "PRU": {
+        "total": 118,
+        "outstanding": 21,
+        "outstanding_pct": 17.8,
+        "good": 74,
+        "good_pct": 62.7,
+        "requires_improvement": 12,
+        "ri_pct": 10.2,
+        "inadequate": 11,
+        "inadequate_pct": 9.3,
+        "good_or_outstanding_pct": 80.5
+      },
+      "Primary": {
+        "total": 9738,
+        "outstanding": 901,
+        "outstanding_pct": 9.3,
+        "good": 7616,
+        "good_pct": 78.2,
+        "requires_improvement": 1021,
+        "ri_pct": 10.5,
+        "inadequate": 200,
+        "inadequate_pct": 2.1,
+        "good_or_outstanding_pct": 87.5
+      },
+      "Secondary": {
+        "total": 1698,
+        "outstanding": 221,
+        "outstanding_pct": 13.0,
+        "good": 1056,
+        "good_pct": 62.2,
+        "requires_improvement": 289,
+        "ri_pct": 17.0,
+        "inadequate": 132,
+        "inadequate_pct": 7.8,
+        "good_or_outstanding_pct": 75.2
+      },
+      "Special": {
+        "total": 500,
+        "outstanding": 226,
+        "outstanding_pct": 45.2,
+        "good": 249,
+        "good_pct": 49.8,
+        "requires_improvement": 9,
+        "ri_pct": 1.8,
+        "inadequate": 16,
+        "inadequate_pct": 3.2,
+        "good_or_outstanding_pct": 95.0
+      }
+    },
+    "trends": {
+      "2019": {
+        "total": 1131,
+        "good_plus_pct": 67.6,
+        "outstanding_pct": 2.1,
+        "ri_pct": 26.6,
+        "inadequate_pct": 5.8
+      },
+      "2020": {
+        "total": 496,
+        "good_plus_pct": 62.9,
+        "outstanding_pct": 6.0,
+        "ri_pct": 29.6,
+        "inadequate_pct": 7.5
+      },
+      "2021": {
+        "total": 227,
+        "good_plus_pct": 78.0,
+        "outstanding_pct": 0.0,
+        "ri_pct": 18.5,
+        "inadequate_pct": 3.5
+      },
+      "2022": {
+        "total": 930,
+        "good_plus_pct": 67.6,
+        "outstanding_pct": 1.3,
+        "ri_pct": 26.1,
+        "inadequate_pct": 6.2
+      },
+      "2023": {
+        "total": 1100,
+        "good_plus_pct": 76.6,
+        "outstanding_pct": 4.6,
+        "ri_pct": 21.5,
+        "inadequate_pct": 1.9
+      },
+      "2024": {
+        "total": 533,
+        "good_plus_pct": 84.8,
+        "outstanding_pct": 11.6,
+        "ri_pct": 13.3,
+        "inadequate_pct": 1.9
+      }
+    }
+  }
+}

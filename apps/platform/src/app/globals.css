@@ -2,7 +2,8 @@
 
 @theme {
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-outfit), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display:
+    var(--font-outfit), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 
   --color-primary-50: #f0f9ff;
   --color-primary-100: #e0f2fe;
@@ -228,6 +229,114 @@ h6 {
 :focus-visible {
   outline: 2px solid var(--color-primary-500);
   outline-offset: 2px;
+}
+
+/* ── Apple-Standard Motion & Transitions ── */
+
+/* Respect user preference for reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Apple spring easing — feels physical, not floaty */
+:root {
+  --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --duration-fast: 200ms;
+  --duration-normal: 350ms;
+  --duration-slow: 500ms;
+  --duration-enter: 600ms;
+}
+
+/* Smooth page section transitions */
+section {
+  will-change: auto;
+}
+
+/* Card hover — lift with subtle shadow bloom */
+.card-hover {
+  transition:
+    transform var(--duration-normal) var(--ease-spring),
+    box-shadow var(--duration-normal) var(--ease-spring),
+    border-color var(--duration-fast) ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 8px 30px -4px rgba(0, 0, 0, 0.08),
+    0 4px 10px -4px rgba(0, 0, 0, 0.04);
+}
+
+.dark .card-hover:hover {
+  box-shadow:
+    0 8px 30px -4px rgba(0, 0, 0, 0.3),
+    0 4px 10px -4px rgba(0, 0, 0, 0.2);
+}
+
+/* Button press — physical tactile feel */
+.btn-press {
+  transition: transform var(--duration-fast) var(--ease-spring);
+}
+
+.btn-press:active {
+  transform: scale(0.97);
+}
+
+/* Smooth gradient text */
+.gradient-text {
+  background: linear-gradient(
+    135deg,
+    var(--color-primary-400),
+    var(--color-primary-600)
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* iOS-style safe areas */
+.safe-area-inset {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Tap highlight removal for mobile */
+@media (hover: none) {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Smooth image loading */
+img {
+  transition: opacity var(--duration-normal) var(--ease-spring);
+}
+
+/* Better touch scrolling */
+.scroll-container {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  scroll-behavior: smooth;
+}
+
+/* Horizontal scroll — no scrollbar on mobile */
+.scroll-x-hidden::-webkit-scrollbar {
+  display: none;
+}
+.scroll-x-hidden {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 /* Sidebar Specific Scrollbar */

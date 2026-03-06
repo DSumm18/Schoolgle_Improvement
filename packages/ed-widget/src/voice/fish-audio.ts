@@ -1,97 +1,97 @@
 /**
  * Fish Audio S1 - Expressive Voice with Emotion Control
- * 
+ *
  * Perfect for Ed because:
  * - Built specifically for conversational chatbots
  * - Emotion/tone tags (helpful, empathetic, upbeat)
  * - Voice cloning in 15 seconds
  * - Real-time streaming
  * - 30+ languages
- * 
+ *
  * Source: https://fish.audio/
  */
 
-import type { PersonaType } from '../types';
+import type { PersonaType } from "../types";
 
 // Emotion and tone configurations for Ed's personas
 const PERSONA_CONFIGS = {
   ed: {
-    tone: 'helpful',
-    emotion: 'friendly',
+    tone: "helpful",
+    emotion: "friendly",
     pitch: 0,
     speed: 1.0,
-    description: 'Professional, warm school assistant (male)',
+    description: "Professional, warm school assistant (male)",
   },
   edwina: {
-    tone: 'helpful',
-    emotion: 'friendly',
+    tone: "helpful",
+    emotion: "friendly",
     pitch: 5,
     speed: 1.0,
-    description: 'Professional, warm school assistant (female)',
+    description: "Professional, warm school assistant (female)",
   },
   santa: {
-    tone: 'jolly',
-    emotion: 'warm',
+    tone: "jolly",
+    emotion: "warm",
     pitch: -10,
     speed: 0.95,
-    description: 'Festive, deep Santa voice',
+    description: "Festive, deep Santa voice",
   },
   elf: {
-    tone: 'upbeat',
-    emotion: 'excited',
+    tone: "upbeat",
+    emotion: "excited",
     pitch: 15,
     speed: 1.1,
-    description: 'Energetic, playful elf helper',
+    description: "Energetic, playful elf helper",
   },
   headteacher: {
-    tone: 'professional',
-    emotion: 'calm',
+    tone: "professional",
+    emotion: "calm",
     pitch: -5,
     speed: 0.9,
-    description: 'Authoritative, welcoming headteacher',
+    description: "Authoritative, welcoming headteacher",
   },
   custom: {
-    tone: 'neutral',
-    emotion: 'neutral',
+    tone: "neutral",
+    emotion: "neutral",
     pitch: 0,
     speed: 1.0,
-    description: 'Custom voice',
+    description: "Custom voice",
   },
 } as const;
 
 // Language to Fish Audio language code mapping
 const LANGUAGE_MAP: Record<string, string> = {
-  'en-GB': 'en',
-  'en-US': 'en',
-  'pl': 'pl',
-  'ro': 'ro',
-  'es': 'es',
-  'pt': 'pt',
-  'fr': 'fr',
-  'zh': 'zh',
-  'ar': 'ar',
-  'pa': 'hi', // Punjabi → Hindi (closest)
-  'bn': 'bn',
-  'ur': 'ur',
-  'so': 'en', // Somali → fallback to English
+  "en-GB": "en",
+  "en-US": "en",
+  pl: "pl",
+  ro: "ro",
+  es: "es",
+  pt: "pt",
+  fr: "fr",
+  zh: "zh",
+  ar: "ar",
+  pa: "hi", // Punjabi → Hindi (closest)
+  bn: "bn",
+  ur: "ur",
+  so: "en", // Somali → fallback to English
 };
 
 export class FishAudioVoice {
   private apiKey: string;
   // Use proxy to avoid CORS issues when calling from browser
   // Don't add /tts here - it's added in the speak() method
-  private baseUrl = '/api/fish-audio';
+  private baseUrl = "/api/fish-audio";
   private audioCache: Map<string, string> = new Map();
   private activeAudio: HTMLAudioElement | null = null; // Track active audio to stop it
 
   // Voice IDs for cloned personas (set after cloning)
   private voiceIds: Record<PersonaType, string> = {
-    ed: '', // Set this after cloning
-    edwina: '', // Edwina (female voice) - set from env: VITE_FISH_AUDIO_VOICE_ID_EDWINA
-    santa: '',
-    elf: '',
-    headteacher: '',
-    custom: '',
+    ed: "", // Set this after cloning
+    edwina: "", // Edwina (female voice) - set from env: VITE_FISH_AUDIO_VOICE_ID_EDWINA
+    santa: "",
+    elf: "",
+    headteacher: "",
+    custom: "",
   };
 
   // Usage tracking
@@ -107,15 +107,15 @@ export class FishAudioVoice {
 
   /**
    * Convert text to speech
-   * 
+   *
    * NOTE: Fish Audio does NOT support emotion tags in text format.
    * Emotion comes from the cloned voice itself, not text tags.
    * All emotion tags and pause tags are removed before sending to API.
    */
   public async speak(
     text: string,
-    persona: PersonaType = 'ed',
-    languageCode: string = 'en-GB'
+    persona: PersonaType = "ed",
+    languageCode: string = "en-GB",
   ): Promise<string> {
     // Remove ALL emotion tags and pause tags - Fish Audio doesn't support them
     // Fish Audio uses voice cloning for emotion, not text-based tags
@@ -132,18 +132,22 @@ export class FishAudioVoice {
     this.updateUsage(textOnly.length);
 
     const config = PERSONA_CONFIGS[persona];
-    const fishLang = LANGUAGE_MAP[languageCode] || 'en';
+    const fishLang = LANGUAGE_MAP[languageCode] || "en";
     const voiceId = this.voiceIds[persona];
 
-    if (!voiceId || voiceId.trim() === '') {
-      console.warn(`[Fish Audio] ⚠️ No voice ID set for ${persona}, using default Fish Audio voice`);
-      console.warn(`[Fish Audio] To use cloned voice, set voice ID in config: fishAudioVoiceIds.${persona}`);
+    if (!voiceId || voiceId.trim() === "") {
+      console.warn(
+        `[Fish Audio] ⚠️ No voice ID set for ${persona}, using default Fish Audio voice`,
+      );
+      console.warn(
+        `[Fish Audio] To use cloned voice, set voice ID in config: fishAudioVoiceIds.${persona}`,
+      );
     } else {
       console.log(`[Fish Audio] Using cloned voice for ${persona}: ${voiceId}`);
     }
 
-    if (!this.apiKey || this.apiKey.trim() === '') {
-      throw new Error('Fish Audio API key is required');
+    if (!this.apiKey || this.apiKey.trim() === "") {
+      throw new Error("Fish Audio API key is required");
     }
 
     try {
@@ -153,7 +157,7 @@ export class FishAudioVoice {
       };
 
       // Add reference_id only if voice ID is provided
-      if (voiceId && voiceId.trim() !== '') {
+      if (voiceId && voiceId.trim() !== "") {
         requestBody.reference_id = voiceId;
       }
 
@@ -164,33 +168,29 @@ export class FishAudioVoice {
       }
 
       // Debug logging (mask API key for security)
-      const maskedKey = this.apiKey ? `${this.apiKey.substring(0, 8)}...${this.apiKey.substring(this.apiKey.length - 4)}` : 'MISSING';
-      console.log('[Fish Audio] Request Details:', {
+      const maskedKey = this.apiKey
+        ? `${this.apiKey.substring(0, 8)}...${this.apiKey.substring(this.apiKey.length - 4)}`
+        : "MISSING";
+      console.log("[Fish Audio] Request Details:", {
         url: `${this.baseUrl}`,
-        method: 'POST',
+        method: "POST",
         apiKeyMasked: maskedKey,
         apiKeyLength: this.apiKey?.length || 0,
-        voiceId: voiceId || 'none',
+        voiceId: voiceId || "none",
         requestBody: requestBody,
       });
 
-      // When using proxy (/api/fish-audio), don't send Authorization header
-      // The proxy handles authentication server-side
       const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       };
 
-      // Only send Authorization header if NOT using proxy (direct API call)
-      // Proxy baseUrl is '/api/fish-audio', direct API is 'https://api.fish.audio'
-      if (!this.baseUrl.startsWith('/api/')) {
-        headers['Authorization'] = `Bearer ${this.apiKey}`;
-      } else {
-        // Using proxy - API key is handled server-side
-        console.log('[Fish Audio] Using proxy, skipping client Authorization header');
+      // Send Authorization header — Vite proxy forwards it to Fish Audio API
+      if (this.apiKey) {
+        headers["Authorization"] = `Bearer ${this.apiKey}`;
       }
 
-      const response = await fetch(this.baseUrl, {
-        method: 'POST',
+      const response = await fetch(`${this.baseUrl}/tts`, {
+        method: "POST",
         headers,
         body: JSON.stringify(requestBody),
       });
@@ -200,41 +200,62 @@ export class FishAudioVoice {
         let errorDetails: any = {};
         try {
           const errorText = await response.text();
-          console.error('[Fish Audio] API Error Response (raw):', errorText);
+          console.error("[Fish Audio] API Error Response (raw):", errorText);
 
           // Try to parse as JSON
           try {
             errorDetails = JSON.parse(errorText);
-            errorMessage = errorDetails.message || errorDetails.error || errorMessage;
-            console.error('[Fish Audio] API Error Response (parsed):', errorDetails);
+            errorMessage =
+              errorDetails.message || errorDetails.error || errorMessage;
+            console.error(
+              "[Fish Audio] API Error Response (parsed):",
+              errorDetails,
+            );
           } catch (e) {
             // Not JSON, use raw text
             errorMessage = errorText || errorMessage;
-            console.error('[Fish Audio] API Error Response (text):', errorText);
+            console.error("[Fish Audio] API Error Response (text):", errorText);
           }
 
           // Provide helpful error messages
           if (response.status === 402) {
-            console.error('[Fish Audio] ❌ 402 Payment Required - Possible causes:');
-            console.error('  1. Invalid API key (check .env.local)');
-            console.error('  2. Account has no credits/balance');
-            console.error('  3. API key might be a voice ID instead of API key');
-            console.error('  → Get API key from: https://fish.audio dashboard → Account Settings');
+            console.error(
+              "[Fish Audio] ❌ 402 Payment Required - Possible causes:",
+            );
+            console.error("  1. Invalid API key (check .env.local)");
+            console.error("  2. Account has no credits/balance");
+            console.error(
+              "  3. API key might be a voice ID instead of API key",
+            );
+            console.error(
+              "  → Get API key from: https://fish.audio dashboard → Account Settings",
+            );
           } else if (response.status === 401) {
-            console.error('[Fish Audio] ❌ 401 Unauthorized - API key is invalid');
+            console.error(
+              "[Fish Audio] ❌ 401 Unauthorized - API key is invalid",
+            );
           } else if (response.status === 400) {
-            console.error('[Fish Audio] ❌ 400 Bad Request - Request format issue:');
-            console.error('  - Check request body format');
-            console.error('  - Verify reference_id format');
-            console.error('  - Check if all required fields are present');
-            console.error('  Request body sent:', JSON.stringify(requestBody, null, 2));
+            console.error(
+              "[Fish Audio] ❌ 400 Bad Request - Request format issue:",
+            );
+            console.error("  - Check request body format");
+            console.error("  - Verify reference_id format");
+            console.error("  - Check if all required fields are present");
+            console.error(
+              "  Request body sent:",
+              JSON.stringify(requestBody, null, 2),
+            );
           } else if (response.status === 500) {
-            console.error('[Fish Audio] ❌ 500 Internal Server Error - Fish Audio API issue');
-            console.error('  - This might be a temporary Fish Audio service issue');
-            console.error('  - Try again in a few moments');
+            console.error(
+              "[Fish Audio] ❌ 500 Internal Server Error - Fish Audio API issue",
+            );
+            console.error(
+              "  - This might be a temporary Fish Audio service issue",
+            );
+            console.error("  - Try again in a few moments");
           }
         } catch (e) {
-          console.error('[Fish Audio] Error parsing response:', e);
+          console.error("[Fish Audio] Error parsing response:", e);
         }
         throw new Error(`TTS error: ${response.status} - ${errorMessage}`);
       }
@@ -255,7 +276,7 @@ export class FishAudioVoice {
       this.audioCache.set(cacheKey, audioUrl);
 
       // Log usage
-      console.log('[Fish Audio] Generated:', {
+      console.log("[Fish Audio] Generated:", {
         persona,
         tone: config.tone,
         emotion: config.emotion,
@@ -266,7 +287,7 @@ export class FishAudioVoice {
 
       return audioUrl;
     } catch (error) {
-      console.error('[Fish Audio] Error:', error);
+      console.error("[Fish Audio] Error:", error);
       throw error;
     }
   }
@@ -277,18 +298,18 @@ export class FishAudioVoice {
   public async cloneVoice(
     audioFile: File | Blob,
     name: string,
-    description: string
+    description: string,
   ): Promise<string> {
     const formData = new FormData();
-    formData.append('audio', audioFile);
-    formData.append('name', name);
-    formData.append('description', description);
+    formData.append("audio", audioFile);
+    formData.append("name", name);
+    formData.append("description", description);
 
     try {
       const response = await fetch(`${this.baseUrl}/voices/clone`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
+          Authorization: `Bearer ${this.apiKey}`,
         },
         body: formData,
       });
@@ -300,15 +321,15 @@ export class FishAudioVoice {
       const data = await response.json();
       const voiceId = data.voice_id || data.id;
 
-      console.log('[Fish Audio] Voice cloned:', {
+      console.log("[Fish Audio] Voice cloned:", {
         name,
         voiceId,
-        duration: '15 seconds',
+        duration: "15 seconds",
       });
 
       return voiceId;
     } catch (error) {
-      console.error('[Fish Audio] Clone error:', error);
+      console.error("[Fish Audio] Clone error:", error);
       throw error;
     }
   }
@@ -323,13 +344,13 @@ export class FishAudioVoice {
         this.activeAudio.pause();
         this.activeAudio.currentTime = 0;
         // Wait longer for pause to complete and prevent "play() interrupted by pause()" errors
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
         // Ensure audio is fully stopped before proceeding
         if (this.activeAudio) {
           this.activeAudio = null;
         }
       } catch (error) {
-        console.warn('[Fish Audio] Error stopping previous audio:', error);
+        console.warn("[Fish Audio] Error stopping previous audio:", error);
         this.activeAudio = null;
       }
     }
@@ -349,9 +370,9 @@ export class FishAudioVoice {
         resolve();
       };
       audio.onerror = (error) => {
-        console.error('[Fish Audio] Audio playback error:', error);
+        console.error("[Fish Audio] Audio playback error:", error);
         this.activeAudio = null;
-        reject(new Error('Audio playback failed'));
+        reject(new Error("Audio playback failed"));
       };
 
       // Try to play with better error handling
@@ -359,30 +380,43 @@ export class FishAudioVoice {
       if (playPromise !== undefined) {
         playPromise
           .then(() => {
-            console.log('[Fish Audio] Audio playing successfully');
+            console.log("[Fish Audio] Audio playing successfully");
           })
           .catch((error) => {
-            console.error('[Fish Audio] Play promise rejected:', error);
+            console.error("[Fish Audio] Play promise rejected:", error);
             // If autoplay is blocked, try to play after user interaction
-            if (error.name === 'NotAllowedError') {
-              console.warn('[Fish Audio] Autoplay blocked, audio will play on next user interaction');
+            if (error.name === "NotAllowedError") {
+              console.warn(
+                "[Fish Audio] Autoplay blocked, audio will play on next user interaction",
+              );
               // Don't reject - let it play when user interacts
               // Set up a one-time click handler to play
               const playOnInteraction = () => {
-                audio.play()
+                audio
+                  .play()
                   .then(() => {
-                    document.removeEventListener('click', playOnInteraction);
-                    document.removeEventListener('touchstart', playOnInteraction);
+                    document.removeEventListener("click", playOnInteraction);
+                    document.removeEventListener(
+                      "touchstart",
+                      playOnInteraction,
+                    );
                   })
                   .catch(() => {
                     // Still failed, reject
-                    document.removeEventListener('click', playOnInteraction);
-                    document.removeEventListener('touchstart', playOnInteraction);
+                    document.removeEventListener("click", playOnInteraction);
+                    document.removeEventListener(
+                      "touchstart",
+                      playOnInteraction,
+                    );
                     reject(error);
                   });
               };
-              document.addEventListener('click', playOnInteraction, { once: true });
-              document.addEventListener('touchstart', playOnInteraction, { once: true });
+              document.addEventListener("click", playOnInteraction, {
+                once: true,
+              });
+              document.addEventListener("touchstart", playOnInteraction, {
+                once: true,
+              });
             } else {
               reject(error);
             }
@@ -401,10 +435,10 @@ export class FishAudioVoice {
         this.activeAudio.pause();
         this.activeAudio.currentTime = 0;
         // Wait for pause to complete to prevent "play() interrupted by pause()" errors
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
         this.activeAudio = null;
       } catch (error) {
-        console.warn('[Fish Audio] Error stopping audio:', error);
+        console.warn("[Fish Audio] Error stopping audio:", error);
         this.activeAudio = null;
       }
     }
@@ -415,8 +449,8 @@ export class FishAudioVoice {
    */
   public async speakAndPlay(
     text: string,
-    persona: PersonaType = 'ed',
-    language: string = 'en-GB'
+    persona: PersonaType = "ed",
+    language: string = "en-GB",
   ): Promise<void> {
     const audioUrl = await this.speak(text, persona, language);
     await this.play(audioUrl);
@@ -427,34 +461,34 @@ export class FishAudioVoice {
    */
   public async speakStream(
     text: string,
-    persona: PersonaType = 'ed',
-    languageCode: string = 'en-GB'
+    persona: PersonaType = "ed",
+    languageCode: string = "en-GB",
   ): Promise<ReadableStream<Uint8Array>> {
     const config = PERSONA_CONFIGS[persona];
-    const fishLang = LANGUAGE_MAP[languageCode] || 'en';
+    const fishLang = LANGUAGE_MAP[languageCode] || "en";
 
     const response = await fetch(`${this.baseUrl}/tts`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json',
+        Authorization: `Bearer ${this.apiKey}`,
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         text,
         reference_id: this.voiceIds[persona],
-        model: 'fish-audio-s1',
+        model: "fish-audio-s1",
         language: fishLang,
         tone: config.tone,
         emotion: config.emotion,
         pitch: config.pitch,
         speed: config.speed,
         streaming: true, // Enable streaming!
-        format: 'mp3',
+        format: "mp3",
       }),
     });
 
     if (!response.ok || !response.body) {
-      throw new Error('Streaming failed');
+      throw new Error("Streaming failed");
     }
 
     return response.body;
@@ -524,19 +558,22 @@ export class FishAudioVoice {
   private stripEmotionTags(text: string): string {
     // Remove emotion tags like (happy), (pause:500ms), etc.
     return text
-      .replace(/\([^)]+\)/g, '') // Remove (emotion) tags
-      .replace(/\s+/g, ' ') // Normalize whitespace
+      .replace(/\([^)]+\)/g, "") // Remove (emotion) tags
+      .replace(/\s+/g, " ") // Normalize whitespace
       .trim();
   }
 
   /**
    * Clean text before TTS - remove emojis, language codes, formatting, and instructional text
    * This ensures only actual spoken content is sent to TTS
-   * 
+   *
    * For Fish Audio: preserves emotion tags like (happy), (pause:500ms) that Fish Audio understands
    * For browser TTS: removes all tags including emotion/pause tags
    */
-  public cleanTextForTTS(text: string, preserveFishAudioTags: boolean = true): string {
+  public cleanTextForTTS(
+    text: string,
+    preserveFishAudioTags: boolean = true,
+  ): string {
     // First, temporarily preserve Fish Audio tags if needed
     const fishAudioTagPlaceholders: Map<string, string> = new Map();
     let cleaned = text;
@@ -545,7 +582,8 @@ export class FishAudioVoice {
       // Extract and preserve Fish Audio emotion/pause tags
       // Match: (happy), (excited), (pause:500ms), etc.
       // Allow optional spaces: (pause: 500ms) or (pause:500ms)
-      const fishAudioTagPattern = /\((?:happy|excited|calm|friendly|empathetic|professional|neutral|confident|warm|cheerful|enthusiastic|understanding|supportive|encouraging|laughing|sighing|pause\s*:\s*\d+\s*ms)\)/gi;
+      const fishAudioTagPattern =
+        /\((?:happy|excited|calm|friendly|empathetic|professional|neutral|confident|warm|cheerful|enthusiastic|understanding|supportive|encouraging|laughing|sighing|pause\s*:\s*\d+\s*ms)\)/gi;
       const matches = text.matchAll(fishAudioTagPattern);
       let placeholderIndex = 0;
       for (const match of matches) {
@@ -558,20 +596,20 @@ export class FishAudioVoice {
 
     // Remove emojis (keep text only)
     cleaned = cleaned
-      .replace(/[\u{1F300}-\u{1F9FF}]/gu, '')
-      .replace(/[\u{2600}-\u{26FF}]/gu, '')
-      .replace(/[\u{2700}-\u{27BF}]/gu, '')
+      .replace(/[\u{1F300}-\u{1F9FF}]/gu, "")
+      .replace(/[\u{2600}-\u{26FF}]/gu, "")
+      .replace(/[\u{2700}-\u{27BF}]/gu, "")
       // Remove language codes like "Polski PL 🇵🇱" or "Română RO"
-      .replace(/\b[A-Z]{2}\s*🇵🇱|🇷🇴|🇬🇧|🇺🇸|🇵🇱|🇷🇴\b/gi, '')
-      .replace(/Polski\s+PL|Română\s+RO|English\s+EN/gi, '')
+      .replace(/\b[A-Z]{2}\s*🇵🇱|🇷🇴|🇬🇧|🇺🇸|🇵🇱|🇷🇴\b/gi, "")
+      .replace(/Polski\s+PL|Română\s+RO|English\s+EN/gi, "")
       // Remove markdown-style formatting
-      .replace(/\*\*([^*]+)\*\*/g, '$1') // Bold
-      .replace(/\*([^*]+)\*/g, '$1') // Italic
-      .replace(/`([^`]+)`/g, '$1') // Code
+      .replace(/\*\*([^*]+)\*\*/g, "$1") // Bold
+      .replace(/\*([^*]+)\*/g, "$1") // Italic
+      .replace(/`([^`]+)`/g, "$1") // Code
       // Remove HTML-like tags
-      .replace(/<[^>]+>/g, '')
+      .replace(/<[^>]+>/g, "")
       // Remove instructional text patterns
-      .replace(/\[Translated to [^\]]+\]:\s*/gi, '');
+      .replace(/\[Translated to [^\]]+\]:\s*/gi, "");
 
     // Remove any remaining tags (non-placeholder tags)
     // If preserving, we've already replaced Fish Audio tags with placeholders
@@ -580,14 +618,14 @@ export class FishAudioVoice {
     if (preserveFishAudioTags) {
       // Only remove tags that aren't placeholders (placeholders don't match \( pattern)
       // The placeholders are like __FISH_TAG_0__ so they're safe
-      cleaned = cleaned.replace(/\([^)]+\)/g, '');
+      cleaned = cleaned.replace(/\([^)]+\)/g, "");
     } else {
       // Remove all tags including Fish Audio tags
-      cleaned = cleaned.replace(/\([^)]+\)/g, '');
+      cleaned = cleaned.replace(/\([^)]+\)/g, "");
     }
 
     // Clean up extra whitespace
-    cleaned = cleaned.replace(/\s+/g, ' ').trim();
+    cleaned = cleaned.replace(/\s+/g, " ").trim();
 
     // Restore Fish Audio tags if preserving
     if (preserveFishAudioTags) {
@@ -610,7 +648,9 @@ export class FishAudioVoice {
 /**
  * Helper to record audio for voice cloning
  */
-export async function recordVoiceClip(durationSeconds: number = 15): Promise<Blob> {
+export async function recordVoiceClip(
+  durationSeconds: number = 15,
+): Promise<Blob> {
   const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
   const mediaRecorder = new MediaRecorder(stream);
   const chunks: BlobPart[] = [];
@@ -618,7 +658,7 @@ export async function recordVoiceClip(durationSeconds: number = 15): Promise<Blo
   return new Promise((resolve, reject) => {
     mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
     mediaRecorder.onstop = () => {
-      const blob = new Blob(chunks, { type: 'audio/webm' });
+      const blob = new Blob(chunks, { type: "audio/webm" });
       stream.getTracks().forEach((track) => track.stop());
       resolve(blob);
     };
@@ -628,4 +668,3 @@ export async function recordVoiceClip(durationSeconds: number = 15): Promise<Blo
     setTimeout(() => mediaRecorder.stop(), durationSeconds * 1000);
   });
 }
-

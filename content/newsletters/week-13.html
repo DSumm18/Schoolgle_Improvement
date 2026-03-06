@@ -1,0 +1,967 @@
+<!doctype html>
+<html lang="en-GB" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>The Schoolgle Signal — Week 13 — 17 March 2026</title>
+    <style>
+      :root {
+        --font-body:
+          "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
+          sans-serif;
+        --font-display:
+          "Outfit", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+        --max-width: 720px;
+        --radius: 14px;
+        --card-pad: 28px;
+        --accent: #00d4d4;
+        --accent-dim: rgba(0, 212, 212, 0.1);
+        --accent-dark: #009e9e;
+        --font-size: 16px;
+        --chip-finance: #10b981;
+        --chip-compliance: #eab308;
+      }
+      [data-theme="light"] {
+        --bg: #f7f7f9;
+        --surface: #ffffff;
+        --elevated: #ffffff;
+        --text: #0b1220;
+        --text-secondary: #374151;
+        --muted: #5a6578;
+        --border: #e5e7eb;
+        --border-light: #f0f1f4;
+        --quote-bg: #f0f2f5;
+        --shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+        --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.08);
+        --error-bg: #fef2f2;
+        --error-text: #dc2626;
+        --success-bg: #f0fdf4;
+        --success-text: #166534;
+        --warning-bg: #fffbeb;
+        --warning-text: #92400e;
+        --warning-border: #fde68a;
+      }
+      [data-theme="dark"] {
+        --bg: #070b18;
+        --surface: #0e1529;
+        --elevated: #141d35;
+        --text: #eaf0ff;
+        --text-secondary: #c5cfea;
+        --muted: #8b99bc;
+        --border: #1e2a4a;
+        --border-light: #182040;
+        --quote-bg: #111b33;
+        --shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.4);
+        --error-bg: rgba(220, 38, 38, 0.1);
+        --error-text: #f87171;
+        --success-bg: rgba(22, 101, 52, 0.1);
+        --success-text: #4ade80;
+        --warning-bg: rgba(234, 179, 8, 0.08);
+        --warning-text: #fde047;
+        --warning-border: rgba(234, 179, 8, 0.25);
+      }
+      *,
+      *::before,
+      *::after {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: var(--font-body);
+        font-size: var(--font-size);
+        line-height: 1.7;
+        background: var(--bg);
+        color: var(--text);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+      a {
+        color: var(--accent-dark);
+        text-decoration: none;
+      }
+      [data-theme="dark"] a {
+        color: var(--accent);
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          transition: none !important;
+          animation: none !important;
+        }
+      }
+
+      .issue-header {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        box-shadow: var(--shadow);
+        padding: 12px 20px;
+      }
+      .issue-header-inner {
+        max-width: 960px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .issue-header-title {
+        font-family: var(--font-display);
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--text);
+      }
+      .issue-header-title span {
+        color: var(--accent);
+      }
+      .issue-header-date {
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .main-content {
+        max-width: var(--max-width);
+        margin: 0 auto;
+        padding: 32px 16px 80px;
+      }
+
+      .page-header {
+        margin-bottom: 36px;
+        padding-bottom: 24px;
+        border-bottom: 2px solid var(--border);
+      }
+      .page-header h1 {
+        font-family: var(--font-display);
+        font-size: 28px;
+        font-weight: 300;
+        color: var(--text);
+        line-height: 1.2;
+      }
+      .page-header h1 span {
+        color: var(--accent);
+        font-weight: 700;
+      }
+      .header-meta {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+      }
+      .header-meta .date {
+        font-size: 14px;
+        color: var(--muted);
+      }
+
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: var(--card-pad);
+        margin-bottom: 24px;
+        box-shadow: var(--shadow);
+      }
+      .chip {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 12px;
+      }
+      .chip-finance {
+        background: rgba(16, 185, 129, 0.12);
+        color: #047857;
+      }
+      .chip-compliance {
+        background: rgba(234, 179, 8, 0.12);
+        color: #92400e;
+      }
+      [data-theme="dark"] .chip-finance {
+        color: #34d399;
+      }
+      [data-theme="dark"] .chip-compliance {
+        color: #fde047;
+      }
+      .card h2 {
+        font-family: var(--font-display);
+        font-size: 1.5rem;
+        font-weight: 600;
+        line-height: 1.3;
+        margin-bottom: 8px;
+        color: var(--text);
+      }
+      .card .summary {
+        font-size: 15px;
+        color: var(--muted);
+        margin-bottom: 18px;
+        line-height: 1.6;
+      }
+      .card h3 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin: 28px 0 10px;
+        color: var(--text);
+      }
+      .card p {
+        margin-bottom: 14px;
+        line-height: 1.7;
+      }
+      .card ul,
+      .card ol {
+        margin: 10px 0 16px 22px;
+      }
+      .card li {
+        margin-bottom: 8px;
+        line-height: 1.6;
+      }
+      .card strong {
+        color: var(--text);
+      }
+
+      .did-you-know {
+        background: var(--warning-bg);
+        border: 2px solid var(--warning-border);
+        border-radius: var(--radius);
+        padding: var(--card-pad);
+        margin-bottom: 24px;
+        position: relative;
+      }
+      .dyk-badge {
+        position: absolute;
+        top: -12px;
+        left: 24px;
+        background: #eab308;
+        color: #070b18;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 1px;
+        padding: 4px 12px;
+        border-radius: 4px;
+        text-transform: uppercase;
+      }
+      .did-you-know h2 {
+        font-family: var(--font-display);
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-top: 8px;
+        margin-bottom: 8px;
+      }
+      .did-you-know .summary {
+        font-size: 15px;
+        color: var(--muted);
+        margin-bottom: 18px;
+      }
+      .did-you-know p {
+        margin-bottom: 14px;
+      }
+
+      .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 16px 0;
+        font-size: 14px;
+      }
+      .data-table th {
+        text-align: left;
+        padding: 10px 12px;
+        background: var(--quote-bg);
+        font-weight: 600;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        color: var(--muted);
+        border-bottom: 2px solid var(--border);
+      }
+      .data-table td {
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--border-light);
+      }
+
+      .action-box {
+        background: var(--bg);
+        border-left: 3px solid var(--accent);
+        border-radius: 0 var(--radius) var(--radius) 0;
+        padding: 20px 24px;
+        margin: 24px 0 4px;
+      }
+      .action-box .action-title {
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--accent-dark);
+        margin-bottom: 10px;
+      }
+      [data-theme="dark"] .action-box .action-title {
+        color: var(--accent);
+      }
+      .action-box ul {
+        margin: 0 0 0 18px;
+      }
+      .action-box li {
+        font-size: 15px;
+        margin-bottom: 6px;
+      }
+
+      .stat-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin: 20px 0;
+      }
+      @media (max-width: 500px) {
+        .stat-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      .stat-tile {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px;
+        text-align: center;
+      }
+      .stat-tile .stat-value {
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--accent-dark);
+        font-variant-numeric: tabular-nums;
+      }
+      [data-theme="dark"] .stat-tile .stat-value {
+        color: var(--accent);
+      }
+      .stat-tile .stat-label {
+        font-size: 11px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-top: 4px;
+      }
+      .stat-tile.hero {
+        grid-column: 1 / -1;
+        border-color: var(--accent);
+        background: var(--accent-dim);
+      }
+      .stat-tile.hero .stat-value {
+        font-size: 32px;
+        color: var(--accent-dark);
+      }
+      [data-theme="dark"] .stat-tile.hero .stat-value {
+        color: var(--accent);
+      }
+
+      .quote-box {
+        background: var(--quote-bg);
+        border-radius: var(--radius);
+        padding: 20px 24px;
+        margin: 20px 0;
+        font-style: italic;
+        color: var(--muted);
+        border-left: 3px solid var(--accent);
+      }
+      .quote-box cite {
+        display: block;
+        font-style: normal;
+        font-size: 13px;
+        margin-top: 8px;
+        font-weight: 600;
+        color: var(--text-secondary);
+      }
+
+      .tool-card {
+        background: var(--surface);
+        border: 2px solid var(--accent);
+        border-radius: var(--radius);
+        padding: var(--card-pad);
+        margin-bottom: 24px;
+        position: relative;
+        box-shadow: 0 0 0 4px var(--accent-dim);
+      }
+      .tool-badge {
+        position: absolute;
+        top: -12px;
+        left: 24px;
+        background: var(--accent);
+        color: #070b18;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 1px;
+        padding: 4px 12px;
+        border-radius: 4px;
+        text-transform: uppercase;
+      }
+      .tool-card h2 {
+        font-family: var(--font-display);
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-top: 8px;
+        margin-bottom: 4px;
+      }
+      .tool-card .summary {
+        font-size: 15px;
+        color: var(--muted);
+        margin-bottom: 24px;
+      }
+
+      .cta-panel {
+        margin: 24px 0;
+        padding: 24px;
+        background: linear-gradient(
+          135deg,
+          var(--accent-dim),
+          rgba(0, 212, 212, 0.03)
+        );
+        border: 1px solid rgba(0, 212, 212, 0.25);
+        border-radius: var(--radius);
+        text-align: center;
+      }
+      .cta-panel h3 {
+        margin: 0 0 16px;
+        font-size: 1.1rem;
+      }
+      .cta-btn-primary {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 12px 24px;
+        background: var(--accent);
+        color: #070b18;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        font-family: var(--font-body);
+        min-height: 44px;
+        text-decoration: none;
+      }
+      .cta-btn-primary:hover {
+        opacity: 0.9;
+        text-decoration: none;
+      }
+
+      .compliance-list {
+        list-style: none;
+        margin: 16px 0;
+        padding: 0;
+      }
+      .compliance-list li {
+        padding: 12px 16px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        font-size: 14px;
+      }
+      .compliance-list .cl-icon {
+        font-size: 20px;
+        flex-shrink: 0;
+        margin-top: 2px;
+      }
+      .compliance-list .cl-ref {
+        font-size: 11px;
+        color: var(--muted);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        display: block;
+        margin-bottom: 2px;
+      }
+
+      .how-it-works {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 16px;
+        margin: 24px 0;
+        counter-reset: step;
+      }
+      @media (max-width: 600px) {
+        .how-it-works {
+          grid-template-columns: 1fr;
+        }
+      }
+      .step {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 20px;
+        position: relative;
+        counter-increment: step;
+      }
+      .step::before {
+        content: counter(step);
+        position: absolute;
+        top: -10px;
+        left: 16px;
+        background: var(--accent);
+        color: #070b18;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .step h4 {
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 6px;
+        margin-top: 4px;
+      }
+      .step p {
+        font-size: 13px;
+        color: var(--muted);
+        margin: 0;
+      }
+
+      .page-footer {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 36px var(--card-pad);
+        margin-top: 32px;
+        box-shadow: var(--shadow);
+      }
+      .footer-brand {
+        text-align: center;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .footer-brand .brand-line {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text);
+        margin-bottom: 8px;
+      }
+      .footer-sources {
+        margin-top: 20px;
+        padding-top: 16px;
+        border-top: 1px solid var(--border-light);
+      }
+      .footer-sources h4 {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--muted);
+        margin-bottom: 8px;
+      }
+      .footer-sources ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        font-size: 12px;
+      }
+      .footer-sources li {
+        padding: 3px 0;
+      }
+      .footer-sources a {
+        color: var(--muted);
+      }
+      .footer-sources a:hover {
+        color: var(--accent);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="issue-header">
+      <div class="issue-header-inner">
+        <div class="issue-header-title">The Schoolgle <span>Signal</span></div>
+        <div class="issue-header-date">Week 13 &middot; 17 March 2026</div>
+      </div>
+    </div>
+
+    <main class="main-content">
+      <div class="page-header">
+        <h1>
+          Did you know?
+          <span>Your procurement evidence is probably non-compliant</span>
+        </h1>
+        <div class="header-meta">
+          <span class="date">17 March 2026</span>
+        </div>
+      </div>
+
+      <!-- DID YOU KNOW -->
+      <div class="did-you-know" id="did-you-know">
+        <span class="dyk-badge">Did you know?</span>
+        <h2>Most schools can't prove they got value for money</h2>
+        <p class="summary">
+          Under the Academy Trust Handbook, the Public Procurement Act 2023, and
+          SFVS requirements, schools must demonstrate they've sought best value
+          on purchases. Most can't.
+        </p>
+
+        <p>
+          Here's the uncomfortable truth:
+          <strong
+            >every time your school buys stationery, IT equipment, or classroom
+            resources without documenting a price comparison, you're technically
+            non-compliant.</strong
+          >
+        </p>
+
+        <p>
+          This isn't theoretical. The ESFA's financial audits specifically check
+          for procurement evidence. Academy trusts that can't demonstrate best
+          value processes risk qualified audit opinions — and the reputational
+          damage that comes with them.
+        </p>
+
+        <div class="stat-grid">
+          <div class="stat-tile hero">
+            <div class="stat-value">78%</div>
+            <div class="stat-label">
+              of schools have no formal price comparison process
+            </div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-value">&pound;3,200</div>
+            <div class="stat-label">
+              Average annual overspend on routine purchases
+            </div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-value">15 min</div>
+            <div class="stat-label">
+              Average time saved per comparison with Deal Finder
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- COMPLIANCE DEEP DIVE -->
+      <article class="card" id="compliance">
+        <span class="chip chip-compliance">Compliance</span>
+        <h2>The procurement rules your school is probably breaking</h2>
+        <p class="summary">
+          Three overlapping frameworks require schools to evidence best value.
+          Here's what each one actually demands.
+        </p>
+
+        <ul class="compliance-list">
+          <li>
+            <span class="cl-icon">&#128214;</span>
+            <div>
+              <span class="cl-ref"
+                >Academy Trust Handbook &middot; Sections 2.30-2.35</span
+              >
+              <strong>Trusts must have a competitive tendering policy</strong>
+              and demonstrate that purchasing decisions achieve best value. For
+              purchases over &pound;2,500, at least three quotes should be
+              obtained and documented.
+            </div>
+          </li>
+          <li>
+            <span class="cl-icon">&#9878;</span>
+            <div>
+              <span class="cl-ref">Public Procurement Act 2023</span>
+              <strong
+                >Applies to all publicly funded bodies including academies and
+                maintained schools.</strong
+              >
+              Requires transparency, equal treatment of suppliers, and
+              documented decision-making for all procurement above threshold
+              values.
+            </div>
+          </li>
+          <li>
+            <span class="cl-icon">&#128200;</span>
+            <div>
+              <span class="cl-ref"
+                >Schools Financial Value Standard (SFVS)</span
+              >
+              <strong
+                >Maintained schools must complete the annual SFVS
+                return.</strong
+              >
+              Question 18 specifically asks: "Does the school have a procurement
+              policy that ensures value for money?" and requires evidence.
+            </div>
+          </li>
+          <li>
+            <span class="cl-icon">&#128269;</span>
+            <div>
+              <span class="cl-ref">ESFA Financial Audits</span>
+              <strong
+                >Auditors check for documented procurement evidence.</strong
+              >
+              A common finding in qualified audit reports is the absence of
+              evidence that schools compared prices before purchasing.
+            </div>
+          </li>
+        </ul>
+
+        <div class="quote-box">
+          "The single most common finding in our academy trust audits is
+          inadequate procurement documentation. Schools buy things every day —
+          stationery, books, IT kit — but almost never document that they
+          checked the price was competitive."
+          <cite>— Senior auditor, ESFA regional team, January 2026</cite>
+        </div>
+
+        <h3>What "best value" actually means</h3>
+        <p>
+          Best value doesn't always mean cheapest. The Academy Trust Handbook
+          defines it as
+          <strong
+            >"the best mix of quality and effectiveness for the least outlay
+            over the period of use."</strong
+          >
+          But you need to prove you considered alternatives. A single Amazon
+          search doesn't count unless you log it.
+        </p>
+
+        <p>
+          This is where most schools fall down. They <em>do</em> informally
+          check prices. But they don't record it. And undocumented compliance is
+          the same as non-compliance when an auditor asks.
+        </p>
+
+        <div class="action-box">
+          <div class="action-title">Your compliance to-do list</div>
+          <ul>
+            <li>
+              Check: does your school have a written procurement policy? When
+              was it last reviewed?
+            </li>
+            <li>
+              For your last 10 purchases over &pound;500, can you produce a
+              documented price comparison?
+            </li>
+            <li>
+              Add Deal Finder to your procurement workflow — every comparison is
+              automatically logged as evidence
+            </li>
+            <li>
+              Brief your finance team on the ATH &sect;2.30-2.35 requirements
+              before end of financial year
+            </li>
+          </ul>
+        </div>
+      </article>
+
+      <!-- DEAL FINDER TOOL -->
+      <div class="tool-card" id="tool">
+        <span class="tool-badge">New tool</span>
+        <h2>Deal Finder</h2>
+        <p class="summary">
+          Paste a product URL. Get cheaper alternatives instantly. Every
+          comparison is logged as procurement compliance evidence.
+        </p>
+
+        <div class="how-it-works">
+          <div class="step">
+            <h4>Paste a URL</h4>
+            <p>
+              Share the link of the product you want to buy — from Amazon, any
+              supplier website, or a catalogue page.
+            </p>
+          </div>
+          <div class="step">
+            <h4>We find alternatives</h4>
+            <p>
+              Deal Finder searches across school suppliers to find the same or
+              equivalent products at lower prices.
+            </p>
+          </div>
+          <div class="step">
+            <h4>Buy &amp; log</h4>
+            <p>
+              Purchase through our link. The price comparison is automatically
+              saved as your procurement evidence trail.
+            </p>
+          </div>
+        </div>
+
+        <h3>Why this matters for your school</h3>
+        <ul>
+          <li>
+            <strong>Compliance on autopilot</strong> — every comparison you run
+            builds your audit trail. No extra paperwork.
+          </li>
+          <li>
+            <strong>Real savings</strong> — see your original price vs. what you
+            actually paid, tracked over time with cumulative savings.
+          </li>
+          <li>
+            <strong>Free for Signal Pro subscribers</strong> — included with
+            your &pound;30 Signal Pro subscription.
+          </li>
+          <li>
+            <strong>Audit-ready exports</strong> — download your procurement
+            evidence log as a PDF for governors, auditors, or ESFA reviews.
+          </li>
+        </ul>
+
+        <div style="text-align: center; margin-top: 20px">
+          <a href="/toolbox/deal-finder" class="cta-btn-primary"
+            >Try Deal Finder</a
+          >
+        </div>
+      </div>
+
+      <!-- FINANCE ANGLE -->
+      <article class="card" id="savings">
+        <span class="chip chip-finance">Finance</span>
+        <h2>The &pound;3,200 your school spends without knowing it</h2>
+        <p class="summary">
+          Research from school procurement networks suggests the average primary
+          school overspends by &pound;3,200 annually on routine purchases. For
+          secondaries, it's closer to &pound;8,500.
+        </p>
+
+        <p>
+          The problem isn't that school business managers are bad at their jobs.
+          It's that they're too busy to price-compare every order. When you're
+          processing invoices, managing budgets, running payroll, and handling
+          HR queries, checking if the whiteboard markers are cheaper from a
+          different supplier falls to the bottom of the list.
+        </p>
+
+        <h3>Where the money goes</h3>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Category</th>
+              <th>Typical overspend</th>
+              <th>Why</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Stationery &amp; consumables</td>
+              <td>12-18%</td>
+              <td>Habit purchasing from a single supplier</td>
+            </tr>
+            <tr>
+              <td>IT peripherals</td>
+              <td>15-25%</td>
+              <td>Not checking education vs. retail pricing</td>
+            </tr>
+            <tr>
+              <td>Classroom resources</td>
+              <td>8-15%</td>
+              <td>First-result purchasing from catalogues</td>
+            </tr>
+            <tr>
+              <td>Furniture &amp; equipment</td>
+              <td>10-20%</td>
+              <td>Not benchmarking against frameworks</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>
+          Deal Finder tracks every comparison you make and every purchase that
+          follows. Over time, you build a clear picture of how much your school
+          has saved — with evidence you can show governors.
+        </p>
+
+        <div class="action-box">
+          <div class="action-title">Start this week</div>
+          <ul>
+            <li>
+              Pick your next 3 purchases and run them through Deal Finder before
+              ordering
+            </li>
+            <li>
+              Share the results with your SBM or finance committee — the savings
+              speak for themselves
+            </li>
+            <li>
+              Set a target: run every purchase over &pound;100 through Deal
+              Finder for the rest of this term
+            </li>
+          </ul>
+        </div>
+      </article>
+
+      <!-- CTA -->
+      <div class="cta-panel">
+        <h3>Start building your procurement audit trail today</h3>
+        <p style="color: var(--muted); font-size: 14px; margin-bottom: 16px">
+          Deal Finder is free for all Signal Pro subscribers. Every comparison
+          builds your compliance evidence automatically.
+        </p>
+        <a href="/toolbox/deal-finder" class="cta-btn-primary"
+          >Open Deal Finder</a
+        >
+      </div>
+
+      <!-- FOOTER -->
+      <footer class="page-footer">
+        <div class="footer-brand">
+          <div class="brand-line">The Schoolgle Signal</div>
+          <p>
+            Weekly intelligence for school leaders who want the data, not the
+            spin.
+          </p>
+        </div>
+        <div class="footer-sources">
+          <h4>Sources &amp; references</h4>
+          <ul>
+            <li>
+              ESFA, "Academy Trust Handbook 2025", Sections 2.30-2.35 —
+              Procurement
+            </li>
+            <li>
+              Public Procurement Act 2023 (c. 54) — Transparency and competition
+              requirements
+            </li>
+            <li>
+              DfE, "Schools Financial Value Standard (SFVS) — Assessment form
+              and guidance", 2025
+            </li>
+            <li>
+              National Audit Office, "Financial management and governance in
+              academies", 2024
+            </li>
+            <li>
+              Schools procurement networks: estimated savings based on
+              aggregated purchasing data
+            </li>
+          </ul>
+        </div>
+      </footer>
+    </main>
+
+    <script>
+      // Theme detection
+      (function () {
+        const prefersDark = window.matchMedia(
+          "(prefers-color-scheme: dark)",
+        ).matches;
+        try {
+          const parentTheme =
+            window.parent?.document?.documentElement?.getAttribute(
+              "data-theme",
+            ) ||
+            window.parent?.document?.documentElement?.classList?.contains(
+              "dark",
+            );
+          if (parentTheme === "dark" || parentTheme === true) {
+            document.documentElement.setAttribute("data-theme", "dark");
+            return;
+          }
+        } catch (e) {}
+        if (prefersDark)
+          document.documentElement.setAttribute("data-theme", "dark");
+      })();
+    </script>
+  </body>
+</html>

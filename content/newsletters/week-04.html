@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="en-GB" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Schoolgle Signal — Week 4 — 13 January 2026</title>
+<style>
+:root {
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-display: 'Outfit', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --max-width: 720px;
+  --radius: 14px;
+  --card-pad: 28px;
+  --accent: #00D4D4;
+  --accent-dim: rgba(0,212,212,0.10);
+  --accent-dark: #009E9E;
+  --font-size: 16px;
+  --chip-finance: #10B981;
+  --chip-compliance: #EAB308;
+  --chip-safeguarding: #EF4444;
+  --chip-send: #F59E0B;
+  --chip-hr: #8B5CF6;
+  --chip-estates: #14B8A6;
+  --chip-leadership: #0EA5E9;
+  --chip-teaching: #3B82F6;
+  --chip-ai: #F43F5E;
+  --chip-ops: #0EA5E9;
+}
+[data-theme="light"] {
+  --bg: #F7F7F9;
+  --surface: #FFFFFF;
+  --elevated: #FFFFFF;
+  --text: #0B1220;
+  --text-secondary: #374151;
+  --muted: #5A6578;
+  --border: #E5E7EB;
+  --border-light: #F0F1F4;
+  --quote-bg: #F0F2F5;
+  --shadow: 0 1px 3px rgba(0,0,0,0.06);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.08);
+  --error-bg: #FEF2F2;
+  --error-text: #DC2626;
+  --error-border: #FECACA;
+  --success-bg: #F0FDF4;
+  --success-text: #166534;
+}
+[data-theme="dark"] {
+  --bg: #070B18;
+  --surface: #0E1529;
+  --elevated: #141D35;
+  --text: #EAF0FF;
+  --text-secondary: #C5CFEA;
+  --muted: #8B99BC;
+  --border: #1E2A4A;
+  --border-light: #182040;
+  --quote-bg: #111B33;
+  --shadow: 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.4);
+  --error-bg: rgba(220,38,38,0.1);
+  --error-text: #F87171;
+  --error-border: #7F1D1D;
+  --success-bg: rgba(22,101,52,0.1);
+  --success-text: #4ADE80;
+}
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: var(--font-body);
+  font-size: var(--font-size);
+  line-height: 1.7;
+  background: var(--bg);
+  color: var(--text);
+  transition: background 0.25s ease, color 0.25s ease;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent-dark); text-decoration: none; }
+[data-theme="dark"] a { color: var(--accent); }
+a:hover { text-decoration: underline; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
+
+/* ===== STICKY 60-SECOND BAR ===== */
+.sixty-bar {
+  position: sticky; top: 0; z-index: 100;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow); padding: 10px 20px; font-size: 13px;
+}
+.sixty-bar-inner {
+  max-width: 960px; margin: 0 auto; display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+}
+.sixty-bar-item { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.sixty-bar-item .bar-label { font-weight: 600; color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+.sixty-bar-item .bar-value { color: var(--text); font-weight: 500; }
+.sixty-bar-item .bar-value a { color: var(--accent-dark); font-weight: 600; }
+[data-theme="dark"] .sixty-bar-item .bar-value a { color: var(--accent); }
+.sixty-bar .spacer { flex: 1; }
+.listen-btn {
+  display: inline-flex; align-items: center; gap: 5px; padding: 6px 14px;
+  background: var(--accent); color: #070B18; border: none; border-radius: 6px;
+  font-size: 12px; font-weight: 600; cursor: pointer; font-family: var(--font-body); min-height: 36px;
+}
+.listen-btn:hover { opacity: 0.9; }
+@media (max-width: 700px) {
+  .sixty-bar-inner { gap: 8px 16px; }
+  .sixty-bar-item:nth-child(2) { display: none; }
+}
+
+/* ===== STICKY ISSUE HEADER ===== */
+.issue-header {
+  position: sticky; top: 47px; z-index: 99;
+  background: var(--accent); color: #070B18;
+  padding: 6px 20px; font-size: 12px; font-weight: 600;
+  text-align: center; letter-spacing: 0.3px;
+  border-bottom: 1px solid rgba(0,0,0,0.1);
+  opacity: 0; transform: translateY(-100%);
+  transition: opacity 0.2s, transform 0.2s;
+}
+.issue-header.visible { opacity: 1; transform: translateY(0); }
+
+/* ===== LAYOUT ===== */
+.layout-wrapper { display: flex; max-width: 1060px; margin: 0 auto; padding: 0 16px; gap: 0; }
+.toc-rail { width: 160px; flex-shrink: 0; position: relative; }
+.toc-sticky { position: sticky; top: 80px; padding: 24px 0; max-height: calc(100vh - 100px); overflow-y: auto; }
+.toc-sticky nav { display: flex; flex-direction: column; gap: 2px; }
+.toc-link {
+  display: block; padding: 6px 12px; font-size: 12px; color: var(--muted);
+  text-decoration: none; border-radius: 6px; line-height: 1.4;
+  border-left: 2px solid transparent; transition: color 0.15s, border-color 0.15s;
+}
+.toc-link:hover { color: var(--text); text-decoration: none; }
+.toc-link.active { color: var(--accent-dark); border-left-color: var(--accent); font-weight: 600; }
+[data-theme="dark"] .toc-link.active { color: var(--accent); }
+@media (max-width: 900px) { .toc-rail { display: none; } .layout-wrapper { padding: 0 16px; } }
+
+.main-content { flex: 1; max-width: var(--max-width); margin: 0 auto; padding: 32px 0 80px; min-width: 0; }
+
+/* ===== HEADER ===== */
+.page-header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  flex-wrap: wrap; gap: 16px; margin-bottom: 36px; padding-bottom: 24px; border-bottom: 2px solid var(--border);
+}
+.page-header h1 { font-family: var(--font-display); font-size: 28px; font-weight: 300; color: var(--text); line-height: 1.2; letter-spacing: -0.3px; }
+.page-header h1 span { color: var(--accent); font-weight: 700; }
+.header-meta { display: flex; flex-direction: column; gap: 2px; }
+.header-meta .date { font-size: 14px; color: var(--muted); }
+.header-meta .issue { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+.controls { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ctrl-group { display: flex; gap: 2px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 2px; }
+.ctrl-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 36px; min-height: 36px; padding: 6px 10px; background: transparent;
+  border: none; border-radius: 6px; color: var(--muted); font-size: 13px;
+  font-weight: 500; cursor: pointer; transition: background 0.15s, color 0.15s; font-family: var(--font-body);
+}
+.ctrl-btn:hover { background: var(--surface); color: var(--text); }
+.ctrl-btn:focus-visible { box-shadow: 0 0 0 2px var(--accent); outline: none; }
+.ctrl-btn.active { background: var(--surface); color: var(--accent); box-shadow: var(--shadow); }
+
+/* ===== AUDIO PLAYER ===== */
+.audio-player {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 20px var(--card-pad); margin-bottom: 28px; box-shadow: var(--shadow);
+}
+.audio-top { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.audio-play-btn {
+  width: 44px; height: 44px; border-radius: 50%; background: var(--accent); color: #070B18;
+  border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 18px;
+}
+.audio-play-btn:hover { opacity: 0.9; }
+.audio-info { flex: 1; min-width: 150px; }
+.audio-info .audio-title { font-size: 14px; font-weight: 600; color: var(--text); }
+.audio-info .audio-time { font-size: 12px; color: var(--muted); }
+.audio-progress { flex: 1; min-width: 180px; display: flex; align-items: center; gap: 10px; }
+.audio-track { flex: 1; height: 4px; background: var(--border); border-radius: 2px; position: relative; cursor: pointer; }
+.audio-track-fill { width: 0%; height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.1s; }
+.audio-track-dot {
+  position: absolute; top: 50%; left: 0%; transform: translate(-50%, -50%);
+  width: 12px; height: 12px; background: var(--accent); border-radius: 50%; box-shadow: 0 0 4px rgba(0,212,212,0.4);
+}
+.audio-time-label { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.audio-speed { display: flex; gap: 2px; background: var(--bg); border-radius: 6px; padding: 2px; }
+.speed-btn {
+  padding: 4px 8px; font-size: 11px; font-weight: 600; border: none; background: transparent;
+  color: var(--muted); cursor: pointer; border-radius: 4px; font-family: var(--font-body);
+}
+.speed-btn.active { background: var(--surface); color: var(--accent); }
+.transcript-section { margin-top: 12px; border-top: 1px solid var(--border-light); }
+.transcript-toggle {
+  display: flex; align-items: center; gap: 6px; padding: 10px 0 0; font-size: 13px;
+  color: var(--accent-dark); background: none; border: none; cursor: pointer; font-family: var(--font-body); font-weight: 500;
+}
+[data-theme="dark"] .transcript-toggle { color: var(--accent); }
+.transcript-body { display: none; margin-top: 10px; padding: 16px; background: var(--quote-bg); border-radius: 8px; font-size: 14px; color: var(--muted); line-height: 1.7; }
+.transcript-body.open { display: block; }
+
+/* ===== CARDS ===== */
+.card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: var(--card-pad); margin-bottom: 24px; box-shadow: var(--shadow);
+}
+.chip {
+  display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px;
+  font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;
+}
+.chip-finance { background: rgba(16,185,129,0.12); color: #047857; }
+.chip-compliance { background: rgba(234,179,8,0.12); color: #92400E; }
+.chip-safeguarding { background: rgba(239,68,68,0.12); color: #B91C1C; }
+.chip-send { background: rgba(245,158,11,0.12); color: #92400E; }
+.chip-hr { background: rgba(139,92,246,0.12); color: #5B21B6; }
+.chip-estates { background: rgba(20,184,166,0.12); color: #0F766E; }
+.chip-leadership { background: rgba(14,165,233,0.12); color: #0369A1; }
+.chip-teaching { background: rgba(59,130,246,0.12); color: #1D4ED8; }
+.chip-ai { background: rgba(244,63,94,0.12); color: #BE123C; }
+.chip-ops { background: rgba(14,165,233,0.12); color: #0369A1; }
+[data-theme="dark"] .chip-finance { color: #34D399; }
+[data-theme="dark"] .chip-compliance { color: #FDE047; }
+[data-theme="dark"] .chip-safeguarding { color: #FCA5A5; }
+[data-theme="dark"] .chip-send { color: #FCD34D; }
+[data-theme="dark"] .chip-hr { color: #C4B5FD; }
+[data-theme="dark"] .chip-estates { color: #5EEAD4; }
+[data-theme="dark"] .chip-leadership { color: #7DD3FC; }
+[data-theme="dark"] .chip-teaching { color: #93C5FD; }
+[data-theme="dark"] .chip-ai { color: #FDA4AF; }
+[data-theme="dark"] .chip-ops { color: #7DD3FC; }
+
+.card h2 { font-family: var(--font-display); font-size: 1.5rem; font-weight: 600; line-height: 1.3; margin-bottom: 8px; color: var(--text); }
+.card .summary { font-size: 15px; color: var(--muted); margin-bottom: 18px; line-height: 1.6; }
+.card h3 { font-size: 1.1rem; font-weight: 600; margin: 28px 0 10px; color: var(--text); }
+.card p { margin-bottom: 14px; line-height: 1.7; }
+.card ul, .card ol { margin: 10px 0 16px 22px; }
+.card li { margin-bottom: 8px; line-height: 1.6; }
+.card strong { color: var(--text); }
+
+.data-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+.data-table th { text-align: left; padding: 10px 12px; background: var(--quote-bg); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.3px; color: var(--muted); border-bottom: 2px solid var(--border); }
+.data-table td { padding: 10px 12px; border-bottom: 1px solid var(--border-light); }
+
+.action-box {
+  background: var(--bg); border-left: 3px solid var(--accent); border-radius: 0 var(--radius) var(--radius) 0;
+  padding: 20px 24px; margin: 24px 0 4px;
+}
+.action-box .action-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--accent-dark); margin-bottom: 10px; }
+[data-theme="dark"] .action-box .action-title { color: var(--accent); }
+.action-box ul { margin: 0 0 0 18px; }
+.action-box li { font-size: 15px; margin-bottom: 6px; }
+.action-box li .time-est { font-size: 12px; color: var(--muted); font-weight: 500; }
+
+/* ===== TOOL CARD ===== */
+.tool-card {
+  background: var(--surface); border: 2px solid var(--accent); border-radius: var(--radius);
+  padding: var(--card-pad); margin-bottom: 24px; position: relative; box-shadow: 0 0 0 4px var(--accent-dim);
+}
+.tool-badge {
+  position: absolute; top: -12px; left: 24px; background: var(--accent); color: #070B18;
+  font-size: 10px; font-weight: 700; letter-spacing: 1px; padding: 4px 12px; border-radius: 4px; text-transform: uppercase;
+}
+.tool-card h2 { font-family: var(--font-display); font-size: 1.5rem; font-weight: 600; margin-top: 8px; margin-bottom: 4px; }
+.tool-card .summary { font-size: 15px; color: var(--muted); margin-bottom: 24px; }
+
+.tool-input-group { margin-bottom: 20px; }
+.tool-input-group label { display: block; font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+.tool-select {
+  width: 100%; padding: 10px 14px; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 8px; font-size: 15px; color: var(--text); font-family: var(--font-body);
+  cursor: pointer; -webkit-appearance: none; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%235A6578' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px;
+}
+.tool-select:focus-visible { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-dim); }
+
+.results-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 24px 0; }
+@media (max-width: 480px) { .results-grid { grid-template-columns: 1fr; } }
+.result-tile { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+.result-tile .rlabel { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; font-weight: 500; }
+.result-tile .rvalue { font-size: 24px; font-weight: 700; font-family: var(--font-body); font-variant-numeric: tabular-nums; }
+.result-tile.hero { grid-column: 1 / -1; border-color: var(--accent); background: var(--accent-dim); }
+.result-tile.hero .rvalue { color: var(--accent-dark); font-size: 32px; }
+[data-theme="dark"] .result-tile.hero .rvalue { color: var(--accent); }
+
+/* Donut chart */
+.donut-container { display: flex; align-items: center; gap: 24px; margin: 24px 0; flex-wrap: wrap; justify-content: center; }
+.donut-svg { width: 200px; height: 200px; flex-shrink: 0; }
+.donut-legend { display: flex; flex-direction: column; gap: 8px; }
+.legend-item { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.legend-dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+.legend-value { font-weight: 700; margin-left: auto; padding-left: 12px; font-variant-numeric: tabular-nums; }
+
+/* Comparison panel */
+.comparison-panel { margin: 24px 0; padding: 20px; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; }
+.comparison-title { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 16px; }
+.bench-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 13px; }
+.bench-label { width: 140px; color: var(--muted); font-size: 12px; flex-shrink: 0; }
+.bench-track { flex: 1; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+.bench-fill { height: 100%; border-radius: 4px; transition: width 0.4s ease; }
+.bench-val { width: 50px; text-align: right; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+
+/* Assumptions expandable */
+.assumptions-details { margin: 20px 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.assumptions-details summary {
+  padding: 14px 18px; font-size: 14px; font-weight: 600; color: var(--muted);
+  cursor: pointer; list-style: none; display: flex; align-items: center; gap: 8px; min-height: 44px;
+}
+.assumptions-details summary::-webkit-details-marker { display: none; }
+.assumptions-details summary::before { content: '▸'; transition: transform 0.2s; }
+.assumptions-details[open] summary::before { transform: rotate(90deg); }
+.assumptions-details summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.assumptions-inner { padding: 0 18px 18px; font-size: 14px; color: var(--muted); line-height: 1.7; }
+.assumptions-inner ul { margin: 8px 0 8px 18px; }
+.assumptions-inner li { margin-bottom: 4px; }
+
+/* Confidence ladder tabs */
+.confidence-tabs { margin: 20px 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.tab-header { display: flex; border-bottom: 1px solid var(--border); }
+.tab-btn {
+  flex: 1; padding: 12px 16px; font-size: 14px; font-weight: 600; border: none;
+  background: var(--bg); color: var(--muted); cursor: pointer; font-family: var(--font-body);
+  min-height: 44px; transition: background 0.15s, color 0.15s;
+}
+.tab-btn.active { background: var(--surface); color: var(--accent-dark); border-bottom: 2px solid var(--accent); }
+[data-theme="dark"] .tab-btn.active { color: var(--accent); }
+.tab-btn:hover:not(.active) { background: var(--surface); }
+.tab-content { display: none; padding: 20px; }
+.tab-content.active { display: block; }
+.lock-overlay { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.lock-icon { font-size: 32px; opacity: 0.5; }
+.lock-features { list-style: none; margin: 12px 0; padding: 0; font-size: 13px; text-align: left; }
+.lock-features li { padding: 4px 0; }
+.lock-features li::before { content: '✓ '; color: var(--accent); font-weight: 700; }
+
+/* CTA Panel */
+.cta-panel {
+  margin: 24px 0; padding: 24px;
+  background: linear-gradient(135deg, var(--accent-dim), rgba(0,212,212,0.03));
+  border: 1px solid rgba(0,212,212,0.25); border-radius: var(--radius); text-align: center;
+}
+.cta-panel h3 { margin: 0 0 16px; font-size: 1.1rem; }
+.cta-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px; }
+.cta-btn-primary {
+  display: inline-flex; align-items: center; gap: 6px; padding: 12px 24px;
+  background: var(--accent); color: #070B18; border: none; border-radius: 8px;
+  font-size: 14px; font-weight: 600; cursor: pointer; font-family: var(--font-body); min-height: 44px;
+}
+.cta-btn-primary:hover { opacity: 0.9; }
+.cta-btn-secondary {
+  display: inline-flex; align-items: center; gap: 6px; padding: 12px 24px;
+  background: var(--surface); color: var(--text); border: 1px solid var(--border);
+  border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: var(--font-body); min-height: 44px;
+}
+.cta-btn-secondary:hover { border-color: var(--accent); }
+.pro-strip { display: flex; flex-wrap: wrap; gap: 12px 20px; justify-content: center; font-size: 13px; color: var(--muted); }
+.pro-strip span::before { content: '✓ '; color: var(--accent); font-weight: 700; }
+
+.save-share { display: flex; gap: 10px; flex-wrap: wrap; margin: 16px 0; }
+.share-btn {
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+  font-size: 13px; font-weight: 500; color: var(--text); cursor: pointer; font-family: var(--font-body); min-height: 40px;
+}
+.share-btn:hover { border-color: var(--accent); }
+.share-btn .pro-badge { font-size: 9px; font-weight: 700; background: var(--accent); color: #070B18; padding: 2px 6px; border-radius: 3px; }
+
+/* ===== POLL ===== */
+.poll-options { display: flex; flex-direction: column; gap: 10px; margin: 16px 0; }
+.poll-option {
+  display: flex; align-items: center; gap: 12px; padding: 14px 18px;
+  background: var(--bg); border: 2px solid var(--border); border-radius: 10px;
+  cursor: pointer; transition: border-color 0.15s, background 0.15s; font-size: 14px;
+}
+.poll-option:hover { border-color: var(--accent); background: var(--accent-dim); }
+.poll-option.selected { border-color: var(--accent); background: var(--accent-dim); }
+.poll-radio {
+  width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--border);
+  flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: border-color 0.15s;
+}
+.poll-option.selected .poll-radio { border-color: var(--accent); }
+.poll-option.selected .poll-radio::after { content: ''; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
+.poll-region { margin: 16px 0; }
+.poll-region label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; font-weight: 500; }
+.poll-submit-btn {
+  margin-top: 16px; padding: 12px 28px; background: var(--accent); color: #070B18;
+  border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;
+  font-family: var(--font-body); min-height: 44px;
+}
+.poll-submit-btn:hover { opacity: 0.9; }
+.poll-submit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.poll-thanks {
+  display: none; padding: 24px; text-align: center; background: var(--success-bg);
+  border-radius: 10px; color: var(--success-text); font-weight: 600; font-size: 15px;
+}
+.poll-prior {
+  margin: 16px 0; padding: 16px; background: var(--quote-bg); border-radius: 10px;
+  font-size: 14px; color: var(--muted); line-height: 1.6;
+}
+
+/* ===== MID CTA ===== */
+.mid-cta {
+  background: var(--surface); border: 1px solid var(--accent); border-radius: var(--radius);
+  padding: 32px var(--card-pad); text-align: center; margin: 32px 0; box-shadow: var(--shadow);
+}
+.mid-cta h2 { font-family: var(--font-display); font-size: 1.3rem; margin-bottom: 8px; }
+.mid-cta p { color: var(--muted); font-size: 15px; margin-bottom: 16px; }
+.email-capture { display: flex; gap: 8px; max-width: 400px; margin: 0 auto; }
+.email-capture input {
+  flex: 1; padding: 12px 16px; border: 1px solid var(--border); border-radius: 8px;
+  font-size: 15px; font-family: var(--font-body); background: var(--bg); color: var(--text); min-height: 44px;
+}
+.email-capture input:focus-visible { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-dim); }
+.email-capture button {
+  padding: 12px 20px; background: var(--accent); color: #070B18; border: none; border-radius: 8px;
+  font-size: 14px; font-weight: 600; cursor: pointer; font-family: var(--font-body); white-space: nowrap; min-height: 44px;
+}
+
+/* ===== EMAIL MODAL ===== */
+.modal-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000;
+  align-items: center; justify-content: center; padding: 20px;
+}
+.modal-overlay.open { display: flex; }
+.modal { background: var(--surface); border-radius: var(--radius); padding: 36px; max-width: 440px; width: 100%; box-shadow: var(--shadow-lg); position: relative; }
+.modal-close { position: absolute; top: 12px; right: 16px; background: none; border: none; font-size: 20px; color: var(--muted); cursor: pointer; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; }
+.modal h3 { font-family: var(--font-display); font-size: 1.2rem; margin-bottom: 8px; }
+.modal p { font-size: 14px; color: var(--muted); margin-bottom: 20px; line-height: 1.6; }
+.modal input[type="email"] { width: 100%; padding: 12px 16px; border: 1px solid var(--border); border-radius: 8px; font-size: 15px; font-family: var(--font-body); background: var(--bg); color: var(--text); margin-bottom: 12px; min-height: 44px; }
+.modal input[type="email"]:focus-visible { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-dim); }
+.modal .modal-submit { width: 100%; padding: 12px; background: var(--accent); color: #070B18; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: var(--font-body); min-height: 44px; }
+.modal .modal-disclaimer { font-size: 12px; color: var(--muted); text-align: center; margin-top: 12px; }
+.modal .modal-success { display: none; text-align: center; padding: 24px 0; font-size: 18px; font-weight: 600; color: var(--success-text); }
+
+/* ===== FOOTER ===== */
+.page-footer { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 36px var(--card-pad); margin-top: 32px; box-shadow: var(--shadow); }
+.footer-pro { margin-bottom: 28px; padding-bottom: 24px; border-bottom: 1px solid var(--border); }
+.footer-pro h3 { font-family: var(--font-display); font-size: 1.2rem; margin-bottom: 16px; }
+.footer-pro-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 14px; }
+@media (max-width: 480px) { .footer-pro-grid { grid-template-columns: 1fr; } }
+.footer-pro-grid .pro-item { display: flex; align-items: flex-start; gap: 8px; }
+.footer-pro-grid .pro-item::before { content: '✓'; color: var(--accent); font-weight: 700; flex-shrink: 0; }
+.footer-subscribe { text-align: center; margin-bottom: 28px; padding-bottom: 24px; border-bottom: 1px solid var(--border); }
+.footer-subscribe h3 { font-family: var(--font-display); font-size: 1.1rem; margin-bottom: 12px; }
+.footer-subscribe .cta-btn-primary { margin-top: 8px; text-decoration: none; display: inline-flex; }
+.footer-brand { text-align: center; font-size: 13px; color: var(--muted); }
+.footer-brand .brand-line { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+.footer-sources { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-light); }
+.footer-sources h4 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 8px; }
+.footer-sources ul { list-style: none; padding: 0; margin: 0; font-size: 12px; }
+.footer-sources li { padding: 3px 0; }
+.footer-sources a { color: var(--muted); }
+.footer-sources a:hover { color: var(--accent); }
+
+.todo { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; }
+.todo input[type="checkbox"] { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--accent); flex-shrink: 0; cursor: pointer; }
+.todo label { font-size: 15px; cursor: pointer; }
+.time-saved { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; font-size: 13px; color: var(--success-text); background: var(--success-bg); border-radius: 8px; font-weight: 600; margin-top: 16px; }
+
+@media print {
+  .sixty-bar, .issue-header, .toc-rail, .controls, .audio-player, .cta-panel, .mid-cta, .modal-overlay, .save-share { display: none; }
+  body { background: #fff; color: #000; font-size: 12pt; }
+  .card, .tool-card, .page-footer { box-shadow: none; border: 1px solid #ddd; }
+}
+</style>
+</head>
+<body>
+
+<!-- STICKY 60-SECOND BAR -->
+<div class="sixty-bar">
+  <div class="sixty-bar-inner">
+    <div class="sixty-bar-item">
+      <span class="bar-label">Deadline</span>
+      <span class="bar-value">28 Feb — Admissions</span>
+    </div>
+    <div class="sixty-bar-item">
+      <span class="bar-label">Focus</span>
+      <span class="bar-value">SEND placements</span>
+    </div>
+    <div class="sixty-bar-item">
+      <span class="bar-label">Tool</span>
+      <span class="bar-value"><a href="#send-tool">SEND Explorer</a></span>
+    </div>
+    <span class="spacer"></span>
+    <button class="listen-btn" onclick="document.getElementById('audio-section').scrollIntoView({behavior:'smooth'})">🎧 Listen</button>
+  </div>
+</div>
+
+<!-- STICKY ISSUE HEADER -->
+<div class="issue-header" id="issueHeader">The Schoolgle Signal — Week 4 — 13 January 2026</div>
+
+<!-- LAYOUT -->
+<div class="layout-wrapper">
+  <aside class="toc-rail">
+    <div class="toc-sticky">
+      <nav aria-label="Table of contents">
+        <a href="#sixty-seconds" class="toc-link" data-section="sixty-seconds">This week</a>
+        <a href="#send-training" class="toc-link" data-section="send-training">SEND training</a>
+        <a href="#send-tool" class="toc-link" data-section="send-tool">SEND Explorer</a>
+        <a href="#report-cards" class="toc-link" data-section="report-cards">Report cards</a>
+        <a href="#falling-rolls" class="toc-link" data-section="falling-rolls">Falling rolls</a>
+        <a href="#ops-checklist" class="toc-link" data-section="ops-checklist">Ops checklist</a>
+        <a href="#the-question" class="toc-link" data-section="the-question">The question</a>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="main-content">
+
+    <!-- HEADER -->
+    <header class="page-header">
+      <div>
+        <h1>The Schoolgle <span>Signal</span></h1>
+        <div class="header-meta">
+          <span class="date">Week of 13 January 2026</span>
+          <span class="issue">Issue #4</span>
+        </div>
+      </div>
+      <div class="controls">
+        <div class="ctrl-group">
+          <button class="ctrl-btn active" onclick="setTheme('light')" id="btn-light" aria-label="Light mode" title="Light mode">☀️</button>
+          <button class="ctrl-btn" onclick="setTheme('dark')" id="btn-dark" aria-label="Dark mode" title="Dark mode">🌙</button>
+          <button class="ctrl-btn" onclick="setTheme('system')" id="btn-system" aria-label="System theme" title="System theme">⚙️</button>
+        </div>
+        <div class="ctrl-group">
+          <button class="ctrl-btn" onclick="adjustFont(-1)" aria-label="Decrease text size" title="Smaller text">A−</button>
+          <button class="ctrl-btn" onclick="adjustFont(0)" aria-label="Default text size" title="Default text">A</button>
+          <button class="ctrl-btn" onclick="adjustFont(1)" aria-label="Increase text size" title="Larger text">A+</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- PERSONAL TOUCH -->
+    <div class="card" style="border-left: 3px solid var(--accent); background: var(--accent-dim);">
+      <p style="margin:0; font-size: 15px; font-style: italic; color: var(--text);">February. The longest short month. Keep going. 💪</p>
+    </div>
+
+    <!-- AUDIO PLAYER -->
+    <div class="audio-player" id="audio-section">
+      <div class="audio-top">
+        <button class="audio-play-btn" id="playBtn" aria-label="Play audio" onclick="togglePlay()">▶</button>
+        <div class="audio-info">
+          <div class="audio-title">Listen to this issue (6 mins)</div>
+          <div class="audio-time">The Schoolgle Signal — Week 4</div>
+        </div>
+        <div class="audio-progress">
+          <span class="audio-time-label" id="audioCurrentTime">0:00</span>
+          <div class="audio-track" onclick="seekAudio(event)">
+            <div class="audio-track-fill" id="audioFill"></div>
+            <div class="audio-track-dot" id="audioDot"></div>
+          </div>
+          <span class="audio-time-label" id="audioTotalTime">6:00</span>
+        </div>
+        <div class="audio-speed">
+          <button class="speed-btn active" onclick="setSpeed(1, this)">1×</button>
+          <button class="speed-btn" onclick="setSpeed(1.5, this)">1.5×</button>
+          <button class="speed-btn" onclick="setSpeed(2, this)">2×</button>
+        </div>
+      </div>
+      <div class="transcript-section">
+        <button class="transcript-toggle" onclick="this.nextElementSibling.classList.toggle('open'); this.querySelector('.arrow').textContent = this.nextElementSibling.classList.contains('open') ? '▾' : '▸'">
+          <span class="arrow">▸</span> Show transcript
+        </button>
+        <div class="transcript-body">
+          <p>This week on the Schoolgle Signal: The £200 million SEND training programme — we run the numbers on what it actually means per school. We've built a SEND Placement Explorer so you can see how your local authority compares. Plus: the first Ofsted report cards, falling school rolls, and census follow-up.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- THIS WEEK IN 60 SECONDS -->
+    <div class="card" id="sixty-seconds">
+      <h2>This week in 60 seconds</h2>
+      <ul>
+        <li><strong>£200 million</strong> — DfE announced "landmark" SEND training programme on 16 January. The maths doesn't add up.</li>
+        <li><strong>Report cards</strong> — First wave of new Ofsted report cards now public. Schools getting different grades across six areas.</li>
+        <li><strong>Falling rolls</strong> — IFS confirms pupil numbers declining rapidly. London worst hit.</li>
+        <li><strong>Census follow-up</strong> — If you submitted last month, monitor validation errors. Money left on the table otherwise.</li>
+        <li><strong>Tool of the week</strong> — <a href="#send-tool">SEND Placement Explorer</a>. See how your LA places SEND pupils.</li>
+      </ul>
+    </div>
+
+    <!-- SEND TRAINING DEEP DIVE -->
+    <div class="card" id="send-training">
+      <span class="chip chip-send">SEND</span>
+      <h2>£200 million for SEND training — the reality maths</h2>
+      <p class="summary">The headline sounds transformative. The per-school allocation tells a different story.</p>
+
+      <p>On 16 January, the DfE announced a £200 million SEND teacher training programme. Adaptive teaching, assistive technologies, working with parents, changes to the SEND Code of Practice. The ambition covers early years, schools, and colleges.</p>
+
+      <h3>Run the numbers</h3>
+      <p>There are approximately 22,000 schools in England. £200 million ÷ 22,000 = roughly <strong>£9,000 per school</strong>. But the funding also covers early years settings and colleges — significantly increasing the number of institutions sharing the pot. Realistic per-school allocation: closer to <strong>£5,000–£6,000</strong>.</p>
+
+      <p>A single day of external SEND training costs £200–£350 per teacher including supply cover. £6,000 buys training for perhaps 20–30 staff across the programme's life — if none goes on resources or materials.</p>
+      <p style="font-size:13px;color:var(--muted);font-style:italic;">Source: DfE announcement, 16 January 2026; training cost estimates from school CPD providers</p>
+
+      <h3>Welcome, but not transformative</h3>
+      <p>Schools with existing SEND expertise will use it to top up. Schools where SEND training has been minimal will find it barely scratches the surface. A single EHCP assessment costs local authorities approximately £6,000, and the national backlog runs to tens of thousands.</p>
+
+      <table class="data-table">
+        <thead>
+          <tr><th>Metric</th><th>Figure</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Total funding</td><td>£200 million</td></tr>
+          <tr><td>Schools in England</td><td>~22,000</td></tr>
+          <tr><td>Realistic per-school share</td><td>£5,000–£6,000</td></tr>
+          <tr><td>Cost of 1 EHCP assessment</td><td>~£6,000</td></tr>
+          <tr><td>National EHCP backlog</td><td>Tens of thousands</td></tr>
+        </tbody>
+      </table>
+
+      <div class="action-box">
+        <div class="action-title">Do this next</div>
+        <ul>
+          <li>Audit your current SEND CPD — how many staff have had formal training in the past two years? <span class="time-est">(30 mins)</span></li>
+          <li>Identify your in-house SEND experts. Who can cascade training when funding arrives? <span class="time-est">(15 mins)</span></li>
+          <li>Build a deployment plan now so you're ready when the money lands. <span class="time-est">(1 hour)</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- SEND PLACEMENT EXPLORER - CONTEXT -->
+    <div class="card" id="send-context" style="border-bottom-left-radius:0;border-bottom-right-radius:0;margin-bottom:0;border-bottom:none;">
+      <span class="chip chip-send">SEND</span>
+      <h2>SEND placements: where are pupils going?</h2>
+      <p>The distribution of SEND placements varies enormously between local authorities. Some LAs place over 60% of EHCP pupils in mainstream settings. Others place less than 30%. Understanding your LA's pattern matters — it shapes your school's likely intake, resource needs, and the support your LA can offer.</p>
+    </div>
+
+    <!-- SEND PLACEMENT EXPLORER TOOL -->
+    <div class="tool-card" id="send-tool" style="border-top-left-radius:0;border-top-right-radius:0;border-top:none;margin-top:0;">
+      <div class="tool-badge">Interactive Tool</div>
+      <h2 style="margin-top:16px;">SEND Placement Explorer</h2>
+      <p class="summary">Select a local authority to see how SEND pupils are placed across different settings.</p>
+
+      <div class="tool-input-group">
+        <label for="la-select">Local authority</label>
+        <select class="tool-select" id="la-select" aria-label="Select local authority">
+          <option value="">Choose a local authority…</option>
+        </select>
+      </div>
+
+      <!-- Donut chart -->
+      <div class="donut-container" id="donut-area" style="display:none;">
+        <svg class="donut-svg" viewBox="0 0 200 200" id="donut-chart">
+          <circle cx="100" cy="100" r="70" fill="none" stroke="var(--border)" stroke-width="30"/>
+        </svg>
+        <div class="donut-legend" id="donut-legend"></div>
+      </div>
+
+      <!-- Results -->
+      <div class="results-grid" id="send-results" style="display:none;">
+        <div class="result-tile hero">
+          <div class="rlabel">Total EHCP pupils</div>
+          <div class="rvalue" id="r-total">—</div>
+        </div>
+        <div class="result-tile">
+          <div class="rlabel">Mainstream</div>
+          <div class="rvalue" id="r-mainstream">—</div>
+        </div>
+        <div class="result-tile">
+          <div class="rlabel">Special schools</div>
+          <div class="rvalue" id="r-special">—</div>
+        </div>
+        <div class="result-tile">
+          <div class="rlabel">Independent/NMSS</div>
+          <div class="rvalue" id="r-independent">—</div>
+        </div>
+        <div class="result-tile">
+          <div class="rlabel">Other (AP, home, etc.)</div>
+          <div class="rvalue" id="r-other">—</div>
+        </div>
+        <div class="result-tile">
+          <div class="rlabel">Mainstream %</div>
+          <div class="rvalue" id="r-mainstream-pct">—</div>
+        </div>
+      </div>
+
+      <!-- Comparison -->
+      <div class="comparison-panel" id="send-comparison" style="display:none;">
+        <div class="comparison-title">Your LA vs national average</div>
+        <div id="send-benchmarks"></div>
+      </div>
+
+      <!-- Assumptions -->
+      <details class="assumptions-details">
+        <summary>How this is calculated (assumptions)</summary>
+        <div class="assumptions-inner">
+          <ul>
+            <li>Data based on DfE SEN2 return 2025 (published January 2026)</li>
+            <li>Placement categories: Mainstream, Special school, Independent/non-maintained special, Other (AP, home education, etc.)</li>
+            <li>Figures include all children and young people with EHCPs aged 0–25</li>
+            <li>Percentages rounded to nearest whole number</li>
+            <li><strong>Illustrative data.</strong> For official figures, see the <a href="https://explore-education-statistics.service.gov.uk/" target="_blank" rel="noopener">DfE Explore Education Statistics</a> service.</li>
+          </ul>
+        </div>
+      </details>
+
+      <!-- Confidence Ladder -->
+      <div class="confidence-tabs">
+        <div class="tab-header">
+          <button class="tab-btn active" onclick="switchTab('quick', this)">LA Overview ✅</button>
+          <button class="tab-btn" onclick="switchTab('pro', this)">Deep Analysis 🔒</button>
+        </div>
+        <div class="tab-content active" id="tab-quick">
+          <p style="font-size:14px;color:var(--muted);margin:0;">You're viewing the <strong>LA Overview</strong> — placement breakdown by category with national comparison. Good for governance reports and SEND strategy discussions.</p>
+        </div>
+        <div class="tab-content" id="tab-pro" style="display:none;">
+          <div class="lock-overlay">
+            <div class="lock-icon">🔒</div>
+            <p style="font-weight:600;font-size:15px;margin:0 0 8px;">Deep Analysis — Schoolgle Pro</p>
+            <p style="font-size:13px;margin:0 0 12px;">Year-on-year trends, needs-type breakdown, cost per placement, and peer LA comparison.</p>
+            <ul class="lock-features">
+              <li>Placement trends over 5 years</li>
+              <li>Breakdown by primary need type (ASD, SEMH, MLD, etc.)</li>
+              <li>Average placement cost by setting type</li>
+              <li>Peer LA comparison (statistical neighbours)</li>
+              <li>Exportable data for governors' reports</li>
+            </ul>
+            <button class="cta-btn-primary" style="margin-top:12px;">Unlock Pro →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- CTA Panel -->
+      <div class="cta-panel">
+        <h3>Save this analysis</h3>
+        <div class="cta-buttons">
+          <button class="cta-btn-primary" onclick="openEmailModal()">📧 Email me this result</button>
+          <button class="cta-btn-secondary" onclick="void(0)">🔓 Unlock Pro: Trends + cost analysis</button>
+        </div>
+        <div class="pro-strip">
+          <span>5-year placement trends</span>
+          <span>Cost per placement type</span>
+          <span>Peer LA comparison</span>
+          <span>Export PDF/CSV</span>
+          <span>Governor-ready summary</span>
+        </div>
+      </div>
+
+      <!-- Save & Share -->
+      <div class="save-share">
+        <button class="share-btn" onclick="copySummary()">📋 Copy summary</button>
+        <button class="share-btn">📄 Download PDF <span class="pro-badge">PRO</span></button>
+        <button class="share-btn">🔗 Share link <span class="pro-badge">PRO</span></button>
+      </div>
+
+      <div class="time-saved">⏱ Time saved using this tool: ~3 hours of data gathering</div>
+    </div>
+
+    <!-- REPORT CARDS -->
+    <div class="card" id="report-cards">
+      <span class="chip chip-compliance">Compliance</span>
+      <h2>Report cards: what the first wave reveals</h2>
+      <p class="summary">Different grades across six areas — that's the point. But it creates new exposure.</p>
+
+      <p>The first batch of report cards from the new Ofsted framework is now public. Early patterns: schools receiving markedly different grades across the six evaluation areas. A school might get "Exceptional" for Leadership and Governance but "Needs attention" for Inclusion.</p>
+
+      <p>Under the old system, that school would have been "Good" — with the inclusion weakness hidden behind an aggregate judgement. For parents, this is more useful information. For schools, it's more exposure.</p>
+
+      <p>A "Needs attention" grade in any area is essentially a flag for deeper scrutiny at your next inspection. Address it proactively.</p>
+
+      <div class="action-box">
+        <div class="action-title">Do this next</div>
+        <ul>
+          <li>If your school has received a report card, read it as a parent would. <span class="time-est">(15 mins)</span></li>
+          <li>If the story doesn't reflect reality, factual accuracy challenges can be submitted within the published window. <span class="time-est">(1 hour)</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- FALLING ROLLS -->
+    <div class="card" id="falling-rolls">
+      <span class="chip chip-finance">Finance</span>
+      <h2>Falling school rolls: the crisis nobody's planning for</h2>
+      <p class="summary">London sharpest, but it's a national trend. Smaller rolls mean less funding, fewer staff, fewer options.</p>
+
+      <p>The IFS Annual Report on Education Spending (December 2025) confirmed: pupil numbers falling rapidly across England. London: forecast decline of 3.8% in Year 7 places and 2.5% in reception between 2025/26 and 2029/30. Schools in North Yorkshire, Nottingham, and Hertfordshire already closing or merging.</p>
+
+      <p>The DfE's falling rolls fund for 2026–27: £141,890 per Middle Layer Super Output Area that sees a 10%+ pupil reduction. That's <strong>per area, not per school</strong>.</p>
+
+      <p style="font-size:13px;color:var(--muted);font-style:italic;">Source: IFS Annual Report on Education Spending, December 2025; Schools Week, January 2026</p>
+
+      <div class="action-box">
+        <div class="action-title">Do this next</div>
+        <ul>
+          <li>Pull admissions data for the last five years. What's the trajectory? <span class="time-est">(30 mins)</span></li>
+          <li>If downward, start conversations now — governing body, trust, or LA. Mergers, federation, restructuring: all better discussed proactively. <span class="time-est">(ongoing)</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- MID-PAGE CTA -->
+    <div class="mid-cta">
+      <h2>Get next week's tool delivered to your inbox</h2>
+      <p>Free weekly intelligence for school leaders. No spam. Unsubscribe anytime.</p>
+      <div class="email-capture">
+        <input type="email" placeholder="your@school.sch.uk" aria-label="Email address">
+        <button onclick="handleMidSubscribe(this)">Subscribe</button>
+      </div>
+    </div>
+
+    <!-- OPS CHECKLIST -->
+    <div class="card" id="ops-checklist">
+      <span class="chip chip-compliance">Compliance</span>
+      <h2>Ops checklist: February priorities</h2>
+
+      <h3>Census follow-up</h3>
+      <div class="todo"><input type="checkbox" id="t1"><label for="t1">Monitor validation errors — don't assume "submitted" means "done"</label></div>
+      <div class="todo"><input type="checkbox" id="t2"><label for="t2">Respond promptly to LA/DfE flags within the submission window</label></div>
+      <div class="todo"><input type="checkbox" id="t3"><label for="t3">FSM under-claims identified and chased</label></div>
+
+      <h3>SEND</h3>
+      <div class="todo"><input type="checkbox" id="t4"><label for="t4">SEND CPD audit completed — who's been trained, who hasn't?</label></div>
+      <div class="todo"><input type="checkbox" id="t5"><label for="t5">EHCP annual review schedule on track for spring term</label></div>
+
+      <h3>Admissions</h3>
+      <div class="todo"><input type="checkbox" id="t6"><label for="t6">Admission arrangements determination by 28 February — meeting scheduled?</label></div>
+      <div class="todo"><input type="checkbox" id="t7"><label for="t7">If changing arrangements: consultation completed (1 Oct – 31 Jan)?</label></div>
+
+      <h3>Budget</h3>
+      <div class="todo"><input type="checkbox" id="t8"><label for="t8">Spring term pupil progress reviews data collection planned</label></div>
+      <div class="todo"><input type="checkbox" id="t9"><label for="t9">NI increase modelled against actual payroll</label></div>
+
+      <div class="action-box">
+        <div class="action-title">Do this next</div>
+        <ul>
+          <li>Block 1 hour this week for SEND CPD audit. <span class="time-est">(1 hour)</span></li>
+          <li>Confirm admissions determination meeting is in the diary before 28 Feb. <span class="time-est">(5 mins)</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- THE QUESTION (POLL) -->
+    <div class="card" id="the-question">
+      <h2>The question leaders should ask out loud</h2>
+
+      <!-- Prior poll results -->
+      <div class="poll-prior">
+        <strong>Last week we asked:</strong> "How confident are you in your census data accuracy?"<br>
+        Results will appear here when we have live data.
+      </div>
+
+      <p style="margin-top:16px;"><strong>Is your school equipped to support more SEND pupils in mainstream?</strong></p>
+      <p>The government's direction is clear — more pupils in mainstream settings. But mainstream readiness varies wildly. Do you have the staff, the training, and the resources?</p>
+
+      <div id="poll-form">
+        <div class="poll-options" id="poll-options">
+          <div class="poll-option" onclick="selectPoll(this, 0)" role="radio" aria-checked="false" tabindex="0">
+            <div class="poll-radio"></div>
+            <span>Yes — we have the staff and training</span>
+          </div>
+          <div class="poll-option" onclick="selectPoll(this, 1)" role="radio" aria-checked="false" tabindex="0">
+            <div class="poll-radio"></div>
+            <span>Partially — willing but under-resourced</span>
+          </div>
+          <div class="poll-option" onclick="selectPoll(this, 2)" role="radio" aria-checked="false" tabindex="0">
+            <div class="poll-radio"></div>
+            <span>No — we're already at breaking point</span>
+          </div>
+          <div class="poll-option" onclick="selectPoll(this, 3)" role="radio" aria-checked="false" tabindex="0">
+            <div class="poll-radio"></div>
+            <span>Unsure — need more guidance</span>
+          </div>
+        </div>
+
+        <div class="poll-region">
+          <label for="poll-region-select">Where are you from? (optional)</label>
+          <select class="tool-select" id="poll-region-select" aria-label="Select region">
+            <option value="">Prefer not to say</option>
+            <option value="ne">North East</option>
+            <option value="nw">North West</option>
+            <option value="yh">Yorkshire</option>
+            <option value="em">East Midlands</option>
+            <option value="wm">West Midlands</option>
+            <option value="ee">East of England</option>
+            <option value="lo">London</option>
+            <option value="se">South East</option>
+            <option value="sw">South West</option>
+            <option value="wa">Wales</option>
+          </select>
+        </div>
+
+        <button class="poll-submit-btn" id="poll-submit" onclick="submitPoll()" disabled>Submit my vote</button>
+      </div>
+
+      <div class="poll-thanks" id="poll-thanks">
+        ✓ Thanks — we'll share results in next week's issue
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="page-footer">
+      <div class="footer-pro">
+        <h3>What you get in Schoolgle Pro</h3>
+        <div class="footer-pro-grid">
+          <div class="pro-item">Save best/likely/worst scenarios</div>
+          <div class="pro-item">Multi-school roll-up (trust-wide)</div>
+          <div class="pro-item">Export PDF/CSV reports</div>
+          <div class="pro-item">Governor-ready paragraphs (AI-written)</div>
+          <div class="pro-item">Full audit trail</div>
+          <div class="pro-item">Priority tool access</div>
+          <div class="pro-item">Benchmarking against similar schools</div>
+          <div class="pro-item">Dedicated support</div>
+        </div>
+      </div>
+
+      <div class="footer-subscribe">
+        <h3>Never miss an issue</h3>
+        <p style="color:var(--muted);font-size:14px;">Weekly intelligence for school leaders. Free.</p>
+        <a href="https://schoolgle.co.uk" class="cta-btn-primary" style="text-decoration:none;">Sign up — it's free</a>
+      </div>
+
+      <div class="footer-brand">
+        <div class="brand-line">Built by Schoolgle — the operating system for schools</div>
+        <p>The Schoolgle Signal — weekly intelligence for school leaders, with the practical context to act on it.</p>
+        <p style="margin-top:8px;">© 2026 <a href="https://schoolgle.co.uk">Schoolgle</a></p>
+
+        <div class="footer-sources">
+          <h4>Data sources</h4>
+          <ul>
+            <li><a href="https://www.gov.uk/government/news" target="_blank" rel="noopener">DfE SEND training announcement</a> — GOV.UK, 16 January 2026</li>
+            <li><a href="https://explore-education-statistics.service.gov.uk/" target="_blank" rel="noopener">DfE SEN2 return data</a> — Explore Education Statistics</li>
+            <li><a href="https://ifs.org.uk/publications" target="_blank" rel="noopener">IFS Annual Report on Education Spending</a> — IFS, December 2025</li>
+            <li><a href="https://schoolsweek.co.uk" target="_blank" rel="noopener">Falling school rolls coverage</a> — Schools Week, January 2026</li>
+            <li><a href="https://www.gov.uk/guidance/school-census" target="_blank" rel="noopener">Spring Census guidance</a> — GOV.UK</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- EMAIL MODAL -->
+<div class="modal-overlay" id="emailModal" role="dialog" aria-modal="true" aria-label="Email capture">
+  <div class="modal">
+    <button class="modal-close" onclick="closeEmailModal()" aria-label="Close">&times;</button>
+    <div id="modal-form">
+      <h3>Get this analysis in your inbox</h3>
+      <p>We'll send this SEND placement analysis to your email — plus next week's tool.</p>
+      <input type="email" id="modal-email" placeholder="your@school.sch.uk" aria-label="Email address">
+      <button class="modal-submit" onclick="submitEmail()">Send</button>
+      <div class="modal-disclaimer">Free. No spam. Unsubscribe anytime.</div>
+    </div>
+    <div class="modal-success" id="modal-success">✓ Check your inbox</div>
+  </div>
+</div>
+
+<!-- Copy toast -->
+<div id="copy-toast" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;z-index:1001;box-shadow:var(--shadow-lg);">
+  ✓ Copied to clipboard
+</div>
+
+<script>
+// ===== THEME =====
+function setTheme(mode) {
+  document.querySelectorAll('#btn-light,#btn-dark,#btn-system').forEach(function(b) { b.classList.remove('active'); });
+  if (mode === 'system') {
+    var sys = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', sys);
+    document.getElementById('btn-system').classList.add('active');
+    localStorage.setItem('signal-theme', 'system');
+  } else {
+    document.documentElement.setAttribute('data-theme', mode);
+    document.getElementById('btn-' + mode).classList.add('active');
+    localStorage.setItem('signal-theme', mode);
+  }
+}
+(function() { var saved = localStorage.getItem('signal-theme') || 'light'; setTheme(saved); })();
+
+// ===== FONT SIZE =====
+var fontSizes = [14, 16, 19]; var fontIdx = 1;
+function adjustFont(dir) {
+  if (dir === 0) fontIdx = 1; else fontIdx = Math.max(0, Math.min(2, fontIdx + dir));
+  document.documentElement.style.setProperty('--font-size', fontSizes[fontIdx] + 'px');
+}
+
+// ===== AUDIO =====
+var isPlaying = false;
+function togglePlay() { isPlaying = !isPlaying; document.getElementById('playBtn').textContent = isPlaying ? '⏸' : '▶'; }
+function seekAudio(e) {}
+function setSpeed(speed, btn) { document.querySelectorAll('.speed-btn').forEach(function(b) { b.classList.remove('active'); }); btn.classList.add('active'); }
+
+// ===== STICKY ISSUE HEADER =====
+(function() {
+  var header = document.getElementById('issueHeader');
+  var pageHeader = document.querySelector('.page-header');
+  if (!header || !pageHeader) return;
+  var observer = new IntersectionObserver(function(entries) {
+    header.classList.toggle('visible', !entries[0].isIntersecting);
+  }, { threshold: 0, rootMargin: '-60px 0px 0px 0px' });
+  observer.observe(pageHeader);
+})();
+
+// ===== SEND PLACEMENT EXPLORER =====
+var laData = {
+  'Barnet': { total: 4250, mainstream: 1870, special: 1530, independent: 510, other: 340 },
+  'Birmingham': { total: 12800, mainstream: 4990, special: 5120, independent: 1540, other: 1150 },
+  'Bradford': { total: 4100, mainstream: 1720, special: 1640, independent: 370, other: 370 },
+  'Bristol': { total: 3200, mainstream: 1440, special: 1120, independent: 350, other: 290 },
+  'Buckinghamshire': { total: 4600, mainstream: 1840, special: 1610, independent: 780, other: 370 },
+  'Camden': { total: 2100, mainstream: 1010, special: 670, independent: 250, other: 170 },
+  'Cornwall': { total: 3800, mainstream: 1900, special: 1220, independent: 340, other: 340 },
+  'Cumbria': { total: 2900, mainstream: 1310, special: 1010, independent: 320, other: 260 },
+  'Derby': { total: 2200, mainstream: 880, special: 880, independent: 220, other: 220 },
+  'Devon': { total: 4800, mainstream: 2260, special: 1540, independent: 530, other: 470 },
+  'Dorset': { total: 2500, mainstream: 1130, special: 880, independent: 280, other: 210 },
+  'Durham': { total: 3600, mainstream: 1480, special: 1400, independent: 360, other: 360 },
+  'Essex': { total: 8900, mainstream: 3740, special: 3120, independent: 1160, other: 880 },
+  'Gloucestershire': { total: 3900, mainstream: 1750, special: 1370, independent: 430, other: 350 },
+  'Hampshire': { total: 7200, mainstream: 3170, special: 2520, independent: 870, other: 640 },
+  'Hertfordshire': { total: 7800, mainstream: 3430, special: 2730, independent: 940, other: 700 },
+  'Kent': { total: 10200, mainstream: 4180, special: 3770, independent: 1320, other: 930 },
+  'Lancashire': { total: 7600, mainstream: 3190, special: 2890, independent: 840, other: 680 },
+  'Leeds': { total: 5200, mainstream: 2290, special: 1870, independent: 570, other: 470 },
+  'Leicester': { total: 2800, mainstream: 1180, special: 1010, independent: 340, other: 270 },
+  'Lincolnshire': { total: 4100, mainstream: 1760, special: 1480, independent: 450, other: 410 },
+  'Liverpool': { total: 3400, mainstream: 1360, special: 1360, independent: 370, other: 310 },
+  'Manchester': { total: 4600, mainstream: 1840, special: 1750, independent: 550, other: 460 },
+  'Newcastle': { total: 2100, mainstream: 880, special: 800, independent: 230, other: 190 },
+  'Norfolk': { total: 5400, mainstream: 2430, special: 1890, independent: 590, other: 490 },
+  'North Yorkshire': { total: 3200, mainstream: 1540, special: 1020, independent: 350, other: 290 },
+  'Northamptonshire': { total: 4200, mainstream: 1760, special: 1600, independent: 460, other: 380 },
+  'Nottinghamshire': { total: 4800, mainstream: 2060, special: 1730, independent: 540, other: 470 },
+  'Oxfordshire': { total: 3900, mainstream: 1830, special: 1210, independent: 500, other: 360 },
+  'Sheffield': { total: 3800, mainstream: 1600, special: 1520, independent: 380, other: 300 },
+  'Somerset': { total: 3100, mainstream: 1430, special: 990, independent: 370, other: 310 },
+  'Staffordshire': { total: 5100, mainstream: 2140, special: 1890, independent: 560, other: 510 },
+  'Suffolk': { total: 4600, mainstream: 2070, special: 1560, independent: 530, other: 440 },
+  'Surrey': { total: 8100, mainstream: 3400, special: 2670, independent: 1210, other: 820 },
+  'Warwickshire': { total: 3600, mainstream: 1620, special: 1190, independent: 430, other: 360 },
+  'West Sussex': { total: 4400, mainstream: 1980, special: 1540, independent: 480, other: 400 },
+  'Wiltshire': { total: 3100, mainstream: 1400, special: 1020, independent: 380, other: 300 },
+  'Wolverhampton': { total: 2200, mainstream: 840, special: 910, independent: 240, other: 210 },
+  'York': { total: 1200, mainstream: 580, special: 380, independent: 130, other: 110 }
+};
+
+// National average percentages
+var nationalAvg = { mainstream: 39.4, special: 36.8, independent: 12.5, other: 11.3 };
+
+// Populate dropdown
+(function() {
+  var sel = document.getElementById('la-select');
+  Object.keys(laData).sort().forEach(function(la) {
+    var opt = document.createElement('option');
+    opt.value = la; opt.textContent = la;
+    sel.appendChild(opt);
+  });
+})();
+
+var COLORS = ['#00D4D4', '#F59E0B', '#EF4444', '#8B5CF6'];
+var LABELS = ['Mainstream', 'Special schools', 'Independent/NMSS', 'Other'];
+
+function drawDonut(data) {
+  var total = data.total;
+  var vals = [data.mainstream, data.special, data.independent, data.other];
+  var pcts = vals.map(function(v) { return v / total; });
+
+  var svg = document.getElementById('donut-chart');
+  svg.innerHTML = '';
+
+  var cx = 100, cy = 100, r = 70, sw = 30;
+  var circumference = 2 * Math.PI * r;
+  var offset = 0;
+
+  pcts.forEach(function(pct, i) {
+    var len = pct * circumference;
+    var circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', cx);
+    circle.setAttribute('cy', cy);
+    circle.setAttribute('r', r);
+    circle.setAttribute('fill', 'none');
+    circle.setAttribute('stroke', COLORS[i]);
+    circle.setAttribute('stroke-width', sw);
+    circle.setAttribute('stroke-dasharray', len + ' ' + (circumference - len));
+    circle.setAttribute('stroke-dashoffset', -offset);
+    circle.setAttribute('transform', 'rotate(-90 100 100)');
+    svg.appendChild(circle);
+    offset += len;
+  });
+
+  // Centre text
+  var text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  text.setAttribute('x', cx);
+  text.setAttribute('y', cy - 6);
+  text.setAttribute('text-anchor', 'middle');
+  text.setAttribute('fill', 'var(--text)');
+  text.setAttribute('font-size', '24');
+  text.setAttribute('font-weight', '700');
+  text.setAttribute('font-family', 'var(--font-body)');
+  text.textContent = total.toLocaleString('en-GB');
+  svg.appendChild(text);
+  var sub = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  sub.setAttribute('x', cx);
+  sub.setAttribute('y', cy + 14);
+  sub.setAttribute('text-anchor', 'middle');
+  sub.setAttribute('fill', 'var(--muted)');
+  sub.setAttribute('font-size', '11');
+  sub.setAttribute('font-family', 'var(--font-body)');
+  sub.textContent = 'EHCPs';
+  svg.appendChild(sub);
+
+  // Legend
+  var legend = document.getElementById('donut-legend');
+  legend.innerHTML = '';
+  vals.forEach(function(v, i) {
+    var div = document.createElement('div');
+    div.className = 'legend-item';
+    div.innerHTML = '<span class="legend-dot" style="background:' + COLORS[i] + '"></span>' +
+      '<span>' + LABELS[i] + '</span>' +
+      '<span class="legend-value">' + Math.round(v / total * 100) + '%</span>';
+    legend.appendChild(div);
+  });
+}
+
+function updateSEND(la) {
+  var d = laData[la];
+  if (!d) return;
+
+  document.getElementById('donut-area').style.display = 'flex';
+  document.getElementById('send-results').style.display = 'grid';
+  document.getElementById('send-comparison').style.display = 'block';
+
+  drawDonut(d);
+
+  document.getElementById('r-total').textContent = d.total.toLocaleString('en-GB');
+  document.getElementById('r-mainstream').textContent = d.mainstream.toLocaleString('en-GB');
+  document.getElementById('r-special').textContent = d.special.toLocaleString('en-GB');
+  document.getElementById('r-independent').textContent = d.independent.toLocaleString('en-GB');
+  document.getElementById('r-other').textContent = d.other.toLocaleString('en-GB');
+  document.getElementById('r-mainstream-pct').textContent = Math.round(d.mainstream / d.total * 100) + '%';
+
+  // Comparison
+  var benchDiv = document.getElementById('send-benchmarks');
+  benchDiv.innerHTML = '';
+  var categories = [
+    { label: 'Mainstream', val: d.mainstream / d.total * 100, avg: nationalAvg.mainstream, color: COLORS[0] },
+    { label: 'Special', val: d.special / d.total * 100, avg: nationalAvg.special, color: COLORS[1] },
+    { label: 'Independent', val: d.independent / d.total * 100, avg: nationalAvg.independent, color: COLORS[2] },
+    { label: 'Other', val: d.other / d.total * 100, avg: nationalAvg.other, color: COLORS[3] }
+  ];
+  categories.forEach(function(c) {
+    var max = Math.max(c.val, c.avg, 50);
+    benchDiv.innerHTML +=
+      '<div class="bench-row"><span class="bench-label">' + c.label + ' (yours)</span>' +
+      '<div class="bench-track"><div class="bench-fill" style="width:' + (c.val / max * 100) + '%;background:' + c.color + ';"></div></div>' +
+      '<span class="bench-val">' + Math.round(c.val) + '%</span></div>' +
+      '<div class="bench-row"><span class="bench-label" style="color:var(--muted);font-style:italic;">' + c.label + ' (national)</span>' +
+      '<div class="bench-track"><div class="bench-fill" style="width:' + (c.avg / max * 100) + '%;background:var(--border);"></div></div>' +
+      '<span class="bench-val" style="font-style:italic;">' + c.avg + '%</span></div>';
+  });
+}
+
+document.getElementById('la-select').addEventListener('change', function() {
+  if (this.value) updateSEND(this.value);
+});
+
+// ===== TABS =====
+function switchTab(tab, btn) {
+  document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+  document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); c.style.display = 'none'; });
+  btn.classList.add('active');
+  var el = document.getElementById('tab-' + tab);
+  el.classList.add('active'); el.style.display = 'block';
+}
+
+// ===== POLL =====
+var selectedPoll = -1;
+function selectPoll(el, idx) {
+  selectedPoll = idx;
+  document.querySelectorAll('.poll-option').forEach(function(o, i) {
+    o.classList.toggle('selected', i === idx);
+    o.setAttribute('aria-checked', i === idx ? 'true' : 'false');
+  });
+  document.getElementById('poll-submit').disabled = false;
+}
+function submitPoll() {
+  if (selectedPoll < 0) return;
+  var region = document.getElementById('poll-region-select').value;
+  localStorage.setItem('signal-poll-week4', JSON.stringify({ vote: selectedPoll, region: region }));
+  document.getElementById('poll-form').style.display = 'none';
+  document.getElementById('poll-thanks').style.display = 'block';
+}
+// Check if already voted
+(function() {
+  var saved = localStorage.getItem('signal-poll-week4');
+  if (saved) {
+    document.getElementById('poll-form').style.display = 'none';
+    document.getElementById('poll-thanks').style.display = 'block';
+  }
+})();
+
+// ===== EMAIL MODAL =====
+function openEmailModal() { document.getElementById('emailModal').classList.add('open'); document.getElementById('modal-form').style.display = 'block'; document.getElementById('modal-success').style.display = 'none'; setTimeout(function() { document.getElementById('modal-email').focus(); }, 100); }
+function closeEmailModal() { document.getElementById('emailModal').classList.remove('open'); }
+function submitEmail() { var email = document.getElementById('modal-email').value; if (email && email.includes('@')) { document.getElementById('modal-form').style.display = 'none'; document.getElementById('modal-success').style.display = 'block'; setTimeout(closeEmailModal, 2000); } }
+document.getElementById('emailModal').addEventListener('click', function(e) { if (e.target === this) closeEmailModal(); });
+
+// ===== COPY SUMMARY =====
+function copySummary() {
+  var la = document.getElementById('la-select').value || 'Not selected';
+  var text = 'SEND Placement Explorer — Schoolgle Signal\nLocal Authority: ' + la + '\n';
+  if (laData[la]) {
+    var d = laData[la];
+    text += 'Total EHCPs: ' + d.total + '\nMainstream: ' + d.mainstream + ' (' + Math.round(d.mainstream/d.total*100) + '%)\n';
+    text += 'Special: ' + d.special + ' (' + Math.round(d.special/d.total*100) + '%)\n';
+    text += 'Independent: ' + d.independent + ' (' + Math.round(d.independent/d.total*100) + '%)\n';
+  }
+  text += 'Illustrative data — verify with DfE statistics.\nhttps://schoolgle.co.uk';
+  navigator.clipboard.writeText(text).then(function() {
+    var toast = document.getElementById('copy-toast');
+    toast.style.display = 'block';
+    setTimeout(function() { toast.style.display = 'none'; }, 2000);
+  });
+}
+
+// ===== MID SUBSCRIBE =====
+function handleMidSubscribe(btn) {
+  var input = btn.previousElementSibling;
+  if (input.value && input.value.includes('@')) { btn.textContent = '✓ Subscribed'; btn.style.background = '#10B981'; setTimeout(function() { btn.textContent = 'Subscribe'; btn.style.background = ''; }, 3000); }
+}
+
+// ===== TOC SCROLL HIGHLIGHT =====
+(function() {
+  var tocLinks = document.querySelectorAll('.toc-link');
+  if (!tocLinks.length) return;
+  var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        var id = entry.target.getAttribute('id');
+        tocLinks.forEach(function(link) { link.classList.toggle('active', link.getAttribute('data-section') === id); });
+      }
+    });
+  }, { rootMargin: '-100px 0px -60% 0px', threshold: 0 });
+  tocLinks.forEach(function(link) { var target = document.getElementById(link.getAttribute('data-section')); if (target) observer.observe(target); });
+})();
+
+// ===== SMOOTH SCROLL =====
+document.querySelectorAll('a[href^="#"]').forEach(function(a) {
+  a.addEventListener('click', function(e) { var target = document.querySelector(this.getAttribute('href')); if (target) { e.preventDefault(); target.scrollIntoView({ behavior: 'smooth', block: 'start' }); } });
+});
+</script>
+</body>
+</html>

@@ -3,7 +3,7 @@
  * Selects the best model for each task using OpenRouter
  */
 
-import type { ModelConfig, TaskType, AppContext } from '../types';
+import type { ModelConfig, TaskType, AppContext } from "../types";
 import {
   OPENROUTER_MODELS,
   MODEL_ALIASES,
@@ -12,7 +12,7 @@ import {
   type ChatMessage,
   type ChatOptions,
   type ChatResponse,
-} from './openrouter';
+} from "./openrouter";
 
 // ============================================================================
 // Task-to-Model Mapping
@@ -24,28 +24,60 @@ import {
  */
 const TASK_MODEL_MAP: Record<TaskType, string[]> = {
   // Fast/cheap for routing
-  'intent-classification': ['openai/gpt-4o-mini', 'google/gemini-2.0-flash-exp', 'deepseek/deepseek-chat'],
-  'work-focus-check': ['openai/gpt-4o-mini', 'google/gemini-2.0-flash-exp'],
+  "intent-classification": [
+    "openai/gpt-4o-mini",
+    "google/gemini-2.0-flash-exp",
+    "deepseek/deepseek-chat",
+  ],
+  "work-focus-check": ["openai/gpt-4o-mini", "google/gemini-2.0-flash-exp"],
 
   // High quality for specialist responses
-  'specialist-response': ['anthropic/claude-3.5-sonnet', 'deepseek/deepseek-chat', 'openai/gpt-4o'],
-  'perspective-generation': ['deepseek/deepseek-chat', 'openai/gpt-4o-mini', 'google/gemini-2.0-flash-exp'],
-  'synthesis': ['anthropic/claude-3.5-sonnet', 'deepseek/deepseek-chat'],
+  "specialist-response": [
+    "anthropic/claude-3.5-sonnet",
+    "deepseek/deepseek-chat",
+    "openai/gpt-4o",
+  ],
+  "perspective-generation": [
+    "deepseek/deepseek-chat",
+    "openai/gpt-4o-mini",
+    "google/gemini-2.0-flash-exp",
+  ],
+  synthesis: ["anthropic/claude-3.5-sonnet", "deepseek/deepseek-chat"],
 
   // Vision needed
-  'ui-analysis': ['anthropic/claude-3.5-sonnet', 'openai/gpt-4o', 'google/gemini-2.5-pro'],
+  "ui-analysis": [
+    "google/gemini-2.5-flash-preview",
+    "openai/gpt-4o",
+    "google/gemini-2.5-pro",
+  ],
 
   // Fast/cheap for actions
-  'action-planning': ['openai/gpt-4o-mini', 'google/gemini-2.0-flash-exp'],
+  "action-planning": ["openai/gpt-4o-mini", "google/gemini-2.0-flash-exp"],
 };
 
 /**
  * Plan-based model constraints
  */
 const PLAN_MODEL_CONSTRAINTS: Record<string, string[]> = {
-  'free': ['openai/gpt-4o-mini', 'google/gemini-2.0-flash-exp', 'deepseek/deepseek-chat'],
-  'schools': ['anthropic/claude-3.5-sonnet', 'deepseek/deepseek-chat', 'openai/gpt-4o', 'google/gemini-2.0-flash-exp'],
-  'trusts': ['anthropic/claude-3.5-sonnet', 'deepseek/deepseek-r1', 'openai/gpt-4o'],
+  free: [
+    "openai/gpt-4o-mini",
+    "google/gemini-2.0-flash-exp",
+    "deepseek/deepseek-chat",
+    "google/gemini-2.5-flash-preview",
+  ],
+  schools: [
+    "anthropic/claude-3.5-sonnet",
+    "deepseek/deepseek-chat",
+    "openai/gpt-4o",
+    "google/gemini-2.0-flash-exp",
+    "google/gemini-2.5-flash-preview",
+  ],
+  trusts: [
+    "anthropic/claude-3.5-sonnet",
+    "deepseek/deepseek-r1",
+    "openai/gpt-4o",
+    "google/gemini-2.5-flash-preview",
+  ],
 };
 
 // ============================================================================
@@ -66,12 +98,15 @@ export class ModelRouter {
    * Select the best model for a given task based on context
    */
   selectModel(task: TaskType, context: AppContext): ModelConfig {
-    const availableModels = TASK_MODEL_MAP[task] || TASK_MODEL_MAP['specialist-response'];
+    const availableModels =
+      TASK_MODEL_MAP[task] || TASK_MODEL_MAP["specialist-response"];
     const { plan, creditsRemaining } = context.subscription;
 
     // Filter models by plan
     const planModels = PLAN_MODEL_CONSTRAINTS[plan] || availableModels;
-    const eligibleModels = availableModels.filter(m => planModels.includes(m));
+    const eligibleModels = availableModels.filter((m) =>
+      planModels.includes(m),
+    );
 
     // If low credits, use cheapest option
     if (creditsRemaining < 1000) {
@@ -95,7 +130,7 @@ export class ModelRouter {
   async chat(
     systemPrompt: string,
     userMessage: string,
-    options: ChatOptions = {}
+    options: ChatOptions = {},
   ): Promise<ChatResponse> {
     return this.client.chatWithSystem(systemPrompt, userMessage, options);
   }
@@ -105,7 +140,7 @@ export class ModelRouter {
    */
   async chatMessages(
     messages: ChatMessage[],
-    options: ChatOptions = {}
+    options: ChatOptions = {},
   ): Promise<ChatResponse> {
     return this.client.chat(messages, options);
   }
@@ -115,9 +150,35 @@ export class ModelRouter {
    */
   async *chatStream(
     messages: ChatMessage[],
-    options: ChatOptions = {}
+    options: ChatOptions = {},
   ): AsyncGenerator<string> {
     yield* this.client.chatStream(messages, options);
+  }
+
+  /**
+   * Build a multimodal message with text and optional image
+   */
+  buildVisionMessage(
+    text: string,
+    imageBase64?: string,
+    mimeType: string = "image/png",
+  ): ChatMessage {
+    if (!imageBase64) {
+      return { role: "user", content: text };
+    }
+
+    // Ensure proper data URL format
+    const imageUrl = imageBase64.startsWith("data:")
+      ? imageBase64
+      : `data:${mimeType};base64,${imageBase64}`;
+
+    return {
+      role: "user",
+      content: [
+        { type: "text", text },
+        { type: "image_url", image_url: { url: imageUrl, detail: "auto" } },
+      ],
+    };
   }
 
   /**
@@ -135,7 +196,7 @@ export class ModelRouter {
       }
     }
 
-    return cheapest || OPENROUTER_MODELS['openai/gpt-4o-mini'];
+    return cheapest || OPENROUTER_MODELS["openai/gpt-4o-mini"];
   }
 
   /**
@@ -170,7 +231,9 @@ export function getModelRouter(apiKey?: string): ModelRouter {
 
   if (!routerInstance) {
     // Pass API key to the OpenRouter client
-    const client = apiKey ? createOpenRouterClient(apiKey) : createOpenRouterClient();
+    const client = apiKey
+      ? createOpenRouterClient(apiKey)
+      : createOpenRouterClient();
     routerInstance = new ModelRouter(client);
     instanceApiKey = apiKey;
   }
@@ -186,7 +249,7 @@ export function getModelRouter(apiKey?: string): ModelRouter {
  */
 export async function selectModel(
   task: TaskType,
-  context: AppContext
+  context: AppContext,
 ): Promise<ModelConfig> {
   const router = getModelRouter();
   return router.selectModel(task, context);
@@ -195,14 +258,17 @@ export async function selectModel(
 /**
  * Check credits (simplified)
  */
-export async function checkCredits(subscription: { creditsRemaining: number }): Promise<{
+export async function checkCredits(subscription: {
+  creditsRemaining: number;
+}): Promise<{
   sufficient: boolean;
   estimatedCost: number;
 }> {
   // Estimate for typical query
   const estimatedTokens = 1000;
-  const model = OPENROUTER_MODELS['google/gemini-2.0-flash-exp'];
-  const estimatedCost = (estimatedTokens / 1_000_000) * model.costPerMillionTokens;
+  const model = OPENROUTER_MODELS["google/gemini-2.0-flash-exp"];
+  const estimatedCost =
+    (estimatedTokens / 1_000_000) * model.costPerMillionTokens;
 
   return {
     sufficient: subscription.creditsRemaining > estimatedCost,
@@ -216,7 +282,7 @@ export async function checkCredits(subscription: { creditsRemaining: number }): 
 export function calculateCost(
   modelId: string,
   inputTokens: number,
-  outputTokens: number
+  outputTokens: number,
 ): number {
   return calculateORCost(modelId, inputTokens, outputTokens);
 }

@@ -1,5 +1,5 @@
 // Force dynamic rendering for all pages to avoid useSearchParams() build errors
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 import type { Metadata } from "next";
 import { Inter, Outfit } from "next/font/google";
@@ -13,19 +13,20 @@ import { EdChatbotProvider } from "@/components/EdChatbotProvider";
 
 const inter = Inter({
   subsets: ["latin"],
-  variable: '--font-inter',
+  variable: "--font-inter",
 });
 
 const outfit = Outfit({
   subsets: ["latin"],
-  variable: '--font-outfit',
+  variable: "--font-outfit",
 });
 
 export const metadata: Metadata = {
   title: "Schoolgle - Ofsted Inspection Preparation for UK Schools",
-  description: "Prepare for Ofsted and SIAMS inspections with Schoolgle. AI-powered evidence mapping, SEF generation, and action planning for UK primary schools and trusts.",
+  description:
+    "Prepare for Ofsted and SIAMS inspections with Schoolgle. AI-powered evidence mapping, SEF generation, and action planning for UK primary schools and trusts.",
   icons: {
-    icon: '/favicon.ico',
+    icon: "/favicon.ico",
   },
   openGraph: {
     title: "Schoolgle - Ofsted Inspection Preparation",
@@ -47,17 +48,27 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${outfit.variable}`} suppressHydrationWarning>
-      <body className="antialiased min-h-screen relative bg-background text-foreground" suppressHydrationWarning>
+    <html
+      lang="en"
+      className={`${inter.variable} ${outfit.variable}`}
+      suppressHydrationWarning
+    >
+      <head>
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, viewport-fit=cover"
+        />
+      </head>
+      <body
+        className="antialiased min-h-screen relative bg-background text-foreground"
+        suppressHydrationWarning
+      >
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
           <ErrorBoundary name="RootLayout">
             <SupabaseAuthProvider>
               <EdChatbotProvider>
                 <SmoothScroll>
-                  <AntigravityBackground />
-                  <div className="relative z-0">
-                    {children}
-                  </div>
+                  <div className="relative z-0">{children}</div>
                 </SmoothScroll>
                 <OfflineIndicator />
               </EdChatbotProvider>

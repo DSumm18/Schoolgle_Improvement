@@ -2,30 +2,29 @@
  * Ed Orchestrator - Main entry point for processing user questions through the agent framework
  */
 
-import type {
-  OrchestratorConfig,
-  AppContext,
-  EdResponse,
-} from '../types';
-import { routeToSpecialist } from './agent-router';
-import { classifyIntent, isWorkRelated } from './intent-classifier';
-import { createCreditManager } from '../credit/manager';
-import { applyGuardrails } from '../guardrails/pipeline';
-import { generateMultiPerspectiveResponse } from '../perspectives/generator';
+import type { OrchestratorConfig, AppContext, EdResponse } from "../types";
+import { routeToSpecialist } from "./agent-router";
+import { classifyIntent, isWorkRelated } from "./intent-classifier";
+import { createCreditManager } from "../credit/manager";
+import { applyGuardrails } from "../guardrails/pipeline";
+import { generateMultiPerspectiveResponse } from "../perspectives/generator";
 import {
   buildEnrichedPrompt,
   loadSchoolContext,
   getTypeSpecificGuidance,
   injectExpertKnowledge,
   mapUrlToDomain,
-  generateProactiveContext
-} from './context-loader';
+  generateProactiveContext,
+} from "./context-loader";
 
-import { CommunicationRouter } from '../communication/communication-router';
-import { CommunicationPayload, CommunicationResult } from '../communication/types';
-import { ResendProvider } from '../communication/providers/resend';
-import { TwilioProvider } from '../communication/providers/twilio';
-import { FishAudioProvider } from '../communication/providers/fish-audio';
+import { CommunicationRouter } from "../communication/communication-router";
+import {
+  CommunicationPayload,
+  CommunicationResult,
+} from "../communication/types";
+import { ResendProvider } from "../communication/providers/resend";
+import { TwilioProvider } from "../communication/providers/twilio";
+import { FishAudioProvider } from "../communication/providers/fish-audio";
 
 /**
  * Ed Orchestrator - coordinates all agent processing
@@ -34,7 +33,7 @@ export class EdOrchestrator {
   private config: OrchestratorConfig;
   private creditManager: ReturnType<typeof createCreditManager>;
   private commRouter: CommunicationRouter;
-  private schoolContext: AppContext['schoolData'] | null = null;
+  private schoolContext: AppContext["schoolData"] | null = null;
   private totalTokensUsed = 0;
 
   constructor(config: OrchestratorConfig) {
@@ -53,20 +52,25 @@ export class EdOrchestrator {
   private initializeProviders() {
     // Email (Resend)
     if (process.env.RESEND_API_KEY) {
-      this.commRouter.registerProvider(new ResendProvider(process.env.RESEND_API_KEY));
+      this.commRouter.registerProvider(
+        new ResendProvider(process.env.RESEND_API_KEY),
+      );
     }
 
     // SMS (Twilio)
     if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
       this.commRouter.registerProvider(
-        new TwilioProvider(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
+        new TwilioProvider(
+          process.env.TWILIO_ACCOUNT_SID,
+          process.env.TWILIO_AUTH_TOKEN,
+        ),
       );
     }
 
     // TTS (Fish Audio)
     if (process.env.NEXT_PUBLIC_FISH_AUDIO_API_KEY) {
       this.commRouter.registerProvider(
-        new FishAudioProvider(process.env.NEXT_PUBLIC_FISH_AUDIO_API_KEY)
+        new FishAudioProvider(process.env.NEXT_PUBLIC_FISH_AUDIO_API_KEY),
       );
     }
   }
@@ -74,7 +78,9 @@ export class EdOrchestrator {
   /**
    * Send a communication message
    */
-  async sendMessage(payload: CommunicationPayload): Promise<CommunicationResult> {
+  async sendMessage(
+    payload: CommunicationPayload,
+  ): Promise<CommunicationResult> {
     const result = await this.commRouter.send(payload);
 
     if (result.success) {
@@ -93,7 +99,7 @@ export class EdOrchestrator {
       app?: string;
       page?: string;
       screenshot?: string;
-    } = {}
+    } = {},
   ): Promise<EdResponse> {
     const startTime = Date.now();
 
@@ -114,7 +120,10 @@ export class EdOrchestrator {
     // Load school context if not already loaded
     if (!this.schoolContext && this.config.supabase) {
       try {
-        this.schoolContext = await loadSchoolContext(this.config.orgId, this.config.supabase);
+        this.schoolContext = await loadSchoolContext(
+          this.config.orgId,
+          this.config.supabase,
+        );
         appContext.schoolData = this.schoolContext;
       } catch {
         // Don't fail if context loading fails
@@ -126,37 +135,48 @@ export class EdOrchestrator {
       const classification = classifyIntent(
         question,
         appContext.activeApp,
-        appContext.userRole
+        appContext.userRole,
       );
 
       // If not work-related, return redirect message
       if (!classification.isWorkRelated) {
         return {
           response: this.getWorkFocusRedirect(),
-          specialist: 'ed-general',
-          confidence: 'HIGH',
+          specialist: "ed-general",
+          confidence: "HIGH",
           sources: [],
           requiresHuman: false,
           metadata: {
-            domain: 'general',
+            domain: "general",
             processedAt: new Date(),
           },
         };
       }
 
       // Step 2: Detect domain and inject expert knowledge
-      const domain = appContext.currentTask ? mapUrlToDomain(appContext.currentTask) : null;
+      const domain = appContext.currentTask
+        ? mapUrlToDomain(appContext.currentTask)
+        : null;
       let enrichedQuestion = question;
 
       if (domain && this.config.supabase) {
-        const expertKnowledge = await injectExpertKnowledge(domain, this.config.supabase);
+        const expertKnowledge = await injectExpertKnowledge(
+          domain,
+          this.config.supabase,
+        );
         if (expertKnowledge) {
           enrichedQuestion = `${expertKnowledge}\n\nUser Question: ${question}`;
         }
       }
 
       // Step 3: Route to specialist and get initial response
-      const agentResponse = await routeToSpecialist(enrichedQuestion, appContext);
+      const agentResponse = await routeToSpecialist(
+        enrichedQuestion,
+        appContext,
+        {
+          screenshot: context.screenshot,
+        },
+      );
 
       // Track tokens from specialist response
       if (agentResponse.metadata?.tokensUsed) {
@@ -166,14 +186,17 @@ export class EdOrchestrator {
 
       // Step 3: Check if multi-perspective is needed
       let finalContent = agentResponse.content;
-      let perspectives: EdResponse['perspectives'] | undefined;
+      let perspectives: EdResponse["perspectives"] | undefined;
       let additionalTokens = 0;
 
-      if (classification.requiresMultiPerspective && this.config.enableMultiPerspective !== false) {
+      if (
+        classification.requiresMultiPerspective &&
+        this.config.enableMultiPerspective !== false
+      ) {
         const perspectiveResponse = await generateMultiPerspectiveResponse(
           question,
           agentResponse.content,
-          appContext
+          appContext,
         );
         finalContent = perspectiveResponse.synthesized;
         perspectives = perspectiveResponse.perspectives;
@@ -187,7 +210,7 @@ export class EdOrchestrator {
       const guardedResponse = await applyGuardrails(
         finalContent,
         appContext,
-        (await this.getDomainForSpecialist(agentResponse.agentId)) || undefined
+        (await this.getDomainForSpecialist(agentResponse.agentId)) || undefined,
       );
 
       // Estimate guardrails tokens
@@ -199,11 +222,16 @@ export class EdOrchestrator {
         specialist: agentResponse.agentId,
         confidence: agentResponse.confidence,
         sources: agentResponse.sources || [],
-        requiresHuman: guardedResponse.requiresHuman || agentResponse.requiresHuman || false,
-        warnings: guardedResponse.warning ? [guardedResponse.warning] : undefined,
+        requiresHuman:
+          guardedResponse.requiresHuman || agentResponse.requiresHuman || false,
+        warnings: guardedResponse.warning
+          ? [guardedResponse.warning]
+          : undefined,
         perspectives,
         metadata: {
-          domain: (await this.getDomainForSpecialist(agentResponse.agentId)) || 'general',
+          domain:
+            (await this.getDomainForSpecialist(agentResponse.agentId)) ||
+            "general",
           tokensUsed: {
             input: Math.round(this.totalTokensUsed * 0.4),
             output: Math.round(this.totalTokensUsed * 0.6),
@@ -217,20 +245,19 @@ export class EdOrchestrator {
       };
 
       return response;
-
     } catch (error) {
       // Handle errors gracefully
       return {
         response: this.getErrorResponse(error),
-        specialist: 'ed-general',
-        confidence: 'LOW',
+        specialist: "ed-general",
+        confidence: "LOW",
         sources: [],
         requiresHuman: true,
-        warnings: ['An error occurred while processing your question.'],
+        warnings: ["An error occurred while processing your question."],
         metadata: {
-          domain: 'general',
+          domain: "general",
           processedAt: new Date(),
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: error instanceof Error ? error.message : "Unknown error",
         },
       };
     }
@@ -246,7 +273,7 @@ export class EdOrchestrator {
   /**
    * Update school context
    */
-  setSchoolContext(context: AppContext['schoolData']) {
+  setSchoolContext(context: AppContext["schoolData"]) {
     this.schoolContext = context;
   }
 
@@ -287,8 +314,10 @@ export class EdOrchestrator {
   /**
    * Get domain for specialist
    */
-  private async getDomainForSpecialist(specialistId: string): Promise<string | undefined> {
-    const { getAgent } = await import('../agents');
+  private async getDomainForSpecialist(
+    specialistId: string,
+  ): Promise<string | undefined> {
+    const { getAgent } = await import("../agents");
     const agent = getAgent(specialistId as any);
     return agent?.domain;
   }
@@ -311,18 +340,18 @@ export class EdOrchestrator {
     userName?: string;
   }): Promise<{ greeting: string; alerts: string[] }> {
     const domain = context.url ? mapUrlToDomain(context.url) : null;
-    let greeting = `Hi ${context.userName || 'there'}! I'm Ed, your school specialist. How can I help you today?`;
+    let greeting = `Hi ${context.userName || "there"}! I'm Ed, your school specialist. How can I help you today?`;
     let alerts: string[] = [];
 
     if (domain && this.config.supabase && this.config.orgId) {
       alerts = await generateProactiveContext(
         this.config.orgId,
         domain,
-        this.config.supabase
+        this.config.supabase,
       );
 
       if (alerts.length > 0) {
-        greeting = `Hi ${context.userName || 'there'}! I noticed you're looking at **${domain}**. 
+        greeting = `Hi ${context.userName || "there"}! I noticed you're looking at **${domain}**. 
 I've scanned your school's compliance data and found **${alerts.length}** items that might need your attention.`;
       }
     }
@@ -352,13 +381,19 @@ What work task can I help you with right now?`;
   private getErrorResponse(error: unknown): string {
     if (error instanceof Error) {
       // Check for specific error types
-      if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+      if (
+        error.message.includes("401") ||
+        error.message.includes("Unauthorized")
+      ) {
         return `I'm having trouble connecting to my AI services right now.
 
 This might be an API configuration issue. Please try again or contact support.`;
       }
 
-      if (error.message.includes('429') || error.message.includes('rate limit')) {
+      if (
+        error.message.includes("429") ||
+        error.message.includes("rate limit")
+      ) {
         return `I'm receiving too many requests right now.
 
 Please wait a moment and try again.`;
@@ -370,7 +405,7 @@ Please wait a moment and try again.`;
 
 If this continues, please contact support.`;
     }
-    return 'I encountered an error processing your request. Please try again.';
+    return "I encountered an error processing your request. Please try again.";
   }
 }
 
@@ -381,7 +416,9 @@ If this continues, please contact support.`;
 /**
  * Create orchestrator with config
  */
-export async function createOrchestrator(config: OrchestratorConfig): Promise<EdOrchestrator> {
+export async function createOrchestrator(
+  config: OrchestratorConfig,
+): Promise<EdOrchestrator> {
   // Load school context if orgId provided and not already loaded
   let schoolContext = config.schoolData;
   if (config.orgId && !schoolContext && config.supabase) {
@@ -401,15 +438,17 @@ export async function createOrchestrator(config: OrchestratorConfig): Promise<Ed
 /**
  * Create a simple orchestrator for testing
  */
-export function createTestOrchestrator(overrides?: Partial<OrchestratorConfig>): EdOrchestrator {
+export function createTestOrchestrator(
+  overrides?: Partial<OrchestratorConfig>,
+): EdOrchestrator {
   return new EdOrchestrator({
     supabase: null,
-    userId: 'test-user',
-    orgId: 'test-org',
-    userRole: 'staff',
+    userId: "test-user",
+    orgId: "test-org",
+    userRole: "staff",
     subscription: {
-      plan: 'schools',
-      features: ['estates', 'hr', 'send', 'data', 'curriculum'],
+      plan: "schools",
+      features: ["estates", "hr", "send", "data", "curriculum"],
       creditsRemaining: 10000,
       creditsUsed: 0,
     },

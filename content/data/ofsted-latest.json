@@ -1,0 +1,249 @@
+{
+  "as_at": "31 August 2025",
+  "source": "State-funded schools inspections and outcomes as at 31 August 2025",
+  "source_url": "https://www.gov.uk/government/statistics/state-funded-schools-inspections-and-outcomes-as-at-31-august-2025",
+  "total_schools": 22005,
+  "graded_schools": 18618,
+  "not_judged_schools": 3269,
+  "national": {
+    "total": 18618,
+    "outstanding": 2063,
+    "outstanding_pct": 11.1,
+    "good": 15264,
+    "good_pct": 82.0,
+    "requires_improvement": 1087,
+    "ri_pct": 5.8,
+    "inadequate": 204,
+    "inadequate_pct": 1.1,
+    "good_or_outstanding_pct": 93.1
+  },
+  "phases": {
+    "Nursery": {
+      "total": 354,
+      "outstanding": 200,
+      "outstanding_pct": 56.5,
+      "good": 150,
+      "good_pct": 42.4,
+      "requires_improvement": 4,
+      "ri_pct": 1.1,
+      "inadequate": 0,
+      "inadequate_pct": 0.0,
+      "good_or_outstanding_pct": 98.9
+    },
+    "PRU": {
+      "total": 275,
+      "outstanding": 53,
+      "outstanding_pct": 19.3,
+      "good": 196,
+      "good_pct": 71.3,
+      "requires_improvement": 16,
+      "ri_pct": 5.8,
+      "inadequate": 10,
+      "inadequate_pct": 3.6,
+      "good_or_outstanding_pct": 90.5
+    },
+    "Primary": {
+      "total": 14224,
+      "outstanding": 1114,
+      "outstanding_pct": 7.8,
+      "good": 12223,
+      "good_pct": 85.9,
+      "requires_improvement": 778,
+      "ri_pct": 5.5,
+      "inadequate": 109,
+      "inadequate_pct": 0.8,
+      "good_or_outstanding_pct": 93.8
+    },
+    "Secondary": {
+      "total": 2830,
+      "outstanding": 371,
+      "outstanding_pct": 13.1,
+      "good": 2144,
+      "good_pct": 75.8,
+      "requires_improvement": 255,
+      "ri_pct": 9.0,
+      "inadequate": 60,
+      "inadequate_pct": 2.1,
+      "good_or_outstanding_pct": 88.9
+    },
+    "Special": {
+      "total": 935,
+      "outstanding": 325,
+      "outstanding_pct": 34.8,
+      "good": 551,
+      "good_pct": 58.9,
+      "requires_improvement": 34,
+      "ri_pct": 3.6,
+      "inadequate": 25,
+      "inadequate_pct": 2.7,
+      "good_or_outstanding_pct": 93.7
+    }
+  },
+  "regions": {
+    "East Midlands": {
+      "total": 1744,
+      "outstanding": 107,
+      "outstanding_pct": 6.1,
+      "good": 1512,
+      "good_pct": 86.7,
+      "requires_improvement": 109,
+      "ri_pct": 6.2,
+      "inadequate": 16,
+      "inadequate_pct": 0.9,
+      "good_or_outstanding_pct": 92.8
+    },
+    "East of England": {
+      "total": 2136,
+      "outstanding": 201,
+      "outstanding_pct": 9.4,
+      "good": 1784,
+      "good_pct": 83.5,
+      "requires_improvement": 127,
+      "ri_pct": 5.9,
+      "inadequate": 24,
+      "inadequate_pct": 1.1,
+      "good_or_outstanding_pct": 92.9
+    },
+    "London": {
+      "total": 2236,
+      "outstanding": 564,
+      "outstanding_pct": 25.2,
+      "good": 1613,
+      "good_pct": 72.1,
+      "requires_improvement": 54,
+      "ri_pct": 2.4,
+      "inadequate": 5,
+      "inadequate_pct": 0.2,
+      "good_or_outstanding_pct": 97.4
+    },
+    "North East": {
+      "total": 979,
+      "outstanding": 90,
+      "outstanding_pct": 9.2,
+      "good": 835,
+      "good_pct": 85.3,
+      "requires_improvement": 46,
+      "ri_pct": 4.7,
+      "inadequate": 8,
+      "inadequate_pct": 0.8,
+      "good_or_outstanding_pct": 94.5
+    },
+    "North West": {
+      "total": 2719,
+      "outstanding": 298,
+      "outstanding_pct": 11.0,
+      "good": 2184,
+      "good_pct": 80.3,
+      "requires_improvement": 197,
+      "ri_pct": 7.2,
+      "inadequate": 40,
+      "inadequate_pct": 1.5,
+      "good_or_outstanding_pct": 91.3
+    },
+    "South East": {
+      "total": 2833,
+      "outstanding": 326,
+      "outstanding_pct": 11.5,
+      "good": 2347,
+      "good_pct": 82.8,
+      "requires_improvement": 120,
+      "ri_pct": 4.2,
+      "inadequate": 40,
+      "inadequate_pct": 1.4,
+      "good_or_outstanding_pct": 94.4
+    },
+    "South West": {
+      "total": 1991,
+      "outstanding": 97,
+      "outstanding_pct": 4.9,
+      "good": 1687,
+      "good_pct": 84.7,
+      "requires_improvement": 177,
+      "ri_pct": 8.9,
+      "inadequate": 30,
+      "inadequate_pct": 1.5,
+      "good_or_outstanding_pct": 89.6
+    },
+    "West Midlands": {
+      "total": 2065,
+      "outstanding": 202,
+      "outstanding_pct": 9.8,
+      "good": 1697,
+      "good_pct": 82.2,
+      "requires_improvement": 139,
+      "ri_pct": 6.7,
+      "inadequate": 27,
+      "inadequate_pct": 1.3,
+      "good_or_outstanding_pct": 92.0
+    },
+    "Yorkshire and the Humber": {
+      "total": 1915,
+      "outstanding": 178,
+      "outstanding_pct": 9.3,
+      "good": 1605,
+      "good_pct": 83.8,
+      "requires_improvement": 118,
+      "ri_pct": 6.2,
+      "inadequate": 14,
+      "inadequate_pct": 0.7,
+      "good_or_outstanding_pct": 93.1
+    }
+  },
+  "safeguarding": {
+    "effective": 16627,
+    "not_effective": 99,
+    "total": 16726,
+    "effective_pct": 99.4
+  },
+  "sub_grades": {
+    "quality_of_education": {
+      "total": 13094,
+      "outstanding": 1679,
+      "outstanding_pct": 12.8,
+      "good": 9618,
+      "good_pct": 73.5,
+      "requires_improvement": 1604,
+      "ri_pct": 12.2,
+      "inadequate": 193,
+      "inadequate_pct": 1.5,
+      "good_or_outstanding_pct": 86.3
+    },
+    "behaviour": {
+      "total": 13094,
+      "outstanding": 3145,
+      "outstanding_pct": 24.0,
+      "good": 9116,
+      "good_pct": 69.6,
+      "requires_improvement": 703,
+      "ri_pct": 5.4,
+      "inadequate": 130,
+      "inadequate_pct": 1.0,
+      "good_or_outstanding_pct": 93.6
+    },
+    "personal_development": {
+      "total": 13094,
+      "outstanding": 3675,
+      "outstanding_pct": 28.1,
+      "good": 8848,
+      "good_pct": 67.6,
+      "requires_improvement": 510,
+      "ri_pct": 3.9,
+      "inadequate": 61,
+      "inadequate_pct": 0.5,
+      "good_or_outstanding_pct": 95.6
+    },
+    "leadership": {
+      "total": 21887,
+      "outstanding": 3491,
+      "outstanding_pct": 16.0,
+      "good": 16952,
+      "good_pct": 77.5,
+      "requires_improvement": 1205,
+      "ri_pct": 5.5,
+      "inadequate": 239,
+      "inadequate_pct": 1.1,
+      "good_or_outstanding_pct": 93.4
+    }
+  },
+  "methodology": "Most recent inspection per school. 'Not judged' schools (inspected after Sep 2024) excluded from overall effectiveness but included in sub-grade analysis."
+}

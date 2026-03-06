@@ -1,0 +1,728 @@
+<!doctype html>
+<html lang="en-GB" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>The Schoolgle Signal — Week 12 — 10 March 2026</title>
+    <style>
+      :root {
+        --font-body:
+          "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
+          sans-serif;
+        --font-display:
+          "Outfit", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+        --max-width: 720px;
+        --radius: 14px;
+        --card-pad: 28px;
+        --accent: #00d4d4;
+        --accent-dim: rgba(0, 212, 212, 0.1);
+        --accent-dark: #009e9e;
+        --font-size: 16px;
+        --chip-finance: #10b981;
+        --chip-compliance: #eab308;
+        --chip-send: #f59e0b;
+      }
+      [data-theme="light"] {
+        --bg: #f7f7f9;
+        --surface: #ffffff;
+        --elevated: #ffffff;
+        --text: #0b1220;
+        --text-secondary: #374151;
+        --muted: #5a6578;
+        --border: #e5e7eb;
+        --border-light: #f0f1f4;
+        --quote-bg: #f0f2f5;
+        --shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+        --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.08);
+        --error-bg: #fef2f2;
+        --error-text: #dc2626;
+        --error-border: #fecaca;
+        --success-bg: #f0fdf4;
+        --success-text: #166534;
+      }
+      [data-theme="dark"] {
+        --bg: #070b18;
+        --surface: #0e1529;
+        --elevated: #141d35;
+        --text: #eaf0ff;
+        --text-secondary: #c5cfea;
+        --muted: #8b99bc;
+        --border: #1e2a4a;
+        --border-light: #182040;
+        --quote-bg: #111b33;
+        --shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.4);
+        --error-bg: rgba(220, 38, 38, 0.1);
+        --error-text: #f87171;
+        --error-border: #7f1d1d;
+        --success-bg: rgba(22, 101, 52, 0.1);
+        --success-text: #4ade80;
+      }
+      *,
+      *::before,
+      *::after {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: var(--font-body);
+        font-size: var(--font-size);
+        line-height: 1.7;
+        background: var(--bg);
+        color: var(--text);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+      a {
+        color: var(--accent-dark);
+        text-decoration: none;
+      }
+      [data-theme="dark"] a {
+        color: var(--accent);
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          transition: none !important;
+          animation: none !important;
+        }
+      }
+
+      .issue-header {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        box-shadow: var(--shadow);
+        padding: 12px 20px;
+      }
+      .issue-header-inner {
+        max-width: 960px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .issue-header-title {
+        font-family: var(--font-display);
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--text);
+      }
+      .issue-header-title span {
+        color: var(--accent);
+      }
+      .issue-header-date {
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .main-content {
+        max-width: var(--max-width);
+        margin: 0 auto;
+        padding: 32px 16px 80px;
+      }
+
+      .page-header {
+        margin-bottom: 36px;
+        padding-bottom: 24px;
+        border-bottom: 2px solid var(--border);
+      }
+      .page-header h1 {
+        font-family: var(--font-display);
+        font-size: 28px;
+        font-weight: 300;
+        color: var(--text);
+        line-height: 1.2;
+      }
+      .page-header h1 span {
+        color: var(--accent);
+        font-weight: 700;
+      }
+      .header-meta {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+      }
+      .header-meta .date {
+        font-size: 14px;
+        color: var(--muted);
+      }
+
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: var(--card-pad);
+        margin-bottom: 24px;
+        box-shadow: var(--shadow);
+      }
+      .chip {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 12px;
+      }
+      .chip-compliance {
+        background: rgba(234, 179, 8, 0.12);
+        color: #92400e;
+      }
+      .chip-send {
+        background: rgba(245, 158, 11, 0.12);
+        color: #92400e;
+      }
+      [data-theme="dark"] .chip-compliance {
+        color: #fde047;
+      }
+      [data-theme="dark"] .chip-send {
+        color: #fcd34d;
+      }
+      .card h2 {
+        font-family: var(--font-display);
+        font-size: 1.5rem;
+        font-weight: 600;
+        line-height: 1.3;
+        margin-bottom: 8px;
+        color: var(--text);
+      }
+      .card .summary {
+        font-size: 15px;
+        color: var(--muted);
+        margin-bottom: 18px;
+        line-height: 1.6;
+      }
+      .card h3 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin: 28px 0 10px;
+        color: var(--text);
+      }
+      .card p {
+        margin-bottom: 14px;
+        line-height: 1.7;
+      }
+      .card ul,
+      .card ol {
+        margin: 10px 0 16px 22px;
+      }
+      .card li {
+        margin-bottom: 8px;
+        line-height: 1.6;
+      }
+      .card strong {
+        color: var(--text);
+      }
+
+      .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 16px 0;
+        font-size: 14px;
+      }
+      .data-table th {
+        text-align: left;
+        padding: 10px 12px;
+        background: var(--quote-bg);
+        font-weight: 600;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        color: var(--muted);
+        border-bottom: 2px solid var(--border);
+      }
+      .data-table td {
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--border-light);
+      }
+
+      .action-box {
+        background: var(--bg);
+        border-left: 3px solid var(--accent);
+        border-radius: 0 var(--radius) var(--radius) 0;
+        padding: 20px 24px;
+        margin: 24px 0 4px;
+      }
+      .action-box .action-title {
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--accent-dark);
+        margin-bottom: 10px;
+      }
+      [data-theme="dark"] .action-box .action-title {
+        color: var(--accent);
+      }
+      .action-box ul {
+        margin: 0 0 0 18px;
+      }
+      .action-box li {
+        font-size: 15px;
+        margin-bottom: 6px;
+      }
+
+      .stat-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 12px;
+        margin: 20px 0;
+      }
+      @media (max-width: 500px) {
+        .stat-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      .stat-tile {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px;
+        text-align: center;
+      }
+      .stat-tile .stat-value {
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--accent-dark);
+        font-variant-numeric: tabular-nums;
+      }
+      [data-theme="dark"] .stat-tile .stat-value {
+        color: var(--accent);
+      }
+      .stat-tile .stat-label {
+        font-size: 11px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-top: 4px;
+      }
+
+      .quote-box {
+        background: var(--quote-bg);
+        border-radius: var(--radius);
+        padding: 20px 24px;
+        margin: 20px 0;
+        font-style: italic;
+        color: var(--muted);
+        border-left: 3px solid var(--accent);
+      }
+      .quote-box cite {
+        display: block;
+        font-style: normal;
+        font-size: 13px;
+        margin-top: 8px;
+        font-weight: 600;
+        color: var(--text-secondary);
+      }
+
+      .tool-card {
+        background: var(--surface);
+        border: 2px solid var(--accent);
+        border-radius: var(--radius);
+        padding: var(--card-pad);
+        margin-bottom: 24px;
+        position: relative;
+        box-shadow: 0 0 0 4px var(--accent-dim);
+      }
+      .tool-badge {
+        position: absolute;
+        top: -12px;
+        left: 24px;
+        background: var(--accent);
+        color: #070b18;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 1px;
+        padding: 4px 12px;
+        border-radius: 4px;
+        text-transform: uppercase;
+      }
+
+      .cta-panel {
+        margin: 24px 0;
+        padding: 24px;
+        background: linear-gradient(
+          135deg,
+          var(--accent-dim),
+          rgba(0, 212, 212, 0.03)
+        );
+        border: 1px solid rgba(0, 212, 212, 0.25);
+        border-radius: var(--radius);
+        text-align: center;
+      }
+      .cta-panel h3 {
+        margin: 0 0 16px;
+        font-size: 1.1rem;
+      }
+      .cta-btn-primary {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 12px 24px;
+        background: var(--accent);
+        color: #070b18;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        font-family: var(--font-body);
+        min-height: 44px;
+        text-decoration: none;
+      }
+      .cta-btn-primary:hover {
+        opacity: 0.9;
+        text-decoration: none;
+      }
+
+      .page-footer {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 36px var(--card-pad);
+        margin-top: 32px;
+        box-shadow: var(--shadow);
+      }
+      .footer-brand {
+        text-align: center;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .footer-brand .brand-line {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text);
+        margin-bottom: 8px;
+      }
+      .footer-sources {
+        margin-top: 20px;
+        padding-top: 16px;
+        border-top: 1px solid var(--border-light);
+      }
+      .footer-sources h4 {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--muted);
+        margin-bottom: 8px;
+      }
+      .footer-sources ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        font-size: 12px;
+      }
+      .footer-sources li {
+        padding: 3px 0;
+      }
+      .footer-sources a {
+        color: var(--muted);
+      }
+      .footer-sources a:hover {
+        color: var(--accent);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="issue-header">
+      <div class="issue-header-inner">
+        <div class="issue-header-title">The Schoolgle <span>Signal</span></div>
+        <div class="issue-header-date">Week 12 &middot; 10 March 2026</div>
+      </div>
+    </div>
+
+    <main class="main-content">
+      <div class="page-header">
+        <h1>
+          The attendance data just dropped —
+          <span>and the gaps are widening</span>
+        </h1>
+        <div class="header-meta">
+          <span class="date">10 March 2026</span>
+        </div>
+      </div>
+
+      <!-- LEAD STORY -->
+      <article class="card" id="attendance">
+        <span class="chip chip-compliance">Compliance</span>
+        <h2>
+          The DfE's latest attendance data reveals a persistent two-tier system
+        </h2>
+        <p class="summary">
+          National absence rates have improved to 6.7%, but the gap between
+          disadvantaged and non-disadvantaged pupils has widened to 3.4
+          percentage points — the largest since records began.
+        </p>
+
+        <div class="stat-grid">
+          <div class="stat-tile">
+            <div class="stat-value">6.7%</div>
+            <div class="stat-label">Overall absence rate</div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-value">3.4pp</div>
+            <div class="stat-label">Disadvantage gap</div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-value">22.3%</div>
+            <div class="stat-label">Persistently absent</div>
+          </div>
+        </div>
+
+        <h3>What the headline masks</h3>
+        <p>
+          While the national average has improved from its post-pandemic peak of
+          7.5% in 2022-23, the improvement is not evenly distributed. Schools in
+          the most deprived quintile have seen only a 0.3pp improvement,
+          compared to 1.2pp for the least deprived.
+        </p>
+
+        <p>
+          The persistent absence threshold (10%+) still captures
+          <strong>22.3% of all pupils</strong> — that's 1.8 million children
+          missing the equivalent of one day a fortnight or more.
+        </p>
+
+        <h3>The SEND dimension</h3>
+        <p>
+          Pupils with an EHCP have an absence rate of <strong>11.2%</strong>,
+          nearly double the national average. For pupils on SEN Support, it's
+          9.1%. These figures have barely moved in three years, suggesting
+          current interventions aren't reaching the pupils who need them most.
+        </p>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Pupil group</th>
+              <th>Absence rate</th>
+              <th>Change from 2023-24</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>All pupils</td>
+              <td>6.7%</td>
+              <td>-0.4pp</td>
+            </tr>
+            <tr>
+              <td>FSM eligible</td>
+              <td>9.8%</td>
+              <td>-0.2pp</td>
+            </tr>
+            <tr>
+              <td>Non-FSM</td>
+              <td>5.4%</td>
+              <td>-0.5pp</td>
+            </tr>
+            <tr>
+              <td>EHCP</td>
+              <td>11.2%</td>
+              <td>-0.1pp</td>
+            </tr>
+            <tr>
+              <td>SEN Support</td>
+              <td>9.1%</td>
+              <td>-0.2pp</td>
+            </tr>
+            <tr>
+              <td>No SEN</td>
+              <td>5.9%</td>
+              <td>-0.5pp</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="action-box">
+          <div class="action-title">What to do this week</div>
+          <ul>
+            <li>
+              Pull your school's term-to-date absence data and compare against
+              the national benchmarks above
+            </li>
+            <li>
+              Run a disaggregated analysis: FSM, SEND, ethnicity — where are
+              <em>your</em> gaps widest?
+            </li>
+            <li>
+              Check your persistent absence list — are your interventions
+              targeting the right children?
+            </li>
+            <li>
+              If Ofsted is likely this term, prepare your attendance narrative
+              with this national context
+            </li>
+          </ul>
+        </div>
+      </article>
+
+      <!-- SEND STORY -->
+      <article class="card" id="send-attendance">
+        <span class="chip chip-send">SEND</span>
+        <h2>
+          Why SEND attendance is the inspection question you're not ready for
+        </h2>
+        <p class="summary">
+          Ofsted's new report cards will track attendance by subgroup. Schools
+          that can't explain their SEND absence patterns will face difficult
+          conversations.
+        </p>
+
+        <p>
+          Under the new inspection framework, inspectors are specifically
+          looking at how schools support the attendance of vulnerable groups.
+          The shift from single-word judgements to diagnostic report cards means
+          schools need to evidence their approach, not just report their
+          numbers.
+        </p>
+
+        <h3>Three questions inspectors will ask</h3>
+        <ol>
+          <li>
+            <strong
+              >"How do you know which SEND pupils are persistently absent, and
+              what have you done about it?"</strong
+            >
+            — Generic whole-school attendance strategies won't cut it.
+            Inspectors want to see targeted, individual approaches.
+          </li>
+          <li>
+            <strong
+              >"How does your SEND provision address barriers to
+              attendance?"</strong
+            >
+            — If a child with autism is persistently absent, what reasonable
+            adjustments have you made to their school experience?
+          </li>
+          <li>
+            <strong
+              >"What does your attendance data look like disaggregated by SEND
+              status?"</strong
+            >
+            — If you can't produce this quickly, that's a finding in itself.
+          </li>
+        </ol>
+
+        <div class="quote-box">
+          "Schools that treat SEND absence as a welfare issue rather than a
+          provision issue are missing the point. For many of these children, the
+          absence <em>is</em> the feedback on your provision."
+          <cite>— Senior HMI, regional conference, February 2026</cite>
+        </div>
+
+        <div class="action-box">
+          <div class="action-title">Prepare now</div>
+          <ul>
+            <li>
+              Generate a SEND absence report disaggregated by primary need type
+            </li>
+            <li>
+              For your top 10 SEND persistent absentees, document what specific
+              adjustments you've made
+            </li>
+            <li>
+              Brief your SENCo on the inspection questions above — can they
+              answer confidently?
+            </li>
+          </ul>
+        </div>
+      </article>
+
+      <!-- TOOL SPOTLIGHT -->
+      <div class="tool-card" id="tool">
+        <span class="tool-badge">This week's tool</span>
+        <h2>Ofsted Inspection Explorer</h2>
+        <p class="summary">
+          With 129,540 inspection records across 155 local authorities, see how
+          your region compares on Ofsted outcomes — and what the attendance
+          patterns look like in context.
+        </p>
+        <p>
+          The explorer now shows the
+          <strong>August 2025 latest data</strong> alongside five-year trends.
+          93.1% of schools nationally are rated Good or Outstanding — but the
+          regional variation is striking.
+        </p>
+        <p>
+          Use the Ofsted Explorer to benchmark your position before inspection
+          conversations.
+        </p>
+        <div style="text-align: center; margin-top: 20px">
+          <a href="/toolbox/ofsted-explorer" class="cta-btn-primary"
+            >Open Ofsted Explorer</a
+          >
+        </div>
+      </div>
+
+      <!-- CTA -->
+      <div class="cta-panel">
+        <h3>Want the full attendance analysis for your LA?</h3>
+        <p style="color: var(--muted); font-size: 14px; margin-bottom: 16px">
+          Signal Pro subscribers get school-level attendance data overlaid with
+          Ofsted outcomes and deprivation indices.
+        </p>
+        <a href="/insights/newsletter" class="cta-btn-primary"
+          >Subscribe to Signal Pro</a
+        >
+      </div>
+
+      <!-- FOOTER -->
+      <footer class="page-footer">
+        <div class="footer-brand">
+          <div class="brand-line">The Schoolgle Signal</div>
+          <p>
+            Weekly intelligence for school leaders who want the data, not the
+            spin.
+          </p>
+        </div>
+        <div class="footer-sources">
+          <h4>Sources</h4>
+          <ul>
+            <li>
+              DfE, "Pupil absence in schools in England: autumn and spring terms
+              2025-26", March 2026
+            </li>
+            <li>DfE, "Analyse School Performance", accessed March 2026</li>
+            <li>Ofsted, "Report card framework guidance", January 2026</li>
+          </ul>
+        </div>
+      </footer>
+    </main>
+
+    <script>
+      // Theme detection
+      (function () {
+        const prefersDark = window.matchMedia(
+          "(prefers-color-scheme: dark)",
+        ).matches;
+        try {
+          const parentTheme =
+            window.parent?.document?.documentElement?.getAttribute(
+              "data-theme",
+            ) ||
+            window.parent?.document?.documentElement?.classList?.contains(
+              "dark",
+            );
+          if (parentTheme === "dark" || parentTheme === true) {
+            document.documentElement.setAttribute("data-theme", "dark");
+            return;
+          }
+        } catch (e) {}
+        if (prefersDark)
+          document.documentElement.setAttribute("data-theme", "dark");
+      })();
+    </script>
+  </body>
+</html>

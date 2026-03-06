@@ -1,112 +1,105 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { loadMDXFile } from '@/lib/mdx-loader';
-import path from 'path';
-import fs from 'fs';
+import { NextRequest, NextResponse } from "next/server";
+import path from "path";
+import fs from "fs";
 
 /**
- * Find content folder by slug
- * Matches folders like "2025-12-13-ai-expert-work-schools" to slug "ai-expert-work-schools"
+ * Serves insight article content.
+ * Looks for content in this order:
+ * 1. content/insights/{slug}.html (generated articles)
+ * 2. content/insights/{date-slug}/index.mdx (legacy MDX)
+ * 3. content/insights/{slug}.md (legacy markdown)
  */
-function findContentFolder(slug: string): string | null {
-    const rootDir = path.resolve(process.cwd(), '..', '..');
-    const insightsDir = path.join(rootDir, 'content', 'insights');
 
-    if (!fs.existsSync(insightsDir)) {
-        console.warn(`Insights content directory not found: ${insightsDir}`);
-        return null;
-    }
+function findContent(slug: string): { html: string } | null {
+  const rootDir = path.resolve(process.cwd(), "..", "..");
+  const insightsDir = path.join(rootDir, "content", "insights");
 
-    // List all folders in insights directory
-    const folders = fs.readdirSync(insightsDir, { withFileTypes: true })
-        .filter(dirent => dirent.isDirectory())
-        .map(dirent => dirent.name);
+  if (!fs.existsSync(insightsDir)) return null;
 
-    // Find folder that ends with the slug (after stripping date prefix)
-    for (const folder of folders) {
-        // Remove date prefix (YYYY-MM-DD-) if present
-        const folderWithoutDate = folder.replace(/^\d{4}-\d{2}-\d{2}-/, '');
-        if (folderWithoutDate === slug) {
-            return folder;
+  // Strategy 1: Direct HTML file
+  const htmlPath = path.join(insightsDir, `${slug}.html`);
+  if (fs.existsSync(htmlPath)) {
+    return { html: fs.readFileSync(htmlPath, "utf-8") };
+  }
+
+  // Strategy 2: Date-prefixed folder with index.mdx/md
+  const folders = fs
+    .readdirSync(insightsDir, { withFileTypes: true })
+    .filter((d) => d.isDirectory())
+    .map((d) => d.name);
+
+  for (const folder of folders) {
+    const folderWithoutDate = folder.replace(/^\d{4}-\d{2}-\d{2}-/, "");
+    if (folderWithoutDate === slug) {
+      for (const ext of ["index.mdx", "index.md"]) {
+        const filePath = path.join(insightsDir, folder, ext);
+        if (fs.existsSync(filePath)) {
+          // Basic markdown-to-HTML for .md files (strip frontmatter, convert basics)
+          let raw = fs.readFileSync(filePath, "utf-8");
+          // Strip frontmatter
+          raw = raw.replace(/^---[\s\S]*?---\s*/, "");
+          // Basic markdown conversion
+          const html = raw
+            .replace(/^### (.*$)/gm, "<h3>$1</h3>")
+            .replace(/^## (.*$)/gm, "<h2>$1</h2>")
+            .replace(/^# (.*$)/gm, "<h2>$1</h2>")
+            .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+            .replace(/\*(.*?)\*/g, "<em>$1</em>")
+            .replace(/^\- (.*$)/gm, "<li>$1</li>")
+            .replace(/(<li>.*<\/li>\n?)+/g, (m) => `<ul>${m}</ul>`)
+            .replace(/\n\n/g, "</p><p>")
+            .replace(/^\[Content in development\]$/gm, "")
+            .replace(/^(?!<[huplb])/gm, "")
+            .trim();
+          return { html: `<p>${html}</p>` };
         }
+      }
     }
+  }
 
-    return null;
+  // Strategy 3: Direct .md file
+  const mdPath = path.join(insightsDir, `${slug}.md`);
+  if (fs.existsSync(mdPath)) {
+    let raw = fs.readFileSync(mdPath, "utf-8");
+    raw = raw.replace(/^---[\s\S]*?---\s*/, "");
+    const html = raw
+      .replace(/^### (.*$)/gm, "<h3>$1</h3>")
+      .replace(/^## (.*$)/gm, "<h2>$1</h2>")
+      .replace(/^# (.*$)/gm, "<h2>$1</h2>")
+      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+      .replace(/\*(.*?)\*/g, "<em>$1</em>")
+      .replace(/\n\n/g, "</p><p>")
+      .trim();
+    return { html: `<p>${html}</p>` };
+  }
+
+  return null;
 }
 
 export async function GET(
-    request: NextRequest,
-    { params }: { params: Promise<{ slug: string }> | { slug: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ slug: string }> | { slug: string } },
 ) {
-    try {
-        const resolvedParams = params instanceof Promise ? await params : params;
-        const { slug } = resolvedParams;
+  try {
+    const resolvedParams = params instanceof Promise ? await params : params;
+    const { slug } = resolvedParams;
 
-        if (!slug) {
-            return NextResponse.json({
-                success: false,
-                content: null,
-                error: 'Slug is missing from request parameters.',
-            }, { status: 400 });
-        }
-
-        // Find the content folder for this slug
-        const contentFolder = findContentFolder(slug);
-
-        if (!contentFolder) {
-            return NextResponse.json({
-                success: false,
-                content: null,
-                error: `No content folder found for slug: ${slug}`,
-            }, { status: 404 });
-        }
-
-        // Construct possible paths for index.mdx or index.md
-        const rootDir = path.resolve(process.cwd(), '..', '..');
-        const possiblePaths = [
-            path.join(rootDir, 'content', 'insights', contentFolder, 'index.mdx'),
-            path.join(rootDir, 'content', 'insights', contentFolder, 'index.md'),
-        ];
-
-        let mdxPath: string | null = null;
-        for (const testPath of possiblePaths) {
-            if (fs.existsSync(testPath)) {
-                mdxPath = testPath;
-                break;
-            }
-        }
-
-        if (!mdxPath) {
-            return NextResponse.json({
-                success: false,
-                content: null,
-                error: `No MDX/MD file found in folder: ${contentFolder}`,
-            }, { status: 404 });
-        }
-
-        const mdxContent = loadMDXFile(mdxPath);
-
-        if (mdxContent) {
-            // Filter out placeholder iframe from content if it exists
-            const cleanedContent = mdxContent.content.replace(/<iframe[^>]*src="VIDEO_URL_GOES_HERE"[\s\S]*?<\/iframe>/gi, '');
-
-            return NextResponse.json({
-                success: true,
-                content: cleanedContent,
-                frontmatter: mdxContent.frontmatter,
-            });
-        }
-
-        return NextResponse.json({
-            success: false,
-            content: null,
-            error: 'Failed to parse MDX content',
-        }, { status: 500 });
-    } catch (error) {
-        console.error('Error loading MDX content:', error);
-        return NextResponse.json(
-            { success: false, error: 'Failed to load content' },
-            { status: 500 }
-        );
+    if (!slug) {
+      return new NextResponse("Missing slug", { status: 400 });
     }
-}
 
+    const result = findContent(slug);
+
+    if (!result) {
+      return new NextResponse(null, { status: 404 });
+    }
+
+    return new NextResponse(result.html, {
+      status: 200,
+      headers: { "Content-Type": "text/html; charset=utf-8" },
+    });
+  } catch (error) {
+    console.error("Error loading insight content:", error);
+    return new NextResponse("Failed to load content", { status: 500 });
+  }
+}

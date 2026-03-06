@@ -1,14 +1,19 @@
 // Ed Chat API - Handles AI questions from browser extension
 
-import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { NextRequest, NextResponse } from "next/server";
+import { createServerSupabaseClient } from "@/lib/supabase-server";
 
 // Import Ed Orchestrator via webpack alias (see next.config.ts)
-import { createOrchestrator, isGreeting, getContextualGreeting } from '@schoolgle/ed-agents';
-import type { OrchestratorConfig } from '@schoolgle/ed-agents/types';
+import {
+  createOrchestrator,
+  isGreeting,
+  getContextualGreeting,
+} from "@schoolgle/ed-agents";
+import type { OrchestratorConfig } from "@schoolgle/ed-agents/types";
 
 interface ChatRequest {
   question: string;
+  image?: string; // Direct image upload (base64)
   context: {
     url: string;
     hostname: string;
@@ -35,7 +40,7 @@ interface ChatRequest {
     template?: any; // Form template from database
   };
   // Phase 2: Language preference
-  language?: 'en' | 'ur' | 'cy' | 'other';
+  language?: "en" | "ur" | "cy" | "other";
 }
 
 interface ChatResponse {
@@ -43,7 +48,7 @@ interface ChatResponse {
   answer: string;
   suggestions?: string[];
   confidence: number;
-  source: 'ai' | 'cache' | 'fallback' | 'automation';
+  source: "ai" | "cache" | "fallback" | "automation";
   automation?: {
     sessionId: string;
     actions: number;
@@ -62,7 +67,7 @@ interface ChatResponse {
     redFlags?: Array<{
       type: string;
       message: string;
-      severity: 'low' | 'medium' | 'high';
+      severity: "low" | "medium" | "high";
     }>;
   };
   // Phase 2: Translation support
@@ -77,26 +82,38 @@ interface ChatResponse {
 // Tool-specific knowledge base for quick responses (retained for compatibility)
 const QUICK_ANSWERS: Record<string, Record<string, string>> = {
   sims: {
-    'add pupil': 'To add a new pupil in SIMS: Go to Focus > Pupil > Pupil Details, click New, fill in the required fields (surname, forename, DOB, gender), then Save.',
-    'attendance report': 'To run an attendance report in SIMS: Go to Reports > Attendance Reports, select the report type, set your date range and year groups, then click Run Report.',
-    'quick search': 'Use Ctrl+Q for quick search in SIMS. You can search for pupils, staff, or other records by name.',
+    "add pupil":
+      "To add a new pupil in SIMS: Go to Focus > Pupil > Pupil Details, click New, fill in the required fields (surname, forename, DOB, gender), then Save.",
+    "attendance report":
+      "To run an attendance report in SIMS: Go to Reports > Attendance Reports, select the report type, set your date range and year groups, then click Run Report.",
+    "quick search":
+      "Use Ctrl+Q for quick search in SIMS. You can search for pupils, staff, or other records by name.",
   },
   arbor: {
-    'mark attendance': 'To mark attendance in Arbor: Go to Students > Attendance > Mark Attendance, select your class, click each student to mark present or use quick mark buttons, then Save.',
-    'send message': 'To send a message in Arbor: Go to Communications > Messages > New Message, select recipients, choose email/SMS, write your message and send.',
-    'safeguarding': 'To log a safeguarding concern in Arbor: Find the student profile, click the Safeguarding tab, click New Concern, complete all fields, and submit for DSL review.',
+    "mark attendance":
+      "To mark attendance in Arbor: Go to Students > Attendance > Mark Attendance, select your class, click each student to mark present or use quick mark buttons, then Save.",
+    "send message":
+      "To send a message in Arbor: Go to Communications > Messages > New Message, select recipients, choose email/SMS, write your message and send.",
+    safeguarding:
+      "To log a safeguarding concern in Arbor: Find the student profile, click the Safeguarding tab, click New Concern, complete all fields, and submit for DSL review.",
   },
   cpoms: {
-    'log incident': 'To log an incident in CPOMS: Click Add Incident (+), search for the student, choose the category, write a factual account, tag for DSL attention if urgent, then Submit.',
-    'add action': 'To add an action in CPOMS: Open the incident, click Add Action, select the type, assign to a staff member, set a due date, and Save.',
+    "log incident":
+      "To log an incident in CPOMS: Click Add Incident (+), search for the student, choose the category, write a factual account, tag for DSL attention if urgent, then Submit.",
+    "add action":
+      "To add an action in CPOMS: Open the incident, click Add Action, select the type, assign to a staff member, set a due date, and Save.",
   },
-  'google-classroom': {
-    'create assignment': 'To create an assignment in Google Classroom: Open your class, click Classwork tab, Create > Assignment, add title and instructions, set due date and points, then Assign.',
-    'grade work': 'To grade in Google Classroom: Open the assignment, click a submission, review, add comments, enter the grade, then Return to student.',
+  "google-classroom": {
+    "create assignment":
+      "To create an assignment in Google Classroom: Open your class, click Classwork tab, Create > Assignment, add title and instructions, set due date and points, then Assign.",
+    "grade work":
+      "To grade in Google Classroom: Open the assignment, click a submission, review, add comments, enter the grade, then Return to student.",
   },
   canva: {
-    'create poster': 'To create a poster in Canva: Click Create a Design, search "Poster", choose a template or start blank, add text/images, customise, then download or share.',
-    'brand kit': 'Set up your school\'s Brand Kit in Settings to maintain consistent colours and fonts across all designs.',
+    "create poster":
+      'To create a poster in Canva: Click Create a Design, search "Poster", choose a template or start blank, add text/images, customise, then download or share.',
+    "brand kit":
+      "Set up your school's Brand Kit in Settings to maintain consistent colours and fonts across all designs.",
   },
 };
 
@@ -107,12 +124,12 @@ const QUICK_ANSWERS: Record<string, Record<string, string>> = {
 export async function POST(request: NextRequest) {
   try {
     const body: ChatRequest = await request.json();
-    const { question, context, pageState, formMode, language } = body;
+    const { question, image, context, pageState, formMode, language } = body;
 
     if (!question) {
       return NextResponse.json(
-        { error: 'Question is required' },
-        { status: 400 }
+        { error: "Question is required" },
+        { status: 400 },
       );
     }
 
@@ -122,7 +139,9 @@ export async function POST(request: NextRequest) {
     // Phase 2: Check if this is a form helper request
     const isFormRequest = detectFormRequest(question, context?.url, formMode);
     if (isFormRequest || formMode?.active) {
-      console.log('[Ed Chat API] Form request detected, routing to form specialist');
+      console.log(
+        "[Ed Chat API] Form request detected, routing to form specialist",
+      );
       return await handleFormRequest(body, supabase);
     }
 
@@ -135,14 +154,19 @@ export async function POST(request: NextRequest) {
         const geminiApiKey = (body as any).geminiApiKey;
 
         // Call automation API
-        const automationResponse = await callAutomationAPI(question, context, pageState, geminiApiKey);
+        const automationResponse = await callAutomationAPI(
+          question,
+          context,
+          pageState,
+          geminiApiKey,
+        );
 
         if (automationResponse) {
           return NextResponse.json({
             id: crypto.randomUUID(),
             answer: automationResponse.answer,
             confidence: 0.9,
-            source: 'automation',
+            source: "automation",
             automation: {
               sessionId: automationResponse.sessionId,
               actions: automationResponse.actions,
@@ -151,9 +175,25 @@ export async function POST(request: NextRequest) {
           });
         }
       } catch (error) {
-        console.error('[Ed Chat API] Automation error:', error);
+        console.error("[Ed Chat API] Automation error:", error);
         // Fall through to regular AI response
       }
+    }
+
+    // Check learned knowledge patterns first (self-improving)
+    const knowledgeResult = await searchLearnedKnowledge(
+      supabase,
+      question,
+      context?.tool?.id,
+    );
+    if (knowledgeResult) {
+      const response: ChatResponse = {
+        id: crypto.randomUUID(),
+        answer: knowledgeResult.answer,
+        confidence: Math.min(knowledgeResult.confidence, 0.95),
+        source: "cache",
+      };
+      return NextResponse.json(response);
     }
 
     // Check if this is a tool-specific quick answer first
@@ -163,19 +203,21 @@ export async function POST(request: NextRequest) {
         id: crypto.randomUUID(),
         answer: quickAnswer,
         confidence: 0.9,
-        source: 'cache',
+        source: "cache",
       };
       return NextResponse.json(response);
     }
 
     // Get user from Supabase
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     // Get user's organization and role
     let organization: any = null;
-    let userRole: 'viewer' = 'viewer';
+    let userRole: "viewer" = "viewer";
     let subscription = {
-      plan: 'free' as const,
+      plan: "free" as const,
       features: [] as string[],
       creditsRemaining: 1000,
       creditsUsed: 0,
@@ -184,27 +226,27 @@ export async function POST(request: NextRequest) {
     if (user) {
       // Fetch organization details
       const { data: orgData } = await supabase
-        .from('organizations')
-        .select('*, role')
-        .eq('user_id', user.id)
+        .from("organizations")
+        .select("*, role")
+        .eq("user_id", user.id)
         .single();
 
       if (orgData) {
         organization = orgData;
 
         // Map role to our format
-        const roleMap: Record<string, 'admin' | 'staff' | 'viewer'> = {
-          'admin': 'admin',
-          'slt': 'admin',
-          'teacher': 'staff',
-          'governor': 'staff',
-          'viewer': 'viewer',
+        const roleMap: Record<string, "admin" | "staff" | "viewer"> = {
+          admin: "admin",
+          slt: "admin",
+          teacher: "staff",
+          governor: "staff",
+          viewer: "viewer",
         };
-        userRole = roleMap[orgData.role] || 'viewer';
+        userRole = roleMap[orgData.role] || "viewer";
 
         // Get subscription details (if available)
         subscription = {
-          plan: (orgData.subscription_plan as any) || 'free',
+          plan: (orgData.subscription_plan as any) || "free",
           features: orgData.features || [],
           creditsRemaining: orgData.credits_remaining || 1000,
           creditsUsed: orgData.credits_used || 0,
@@ -215,11 +257,11 @@ export async function POST(request: NextRequest) {
     // Check for greetings first - before any other processing
     if (isGreeting(question)) {
       // Create orchestrator for greeting context
-      const apiKey = process.env.OPENROUTER_API_KEY || '';
+      const apiKey = process.env.OPENROUTER_API_KEY || "";
       const orchestratorConfig: OrchestratorConfig = {
         supabase,
-        userId: user?.id || 'anonymous',
-        orgId: organization?.id || 'unknown',
+        userId: user?.id || "anonymous",
+        orgId: organization?.id || "unknown",
         userRole,
         subscription,
         activeApp,
@@ -230,14 +272,14 @@ export async function POST(request: NextRequest) {
       const { greeting, alerts } = await orchestrator.handleProactiveGreeting({
         url: context?.url,
         title: context?.title,
-        userName: user?.user_metadata?.name || user?.email?.split('@')[0],
+        userName: user?.user_metadata?.name || user?.email?.split("@")[0],
       });
 
       const response: ChatResponse = {
         id: crypto.randomUUID(),
         answer: greeting,
         confidence: 0.95,
-        source: 'ai',
+        source: "ai",
         suggestions: alerts.length > 0 ? alerts : undefined,
       };
       return NextResponse.json(response);
@@ -247,46 +289,57 @@ export async function POST(request: NextRequest) {
     let activeApp: string | undefined;
     if (context?.tool?.id) {
       const appMap: Record<string, string> = {
-        'sims': 'schoolgle-platform',
-        'arbor': 'schoolgle-platform',
-        'cpoms': 'schoolgle-platform',
+        sims: "schoolgle-platform",
+        arbor: "schoolgle-platform",
+        cpoms: "schoolgle-platform",
       };
       activeApp = appMap[context.tool.id];
     }
 
     // Create orchestrator config
-    const apiKey = process.env.OPENROUTER_API_KEY || '';
-    console.log('[Ed Chat API] API Key present:', apiKey.length > 0 ? `YES (${apiKey.substring(0, 10)}...)` : 'NO');
+    const apiKey = process.env.OPENROUTER_API_KEY || "";
+    console.log(
+      "[Ed Chat API] API Key present:",
+      apiKey.length > 0 ? `YES (${apiKey.substring(0, 10)}...)` : "NO",
+    );
 
     const orchestratorConfig: OrchestratorConfig = {
       supabase,
-      userId: user?.id || 'anonymous',
-      orgId: organization?.id || 'unknown',
+      userId: user?.id || "anonymous",
+      orgId: organization?.id || "unknown",
       userRole,
       subscription,
       activeApp,
       enableMultiPerspective: true,
       enableBrowserAutomation: false,
-      debug: process.env.NODE_ENV === 'development',
+      debug: process.env.NODE_ENV === "development",
       openRouterApiKey: apiKey, // Pass API key explicitly
     };
 
     // Create orchestrator and process question
     const orchestrator = await createOrchestrator(orchestratorConfig);
 
+    // Get screenshot from either direct image upload or pageState
+    const screenshot = image || pageState?.screenshot;
+
     // Process through agent framework
     const edResponse = await orchestrator.processQuestion(question, {
       app: activeApp,
       page: context?.title,
-      screenshot: pageState?.screenshot,
+      screenshot,
     });
 
     // Map EdResponse to ChatResponse format
     const response: ChatResponse = {
       id: crypto.randomUUID(),
       answer: edResponse.response,
-      confidence: edResponse.confidence === 'HIGH' ? 0.9 : edResponse.confidence === 'MEDIUM' ? 0.7 : 0.5,
-      source: 'ai',
+      confidence:
+        edResponse.confidence === "HIGH"
+          ? 0.9
+          : edResponse.confidence === "MEDIUM"
+            ? 0.7
+            : 0.5,
+      source: "ai",
     };
 
     // Add suggestions if available
@@ -295,43 +348,46 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(response);
-
   } catch (error) {
-    console.error('[Ed Chat API] Error:', error);
+    console.error("[Ed Chat API] Error:", error);
 
     // Check for specific error types
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
 
-    if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
+    if (errorMessage.includes("401") || errorMessage.includes("Unauthorized")) {
       return NextResponse.json(
         {
           id: crypto.randomUUID(),
-          answer: "I'm having trouble connecting to my AI services. This might be an API configuration issue. Please try again or contact support.",
+          answer:
+            "I'm having trouble connecting to my AI services. This might be an API configuration issue. Please try again or contact support.",
           confidence: 0,
-          source: 'fallback',
+          source: "fallback",
         },
-        { status: 503 }
+        { status: 503 },
       );
     }
 
-    if (errorMessage.includes('429') || errorMessage.includes('rate limit')) {
+    if (errorMessage.includes("429") || errorMessage.includes("rate limit")) {
       return NextResponse.json(
         {
           id: crypto.randomUUID(),
-          answer: "I'm receiving too many requests right now. Please wait a moment and try again.",
+          answer:
+            "I'm receiving too many requests right now. Please wait a moment and try again.",
           confidence: 0.5,
-          source: 'fallback',
+          source: "fallback",
         },
-        { status: 429 }
+        { status: 429 },
       );
     }
 
     // Generic fallback
     const fallback: ChatResponse = {
       id: crypto.randomUUID(),
-      answer: "I'm having trouble processing that right now. Could you try asking in a different way?",
+      answer:
+        "I'm having trouble processing that right now. Could you try asking in a different way?",
       confidence: 0,
-      source: 'fallback',
+      source: "fallback",
     };
 
     return NextResponse.json(fallback);
@@ -371,25 +427,25 @@ function findQuickAnswer(question: string, toolId?: string): string | null {
 function detectAutomationRequest(question: string): boolean {
   const lowerQuestion = question.toLowerCase();
   const automationKeywords = [
-    'fill',
-    'click',
-    'type',
-    'select',
-    'navigate',
-    'go to',
-    'open',
-    'submit',
-    'enter',
-    'do this',
-    'perform',
-    'execute',
-    'automate',
-    'complete this',
-    'fill in',
-    'fill out',
+    "fill",
+    "click",
+    "type",
+    "select",
+    "navigate",
+    "go to",
+    "open",
+    "submit",
+    "enter",
+    "do this",
+    "perform",
+    "execute",
+    "automate",
+    "complete this",
+    "fill in",
+    "fill out",
   ];
 
-  return automationKeywords.some(keyword => lowerQuestion.includes(keyword));
+  return automationKeywords.some((keyword) => lowerQuestion.includes(keyword));
 }
 
 /**
@@ -397,16 +453,21 @@ function detectAutomationRequest(question: string): boolean {
  */
 async function callAutomationAPI(
   question: string,
-  context: ChatRequest['context'],
-  pageState?: ChatRequest['pageState'],
-  geminiApiKey?: string
-): Promise<{ answer: string; sessionId: string; actions: number; success: boolean } | null> {
+  context: ChatRequest["context"],
+  pageState?: ChatRequest["pageState"],
+  geminiApiKey?: string,
+): Promise<{
+  answer: string;
+  sessionId: string;
+  actions: number;
+  success: boolean;
+} | null> {
   try {
     // Get base URL for API calls
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
     const body: any = {
-      url: context?.url || '',
+      url: context?.url || "",
       task: question,
     };
 
@@ -417,20 +478,27 @@ async function callAutomationAPI(
 
     // Add pageState if provided
     if (pageState) {
-      body.screenshot = pageState.screenshot.replace(/^data:image\/\w+;base64,/, '');
+      body.screenshot = pageState.screenshot.replace(
+        /^data:image\/\w+;base64,/,
+        "",
+      );
       body.domSnapshot = pageState.domSnapshot;
     }
 
     const response = await fetch(`${baseUrl}/api/ed/automate`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify(body),
     });
 
     if (!response.ok) {
-      console.error('[Automation API] Error:', response.status, await response.text());
+      console.error(
+        "[Automation API] Error:",
+        response.status,
+        await response.text(),
+      );
       return null;
     }
 
@@ -441,21 +509,21 @@ async function callAutomationAPI(
       const failedCount = data.execution.failed.length;
 
       return {
-        answer: `I've completed the task! Executed ${completedCount} action${completedCount !== 1 ? 's' : ''}${failedCount > 0 ? ` (${failedCount} failed)` : ''}.`,
+        answer: `I've completed the task! Executed ${completedCount} action${completedCount !== 1 ? "s" : ""}${failedCount > 0 ? ` (${failedCount} failed)` : ""}.`,
         sessionId: data.sessionId,
         actions: data.actions.length,
         success: true,
       };
     } else {
       return {
-        answer: `I tried to complete the task but encountered an error: ${data.error || 'Unknown error'}`,
-        sessionId: data.sessionId || '',
+        answer: `I tried to complete the task but encountered an error: ${data.error || "Unknown error"}`,
+        sessionId: data.sessionId || "",
         actions: 0,
         success: false,
       };
     }
   } catch (error) {
-    console.error('[Automation API] Request error:', error);
+    console.error("[Automation API] Request error:", error);
     return null;
   }
 }
@@ -466,7 +534,7 @@ async function callAutomationAPI(
 function detectFormRequest(
   question: string,
   url?: string,
-  formMode?: ChatRequest['formMode']
+  formMode?: ChatRequest["formMode"],
 ): boolean {
   // If already in form mode, continue
   if (formMode?.active) {
@@ -474,20 +542,31 @@ function detectFormRequest(
   }
 
   const lowerQuestion = question.toLowerCase();
-  const lowerUrl = url?.toLowerCase() || '';
+  const lowerUrl = url?.toLowerCase() || "";
 
   // Form-related keywords
   const formKeywords = [
-    'fill form', 'fill in', 'fill out', 'complete form',
-    'form help', 'help with form', 'form guidance',
-    'what do i put', 'how do i answer', 'what should i write',
-    'riddor', 'safeguarding form', 'ehcp', 'send form',
-    'incident report', 'accident report',
+    "fill form",
+    "fill in",
+    "fill out",
+    "complete form",
+    "form help",
+    "help with form",
+    "form guidance",
+    "what do i put",
+    "how do i answer",
+    "what should i write",
+    "riddor",
+    "safeguarding form",
+    "ehcp",
+    "send form",
+    "incident report",
+    "accident report",
   ];
 
   // Check for form keywords
-  const hasFormKeyword = formKeywords.some(keyword =>
-    lowerQuestion.includes(keyword) || lowerUrl.includes(keyword)
+  const hasFormKeyword = formKeywords.some(
+    (keyword) => lowerQuestion.includes(keyword) || lowerUrl.includes(keyword),
   );
 
   return hasFormKeyword;
@@ -499,11 +578,15 @@ function detectFormRequest(
  */
 async function handleFormRequest(
   body: ChatRequest,
-  supabase: any
+  supabase: any,
 ): Promise<NextResponse<ChatResponse>> {
   const { question, context, formMode, language } = body;
 
-  console.log('[Ed Chat API] Handling form request:', { question, formMode, language });
+  console.log("[Ed Chat API] Handling form request:", {
+    question,
+    formMode,
+    language,
+  });
 
   // Get form template if provided or fetch from URL
   let template = formMode?.template;
@@ -518,7 +601,10 @@ async function handleFormRequest(
 
   if (template?.form_key) {
     // Get all field knowledge for this template
-    const knowledgeResponse = await fetchFieldKnowledge(supabase, template.form_key);
+    const knowledgeResponse = await fetchFieldKnowledge(
+      supabase,
+      template.form_key,
+    );
     if (knowledgeResponse) {
       fieldKnowledge = knowledgeResponse.fields || [];
     }
@@ -528,7 +614,7 @@ async function handleFormRequest(
       const specificKnowledge = await fetchFieldKnowledge(
         supabase,
         template.form_key,
-        formMode.currentField
+        formMode.currentField,
       );
       if (specificKnowledge?.knowledge) {
         currentFieldKnowledge = specificKnowledge.knowledge;
@@ -541,17 +627,17 @@ async function handleFormRequest(
         supabase,
         template.form_key,
         formMode.currentField,
-        question
+        question,
       );
     }
   }
 
   // Build form-specific context with knowledge
-  let formContext = '';
+  let formContext = "";
   if (template) {
     formContext = `
 FORM CONTEXT: You are helping with the "${template.form_name}" form.
-Form description: ${template.description || 'No description available'}
+Form description: ${template.description || "No description available"}
 Form category: ${template.form_category}
 Estimated time: ${template.estimated_time_minutes || 5} minutes
 
@@ -565,7 +651,10 @@ The user is currently viewing this form. Guide them through it step by step.
     formContext += `Field: ${currentFieldKnowledge.field_label}\n`;
     formContext += `Explanation: ${currentFieldKnowledge.explanation}\n`;
 
-    if (currentFieldKnowledge.red_flags && currentFieldKnowledge.red_flags.length > 0) {
+    if (
+      currentFieldKnowledge.red_flags &&
+      currentFieldKnowledge.red_flags.length > 0
+    ) {
       formContext += `\nRed flags to watch for:\n`;
       for (const flag of currentFieldKnowledge.red_flags) {
         formContext += `- ${flag.type}: ${flag.explanation}\n`;
@@ -576,21 +665,23 @@ The user is currently viewing this form. Guide them through it step by step.
       formContext += `\nLegal context: ${currentFieldKnowledge.legal_context}\n`;
     }
   } else if (fieldKnowledge.length > 0) {
-    formContext += `\nAvailable fields with guidance: ${fieldKnowledge.map((f: any) => f.field_label).join(', ')}\n`;
+    formContext += `\nAvailable fields with guidance: ${fieldKnowledge.map((f: any) => f.field_label).join(", ")}\n`;
   }
 
   // Get user for organization context
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   // Create orchestrator with form-specialist
-  const apiKey = process.env.OPENROUTER_API_KEY || '';
+  const apiKey = process.env.OPENROUTER_API_KEY || "";
   const orchestratorConfig = {
     supabase,
-    userId: user?.id || 'anonymous',
-    orgId: user?.user_metadata?.orgId || 'unknown',
-    userRole: 'staff' as const,
+    userId: user?.id || "anonymous",
+    orgId: user?.user_metadata?.orgId || "unknown",
+    userRole: "staff" as const,
     subscription: {
-      plan: 'schools' as const,
+      plan: "schools" as const,
       features: [],
       creditsRemaining: 1000,
       creditsUsed: 0,
@@ -598,7 +689,7 @@ The user is currently viewing this form. Guide them through it step by step.
     openRouterApiKey: apiKey,
   };
 
-  const { createOrchestrator } = await import('@schoolgle/ed-agents');
+  const { createOrchestrator } = await import("@schoolgle/ed-agents");
   const orchestrator = await createOrchestrator(orchestratorConfig);
 
   // Process with form specialist
@@ -606,13 +697,16 @@ The user is currently viewing this form. Guide them through it step by step.
   const enhancedQuestion = formContext + `\n\nUser question: ${question}`;
 
   const edResponse = await orchestrator.processQuestion(enhancedQuestion, {
-    app: 'form-helper',
+    app: "form-helper",
     page: context?.title,
     formTemplate: template?.form_key,
   });
 
   // Check for red flags and suggested wording in the response
-  const formModeResponse = analyzeResponseForFormHints(edResponse.response, question);
+  const formModeResponse = analyzeResponseForFormHints(
+    edResponse.response,
+    question,
+  );
 
   // Phase 3: Include red flag check results in response
   if (redFlagCheckResult?.has_red_flags) {
@@ -621,7 +715,7 @@ The user is currently viewing this form. Guide them through it step by step.
       ...redFlagCheckResult.matched_flags.map((flag: any) => ({
         type: flag.type,
         message: flag.explanation,
-        severity: 'high' as const,
+        severity: "high" as const,
       })),
     ];
   }
@@ -629,8 +723,8 @@ The user is currently viewing this form. Guide them through it step by step.
   const response: ChatResponse = {
     id: crypto.randomUUID(),
     answer: edResponse.response,
-    confidence: edResponse.confidence === 'HIGH' ? 0.9 : 0.7,
-    source: 'ai',
+    confidence: edResponse.confidence === "HIGH" ? 0.9 : 0.7,
+    source: "ai",
     formMode: {
       active: true,
       templateId: template?.form_key,
@@ -648,17 +742,17 @@ The user is currently viewing this form. Guide them through it step by step.
 async function fetchFieldKnowledge(
   supabase: any,
   templateId: string,
-  fieldKey?: string
+  fieldKey?: string,
 ): Promise<{ fields?: any[]; knowledge?: any } | null> {
   try {
     if (fieldKey) {
-      const { data, error } = await supabase.rpc('get_field_knowledge', {
+      const { data, error } = await supabase.rpc("get_field_knowledge", {
         p_template_id: templateId,
         p_field_key: fieldKey,
       });
 
       if (error) {
-        console.warn('[Ed Chat API] Field knowledge fetch error:', error);
+        console.warn("[Ed Chat API] Field knowledge fetch error:", error);
         return null;
       }
 
@@ -668,19 +762,19 @@ async function fetchFieldKnowledge(
 
     // Get all fields for template
     const { data, error } = await supabase
-      .from('ed_form_field_knowledge')
-      .select('*')
-      .eq('template_id', templateId)
-      .order('field_label', { ascending: true });
+      .from("ed_form_field_knowledge")
+      .select("*")
+      .eq("template_id", templateId)
+      .order("field_label", { ascending: true });
 
     if (error) {
-      console.warn('[Ed Chat API] Template knowledge fetch error:', error);
+      console.warn("[Ed Chat API] Template knowledge fetch error:", error);
       return null;
     }
 
     return { fields: data || [] };
   } catch (error) {
-    console.warn('[Ed Chat API] Knowledge fetch exception:', error);
+    console.warn("[Ed Chat API] Knowledge fetch exception:", error);
     return null;
   }
 }
@@ -692,24 +786,28 @@ async function checkForRedFlags(
   supabase: any,
   templateId: string,
   fieldKey: string,
-  userText: string
-): Promise<{ has_red_flags: boolean; matched_flags: any[]; suggestions: any[] } | null> {
+  userText: string,
+): Promise<{
+  has_red_flags: boolean;
+  matched_flags: any[];
+  suggestions: any[];
+} | null> {
   try {
-    const { data, error } = await supabase.rpc('check_form_text_red_flags', {
+    const { data, error } = await supabase.rpc("check_form_text_red_flags", {
       p_template_id: templateId,
       p_field_key: fieldKey,
       p_user_text: userText,
     });
 
     if (error) {
-      console.warn('[Ed Chat API] Red flag check error:', error);
+      console.warn("[Ed Chat API] Red flag check error:", error);
       return null;
     }
 
     const result = Array.isArray(data) && data.length > 0 ? data[0] : null;
     return result;
   } catch (error) {
-    console.warn('[Ed Chat API] Red flag check exception:', error);
+    console.warn("[Ed Chat API] Red flag check exception:", error);
     return null;
   }
 }
@@ -719,11 +817,10 @@ async function checkForRedFlags(
  */
 async function getFormTemplateForUrl(supabase: any, url: string): Promise<any> {
   try {
-    const { data } = await supabase
-      .rpc('get_form_template_by_url', { url });
+    const { data } = await supabase.rpc("get_form_template_by_url", { url });
     return data;
   } catch (error) {
-    console.warn('[Ed Chat API] Failed to get form template:', error);
+    console.warn("[Ed Chat API] Failed to get form template:", error);
     return null;
   }
 }
@@ -733,10 +830,14 @@ async function getFormTemplateForUrl(supabase: any, url: string): Promise<any> {
  */
 function analyzeResponseForFormHints(
   response: string,
-  originalQuestion: string
+  originalQuestion: string,
 ): {
   suggestedWording?: { original: string; suggested: string; reason: string };
-  redFlags?: Array<{ type: string; message: string; severity: 'low' | 'medium' | 'high' }>;
+  redFlags?: Array<{
+    type: string;
+    message: string;
+    severity: "low" | "medium" | "high";
+  }>;
 } {
   const result: ReturnType<typeof analyzeResponseForFormHints> = {};
 
@@ -746,14 +847,22 @@ function analyzeResponseForFormHints(
     result.suggestedWording = {
       original: originalQuestion,
       suggested: wordingMatch[1],
-      reason: 'More professional and likely to be more effective',
+      reason: "More professional and likely to be more effective",
     };
   }
 
   // Check for red flags mentioned in response
   const redFlagPatterns = [
-    { pattern: /aggressive|emotional|accusatory/i, severity: 'high' as const, type: 'tone' },
-    { pattern: /vague|specific|example/i, severity: 'medium' as const, type: 'clarity' },
+    {
+      pattern: /aggressive|emotional|accusatory/i,
+      severity: "high" as const,
+      type: "tone",
+    },
+    {
+      pattern: /vague|specific|example/i,
+      severity: "medium" as const,
+      type: "clarity",
+    },
   ];
 
   for (const flag of redFlagPatterns) {
@@ -761,11 +870,49 @@ function analyzeResponseForFormHints(
       result.redFlags = result.redFlags || [];
       result.redFlags.push({
         type: flag.type,
-        message: `Consider revising your wording to be more ${flag.type === 'tone' ? 'neutral' : 'specific'}`,
+        message: `Consider revising your wording to be more ${flag.type === "tone" ? "neutral" : "specific"}`,
         severity: flag.severity,
       });
     }
   }
 
   return result;
+}
+
+/**
+ * Search learned knowledge patterns (self-improving knowledge base)
+ * Returns high-confidence matches from ed_knowledge_patterns
+ */
+async function searchLearnedKnowledge(
+  supabase: any,
+  question: string,
+  toolId?: string,
+): Promise<{ id: string; answer: string; confidence: number } | null> {
+  try {
+    const { data, error } = await supabase.rpc("search_ed_knowledge", {
+      p_query: question,
+      p_org_id: null, // Will match global + user's org via RLS
+      p_domain: null,
+      p_system: toolId || null,
+      p_limit: 1,
+    });
+
+    if (error || !data || data.length === 0) {
+      return null;
+    }
+
+    const match = data[0];
+    // Only return if confidence is high enough to be useful
+    if (match.confidence >= 0.7) {
+      return {
+        id: match.id,
+        answer: match.answer,
+        confidence: match.confidence,
+      };
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
 }

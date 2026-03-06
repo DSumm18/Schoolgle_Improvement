@@ -1,0 +1,203 @@
+{
+  "all_time": {
+    "total": 129540,
+    "outstanding": 21251,
+    "outstanding_pct": 16.4,
+    "good": 93370,
+    "good_pct": 72.1,
+    "requires_improvement": 11494,
+    "ri_pct": 8.9,
+    "inadequate": 3425,
+    "inadequate_pct": 2.6,
+    "good_or_outstanding_pct": 88.5
+  },
+  "recent": {
+    "total": 26095,
+    "outstanding": 2485,
+    "outstanding_pct": 9.5,
+    "good": 17949,
+    "good_pct": 68.8,
+    "requires_improvement": 4791,
+    "ri_pct": 18.4,
+    "inadequate": 870,
+    "inadequate_pct": 3.3,
+    "good_or_outstanding_pct": 78.3
+  },
+  "recent_years": [
+    "2022",
+    "2023",
+    "2024"
+  ],
+  "trends": {
+    "2019": {
+      "total": 12858,
+      "good_plus_pct": 73.5,
+      "outstanding_pct": 9.2,
+      "ri_pct": 20.7,
+      "inadequate_pct": 5.7
+    },
+    "2020": {
+      "total": 4507,
+      "good_plus_pct": 66.4,
+      "outstanding_pct": 4.4,
+      "ri_pct": 25.7,
+      "inadequate_pct": 7.9
+    },
+    "2021": {
+      "total": 1996,
+      "good_plus_pct": 72.5,
+      "outstanding_pct": 7.3,
+      "ri_pct": 21.0,
+      "inadequate_pct": 6.5
+    },
+    "2022": {
+      "total": 8972,
+      "good_plus_pct": 75.3,
+      "outstanding_pct": 4.8,
+      "ri_pct": 19.3,
+      "inadequate_pct": 5.3
+    },
+    "2023": {
+      "total": 11160,
+      "good_plus_pct": 78.4,
+      "outstanding_pct": 8.5,
+      "ri_pct": 18.9,
+      "inadequate_pct": 2.6
+    },
+    "2024": {
+      "total": 5963,
+      "good_plus_pct": 82.5,
+      "outstanding_pct": 18.5,
+      "ri_pct": 15.8,
+      "inadequate_pct": 1.7
+    }
+  },
+  "deprivation": {
+    "Average": {
+      "total": 25806,
+      "outstanding": 3343,
+      "outstanding_pct": 13.0,
+      "good": 19532,
+      "good_pct": 75.7,
+      "requires_improvement": 2391,
+      "ri_pct": 9.3,
+      "inadequate": 540,
+      "inadequate_pct": 2.1,
+      "good_or_outstanding_pct": 88.6
+    },
+    "Deprived": {
+      "total": 26094,
+      "outstanding": 3737,
+      "outstanding_pct": 14.3,
+      "good": 18964,
+      "good_pct": 72.7,
+      "requires_improvement": 2698,
+      "ri_pct": 10.3,
+      "inadequate": 695,
+      "inadequate_pct": 2.7,
+      "good_or_outstanding_pct": 87.0
+    },
+    "Least deprived": {
+      "total": 24711,
+      "outstanding": 5838,
+      "outstanding_pct": 23.6,
+      "good": 17353,
+      "good_pct": 70.2,
+      "requires_improvement": 1240,
+      "ri_pct": 5.0,
+      "inadequate": 280,
+      "inadequate_pct": 1.1,
+      "good_or_outstanding_pct": 93.8
+    },
+    "Less deprived": {
+      "total": 25354,
+      "outstanding": 4352,
+      "outstanding_pct": 17.2,
+      "good": 18789,
+      "good_pct": 74.1,
+      "requires_improvement": 1779,
+      "ri_pct": 7.0,
+      "inadequate": 434,
+      "inadequate_pct": 1.7,
+      "good_or_outstanding_pct": 91.3
+    },
+    "Most deprived": {
+      "total": 26035,
+      "outstanding": 3567,
+      "outstanding_pct": 13.7,
+      "good": 18264,
+      "good_pct": 70.2,
+      "requires_improvement": 3284,
+      "ri_pct": 12.6,
+      "inadequate": 920,
+      "inadequate_pct": 3.5,
+      "good_or_outstanding_pct": 83.9
+    }
+  },
+  "safeguarding": {
+    "all_time": {
+      "effective": 70258,
+      "not_effective": 1363,
+      "total": 71621,
+      "effective_pct": 98.1
+    },
+    "recent": {
+      "effective": 25669,
+      "not_effective": 426,
+      "total": 26095,
+      "effective_pct": 98.4
+    }
+  },
+  "sub_grades": {
+    "leadership": {
+      "total": 129540,
+      "outstanding": 26102,
+      "outstanding_pct": 20.1,
+      "good": 90926,
+      "good_pct": 70.2,
+      "requires_improvement": 9486,
+      "ri_pct": 7.3,
+      "inadequate": 3026,
+      "inadequate_pct": 2.3,
+      "good_or_outstanding_pct": 90.3
+    },
+    "quality_of_education": {
+      "total": 35754,
+      "outstanding": 3073,
+      "outstanding_pct": 8.6,
+      "good": 24315,
+      "good_pct": 68.0,
+      "requires_improvement": 7391,
+      "ri_pct": 20.7,
+      "inadequate": 975,
+      "inadequate_pct": 2.7,
+      "good_or_outstanding_pct": 76.6
+    },
+    "personal_development": {
+      "total": 35754,
+      "outstanding": 7320,
+      "outstanding_pct": 20.5,
+      "good": 25436,
+      "good_pct": 71.1,
+      "requires_improvement": 2631,
+      "ri_pct": 7.4,
+      "inadequate": 367,
+      "inadequate_pct": 1.0,
+      "good_or_outstanding_pct": 91.6
+    },
+    "behaviour": {
+      "total": 35754,
+      "outstanding": 6270,
+      "outstanding_pct": 17.5,
+      "good": 25385,
+      "good_pct": 71.0,
+      "requires_improvement": 3353,
+      "ri_pct": 9.4,
+      "inadequate": 746,
+      "inadequate_pct": 2.1,
+      "good_or_outstanding_pct": 88.5
+    }
+  },
+  "la_count": 155,
+  "school_count": 24090
+}

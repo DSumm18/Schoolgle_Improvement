@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="en-GB" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Schoolgle Signal — Week 3 — 6 January 2026</title>
+<style>
+:root {
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-display: 'Outfit', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --max-width: 720px; --radius: 14px; --card-pad: 28px;
+  --accent: #00D4D4; --accent-dim: rgba(0,212,212,0.10); --accent-dark: #009E9E; --font-size: 16px;
+  --chip-finance: #10B981; --chip-compliance: #EAB308; --chip-safeguarding: #EF4444;
+  --chip-send: #F59E0B; --chip-hr: #8B5CF6; --chip-estates: #14B8A6;
+  --chip-leadership: #0EA5E9; --chip-teaching: #3B82F6; --chip-ai: #F43F5E; --chip-ops: #0EA5E9;
+}
+[data-theme="light"] {
+  --bg: #F7F7F9; --surface: #FFFFFF; --elevated: #FFFFFF;
+  --text: #0B1220; --text-secondary: #374151; --muted: #5A6578;
+  --border: #E5E7EB; --border-light: #F0F1F4; --quote-bg: #F0F2F5;
+  --shadow: 0 1px 3px rgba(0,0,0,0.06); --shadow-lg: 0 4px 16px rgba(0,0,0,0.08);
+  --error-bg: #FEF2F2; --error-text: #DC2626; --error-border: #FECACA;
+  --success-bg: #F0FDF4; --success-text: #166534;
+}
+[data-theme="dark"] {
+  --bg: #070B18; --surface: #0E1529; --elevated: #141D35;
+  --text: #EAF0FF; --text-secondary: #C5CFEA; --muted: #8B99BC;
+  --border: #1E2A4A; --border-light: #182040; --quote-bg: #111B33;
+  --shadow: 0 1px 3px rgba(0,0,0,0.3); --shadow-lg: 0 4px 16px rgba(0,0,0,0.4);
+  --error-bg: rgba(220,38,38,0.1); --error-text: #F87171; --error-border: #7F1D1D;
+  --success-bg: rgba(22,101,52,0.1); --success-text: #4ADE80;
+}
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: var(--font-body); font-size: var(--font-size); line-height: 1.7; background: var(--bg); color: var(--text); transition: background 0.25s ease, color 0.25s ease; -webkit-font-smoothing: antialiased; }
+a { color: var(--accent-dark); text-decoration: none; }
+[data-theme="dark"] a { color: var(--accent); }
+a:hover { text-decoration: underline; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
+
+.sixty-bar { position: sticky; top: 0; z-index: 100; background: var(--surface); border-bottom: 1px solid var(--border); box-shadow: var(--shadow); padding: 10px 20px; font-size: 13px; }
+.sixty-bar-inner { max-width: 960px; margin: 0 auto; display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+.sixty-bar-item { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.sixty-bar-item .bar-label { font-weight: 600; color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+.sixty-bar-item .bar-value { color: var(--text); font-weight: 500; }
+.sixty-bar-item .bar-value a { color: var(--accent-dark); font-weight: 600; }
+[data-theme="dark"] .sixty-bar-item .bar-value a { color: var(--accent); }
+.sixty-bar .spacer { flex: 1; }
+.listen-btn { display: inline-flex; align-items: center; gap: 5px; padding: 6px 14px; background: var(--accent); color: #070B18; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: var(--font-body); min-height: 36px; }
+@media (max-width: 700px) { .sixty-bar-inner { gap: 8px 16px; } .sixty-bar-item:nth-child(2) { display: none; } }
+
+.sticky-title { position: sticky; top: 47px; z-index: 99; background: var(--surface); border-bottom: 1px solid var(--border); padding: 8px 20px; font-size: 14px; font-weight: 600; color: var(--text); text-align: center; transform: translateY(-100%); opacity: 0; transition: transform 0.25s ease, opacity 0.25s ease; font-family: var(--font-display); }
+.sticky-title.visible { transform: translateY(0); opacity: 1; }
+
+.layout-wrapper { display: flex; max-width: 1060px; margin: 0 auto; padding: 0 16px; gap: 0; }
+.toc-rail { width: 160px; flex-shrink: 0; position: relative; }
+.toc-sticky { position: sticky; top: 100px; padding: 24px 0; max-height: calc(100vh - 120px); overflow-y: auto; }
+.toc-sticky nav { display: flex; flex-direction: column; gap: 2px; }
+.toc-link { display: block; padding: 6px 12px; font-size: 12px; color: var(--muted); text-decoration: none; border-radius: 6px; line-height: 1.4; border-left: 2px solid transparent; transition: color 0.15s, border-color 0.15s; }
+.toc-link:hover { color: var(--text); text-decoration: none; }
+.toc-link.active { color: var(--accent-dark); border-left-color: var(--accent); font-weight: 600; }
+[data-theme="dark"] .toc-link.active { color: var(--accent); }
+@media (max-width: 900px) { .toc-rail { display: none; } .layout-wrapper { padding: 0 16px; } }
+.main-content { flex: 1; max-width: var(--max-width); margin: 0 auto; padding: 32px 0 80px; min-width: 0; }
+
+.page-header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; margin-bottom: 36px; padding-bottom: 24px; border-bottom: 2px solid var(--border); }
+.page-header h1 { font-family: var(--font-display); font-size: 28px; font-weight: 300; color: var(--text); line-height: 1.2; letter-spacing: -0.3px; }
+.page-header h1 span { color: var(--accent); font-weight: 700; }
+.header-meta { display: flex; flex-direction: column; gap: 2px; }
+.header-meta .date { font-size: 14px; color: var(--muted); }
+.header-meta .issue { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+.controls { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ctrl-group { display: flex; gap: 2px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 2px; }
+.ctrl-btn { display: inline-flex; align-items: center; justify-content: center; min-width: 36px; min-height: 36px; padding: 6px 10px; background: transparent; border: none; border-radius: 6px; color: var(--muted); font-size: 13px; font-weight: 500; cursor: pointer; transition: background 0.15s, color 0.15s; font-family: var(--font-body); }
+.ctrl-btn:hover { background: var(--surface); color: var(--text); }
+.ctrl-btn.active { background: var(--surface); color: var(--accent); box-shadow: var(--shadow); }
+
+.audio-player { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px var(--card-pad); margin-bottom: 28px; box-shadow: var(--shadow); }
+.audio-top { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.audio-play-btn { width: 44px; height: 44px; border-radius: 50%; background: var(--accent); color: #070B18; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 18px; }
+.audio-info { flex: 1; min-width: 150px; }
+.audio-info .audio-title { font-size: 14px; font-weight: 600; color: var(--text); }
+.audio-info .audio-time { font-size: 12px; color: var(--muted); }
+.audio-progress { flex: 1; min-width: 180px; display: flex; align-items: center; gap: 10px; }
+.audio-track { flex: 1; height: 4px; background: var(--border); border-radius: 2px; position: relative; cursor: pointer; }
+.audio-track-fill { width: 0%; height: 100%; background: var(--accent); border-radius: 2px; }
+.audio-track-dot { position: absolute; top: 50%; left: 0%; transform: translate(-50%, -50%); width: 12px; height: 12px; background: var(--accent); border-radius: 50%; }
+.audio-time-label { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.audio-speed { display: flex; gap: 2px; background: var(--bg); border-radius: 6px; padding: 2px; }
+.speed-btn { padding: 4px 8px; font-size: 11px; font-weight: 600; border: none; background: transparent; color: var(--muted); cursor: pointer; border-radius: 4px; font-family: var(--font-body); }
+.speed-btn.active { background: var(--surface); color: var(--accent); }
+.transcript-section { margin-top: 12px; border-top: 1px solid var(--border-light); }
+.transcript-toggle { display: flex; align-items: center; gap: 6px; padding: 10px 0 0; font-size: 13px; color: var(--accent-dark); background: none; border: none; cursor: pointer; font-family: var(--font-body); font-weight: 500; }
+[data-theme="dark"] .transcript-toggle { color: var(--accent); }
+.transcript-body { display: none; margin-top: 10px; padding: 16px; background: var(--quote-bg); border-radius: 8px; font-size: 14px; color: var(--muted); line-height: 1.7; }
+.transcript-body.open { display: block; }
+
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--card-pad); margin-bottom: 24px; box-shadow: var(--shadow); }
+.chip { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+.chip-finance { background: rgba(16,185,129,0.12); color: #047857; }
+.chip-compliance { background: rgba(234,179,8,0.12); color: #92400E; }
+.chip-safeguarding { background: rgba(239,68,68,0.12); color: #B91C1C; }
+.chip-send { background: rgba(245,158,11,0.12); color: #92400E; }
+.chip-hr { background: rgba(139,92,246,0.12); color: #5B21B6; }
+.chip-estates { background: rgba(20,184,166,0.12); color: #0F766E; }
+.chip-leadership { background: rgba(14,165,233,0.12); color: #0369A1; }
+.chip-teaching { background: rgba(59,130,246,0.12); color: #1D4ED8; }
+.chip-ai { background: rgba(244,63,94,0.12); color: #BE123C; }
+.chip-ops { background: rgba(14,165,233,0.12); color: #0369A1; }
+[data-theme="dark"] .chip-finance { color: #34D399; }
+[data-theme="dark"] .chip-compliance { color: #FDE047; }
+[data-theme="dark"] .chip-safeguarding { color: #FCA5A5; }
+[data-theme="dark"] .chip-send { color: #FCD34D; }
+[data-theme="dark"] .chip-hr { color: #C4B5FD; }
+[data-theme="dark"] .chip-estates { color: #5EEAD4; }
+[data-theme="dark"] .chip-leadership { color: #7DD3FC; }
+[data-theme="dark"] .chip-teaching { color: #93C5FD; }
+[data-theme="dark"] .chip-ai { color: #FDA4AF; }
+[data-theme="dark"] .chip-ops { color: #7DD3FC; }
+
+.card h2 { font-family: var(--font-display); font-size: 1.5rem; font-weight: 600; line-height: 1.3; margin-bottom: 8px; color: var(--text); }
+.card .summary { font-size: 15px; color: var(--muted); margin-bottom: 18px; line-height: 1.6; }
+.card h3 { font-size: 1.1rem; font-weight: 600; margin: 28px 0 10px; color: var(--text); }
+.card p { margin-bottom: 14px; line-height: 1.7; }
+.card ul, .card ol { margin: 10px 0 16px 22px; }
+.card li { margin-bottom: 8px; line-height: 1.6; }
+.card strong { color: var(--text); }
+
+.data-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+.data-table th { text-align: left; padding: 10px 12px; background: var(--quote-bg); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.3px; color: var(--muted); border-bottom: 2px solid var(--border); }
+.data-table td { padding: 10px 12px; border-bottom: 1px solid var(--border-light); }
+
+.action-box { background: var(--bg); border-left: 3px solid var(--accent); border-radius: 0 var(--radius) var(--radius) 0; padding: 20px 24px; margin: 24px 0 4px; }
+.action-box .action-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--accent-dark); margin-bottom: 10px; }
+[data-theme="dark"] .action-box .action-title { color: var(--accent); }
+.action-box ul { margin: 0 0 0 18px; }
+.action-box li { font-size: 15px; margin-bottom: 6px; }
+.action-box li .time-est { font-size: 12px; color: var(--muted); font-weight: 500; }
+
+.tool-card { background: var(--surface); border: 2px solid var(--accent); border-radius: var(--radius); padding: var(--card-pad); margin-bottom: 24px; position: relative; box-shadow: 0 0 0 4px var(--accent-dim); }
+.tool-badge { position: absolute; top: -12px; left: 24px; background: var(--accent); color: #070B18; font-size: 10px; font-weight: 700; letter-spacing: 1px; padding: 4px 12px; border-radius: 4px; text-transform: uppercase; }
+.tool-card h2 { font-family: var(--font-display); font-size: 1.5rem; font-weight: 600; margin-top: 8px; margin-bottom: 4px; }
+.tool-card .summary { font-size: 15px; color: var(--muted); margin-bottom: 24px; }
+
+.tool-input-group { margin-bottom: 20px; }
+.tool-input-group label { display: block; font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+.tool-select { width: 100%; padding: 10px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; font-size: 15px; color: var(--text); font-family: var(--font-body); cursor: pointer; -webkit-appearance: none; appearance: none; background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%235A6578' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+.tool-select:focus-visible { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-dim); }
+
+.results-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 24px 0; }
+@media (max-width: 480px) { .results-grid { grid-template-columns: 1fr; } }
+.result-tile { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+.result-tile .rlabel { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; font-weight: 500; }
+.result-tile .rvalue { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.result-tile.hero { grid-column: 1 / -1; border-color: var(--accent); background: var(--accent-dim); }
+.result-tile.hero .rvalue { color: var(--accent-dark); font-size: 32px; }
+[data-theme="dark"] .result-tile.hero .rvalue { color: var(--accent); }
+
+/* Census checker styles */
+.checker-grid { display: grid; gap: 8px; margin: 16px 0; }
+.check-item { display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; transition: background 0.15s; }
+.check-item.checked { background: var(--success-bg); border-color: rgba(22,101,52,0.2); }
+.check-item.checked .check-status { color: var(--success-text); }
+.check-item input[type="checkbox"] { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--accent); flex-shrink: 0; cursor: pointer; }
+.check-item .check-text { flex: 1; }
+.check-item .check-label { font-size: 14px; font-weight: 500; cursor: pointer; display: block; }
+.check-item .check-detail { font-size: 13px; color: var(--muted); margin-top: 4px; }
+.check-item .check-status { font-size: 12px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+.checker-score { text-align: center; padding: 20px; background: var(--bg); border-radius: 12px; border: 1px solid var(--border); margin: 20px 0; }
+.checker-score .score-number { font-size: 48px; font-weight: 800; color: var(--accent-dark); }
+[data-theme="dark"] .checker-score .score-number { color: var(--accent); }
+.checker-score .score-label { font-size: 14px; color: var(--muted); margin-top: 4px; }
+.checker-score .score-verdict { font-size: 16px; font-weight: 600; margin-top: 8px; }
+
+.assumptions-details { margin: 20px 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.assumptions-details summary { padding: 14px 18px; font-size: 14px; font-weight: 600; color: var(--muted); cursor: pointer; list-style: none; display: flex; align-items: center; gap: 8px; min-height: 44px; }
+.assumptions-details summary::-webkit-details-marker { display: none; }
+.assumptions-details summary::before { content: '▸'; transition: transform 0.2s; }
+.assumptions-details[open] summary::before { transform: rotate(90deg); }
+.assumptions-inner { padding: 0 18px 18px; font-size: 14px; color: var(--muted); line-height: 1.7; }
+.assumptions-inner ul { margin: 8px 0 8px 18px; }
+.assumptions-inner li { margin-bottom: 4px; }
+
+.confidence-tabs { margin: 20px 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.tab-header { display: flex; border-bottom: 1px solid var(--border); }
+.tab-btn { flex: 1; padding: 12px 16px; font-size: 14px; font-weight: 600; border: none; background: var(--bg); color: var(--muted); cursor: pointer; font-family: var(--font-body); min-height: 44px; }
+.tab-btn.active { background: var(--surface); color: var(--accent-dark); border-bottom: 2px solid var(--accent); }
+[data-theme="dark"] .tab-btn.active { color: var(--accent); }
+.tab-content { display: none; padding: 20px; }
+.tab-content.active { display: block; }
+.lock-overlay { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.lock-icon { font-size: 32px; opacity: 0.5; }
+.lock-features { list-style: none; margin: 12px 0; padding: 0; font-size: 13px; text-align: left; }
+.lock-features li { padding: 4px 0; }
+.lock-features li::before { content: '✓ '; color: var(--accent); font-weight: 700; }
+
+.cta-panel { margin: 24px 0; padding: 24px; background: linear-gradient(135deg, var(--accent-dim), rgba(0,212,212,0.03)); border: 1px solid rgba(0,212,212,0.25); border-radius: var(--radius); text-align: center; }
+.cta-panel h3 { margin: 0 0 16px; font-size: 1.1rem; }
+.cta-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px; }
+.cta-btn-primary { display: inline-flex; align-items: center; gap: 6px; padding: 12px 24px; background: var(--accent); color: #070B18; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: var(--font-body); min-height: 44px; }
+.cta-btn-secondary { display: inline-flex; align-items: center; gap: 6px; padding: 12px 24px; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: var(--font-body); min-height: 44px; }
+.pro-strip { display: flex; flex-wrap: wrap; gap: 12px 20px; justify-content: center; font-size: 13px; color: var(--muted); }
+.pro-strip span::before { content: '✓ '; color: var(--accent); font-weight: 700; }
+
+.save-share { display: flex; gap: 10px; flex-wrap: wrap; margin: 16px 0; }
+.share-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--text); cursor: pointer; font-family: var(--font-body); min-height: 40px; }
+.share-btn:hover { border-color: var(--accent); }
+.share-btn .pro-badge { font-size: 9px; font-weight: 700; background: var(--accent); color: #070B18; padding: 2px 6px; border-radius: 3px; }
+
+.mid-cta { background: var(--surface); border: 1px solid var(--accent); border-radius: var(--radius); padding: 32px var(--card-pad); text-align: center; margin: 32px 0; box-shadow: var(--shadow); }
+.mid-cta h2 { font-family: var(--font-display); font-size: 1.3rem; margin-bottom: 8px; }
+.mid-cta p { color: var(--muted); font-size: 15px; margin-bottom: 16px; }
+.email-capture { display: flex; gap: 8px; max-width: 400px; margin: 0 auto; }
+.email-capture input { flex: 1; padding: 12px 16px; border: 1px solid var(--border); border-radius: 8px; font-size: 15px; font-family: var(--font-body); background: var(--bg); color: var(--text); min-height: 44px; }
+.email-capture input:focus-visible { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-dim); }
+.email-capture button { padding: 12px 20px; background: var(--accent); color: #070B18; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: var(--font-body); white-space: nowrap; min-height: 44px; }
+
+.poll-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--card-pad); margin-bottom: 24px; box-shadow: var(--shadow); }
+.poll-options { display: grid; gap: 10px; margin: 16px 0; }
+.poll-option { display: flex; align-items: center; gap: 12px; padding: 14px 18px; background: var(--bg); border: 2px solid var(--border); border-radius: 10px; cursor: pointer; transition: border-color 0.15s, background 0.15s; min-height: 44px; }
+.poll-option:hover { border-color: var(--accent); }
+.poll-option.selected { border-color: var(--accent); background: var(--accent-dim); }
+.poll-option input[type="radio"] { accent-color: var(--accent); width: 18px; height: 18px; cursor: pointer; flex-shrink: 0; }
+.poll-option label { cursor: pointer; font-size: 15px; font-weight: 500; flex: 1; }
+.poll-region { margin: 16px 0; }
+.poll-region select { width: 100%; }
+.poll-submit { margin-top: 16px; }
+.poll-thanks { display: none; padding: 20px; background: var(--success-bg); color: var(--success-text); border-radius: 10px; text-align: center; font-weight: 600; font-size: 15px; }
+.poll-results-ref { background: var(--quote-bg); border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+.poll-results-ref h4 { font-size: 14px; margin-bottom: 8px; color: var(--text); }
+.poll-results-ref p { font-size: 14px; color: var(--muted); margin: 0; }
+
+.todo { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; }
+.todo input[type="checkbox"] { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--accent); flex-shrink: 0; cursor: pointer; }
+.todo label { font-size: 15px; cursor: pointer; }
+.time-saved { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; font-size: 13px; color: var(--success-text); background: var(--success-bg); border-radius: 8px; font-weight: 600; margin-top: 16px; }
+
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
+.modal-overlay.open { display: flex; }
+.modal { background: var(--surface); border-radius: var(--radius); padding: 36px; max-width: 440px; width: 100%; box-shadow: var(--shadow-lg); position: relative; }
+.modal-close { position: absolute; top: 12px; right: 16px; background: none; border: none; font-size: 20px; color: var(--muted); cursor: pointer; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; }
+.modal h3 { font-family: var(--font-display); font-size: 1.2rem; margin-bottom: 8px; }
+.modal p { font-size: 14px; color: var(--muted); margin-bottom: 20px; line-height: 1.6; }
+.modal input[type="email"] { width: 100%; padding: 12px 16px; border: 1px solid var(--border); border-radius: 8px; font-size: 15px; font-family: var(--font-body); background: var(--bg); color: var(--text); margin-bottom: 12px; min-height: 44px; }
+.modal .modal-submit { width: 100%; padding: 12px; background: var(--accent); color: #070B18; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: var(--font-body); min-height: 44px; }
+.modal .modal-disclaimer { font-size: 12px; color: var(--muted); text-align: center; margin-top: 12px; }
+.modal .modal-success { display: none; text-align: center; padding: 24px 0; font-size: 18px; font-weight: 600; color: var(--success-text); }
+
+.page-footer { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 36px var(--card-pad); margin-top: 32px; box-shadow: var(--shadow); }
+.footer-pro { margin-bottom: 28px; padding-bottom: 24px; border-bottom: 1px solid var(--border); }
+.footer-pro h3 { font-family: var(--font-display); font-size: 1.2rem; margin-bottom: 16px; }
+.footer-pro-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 14px; }
+@media (max-width: 480px) { .footer-pro-grid { grid-template-columns: 1fr; } }
+.footer-pro-grid .pro-item { display: flex; align-items: flex-start; gap: 8px; }
+.footer-pro-grid .pro-item::before { content: '✓'; color: var(--accent); font-weight: 700; flex-shrink: 0; }
+.footer-subscribe { text-align: center; margin-bottom: 28px; padding-bottom: 24px; border-bottom: 1px solid var(--border); }
+.footer-subscribe h3 { font-family: var(--font-display); font-size: 1.1rem; margin-bottom: 12px; }
+.footer-subscribe .cta-btn-primary { margin-top: 8px; text-decoration: none; display: inline-flex; }
+.footer-brand { text-align: center; font-size: 13px; color: var(--muted); }
+.footer-brand .brand-line { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+.footer-sources { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-light); }
+.footer-sources h4 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 8px; }
+.footer-sources ul { list-style: none; padding: 0; margin: 0; font-size: 12px; }
+.footer-sources li { padding: 3px 0; }
+.footer-sources a { color: var(--muted); }
+.footer-sources a:hover { color: var(--accent); }
+
+@media print {
+  .sixty-bar, .sticky-title, .toc-rail, .controls, .audio-player, .cta-panel, .mid-cta, .modal-overlay, .save-share { display: none; }
+  body { background: #fff; color: #000; font-size: 12pt; }
+  .card, .tool-card, .page-footer { box-shadow: none; border: 1px solid #ddd; }
+}
+</style>
+</head>
+<body>
+
+<div class="sixty-bar">
+  <div class="sixty-bar-inner">
+    <div class="sixty-bar-item">
+      <span class="bar-label">Deadline</span>
+      <span class="bar-value">15 Jan — Spring Census</span>
+    </div>
+    <div class="sixty-bar-item">
+      <span class="bar-label">Risk</span>
+      <span class="bar-value">Census data errors</span>
+    </div>
+    <div class="sixty-bar-item">
+      <span class="bar-label">Tool</span>
+      <span class="bar-value"><a href="#census-tool">Census Checker</a></span>
+    </div>
+    <span class="spacer"></span>
+    <button class="listen-btn" onclick="document.getElementById('audio-section').scrollIntoView({behavior:'smooth'})">🎧 Listen</button>
+  </div>
+</div>
+
+<div class="sticky-title" id="stickyTitle">The Schoolgle Signal — Week 3 — 6 January 2026</div>
+
+<div class="layout-wrapper">
+  <aside class="toc-rail">
+    <div class="toc-sticky">
+      <nav aria-label="Table of contents">
+        <a href="#sixty-seconds" class="toc-link" data-section="sixty-seconds">This week</a>
+        <a href="#deep-dive" class="toc-link" data-section="deep-dive">Census deep dive</a>
+        <a href="#census-tool" class="toc-link" data-section="census-tool">Census Checker</a>
+        <a href="#radar" class="toc-link" data-section="radar">Radar</a>
+        <a href="#ops-checklist" class="toc-link" data-section="ops-checklist">Ops checklist</a>
+        <a href="#ai-risk" class="toc-link" data-section="ai-risk">AI &amp; Risk</a>
+        <a href="#the-question" class="toc-link" data-section="the-question">The question</a>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="main-content">
+
+    <header class="page-header">
+      <div>
+        <h1>The Schoolgle <span>Signal</span></h1>
+        <div class="header-meta">
+          <span class="date">Week of 6 January 2026</span>
+          <span class="issue">Issue #3</span>
+        </div>
+      </div>
+      <div class="controls">
+        <div class="ctrl-group">
+          <button class="ctrl-btn active" onclick="setTheme('light')" id="btn-light" aria-label="Light mode">☀️</button>
+          <button class="ctrl-btn" onclick="setTheme('dark')" id="btn-dark" aria-label="Dark mode">🌙</button>
+          <button class="ctrl-btn" onclick="setTheme('system')" id="btn-system" aria-label="System theme">⚙️</button>
+        </div>
+        <div class="ctrl-group">
+          <button class="ctrl-btn" onclick="adjustFont(-1)" aria-label="Decrease text size">A−</button>
+          <button class="ctrl-btn" onclick="adjustFont(0)" aria-label="Default text size">A</button>
+          <button class="ctrl-btn" onclick="adjustFont(1)" aria-label="Increase text size">A+</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="card" style="border-left: 3px solid var(--accent); background: var(--accent-dim);">
+      <p style="margin:0; font-size: 15px; font-style: italic; color: var(--text);">🎯 Census Thursday. Half term Friday week. You've got this.</p>
+    </div>
+
+    <div class="audio-player" id="audio-section">
+      <div class="audio-top">
+        <button class="audio-play-btn" id="playBtn" aria-label="Play audio" onclick="togglePlay()">▶</button>
+        <div class="audio-info">
+          <div class="audio-title">Listen to this issue (6 mins)</div>
+          <div class="audio-time">The Schoolgle Signal — Week 3</div>
+        </div>
+        <div class="audio-progress">
+          <span class="audio-time-label">0:00</span>
+          <div class="audio-track"><div class="audio-track-fill"></div><div class="audio-track-dot"></div></div>
+          <span class="audio-time-label">6:15</span>
+        </div>
+        <div class="audio-speed">
+          <button class="speed-btn active" onclick="setSpeed(1,this)">1×</button>
+          <button class="speed-btn" onclick="setSpeed(1.5,this)">1.5×</button>
+          <button class="speed-btn" onclick="setSpeed(2,this)">2×</button>
+        </div>
+      </div>
+      <div class="transcript-section">
+        <button class="transcript-toggle" onclick="this.nextElementSibling.classList.toggle('open'); this.querySelector('.arrow').textContent = this.nextElementSibling.classList.contains('open') ? '▾' : '▸'">
+          <span class="arrow">▸</span> Show transcript
+        </button>
+        <div class="transcript-body">
+          <p>This week: Spring Census is Thursday — we cover the five validation errors that catch schools every year and built a 20-point Census Checker so you can audit your data before submission. Plus: Ofsted inspections resume under the new framework, the AAR deadline, and why your school needs a snow day plan.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 60 SECONDS -->
+    <div class="card" id="sixty-seconds">
+      <h2>This week in 60 seconds</h2>
+      <ul>
+        <li><strong>6 January</strong> — Spring term starts. Three staff already emailed in sick. January in education.</li>
+        <li><strong>15 January</strong> — Spring Census day. Nine days to get your data clean. Every missing UPN costs money.</li>
+        <li><strong>28 January</strong> — Academies Accounts Return (AAR) deadline for 2024/25.</li>
+        <li><strong>Ofsted</strong> — Inspections resume this week under the new report card framework.</li>
+        <li><strong>Tool of the week</strong> — <a href="#census-tool">Census Checker</a>. 20-point audit for your Spring Census data.</li>
+      </ul>
+    </div>
+
+    <!-- DEEP DIVE: CENSUS -->
+    <div class="card" id="deep-dive">
+      <span class="chip chip-compliance">Compliance</span>
+      <h2>Spring Census — nine days to get it right</h2>
+      <p class="summary">Census day is 15 January. The data submitted directly determines funding allocation for the following year.</p>
+
+      <h3>The five errors that delay submissions</h3>
+      <ol>
+        <li>Pupils on roll with no attendance marks for autumn term</li>
+        <li>FSM claims without a valid eligibility start date</li>
+        <li>EHCP and SEN Support pupils with incorrect provision type codes</li>
+        <li>Start dates falling on weekends or bank holidays</li>
+        <li>Duplicate UPNs from pupils who transferred between schools</li>
+      </ol>
+
+      <h3>FSM: the money left on the table</h3>
+      <p>Between 10–15% of FSM-eligible pupils go unclaimed on census day nationally. At approximately £1,480 per pupil in Pupil Premium, five unclaimed pupils = £7,400 lost annually.</p>
+      <p>The most common reason: parents didn't complete the application. The second: the school didn't chase it.</p>
+      <p style="font-size:13px;color:var(--muted);font-style:italic;">Source: DfE School Census guidance, 2025–26; Pupil Premium rates 2025–26</p>
+
+      <div class="action-box">
+        <div class="action-title">Do this next</div>
+        <ul>
+          <li>Block time for your data manager to run a full validation check. <span class="time-est">(2 hours)</span></li>
+          <li>Compare MIS roll against physical roll. Chase outstanding FSM applications. <span class="time-est">(1 hour)</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- CENSUS CHECKER TOOL -->
+    <div class="tool-card" id="census-tool">
+      <div class="tool-badge">Interactive Tool</div>
+      <h2 style="margin-top:16px;">Census Checker</h2>
+      <p class="summary">20-point audit to make sure your Spring Census is accurate. Check off each item to see your readiness score.</p>
+
+      <div class="tool-input-group">
+        <label for="census-phase">School phase</label>
+        <select class="tool-select" id="census-phase">
+          <option value="primary">Primary</option>
+          <option value="secondary" selected>Secondary</option>
+          <option value="special">Special school</option>
+          <option value="ap">Alternative provision</option>
+        </select>
+      </div>
+
+      <!-- Score display -->
+      <div class="checker-score" id="checker-score">
+        <div class="score-number" id="score-number">0/20</div>
+        <div class="score-label">Census readiness score</div>
+        <div class="score-verdict" id="score-verdict" style="color:var(--error-text);">Not started — work through the checklist below</div>
+      </div>
+
+      <!-- Checklist -->
+      <h3 style="margin:20px 0 12px;font-size:1rem;">Pupil data</h3>
+      <div class="checker-grid" id="checker-list">
+        <div class="check-item"><input type="checkbox" onchange="updateScore()" id="c1"><div class="check-text"><label for="c1" class="check-label">All pupils on roll have a valid UPN</label><div class="check-detail">Missing UPNs will fail validation and delay submission</div></div></div>
+        <div class="check-item"><input type="checkbox" onchange="updateScore()" id="c2"><div class="check-text"><label for="c2" class="check-label">No duplicate UPNs (especially mid-year transfers)</label><div class="check-detail">Check your MIS didn't create new records instead of merging</div></div></div>
+        <div class="check-item"><input type="checkbox" onchange="updateScore()" id="c3"><div class="check-text"><label for="c3" class="check-label">Pupil start dates don't fall on weekends or bank holidays</label><div class="check-detail">Common data entry error that flags during validation</div></div></div>
+        <div class="check-item"><input type="checkbox" onchange="updateScore()" id="c4"><div class="check-text"><label for="c4" class="check-label">Ethnicity data coded (use "refused" not blank)</label><div class="check-detail">Blank ethnicity generates validation warnings</div></div></div>
+        <div class="check-item"><input type="checkbox" onchange="updateScore()" id="c5"><div class="check-text"><label for="c5" class="check-label">No attendance marks after a pupil's leaving date</label><div class="check-detail">If a pupil left mid-term, check there are no marks after their leaving date</div></div></div>
+      </div>
+
+      <h3 style="margin:20px 0 12px;font-size:1rem;">FSM &amp; Pupil Premium</h3>
+      <div class="checker-grid">
+        <div class="check-item"><input type="checkbox" onchange="updateScore()" id="c6"><div class="check-text"><label for="c6" class="check-label">All FSM-eligible pupils have eligibility flag set</label><div class="check-detail">Not just meal uptake — the eligibility flag drives Pupil Premium</div></div></div>
+        <div class="check-item"><input type="checkbox" onchange="updateScore()" id="c7"><div class="check-text"><label for="c7" class="check-label">FSM claims have valid eligibility start date</label><div class="check-detail">Missing start dates fail validation</div></div></div>
+        <div class="check-item"><input type="checkbox" onchange="updateScore()" id="c8"><div class="check-text"><label for="c8" class="check-label">Outstanding FSM applications chased with parents</label><div class="check-detail">5 unclaimed pupils = £7,400+ lost Pupil Premium annually</div></div></div>
+        <div class="check-item"><input type="checkbox" onchange="updateScore()" id="c9"><div class="check-text"><label for="c9" class="check-label">Ever-6 FSM pupils correctly flagged</label><div class="check-detail">Pupils eligible in the last 6 years attract Pupil Premium</div></div></div>
+      </div>
+
+      <h3 style="margin:20px 0 12px;font-size:1rem;">SEN &amp; EHCP</h3>
+      <div class="checker-grid">
+        <div class="check-item"><input type="checkbox" onchange="updateScore()" id="c10"><div class="check-text"><label for="c10" class="check-label">Every EHCP pupil's SEN coding verified against SEND register</label><div class="check-detail">SEN Support vs EHCP mismatches create data conflicts</div></div></div>
+        <div class="check-item"><input type="checkbox" onchange="updateScore()" id="c11"><div class="check-text"><label for="c11" class="check-label">Provision type codes correct for all SEN pupils</label><div class="check-detail">Incorrect provision types flag during validation</div></div></div>
+        <div class="check-item"><input type="checkbox" onchange="updateScore()" id="c12"><div class="check-text"><label for="c12" class="check-label">Primary need codes match current assessments</label><div class="check-detail">Needs may have changed since autumn — update if necessary</div></div></div>
+      </div>
+
+      <h3 style="margin:20px 0 12px;font-size:1rem;">Attendance</h3>
+      <div class="checker-grid">
+        <div class="check-item"><input type="checkbox" onchange="updateScore()" id="c13"><div class="check-text"><label for="c13" class="check-label">All pupils have attendance marks for autumn term</label><div class="check-detail">Pupils on roll with no marks will fail validation</div></div></div>
+        <div class="check-item"><input type="checkbox" onchange="updateScore()" id="c14"><div class="check-text"><label for="c14" class="check-label">Non-standard absence codes used correctly</label><div class="check-detail">Inconsistencies between registration and MIS generate failures</div></div></div>
+        <div class="check-item"><input type="checkbox" onchange="updateScore()" id="c15"><div class="check-text"><label for="c15" class="check-label">Persistent absence pupils identified and coded</label><div class="check-detail">Check PA thresholds are being applied consistently</div></div></div>
+      </div>
+
+      <h3 style="margin:20px 0 12px;font-size:1rem;">Governance &amp; submission</h3>
+      <div class="checker-grid">
+        <div class="check-item"><input type="checkbox" onchange="updateScore()" id="c16"><div class="check-text"><label for="c16" class="check-label">Validation report run and errors sorted by funding impact</label><div class="check-detail">Fix money errors first — they directly affect your budget</div></div></div>
+        <div class="check-item"><input type="checkbox" onchange="updateScore()" id="c17"><div class="check-text"><label for="c17" class="check-label">Census window open and test submission completed</label><div class="check-detail">Don't wait until census day to discover issues</div></div></div>
+        <div class="check-item"><input type="checkbox" onchange="updateScore()" id="c18"><div class="check-text"><label for="c18" class="check-label">LA/DfE flags from previous census addressed</label><div class="check-detail">Outstanding queries from last time will delay this submission</div></div></div>
+        <div class="check-item"><input type="checkbox" onchange="updateScore()" id="c19"><div class="check-text"><label for="c19" class="check-label">MIS roll matches physical roll (pupils on site today)</label><div class="check-detail">Walk the building if needed — paper truth vs system truth</div></div></div>
+        <div class="check-item"><input type="checkbox" onchange="updateScore()" id="c20"><div class="check-text"><label for="c20" class="check-label">Headteacher sign-off obtained before submission</label><div class="check-detail">The head is accountable for census accuracy</div></div></div>
+      </div>
+
+      <!-- Assumptions -->
+      <details class="assumptions-details">
+        <summary>How to use this checker</summary>
+        <div class="assumptions-inner">
+          <ul>
+            <li>Work through each item — tick when you've verified it</li>
+            <li>Your score updates automatically</li>
+            <li>Focus on FSM and SEN items first — they have the biggest funding impact</li>
+            <li>This is a guidance checklist, not an exhaustive list</li>
+            <li><strong>Always run the official DfE validation tool before final submission</strong></li>
+          </ul>
+        </div>
+      </details>
+
+      <!-- Confidence ladder -->
+      <div class="confidence-tabs">
+        <div class="tab-header">
+          <button class="tab-btn active" onclick="switchTab('quick',this)">Readiness Audit ✅</button>
+          <button class="tab-btn" onclick="switchTab('pro',this)">Automated Census Check 🔒</button>
+        </div>
+        <div class="tab-content active" id="tab-quick">
+          <p style="font-size:14px;color:var(--muted);margin:0;">You're using the <strong>manual readiness audit</strong> — a 20-point checklist based on the most common census errors. Good for a quick self-assessment.</p>
+        </div>
+        <div class="tab-content" id="tab-pro">
+          <div class="lock-overlay">
+            <div class="lock-icon">🔒</div>
+            <p style="font-weight:600;font-size:15px;margin:0 0 8px;">Automated Census Check — Schoolgle Pro</p>
+            <p style="font-size:13px;margin:0 0 12px;">Upload your census file for automated validation with funding impact analysis.</p>
+            <ul class="lock-features">
+              <li>Upload CTF/XML for instant validation</li>
+              <li>Funding impact calculation per error</li>
+              <li>Priority-ranked fix list</li>
+              <li>Year-on-year comparison</li>
+              <li>Governor-ready census summary report</li>
+            </ul>
+            <button class="cta-btn-primary" style="margin-top:12px;">Unlock Pro →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- CTA -->
+      <div class="cta-panel">
+        <h3>Save your census audit</h3>
+        <div class="cta-buttons">
+          <button class="cta-btn-primary" onclick="openEmailModal()">📧 Email me this checklist</button>
+          <button class="cta-btn-secondary">🔓 Unlock Pro: Automated census validation</button>
+        </div>
+        <div class="pro-strip">
+          <span>Automated file validation</span>
+          <span>Funding impact analysis</span>
+          <span>Export PDF/CSV</span>
+          <span>Governor-ready summary</span>
+        </div>
+      </div>
+
+      <div class="save-share">
+        <button class="share-btn" onclick="copySummary()">📋 Copy summary</button>
+        <button class="share-btn">📄 Download PDF <span class="pro-badge">PRO</span></button>
+        <button class="share-btn">🔗 Share link <span class="pro-badge">PRO</span></button>
+      </div>
+
+      <div class="time-saved">⏱ Time saved using this checker: ~2 hours of manual verification</div>
+    </div>
+
+    <!-- RADAR -->
+    <div class="card" id="radar">
+      <span class="chip chip-leadership">Leadership</span>
+      <h2>Radar</h2>
+
+      <h3>Ofsted inspections resume under new framework</h3>
+      <p>Key points for schools expecting a call this term:</p>
+      <ul>
+        <li>Inspections led by the most experienced inspectors initially</li>
+        <li>Six evaluation areas on a five-point scale, not the old four-word system</li>
+        <li>Safeguarding: separate binary judgement (met/not met)</li>
+        <li>Inspection software still glitchy — contingency arrangements in place</li>
+      </ul>
+
+      <div class="action-box">
+        <div class="action-title">Do this next</div>
+        <ul>
+          <li>Download the new inspection handbook from GOV.UK. Brief your SLT on the six areas. <span class="time-est">(1 hour)</span></li>
+          <li>Agree who leads on evidence for each area. If Ofsted calls Monday, you want to know who's presenting what. <span class="time-est">(30 mins)</span></li>
+        </ul>
+      </div>
+
+      <h3 style="margin-top:28px;">AAR deadline: 28 January</h3>
+      <p>Academy trusts must submit the Academies Accounts Return by 28 January. Late submissions are flagged by ESFA and can trigger additional scrutiny.</p>
+      <div class="action-box">
+        <div class="action-title">Do this next</div>
+        <ul>
+          <li>Check with your finance team that the AAR is in progress. If using an external auditor, confirm they have capacity before the deadline. <span class="time-est">(15 mins)</span></li>
+        </ul>
+      </div>
+
+      <h3 style="margin-top:28px;">Snow closures: the decision framework</h3>
+      <p>Met Office cold weather alerts issued. A clear framework:</p>
+      <ol>
+        <li><strong>By 6:00am</strong> — Check roads, staff availability, heating.</li>
+        <li><strong>By 6:30am</strong> — Decide. Communicate via text system, website, social media, local radio.</li>
+        <li><strong>Document everything</strong> — You need contemporaneous evidence if challenged.</li>
+        <li><strong>Partial opening</strong> — Some year groups if staffing limited.</li>
+      </ol>
+    </div>
+
+    <!-- OPS CHECKLIST -->
+    <div class="card" id="ops-checklist">
+      <span class="chip chip-ops">Operations</span>
+      <h2>Ops checklist: first week back</h2>
+
+      <h3>INSET day</h3>
+      <div class="todo"><input type="checkbox" id="t1"><label for="t1">Safeguarding refresher — local procedure changes, KCSIE AI updates</label></div>
+      <div class="todo"><input type="checkbox" id="t2"><label for="t2">Census briefing — staff understand why accurate data matters</label></div>
+      <div class="todo"><input type="checkbox" id="t3"><label for="t3">Behaviour policy changes communicated in person</label></div>
+      <div class="todo"><input type="checkbox" id="t4"><label for="t4">Assessment calendar confirmed for spring term</label></div>
+      <div class="todo"><input type="checkbox" id="t5"><label for="t5">CPD priorities linked to school improvement plan</label></div>
+
+      <h3>By Friday</h3>
+      <div class="todo"><input type="checkbox" id="t6"><label for="t6">Fire drill completed (not day one — but by end of week)</label></div>
+      <div class="todo"><input type="checkbox" id="t7"><label for="t7">Staffing gaps identified — advertise immediately</label></div>
+      <div class="todo"><input type="checkbox" id="t8"><label for="t8">Supply agency arrangements confirmed with backup</label></div>
+    </div>
+
+    <!-- AI -->
+    <div class="card" id="ai-risk">
+      <span class="chip chip-ai">AI &amp; Tech</span>
+      <h2>Ofsted's inspection software: still unreliable</h2>
+      <p>Inspectors told to follow contingency arrangements — essentially manual note-taking where digital systems fail. If an inspector misrecords a conversation or loses notes to a software crash, the report card may not accurately reflect what happened.</p>
+
+      <div class="action-box">
+        <div class="action-title">Do this next</div>
+        <ul>
+          <li>If inspected this term, designate an SLT member to keep a detailed contemporaneous log. <span class="time-est">(ongoing)</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- MID CTA -->
+    <div class="mid-cta">
+      <h2>Get next week's tool delivered to your inbox</h2>
+      <p>Free weekly intelligence for school leaders. No spam. Unsubscribe anytime.</p>
+      <div class="email-capture">
+        <input type="email" placeholder="your@school.sch.uk" aria-label="Email address">
+        <button onclick="handleMidSubscribe(this)">Subscribe</button>
+      </div>
+    </div>
+
+    <!-- THE QUESTION -->
+    <div class="card" id="the-question">
+      <h2>The question leaders should ask out loud</h2>
+      <p><strong>Should every school have a "snow day" remote learning plan ready to deploy?</strong></p>
+      <p>Snow closures cost approximately 10 million pupil-days per year across England. COVID showed most schools can deliver some form of remote education. Yet when snow closes a school in 2026, most pupils simply lose a day.</p>
+      <p>Is the technology and expectation now in place to make snow closures a thing of the past — or is a day off when it snows one of the few genuine joys of childhood?</p>
+    </div>
+
+    <!-- POLL -->
+    <div class="poll-card" id="poll-section">
+      <h2>📊 Your turn</h2>
+
+      <div class="poll-results-ref">
+        <h4>Last week we asked: "Does your LA provide adequate SEND support?"</h4>
+        <p>Results will appear here when we have live data.</p>
+      </div>
+
+      <p><strong>How confident are you in your census data accuracy?</strong></p>
+
+      <div id="poll-form">
+        <div class="poll-options">
+          <div class="poll-option" onclick="selectPoll(this,'very-confident')">
+            <input type="radio" name="poll-w3" id="poll-very" value="very-confident">
+            <label for="poll-very">Very confident — triple-checked</label>
+          </div>
+          <div class="poll-option" onclick="selectPoll(this,'mostly')">
+            <input type="radio" name="poll-w3" id="poll-mostly" value="mostly">
+            <label for="poll-mostly">Mostly confident — a few queries</label>
+          </div>
+          <div class="poll-option" onclick="selectPoll(this,'nervous')">
+            <input type="radio" name="poll-w3" id="poll-nervous" value="nervous">
+            <label for="poll-nervous">Nervous — always something wrong</label>
+          </div>
+          <div class="poll-option" onclick="selectPoll(this,'first-time')">
+            <input type="radio" name="poll-w3" id="poll-first" value="first-time">
+            <label for="poll-first">First time leading census</label>
+          </div>
+        </div>
+
+        <div class="poll-region">
+          <label style="font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;">Where are you from? (optional)</label>
+          <select class="tool-select" id="poll-region">
+            <option value="">— Select region —</option>
+            <option value="north-east">North East</option>
+            <option value="north-west">North West</option>
+            <option value="yorkshire">Yorkshire</option>
+            <option value="east-midlands">East Midlands</option>
+            <option value="west-midlands">West Midlands</option>
+            <option value="east">East of England</option>
+            <option value="london">London</option>
+            <option value="south-east">South East</option>
+            <option value="south-west">South West</option>
+            <option value="wales">Wales</option>
+          </select>
+        </div>
+
+        <button class="cta-btn-primary poll-submit" id="poll-submit-btn" onclick="submitPoll()" disabled style="opacity:0.5;width:100%;">Vote</button>
+      </div>
+
+      <div class="poll-thanks" id="poll-thanks">
+        ✅ Thanks — we'll share results in next week's issue.
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="page-footer">
+      <div class="footer-pro">
+        <h3>What you get in Schoolgle Pro</h3>
+        <div class="footer-pro-grid">
+          <div class="pro-item">Automated census validation</div>
+          <div class="pro-item">Funding impact analysis</div>
+          <div class="pro-item">Export PDF/CSV reports</div>
+          <div class="pro-item">Governor-ready paragraphs (AI-written)</div>
+          <div class="pro-item">Full audit trail</div>
+          <div class="pro-item">Priority tool access</div>
+          <div class="pro-item">Benchmarking against similar schools</div>
+          <div class="pro-item">Dedicated support</div>
+        </div>
+      </div>
+      <div class="footer-subscribe">
+        <h3>Never miss an issue</h3>
+        <p style="color:var(--muted);font-size:14px;">Weekly intelligence for school leaders. Free.</p>
+        <a href="https://schoolgle.co.uk" class="cta-btn-primary" style="text-decoration:none;">Sign up — it's free</a>
+      </div>
+      <div class="footer-brand">
+        <div class="brand-line">Built by Schoolgle — the operating system for schools</div>
+        <p>The Schoolgle Signal — weekly intelligence for school leaders, with the practical context to act on it.</p>
+        <p style="margin-top:8px;">© 2026 <a href="https://schoolgle.co.uk">Schoolgle</a></p>
+        <div class="footer-sources">
+          <h4>Data sources</h4>
+          <ul>
+            <li><a href="https://www.gov.uk/guidance/school-census" target="_blank" rel="noopener">Spring School Census 2026 guidance</a> — GOV.UK</li>
+            <li><a href="https://www.gov.uk/government/publications/school-inspection-handbook-eif" target="_blank" rel="noopener">Ofsted new inspection handbook</a> — GOV.UK</li>
+            <li><a href="https://www.gov.uk/guidance/academies-accounts-return" target="_blank" rel="noopener">Academies Accounts Return guidance</a> — GOV.UK</li>
+            <li><a href="https://www.gov.uk/government/publications/school-closures" target="_blank" rel="noopener">DfE severe weather guidance for schools</a> — GOV.UK</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div class="modal-overlay" id="emailModal" role="dialog" aria-modal="true" aria-label="Email capture">
+  <div class="modal">
+    <button class="modal-close" onclick="closeEmailModal()" aria-label="Close">&times;</button>
+    <div id="modal-form">
+      <h3>Get this census checklist in your inbox</h3>
+      <p>We'll send this 20-point audit to your email — plus next week's tool.</p>
+      <input type="email" id="modal-email" placeholder="your@school.sch.uk" aria-label="Email address">
+      <button class="modal-submit" onclick="submitEmail()">Send</button>
+      <div class="modal-disclaimer">Free. No spam. Unsubscribe anytime.</div>
+    </div>
+    <div class="modal-success" id="modal-success">✓ Check your inbox</div>
+  </div>
+</div>
+
+<div id="copy-toast" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;z-index:1001;box-shadow:var(--shadow-lg);">✓ Copied to clipboard</div>
+
+<script>
+function setTheme(mode){
+  document.querySelectorAll('#btn-light,#btn-dark,#btn-system').forEach(function(b){b.classList.remove('active')});
+  if(mode==='system'){var sys=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',sys);document.getElementById('btn-system').classList.add('active');localStorage.setItem('signal-theme','system')}
+  else{document.documentElement.setAttribute('data-theme',mode);document.getElementById('btn-'+mode).classList.add('active');localStorage.setItem('signal-theme',mode)}
+}
+(function(){var s=localStorage.getItem('signal-theme')||'light';setTheme(s)})();
+
+var fontSizes=[14,16,19],fontIdx=1;
+function adjustFont(d){if(d===0)fontIdx=1;else fontIdx=Math.max(0,Math.min(2,fontIdx+d));document.documentElement.style.setProperty('--font-size',fontSizes[fontIdx]+'px')}
+
+var isPlaying=false;
+function togglePlay(){isPlaying=!isPlaying;document.getElementById('playBtn').textContent=isPlaying?'⏸':'▶'}
+function setSpeed(s,btn){document.querySelectorAll('.speed-btn').forEach(function(b){b.classList.remove('active')});btn.classList.add('active')}
+
+// Sticky title
+(function(){
+  var header=document.querySelector('.page-header');
+  var st=document.getElementById('stickyTitle');
+  if(!header||!st)return;
+  new IntersectionObserver(function(e){st.classList.toggle('visible',!e[0].isIntersecting)},{threshold:0}).observe(header);
+})();
+
+// Census Checker score
+function updateScore(){
+  var checks=document.querySelectorAll('.check-item input[type="checkbox"]');
+  var total=checks.length;
+  var checked=0;
+  checks.forEach(function(c){
+    if(c.checked){checked++;c.closest('.check-item').classList.add('checked')}
+    else{c.closest('.check-item').classList.remove('checked')}
+  });
+  document.getElementById('score-number').textContent=checked+'/'+total;
+  var verdict=document.getElementById('score-verdict');
+  if(checked===0){verdict.textContent='Not started — work through the checklist below';verdict.style.color='var(--error-text)'}
+  else if(checked<10){verdict.textContent='In progress — keep going, focus on FSM and SEN items';verdict.style.color='var(--error-text)'}
+  else if(checked<16){verdict.textContent='Good progress — a few more items to verify';verdict.style.color='#F59E0B'}
+  else if(checked<20){verdict.textContent='Nearly there — just a couple more checks';verdict.style.color='var(--accent-dark)'}
+  else{verdict.textContent='Census ready ✓ — submit with confidence';verdict.style.color='var(--success-text)'}
+}
+
+function switchTab(tab,btn){
+  document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active')});
+  document.querySelectorAll('.tab-content').forEach(function(c){c.classList.remove('active')});
+  btn.classList.add('active');document.getElementById('tab-'+tab).classList.add('active');
+}
+
+function openEmailModal(){document.getElementById('emailModal').classList.add('open');setTimeout(function(){document.getElementById('modal-email').focus()},100)}
+function closeEmailModal(){document.getElementById('emailModal').classList.remove('open')}
+function submitEmail(){var e=document.getElementById('modal-email').value;if(e&&e.includes('@')){document.getElementById('modal-form').style.display='none';document.getElementById('modal-success').style.display='block';setTimeout(closeEmailModal,2000)}}
+document.getElementById('emailModal').addEventListener('click',function(e){if(e.target===this)closeEmailModal()});
+
+function copySummary(){
+  var score=document.getElementById('score-number').textContent;
+  var verdict=document.getElementById('score-verdict').textContent;
+  var text='Census Checker — Schoolgle Signal Week 3\nScore: '+score+'\nVerdict: '+verdict+'\nhttps://schoolgle.co.uk';
+  navigator.clipboard.writeText(text).then(function(){var t=document.getElementById('copy-toast');t.style.display='block';setTimeout(function(){t.style.display='none'},2000)});
+}
+
+function handleMidSubscribe(btn){var input=btn.previousElementSibling;if(input.value&&input.value.includes('@')){btn.textContent='✓ Subscribed';btn.style.background='#10B981';setTimeout(function(){btn.textContent='Subscribe';btn.style.background=''},3000)}}
+
+// Poll
+var pollSelected=null;
+function selectPoll(el,val){
+  document.querySelectorAll('.poll-option').forEach(function(o){o.classList.remove('selected')});
+  el.classList.add('selected');el.querySelector('input').checked=true;pollSelected=val;
+  var btn=document.getElementById('poll-submit-btn');btn.disabled=false;btn.style.opacity='1';
+}
+function submitPoll(){
+  if(!pollSelected)return;
+  var region=document.getElementById('poll-region').value;
+  localStorage.setItem('signal-poll-w3',JSON.stringify({vote:pollSelected,region:region,ts:Date.now()}));
+  document.getElementById('poll-form').style.display='none';document.getElementById('poll-thanks').style.display='block';
+}
+(function(){if(localStorage.getItem('signal-poll-w3')){document.getElementById('poll-form').style.display='none';document.getElementById('poll-thanks').style.display='block'}})();
+
+// TOC
+(function(){
+  var tocLinks=document.querySelectorAll('.toc-link');if(!tocLinks.length)return;
+  var observer=new IntersectionObserver(function(entries){entries.forEach(function(entry){if(entry.isIntersecting){var id=entry.target.getAttribute('id');tocLinks.forEach(function(l){l.classList.toggle('active',l.getAttribute('data-section')===id)})}})},{rootMargin:'-100px 0px -60% 0px',threshold:0});
+  tocLinks.forEach(function(l){var t=document.getElementById(l.getAttribute('data-section'));if(t)observer.observe(t)});
+})();
+document.querySelectorAll('a[href^="#"]').forEach(function(a){a.addEventListener('click',function(e){var t=document.querySelector(this.getAttribute('href'));if(t){e.preventDefault();t.scrollIntoView({behavior:'smooth',block:'start'})}})});
+</script>
+</body>
+</html>

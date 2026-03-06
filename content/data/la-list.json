@@ -1,0 +1,622 @@
+[
+  {
+    "name": "Barking and Dagenham",
+    "region": "London"
+  },
+  {
+    "name": "Barnet",
+    "region": "London"
+  },
+  {
+    "name": "Barnsley",
+    "region": "Yorkshire and the Humber"
+  },
+  {
+    "name": "Bath and North East Somerset",
+    "region": "South West"
+  },
+  {
+    "name": "Bedford",
+    "region": "East of England"
+  },
+  {
+    "name": "Bexley",
+    "region": "London"
+  },
+  {
+    "name": "Birmingham",
+    "region": "West Midlands"
+  },
+  {
+    "name": "Blackburn with Darwen",
+    "region": "North West"
+  },
+  {
+    "name": "Blackpool",
+    "region": "North West"
+  },
+  {
+    "name": "Bolton",
+    "region": "North West"
+  },
+  {
+    "name": "Bournemouth, Christchurch & Poole",
+    "region": "South West"
+  },
+  {
+    "name": "Bracknell Forest",
+    "region": "South East"
+  },
+  {
+    "name": "Bradford",
+    "region": "Yorkshire and the Humber"
+  },
+  {
+    "name": "Brent",
+    "region": "London"
+  },
+  {
+    "name": "Brighton and Hove",
+    "region": "South East"
+  },
+  {
+    "name": "Bristol",
+    "region": "South West"
+  },
+  {
+    "name": "Bromley",
+    "region": "London"
+  },
+  {
+    "name": "Buckinghamshire",
+    "region": "South East"
+  },
+  {
+    "name": "Bury",
+    "region": "North West"
+  },
+  {
+    "name": "Calderdale",
+    "region": "Yorkshire and the Humber"
+  },
+  {
+    "name": "Cambridgeshire",
+    "region": "East of England"
+  },
+  {
+    "name": "Camden",
+    "region": "London"
+  },
+  {
+    "name": "Central Bedfordshire",
+    "region": "East of England"
+  },
+  {
+    "name": "Cheshire East",
+    "region": "North West"
+  },
+  {
+    "name": "Cheshire West and Chester",
+    "region": "North West"
+  },
+  {
+    "name": "City of London",
+    "region": "London"
+  },
+  {
+    "name": "Cornwall",
+    "region": "South West"
+  },
+  {
+    "name": "Coventry",
+    "region": "West Midlands"
+  },
+  {
+    "name": "Croydon",
+    "region": "London"
+  },
+  {
+    "name": "Cumberland",
+    "region": "North West"
+  },
+  {
+    "name": "Cumbria",
+    "region": "North West"
+  },
+  {
+    "name": "Darlington",
+    "region": "North East"
+  },
+  {
+    "name": "Derby",
+    "region": "East Midlands"
+  },
+  {
+    "name": "Derbyshire",
+    "region": "East Midlands"
+  },
+  {
+    "name": "Devon",
+    "region": "South West"
+  },
+  {
+    "name": "Doncaster",
+    "region": "Yorkshire and the Humber"
+  },
+  {
+    "name": "Dorset",
+    "region": "South West"
+  },
+  {
+    "name": "Dudley",
+    "region": "West Midlands"
+  },
+  {
+    "name": "Durham",
+    "region": "North East"
+  },
+  {
+    "name": "Ealing",
+    "region": "London"
+  },
+  {
+    "name": "East Riding of Yorkshire",
+    "region": "Yorkshire and the Humber"
+  },
+  {
+    "name": "East Sussex",
+    "region": "South East"
+  },
+  {
+    "name": "Enfield",
+    "region": "London"
+  },
+  {
+    "name": "Essex",
+    "region": "East of England"
+  },
+  {
+    "name": "Gateshead",
+    "region": "North East"
+  },
+  {
+    "name": "Gloucestershire",
+    "region": "South West"
+  },
+  {
+    "name": "Greenwich",
+    "region": "London"
+  },
+  {
+    "name": "Hackney",
+    "region": "London"
+  },
+  {
+    "name": "Halton",
+    "region": "North West"
+  },
+  {
+    "name": "Hammersmith and Fulham",
+    "region": "London"
+  },
+  {
+    "name": "Hampshire",
+    "region": "South East"
+  },
+  {
+    "name": "Haringey",
+    "region": "London"
+  },
+  {
+    "name": "Harrow",
+    "region": "London"
+  },
+  {
+    "name": "Hartlepool",
+    "region": "North East"
+  },
+  {
+    "name": "Havering",
+    "region": "London"
+  },
+  {
+    "name": "Herefordshire",
+    "region": "West Midlands"
+  },
+  {
+    "name": "Hertfordshire",
+    "region": "East of England"
+  },
+  {
+    "name": "Hillingdon",
+    "region": "London"
+  },
+  {
+    "name": "Hounslow",
+    "region": "London"
+  },
+  {
+    "name": "Isle of Wight",
+    "region": "South East"
+  },
+  {
+    "name": "Isles of Scilly",
+    "region": "South West"
+  },
+  {
+    "name": "Islington",
+    "region": "London"
+  },
+  {
+    "name": "Kensington and Chelsea",
+    "region": "London"
+  },
+  {
+    "name": "Kent",
+    "region": "South East"
+  },
+  {
+    "name": "Kingston upon Hull",
+    "region": "Yorkshire and the Humber"
+  },
+  {
+    "name": "Kingston upon Thames",
+    "region": "London"
+  },
+  {
+    "name": "Kirklees",
+    "region": "Yorkshire and the Humber"
+  },
+  {
+    "name": "Knowsley",
+    "region": "North West"
+  },
+  {
+    "name": "Lambeth",
+    "region": "London"
+  },
+  {
+    "name": "Lancashire",
+    "region": "North West"
+  },
+  {
+    "name": "Leeds",
+    "region": "Yorkshire and the Humber"
+  },
+  {
+    "name": "Leicester",
+    "region": "East Midlands"
+  },
+  {
+    "name": "Leicestershire",
+    "region": "East Midlands"
+  },
+  {
+    "name": "Lewisham",
+    "region": "London"
+  },
+  {
+    "name": "Lincolnshire",
+    "region": "East Midlands"
+  },
+  {
+    "name": "Liverpool",
+    "region": "North West"
+  },
+  {
+    "name": "Luton",
+    "region": "East of England"
+  },
+  {
+    "name": "Manchester",
+    "region": "North West"
+  },
+  {
+    "name": "Medway",
+    "region": "South East"
+  },
+  {
+    "name": "Merton",
+    "region": "London"
+  },
+  {
+    "name": "Middlesbrough",
+    "region": "North East"
+  },
+  {
+    "name": "Milton Keynes",
+    "region": "South East"
+  },
+  {
+    "name": "Newcastle upon Tyne",
+    "region": "North East"
+  },
+  {
+    "name": "Newham",
+    "region": "London"
+  },
+  {
+    "name": "Norfolk",
+    "region": "East of England"
+  },
+  {
+    "name": "North East Lincolnshire",
+    "region": "Yorkshire and the Humber"
+  },
+  {
+    "name": "North Lincolnshire",
+    "region": "Yorkshire and the Humber"
+  },
+  {
+    "name": "North Northamptonshire",
+    "region": "East Midlands"
+  },
+  {
+    "name": "North Somerset",
+    "region": "South West"
+  },
+  {
+    "name": "North Tyneside",
+    "region": "North East"
+  },
+  {
+    "name": "North Yorkshire",
+    "region": "Yorkshire and the Humber"
+  },
+  {
+    "name": "Northamptonshire",
+    "region": "East Midlands"
+  },
+  {
+    "name": "Northumberland",
+    "region": "North East"
+  },
+  {
+    "name": "Nottingham",
+    "region": "East Midlands"
+  },
+  {
+    "name": "Nottinghamshire",
+    "region": "East Midlands"
+  },
+  {
+    "name": "Oldham",
+    "region": "North West"
+  },
+  {
+    "name": "Oxfordshire",
+    "region": "South East"
+  },
+  {
+    "name": "Peterborough",
+    "region": "East of England"
+  },
+  {
+    "name": "Plymouth",
+    "region": "South West"
+  },
+  {
+    "name": "Portsmouth",
+    "region": "South East"
+  },
+  {
+    "name": "Reading",
+    "region": "South East"
+  },
+  {
+    "name": "Redbridge",
+    "region": "London"
+  },
+  {
+    "name": "Redcar and Cleveland",
+    "region": "North East"
+  },
+  {
+    "name": "Richmond upon Thames",
+    "region": "London"
+  },
+  {
+    "name": "Rochdale",
+    "region": "North West"
+  },
+  {
+    "name": "Rotherham",
+    "region": "Yorkshire and the Humber"
+  },
+  {
+    "name": "Rutland",
+    "region": "East Midlands"
+  },
+  {
+    "name": "Salford",
+    "region": "North West"
+  },
+  {
+    "name": "Sandwell",
+    "region": "West Midlands"
+  },
+  {
+    "name": "Sefton",
+    "region": "North West"
+  },
+  {
+    "name": "Sheffield",
+    "region": "Yorkshire and the Humber"
+  },
+  {
+    "name": "Shropshire",
+    "region": "West Midlands"
+  },
+  {
+    "name": "Slough",
+    "region": "South East"
+  },
+  {
+    "name": "Solihull",
+    "region": "West Midlands"
+  },
+  {
+    "name": "Somerset",
+    "region": "South West"
+  },
+  {
+    "name": "South Gloucestershire",
+    "region": "South West"
+  },
+  {
+    "name": "South Tyneside",
+    "region": "North East"
+  },
+  {
+    "name": "Southampton",
+    "region": "South East"
+  },
+  {
+    "name": "Southend on Sea",
+    "region": "East of England"
+  },
+  {
+    "name": "Southwark",
+    "region": "London"
+  },
+  {
+    "name": "St Helens",
+    "region": "North West"
+  },
+  {
+    "name": "Staffordshire",
+    "region": "West Midlands"
+  },
+  {
+    "name": "Stockport",
+    "region": "North West"
+  },
+  {
+    "name": "Stockton-on-Tees",
+    "region": "North East"
+  },
+  {
+    "name": "Stoke-on-Trent",
+    "region": "West Midlands"
+  },
+  {
+    "name": "Suffolk",
+    "region": "East of England"
+  },
+  {
+    "name": "Sunderland",
+    "region": "North East"
+  },
+  {
+    "name": "Surrey",
+    "region": "South East"
+  },
+  {
+    "name": "Sutton",
+    "region": "London"
+  },
+  {
+    "name": "Swindon",
+    "region": "South West"
+  },
+  {
+    "name": "Tameside",
+    "region": "North West"
+  },
+  {
+    "name": "Telford and Wrekin",
+    "region": "West Midlands"
+  },
+  {
+    "name": "Thurrock",
+    "region": "East of England"
+  },
+  {
+    "name": "Torbay",
+    "region": "South West"
+  },
+  {
+    "name": "Tower Hamlets",
+    "region": "London"
+  },
+  {
+    "name": "Trafford",
+    "region": "North West"
+  },
+  {
+    "name": "Wakefield",
+    "region": "Yorkshire and the Humber"
+  },
+  {
+    "name": "Walsall",
+    "region": "West Midlands"
+  },
+  {
+    "name": "Waltham Forest",
+    "region": "London"
+  },
+  {
+    "name": "Wandsworth",
+    "region": "London"
+  },
+  {
+    "name": "Warrington",
+    "region": "North West"
+  },
+  {
+    "name": "Warwickshire",
+    "region": "West Midlands"
+  },
+  {
+    "name": "West Berkshire",
+    "region": "South East"
+  },
+  {
+    "name": "West Northamptonshire",
+    "region": "East Midlands"
+  },
+  {
+    "name": "West Sussex",
+    "region": "South East"
+  },
+  {
+    "name": "Westminster",
+    "region": "London"
+  },
+  {
+    "name": "Westmorland and Furness",
+    "region": "North West"
+  },
+  {
+    "name": "Wigan",
+    "region": "North West"
+  },
+  {
+    "name": "Wiltshire",
+    "region": "South West"
+  },
+  {
+    "name": "Windsor and Maidenhead",
+    "region": "South East"
+  },
+  {
+    "name": "Wirral",
+    "region": "North West"
+  },
+  {
+    "name": "Wokingham",
+    "region": "South East"
+  },
+  {
+    "name": "Wolverhampton",
+    "region": "West Midlands"
+  },
+  {
+    "name": "Worcestershire",
+    "region": "West Midlands"
+  },
+  {
+    "name": "York",
+    "region": "Yorkshire and the Humber"
+  }
+]

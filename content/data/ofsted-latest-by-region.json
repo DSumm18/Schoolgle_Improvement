@@ -1,0 +1,110 @@
+{
+  "East Midlands": {
+    "total": 1744,
+    "outstanding": 107,
+    "outstanding_pct": 6.1,
+    "good": 1512,
+    "good_pct": 86.7,
+    "requires_improvement": 109,
+    "ri_pct": 6.2,
+    "inadequate": 16,
+    "inadequate_pct": 0.9,
+    "good_or_outstanding_pct": 92.8
+  },
+  "East of England": {
+    "total": 2136,
+    "outstanding": 201,
+    "outstanding_pct": 9.4,
+    "good": 1784,
+    "good_pct": 83.5,
+    "requires_improvement": 127,
+    "ri_pct": 5.9,
+    "inadequate": 24,
+    "inadequate_pct": 1.1,
+    "good_or_outstanding_pct": 92.9
+  },
+  "London": {
+    "total": 2236,
+    "outstanding": 564,
+    "outstanding_pct": 25.2,
+    "good": 1613,
+    "good_pct": 72.1,
+    "requires_improvement": 54,
+    "ri_pct": 2.4,
+    "inadequate": 5,
+    "inadequate_pct": 0.2,
+    "good_or_outstanding_pct": 97.4
+  },
+  "North East": {
+    "total": 979,
+    "outstanding": 90,
+    "outstanding_pct": 9.2,
+    "good": 835,
+    "good_pct": 85.3,
+    "requires_improvement": 46,
+    "ri_pct": 4.7,
+    "inadequate": 8,
+    "inadequate_pct": 0.8,
+    "good_or_outstanding_pct": 94.5
+  },
+  "North West": {
+    "total": 2719,
+    "outstanding": 298,
+    "outstanding_pct": 11.0,
+    "good": 2184,
+    "good_pct": 80.3,
+    "requires_improvement": 197,
+    "ri_pct": 7.2,
+    "inadequate": 40,
+    "inadequate_pct": 1.5,
+    "good_or_outstanding_pct": 91.3
+  },
+  "South East": {
+    "total": 2833,
+    "outstanding": 326,
+    "outstanding_pct": 11.5,
+    "good": 2347,
+    "good_pct": 82.8,
+    "requires_improvement": 120,
+    "ri_pct": 4.2,
+    "inadequate": 40,
+    "inadequate_pct": 1.4,
+    "good_or_outstanding_pct": 94.4
+  },
+  "South West": {
+    "total": 1991,
+    "outstanding": 97,
+    "outstanding_pct": 4.9,
+    "good": 1687,
+    "good_pct": 84.7,
+    "requires_improvement": 177,
+    "ri_pct": 8.9,
+    "inadequate": 30,
+    "inadequate_pct": 1.5,
+    "good_or_outstanding_pct": 89.6
+  },
+  "West Midlands": {
+    "total": 2065,
+    "outstanding": 202,
+    "outstanding_pct": 9.8,
+    "good": 1697,
+    "good_pct": 82.2,
+    "requires_improvement": 139,
+    "ri_pct": 6.7,
+    "inadequate": 27,
+    "inadequate_pct": 1.3,
+    "good_or_outstanding_pct": 92.0
+  },
+  "Yorkshire and the Humber": {
+    "total": 1915,
+    "outstanding": 178,
+    "outstanding_pct": 9.3,
+    "good": 1605,
+    "good_pct": 83.8,
+    "requires_improvement": 118,
+    "ri_pct": 6.2,
+    "inadequate": 14,
+    "inadequate_pct": 0.7,
+    "good_or_outstanding_pct": 93.1
+  }
+}

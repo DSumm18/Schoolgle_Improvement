@@ -3,7 +3,7 @@
  * Unified model access via OpenRouter API
  */
 
-import type { ModelConfig, TokenUsage } from '../types';
+import type { ModelConfig, TokenUsage } from "../types";
 
 // ============================================================================
 // Configuration
@@ -26,11 +26,11 @@ export interface OpenRouterConfig {
 export const OPENROUTER_MODELS: Record<string, ModelConfig> = {
   // ========== PREMIUM MODELS (High quality, higher cost) ==========
 
-  'anthropic/claude-3.5-sonnet': {
-    id: 'anthropic/claude-3.5-sonnet',
-    provider: 'openrouter',
-    model: 'anthropic/claude-3.5-sonnet',
-    costPerMillionTokens: 3.00, // Input, output is ~$15
+  "anthropic/claude-3.5-sonnet": {
+    id: "anthropic/claude-3.5-sonnet",
+    provider: "openrouter",
+    model: "anthropic/claude-3.5-sonnet",
+    costPerMillionTokens: 3.0, // Input, output is ~$15
     capabilities: {
       vision: true,
       streaming: true,
@@ -38,11 +38,11 @@ export const OPENROUTER_MODELS: Record<string, ModelConfig> = {
     },
   },
 
-  'anthropic/claude-3.5-sonnet:beta': {
-    id: 'anthropic/claude-3.5-sonnet:beta',
-    provider: 'openrouter',
-    model: 'anthropic/claude-3.5-sonnet:beta',
-    costPerMillionTokens: 3.00,
+  "anthropic/claude-3.5-sonnet:beta": {
+    id: "anthropic/claude-3.5-sonnet:beta",
+    provider: "openrouter",
+    model: "anthropic/claude-3.5-sonnet:beta",
+    costPerMillionTokens: 3.0,
     capabilities: {
       vision: true,
       streaming: true,
@@ -50,11 +50,11 @@ export const OPENROUTER_MODELS: Record<string, ModelConfig> = {
     },
   },
 
-  'openai/gpt-4o': {
-    id: 'openai/gpt-4o',
-    provider: 'openrouter',
-    model: 'openai/gpt-4o',
-    costPerMillionTokens: 2.50, // Input, output is ~$10
+  "openai/gpt-4o": {
+    id: "openai/gpt-4o",
+    provider: "openrouter",
+    model: "openai/gpt-4o",
+    costPerMillionTokens: 2.5, // Input, output is ~$10
     capabilities: {
       vision: true,
       streaming: true,
@@ -62,10 +62,10 @@ export const OPENROUTER_MODELS: Record<string, ModelConfig> = {
     },
   },
 
-  'google/gemini-2.0-flash-exp': {
-    id: 'google/gemini-2.0-flash-exp',
-    provider: 'openrouter',
-    model: 'google/gemini-2.0-flash-exp',
+  "google/gemini-2.0-flash-exp": {
+    id: "google/gemini-2.0-flash-exp",
+    provider: "openrouter",
+    model: "google/gemini-2.0-flash-exp",
     costPerMillionTokens: 0.075, // Very cheap!
     capabilities: {
       vision: true,
@@ -74,10 +74,10 @@ export const OPENROUTER_MODELS: Record<string, ModelConfig> = {
     },
   },
 
-  'google/gemini-2.5-pro': {
-    id: 'google/gemini-2.5-pro',
-    provider: 'openrouter',
-    model: 'google/gemini-2.5-pro',
+  "google/gemini-2.5-pro": {
+    id: "google/gemini-2.5-pro",
+    provider: "openrouter",
+    model: "google/gemini-2.5-pro",
     costPerMillionTokens: 1.25,
     capabilities: {
       vision: true,
@@ -86,11 +86,11 @@ export const OPENROUTER_MODELS: Record<string, ModelConfig> = {
     },
   },
 
-  'google/gemini-2.5-flash-thinking-exp': {
-    id: 'google/gemini-2.5-flash-thinking-exp',
-    provider: 'openrouter',
-    model: 'google/gemini-2.5-flash-thinking-exp',
-    costPerMillionTokens: 0.10,
+  "google/gemini-2.5-flash-thinking-exp": {
+    id: "google/gemini-2.5-flash-thinking-exp",
+    provider: "openrouter",
+    model: "google/gemini-2.5-flash-thinking-exp",
+    costPerMillionTokens: 0.1,
     capabilities: {
       vision: false,
       streaming: true,
@@ -98,12 +98,24 @@ export const OPENROUTER_MODELS: Record<string, ModelConfig> = {
     },
   },
 
+  "google/gemini-2.5-flash-preview": {
+    id: "google/gemini-2.5-flash-preview",
+    provider: "openrouter",
+    model: "google/gemini-2.5-flash-preview",
+    costPerMillionTokens: 0.15,
+    capabilities: {
+      vision: true,
+      streaming: true,
+      jsonMode: true,
+    },
+  },
+
   // ========== FAST CHEAP MODELS (Routing, classification) ==========
 
-  'openai/gpt-4o-mini': {
-    id: 'openai/gpt-4o-mini',
-    provider: 'openrouter',
-    model: 'openai/gpt-4o-mini',
+  "openai/gpt-4o-mini": {
+    id: "openai/gpt-4o-mini",
+    provider: "openrouter",
+    model: "openai/gpt-4o-mini",
     costPerMillionTokens: 0.15, // Input, output is ~$0.60
     capabilities: {
       vision: true,
@@ -112,10 +124,10 @@ export const OPENROUTER_MODELS: Record<string, ModelConfig> = {
     },
   },
 
-  'deepseek/deepseek-chat': {
-    id: 'deepseek/deepseek-chat',
-    provider: 'openrouter',
-    model: 'deepseek/deepseek-chat',
+  "deepseek/deepseek-chat": {
+    id: "deepseek/deepseek-chat",
+    provider: "openrouter",
+    model: "deepseek/deepseek-chat",
     costPerMillionTokens: 0.27, // Input, output is ~$1.10
     capabilities: {
       vision: false,
@@ -124,10 +136,10 @@ export const OPENROUTER_MODELS: Record<string, ModelConfig> = {
     },
   },
 
-  'deepseek/deepseek-chat-v3-0324': {
-    id: 'deepseek/deepseek-chat-v3-0324',
-    provider: 'openrouter',
-    model: 'deepseek/deepseek-chat-v3-0324',
+  "deepseek/deepseek-chat-v3-0324": {
+    id: "deepseek/deepseek-chat-v3-0324",
+    provider: "openrouter",
+    model: "deepseek/deepseek-chat-v3-0324",
     costPerMillionTokens: 0.27,
     capabilities: {
       vision: false,
@@ -136,10 +148,10 @@ export const OPENROUTER_MODELS: Record<string, ModelConfig> = {
     },
   },
 
-  'deepseek/deepseek-r1': {
-    id: 'deepseek/deepseek-r1',
-    provider: 'openrouter',
-    model: 'deepseek/deepseek-r1',
+  "deepseek/deepseek-r1": {
+    id: "deepseek/deepseek-r1",
+    provider: "openrouter",
+    model: "deepseek/deepseek-r1",
     costPerMillionTokens: 0.55, // Reasoning model
     capabilities: {
       vision: false,
@@ -154,11 +166,11 @@ export const OPENROUTER_MODELS: Record<string, ModelConfig> = {
 
   // ========== VISION MODELS ==========
 
-  'anthropic/claude-3.5-sonnet': {
-    id: 'anthropic/claude-3.5-sonnet',
-    provider: 'openrouter',
-    model: 'anthropic/claude-3.5-sonnet',
-    costPerMillionTokens: 3.00,
+  "anthropic/claude-3.5-sonnet": {
+    id: "anthropic/claude-3.5-sonnet",
+    provider: "openrouter",
+    model: "anthropic/claude-3.5-sonnet",
+    costPerMillionTokens: 3.0,
     capabilities: {
       vision: true,
       streaming: true,
@@ -166,11 +178,11 @@ export const OPENROUTER_MODELS: Record<string, ModelConfig> = {
     },
   },
 
-  'openai/gpt-4o': {
-    id: 'openai/gpt-4o',
-    provider: 'openrouter',
-    model: 'openai/gpt-4o',
-    costPerMillionTokens: 2.50,
+  "openai/gpt-4o": {
+    id: "openai/gpt-4o",
+    provider: "openrouter",
+    model: "openai/gpt-4o",
+    costPerMillionTokens: 2.5,
     capabilities: {
       vision: true,
       streaming: true,
@@ -178,10 +190,10 @@ export const OPENROUTER_MODELS: Record<string, ModelConfig> = {
     },
   },
 
-  'google/gemini-2.0-flash-exp': {
-    id: 'google/gemini-2.0-flash-exp',
-    provider: 'openrouter',
-    model: 'google/gemini-2.0-flash-exp',
+  "google/gemini-2.0-flash-exp": {
+    id: "google/gemini-2.0-flash-exp",
+    provider: "openrouter",
+    model: "google/gemini-2.0-flash-exp",
     costPerMillionTokens: 0.075,
     capabilities: {
       vision: true,
@@ -192,10 +204,10 @@ export const OPENROUTER_MODELS: Record<string, ModelConfig> = {
 
   // ========== REASONING MODELS ==========
 
-  'deepseek/deepseek-r1': {
-    id: 'deepseek/deepseek-r1',
-    provider: 'openrouter',
-    model: 'deepseek/deepseek-r1',
+  "deepseek/deepseek-r1": {
+    id: "deepseek/deepseek-r1",
+    provider: "openrouter",
+    model: "deepseek/deepseek-r1",
     costPerMillionTokens: 0.55,
     capabilities: {
       vision: false,
@@ -210,17 +222,19 @@ export const OPENROUTER_MODELS: Record<string, ModelConfig> = {
  */
 export const MODEL_ALIASES: Record<string, string> = {
   // Primary models
-  'premium': 'anthropic/claude-3.5-sonnet',
-  'fast': 'openai/gpt-4o-mini',
-  'cheap': 'deepseek/deepseek-chat',
+  premium: "anthropic/claude-3.5-sonnet",
+  fast: "openai/gpt-4o-mini",
+  cheap: "deepseek/deepseek-chat",
 
   // Specific model aliases
-  'claude': 'anthropic/claude-3.5-sonnet',
-  'gpt4': 'openai/gpt-4o',
-  'gpt4-mini': 'openai/gpt-4o-mini',
-  'gemini': 'google/gemini-2.5-flash-thinking-exp',
-  'deepseek': 'deepseek/deepseek-chat',
-  'deepseek-r1': 'deepseek/deepseek-r1',
+  claude: "anthropic/claude-3.5-sonnet",
+  gpt4: "openai/gpt-4o",
+  "gpt4-mini": "openai/gpt-4o-mini",
+  gemini: "google/gemini-2.5-flash-thinking-exp",
+  deepseek: "deepseek/deepseek-chat",
+  "deepseek-r1": "deepseek/deepseek-r1",
+  vision: "google/gemini-2.5-flash-preview",
+  "gemini-flash": "google/gemini-2.5-flash-preview",
 };
 
 // ============================================================================
@@ -228,8 +242,14 @@ export const MODEL_ALIASES: Record<string, string> = {
 // ============================================================================
 
 export interface ChatMessage {
-  role: 'system' | 'user' | 'assistant';
-  content: string;
+  role: "system" | "user" | "assistant";
+  content:
+    | string
+    | Array<{
+        type: "text" | "image_url";
+        text?: string;
+        image_url?: { url: string; detail?: "auto" | "low" | "high" };
+      }>;
 }
 
 export interface ChatOptions {
@@ -254,7 +274,7 @@ export interface ChatResponse {
   finishReason?: string;
   toolCalls?: Array<{
     id: string;
-    type: 'function';
+    type: "function";
     function: {
       name: string;
       arguments: string;
@@ -271,7 +291,7 @@ export class OpenRouterClient {
 
   constructor(config: OpenRouterConfig) {
     this.config = config;
-    this.baseURL = config.baseURL || 'https://openrouter.ai/api/v1';
+    this.baseURL = config.baseURL || "https://openrouter.ai/api/v1";
   }
 
   /**
@@ -279,13 +299,13 @@ export class OpenRouterClient {
    */
   async chat(
     messages: ChatMessage[],
-    options: ChatOptions = {}
+    options: ChatOptions = {},
   ): Promise<ChatResponse> {
-    const model = options.model || 'anthropic/claude-3.5-sonnet';
+    const model = options.model || "anthropic/claude-3.5-sonnet";
 
     const requestBody = {
       model,
-      messages: messages.map(m => ({
+      messages: messages.map((m) => ({
         role: m.role,
         content: m.content,
       })),
@@ -298,15 +318,20 @@ export class OpenRouterClient {
     };
 
     const response = await fetch(`${this.baseURL}/chat/completions`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Authorization': `Bearer ${this.config.apiKey}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': typeof window !== 'undefined' ? window.location.href : 'https://schoolgle.co.uk',
-        'X-Title': 'Schoolgle Ed',
+        Authorization: `Bearer ${this.config.apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer":
+          typeof window !== "undefined"
+            ? window.location.href
+            : "https://schoolgle.co.uk",
+        "X-Title": "Schoolgle Ed",
       },
       body: JSON.stringify(requestBody),
-      signal: options.timeout ? AbortSignal.timeout(options.timeout) : undefined,
+      signal: options.timeout
+        ? AbortSignal.timeout(options.timeout)
+        : undefined,
     });
 
     if (!response.ok) {
@@ -314,7 +339,7 @@ export class OpenRouterClient {
       throw new OpenRouterError(
         `OpenRouter API error: ${response.status} ${response.statusText}`,
         response.status,
-        errorText
+        errorText,
       );
     }
 
@@ -323,11 +348,11 @@ export class OpenRouterClient {
     // Extract response
     const choice = data.choices?.[0];
     if (!choice) {
-      throw new OpenRouterError('No choices returned from OpenRouter', 500);
+      throw new OpenRouterError("No choices returned from OpenRouter", 500);
     }
 
     return {
-      content: choice.message?.content || '',
+      content: choice.message?.content || "",
       model: data.model || model,
       usage: {
         promptTokens: data.usage?.prompt_tokens || 0,
@@ -345,14 +370,14 @@ export class OpenRouterClient {
   async chatWithSystem(
     systemPrompt: string,
     userMessage: string,
-    options: ChatOptions = {}
+    options: ChatOptions = {},
   ): Promise<ChatResponse> {
     return this.chat(
       [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userMessage },
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userMessage },
       ],
-      options
+      options,
     );
   }
 
@@ -361,13 +386,13 @@ export class OpenRouterClient {
    */
   async *chatStream(
     messages: ChatMessage[],
-    options: ChatOptions = {}
+    options: ChatOptions = {},
   ): AsyncGenerator<string, void, unknown> {
-    const model = options.model || 'anthropic/claude-3.5-sonnet';
+    const model = options.model || "anthropic/claude-3.5-sonnet";
 
     const requestBody = {
       model,
-      messages: messages.map(m => ({
+      messages: messages.map((m) => ({
         role: m.role,
         content: m.content,
       })),
@@ -377,12 +402,12 @@ export class OpenRouterClient {
     };
 
     const response = await fetch(`${this.baseURL}/chat/completions`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Authorization': `Bearer ${this.config.apiKey}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://schoolgle.co.uk',
-        'X-Title': 'Schoolgle Ed',
+        Authorization: `Bearer ${this.config.apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://schoolgle.co.uk",
+        "X-Title": "Schoolgle Ed",
       },
       body: JSON.stringify(requestBody),
     });
@@ -390,13 +415,13 @@ export class OpenRouterClient {
     if (!response.ok) {
       throw new OpenRouterError(
         `OpenRouter API error: ${response.status} ${response.statusText}`,
-        response.status
+        response.status,
       );
     }
 
     // Stream parsing
     const reader = response.body?.getReader();
-    if (!reader) throw new OpenRouterError('No response body', 500);
+    if (!reader) throw new OpenRouterError("No response body", 500);
 
     const decoder = new TextDecoder();
 
@@ -406,12 +431,12 @@ export class OpenRouterClient {
         if (done) break;
 
         const chunk = decoder.decode(value);
-        const lines = chunk.split('\n').filter(line => line.trim());
+        const lines = chunk.split("\n").filter((line) => line.trim());
 
         for (const line of lines) {
-          if (line.startsWith('data: ')) {
+          if (line.startsWith("data: ")) {
             const data = line.slice(6);
-            if (data === '[DONE]') return;
+            if (data === "[DONE]") return;
 
             try {
               const parsed = JSON.parse(data);
@@ -453,10 +478,10 @@ export class OpenRouterError extends Error {
   constructor(
     message: string,
     public statusCode: number,
-    public responseText?: string
+    public responseText?: string,
   ) {
     super(message);
-    this.name = 'OpenRouterError';
+    this.name = "OpenRouterError";
   }
 }
 
@@ -468,14 +493,17 @@ export class OpenRouterError extends Error {
  * Create OpenRouter client from environment
  */
 export function createOpenRouterClient(apiKey?: string): OpenRouterClient {
-  const key = apiKey || process.env.OPENROUTER_API_KEY || '';
+  const key = apiKey || process.env.OPENROUTER_API_KEY || "";
 
   if (!key) {
-    throw new Error('OPENROUTER_API_KEY environment variable is not set');
+    throw new Error("OPENROUTER_API_KEY environment variable is not set");
   }
 
   // Log for debugging (remove in production)
-  console.log('[OpenRouter] Using API key starting with:', key.substring(0, 10) + '...');
+  console.log(
+    "[OpenRouter] Using API key starting with:",
+    key.substring(0, 10) + "...",
+  );
 
   return new OpenRouterClient({
     apiKey: key,
@@ -489,7 +517,7 @@ export function createOpenRouterClient(apiKey?: string): OpenRouterClient {
 export function calculateTokenCost(
   modelId: string,
   inputTokens: number,
-  outputTokens: number
+  outputTokens: number,
 ): number {
   const model = OPENROUTER_MODELS[modelId];
   if (!model) return 0;
@@ -497,7 +525,8 @@ export function calculateTokenCost(
   // Note: OpenRouter pricing can vary by provider
   // This is an approximation using the base cost per million tokens
   const inputCost = (inputTokens / 1_000_000) * model.costPerMillionTokens;
-  const outputCost = (outputTokens / 1_000_000) * (model.costPerMillionTokens * 3); // Rough estimate
+  const outputCost =
+    (outputTokens / 1_000_000) * (model.costPerMillionTokens * 3); // Rough estimate
 
   return inputCost + outputCost;
 }

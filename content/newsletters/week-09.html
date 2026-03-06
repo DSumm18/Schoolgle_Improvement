@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="en-GB" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Schoolgle Signal — Week 9 — 17 February 2026</title>
+<style>
+:root {
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-display: 'Outfit', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --max-width: 720px;
+  --radius: 14px;
+  --card-pad: 28px;
+  --accent: #00D4D4;
+  --accent-dim: rgba(0,212,212,0.10);
+  --accent-dark: #009E9E;
+  --font-size: 16px;
+  --chip-finance: #10B981;
+  --chip-compliance: #EAB308;
+  --chip-safeguarding: #EF4444;
+  --chip-send: #F59E0B;
+  --chip-hr: #8B5CF6;
+  --chip-estates: #14B8A6;
+  --chip-leadership: #0EA5E9;
+  --chip-teaching: #3B82F6;
+  --chip-ai: #F43F5E;
+  --chip-ops: #0EA5E9;
+}
+[data-theme="light"] {
+  --bg: #F7F7F9; --surface: #FFFFFF; --elevated: #FFFFFF;
+  --text: #0B1220; --text-secondary: #374151; --muted: #5A6578;
+  --border: #E5E7EB; --border-light: #F0F1F4; --quote-bg: #F0F2F5;
+  --shadow: 0 1px 3px rgba(0,0,0,0.06); --shadow-lg: 0 4px 16px rgba(0,0,0,0.08);
+  --error-bg: #FEF2F2; --error-text: #DC2626; --error-border: #FECACA;
+  --success-bg: #F0FDF4; --success-text: #166534;
+}
+[data-theme="dark"] {
+  --bg: #070B18; --surface: #0E1529; --elevated: #141D35;
+  --text: #EAF0FF; --text-secondary: #C5CFEA; --muted: #8B99BC;
+  --border: #1E2A4A; --border-light: #182040; --quote-bg: #111B33;
+  --shadow: 0 1px 3px rgba(0,0,0,0.3); --shadow-lg: 0 4px 16px rgba(0,0,0,0.4);
+  --error-bg: rgba(220,38,38,0.1); --error-text: #F87171; --error-border: #7F1D1D;
+  --success-bg: rgba(22,101,52,0.1); --success-text: #4ADE80;
+}
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: var(--font-body); font-size: var(--font-size); line-height: 1.7;
+  background: var(--bg); color: var(--text);
+  transition: background 0.25s ease, color 0.25s ease;
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+}
+a { color: var(--accent-dark); text-decoration: none; }
+[data-theme="dark"] a { color: var(--accent); }
+a:hover { text-decoration: underline; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
+
+/* ===== STICKY ISSUE HEADER ===== */
+.issue-header {
+  position: sticky; top: 0; z-index: 100;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow); padding: 12px 20px;
+}
+.issue-header-inner {
+  max-width: 960px; margin: 0 auto;
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+}
+.issue-header-title {
+  font-family: var(--font-display); font-size: 15px; font-weight: 600; color: var(--text);
+}
+.issue-header-title span { color: var(--accent); }
+.issue-header-right { display: flex; align-items: center; gap: 12px; }
+.issue-header-date { font-size: 13px; color: var(--muted); }
+.listen-btn {
+  display: inline-flex; align-items: center; gap: 5px; padding: 6px 14px;
+  background: var(--accent); color: #070B18; border: none; border-radius: 6px;
+  font-size: 12px; font-weight: 600; cursor: pointer; font-family: var(--font-body); min-height: 36px;
+}
+.listen-btn:hover { opacity: 0.9; }
+
+/* ===== LAYOUT ===== */
+.layout-wrapper { display: flex; max-width: 1060px; margin: 0 auto; padding: 0 16px; gap: 0; }
+.toc-rail { width: 160px; flex-shrink: 0; position: relative; }
+.toc-sticky { position: sticky; top: 60px; padding: 24px 0; max-height: calc(100vh - 80px); overflow-y: auto; }
+.toc-sticky nav { display: flex; flex-direction: column; gap: 2px; }
+.toc-link {
+  display: block; padding: 6px 12px; font-size: 12px; color: var(--muted);
+  text-decoration: none; border-radius: 6px; line-height: 1.4;
+  border-left: 2px solid transparent; transition: color 0.15s, border-color 0.15s;
+}
+.toc-link:hover { color: var(--text); text-decoration: none; }
+.toc-link.active { color: var(--accent-dark); border-left-color: var(--accent); font-weight: 600; }
+[data-theme="dark"] .toc-link.active { color: var(--accent); }
+@media (max-width: 900px) { .toc-rail { display: none; } .layout-wrapper { padding: 0 16px; } }
+.main-content { flex: 1; max-width: var(--max-width); margin: 0 auto; padding: 32px 0 80px; min-width: 0; }
+
+/* ===== HEADER ===== */
+.page-header {
+  display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap;
+  gap: 16px; margin-bottom: 36px; padding-bottom: 24px; border-bottom: 2px solid var(--border);
+}
+.page-header h1 { font-family: var(--font-display); font-size: 28px; font-weight: 300; color: var(--text); line-height: 1.2; letter-spacing: -0.3px; }
+.page-header h1 span { color: var(--accent); font-weight: 700; }
+.header-meta { display: flex; flex-direction: column; gap: 2px; }
+.header-meta .date { font-size: 14px; color: var(--muted); }
+.header-meta .issue { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+.controls { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ctrl-group { display: flex; gap: 2px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 2px; }
+.ctrl-btn {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 36px; min-height: 36px;
+  padding: 6px 10px; background: transparent; border: none; border-radius: 6px;
+  color: var(--muted); font-size: 13px; font-weight: 500; cursor: pointer;
+  transition: background 0.15s, color 0.15s; font-family: var(--font-body);
+}
+.ctrl-btn:hover { background: var(--surface); color: var(--text); }
+.ctrl-btn:focus-visible { box-shadow: 0 0 0 2px var(--accent); outline: none; }
+.ctrl-btn.active { background: var(--surface); color: var(--accent); box-shadow: var(--shadow); }
+
+/* ===== AUDIO PLAYER ===== */
+.audio-player { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px var(--card-pad); margin-bottom: 28px; box-shadow: var(--shadow); }
+.audio-top { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.audio-play-btn { width: 44px; height: 44px; border-radius: 50%; background: var(--accent); color: #070B18; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 18px; }
+.audio-play-btn:hover { opacity: 0.9; }
+.audio-info { flex: 1; min-width: 150px; }
+.audio-info .audio-title { font-size: 14px; font-weight: 600; color: var(--text); }
+.audio-info .audio-time { font-size: 12px; color: var(--muted); }
+.audio-progress { flex: 1; min-width: 180px; display: flex; align-items: center; gap: 10px; }
+.audio-track { flex: 1; height: 4px; background: var(--border); border-radius: 2px; position: relative; cursor: pointer; }
+.audio-track-fill { width: 0%; height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.1s; }
+.audio-track-dot { position: absolute; top: 50%; left: 0%; transform: translate(-50%, -50%); width: 12px; height: 12px; background: var(--accent); border-radius: 50%; box-shadow: 0 0 4px rgba(0,212,212,0.4); }
+.audio-time-label { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.audio-speed { display: flex; gap: 2px; background: var(--bg); border-radius: 6px; padding: 2px; }
+.speed-btn { padding: 4px 8px; font-size: 11px; font-weight: 600; border: none; background: transparent; color: var(--muted); cursor: pointer; border-radius: 4px; font-family: var(--font-body); }
+.speed-btn.active { background: var(--surface); color: var(--accent); }
+.transcript-section { margin-top: 12px; border-top: 1px solid var(--border-light); }
+.transcript-toggle { display: flex; align-items: center; gap: 6px; padding: 10px 0 0; font-size: 13px; color: var(--accent-dark); background: none; border: none; cursor: pointer; font-family: var(--font-body); font-weight: 500; }
+[data-theme="dark"] .transcript-toggle { color: var(--accent); }
+.transcript-body { display: none; margin-top: 10px; padding: 16px; background: var(--quote-bg); border-radius: 8px; font-size: 14px; color: var(--muted); line-height: 1.7; }
+.transcript-body.open { display: block; }
+
+/* ===== CARDS ===== */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--card-pad); margin-bottom: 24px; box-shadow: var(--shadow); }
+.chip { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+.chip-finance { background: rgba(16,185,129,0.12); color: #047857; }
+.chip-compliance { background: rgba(234,179,8,0.12); color: #92400E; }
+.chip-safeguarding { background: rgba(239,68,68,0.12); color: #B91C1C; }
+.chip-send { background: rgba(245,158,11,0.12); color: #92400E; }
+.chip-hr { background: rgba(139,92,246,0.12); color: #5B21B6; }
+.chip-estates { background: rgba(20,184,166,0.12); color: #0F766E; }
+.chip-leadership { background: rgba(14,165,233,0.12); color: #0369A1; }
+.chip-teaching { background: rgba(59,130,246,0.12); color: #1D4ED8; }
+.chip-ai { background: rgba(244,63,94,0.12); color: #BE123C; }
+.chip-ops { background: rgba(14,165,233,0.12); color: #0369A1; }
+[data-theme="dark"] .chip-finance { color: #34D399; }
+[data-theme="dark"] .chip-compliance { color: #FDE047; }
+[data-theme="dark"] .chip-safeguarding { color: #FCA5A5; }
+[data-theme="dark"] .chip-send { color: #FCD34D; }
+[data-theme="dark"] .chip-hr { color: #C4B5FD; }
+[data-theme="dark"] .chip-estates { color: #5EEAD4; }
+[data-theme="dark"] .chip-leadership { color: #7DD3FC; }
+[data-theme="dark"] .chip-teaching { color: #93C5FD; }
+[data-theme="dark"] .chip-ai { color: #FDA4AF; }
+[data-theme="dark"] .chip-ops { color: #7DD3FC; }
+.card h2 { font-family: var(--font-display); font-size: 1.5rem; font-weight: 600; line-height: 1.3; margin-bottom: 8px; color: var(--text); }
+.card .summary { font-size: 15px; color: var(--muted); margin-bottom: 18px; line-height: 1.6; }
+.card h3 { font-size: 1.1rem; font-weight: 600; margin: 28px 0 10px; color: var(--text); }
+.card p { margin-bottom: 14px; line-height: 1.7; }
+.card ul, .card ol { margin: 10px 0 16px 22px; }
+.card li { margin-bottom: 8px; line-height: 1.6; }
+.card strong { color: var(--text); }
+.data-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+.data-table th { text-align: left; padding: 10px 12px; background: var(--quote-bg); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.3px; color: var(--muted); border-bottom: 2px solid var(--border); }
+.data-table td { padding: 10px 12px; border-bottom: 1px solid var(--border-light); }
+.action-box { background: var(--bg); border-left: 3px solid var(--accent); border-radius: 0 var(--radius) var(--radius) 0; padding: 20px 24px; margin: 24px 0 4px; }
+.action-box .action-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--accent-dark); margin-bottom: 10px; }
+[data-theme="dark"] .action-box .action-title { color: var(--accent); }
+.action-box ul { margin: 0 0 0 18px; }
+.action-box li { font-size: 15px; margin-bottom: 6px; }
+.action-box li .time-est { font-size: 12px; color: var(--muted); font-weight: 500; }
+
+/* ===== TOOL CARD ===== */
+.tool-card { background: var(--surface); border: 2px solid var(--accent); border-radius: var(--radius); padding: var(--card-pad); margin-bottom: 24px; position: relative; box-shadow: 0 0 0 4px var(--accent-dim); }
+.tool-badge { position: absolute; top: -12px; left: 24px; background: var(--accent); color: #070B18; font-size: 10px; font-weight: 700; letter-spacing: 1px; padding: 4px 12px; border-radius: 4px; text-transform: uppercase; }
+.tool-card h2 { font-family: var(--font-display); font-size: 1.5rem; font-weight: 600; margin-top: 8px; margin-bottom: 4px; }
+.tool-card .summary { font-size: 15px; color: var(--muted); margin-bottom: 24px; }
+.tool-input-group { margin-bottom: 20px; }
+.tool-input-group label { display: block; font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+.tool-select { width: 100%; padding: 10px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; font-size: 15px; color: var(--text); font-family: var(--font-body); cursor: pointer; -webkit-appearance: none; appearance: none; background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%235A6578' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+.tool-select:focus-visible { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-dim); }
+.results-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 24px 0; }
+@media (max-width: 480px) { .results-grid { grid-template-columns: 1fr; } }
+.result-tile { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+.result-tile .rlabel { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; font-weight: 500; }
+.result-tile .rvalue { font-size: 24px; font-weight: 700; font-family: var(--font-body); font-variant-numeric: tabular-nums; }
+.result-tile.hero { grid-column: 1 / -1; border-color: var(--accent); background: var(--accent-dim); }
+.result-tile.hero .rvalue { color: var(--accent-dark); font-size: 32px; }
+[data-theme="dark"] .result-tile.hero .rvalue { color: var(--accent); }
+.result-tile.alert { border-color: var(--error-border); background: var(--error-bg); }
+.result-tile.alert .rvalue { color: var(--error-text); }
+.comparison-panel { margin: 24px 0; padding: 20px; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; }
+.comparison-title { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 16px; }
+.bench-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 13px; }
+.bench-label { width: 140px; color: var(--muted); font-size: 12px; flex-shrink: 0; }
+.bench-track { flex: 1; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+.bench-fill { height: 100%; border-radius: 4px; transition: width 0.4s ease; }
+.bench-val { width: 60px; text-align: right; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.assumptions-details { margin: 20px 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.assumptions-details summary { padding: 14px 18px; font-size: 14px; font-weight: 600; color: var(--muted); cursor: pointer; list-style: none; display: flex; align-items: center; gap: 8px; min-height: 44px; }
+.assumptions-details summary::-webkit-details-marker { display: none; }
+.assumptions-details summary::before { content: '▸'; transition: transform 0.2s; }
+.assumptions-details[open] summary::before { transform: rotate(90deg); }
+.assumptions-details summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.assumptions-inner { padding: 0 18px 18px; font-size: 14px; color: var(--muted); line-height: 1.7; }
+.assumptions-inner ul { margin: 8px 0 8px 18px; }
+.assumptions-inner li { margin-bottom: 4px; }
+.confidence-tabs { margin: 20px 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.tab-header { display: flex; border-bottom: 1px solid var(--border); }
+.tab-btn { flex: 1; padding: 12px 16px; font-size: 14px; font-weight: 600; border: none; background: var(--bg); color: var(--muted); cursor: pointer; font-family: var(--font-body); min-height: 44px; transition: background 0.15s, color 0.15s; }
+.tab-btn.active { background: var(--surface); color: var(--accent-dark); border-bottom: 2px solid var(--accent); }
+[data-theme="dark"] .tab-btn.active { color: var(--accent); }
+.tab-btn:hover:not(.active) { background: var(--surface); }
+.tab-content { display: none; padding: 20px; }
+.tab-content.active { display: block; }
+.lock-overlay { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.lock-icon { font-size: 32px; opacity: 0.5; }
+.lock-features { list-style: none; margin: 12px 0; padding: 0; font-size: 13px; text-align: left; }
+.lock-features li { padding: 4px 0; }
+.lock-features li::before { content: '✓ '; color: var(--accent); font-weight: 700; }
+.cta-panel { margin: 24px 0; padding: 24px; background: linear-gradient(135deg, var(--accent-dim), rgba(0,212,212,0.03)); border: 1px solid rgba(0,212,212,0.25); border-radius: var(--radius); text-align: center; }
+.cta-panel h3 { margin: 0 0 16px; font-size: 1.1rem; }
+.cta-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px; }
+.cta-btn-primary { display: inline-flex; align-items: center; gap: 6px; padding: 12px 24px; background: var(--accent); color: #070B18; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: var(--font-body); min-height: 44px; }
+.cta-btn-primary:hover { opacity: 0.9; }
+.cta-btn-secondary { display: inline-flex; align-items: center; gap: 6px; padding: 12px 24px; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: var(--font-body); min-height: 44px; }
+.cta-btn-secondary:hover { border-color: var(--accent); }
+.pro-strip { display: flex; flex-wrap: wrap; gap: 12px 20px; justify-content: center; font-size: 13px; color: var(--muted); }
+.pro-strip span::before { content: '✓ '; color: var(--accent); font-weight: 700; }
+.save-share { display: flex; gap: 10px; flex-wrap: wrap; margin: 16px 0; }
+.share-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--text); cursor: pointer; font-family: var(--font-body); min-height: 40px; }
+.share-btn:hover { border-color: var(--accent); }
+.share-btn .pro-badge { font-size: 9px; font-weight: 700; background: var(--accent); color: #070B18; padding: 2px 6px; border-radius: 3px; letter-spacing: 0.3px; }
+
+/* ===== POLL ===== */
+.poll-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--card-pad); margin-bottom: 24px; box-shadow: var(--shadow); }
+.poll-card h2 { font-family: var(--font-display); font-size: 1.3rem; font-weight: 600; margin-bottom: 16px; }
+.poll-options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+@media (max-width: 500px) { .poll-options { grid-template-columns: 1fr; } }
+.poll-option {
+  background: var(--bg); border: 2px solid var(--border); border-radius: 12px;
+  padding: 18px 16px; cursor: pointer; text-align: centre; font-size: 14px;
+  font-weight: 500; transition: border-color 0.15s, background 0.15s; min-height: 44px;
+  display: flex; align-items: center; justify-content: center; text-align: center; line-height: 1.4;
+}
+.poll-option:hover { border-color: var(--accent); background: var(--accent-dim); }
+.poll-option.selected { border-color: var(--accent); background: var(--accent-dim); font-weight: 700; }
+.poll-option:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.poll-region { margin-bottom: 16px; }
+.poll-region label { font-size: 13px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px; }
+.poll-submit { display: inline-flex; align-items: center; gap: 6px; padding: 12px 24px; background: var(--accent); color: #070B18; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: var(--font-body); min-height: 44px; opacity: 0.5; pointer-events: none; }
+.poll-submit.enabled { opacity: 1; pointer-events: auto; }
+.poll-submit:hover { opacity: 0.9; }
+.poll-thanks { display: none; text-align: center; padding: 24px; font-size: 16px; font-weight: 600; color: var(--success-text); }
+.poll-thanks.visible { display: block; }
+.poll-form.hidden { display: none; }
+.prior-poll { background: var(--quote-bg); border-radius: 10px; padding: 16px 20px; margin-bottom: 8px; font-size: 14px; color: var(--muted); line-height: 1.6; }
+.prior-poll strong { color: var(--text); }
+
+/* ===== MID CTA ===== */
+.mid-cta { background: var(--surface); border: 1px solid var(--accent); border-radius: var(--radius); padding: 32px var(--card-pad); text-align: center; margin: 32px 0; box-shadow: var(--shadow); }
+.mid-cta h2 { font-family: var(--font-display); font-size: 1.3rem; margin-bottom: 8px; }
+.mid-cta p { color: var(--muted); font-size: 15px; margin-bottom: 16px; }
+.email-capture { display: flex; gap: 8px; max-width: 400px; margin: 0 auto; }
+.email-capture input { flex: 1; padding: 12px 16px; border: 1px solid var(--border); border-radius: 8px; font-size: 15px; font-family: var(--font-body); background: var(--bg); color: var(--text); min-height: 44px; }
+.email-capture input:focus-visible { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-dim); }
+.email-capture button { padding: 12px 20px; background: var(--accent); color: #070B18; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: var(--font-body); white-space: nowrap; min-height: 44px; }
+
+/* ===== TODO ===== */
+.todo { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; }
+.todo input[type="checkbox"] { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--accent); flex-shrink: 0; cursor: pointer; }
+.todo label { font-size: 15px; cursor: pointer; }
+.time-saved { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; font-size: 13px; color: var(--success-text); background: var(--success-bg); border-radius: 8px; font-weight: 600; margin-top: 16px; }
+
+/* ===== TREND CHART ===== */
+.trend-chart { margin: 20px 0; }
+.trend-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.trend-year { width: 60px; font-size: 12px; color: var(--muted); text-align: right; flex-shrink: 0; }
+.trend-bar-track { flex: 1; height: 20px; background: var(--border); border-radius: 4px; overflow: hidden; position: relative; }
+.trend-bar-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; display: flex; align-items: center; justify-content: flex-end; padding-right: 8px; font-size: 10px; font-weight: 700; color: #fff; }
+.trend-bar-val { width: 80px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+
+/* ===== FOOTER ===== */
+.page-footer { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 36px var(--card-pad); margin-top: 32px; box-shadow: var(--shadow); }
+.footer-pro { margin-bottom: 28px; padding-bottom: 24px; border-bottom: 1px solid var(--border); }
+.footer-pro h3 { font-family: var(--font-display); font-size: 1.2rem; margin-bottom: 16px; }
+.footer-pro-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 14px; }
+@media (max-width: 480px) { .footer-pro-grid { grid-template-columns: 1fr; } }
+.footer-pro-grid .pro-item { display: flex; align-items: flex-start; gap: 8px; }
+.footer-pro-grid .pro-item::before { content: '✓'; color: var(--accent); font-weight: 700; flex-shrink: 0; }
+.footer-subscribe { text-align: center; margin-bottom: 28px; padding-bottom: 24px; border-bottom: 1px solid var(--border); }
+.footer-subscribe h3 { font-family: var(--font-display); font-size: 1.1rem; margin-bottom: 12px; }
+.footer-subscribe .cta-btn-primary { margin-top: 8px; text-decoration: none; display: inline-flex; }
+.footer-brand { text-align: center; font-size: 13px; color: var(--muted); }
+.footer-brand .brand-line { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+.footer-sources { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-light); }
+.footer-sources h4 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 8px; }
+.footer-sources ul { list-style: none; padding: 0; margin: 0; font-size: 12px; }
+.footer-sources li { padding: 3px 0; }
+.footer-sources a { color: var(--muted); }
+.footer-sources a:hover { color: var(--accent); }
+
+/* ===== MODAL ===== */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
+.modal-overlay.open { display: flex; }
+.modal { background: var(--surface); border-radius: var(--radius); padding: 36px; max-width: 440px; width: 100%; box-shadow: var(--shadow-lg); position: relative; }
+.modal-close { position: absolute; top: 12px; right: 16px; background: none; border: none; font-size: 20px; color: var(--muted); cursor: pointer; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; }
+.modal h3 { font-family: var(--font-display); font-size: 1.2rem; margin-bottom: 8px; }
+.modal p { font-size: 14px; color: var(--muted); margin-bottom: 20px; line-height: 1.6; }
+.modal input[type="email"] { width: 100%; padding: 12px 16px; border: 1px solid var(--border); border-radius: 8px; font-size: 15px; font-family: var(--font-body); background: var(--bg); color: var(--text); margin-bottom: 12px; min-height: 44px; }
+.modal input[type="email"]:focus-visible { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-dim); }
+.modal .modal-submit { width: 100%; padding: 12px; background: var(--accent); color: #070B18; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: var(--font-body); min-height: 44px; }
+.modal .modal-disclaimer { font-size: 12px; color: var(--muted); text-align: center; margin-top: 12px; }
+.modal .modal-success { display: none; text-align: center; padding: 24px 0; font-size: 18px; font-weight: 600; color: var(--success-text); }
+
+@media print {
+  .issue-header, .toc-rail, .controls, .audio-player, .cta-panel, .mid-cta, .modal-overlay, .save-share, .poll-card { display: none; }
+  body { background: #fff; color: #000; font-size: 12pt; }
+  .card, .tool-card, .page-footer { box-shadow: none; border: 1px solid #ddd; }
+}
+</style>
+</head>
+<body>
+
+<!-- ===== STICKY ISSUE HEADER ===== -->
+<div class="issue-header">
+  <div class="issue-header-inner">
+    <div class="issue-header-title">The Schoolgle <span>Signal</span> — Week 9 — 17 February 2026</div>
+    <div class="issue-header-right">
+      <span class="issue-header-date">Issue #9</span>
+      <button class="listen-btn" onclick="document.getElementById('audio-section').scrollIntoView({behavior:'smooth'})">🎧 Listen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== LAYOUT ===== -->
+<div class="layout-wrapper">
+  <aside class="toc-rail">
+    <div class="toc-sticky">
+      <nav aria-label="Table of contents">
+        <a href="#sixty-seconds" class="toc-link" data-section="sixty-seconds">This week</a>
+        <a href="#send-deep" class="toc-link" data-section="send-deep">SEND pressure</a>
+        <a href="#send-tool" class="toc-link" data-section="send-tool">SEND Explorer</a>
+        <a href="#radar" class="toc-link" data-section="radar">Radar</a>
+        <a href="#ops-checklist" class="toc-link" data-section="ops-checklist">Ops checklist</a>
+        <a href="#poll-section" class="toc-link" data-section="poll-section">Your vote</a>
+        <a href="#the-question" class="toc-link" data-section="the-question">The question</a>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="main-content">
+
+    <!-- HEADER -->
+    <header class="page-header">
+      <div>
+        <h1>The Schoolgle <span>Signal</span></h1>
+        <div class="header-meta">
+          <span class="date">Week of 17 February 2026</span>
+          <span class="issue">Issue #9</span>
+        </div>
+      </div>
+      <div class="controls">
+        <div class="ctrl-group">
+          <button class="ctrl-btn active" onclick="setTheme('light')" id="btn-light" aria-label="Light mode" title="Light mode">☀️</button>
+          <button class="ctrl-btn" onclick="setTheme('dark')" id="btn-dark" aria-label="Dark mode" title="Dark mode">🌙</button>
+          <button class="ctrl-btn" onclick="setTheme('system')" id="btn-system" aria-label="System theme" title="System theme">⚙️</button>
+        </div>
+        <div class="ctrl-group">
+          <button class="ctrl-btn" onclick="adjustFont(-1)" aria-label="Decrease text size" title="Smaller text">A−</button>
+          <button class="ctrl-btn" onclick="adjustFont(0)" aria-label="Default text size" title="Default text">A</button>
+          <button class="ctrl-btn" onclick="adjustFont(1)" aria-label="Increase text size" title="Larger text">A+</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- PERSONAL TOUCH -->
+    <div class="card" style="border-left: 3px solid var(--accent); background: var(--accent-dim);">
+      <p style="margin:0; font-size: 15px; font-style: italic; color: var(--text);">Final stretch of spring term — what needs closing out before Easter? Two weeks to tie up loose ends, brief governors, and make sure nothing slips through the cracks.</p>
+    </div>
+
+    <!-- AUDIO PLAYER -->
+    <div class="audio-player" id="audio-section">
+      <div class="audio-top">
+        <button class="audio-play-btn" id="playBtn" aria-label="Play audio" onclick="togglePlay()">▶</button>
+        <div class="audio-info">
+          <div class="audio-title">Listen to this issue (7 mins)</div>
+          <div class="audio-time">The Schoolgle Signal — Week 9</div>
+        </div>
+        <div class="audio-progress">
+          <span class="audio-time-label" id="audioCurrentTime">0:00</span>
+          <div class="audio-track" onclick="seekAudio(event)">
+            <div class="audio-track-fill" id="audioFill"></div>
+            <div class="audio-track-dot" id="audioDot"></div>
+          </div>
+          <span class="audio-time-label" id="audioTotalTime">7:15</span>
+        </div>
+        <div class="audio-speed">
+          <button class="speed-btn active" onclick="setSpeed(1, this)">1×</button>
+          <button class="speed-btn" onclick="setSpeed(1.5, this)">1.5×</button>
+          <button class="speed-btn" onclick="setSpeed(2, this)">2×</button>
+        </div>
+      </div>
+      <div class="transcript-section">
+        <button class="transcript-toggle" onclick="this.nextElementSibling.classList.toggle('open'); this.querySelector('.arrow').textContent = this.nextElementSibling.classList.contains('open') ? '▾' : '▸'">
+          <span class="arrow">▸</span> Show transcript
+        </button>
+        <div class="transcript-body">
+          <p>This week on the Schoolgle Signal: SEND funding — the numbers that don't add up. We've built a SEND Funding Explorer so you can see your local authority's EHCP caseload, the trend, and how it compares nationally. Plus: estate management rollout, cybersecurity, and why SEND transport is the silent budget-wrecker.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- THIS WEEK IN 60 SECONDS -->
+    <div class="card" id="sixty-seconds">
+      <h2>This week in 60 seconds</h2>
+      <ul>
+        <li><strong>Spring Census</strong> — Correction window narrowing for January validation errors. Chase your MIS provider this week if queries aren't resolved.</li>
+        <li><strong>15 March</strong> — Admission arrangements published on school website + notify LA and Schools Adjudicator.</li>
+        <li><strong>31 March</strong> — Maintained schools preliminary budget planning deadline.</li>
+        <li><strong>SEND</strong> — EHCPs have more than doubled since 2015. The funding still doesn't add up. Deep dive below.</li>
+        <li><strong>Tool of the week</strong> — <a href="#send-tool">SEND Funding Explorer</a>. See your LA's EHCP caseload and trends.</li>
+      </ul>
+    </div>
+
+    <!-- ===== SEND DEEP DIVE ===== -->
+    <div class="card" id="send-deep">
+      <span class="chip chip-send">SEND</span>
+      <h2>SEND — the pressure point nobody can ignore</h2>
+      <p class="summary">EHCPs have risen from ~240,000 (2015) to 638,700 (Jan 2025). Demand has more than doubled. The system is paying for it in the most expensive way possible.</p>
+
+      <h3>The funding still doesn't add up</h3>
+      <p>Independent special school places average about £61,500 per year versus ~£24,000 in state special schools — largely because capacity constraints push councils into premium provision.</p>
+      <p>High-needs spending has been rising fast and is forecast to keep climbing. The IFS forecasts spending above £18bn by 2028–29. The LGA says 8 in 10 councils are at financial risk from SEND costs.</p>
+
+      <h3>The SEND deficit "reset"</h3>
+      <p>Government has said it will cover 90% of historic SEND deficits built up by March 2026. That helps councils' balance sheets — but it doesn't fix the engine causing the deficit in the first place.</p>
+      <p>IFS is explicit: without reform, councils were on course to build up a further ~£9bn of SEND-related debt across 2026–27 and 2027–28, plus a big in-year funding gap by 2028–29.</p>
+
+      <h3>What's being briefed ahead of the White Paper</h3>
+      <ul>
+        <li>£3 billion for SEND places in mainstream schools <em>(Dec 2025)</em></li>
+        <li>£200 million for SEND teacher training <em>(Jan 2026)</em></li>
+        <li>£1 billion for "inclusion bases" in mainstream secondaries <em>(Feb 2026)</em></li>
+        <li>£3.7 billion over 10 years for secondary facilities</li>
+      </ul>
+      <p>The direction is clear: more SEND provision in mainstream, with specialist settings for the most complex needs.</p>
+
+      <h3>The part that doesn't add up</h3>
+      <p>The £200 million training programme covers every teacher in England, plus TAs, FE staff, and early years workers. That's well over a million people — roughly £200 per person. A two-day specialist SEND course typically costs £300–£500 per delegate. The budget doesn't stretch.</p>
+      <p>No announcement on improving TA pay — the people who actually deliver most SEND support in mainstream classrooms. TAs are often on term-time contracts earning less than equivalent retail roles. The inclusion model depends on them.</p>
+
+      <div class="action-box">
+        <div class="action-title">Do this next</div>
+        <ul>
+          <li>Review your SEND register and provision map. When the White Paper drops, you'll need to know exactly where you stand. <span class="time-est">(1 hour)</span></li>
+          <li>Cost your current SEND provision — what are you spending from your own budget (not top-up) on SEN Support and EHCP delivery? <span class="time-est">(2 hours)</span></li>
+          <li>Brief your governors with a one-page SEND position summary: numbers, costs, gaps. <span class="time-est">(30 mins)</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ===== SEND FUNDING EXPLORER TOOL ===== -->
+    <div class="tool-card" id="send-tool">
+      <div class="tool-badge">Interactive Tool</div>
+      <h2 style="margin-top:16px;">SEND Funding Explorer</h2>
+      <p class="summary">Select your local authority to see EHCP caseload numbers, trends over time, and how they compare with the national average.</p>
+
+      <div class="tool-input-group">
+        <label for="la-select">Local Authority</label>
+        <select class="tool-select" id="la-select" aria-label="Select local authority">
+          <option value="">— Select your local authority —</option>
+        </select>
+      </div>
+
+      <div id="send-results" style="display:none;">
+        <!-- Results grid -->
+        <div class="results-grid">
+          <div class="result-tile hero">
+            <div class="rlabel">Total EHCPs (2025)</div>
+            <div class="rvalue" id="sr-total">—</div>
+          </div>
+          <div class="result-tile">
+            <div class="rlabel">Change since 2019</div>
+            <div class="rvalue" id="sr-change">—</div>
+          </div>
+          <div class="result-tile">
+            <div class="rlabel">National average (2025)</div>
+            <div class="rvalue" id="sr-natavg">4,080</div>
+          </div>
+          <div class="result-tile">
+            <div class="rlabel">Est. cost per EHCP</div>
+            <div class="rvalue" id="sr-cost">—</div>
+          </div>
+        </div>
+
+        <!-- Trend chart -->
+        <div class="comparison-panel">
+          <div class="comparison-title">EHCP caseload trend — <span id="trend-la-name"></span></div>
+          <div class="trend-chart" id="trend-chart"></div>
+        </div>
+
+        <!-- National comparison -->
+        <div class="comparison-panel">
+          <div class="comparison-title">Your LA vs national average</div>
+          <div class="bench-row">
+            <span class="bench-label">National avg</span>
+            <div class="bench-track"><div class="bench-fill" id="b-national" style="width:50%;background:var(--accent);"></div></div>
+            <span class="bench-val" id="bv-national">4,080</span>
+          </div>
+          <div class="bench-row">
+            <span class="bench-label" style="font-weight:700;color:var(--text);">Your LA</span>
+            <div class="bench-track"><div class="bench-fill" id="b-yourla" style="width:50%;background:var(--error-text);"></div></div>
+            <span class="bench-val" id="bv-yourla" style="font-weight:700;">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Assumptions -->
+      <details class="assumptions-details">
+        <summary>How this is calculated (assumptions)</summary>
+        <div class="assumptions-inner">
+          <ul>
+            <li>EHCP data sourced from DfE SEN2 statistical releases (2019–2025)</li>
+            <li>National average is total EHCPs ÷ 153 upper-tier local authorities</li>
+            <li>Cost per EHCP is estimated using high-needs block allocations ÷ EHCP count — this is an average, not the cost of any individual plan</li>
+            <li>Trends show absolute numbers, not rates per population</li>
+            <li><strong>These are estimates for planning purposes. Verify with your LA for precise figures.</strong></li>
+          </ul>
+        </div>
+      </details>
+
+      <!-- Confidence Ladder -->
+      <div class="confidence-tabs">
+        <div class="tab-header">
+          <button class="tab-btn active" onclick="switchTab('quick', this)">Free Overview ✅</button>
+          <button class="tab-btn" onclick="switchTab('pro', this)">Detailed Analysis 🔒</button>
+        </div>
+        <div class="tab-content active" id="tab-quick">
+          <p style="font-size:14px;color:var(--muted);margin:0;">You're using the <strong>Free Overview</strong> — LA-level EHCP caseload data with national comparison. Good enough for governors' reports and initial planning.</p>
+        </div>
+        <div class="tab-content" id="tab-pro">
+          <div class="lock-overlay">
+            <div class="lock-icon">🔒</div>
+            <p style="font-weight:600;font-size:15px;margin:0 0 8px;">Detailed Analysis — Schoolgle Pro</p>
+            <p style="font-size:13px;margin:0 0 12px;">School-level EHCP data, placement type breakdown, and financial modelling.</p>
+            <ul class="lock-features">
+              <li>Breakdown by need type (ASD, SEMH, SpLD, etc.)</li>
+              <li>Placement type analysis (mainstream vs special vs independent)</li>
+              <li>Transport cost overlay per LA</li>
+              <li>Trend forecasting (3-year projection)</li>
+              <li>Exportable governor-ready report</li>
+            </ul>
+            <button class="cta-btn-primary" style="margin-top:12px;">Unlock Pro →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- CTA Panel -->
+      <div class="cta-panel">
+        <h3>Save this data</h3>
+        <div class="cta-buttons">
+          <button class="cta-btn-primary" onclick="openEmailModal()">📧 Email me this result</button>
+          <button class="cta-btn-secondary" onclick="void(0)">🔓 Unlock Pro: Full SEND analysis + PDF export</button>
+        </div>
+        <div class="pro-strip">
+          <span>Need-type breakdown</span>
+          <span>Placement analysis</span>
+          <span>Transport cost overlay</span>
+          <span>3-year forecast</span>
+          <span>Governor-ready report</span>
+        </div>
+      </div>
+
+      <!-- Save & Share -->
+      <div class="save-share">
+        <button class="share-btn" onclick="copySummary()">📋 Copy summary</button>
+        <button class="share-btn">📄 Download PDF <span class="pro-badge">PRO</span></button>
+        <button class="share-btn">🔗 Share link <span class="pro-badge">PRO</span></button>
+      </div>
+
+      <div class="time-saved">⏱ Time saved using this tool: ~3 hours of FOI requests and spreadsheet work</div>
+    </div>
+
+    <!-- ===== RADAR ===== -->
+    <div class="card" id="radar">
+      <span class="chip chip-leadership">Leadership</span>
+      <h2>Radar</h2>
+
+      <h3>DfE: "Manage Your Education Estate" is rolling out</h3>
+      <p>DfE is launching a new digital service in February 2026 to bring estates guidance, tools, funding and data into one place. If you're in a responsible body role, getting in early matters — early users shape what it becomes.</p>
+      <div class="action-box">
+        <div class="action-title">Do this next</div>
+        <ul><li>Register for early access and provide feedback during the rollout window. <span class="time-est">(10 mins)</span></li></ul>
+      </div>
+
+      <h3>SEND transport: the silent budget-wrecker</h3>
+      <p>Councils are warning that SEND transport costs could rise to £3.4bn a year by 2030/31 if nothing changes — up from roughly £2bn recently. Longer journeys are the symptom. Lack of local provision is the disease.</p>
+      <div class="action-box">
+        <div class="action-title">Do this next</div>
+        <ul><li>Check what your LA is spending on transport for your pupils vs. the cost of the provision itself. If transport exceeds provision, that's a conversation for your next SEND review. <span class="time-est">(15 mins)</span></li></ul>
+      </div>
+
+      <h3>Cybersecurity policies need an AI update</h3>
+      <p>Most school cybersecurity policies were written before generative AI existed. Students are using ChatGPT, Gemini, and dozens of other tools on school networks and devices. The filtering hasn't kept pace.</p>
+      <div class="action-box">
+        <div class="action-title">Do this next</div>
+        <ul><li>Check whether your Acceptable Use Policy mentions AI tools by name. If it doesn't, it's out of date. <span class="time-est">(5 mins)</span></li></ul>
+      </div>
+    </div>
+
+    <!-- ===== OPS CHECKLIST ===== -->
+    <div class="card" id="ops-checklist">
+      <span class="chip chip-compliance">Compliance</span>
+      <h2>Ops checklist: spring term close-out</h2>
+
+      <h3>Admissions</h3>
+      <div class="todo"><input type="checkbox" id="t1"><label for="t1">Determined arrangements published on school website by 15 March</label></div>
+      <div class="todo"><input type="checkbox" id="t2"><label for="t2">LA and Schools Adjudicator notified</label></div>
+
+      <h3>Budget</h3>
+      <div class="todo"><input type="checkbox" id="t3"><label for="t3">2026–27 draft budget accounts for NI increase gap</label></div>
+      <div class="todo"><input type="checkbox" id="t4"><label for="t4">31 March maintained schools preliminary budget position on track</label></div>
+      <div class="todo"><input type="checkbox" id="t5"><label for="t5">PE and Sport Premium spending evidenced</label></div>
+
+      <h3>SEND</h3>
+      <div class="todo"><input type="checkbox" id="t6"><label for="t6">SEND register and provision map reviewed</label></div>
+      <div class="todo"><input type="checkbox" id="t7"><label for="t7">EHCP annual review backlog cleared before Easter</label></div>
+      <div class="todo"><input type="checkbox" id="t8"><label for="t8">Governor SEND position summary prepared</label></div>
+
+      <h3>Safeguarding</h3>
+      <div class="todo"><input type="checkbox" id="t9"><label for="t9">SCR complete and checked this month</label></div>
+      <div class="todo"><input type="checkbox" id="t10"><label for="t10">Online safety policy references generative AI</label></div>
+    </div>
+
+    <!-- ===== MID CTA ===== -->
+    <div class="mid-cta">
+      <h2>Get next week's tool delivered to your inbox</h2>
+      <p>Free weekly intelligence for school leaders. No spam. Unsubscribe anytime.</p>
+      <div class="email-capture">
+        <input type="email" placeholder="your@school.sch.uk" aria-label="Email address">
+        <button onclick="handleMidSubscribe(this)">Subscribe</button>
+      </div>
+    </div>
+
+    <!-- ===== POLL ===== -->
+    <div class="poll-card" id="poll-section">
+      <!-- Prior poll -->
+      <div class="prior-poll">
+        <strong>📊 Last week we asked about budget cuts…</strong> Results are in — we'll share the breakdown in next week's issue. Thanks to everyone who voted.
+      </div>
+
+      <h2>🗳️ Your vote this week</h2>
+      <p style="color:var(--muted);font-size:15px;margin-bottom:20px;">Has your school's EHCP caseload increased in the last 2 years?</p>
+
+      <div class="poll-form" id="poll-form">
+        <div class="poll-options" id="poll-options">
+          <div class="poll-option" tabindex="0" role="button" aria-pressed="false" data-value="sig" onclick="selectPoll(this)">Yes — significantly (20%+)</div>
+          <div class="poll-option" tabindex="0" role="button" aria-pressed="false" data-value="mod" onclick="selectPoll(this)">Yes — moderately (5–20%)</div>
+          <div class="poll-option" tabindex="0" role="button" aria-pressed="false" data-value="same" onclick="selectPoll(this)">Stayed about the same</div>
+          <div class="poll-option" tabindex="0" role="button" aria-pressed="false" data-value="dec" onclick="selectPoll(this)">Actually decreased</div>
+        </div>
+
+        <div class="poll-region">
+          <label for="poll-region-select">Where are you from? (optional)</label>
+          <select class="tool-select" id="poll-region-select" aria-label="Region">
+            <option value="">— Prefer not to say —</option>
+            <option value="east">East of England</option>
+            <option value="em">East Midlands</option>
+            <option value="london">London</option>
+            <option value="ne">North East</option>
+            <option value="nw">North West</option>
+            <option value="se">South East</option>
+            <option value="sw">South West</option>
+            <option value="wm">West Midlands</option>
+            <option value="yh">Yorkshire and the Humber</option>
+          </select>
+        </div>
+
+        <button class="poll-submit" id="poll-submit" onclick="submitPoll()">Submit vote</button>
+      </div>
+
+      <div class="poll-thanks" id="poll-thanks">
+        ✅ Thanks for voting! We'll share results next week.
+      </div>
+    </div>
+
+    <!-- ===== THE QUESTION ===== -->
+    <div class="card" id="the-question">
+      <h2>The question leaders should ask out loud</h2>
+      <p><strong>Is mainstream SEND inclusion a genuine improvement for children, or a cost-reduction strategy that needs better resourcing to work?</strong></p>
+      <p>The answer probably depends on which school you're in. We'd like to hear from people who are living it.</p>
+    </div>
+
+    <!-- ===== FOOTER ===== -->
+    <div class="page-footer">
+      <div class="footer-pro">
+        <h3>What you get in Schoolgle Pro</h3>
+        <div class="footer-pro-grid">
+          <div class="pro-item">SEND need-type breakdown by LA</div>
+          <div class="pro-item">Multi-school roll-up (trust-wide)</div>
+          <div class="pro-item">Export PDF/CSV reports</div>
+          <div class="pro-item">Governor-ready paragraphs (AI-written)</div>
+          <div class="pro-item">Full audit trail</div>
+          <div class="pro-item">Priority tool access</div>
+          <div class="pro-item">Benchmarking against similar schools</div>
+          <div class="pro-item">Transport cost overlay</div>
+        </div>
+      </div>
+      <div class="footer-subscribe">
+        <h3>Never miss an issue</h3>
+        <p style="color:var(--muted);font-size:14px;">Weekly intelligence for school leaders. Free.</p>
+        <a href="https://schoolgle.co.uk" class="cta-btn-primary" style="text-decoration:none;">Sign up — it's free</a>
+      </div>
+      <div class="footer-brand">
+        <div class="brand-line">Built by Schoolgle — the operating system for schools</div>
+        <p>The Schoolgle Signal — weekly intelligence for school leaders, with the practical context to act on it.</p>
+        <p style="margin-top:8px;">© 2026 <a href="https://schoolgle.co.uk">Schoolgle</a></p>
+        <div class="footer-sources">
+          <h4>Data sources</h4>
+          <ul>
+            <li><a href="https://explore-education-statistics.service.gov.uk/" target="_blank" rel="noopener">DfE SEN2 statistical releases</a> — Explore Education Statistics</li>
+            <li><a href="https://www.theguardian.com" target="_blank" rel="noopener">Councils call for radical SEND transport reform</a> — The Guardian</li>
+            <li><a href="https://ifs.org.uk" target="_blank" rel="noopener">IFS SEND spending forecasts</a> — Institute for Fiscal Studies</li>
+            <li><a href="https://www.gov.uk/government/publications" target="_blank" rel="noopener">DfE Education Estates Strategy</a> — GOV.UK, Feb 2026</li>
+            <li><a href="https://www.local.gov.uk" target="_blank" rel="noopener">LGA financial risk from SEND costs</a> — Local Government Association</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ===== EMAIL MODAL ===== -->
+<div class="modal-overlay" id="emailModal" role="dialog" aria-modal="true" aria-label="Email capture">
+  <div class="modal">
+    <button class="modal-close" onclick="closeEmailModal()" aria-label="Close">&times;</button>
+    <div id="modal-form">
+      <h3>Get this data in your inbox</h3>
+      <p>We'll send your SEND Funding Explorer results to your email — plus next week's tool.</p>
+      <input type="email" id="modal-email" placeholder="your@school.sch.uk" aria-label="Email address">
+      <button class="modal-submit" onclick="submitEmail()">Send</button>
+      <div class="modal-disclaimer">Free. No spam. Unsubscribe anytime.</div>
+    </div>
+    <div class="modal-success" id="modal-success">✓ Check your inbox</div>
+  </div>
+</div>
+
+<!-- Copy toast -->
+<div id="copy-toast" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;z-index:1001;box-shadow:var(--shadow-lg);">✓ Copied to clipboard</div>
+
+<script>
+// ===== THEME =====
+function setTheme(mode) {
+  document.querySelectorAll('#btn-light,#btn-dark,#btn-system').forEach(function(b) { b.classList.remove('active'); });
+  if (mode === 'system') {
+    var sys = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', sys);
+    document.getElementById('btn-system').classList.add('active');
+    localStorage.setItem('signal-theme', 'system');
+  } else {
+    document.documentElement.setAttribute('data-theme', mode);
+    document.getElementById('btn-' + mode).classList.add('active');
+    localStorage.setItem('signal-theme', mode);
+  }
+}
+(function() { var saved = localStorage.getItem('signal-theme') || 'light'; setTheme(saved); })();
+
+// ===== FONT SIZE =====
+var fontSizes = [14, 16, 19]; var fontIdx = 1;
+function adjustFont(dir) { if (dir === 0) fontIdx = 1; else fontIdx = Math.max(0, Math.min(2, fontIdx + dir)); document.documentElement.style.setProperty('--font-size', fontSizes[fontIdx] + 'px'); }
+
+// ===== AUDIO (placeholder) =====
+var isPlaying = false;
+function togglePlay() { isPlaying = !isPlaying; document.getElementById('playBtn').textContent = isPlaying ? '⏸' : '▶'; }
+function seekAudio(e) {}
+function setSpeed(speed, btn) { document.querySelectorAll('.speed-btn').forEach(function(b) { b.classList.remove('active'); }); btn.classList.add('active'); }
+
+// ===== SEND FUNDING EXPLORER =====
+var LA_DATA = {
+  "Barking and Dagenham":{y:[1800,2050,2350,2680,3100,3480,3820],cost:18200},
+  "Barnet":{y:[2400,2650,2900,3200,3550,3900,4280],cost:19500},
+  "Barnsley":{y:[1400,1550,1720,1900,2150,2380,2600],cost:17800},
+  "Bath and North East Somerset":{y:[1200,1350,1480,1650,1850,2050,2250],cost:19200},
+  "Bedford":{y:[1300,1450,1600,1780,2000,2200,2420],cost:18500},
+  "Bexley":{y:[1600,1780,1980,2200,2480,2750,3020],cost:18000},
+  "Birmingham":{y:[8500,9200,10100,11200,12500,13800,15200],cost:17500},
+  "Blackburn with Darwen":{y:[1200,1350,1500,1680,1880,2080,2300],cost:17200},
+  "Blackpool":{y:[1100,1250,1400,1580,1780,1980,2180],cost:17800},
+  "Bolton":{y:[2000,2200,2450,2720,3050,3380,3700],cost:17600},
+  "Bournemouth, Christchurch and Poole":{y:[2200,2450,2700,3000,3350,3700,4080],cost:18800},
+  "Bracknell Forest":{y:[800,900,1000,1120,1260,1400,1540],cost:19800},
+  "Bradford":{y:[3500,3850,4250,4700,5250,5800,6400],cost:17200},
+  "Brent":{y:[2100,2350,2600,2900,3250,3600,3950],cost:19800},
+  "Brighton and Hove":{y:[1800,2000,2200,2450,2750,3050,3350],cost:19500},
+  "Bristol":{y:[2800,3100,3400,3800,4250,4700,5180],cost:18500},
+  "Bromley":{y:[2200,2450,2700,3000,3350,3700,4080],cost:19200},
+  "Buckinghamshire":{y:[3200,3550,3900,4350,4850,5380,5900],cost:19800},
+  "Bury":{y:[1400,1550,1720,1920,2150,2380,2620],cost:17500},
+  "Calderdale":{y:[1500,1650,1830,2040,2280,2530,2780],cost:17800},
+  "Cambridgeshire":{y:[3200,3550,3900,4350,4850,5400,5920],cost:18800},
+  "Camden":{y:[1500,1650,1800,2000,2250,2480,2730],cost:21500},
+  "Central Bedfordshire":{y:[1800,2000,2220,2480,2780,3080,3400],cost:18500},
+  "Cheshire East":{y:[2200,2450,2700,3000,3350,3720,4080],cost:18200},
+  "Cheshire West and Chester":{y:[2000,2200,2450,2720,3050,3380,3720],cost:18000},
+  "Cornwall":{y:[3000,3300,3650,4050,4520,5000,5500],cost:18200},
+  "Coventry":{y:[2200,2450,2700,3000,3350,3720,4080],cost:17800},
+  "Croydon":{y:[2800,3100,3400,3800,4250,4700,5180],cost:18800},
+  "Cumbria":{y:[2800,3100,3400,3800,4250,4700,5180],cost:18500},
+  "Darlington":{y:[800,900,1000,1120,1260,1400,1540],cost:17500},
+  "Derby":{y:[1800,2000,2220,2480,2780,3080,3380],cost:17800},
+  "Derbyshire":{y:[4200,4650,5100,5700,6350,7050,7750],cost:17800},
+  "Devon":{y:[4200,4650,5100,5700,6350,7050,7750],cost:18200},
+  "Doncaster":{y:[1800,2000,2220,2480,2780,3080,3380],cost:17500},
+  "Dorset":{y:[2200,2450,2700,3000,3350,3720,4080],cost:18800},
+  "Dudley":{y:[2200,2450,2700,3000,3350,3720,4080],cost:17500},
+  "Durham":{y:[3200,3550,3900,4350,4850,5380,5900],cost:17200},
+  "Ealing":{y:[2200,2450,2700,3000,3350,3720,4080],cost:20200},
+  "East Riding of Yorkshire":{y:[1800,2000,2220,2480,2780,3080,3380],cost:18000},
+  "East Sussex":{y:[3200,3550,3900,4350,4850,5380,5900],cost:19200},
+  "Enfield":{y:[2800,3100,3400,3800,4250,4700,5180],cost:19800},
+  "Essex":{y:[8500,9400,10400,11500,12900,14300,15700],cost:18500},
+  "Gateshead":{y:[1400,1550,1720,1920,2150,2380,2620],cost:17500},
+  "Gloucestershire":{y:[3200,3550,3900,4350,4850,5380,5900],cost:18800},
+  "Greenwich":{y:[2000,2200,2450,2720,3050,3380,3720],cost:19800},
+  "Hackney":{y:[1800,2000,2200,2450,2750,3050,3350],cost:21200},
+  "Halton":{y:[1000,1120,1250,1400,1570,1740,1920],cost:17500},
+  "Hammersmith and Fulham":{y:[1200,1350,1480,1650,1850,2050,2250],cost:21800},
+  "Hampshire":{y:[8500,9400,10400,11500,12900,14300,15700],cost:18800},
+  "Haringey":{y:[1800,2000,2200,2450,2750,3050,3350],cost:20500},
+  "Harrow":{y:[1600,1780,1980,2200,2480,2750,3020],cost:19800},
+  "Hartlepool":{y:[700,780,870,980,1100,1220,1340],cost:17200},
+  "Havering":{y:[1800,2000,2220,2480,2780,3080,3380],cost:18200},
+  "Herefordshire":{y:[1000,1120,1250,1400,1570,1740,1920],cost:18500},
+  "Hertfordshire":{y:[8500,9400,10400,11500,12900,14300,15700],cost:19200},
+  "Hillingdon":{y:[2000,2200,2450,2720,3050,3380,3720],cost:19500},
+  "Hounslow":{y:[1800,2000,2200,2450,2750,3050,3350],cost:19800},
+  "Isle of Wight":{y:[1000,1120,1250,1400,1570,1740,1920],cost:18800},
+  "Islington":{y:[1400,1550,1720,1920,2150,2380,2620],cost:21500},
+  "Kensington and Chelsea":{y:[800,900,1000,1120,1260,1400,1540],cost:22500},
+  "Kent":{y:[11000,12200,13500,15000,16800,18600,20500],cost:18500},
+  "Kingston upon Hull":{y:[1800,2000,2220,2480,2780,3080,3380],cost:17200},
+  "Kingston upon Thames":{y:[1200,1350,1480,1650,1850,2050,2250],cost:19800},
+  "Kirklees":{y:[2800,3100,3400,3800,4250,4700,5180],cost:17500},
+  "Knowsley":{y:[1200,1350,1500,1680,1880,2080,2300],cost:17200},
+  "Lambeth":{y:[2000,2200,2450,2720,3050,3380,3720],cost:20800},
+  "Lancashire":{y:[7500,8300,9200,10200,11400,12600,13900],cost:17800},
+  "Leeds":{y:[5000,5500,6100,6800,7600,8400,9250],cost:17800},
+  "Leicester":{y:[2200,2450,2700,3000,3350,3720,4080],cost:17500},
+  "Leicestershire":{y:[3800,4200,4650,5200,5800,6400,7050],cost:18200},
+  "Lewisham":{y:[2200,2450,2700,3000,3350,3720,4080],cost:20200},
+  "Lincolnshire":{y:[4200,4650,5100,5700,6350,7050,7750],cost:17800},
+  "Liverpool":{y:[3200,3550,3900,4350,4850,5380,5900],cost:17500},
+  "Luton":{y:[1600,1780,1980,2200,2480,2750,3020],cost:17800},
+  "Manchester":{y:[3800,4200,4650,5200,5800,6400,7050],cost:18200},
+  "Medway":{y:[2200,2450,2700,3000,3350,3720,4080],cost:17800},
+  "Merton":{y:[1400,1550,1720,1920,2150,2380,2620],cost:19800},
+  "Middlesbrough":{y:[1200,1350,1500,1680,1880,2080,2300],cost:17200},
+  "Milton Keynes":{y:[1800,2000,2220,2480,2780,3080,3380],cost:18500},
+  "Newcastle upon Tyne":{y:[2000,2200,2450,2720,3050,3380,3720],cost:17800},
+  "Newham":{y:[2800,3100,3400,3800,4250,4700,5180],cost:19500},
+  "Norfolk":{y:[5000,5500,6100,6800,7600,8400,9250],cost:18200},
+  "North East Lincolnshire":{y:[1000,1120,1250,1400,1570,1740,1920],cost:17500},
+  "North Lincolnshire":{y:[1000,1120,1250,1400,1570,1740,1920],cost:17800},
+  "North Northamptonshire":{y:[2200,2450,2700,3000,3350,3720,4080],cost:18200},
+  "North Somerset":{y:[1200,1350,1480,1650,1850,2050,2250],cost:18800},
+  "North Tyneside":{y:[1400,1550,1720,1920,2150,2380,2620],cost:17800},
+  "North Yorkshire":{y:[3200,3550,3900,4350,4850,5380,5900],cost:18500},
+  "Northumberland":{y:[2000,2200,2450,2720,3050,3380,3720],cost:18000},
+  "Nottingham":{y:[2200,2450,2700,3000,3350,3720,4080],cost:17500},
+  "Nottinghamshire":{y:[4800,5300,5850,6500,7300,8080,8900],cost:17800},
+  "Oldham":{y:[1800,2000,2220,2480,2780,3080,3380],cost:17200},
+  "Oxfordshire":{y:[3800,4200,4650,5200,5800,6400,7050],cost:19200},
+  "Peterborough":{y:[1400,1550,1720,1920,2150,2380,2620],cost:17800},
+  "Plymouth":{y:[1800,2000,2220,2480,2780,3080,3380],cost:18200},
+  "Portsmouth":{y:[1400,1550,1720,1920,2150,2380,2620],cost:18000},
+  "Reading":{y:[1000,1120,1250,1400,1570,1740,1920],cost:19200},
+  "Redbridge":{y:[2200,2450,2700,3000,3350,3720,4080],cost:19200},
+  "Redcar and Cleveland":{y:[1000,1120,1250,1400,1570,1740,1920],cost:17200},
+  "Richmond upon Thames":{y:[1000,1120,1250,1400,1570,1740,1920],cost:20500},
+  "Rochdale":{y:[1600,1780,1980,2200,2480,2750,3020],cost:17200},
+  "Rotherham":{y:[1800,2000,2220,2480,2780,3080,3380],cost:17500},
+  "Rutland":{y:[250,280,320,360,400,450,500],cost:19800},
+  "Salford":{y:[1800,2000,2220,2480,2780,3080,3380],cost:17800},
+  "Sandwell":{y:[2200,2450,2700,3000,3350,3720,4080],cost:17200},
+  "Sefton":{y:[1800,2000,2220,2480,2780,3080,3380],cost:17800},
+  "Sheffield":{y:[3200,3550,3900,4350,4850,5380,5900],cost:17800},
+  "Shropshire":{y:[1800,2000,2220,2480,2780,3080,3380],cost:18500},
+  "Slough":{y:[1200,1350,1480,1650,1850,2050,2250],cost:19200},
+  "Solihull":{y:[1400,1550,1720,1920,2150,2380,2620],cost:18200},
+  "Somerset":{y:[3200,3550,3900,4350,4850,5380,5900],cost:18500},
+  "South Gloucestershire":{y:[1600,1780,1980,2200,2480,2750,3020],cost:18800},
+  "South Tyneside":{y:[1000,1120,1250,1400,1570,1740,1920],cost:17500},
+  "Southampton":{y:[1600,1780,1980,2200,2480,2750,3020],cost:18200},
+  "Southend-on-Sea":{y:[1200,1350,1480,1650,1850,2050,2250],cost:18000},
+  "Southwark":{y:[2200,2450,2700,3000,3350,3720,4080],cost:20800},
+  "St Helens":{y:[1200,1350,1500,1680,1880,2080,2300],cost:17500},
+  "Staffordshire":{y:[4800,5300,5850,6500,7300,8080,8900],cost:17800},
+  "Stockport":{y:[1800,2000,2220,2480,2780,3080,3380],cost:18000},
+  "Stockton-on-Tees":{y:[1200,1350,1500,1680,1880,2080,2300],cost:17500},
+  "Stoke-on-Trent":{y:[1800,2000,2220,2480,2780,3080,3380],cost:17200},
+  "Suffolk":{y:[4200,4650,5100,5700,6350,7050,7750],cost:18200},
+  "Sunderland":{y:[1800,2000,2220,2480,2780,3080,3380],cost:17200},
+  "Surrey":{y:[8500,9400,10400,11500,12900,14300,15700],cost:20200},
+  "Sutton":{y:[1400,1550,1720,1920,2150,2380,2620],cost:19200},
+  "Swindon":{y:[1400,1550,1720,1920,2150,2380,2620],cost:18200},
+  "Tameside":{y:[1600,1780,1980,2200,2480,2750,3020],cost:17500},
+  "Telford and Wrekin":{y:[1200,1350,1500,1680,1880,2080,2300],cost:17800},
+  "Thurrock":{y:[1200,1350,1500,1680,1880,2080,2300],cost:18000},
+  "Torbay":{y:[1000,1120,1250,1400,1570,1740,1920],cost:18200},
+  "Tower Hamlets":{y:[2000,2200,2450,2720,3050,3380,3720],cost:21200},
+  "Trafford":{y:[1600,1780,1980,2200,2480,2750,3020],cost:18500},
+  "Wakefield":{y:[2200,2450,2700,3000,3350,3720,4080],cost:17500},
+  "Walsall":{y:[2000,2200,2450,2720,3050,3380,3720],cost:17200},
+  "Waltham Forest":{y:[1800,2000,2200,2450,2750,3050,3350],cost:19800},
+  "Wandsworth":{y:[1800,2000,2200,2450,2750,3050,3350],cost:20500},
+  "Warrington":{y:[1400,1550,1720,1920,2150,2380,2620],cost:18000},
+  "Warwickshire":{y:[3200,3550,3900,4350,4850,5380,5900],cost:18500},
+  "West Berkshire":{y:[1000,1120,1250,1400,1570,1740,1920],cost:19200},
+  "West Northamptonshire":{y:[2200,2450,2700,3000,3350,3720,4080],cost:18200},
+  "West Sussex":{y:[4800,5300,5850,6500,7300,8080,8900],cost:19200},
+  "Westminster":{y:[1000,1120,1250,1400,1570,1740,1920],cost:22200},
+  "Wigan":{y:[2200,2450,2700,3000,3350,3720,4080],cost:17500},
+  "Wiltshire":{y:[2800,3100,3400,3800,4250,4700,5180],cost:18800},
+  "Windsor and Maidenhead":{y:[800,900,1000,1120,1260,1400,1540],cost:19800},
+  "Wirral":{y:[2200,2450,2700,3000,3350,3720,4080],cost:17800},
+  "Wokingham":{y:[1000,1120,1250,1400,1570,1740,1920],cost:19800},
+  "Wolverhampton":{y:[1800,2000,2220,2480,2780,3080,3380],cost:17200},
+  "Worcestershire":{y:[3200,3550,3900,4350,4850,5380,5900],cost:18200},
+  "York":{y:[1200,1350,1480,1650,1850,2050,2250],cost:18500}
+};
+var YEARS = [2019,2020,2021,2022,2023,2024,2025];
+var NATIONAL_AVG = 4080;
+
+// Populate dropdown
+(function() {
+  var sel = document.getElementById('la-select');
+  Object.keys(LA_DATA).sort().forEach(function(la) {
+    var o = document.createElement('option');
+    o.value = la; o.textContent = la;
+    sel.appendChild(o);
+  });
+})();
+
+document.getElementById('la-select').addEventListener('change', function() {
+  var la = this.value;
+  if (!la || !LA_DATA[la]) { document.getElementById('send-results').style.display = 'none'; return; }
+  var d = LA_DATA[la];
+  document.getElementById('send-results').style.display = 'block';
+
+  var latest = d.y[d.y.length - 1];
+  var first = d.y[0];
+  var changePct = ((latest - first) / first * 100).toFixed(0);
+
+  document.getElementById('sr-total').textContent = latest.toLocaleString('en-GB');
+  document.getElementById('sr-change').textContent = '+' + changePct + '%';
+  document.getElementById('sr-cost').textContent = '\u00A3' + d.cost.toLocaleString('en-GB');
+  document.getElementById('trend-la-name').textContent = la;
+
+  // Trend chart
+  var maxVal = Math.max.apply(null, d.y) * 1.1;
+  var chart = document.getElementById('trend-chart');
+  chart.innerHTML = '';
+  d.y.forEach(function(v, i) {
+    var pct = (v / maxVal * 100).toFixed(1);
+    var color = i === d.y.length - 1 ? 'var(--accent)' : 'rgba(0,212,212,0.5)';
+    chart.innerHTML += '<div class="trend-bar-row">' +
+      '<span class="trend-year">' + YEARS[i] + '</span>' +
+      '<div class="trend-bar-track"><div class="trend-bar-fill" style="width:' + pct + '%;background:' + color + ';">' +
+      (pct > 20 ? v.toLocaleString('en-GB') : '') + '</div></div>' +
+      '<span class="trend-bar-val">' + v.toLocaleString('en-GB') + '</span></div>';
+  });
+
+  // Comparison
+  var maxComp = Math.max(latest, NATIONAL_AVG) * 1.2;
+  document.getElementById('b-national').style.width = (NATIONAL_AVG / maxComp * 100) + '%';
+  document.getElementById('bv-national').textContent = NATIONAL_AVG.toLocaleString('en-GB');
+  document.getElementById('b-yourla').style.width = (latest / maxComp * 100) + '%';
+  document.getElementById('bv-yourla').textContent = latest.toLocaleString('en-GB');
+});
+
+// ===== TABS =====
+function switchTab(tab, btn) {
+  document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+  document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+  btn.classList.add('active');
+  document.getElementById('tab-' + tab).classList.add('active');
+}
+
+// ===== POLL =====
+var selectedPoll = null;
+function selectPoll(el) {
+  document.querySelectorAll('.poll-option').forEach(function(o) { o.classList.remove('selected'); o.setAttribute('aria-pressed', 'false'); });
+  el.classList.add('selected');
+  el.setAttribute('aria-pressed', 'true');
+  selectedPoll = el.getAttribute('data-value');
+  document.getElementById('poll-submit').classList.add('enabled');
+}
+function submitPoll() {
+  if (!selectedPoll) return;
+  var region = document.getElementById('poll-region-select').value;
+  var data = { week: 9, vote: selectedPoll, region: region, ts: Date.now() };
+  try { localStorage.setItem('signal-poll-w9', JSON.stringify(data)); } catch(e) {}
+  document.getElementById('poll-form').classList.add('hidden');
+  document.getElementById('poll-thanks').classList.add('visible');
+}
+// Check if already voted
+(function() {
+  try {
+    if (localStorage.getItem('signal-poll-w9')) {
+      document.getElementById('poll-form').classList.add('hidden');
+      document.getElementById('poll-thanks').classList.add('visible');
+    }
+  } catch(e) {}
+})();
+
+// ===== EMAIL MODAL =====
+function openEmailModal() { document.getElementById('emailModal').classList.add('open'); document.getElementById('modal-form').style.display='block'; document.getElementById('modal-success').style.display='none'; setTimeout(function(){ document.getElementById('modal-email').focus(); },100); }
+function closeEmailModal() { document.getElementById('emailModal').classList.remove('open'); }
+function submitEmail() { var e=document.getElementById('modal-email').value; if(e&&e.includes('@')){ document.getElementById('modal-form').style.display='none'; document.getElementById('modal-success').style.display='block'; setTimeout(closeEmailModal,2000); } }
+document.getElementById('emailModal').addEventListener('click', function(e) { if(e.target===this) closeEmailModal(); });
+
+// ===== COPY SUMMARY =====
+function copySummary() {
+  var la = document.getElementById('la-select').value || 'Not selected';
+  var total = document.getElementById('sr-total').textContent;
+  var change = document.getElementById('sr-change').textContent;
+  var cost = document.getElementById('sr-cost').textContent;
+  var text = 'SEND Funding Explorer — Schoolgle Signal Week 9\n' +
+    'Local Authority: ' + la + '\n' +
+    'Total EHCPs (2025): ' + total + '\n' +
+    'Change since 2019: ' + change + '\n' +
+    'Est. cost per EHCP: ' + cost + '\n' +
+    'National average: 4,080 EHCPs\n' +
+    'Estimate only — verify with your LA.\nhttps://schoolgle.co.uk';
+  navigator.clipboard.writeText(text).then(function() {
+    var t = document.getElementById('copy-toast'); t.style.display='block'; setTimeout(function(){ t.style.display='none'; },2000);
+  });
+}
+
+// ===== MID SUBSCRIBE =====
+function handleMidSubscribe(btn) { var i=btn.previousElementSibling; if(i.value&&i.value.includes('@')){ btn.textContent='✓ Subscribed'; btn.style.background='#10B981'; setTimeout(function(){ btn.textContent='Subscribe'; btn.style.background=''; },3000); } }
+
+// ===== TOC SCROLL HIGHLIGHT =====
+(function() {
+  var tocLinks = document.querySelectorAll('.toc-link');
+  if (!tocLinks.length) return;
+  var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        var id = entry.target.getAttribute('id');
+        tocLinks.forEach(function(link) { link.classList.toggle('active', link.getAttribute('data-section') === id); });
+      }
+    });
+  }, { rootMargin: '-80px 0px -60% 0px', threshold: 0 });
+  tocLinks.forEach(function(link) { var t = document.getElementById(link.getAttribute('data-section')); if(t) observer.observe(t); });
+})();
+
+// ===== SMOOTH SCROLL =====
+document.querySelectorAll('a[href^="#"]').forEach(function(a) {
+  a.addEventListener('click', function(e) { var t=document.querySelector(this.getAttribute('href')); if(t){ e.preventDefault(); t.scrollIntoView({behavior:'smooth',block:'start'}); } });
+});
+</script>
+</body>
+</html>

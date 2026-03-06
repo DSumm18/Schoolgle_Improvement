@@ -1,0 +1,1266 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>St. Mary's Church of England Primary School</title>
+    <style>
+      /* ── Reset & Base ─────────────────────────────────── */
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", sans-serif;
+        color: #1a1a2e;
+        line-height: 1.6;
+        background: #fff;
+      }
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+      img {
+        max-width: 100%;
+        display: block;
+      }
+
+      /* ── School Brand Colours ─────────────────────────── */
+      :root {
+        --primary: #1e3a5f; /* Navy blue */
+        --accent: #c9a227; /* Gold */
+        --bg-light: #f8f6f0; /* Warm cream */
+        --text: #1a1a2e;
+        --text-muted: #5a5a7a;
+        --border: #e0dcd4;
+      }
+
+      /* ── Header / Nav ─────────────────────────────────── */
+      .site-header {
+        background: var(--primary);
+        color: #fff;
+        padding: 0;
+      }
+      .header-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 16px 24px;
+      }
+      .school-crest {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: var(--accent);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 28px;
+      }
+      .school-name {
+        flex: 1;
+        margin-left: 16px;
+      }
+      .school-name h1 {
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+      }
+      .school-name p {
+        font-size: 13px;
+        opacity: 0.8;
+      }
+      .header-cta {
+        background: var(--accent);
+        color: var(--primary);
+        padding: 10px 20px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 14px;
+      }
+
+      .nav-bar {
+        background: rgba(0, 0, 0, 0.15);
+      }
+      .nav-inner {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: flex;
+        gap: 0;
+      }
+      .nav-inner a {
+        padding: 12px 20px;
+        font-size: 14px;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.85);
+        transition: background 0.2s;
+      }
+      .nav-inner a:hover,
+      .nav-inner a.active {
+        background: rgba(255, 255, 255, 0.1);
+        color: #fff;
+      }
+
+      /* ── Hero Banner ──────────────────────────────────── */
+      .hero {
+        background: linear-gradient(135deg, var(--primary) 0%, #2a5298 100%);
+        color: #fff;
+        padding: 80px 24px;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+      }
+      .hero::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 60px;
+        background: linear-gradient(transparent, var(--bg-light));
+      }
+      .hero h2 {
+        font-size: 42px;
+        font-weight: 700;
+        margin-bottom: 16px;
+      }
+      .hero p {
+        font-size: 18px;
+        opacity: 0.9;
+        max-width: 600px;
+        margin: 0 auto 32px;
+      }
+      .hero-buttons {
+        display: flex;
+        gap: 16px;
+        justify-content: center;
+      }
+      .btn {
+        padding: 14px 28px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 15px;
+        cursor: pointer;
+        border: none;
+        transition: transform 0.2s;
+      }
+      .btn:hover {
+        transform: translateY(-2px);
+      }
+      .btn-gold {
+        background: var(--accent);
+        color: var(--primary);
+      }
+      .btn-outline {
+        background: transparent;
+        color: #fff;
+        border: 2px solid rgba(255, 255, 255, 0.5);
+      }
+
+      /* ── Content Sections ─────────────────────────────── */
+      .section {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 60px 24px;
+      }
+      .section-title {
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--primary);
+        margin-bottom: 8px;
+      }
+      .section-subtitle {
+        color: var(--text-muted);
+        font-size: 16px;
+        margin-bottom: 40px;
+      }
+
+      .card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 24px;
+      }
+      .card {
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 28px;
+        transition:
+          box-shadow 0.3s,
+          transform 0.3s;
+      }
+      .card:hover {
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+        transform: translateY(-4px);
+      }
+      .card-icon {
+        font-size: 32px;
+        margin-bottom: 12px;
+      }
+      .card h3 {
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+      .card p {
+        color: var(--text-muted);
+        font-size: 14px;
+      }
+
+      /* ── Key Info Strip ───────────────────────────────── */
+      .info-strip {
+        background: var(--bg-light);
+        border-top: 1px solid var(--border);
+        border-bottom: 1px solid var(--border);
+      }
+      .info-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      .info-item {
+        padding: 24px;
+        text-align: center;
+        border-right: 1px solid var(--border);
+      }
+      .info-item:last-child {
+        border-right: none;
+      }
+      .info-item .number {
+        font-size: 36px;
+        font-weight: 700;
+        color: var(--primary);
+      }
+      .info-item .label {
+        font-size: 13px;
+        color: var(--text-muted);
+        margin-top: 4px;
+      }
+
+      /* ── Contact Form ─────────────────────────────────── */
+      .contact-section {
+        background: var(--bg-light);
+      }
+      .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 40px;
+      }
+      .form-container {
+        background: #fff;
+        border-radius: 12px;
+        padding: 32px;
+        border: 1px solid var(--border);
+      }
+      .form-group {
+        margin-bottom: 20px;
+      }
+      .form-group label {
+        display: block;
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 6px;
+        color: var(--text);
+      }
+      .form-group label .required {
+        color: #e74c3c;
+      }
+      .form-group input,
+      .form-group select,
+      .form-group textarea {
+        width: 100%;
+        padding: 12px 14px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-size: 14px;
+        font-family: inherit;
+        transition: border-color 0.2s;
+      }
+      .form-group input:focus,
+      .form-group select:focus,
+      .form-group textarea:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.1);
+      }
+      .form-group textarea {
+        resize: vertical;
+        min-height: 120px;
+      }
+      .checkbox-group {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+      }
+      .checkbox-group input {
+        width: auto;
+        margin-top: 3px;
+      }
+      .checkbox-group label {
+        font-weight: 400;
+        font-size: 13px;
+        color: var(--text-muted);
+      }
+      .submit-btn {
+        background: var(--primary);
+        color: #fff;
+        padding: 14px 32px;
+        border: none;
+        border-radius: 8px;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      .submit-btn:hover {
+        background: #2a5298;
+      }
+
+      .contact-info h3 {
+        font-size: 20px;
+        margin-bottom: 20px;
+        color: var(--primary);
+      }
+      .contact-detail {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 16px;
+        padding: 16px;
+        background: #fff;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+      }
+      .contact-detail .icon {
+        font-size: 20px;
+      }
+      .contact-detail .text {
+        font-size: 14px;
+      }
+      .contact-detail .text strong {
+        display: block;
+        font-size: 13px;
+        color: var(--text-muted);
+        margin-bottom: 2px;
+      }
+
+      /* ── Admissions Form ──────────────────────────────── */
+      .admissions-section {
+        background: #fff;
+      }
+      .admissions-form {
+        max-width: 700px;
+        margin: 0 auto;
+        background: var(--bg-light);
+        border-radius: 12px;
+        padding: 32px;
+        border: 1px solid var(--border);
+      }
+      .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+
+      /* ── Footer ───────────────────────────────────────── */
+      .site-footer {
+        background: var(--primary);
+        color: rgba(255, 255, 255, 0.7);
+        padding: 48px 24px 24px;
+      }
+      .footer-inner {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr;
+        gap: 40px;
+      }
+      .footer-inner h4 {
+        color: #fff;
+        margin-bottom: 12px;
+        font-size: 15px;
+      }
+      .footer-inner p,
+      .footer-inner a {
+        font-size: 13px;
+        line-height: 1.8;
+      }
+      .footer-inner a:hover {
+        color: var(--accent);
+      }
+      .footer-bottom {
+        max-width: 1200px;
+        margin: 24px auto 0;
+        padding-top: 24px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        font-size: 12px;
+        text-align: center;
+      }
+
+      /* ── Ed Toggle Panel (DEMO CONTROL) ───────────────── */
+      .ed-control-panel {
+        position: fixed;
+        top: 16px;
+        right: 16px;
+        z-index: 100000;
+        background: #111;
+        color: #fff;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 8px 40px rgba(0, 0, 0, 0.3);
+        width: 300px;
+        font-size: 13px;
+        transition: transform 0.3s;
+      }
+      .ed-control-panel.collapsed {
+        transform: translateX(calc(100% + 32px));
+      }
+      .ed-control-panel h4 {
+        font-size: 14px;
+        margin-bottom: 12px;
+        color: var(--accent);
+      }
+      .ed-control-panel .toggle-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+      .ed-control-panel .status {
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 600;
+      }
+      .ed-control-panel .status.active {
+        background: #10b981;
+        color: #fff;
+      }
+      .ed-control-panel .status.inactive {
+        background: #374151;
+        color: #9ca3af;
+      }
+      .toggle-switch {
+        width: 44px;
+        height: 24px;
+        background: #374151;
+        border-radius: 12px;
+        position: relative;
+        cursor: pointer;
+        transition: background 0.3s;
+      }
+      .toggle-switch.on {
+        background: #10b981;
+      }
+      .toggle-switch::after {
+        content: "";
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 20px;
+        height: 20px;
+        background: #fff;
+        border-radius: 50%;
+        transition: transform 0.3s;
+      }
+      .toggle-switch.on::after {
+        transform: translateX(20px);
+      }
+      .mode-select {
+        width: 100%;
+        padding: 8px;
+        border-radius: 6px;
+        border: 1px solid #374151;
+        background: #1f2937;
+        color: #fff;
+        font-size: 13px;
+        margin-top: 8px;
+      }
+      .ed-control-panel .note {
+        color: #9ca3af;
+        font-size: 11px;
+        margin-top: 12px;
+        line-height: 1.5;
+      }
+      .panel-toggle {
+        position: fixed;
+        top: 16px;
+        right: 16px;
+        z-index: 100001;
+        background: #111;
+        color: var(--accent);
+        border: none;
+        padding: 8px 14px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      /* ── Responsive ───────────────────────────────────── */
+      @media (max-width: 768px) {
+        .hero h2 {
+          font-size: 28px;
+        }
+        .info-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .form-grid,
+        .form-row {
+          grid-template-columns: 1fr;
+        }
+        .footer-inner {
+          grid-template-columns: 1fr;
+        }
+        .nav-inner {
+          overflow-x: auto;
+        }
+      }
+
+      /* ── Event Log (for testing) ──────────────────────── */
+      .event-log {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 0;
+        background: #111;
+        color: #0f0;
+        font-family: "Courier New", monospace;
+        font-size: 11px;
+        overflow-y: auto;
+        transition: height 0.3s;
+        z-index: 99999;
+        padding: 0;
+      }
+      .event-log.open {
+        height: 200px;
+        padding: 12px;
+      }
+      .event-log-toggle {
+        position: fixed;
+        bottom: 8px;
+        left: 8px;
+        z-index: 100000;
+        background: #111;
+        color: #0f0;
+        border: 1px solid #333;
+        padding: 4px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 11px;
+        font-family: monospace;
+      }
+      .event-log.open ~ .event-log-toggle {
+        bottom: 208px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ════════════ SCHOOL WEBSITE ════════════ -->
+
+    <header class="site-header">
+      <div class="header-top">
+        <div class="school-crest">+</div>
+        <div class="school-name">
+          <h1>St. Mary's Church of England Primary School</h1>
+          <p>Nurturing hearts, inspiring minds</p>
+        </div>
+        <a href="#admissions" class="header-cta">Apply for a Place</a>
+      </div>
+      <nav class="nav-bar">
+        <div class="nav-inner">
+          <a href="#" class="active">Home</a>
+          <a href="#about">About Us</a>
+          <a href="#admissions">Admissions</a>
+          <a href="#curriculum">Curriculum</a>
+          <a href="#parents">Parents</a>
+          <a href="#news">News</a>
+          <a href="#contact">Contact</a>
+        </div>
+      </nav>
+    </header>
+
+    <section class="hero">
+      <h2>Welcome to St. Mary's</h2>
+      <p>
+        A warm, inclusive school where every child is known, valued, and
+        supported to flourish in their God-given potential.
+      </p>
+      <div class="hero-buttons">
+        <a href="#admissions" class="btn btn-gold">Book a Visit</a>
+        <a href="#about" class="btn btn-outline">Learn More</a>
+      </div>
+    </section>
+
+    <section class="info-strip">
+      <div class="info-grid">
+        <div class="info-item">
+          <div class="number">Outstanding</div>
+          <div class="label">Ofsted Rating (2024)</div>
+        </div>
+        <div class="info-item">
+          <div class="number">210</div>
+          <div class="label">Pupils on Roll</div>
+        </div>
+        <div class="info-item">
+          <div class="number">98%</div>
+          <div class="label">Parent Satisfaction</div>
+        </div>
+        <div class="info-item">
+          <div class="number">1872</div>
+          <div class="label">Year Established</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="about">
+      <h2 class="section-title">Discover St. Mary's</h2>
+      <p class="section-subtitle">Find out what makes our school special</p>
+      <div class="card-grid">
+        <div class="card">
+          <div class="card-icon">&#x1F4DA;</div>
+          <h3>Broad Curriculum</h3>
+          <p>
+            A rich, knowledge-based curriculum from EYFS to Year 6, with
+            specialist teaching in music, PE, and modern languages.
+          </p>
+        </div>
+        <div class="card">
+          <div class="card-icon">&#x2764;</div>
+          <h3>Christian Values</h3>
+          <p>
+            Our school is rooted in Christian values of love, respect, and
+            service. We welcome children of all faiths and none.
+          </p>
+        </div>
+        <div class="card">
+          <div class="card-icon">&#x1F3A8;</div>
+          <h3>Creative Arts</h3>
+          <p>
+            Every child performs in our annual productions, learns an
+            instrument, and has access to our dedicated art studio.
+          </p>
+        </div>
+        <div class="card">
+          <div class="card-icon">&#x1F331;</div>
+          <h3>Outdoor Learning</h3>
+          <p>
+            Our forest school, allotment garden, and nature trail provide
+            hands-on learning in every season.
+          </p>
+        </div>
+        <div class="card">
+          <div class="card-icon">&#x1F91D;</div>
+          <h3>Pastoral Care</h3>
+          <p>
+            Small class sizes, dedicated teaching assistants, and our trained
+            ELSA ensure every child is supported.
+          </p>
+        </div>
+        <div class="card">
+          <div class="card-icon">&#x1F3C6;</div>
+          <h3>Beyond the Classroom</h3>
+          <p>
+            Over 20 after-school clubs including coding, chess, netball,
+            football, gardening, and choir.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Contact Form ─────────────────────────────────── -->
+    <section class="section contact-section" id="contact">
+      <h2 class="section-title">Get in Touch</h2>
+      <p class="section-subtitle">We'd love to hear from you</p>
+      <div class="form-grid">
+        <div class="form-container">
+          <form id="contact-form" action="#" method="post">
+            <input
+              type="hidden"
+              name="csrf_token"
+              value="demo-csrf-token-xyz"
+            />
+
+            <div class="form-group">
+              <label for="contact_name"
+                >Your Name <span class="required">*</span></label
+              >
+              <input
+                type="text"
+                id="contact_name"
+                name="contact_name"
+                required
+                placeholder="e.g. Sarah Johnson"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="contact_email"
+                >Email Address <span class="required">*</span></label
+              >
+              <input
+                type="email"
+                id="contact_email"
+                name="contact_email"
+                required
+                placeholder="e.g. parent@example.com"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="contact_phone">Phone Number</label>
+              <input
+                type="tel"
+                id="contact_phone"
+                name="contact_phone"
+                placeholder="e.g. 01onal 555 0199"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="contact_subject"
+                >Subject <span class="required">*</span></label
+              >
+              <select id="contact_subject" name="contact_subject" required>
+                <option value="">-- Please select --</option>
+                <option value="general">General Enquiry</option>
+                <option value="admissions">Admissions</option>
+                <option value="absence">Reporting an Absence</option>
+                <option value="sen">SEND Support</option>
+                <option value="complaint">Formal Complaint</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="contact_message"
+                >Your Message <span class="required">*</span></label
+              >
+              <textarea
+                id="contact_message"
+                name="contact_message"
+                required
+                placeholder="How can we help?"
+              ></textarea>
+            </div>
+
+            <div class="form-group">
+              <div class="checkbox-group">
+                <input type="checkbox" id="contact_gdpr" name="contact_gdpr" />
+                <label for="contact_gdpr"
+                  >I consent to St. Mary's processing my data for the purpose of
+                  responding to this enquiry.
+                  <a
+                    href="#"
+                    style="color: var(--primary); text-decoration: underline"
+                    >Privacy Policy</a
+                  ></label
+                >
+              </div>
+            </div>
+
+            <button type="submit" class="submit-btn">Send Message</button>
+          </form>
+        </div>
+
+        <div class="contact-info">
+          <h3>Contact Details</h3>
+          <div class="contact-detail">
+            <span class="icon">&#x1F4CD;</span>
+            <div class="text">
+              <strong>Address</strong>
+              St. Mary's CE Primary School<br />
+              Church Lane, Oakworth<br />
+              West Yorkshire, BD22 7HT
+            </div>
+          </div>
+          <div class="contact-detail">
+            <span class="icon">&#x1F4DE;</span>
+            <div class="text">
+              <strong>Telephone</strong>
+              01234 567 890
+            </div>
+          </div>
+          <div class="contact-detail">
+            <span class="icon">&#x2709;</span>
+            <div class="text">
+              <strong>Email</strong>
+              office@stmarys-oakworth.sch.uk
+            </div>
+          </div>
+          <div class="contact-detail">
+            <span class="icon">&#x1F552;</span>
+            <div class="text">
+              <strong>Office Hours</strong>
+              Monday - Friday: 8:00am - 4:00pm<br />
+              Term time only
+            </div>
+          </div>
+          <div class="contact-detail">
+            <span class="icon">&#x1F4C5;</span>
+            <div class="text">
+              <strong>Next Open Day</strong>
+              Thursday 20th March 2026, 9:30am<br />
+              <a
+                href="#"
+                style="color: var(--primary); text-decoration: underline"
+                >Book your place</a
+              >
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Admissions Enquiry Form ──────────────────────── -->
+    <section class="section admissions-section" id="admissions">
+      <h2 class="section-title">Admissions Enquiry</h2>
+      <p class="section-subtitle">Start your child's journey at St. Mary's</p>
+      <div class="admissions-form">
+        <form id="admissions-form" action="#" method="post">
+          <input type="hidden" name="csrf_token" value="demo-csrf-admissions" />
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="parent_name"
+                >Parent/Carer Name <span class="required">*</span></label
+              >
+              <input type="text" id="parent_name" name="parent_name" required />
+            </div>
+            <div class="form-group">
+              <label for="parent_email"
+                >Email <span class="required">*</span></label
+              >
+              <input
+                type="email"
+                id="parent_email"
+                name="parent_email"
+                required
+              />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="parent_phone"
+                >Phone Number <span class="required">*</span></label
+              >
+              <input
+                type="tel"
+                id="parent_phone"
+                name="parent_phone"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="child_dob"
+                >Child's Date of Birth <span class="required">*</span></label
+              >
+              <input type="date" id="child_dob" name="child_dob" required />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="child_name"
+                >Child's Name <span class="required">*</span></label
+              >
+              <input type="text" id="child_name" name="child_name" required />
+            </div>
+            <div class="form-group">
+              <label for="entry_year">Preferred Entry Year</label>
+              <select id="entry_year" name="entry_year">
+                <option value="">-- Please select --</option>
+                <option value="reception">Reception (September 2026)</option>
+                <option value="year1">Year 1</option>
+                <option value="year2">Year 2</option>
+                <option value="year3">Year 3</option>
+                <option value="year4">Year 4</option>
+                <option value="year5">Year 5</option>
+                <option value="year6">Year 6</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="siblings"
+              >Does your child have siblings at St. Mary's?</label
+            >
+            <select id="siblings" name="siblings">
+              <option value="">-- Please select --</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="faith">Faith Background</label>
+            <select id="faith" name="faith">
+              <option value="">-- Prefer not to say --</option>
+              <option value="coe">Church of England</option>
+              <option value="catholic">Roman Catholic</option>
+              <option value="other_christian">Other Christian</option>
+              <option value="other_faith">Other Faith</option>
+              <option value="none">No Faith</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="additional_info">Anything else we should know?</label>
+            <textarea
+              id="additional_info"
+              name="additional_info"
+              placeholder="e.g. SEND needs, medical conditions, specific questions..."
+            ></textarea>
+          </div>
+
+          <div class="form-group">
+            <div class="checkbox-group">
+              <input type="checkbox" id="visit_request" name="visit_request" />
+              <label for="visit_request"
+                >I would like to book a school visit</label
+              >
+            </div>
+          </div>
+
+          <div class="form-group">
+            <div class="checkbox-group">
+              <input
+                type="checkbox"
+                id="admissions_gdpr"
+                name="admissions_gdpr"
+                required
+              />
+              <label for="admissions_gdpr"
+                >I consent to my data being processed for admissions purposes.
+                <span class="required">*</span></label
+              >
+            </div>
+          </div>
+
+          <button type="submit" class="submit-btn">Submit Enquiry</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ── Footer ───────────────────────────────────────── -->
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div>
+          <h4>St. Mary's CE Primary School</h4>
+          <p>Church Lane, Oakworth, West Yorkshire, BD22 7HT</p>
+          <p>Tel: 01234 567 890</p>
+          <p>Email: office@stmarys-oakworth.sch.uk</p>
+          <p style="margin-top: 12px; font-size: 11px">
+            A member of the Leeds Diocesan Academies Trust
+          </p>
+        </div>
+        <div>
+          <h4>Quick Links</h4>
+          <p><a href="#">Term Dates</a></p>
+          <p><a href="#">School Uniform</a></p>
+          <p><a href="#">School Meals</a></p>
+          <p><a href="#">Parent Pay</a></p>
+          <p><a href="#">Class Pages</a></p>
+        </div>
+        <div>
+          <h4>Policies</h4>
+          <p><a href="#">Safeguarding</a></p>
+          <p><a href="#">SEND Policy</a></p>
+          <p><a href="#">Behaviour Policy</a></p>
+          <p><a href="#">Privacy Notice</a></p>
+          <p><a href="#">Accessibility</a></p>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        &copy; 2026 St. Mary's CE Primary School. All rights reserved. | Powered
+        by <strong>Schoolgle</strong>
+      </div>
+    </footer>
+
+    <!-- ════════════ ED DEMO CONTROL PANEL ════════════ -->
+
+    <button class="panel-toggle" id="panel-toggle" onclick="togglePanel()">
+      Ed Demo
+    </button>
+
+    <div class="ed-control-panel" id="ed-panel">
+      <h4>Ed Widget Demo Controls</h4>
+
+      <div class="toggle-row">
+        <span>Ed Widget</span>
+        <div style="display: flex; align-items: center; gap: 8px">
+          <span class="status inactive" id="ed-status">OFF</span>
+          <div class="toggle-switch" id="ed-toggle" onclick="toggleEd()"></div>
+        </div>
+      </div>
+
+      <div>
+        <label style="font-size: 12px; color: #9ca3af">Ed Mode:</label>
+        <select class="mode-select" id="ed-mode" onchange="changeMode()">
+          <option value="website">Website (Public Visitors)</option>
+          <option value="support">Support (Pre-Login)</option>
+          <option value="school">School (Logged-In Staff)</option>
+        </select>
+      </div>
+
+      <div style="margin-top: 12px">
+        <label style="font-size: 12px; color: #9ca3af">School Branding:</label>
+        <select class="mode-select" id="ed-theme" onchange="changeTheme()">
+          <option value="standard">Standard Blue</option>
+          <option value="forest">Forest Green</option>
+          <option value="royal">Royal Purple</option>
+          <option value="sunset">Sunset Orange</option>
+        </select>
+      </div>
+
+      <p class="note">
+        <strong>How to test:</strong><br />
+        1. Toggle Ed ON to add the widget<br />
+        2. Ask Ed to fill the contact form<br />
+        3. Watch the field highlighting and animations<br />
+        4. Try: "help me fill the contact form"<br />
+        5. Toggle OFF to remove Ed completely<br />
+        <br />
+        <strong>Guardrails to verify:</strong><br />
+        - CSRF tokens are never visible to Ed<br />
+        - Submit shows confirmation overlay<br />
+        - Cancel stops everything instantly<br />
+        - No data stored after session ends
+      </p>
+    </div>
+
+    <!-- Event log for testing -->
+    <div class="event-log" id="event-log"></div>
+    <button class="event-log-toggle" id="log-toggle" onclick="toggleLog()">
+      Event Log
+    </button>
+
+    <!-- ════════════ DEMO SCRIPTS ════════════ -->
+
+    <script>
+      // ── State ──────────────────────────────────────────
+      let edLoaded = false;
+      let panelVisible = true;
+      let logVisible = false;
+
+      // ── Panel Toggle ───────────────────────────────────
+      function togglePanel() {
+        panelVisible = !panelVisible;
+        document
+          .getElementById("ed-panel")
+          .classList.toggle("collapsed", !panelVisible);
+        document.getElementById("panel-toggle").textContent = panelVisible
+          ? "Ed Demo"
+          : "Show Panel";
+      }
+
+      // ── Event Log ──────────────────────────────────────
+      function toggleLog() {
+        logVisible = !logVisible;
+        document
+          .getElementById("event-log")
+          .classList.toggle("open", logVisible);
+      }
+
+      function log(msg) {
+        const el = document.getElementById("event-log");
+        const time = new Date().toLocaleTimeString("en-GB");
+        el.innerHTML += `<div>[${time}] ${msg}</div>`;
+        el.scrollTop = el.scrollHeight;
+      }
+
+      // ── Form Event Listeners (for testing) ─────────────
+      document.querySelectorAll("input, select, textarea").forEach((el) => {
+        el.addEventListener("input", (e) => {
+          log(`INPUT: ${e.target.name || e.target.id} = "${e.target.value}"`);
+        });
+        el.addEventListener("change", (e) => {
+          log(`CHANGE: ${e.target.name || e.target.id} = "${e.target.value}"`);
+        });
+      });
+
+      // Prevent actual form submission
+      document.querySelectorAll("form").forEach((form) => {
+        form.addEventListener("submit", (e) => {
+          e.preventDefault();
+          log(`SUBMIT: ${form.id} -- BLOCKED (demo mode)`);
+          alert(
+            "Form submission blocked (demo mode).\n\nIn production, this would submit to the school's backend.",
+          );
+        });
+      });
+
+      // ── Ed Toggle Logic ────────────────────────────────
+      async function toggleEd() {
+        const toggle = document.getElementById("ed-toggle");
+        const status = document.getElementById("ed-status");
+
+        if (!edLoaded) {
+          // LOAD Ed
+          toggle.classList.add("on");
+          status.textContent = "LOADING...";
+          status.className = "status active";
+          await loadEd();
+          if (edLoaded) {
+            status.textContent = "ON";
+            log("Ed Widget: LOADED");
+          } else {
+            // Load failed — reset toggle
+            toggle.classList.remove("on");
+            status.textContent = "ERROR";
+            status.className = "status inactive";
+            log("Ed Widget: FAILED TO LOAD — check errors above");
+          }
+        } else {
+          // UNLOAD Ed
+          toggle.classList.remove("on");
+          status.textContent = "OFF";
+          status.className = "status inactive";
+          unloadEd();
+          log("Ed Widget: REMOVED");
+        }
+      }
+
+      async function loadEd() {
+        if (edLoaded) return;
+        edLoaded = true;
+
+        const mode = document.getElementById("ed-mode").value;
+        const theme = document.getElementById("ed-theme").value;
+
+        // Open event log so user can see what's happening
+        if (!logVisible) toggleLog();
+
+        try {
+          log("Loading Ed widget via dynamic import...");
+          const module = await import("../src/index.ts");
+          log("Module loaded OK: " + Object.keys(module).join(", "));
+
+          const EdWidget = window.EdWidget || module.EdWidget;
+          if (!EdWidget) {
+            log("ERROR: EdWidget not found after import");
+            edLoaded = false;
+            return;
+          }
+
+          log("Calling EdWidget.init()...");
+          try {
+            EdWidget.init({
+              schoolId: "st-marys-oakworth",
+              schoolName: "St. Mary's CE Primary School",
+              theme: theme,
+              position: "bottom-right",
+              language: "en-GB",
+              mode: mode,
+              enableTTS: true,
+              ttsProvider: "fish",
+              fishAudioApiKey: "979fa335474b48d8af6bbe56cc171ec6",
+              fishAudioVoiceIds: {
+                ed: "400b2a2c4aa44afc87b6d14adf0dd13c",
+                edwina: "72e3a3135204461ba041df787dc5c834",
+                santa: "2e56aeff1a7a4cc9b904971cd5bd9794",
+              },
+              features: {
+                admissions: true,
+                policies: true,
+                calendar: true,
+                staffDirectory: false,
+                formFill: true,
+                voice: true,
+              },
+            });
+            log("EdWidget.init() SUCCESS - mode=" + mode);
+          } catch (initErr) {
+            log("ERROR in EdWidget.init(): " + initErr.message);
+            console.error("[Demo] EdWidget.init() failed:", initErr);
+            edLoaded = false;
+          }
+        } catch (err) {
+          log("ERROR loading module: " + err.message);
+          console.error("[Demo] Failed to load Ed widget:", err);
+          edLoaded = false;
+        }
+      }
+
+      function unloadEd() {
+        if (!edLoaded) return;
+        edLoaded = false;
+
+        // Use the official destroy API
+        if (window.EdWidget) {
+          window.EdWidget.destroy();
+          log("EdWidget.destroy() called");
+        }
+
+        // Remove the script tag
+        const script = document.getElementById("ed-widget-script");
+        if (script) script.remove();
+
+        // Clean up Ed DOM elements (but NOT our demo panel controls)
+        const demoIds = [
+          "ed-panel",
+          "ed-toggle",
+          "ed-status",
+          "ed-mode",
+          "ed-theme",
+        ];
+        document
+          .querySelectorAll(
+            "#ed-widget-container, .ed-widget, .ed-field-active, .ed-field-label, #ed-submit-confirm, #ed-progress-overlay",
+          )
+          .forEach((el) => {
+            if (!demoIds.includes(el.id)) el.remove();
+          });
+
+        // Remove injected styles
+        document.querySelectorAll("style").forEach((style) => {
+          if (
+            style.textContent?.includes("ed-field-pulse") ||
+            style.textContent?.includes("ed-widget")
+          ) {
+            style.remove();
+          }
+        });
+
+        log("Ed DOM elements cleaned up");
+      }
+
+      function changeMode() {
+        const mode = document.getElementById("ed-mode").value;
+        if (window.__ED_INSTANCE__) {
+          // Update the mode on the live instance
+          window.__ED_INSTANCE__.setMode?.(mode);
+          log("Ed mode changed to: " + mode);
+        }
+      }
+
+      function changeTheme() {
+        if (edLoaded) {
+          log("Theme change requires reload. Removing and re-adding Ed...");
+          unloadEd();
+          setTimeout(() => {
+            toggleEd();
+          }, 500);
+        }
+      }
+
+      // Log page ready
+      log("Demo school website loaded");
+      log("Forms detected: contact-form, admissions-form");
+      log("Toggle Ed ON to begin testing");
+    </script>
+  </body>
+</html>

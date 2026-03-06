@@ -1,0 +1,1567 @@
+<!DOCTYPE html>
+<html lang="en-GB" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KCSIE Safeguarding Checker — The Schoolgle Signal</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+
+/* ===== THEME VARIABLES ===== */
+:root {
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-display: 'Outfit', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --max-width: 720px;
+  --radius: 14px;
+  --card-pad: 28px;
+  --accent: #00D4D4;
+  --accent-dim: rgba(0,212,212,0.10);
+  --accent-dark: #009E9E;
+  --font-size: 16px;
+  --chip-finance: #10B981;
+  --chip-compliance: #EAB308;
+  --chip-safeguarding: #EF4444;
+  --chip-send: #F59E0B;
+  --chip-hr: #8B5CF6;
+  --chip-estates: #14B8A6;
+  --chip-leadership: #0EA5E9;
+  --chip-teaching: #3B82F6;
+  --chip-ai: #F43F5E;
+  --chip-ops: #0EA5E9;
+}
+
+[data-theme="light"] {
+  --bg: #F7F7F9;
+  --surface: #FFFFFF;
+  --elevated: #FFFFFF;
+  --text: #0B1220;
+  --text-secondary: #374151;
+  --muted: #5A6578;
+  --border: #E5E7EB;
+  --border-light: #F0F1F4;
+  --quote-bg: #F0F2F5;
+  --shadow: 0 1px 3px rgba(0,0,0,0.06);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.08);
+  --error-bg: #FEF2F2;
+  --error-text: #DC2626;
+  --error-border: #FECACA;
+  --success-bg: #F0FDF4;
+  --success-text: #166534;
+}
+
+[data-theme="dark"] {
+  --bg: #070B18;
+  --surface: #0E1529;
+  --elevated: #141D35;
+  --text: #EAF0FF;
+  --text-secondary: #C5CFEA;
+  --muted: #8B99BC;
+  --border: #1E2A4A;
+  --border-light: #182040;
+  --quote-bg: #111B33;
+  --shadow: 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.4);
+  --error-bg: rgba(220,38,38,0.1);
+  --error-text: #F87171;
+  --error-border: #7F1D1D;
+  --success-bg: rgba(22,101,52,0.1);
+  --success-text: #4ADE80;
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: var(--font-body);
+  font-size: var(--font-size);
+  line-height: 1.7;
+  background: var(--bg);
+  color: var(--text);
+  transition: background 0.25s ease, color 0.25s ease;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--accent-dark); text-decoration: none; }
+[data-theme="dark"] a { color: var(--accent); }
+a:hover { text-decoration: underline; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+
+/* ===== STICKY 60-SECOND BAR ===== */
+.sixty-bar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  padding: 10px 20px;
+  font-size: 13px;
+}
+.sixty-bar-inner {
+  max-width: 960px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.sixty-bar-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.sixty-bar-item .bar-label {
+  font-weight: 600;
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.sixty-bar-item .bar-value {
+  color: var(--text);
+  font-weight: 500;
+}
+.sixty-bar-item .bar-value a { color: var(--accent-dark); font-weight: 600; }
+[data-theme="dark"] .sixty-bar-item .bar-value a { color: var(--accent); }
+.sixty-bar .spacer { flex: 1; }
+.listen-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  background: var(--accent);
+  color: #070B18;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-body);
+  min-height: 36px;
+}
+.listen-btn:hover { opacity: 0.9; }
+
+@media (max-width: 700px) {
+  .sixty-bar-inner { gap: 8px 16px; }
+  .sixty-bar-item:nth-child(2) { display: none; }
+}
+
+/* ===== STICKY ISSUE HEADER ===== */
+.issue-header {
+  position: sticky;
+  top: 48px;
+  z-index: 99;
+  background: var(--text);
+  color: var(--bg);
+  padding: 6px 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  letter-spacing: 0.3px;
+}
+[data-theme="dark"] .issue-header {
+  background: var(--elevated);
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+}
+
+/* ===== LAYOUT ===== */
+.layout-wrapper {
+  display: flex;
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: 0 16px;
+  gap: 0;
+}
+.toc-rail {
+  width: 160px;
+  flex-shrink: 0;
+  position: relative;
+}
+.toc-sticky {
+  position: sticky;
+  top: 90px;
+  padding: 24px 0;
+  max-height: calc(100vh - 110px);
+  overflow-y: auto;
+}
+.toc-sticky nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.toc-link {
+  display: block;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--muted);
+  text-decoration: none;
+  border-radius: 6px;
+  line-height: 1.4;
+  border-left: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+}
+.toc-link:hover { color: var(--text); text-decoration: none; }
+.toc-link.active {
+  color: var(--accent-dark);
+  border-left-color: var(--accent);
+  font-weight: 600;
+}
+[data-theme="dark"] .toc-link.active { color: var(--accent); }
+
+@media (max-width: 900px) {
+  .toc-rail { display: none; }
+  .layout-wrapper { padding: 0 16px; }
+}
+
+.main-content {
+  flex: 1;
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 32px 0 80px;
+  min-width: 0;
+}
+
+/* ===== HEADER ===== */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 36px;
+  padding-bottom: 24px;
+  border-bottom: 2px solid var(--border);
+}
+.page-header h1 {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 300;
+  color: var(--text);
+  line-height: 1.2;
+  letter-spacing: -0.3px;
+}
+.page-header h1 span { color: var(--accent); font-weight: 700; }
+.header-meta { display: flex; flex-direction: column; gap: 2px; }
+.header-meta .date { font-size: 14px; color: var(--muted); }
+.header-meta .issue { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.ctrl-group {
+  display: flex;
+  gap: 2px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 2px;
+}
+.ctrl-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 6px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  font-family: var(--font-body);
+}
+.ctrl-btn:hover { background: var(--surface); color: var(--text); }
+.ctrl-btn:focus-visible { box-shadow: 0 0 0 2px var(--accent); outline: none; }
+.ctrl-btn.active { background: var(--surface); color: var(--accent); box-shadow: var(--shadow); }
+
+/* ===== AUDIO PLAYER ===== */
+.audio-player {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px var(--card-pad);
+  margin-bottom: 28px;
+  box-shadow: var(--shadow);
+}
+.audio-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.audio-play-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #070B18;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 18px;
+}
+.audio-play-btn:hover { opacity: 0.9; }
+.audio-info { flex: 1; min-width: 150px; }
+.audio-info .audio-title { font-size: 14px; font-weight: 600; color: var(--text); }
+.audio-info .audio-time { font-size: 12px; color: var(--muted); }
+.audio-progress {
+  flex: 1;
+  min-width: 180px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.audio-track {
+  flex: 1;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  position: relative;
+  cursor: pointer;
+}
+.audio-track-fill {
+  width: 0%;
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 0.1s;
+}
+.audio-track-dot {
+  position: absolute;
+  top: 50%;
+  left: 0%;
+  transform: translate(-50%, -50%);
+  width: 12px;
+  height: 12px;
+  background: var(--accent);
+  border-radius: 50%;
+  box-shadow: 0 0 4px rgba(0,212,212,0.4);
+}
+.audio-time-label { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.audio-speed {
+  display: flex;
+  gap: 2px;
+  background: var(--bg);
+  border-radius: 6px;
+  padding: 2px;
+}
+.speed-btn {
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: 4px;
+  font-family: var(--font-body);
+}
+.speed-btn.active { background: var(--surface); color: var(--accent); }
+.transcript-section { margin-top: 12px; border-top: 1px solid var(--border-light); }
+.transcript-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 0 0;
+  font-size: 13px;
+  color: var(--accent-dark);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-weight: 500;
+}
+[data-theme="dark"] .transcript-toggle { color: var(--accent); }
+.transcript-body {
+  display: none;
+  margin-top: 10px;
+  padding: 16px;
+  background: var(--quote-bg);
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+.transcript-body.open { display: block; }
+
+/* ===== CARDS ===== */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--card-pad);
+  margin-bottom: 24px;
+  box-shadow: var(--shadow);
+}
+
+.chip {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+}
+.chip-finance { background: rgba(16,185,129,0.12); color: #047857; }
+.chip-compliance { background: rgba(234,179,8,0.12); color: #92400E; }
+.chip-safeguarding { background: rgba(239,68,68,0.12); color: #B91C1C; }
+.chip-send { background: rgba(245,158,11,0.12); color: #92400E; }
+.chip-hr { background: rgba(139,92,246,0.12); color: #5B21B6; }
+.chip-estates { background: rgba(20,184,166,0.12); color: #0F766E; }
+.chip-leadership { background: rgba(14,165,233,0.12); color: #0369A1; }
+.chip-teaching { background: rgba(59,130,246,0.12); color: #1D4ED8; }
+.chip-ai { background: rgba(244,63,94,0.12); color: #BE123C; }
+.chip-ops { background: rgba(14,165,233,0.12); color: #0369A1; }
+
+[data-theme="dark"] .chip-finance { color: #34D399; }
+[data-theme="dark"] .chip-compliance { color: #FDE047; }
+[data-theme="dark"] .chip-safeguarding { color: #FCA5A5; }
+[data-theme="dark"] .chip-send { color: #FCD34D; }
+[data-theme="dark"] .chip-hr { color: #C4B5FD; }
+[data-theme="dark"] .chip-estates { color: #5EEAD4; }
+[data-theme="dark"] .chip-leadership { color: #7DD3FC; }
+[data-theme="dark"] .chip-teaching { color: #93C5FD; }
+[data-theme="dark"] .chip-ai { color: #FDA4AF; }
+[data-theme="dark"] .chip-ops { color: #7DD3FC; }
+
+.card h2 {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.3;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+.card .summary {
+  font-size: 15px;
+  color: var(--muted);
+  margin-bottom: 18px;
+  line-height: 1.6;
+}
+.card h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 28px 0 10px;
+  color: var(--text);
+}
+.card p { margin-bottom: 14px; line-height: 1.7; }
+.card ul, .card ol { margin: 10px 0 16px 22px; }
+.card li { margin-bottom: 8px; line-height: 1.6; }
+.card strong { color: var(--text); }
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+  font-size: 14px;
+}
+.data-table th {
+  text-align: left;
+  padding: 10px 12px;
+  background: var(--quote-bg);
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--muted);
+  border-bottom: 2px solid var(--border);
+}
+.data-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.action-box {
+  background: var(--bg);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  padding: 20px 24px;
+  margin: 24px 0 4px;
+}
+.action-box .action-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--accent-dark);
+  margin-bottom: 10px;
+}
+[data-theme="dark"] .action-box .action-title { color: var(--accent); }
+.action-box ul { margin: 0 0 0 18px; }
+.action-box li { font-size: 15px; margin-bottom: 6px; }
+.action-box li .time-est {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+/* ===== TOOL CARD ===== */
+.tool-card {
+  background: var(--surface);
+  border: 2px solid var(--accent);
+  border-radius: var(--radius);
+  padding: var(--card-pad);
+  margin-bottom: 24px;
+  position: relative;
+  box-shadow: 0 0 0 4px var(--accent-dim);
+}
+.tool-badge {
+  position: absolute;
+  top: -12px;
+  left: 24px;
+  background: var(--accent);
+  color: #070B18;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 4px 12px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+.tool-card h2 {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-top: 8px;
+  margin-bottom: 4px;
+}
+.tool-card .summary { font-size: 15px; color: var(--muted); margin-bottom: 24px; }
+
+/* Checklist tool styles */
+.sg-checklist { margin: 0; padding: 0; list-style: none; }
+.sg-checklist-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 8px;
+  background: var(--bg);
+  transition: border-color 0.15s, background 0.15s;
+  cursor: pointer;
+}
+.sg-checklist-item:hover { border-color: var(--accent); }
+.sg-checklist-item.checked { border-color: #10B981; background: var(--success-bg); }
+.sg-checklist-item.flagged { border-color: var(--error-border); background: var(--error-bg); }
+.sg-check-toggle {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.sg-check-toggle button {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, border-color 0.15s;
+}
+.sg-check-toggle button:hover { border-color: var(--accent); }
+.sg-check-toggle button.active-yes { background: #10B981; color: white; border-color: #10B981; }
+.sg-check-toggle button.active-no { background: #EF4444; color: white; border-color: #EF4444; }
+.sg-check-text { flex: 1; font-size: 14px; line-height: 1.5; padding-top: 4px; }
+.sg-check-cat {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  display: block;
+  margin-bottom: 2px;
+}
+
+/* Results grid */
+.results-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 24px 0;
+}
+@media (max-width: 480px) { .results-grid { grid-template-columns: 1fr; } }
+.result-tile {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 18px;
+}
+.result-tile .rlabel {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+.result-tile .rvalue {
+  font-size: 24px;
+  font-weight: 700;
+  font-family: var(--font-body);
+  font-variant-numeric: tabular-nums;
+}
+.result-tile.hero {
+  grid-column: 1 / -1;
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+.result-tile.hero .rvalue { color: var(--accent-dark); font-size: 32px; }
+[data-theme="dark"] .result-tile.hero .rvalue { color: var(--accent); }
+.result-tile.risk-high { border-color: var(--error-border); background: var(--error-bg); }
+.result-tile.risk-high .rvalue { color: var(--error-text); }
+.result-tile.risk-ok { border-color: #10B981; background: var(--success-bg); }
+.result-tile.risk-ok .rvalue { color: var(--success-text); }
+
+/* Gap analysis */
+.gap-analysis {
+  margin: 20px 0;
+  padding: 20px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.gap-analysis h3 {
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  margin: 0 0 12px 0;
+}
+.gap-list { list-style: none; margin: 0; padding: 0; }
+.gap-list li {
+  padding: 8px 12px;
+  font-size: 14px;
+  border-left: 3px solid var(--error-text);
+  margin-bottom: 6px;
+  background: var(--error-bg);
+  border-radius: 0 8px 8px 0;
+}
+.gap-list .gap-ok {
+  border-left-color: #10B981;
+  background: var(--success-bg);
+}
+.gap-empty {
+  text-align: center;
+  padding: 16px;
+  color: var(--muted);
+  font-size: 14px;
+  font-style: italic;
+}
+
+/* Assumptions */
+.assumptions-details {
+  margin: 20px 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.assumptions-details summary {
+  padding: 14px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+.assumptions-details summary::-webkit-details-marker { display: none; }
+.assumptions-details summary::before { content: '▸'; transition: transform 0.2s; }
+.assumptions-details[open] summary::before { transform: rotate(90deg); }
+.assumptions-inner {
+  padding: 0 18px 18px;
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+.assumptions-inner ul { margin: 8px 0 8px 18px; }
+.assumptions-inner li { margin-bottom: 4px; }
+
+/* Confidence ladder */
+.confidence-tabs {
+  margin: 20px 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.tab-header {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+}
+.tab-btn {
+  flex: 1;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  background: var(--bg);
+  color: var(--muted);
+  cursor: pointer;
+  font-family: var(--font-body);
+  min-height: 44px;
+  transition: background 0.15s, color 0.15s;
+}
+.tab-btn.active { background: var(--surface); color: var(--accent-dark); border-bottom: 2px solid var(--accent); }
+[data-theme="dark"] .tab-btn.active { color: var(--accent); }
+.tab-btn:hover:not(.active) { background: var(--surface); }
+.tab-content { display: none; padding: 20px; }
+.tab-content.active { display: block; }
+.lock-overlay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+.lock-icon { font-size: 32px; opacity: 0.5; }
+.lock-features { list-style: none; margin: 12px 0; padding: 0; font-size: 13px; text-align: left; }
+.lock-features li { padding: 4px 0; }
+.lock-features li::before { content: '✓ '; color: var(--accent); font-weight: 700; }
+
+/* CTA Panel */
+.cta-panel {
+  margin: 24px 0;
+  padding: 24px;
+  background: linear-gradient(135deg, var(--accent-dim), rgba(0,212,212,0.03));
+  border: 1px solid rgba(0,212,212,0.25);
+  border-radius: var(--radius);
+  text-align: center;
+}
+.cta-panel h3 { margin: 0 0 16px; font-size: 1.1rem; }
+.cta-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px; }
+.cta-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 24px;
+  background: var(--accent);
+  color: #070B18;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-body);
+  min-height: 44px;
+}
+.cta-btn-primary:hover { opacity: 0.9; }
+.cta-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 24px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-body);
+  min-height: 44px;
+}
+.cta-btn-secondary:hover { border-color: var(--accent); }
+.pro-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  justify-content: center;
+  font-size: 13px;
+  color: var(--muted);
+}
+.pro-strip span::before { content: '✓ '; color: var(--accent); font-weight: 700; }
+
+/* Save & Share */
+.save-share {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 16px 0;
+}
+.share-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  cursor: pointer;
+  font-family: var(--font-body);
+  min-height: 40px;
+}
+.share-btn:hover { border-color: var(--accent); }
+.share-btn .pro-badge {
+  font-size: 9px;
+  font-weight: 700;
+  background: var(--accent);
+  color: #070B18;
+  padding: 2px 6px;
+  border-radius: 3px;
+  letter-spacing: 0.3px;
+}
+
+/* ===== MID-PAGE CTA ===== */
+.mid-cta {
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 32px var(--card-pad);
+  text-align: center;
+  margin: 32px 0;
+  box-shadow: var(--shadow);
+}
+.mid-cta h2 {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  margin-bottom: 8px;
+}
+.mid-cta p { color: var(--muted); font-size: 15px; margin-bottom: 16px; }
+.email-capture {
+  display: flex;
+  gap: 8px;
+  max-width: 400px;
+  margin: 0 auto;
+}
+.email-capture input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 15px;
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 44px;
+}
+.email-capture input:focus-visible { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-dim); }
+.email-capture button {
+  padding: 12px 20px;
+  background: var(--accent);
+  color: #070B18;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-body);
+  white-space: nowrap;
+  min-height: 44px;
+}
+
+/* ===== POLL STYLES ===== */
+.poll-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 16px 0;
+}
+@media (max-width: 500px) { .poll-cards { grid-template-columns: 1fr; } }
+.poll-option {
+  padding: 16px;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  cursor: pointer;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  transition: border-color 0.15s, background 0.15s, transform 0.1s;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.poll-option:hover { border-color: var(--accent); transform: translateY(-1px); }
+.poll-option.selected {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+  color: var(--accent-dark);
+  font-weight: 700;
+}
+[data-theme="dark"] .poll-option.selected { color: var(--accent); }
+.poll-region {
+  margin: 12px 0;
+}
+.poll-region select {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--text);
+  font-family: var(--font-body);
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%235A6578' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 36px;
+}
+.poll-region label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+.poll-thanks {
+  display: none;
+  text-align: center;
+  padding: 24px;
+  background: var(--success-bg);
+  border: 1px solid #10B981;
+  border-radius: 12px;
+  color: var(--success-text);
+  font-weight: 600;
+  font-size: 15px;
+}
+.poll-thanks.visible { display: block; }
+.prior-poll {
+  background: var(--quote-bg);
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.prior-poll strong { color: var(--text); }
+
+/* ===== EMAIL MODAL ===== */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 36px;
+  max-width: 440px;
+  width: 100%;
+  box-shadow: var(--shadow-lg);
+  position: relative;
+}
+.modal-close {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: var(--muted);
+  cursor: pointer;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal h3 { font-family: var(--font-display); font-size: 1.2rem; margin-bottom: 8px; }
+.modal p { font-size: 14px; color: var(--muted); margin-bottom: 20px; line-height: 1.6; }
+.modal input[type="email"] {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 15px;
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--text);
+  margin-bottom: 12px;
+  min-height: 44px;
+}
+.modal input[type="email"]:focus-visible { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-dim); }
+.modal .modal-submit {
+  width: 100%;
+  padding: 12px;
+  background: var(--accent);
+  color: #070B18;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-body);
+  min-height: 44px;
+}
+.modal .modal-disclaimer { font-size: 12px; color: var(--muted); text-align: center; margin-top: 12px; }
+.modal .modal-success {
+  display: none;
+  text-align: center;
+  padding: 24px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--success-text);
+}
+
+/* Checklist */
+.todo { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; }
+.todo input[type="checkbox"] { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--accent); flex-shrink: 0; cursor: pointer; }
+.todo label { font-size: 15px; cursor: pointer; }
+
+.time-saved {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  font-size: 13px;
+  color: var(--success-text);
+  background: var(--success-bg);
+  border-radius: 8px;
+  font-weight: 600;
+  margin-top: 16px;
+}
+
+/* ===== FOOTER ===== */
+.page-footer {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 36px var(--card-pad);
+  margin-top: 32px;
+  box-shadow: var(--shadow);
+}
+.footer-pro {
+  margin-bottom: 28px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+}
+.footer-pro h3 { font-family: var(--font-display); font-size: 1.2rem; margin-bottom: 16px; }
+.footer-pro-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  font-size: 14px;
+}
+@media (max-width: 480px) { .footer-pro-grid { grid-template-columns: 1fr; } }
+.footer-pro-grid .pro-item { display: flex; align-items: flex-start; gap: 8px; }
+.footer-pro-grid .pro-item::before { content: '✓'; color: var(--accent); font-weight: 700; flex-shrink: 0; }
+.footer-subscribe {
+  text-align: center;
+  margin-bottom: 28px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+}
+.footer-subscribe h3 { font-family: var(--font-display); font-size: 1.1rem; margin-bottom: 12px; }
+.footer-subscribe .cta-btn-primary { margin-top: 8px; text-decoration: none; display: inline-flex; }
+.footer-brand {
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted);
+}
+.footer-brand .brand-line {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+.footer-sources {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-light);
+}
+.footer-sources h4 {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.footer-sources ul { list-style: none; padding: 0; margin: 0; font-size: 12px; }
+.footer-sources li { padding: 3px 0; }
+.footer-sources a { color: var(--muted); }
+.footer-sources a:hover { color: var(--accent); }
+
+/* ===== PRINT ===== */
+@media print {
+  .sixty-bar, .issue-header, .toc-rail, .controls, .audio-player, .cta-panel, .mid-cta, .modal-overlay, .save-share { display: none; }
+  body { background: #fff; color: #000; font-size: 12pt; }
+  .card, .tool-card, .page-footer { box-shadow: none; border: 1px solid #ddd; }
+}
+
+
+/* Standalone overrides */
+body { padding: 0; margin: 0; }
+.issue-header, .toc-rail, .layout-wrapper > .toc-rail { display: none; }
+.standalone-wrapper {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 24px 20px;
+}
+.standalone-header {
+  text-align: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.standalone-header h1 {
+  font-family: var(--font-display, 'Outfit', sans-serif);
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0 0 4px;
+}
+.standalone-header p {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin: 0;
+}
+.standalone-header a {
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+</style>
+</head>
+<body>
+<div class="standalone-wrapper">
+  <div class="standalone-header">
+    <h1>KCSIE Safeguarding Checker</h1>
+    <p>From <a href="/insights/newsletter/week-07">The Schoolgle Signal — Week 7</a></p>
+  </div>
+  <div class="tool-card" id="kcsie-checker" style="border-top-left-radius:0;border-top-right-radius:0;border-top:none;margin-top:0;">
+      <div class="tool-badge">Interactive Tool</div>
+      <h2 style="margin-top:16px;">KCSIE Safeguarding Checker</h2>
+      <p class="summary">Tick yes or no for each requirement. See your compliance score and gap analysis instantly.</p>
+
+      <div id="checklist-container">
+        <ul class="sg-checklist" id="sg-checklist"></ul>
+      </div>
+
+      <!-- Results -->
+      <div class="results-grid" id="sg-results">
+        <div class="result-tile hero" id="score-tile">
+          <div class="rlabel">Compliance score</div>
+          <div class="rvalue" id="r-score">— / 25</div>
+        </div>
+        <div class="result-tile" id="yes-tile">
+          <div class="rlabel">In place</div>
+          <div class="rvalue" id="r-yes">0</div>
+        </div>
+        <div class="result-tile" id="no-tile">
+          <div class="rlabel">Gaps identified</div>
+          <div class="rvalue" id="r-no">0</div>
+        </div>
+        <div class="result-tile">
+          <div class="rlabel">Not yet assessed</div>
+          <div class="rvalue" id="r-pending">25</div>
+        </div>
+        <div class="result-tile" id="rating-tile">
+          <div class="rlabel">Overall rating</div>
+          <div class="rvalue" id="r-rating">Not assessed</div>
+        </div>
+      </div>
+
+      <!-- Gap Analysis -->
+      <div class="gap-analysis" id="gap-analysis">
+        <h3>Gap analysis — priority actions</h3>
+        <div id="gap-list-container">
+          <div class="gap-empty">Complete the checklist above to see your gap analysis.</div>
+        </div>
+      </div>
+
+      <!-- Assumptions -->
+      <details class="assumptions-details">
+        <summary>How this works (methodology)</summary>
+        <div class="assumptions-inner">
+          <ul>
+            <li>Based on KCSIE 2025 statutory guidance requirements</li>
+            <li>Covers Part 1 (all staff), Part 2 (management), Part 3 (safer recruitment), Part 4 (allegations), and Part 5 (child-on-child)</li>
+            <li>Self-assessment only — not a formal audit or inspection tool</li>
+            <li>Compliance score is a simple count of "yes" responses out of 25</li>
+            <li><strong>This does not replace professional safeguarding advice or audit.</strong> Use it as a quick health check and discuss gaps with your DSL.</li>
+          </ul>
+        </div>
+      </details>
+
+      <!-- Confidence Ladder -->
+      <div class="confidence-tabs">
+        <div class="tab-header">
+          <button class="tab-btn active" onclick="switchTab('quick', this)">Self-Assessment ✅</button>
+          <button class="tab-btn" onclick="switchTab('pro', this)">Full Audit 🔒</button>
+        </div>
+        <div class="tab-content active" id="tab-quick">
+          <p style="font-size:14px;color:var(--muted);margin:0;">You're using the <strong>free self-assessment</strong> — a quick health check against 25 key KCSIE requirements. Good enough for a termly check-in and DSL discussion.</p>
+        </div>
+        <div class="tab-content" id="tab-pro">
+          <div class="lock-overlay">
+            <div class="lock-icon">🔒</div>
+            <p style="font-weight:600;font-size:15px;margin:0 0 8px;">Full Safeguarding Audit — Schoolgle Pro</p>
+            <p style="font-size:13px;margin:0 0 12px;">Comprehensive 80+ item audit with evidence tracking, action plans, and governor reporting.</p>
+            <ul class="lock-features">
+              <li>80+ audit items across all KCSIE parts</li>
+              <li>Evidence upload and tracking per item</li>
+              <li>Automated action plan with deadlines</li>
+              <li>Governor-ready safeguarding report (AI-generated)</li>
+              <li>Termly comparison and trend tracking</li>
+            </ul>
+            <button class="cta-btn-primary" style="margin-top:12px;">Unlock Pro →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- CTA Panel -->
+      <div class="cta-panel">
+        <h3>Save this assessment</h3>
+        <div class="cta-buttons">
+          <button class="cta-btn-primary" onclick="openEmailModal()">📧 Email me this result</button>
+          <button class="cta-btn-secondary" onclick="void(0)">🔓 Unlock Pro: Full audit + action plans</button>
+        </div>
+        <div class="pro-strip">
+          <span>80+ audit items</span>
+          <span>Evidence tracking</span>
+          <span>Governor reports</span>
+          <span>Trend analysis</span>
+          <span>Action plans</span>
+        </div>
+      </div>
+
+      <!-- Save & Share -->
+      <div class="save-share">
+        <button class="share-btn" onclick="copySummary()">📋 Copy summary</button>
+        <button class="share-btn">📄 Download PDF <span class="pro-badge">PRO</span></button>
+        <button class="share-btn">🔗 Share link <span class="pro-badge">PRO</span></button>
+      </div>
+
+      <div class="time-saved">⏱ Time saved using this checker: ~3 hours of manual audit preparation</div>
+    </div>
+</div>
+<script>
+
+// ===== THEME =====
+function setTheme(mode) {
+  document.querySelectorAll('#btn-light,#btn-dark,#btn-system').forEach(function(b) { b.classList.remove('active'); });
+  if (mode === 'system') {
+    var sys = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', sys);
+    document.getElementById('btn-system').classList.add('active');
+    localStorage.setItem('signal-theme', 'system');
+  } else {
+    document.documentElement.setAttribute('data-theme', mode);
+    document.getElementById('btn-' + mode).classList.add('active');
+    localStorage.setItem('signal-theme', mode);
+  }
+}
+(function() {
+  var saved = localStorage.getItem('signal-theme');
+  if (saved) setTheme(saved);
+})();
+
+// ===== FONT SIZE =====
+var fontSizes = [14, 16, 19];
+var fontIdx = 1;
+function adjustFont(dir) {
+  if (dir === 0) fontIdx = 1;
+  else fontIdx = Math.max(0, Math.min(2, fontIdx + dir));
+  document.documentElement.style.setProperty('--font-size', fontSizes[fontIdx] + 'px');
+}
+
+// ===== AUDIO PLAYER (placeholder) =====
+var isPlaying = false;
+function togglePlay() {
+  isPlaying = !isPlaying;
+  document.getElementById('playBtn').textContent = isPlaying ? '⏸' : '▶';
+}
+function seekAudio(e) {}
+function setSpeed(speed, btn) {
+  document.querySelectorAll('.speed-btn').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+
+// ===== KCSIE CHECKLIST DATA =====
+var kcsieItems = [
+  { cat: 'Part 1 — All Staff', text: 'All staff have read at least Part 1 of KCSIE 2025 and signed to confirm' },
+  { cat: 'Part 1 — All Staff', text: 'Staff know who the Designated Safeguarding Lead (DSL) and deputies are' },
+  { cat: 'Part 1 — All Staff', text: 'Staff understand how to raise safeguarding concerns and the process for doing so' },
+  { cat: 'Part 1 — All Staff', text: 'Staff can identify signs of abuse, neglect, and exploitation' },
+  { cat: 'Part 1 — All Staff', text: 'All staff have received safeguarding training at induction and regular updates' },
+  { cat: 'Part 2 — Management', text: 'A member of the senior leadership team is designated as DSL' },
+  { cat: 'Part 2 — Management', text: 'The DSL has undertaken training updated every two years (and regular updates in between)' },
+  { cat: 'Part 2 — Management', text: 'The governing body/trust board has a named safeguarding lead governor' },
+  { cat: 'Part 2 — Management', text: 'Safeguarding policy is published on the school website, reviewed annually, and known to all staff' },
+  { cat: 'Part 2 — Management', text: 'The school has procedures for managing safeguarding concerns about staff (including low-level concerns)' },
+  { cat: 'Part 3 — Safer Recruitment', text: 'The Single Central Record (SCR) is complete, accurate, and checked regularly' },
+  { cat: 'Part 3 — Safer Recruitment', text: 'At least one person on every interview panel has completed safer recruitment training' },
+  { cat: 'Part 3 — Safer Recruitment', text: 'DBS checks (enhanced with barred list) are in place for all staff and regular volunteers' },
+  { cat: 'Part 3 — Safer Recruitment', text: 'Section 128 checks completed for management positions (academies/free schools)' },
+  { cat: 'Part 3 — Safer Recruitment', text: 'Pre-employment checks include identity, right to work, qualifications, references, and prohibition checks' },
+  { cat: 'Part 4 — Allegations', text: 'Clear procedures in place for managing allegations against staff and volunteers' },
+  { cat: 'Part 4 — Allegations', text: 'Staff know how to report concerns about other adults (including the headteacher)' },
+  { cat: 'Part 4 — Allegations', text: 'The school knows how to contact the Local Authority Designated Officer (LADO)' },
+  { cat: 'Part 4 — Allegations', text: 'Low-level concerns policy is in place and staff understand how to use it' },
+  { cat: 'Part 4 — Allegations', text: 'Records of allegations and low-level concerns are maintained securely' },
+  { cat: 'Part 5 — Child-on-Child', text: 'Policy and procedures address child-on-child abuse (including sexual violence and harassment)' },
+  { cat: 'Part 5 — Child-on-Child', text: 'Staff understand that child-on-child abuse can happen and know how to respond' },
+  { cat: 'Online Safety', text: 'Online safety policy is in place and covers staff and pupil use of technology (including generative AI)' },
+  { cat: 'Online Safety', text: 'Appropriate filtering and monitoring systems are in place and regularly reviewed' },
+  { cat: 'Record Keeping', text: 'Safeguarding records are maintained using a secure system (e.g. CPOMS, MyConcern) with appropriate access controls' }
+];
+
+var checklistState = {};
+var STORAGE_KEY = 'signal-w7-kcsie';
+
+// Load saved state
+(function() {
+  try {
+    var saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) checklistState = JSON.parse(saved);
+  } catch(e) {}
+})();
+
+function renderChecklist() {
+  var container = document.getElementById('sg-checklist');
+  container.innerHTML = '';
+  kcsieItems.forEach(function(item, i) {
+    var state = checklistState[i] || 'none';
+    var li = document.createElement('li');
+    li.className = 'sg-checklist-item';
+    if (state === 'yes') li.className += ' checked';
+    if (state === 'no') li.className += ' flagged';
+
+    li.innerHTML =
+      '<div class="sg-check-toggle">' +
+        '<button onclick="toggleItem(' + i + ', \'yes\')" class="' + (state === 'yes' ? 'active-yes' : '') + '" aria-label="Yes" title="Yes">✓</button>' +
+        '<button onclick="toggleItem(' + i + ', \'no\')" class="' + (state === 'no' ? 'active-no' : '') + '" aria-label="No" title="No">✗</button>' +
+      '</div>' +
+      '<div class="sg-check-text">' +
+        '<span class="sg-check-cat">' + item.cat + '</span>' +
+        item.text +
+      '</div>';
+    container.appendChild(li);
+  });
+  updateResults();
+}
+
+function toggleItem(idx, val) {
+  if (checklistState[idx] === val) {
+    delete checklistState[idx];
+  } else {
+    checklistState[idx] = val;
+  }
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(checklistState)); } catch(e) {}
+  renderChecklist();
+}
+
+function updateResults() {
+  var yes = 0, no = 0, pending = 0;
+  var gaps = [];
+  kcsieItems.forEach(function(item, i) {
+    var s = checklistState[i];
+    if (s === 'yes') yes++;
+    else if (s === 'no') { no++; gaps.push(item); }
+    else pending++;
+  });
+
+  document.getElementById('r-score').textContent = yes + ' / 25';
+  document.getElementById('r-yes').textContent = yes;
+  document.getElementById('r-no').textContent = no;
+  document.getElementById('r-pending').textContent = pending;
+
+  // Rating
+  var assessed = yes + no;
+  var ratingEl = document.getElementById('r-rating');
+  var ratingTile = document.getElementById('rating-tile');
+  ratingTile.className = 'result-tile';
+
+  if (assessed === 0) {
+    ratingEl.textContent = 'Not assessed';
+  } else {
+    var pct = (yes / 25) * 100;
+    if (pct >= 92) { ratingEl.textContent = '🟢 Strong'; ratingTile.classList.add('risk-ok'); }
+    else if (pct >= 72) { ratingEl.textContent = '🟡 Good'; }
+    else if (pct >= 48) { ratingEl.textContent = '🟠 Developing'; }
+    else { ratingEl.textContent = '🔴 Significant gaps'; ratingTile.classList.add('risk-high'); }
+  }
+
+  // Score tile colour
+  var scoreTile = document.getElementById('score-tile');
+  scoreTile.className = 'result-tile hero';
+  if (assessed > 0) {
+    var pct2 = (yes / 25) * 100;
+    if (pct2 >= 92) scoreTile.style.borderColor = '#10B981';
+    else if (pct2 >= 72) scoreTile.style.borderColor = '#EAB308';
+    else scoreTile.style.borderColor = '';
+  }
+
+  // Gap analysis
+  var gapContainer = document.getElementById('gap-list-container');
+  if (gaps.length === 0 && no === 0) {
+    if (yes === 25) {
+      gapContainer.innerHTML = '<div class="gap-empty" style="color:var(--success-text);">✓ No gaps identified. All 25 requirements in place.</div>';
+    } else {
+      gapContainer.innerHTML = '<div class="gap-empty">Complete the checklist above to see your gap analysis.</div>';
+    }
+  } else {
+    var html = '<ul class="gap-list">';
+    gaps.forEach(function(g) {
+      html += '<li><strong>' + g.cat + ':</strong> ' + g.text + '</li>';
+    });
+    html += '</ul>';
+    gapContainer.innerHTML = html;
+  }
+}
+
+renderChecklist();
+
+// ===== TABS =====
+function switchTab(tab, btn) {
+  document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+  document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+  btn.classList.add('active');
+  document.getElementById('tab-' + tab).classList.add('active');
+}
+
+// ===== POLL =====
+var POLL_KEY = 'signal-w7-poll';
+
+(function() {
+  try {
+    var saved = localStorage.getItem(POLL_KEY);
+    if (saved) {
+      document.getElementById('poll-container').style.display = 'none';
+      document.getElementById('poll-thanks').classList.add('visible');
+    }
+  } catch(e) {}
+})();
+
+function selectPoll(el, value) {
+  document.querySelectorAll('.poll-option').forEach(function(o) { o.classList.remove('selected'); });
+  el.classList.add('selected');
+
+  var region = document.getElementById('poll-region').value;
+  var data = { vote: value, region: region, timestamp: Date.now() };
+  try { localStorage.setItem(POLL_KEY, JSON.stringify(data)); } catch(e) {}
+
+  setTimeout(function() {
+    document.getElementById('poll-container').style.display = 'none';
+    document.getElementById('poll-thanks').classList.add('visible');
+  }, 400);
+}
+
+// ===== EMAIL MODAL =====
+function openEmailModal() {
+  document.getElementById('emailModal').classList.add('open');
+  document.getElementById('modal-form').style.display = 'block';
+  document.getElementById('modal-success').style.display = 'none';
+  setTimeout(function() { document.getElementById('modal-email').focus(); }, 100);
+}
+function closeEmailModal() {
+  document.getElementById('emailModal').classList.remove('open');
+}
+function submitEmail() {
+  var email = document.getElementById('modal-email').value;
+  if (email && email.includes('@')) {
+    document.getElementById('modal-form').style.display = 'none';
+    document.getElementById('modal-success').style.display = 'block';
+    setTimeout(closeEmailModal, 2000);
+  }
+}
+document.getElementById('emailModal').addEventListener('click', function(e) {
+  if (e.target === this) closeEmailModal();
+});
+
+// ===== COPY SUMMARY =====
+function copySummary() {
+  var yes = 0, no = 0, gaps = [];
+  kcsieItems.forEach(function(item, i) {
+    if (checklistState[i] === 'yes') yes++;
+    else if (checklistState[i] === 'no') { no++; gaps.push(item.text); }
+  });
+  var text = 'KCSIE Safeguarding Checker — Schoolgle Signal Week 7\n' +
+    'Compliance score: ' + yes + ' / 25\n' +
+    'In place: ' + yes + ' | Gaps: ' + no + '\n';
+  if (gaps.length > 0) {
+    text += '\nGaps identified:\n';
+    gaps.forEach(function(g) { text += '• ' + g + '\n'; });
+  }
+  text += '\nSelf-assessment only — verify with your DSL.\nhttps://schoolgle.co.uk';
+  navigator.clipboard.writeText(text).then(function() {
+    var toast = document.getElementById('copy-toast');
+    toast.style.display = 'block';
+    setTimeout(function() { toast.style.display = 'none'; }, 2000);
+  });
+}
+
+// ===== MID-PAGE SUBSCRIBE =====
+function handleMidSubscribe(btn) {
+  var input = btn.previousElementSibling;
+  if (input.value && input.value.includes('@')) {
+    btn.textContent = '✓ Subscribed';
+    btn.style.background = '#10B981';
+    setTimeout(function() { btn.textContent = 'Subscribe'; btn.style.background = ''; }, 3000);
+  }
+}
+
+// ===== TOC SCROLL HIGHLIGHT =====
+(function() {
+  var tocLinks = document.querySelectorAll('.toc-link');
+  if (!tocLinks.length) return;
+  var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        var id = entry.target.getAttribute('id');
+        tocLinks.forEach(function(link) {
+          link.classList.toggle('active', link.getAttribute('data-section') === id);
+        });
+      }
+    });
+  }, { rootMargin: '-100px 0px -60% 0px', threshold: 0 });
+  tocLinks.forEach(function(link) {
+    var target = document.getElementById(link.getAttribute('data-section'));
+    if (target) observer.observe(target);
+  });
+})();
+
+// ===== SMOOTH SCROLL =====
+document.querySelectorAll('a[href^="#"]').forEach(function(a) {
+  a.addEventListener('click', function(e) {
+    var target = document.querySelector(this.getAttribute('href'));
+    if (target) { e.preventDefault(); target.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+  });
+});
+
+</script>
+</body>
+</html>
