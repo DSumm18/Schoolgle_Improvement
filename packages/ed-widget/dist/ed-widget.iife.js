@@ -1,4 +1,4 @@
-var EdWidget=function(Ut){"use strict";var kd=Object.defineProperty;var Gd=(Ut,Ct,Dn)=>Ct in Ut?kd(Ut,Ct,{enumerable:!0,configurable:!0,writable:!0,value:Dn}):Ut[Ct]=Dn;var Z=(Ut,Ct,Dn)=>Gd(Ut,typeof Ct!="symbol"?Ct+"":Ct,Dn);/**
+var __EdWidgetExports=function(Ut){"use strict";var kd=Object.defineProperty;var Gd=(Ut,Ct,Dn)=>Ct in Ut?kd(Ut,Ct,{enumerable:!0,configurable:!0,writable:!0,value:Dn}):Ut[Ct]=Dn;var Z=(Ut,Ct,Dn)=>Gd(Ut,typeof Ct!="symbol"?Ct+"":Ct,Dn);/**
  * @license
  * Copyright 2010-2023 Three.js Authors
  * SPDX-License-Identifier: MIT
