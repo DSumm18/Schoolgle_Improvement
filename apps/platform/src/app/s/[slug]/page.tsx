@@ -15,7 +15,7 @@ import type {
 import { evaluateLogic } from "@/lib/surveys/logic-engine";
 import { validateAnswer } from "@/lib/surveys/validation-engine";
 
-// Dynamic import for question renderer to avoid SSR issues
+// Dynamic imports to avoid SSR issues
 import dynamic from "next/dynamic";
 const QuestionRenderer = dynamic(
   () =>
@@ -26,6 +26,20 @@ const QuestionRenderer = dynamic(
     ssr: false,
     loading: () => (
       <div className="h-20 animate-pulse bg-slate-100 rounded-xl" />
+    ),
+  },
+);
+const ConversationalRenderer = dynamic(
+  () =>
+    import("@/components/surveys/respondent/ConversationalRenderer").then(
+      (m) => m.ConversationalRenderer,
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-600" />
+      </div>
     ),
   },
 );
@@ -80,11 +94,36 @@ export default function PublicSurveyPage({
 
   const pages: SurveyPage[] = survey?.pages || [];
   const currentPage = currentPageIndex >= 0 ? pages[currentPageIndex] : null;
-  const questions: SurveyQuestion[] = currentPage
+  const allPageQuestions: SurveyQuestion[] = currentPage
     ? (currentPage as any).survey_questions || currentPage.questions || []
     : [];
 
-  const totalQuestions = pages.reduce(
+  // Evaluate skip logic to filter visible questions
+  const logicRules = (survey as any)?.logic_rules || [];
+  const answerMapForLogic = new Map<string, SurveyAnswer>();
+  answers.forEach((val, qId) => {
+    answerMapForLogic.set(qId, {
+      id: "",
+      response_id: "",
+      question_id: qId,
+      answer_text: typeof val === "string" ? val : null,
+      answer_choices: Array.isArray(val) ? val : null,
+      answer_numeric: typeof val === "number" ? val : null,
+      answer_date: null,
+      answer_json: typeof val === "object" && !Array.isArray(val) ? val : null,
+      score: null,
+      answered_at: new Date().toISOString(),
+    });
+  });
+  const logicResult = evaluateLogic(logicRules, answerMapForLogic);
+  const questions = allPageQuestions.filter(
+    (q) => !logicResult.hiddenQuestionIds.has(q.id),
+  );
+  const visiblePages = pages.filter(
+    (p) => !logicResult.hiddenPageIds.has(p.id),
+  );
+
+  const totalQuestions = visiblePages.reduce(
     (acc, p) => acc + ((p as any).survey_questions || p.questions || []).length,
     0,
   );
@@ -223,6 +262,42 @@ export default function PublicSurveyPage({
           </p>
         </div>
       </div>
+    );
+  }
+
+  // Conversational mode (Typeform-style)
+  if (survey.settings.conversational_mode) {
+    return (
+      <ConversationalRenderer
+        survey={survey}
+        onSubmit={async (convAnswers) => {
+          const answerPayload = Array.from(convAnswers.entries()).map(
+            ([questionId, value]) => ({
+              questionId,
+              answerText: typeof value === "string" ? value : null,
+              answerChoices: Array.isArray(value) ? value : null,
+              answerNumeric: typeof value === "number" ? value : null,
+              answerJson:
+                typeof value === "object" && !Array.isArray(value)
+                  ? value
+                  : null,
+            }),
+          );
+
+          const res = await fetch(`/api/surveys/${survey.id}/responses`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              sessionId,
+              status: "completed",
+              answers: answerPayload,
+              timeTakenSeconds: Math.round((Date.now() - startTime) / 1000),
+            }),
+          });
+
+          if (!res.ok) throw new Error("Failed to submit");
+        }}
+      />
     );
   }
 
