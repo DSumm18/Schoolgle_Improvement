@@ -14,10 +14,30 @@ import fs from "fs";
  * GET /api/data/ofsted?view=latest-la  → Latest per-school by LA
  * GET /api/data/ofsted?view=latest-region → Latest per-school by region
  */
+/** Find the content/data directory — works both locally and on Vercel */
+function findDataDir(): string | null {
+  const candidates = [
+    path.resolve(process.cwd(), "..", "..", "content", "data"),
+    path.resolve(process.cwd(), "content", "data"),
+    path.resolve(process.cwd(), "..", "content", "data"),
+    path.join(process.cwd(), "content", "data"),
+  ];
+  for (const dir of candidates) {
+    if (fs.existsSync(dir)) return dir;
+  }
+  return null;
+}
+
 export async function GET(request: NextRequest) {
   const view = request.nextUrl.searchParams.get("view") || "region";
-  const rootDir = path.resolve(process.cwd(), "..", "..");
-  const dataDir = path.join(rootDir, "content", "data");
+  const dataDir = findDataDir();
+  if (!dataDir) {
+    console.error("Could not find content/data directory. cwd:", process.cwd());
+    return NextResponse.json(
+      { error: "Data directory not found" },
+      { status: 500 },
+    );
+  }
 
   try {
     if (view === "national") {

@@ -17,6 +17,20 @@ const TOOL_FILE_MAP: Record<string, string> = {
   "deal-finder": "deal-finder.html",
 };
 
+/** Find the content/tools directory — works both locally and on Vercel */
+function findContentDir(): string | null {
+  const candidates = [
+    path.resolve(process.cwd(), "..", "..", "content", "tools"),
+    path.resolve(process.cwd(), "content", "tools"),
+    path.resolve(process.cwd(), "..", "content", "tools"),
+    path.join(process.cwd(), "content", "tools"),
+  ];
+  for (const dir of candidates) {
+    if (fs.existsSync(dir)) return dir;
+  }
+  return null;
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ toolId: string }> | { toolId: string } },
@@ -30,8 +44,16 @@ export async function GET(
       return new NextResponse("Tool not found", { status: 404 });
     }
 
-    const rootDir = path.resolve(process.cwd(), "..", "..");
-    const filePath = path.join(rootDir, "content", "tools", fileName);
+    const contentDir = findContentDir();
+    if (!contentDir) {
+      console.error(
+        "Could not find content/tools directory. cwd:",
+        process.cwd(),
+      );
+      return new NextResponse("Content directory not found", { status: 500 });
+    }
+
+    const filePath = path.join(contentDir, fileName);
 
     if (!fs.existsSync(filePath)) {
       return new NextResponse(null, { status: 404 });
@@ -40,7 +62,10 @@ export async function GET(
     const html = fs.readFileSync(filePath, "utf-8");
     return new NextResponse(html, {
       status: 200,
-      headers: { "Content-Type": "text/html; charset=utf-8" },
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "public, max-age=3600, s-maxage=86400",
+      },
     });
   } catch (error) {
     console.error("Error loading tool content:", error);

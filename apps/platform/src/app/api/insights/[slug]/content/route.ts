@@ -11,8 +11,13 @@ import fs from "fs";
  */
 
 function findContent(slug: string): { html: string } | null {
-  const rootDir = path.resolve(process.cwd(), "..", "..");
-  const insightsDir = path.join(rootDir, "content", "insights");
+  const insightsDir = [
+    path.resolve(process.cwd(), "..", "..", "content", "insights"),
+    path.resolve(process.cwd(), "content", "insights"),
+    path.resolve(process.cwd(), "..", "content", "insights"),
+  ].find((d) => fs.existsSync(d));
+
+  if (!insightsDir) return null;
 
   if (!fs.existsSync(insightsDir)) return null;
 

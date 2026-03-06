@@ -145,14 +145,15 @@ export default function ToolPage() {
               ref={iframeRef}
               src={`/api/tools/${toolId}/content`}
               className="w-full border border-border rounded-2xl bg-card"
-              style={{ minHeight: "70vh" }}
+              style={{ minHeight: "80vh", height: "80vh" }}
               onLoad={() => {
                 const iframe = iframeRef.current;
                 if (iframe?.contentDocument?.body) {
                   const height = iframe.contentDocument.body.scrollHeight;
-                  iframe.style.height = `${height + 40}px`;
+                  iframe.style.height = `${Math.max(height + 40, 600)}px`;
                 }
               }}
+              allow="clipboard-write"
               title={tool.name}
             />
           ) : tool.url.startsWith("http") ? (

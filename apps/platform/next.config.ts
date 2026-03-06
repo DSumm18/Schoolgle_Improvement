@@ -1,26 +1,27 @@
 import type { NextConfig } from "next";
 import path from "path";
-const withBundleAnalyzer = require('@next/bundle-analyzer')({
-  enabled: process.env.ANALYZE === 'true',
+const withBundleAnalyzer = require("@next/bundle-analyzer")({
+  enabled: process.env.ANALYZE === "true",
 });
 
 const nextConfig: NextConfig = {
+  outputFileTracingRoot: path.join(__dirname, "../../"),
   typescript: {
     ignoreBuildErrors: true,
   },
   images: {
     remotePatterns: [
       {
-        protocol: 'https',
-        hostname: 'schoolgle.co.uk',
+        protocol: "https",
+        hostname: "schoolgle.co.uk",
       },
       {
-        protocol: 'https',
-        hostname: 'www.schoolgle.co.uk',
+        protocol: "https",
+        hostname: "www.schoolgle.co.uk",
       },
       {
-        protocol: 'https',
-        hostname: 'www.google.com',
+        protocol: "https",
+        hostname: "www.google.com",
       },
     ],
   },
@@ -33,16 +34,22 @@ const nextConfig: NextConfig = {
     }
     config.resolve.alias = {
       ...config.resolve.alias,
-      '@schoolgle/ed-widget': path.resolve(__dirname, 'src/lib/ed-widget-stub.ts'),
-      '@schoolgle/ed-agents': path.resolve(__dirname, '../../packages/ed-agents/src'),
+      "@schoolgle/ed-widget": path.resolve(
+        __dirname,
+        "src/lib/ed-widget-stub.ts",
+      ),
+      "@schoolgle/ed-agents": path.resolve(
+        __dirname,
+        "../../packages/ed-agents/src",
+      ),
     };
     return config;
   },
   turbopack: {
     resolveAlias: {
-      '@schoolgle/ed-widget': './src/lib/ed-widget-stub.ts',
-      '@schoolgle/ed-agents': '../../packages/ed-agents/src',
-      '@schoolgle/ed-agents/*': '../../packages/ed-agents/src/*',
+      "@schoolgle/ed-widget": "./src/lib/ed-widget-stub.ts",
+      "@schoolgle/ed-agents": "../../packages/ed-agents/src",
+      "@schoolgle/ed-agents/*": "../../packages/ed-agents/src/*",
     },
   },
 } as NextConfig;

@@ -14,13 +14,21 @@ export async function GET(
       return new NextResponse("Invalid week format", { status: 400 });
     }
 
-    const rootDir = path.resolve(process.cwd(), "..", "..");
-    const filePath = path.join(
-      rootDir,
-      "content",
-      "newsletters",
-      `${week}.html`,
-    );
+    const contentDir = [
+      path.resolve(process.cwd(), "..", "..", "content", "newsletters"),
+      path.resolve(process.cwd(), "content", "newsletters"),
+      path.resolve(process.cwd(), "..", "content", "newsletters"),
+    ].find((d) => fs.existsSync(d));
+
+    if (!contentDir) {
+      console.error(
+        "Could not find content/newsletters directory. cwd:",
+        process.cwd(),
+      );
+      return new NextResponse("Content directory not found", { status: 500 });
+    }
+
+    const filePath = path.join(contentDir, `${week}.html`);
 
     if (!fs.existsSync(filePath)) {
       return new NextResponse(null, { status: 404 });
@@ -29,7 +37,10 @@ export async function GET(
     const html = fs.readFileSync(filePath, "utf-8");
     return new NextResponse(html, {
       status: 200,
-      headers: { "Content-Type": "text/html; charset=utf-8" },
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "public, max-age=3600, s-maxage=86400",
+      },
     });
   } catch (error) {
     console.error("Error loading newsletter content:", error);
