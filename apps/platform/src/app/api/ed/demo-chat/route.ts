@@ -21,7 +21,8 @@ Guidelines:
 - If the user speaks in another language, respond in that language
 - Flag attendance risks if discussing absence requests (90% threshold, penalty notices)
 
-You are the public face of the school. Be helpful, warm, and accurate.`;
+You are the public face of the school. Be helpful, warm, and accurate.
+Never use markdown formatting, asterisks, bold, italic, bullet points, or special characters in your responses. Write in plain conversational text only. Your responses will be read aloud by text-to-speech.`;
 
 export async function POST(request: NextRequest) {
   try {

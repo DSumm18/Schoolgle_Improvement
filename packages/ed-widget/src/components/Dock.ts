@@ -39,24 +39,6 @@ const DOCK_ITEMS: DockItem[] = [
     label: "Settings",
   },
   {
-    id: "language",
-    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <circle cx="12" cy="12" r="10"/>
-      <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-    </svg>`,
-    label: "Language",
-  },
-  {
-    id: "persona",
-    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <rect x="3" y="8" width="18" height="14" rx="2"/>
-      <path d="M12 8V6a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2v2"/>
-      <path d="M8 8V6a2 2 0 0 0-2-2h0a2 2 0 0 0-2 2v2"/>
-      <path d="M9 15h6"/>
-    </svg>`,
-    label: "Persona",
-  },
-  {
     id: "microphone",
     icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
@@ -185,12 +167,7 @@ export class Dock {
     }
 
     // Show menu for actions that have options
-    const menuActions: DockAction[] = [
-      "magic-tools",
-      "settings",
-      "language",
-      "persona",
-    ];
+    const menuActions: DockAction[] = ["magic-tools", "settings"];
     if (menuActions.includes(action)) {
       // If menu is already open for this action, close it
       if (this.activeMenu && this.activeMenu.dataset.action === action) {
@@ -281,37 +258,6 @@ export class Dock {
           <div class="dock-menu-item" data-setting="theme-contrast">
             <span class="dock-menu-icon">⚡</span>
             <span>High Contrast</span>
-          </div>
-        `;
-        break;
-      case "language":
-        menu.innerHTML = `
-          <div class="dock-menu-item" data-lang="en-GB">🇬🇧 English</div>
-          <div class="dock-menu-item" data-lang="pl">🇵🇱 Polski</div>
-          <div class="dock-menu-item" data-lang="ro">🇷🇴 Română</div>
-          <div class="dock-menu-item" data-lang="es">🇪🇸 Español</div>
-          <div class="dock-menu-item" data-lang="pt">🇵🇹 Português</div>
-          <div class="dock-menu-item" data-lang="fr">🇫🇷 Français</div>
-          <div class="dock-menu-item" data-lang="ur">🇵🇰 Urdu</div>
-          <div class="dock-menu-item" data-lang="bn">🇧🇩 Bengali</div>
-          <div class="dock-menu-item" data-lang="so">🇸🇴 Somali</div>
-          <div class="dock-menu-item" data-lang="zh">🇨🇳 Chinese</div>
-          <div class="dock-menu-item" data-lang="ar">🇸🇦 Arabic</div>
-          <div class="dock-menu-item" data-lang="pa">🇮🇳 Punjabi</div>
-        `;
-        break;
-      case "persona":
-        menu.innerHTML = `
-          <div class="dock-menu-section">
-            <div class="dock-menu-section-title">Main Assistant</div>
-            <div class="dock-menu-item" data-persona="ed">
-              <span class="dock-menu-icon">🎓</span>
-              <span>Ed (Male Voice)</span>
-            </div>
-            <div class="dock-menu-item" data-persona="edwina">
-              <span class="dock-menu-icon">🎓</span>
-              <span>Edwina (Female Voice)</span>
-            </div>
           </div>
         `;
         break;
