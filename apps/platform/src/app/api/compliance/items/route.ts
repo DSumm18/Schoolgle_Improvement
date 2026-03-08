@@ -1,73 +1,51 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+import { NextRequest } from "next/server";
+import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
+import { createServiceRoleClient } from "@/lib/supabase-server";
 
 /**
  * GET /api/compliance/items
  * List compliance items for an organization
  */
-export async function GET(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const organizationId = searchParams.get("organizationId");
-    const type = searchParams.get("type");
-    const status = searchParams.get("status");
+export const GET = protectedRoute(async (auth, request: NextRequest) => {
+  const { searchParams } = new URL(request.url);
+  const type = searchParams.get("type");
+  const status = searchParams.get("status");
 
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: "Missing organizationId parameter" },
-        { status: 400 },
-      );
-    }
+  const supabase = createServiceRoleClient();
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  let query = supabase
+    .from("compliance_items")
+    .select(
+      "*, current_version:compliance_versions(*), review_schedule:compliance_review_schedule(*)",
+    )
+    .eq("organization_id", auth.organizationId)
+    .order("updated_at", { ascending: false });
 
-    let query = supabase
-      .from("compliance_items")
-      .select(
-        "*, current_version:compliance_versions(*), review_schedule:compliance_review_schedule(*)",
-      )
-      .eq("organization_id", organizationId)
-      .order("updated_at", { ascending: false });
-
-    if (type) {
-      query = query.eq("type", type);
-    }
-    if (status) {
-      query = query.eq("status", status);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      console.error("Error fetching compliance items:", error);
-      return NextResponse.json(
-        { error: "Failed to fetch compliance items" },
-        { status: 500 },
-      );
-    }
-
-    return NextResponse.json({ items: data || [] });
-  } catch (error: any) {
-    console.error("Compliance items API error:", error);
-    return NextResponse.json(
-      { error: error.message || "Internal server error" },
-      { status: 500 },
-    );
+  if (type) {
+    query = query.eq("type", type);
   }
-}
+  if (status) {
+    query = query.eq("status", status);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error("Error fetching compliance items:", error);
+    return apiError("Failed to fetch compliance items", 500);
+  }
+
+  return apiSuccess({ items: data || [] });
+});
 
 /**
  * POST /api/compliance/items
  * Create a new compliance item
  */
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
+export const POST = protectedRoute(
+  async (auth, request: NextRequest) => {
+    const body = await request.json();
     const {
-      organizationId,
       type,
       title,
       status,
@@ -79,26 +57,22 @@ export async function POST(req: NextRequest) {
       content_format,
       content_html,
       content_md,
-      created_by_user_id,
       review_frequency,
       custom_days,
       reminder_days,
     } = body;
 
-    if (!organizationId || !type || !title) {
-      return NextResponse.json(
-        { error: "Missing required fields: organizationId, type, title" },
-        { status: 400 },
-      );
+    if (!type || !title) {
+      return apiError("Missing required fields: type, title", 400);
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createServiceRoleClient();
 
     // Create the compliance item
     const { data: item, error: itemError } = await supabase
       .from("compliance_items")
       .insert({
-        organization_id: organizationId,
+        organization_id: auth.organizationId,
         type,
         title,
         status: status || "draft",
@@ -113,10 +87,7 @@ export async function POST(req: NextRequest) {
 
     if (itemError) {
       console.error("Error creating compliance item:", itemError);
-      return NextResponse.json(
-        { error: "Failed to create compliance item" },
-        { status: 500 },
-      );
+      return apiError("Failed to create compliance item", 500);
     }
 
     // Create first version
@@ -132,7 +103,7 @@ export async function POST(req: NextRequest) {
         content_format: content_format || "html",
         content_html,
         content_md,
-        created_by_user_id,
+        created_by_user_id: auth.userId,
         change_summary: "Initial version",
         content_hash: contentHash,
       })
@@ -177,25 +148,20 @@ export async function POST(req: NextRequest) {
 
     // Audit log
     await supabase.from("compliance_audit_log").insert({
-      organization_id: organizationId,
+      organization_id: auth.organizationId,
       entity_type: "compliance_item",
       entity_id: item.id,
       action: "created",
-      actor_user_id: created_by_user_id,
+      actor_user_id: auth.userId,
       metadata: { type, title },
     });
 
-    return NextResponse.json(
+    return apiSuccess(
       {
         item: { ...item, current_version: version, review_schedule: schedule },
       },
-      { status: 201 },
+      201,
     );
-  } catch (error: any) {
-    console.error("Compliance item create error:", error);
-    return NextResponse.json(
-      { error: error.message || "Internal server error" },
-      { status: 500 },
-    );
-  }
-}
+  },
+  { requiredRole: "slt" },
+);

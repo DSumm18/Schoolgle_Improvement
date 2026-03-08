@@ -2,6 +2,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
+import { checkRateLimit, getRateLimitKey, RATE_LIMITS } from "@/lib/rate-limit";
 
 // Import Ed Orchestrator via webpack alias (see next.config.ts)
 import {
@@ -123,6 +124,27 @@ const QUICK_ANSWERS: Record<string, Record<string, string>> = {
  */
 export async function POST(request: NextRequest) {
   try {
+    // Auth check - require valid session for AI endpoint
+    const supabase = await createServerSupabaseClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: "Unauthorized", code: "UNAUTHORIZED" },
+        { status: 401 },
+      );
+    }
+
+    // Rate limit AI requests (20/min per user)
+    const rateLimited = checkRateLimit(
+      getRateLimitKey(request, "ed-chat", user.id),
+      RATE_LIMITS.ai,
+    );
+    if (rateLimited) return rateLimited;
+
     const body: ChatRequest = await request.json();
     const { question, image, context, pageState, formMode, language } = body;
 
@@ -132,9 +154,6 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
-
-    // Get user context from Supabase early (needed for form detection)
-    const supabase = await createServerSupabaseClient();
 
     // Phase 2: Check if this is a form helper request
     const isFormRequest = detectFormRequest(question, context?.url, formMode);
