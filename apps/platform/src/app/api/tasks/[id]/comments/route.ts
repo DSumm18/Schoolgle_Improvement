@@ -1,192 +1,141 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import type { TaskComment, TaskCommentForm, CommentAttachment } from '@/lib/tasks';
-import { v4 as uuidv4 } from 'uuid';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+import { NextRequest } from "next/server";
+import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
+import { createServiceRoleClient } from "@/lib/supabase-server";
+import type { TaskCommentForm } from "@/lib/tasks";
+import { v4 as uuidv4 } from "uuid";
 
 /**
  * GET /api/tasks/[id]/comments
  * Get comments for a task
  */
-export async function GET(
-    req: NextRequest,
-    { params }: { params: { id: string } }
-) {
-    try {
-        const { searchParams } = new URL(req.url);
-        const organizationId = searchParams.get('organizationId');
-        const taskId = params.id;
+export const GET = protectedRoute(async (auth, req: NextRequest) => {
+  const { searchParams } = new URL(req.url);
+  const organizationId =
+    searchParams.get("organizationId") || auth.organizationId;
+  const segments = req.nextUrl.pathname.split("/");
+  const taskId = segments[segments.indexOf("tasks") + 1];
 
-        if (!organizationId) {
-            return NextResponse.json(
-                { error: 'Missing organizationId parameter' },
-                { status: 400 }
-            );
-        }
+  const supabase = createServiceRoleClient();
 
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  const { data: comments, error } = await supabase
+    .from("task_comments")
+    .select(
+      `
+            *,
+            user:users!task_comments_user_id_fkey (
+                id,
+                email,
+                raw_user_meta_data->>'full_name' as full_name,
+                raw_user_meta_data->>'avatar_url' as avatar_url
+            )
+        `,
+    )
+    .eq("organization_id", organizationId)
+    .eq("task_id", taskId)
+    .order("created_at", { ascending: true });
 
-        const { data: comments, error } = await supabase
-            .from('task_comments')
-            .select(`
-                *,
-                user:users!task_comments_user_id_fkey (
-                    id,
-                    email,
-                    raw_user_meta_data->>'full_name' as full_name,
-                    raw_user_meta_data->>'avatar_url' as avatar_url
-                )
-            `)
-            .eq('organization_id', organizationId)
-            .eq('task_id', taskId)
-            .order('created_at', { ascending: true });
+  if (error) {
+    console.error("Error fetching comments:", error);
+    return apiError("Failed to fetch comments", 500);
+  }
 
-        if (error) {
-            console.error('Error fetching comments:', error);
-            return NextResponse.json(
-                { error: 'Failed to fetch comments' },
-                { status: 500 }
-            );
-        }
+  // Enrich with parent/child relationships
+  const enrichedComments = (comments || []).map((comment: any) => ({
+    ...comment,
+    user_name: comment.user?.full_name || comment.user?.email || "System",
+    user_email: comment.user?.email || null,
+    user_avatar: comment.user?.avatar_url || null,
+  }));
 
-        // Enrich with parent/child relationships
-        const enrichedComments = (comments || []).map((comment: any) => ({
-            ...comment,
-            user_name: comment.user?.full_name || comment.user?.email || 'System',
-            user_email: comment.user?.email || null,
-            user_avatar: comment.user?.avatar_url || null,
-        }));
-
-        return NextResponse.json({ comments: enrichedComments });
-
-    } catch (error: any) {
-        console.error('Task Comments API error:', error);
-        return NextResponse.json(
-            { error: error.message || 'Internal server error' },
-            { status: 500 }
-        );
-    }
-}
+  return apiSuccess({ comments: enrichedComments });
+});
 
 /**
  * POST /api/tasks/[id]/comments
  * Add a comment to a task
  */
-export async function POST(
-    req: NextRequest,
-    { params }: { params: { id: string } }
-) {
-    try {
-        const body = await req.json();
-        const {
-            organizationId,
-            taskSource,
-            content,
-            comment_type,
-            parent_comment_id,
-            attachments,
-            userId,
-        } = body as TaskCommentForm & { organizationId: string; userId?: string };
+export const POST = protectedRoute(async (auth, req: NextRequest) => {
+  const body = await req.json();
+  const {
+    organizationId,
+    taskSource,
+    content,
+    comment_type,
+    parent_comment_id,
+    attachments,
+    userId,
+  } = body as TaskCommentForm & { organizationId: string; userId?: string };
 
-        if (!organizationId || !content) {
-            return NextResponse.json(
-                { error: 'Missing required fields: organizationId, content' },
-                { status: 400 }
-            );
-        }
+  const orgId = organizationId || auth.organizationId;
+  const segments = req.nextUrl.pathname.split("/");
+  const taskId = segments[segments.indexOf("tasks") + 1];
 
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  if (!content) {
+    return apiError("Missing required fields: content", 400);
+  }
 
-        const { data: comment, error } = await supabase
-            .from('task_comments')
-            .insert({
-                id: uuidv4(),
-                organization_id: organizationId,
-                task_id: params.id,
-                task_source: taskSource || 'actions',
-                content,
-                comment_type: comment_type || 'comment',
-                attachments: attachments || [],
-                parent_comment_id: parent_comment_id || null,
-                user_id: userId || null,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-            })
-            .select()
-            .single();
+  const supabase = createServiceRoleClient();
 
-        if (error) {
-            console.error('Error creating comment:', error);
-            return NextResponse.json(
-                { error: 'Failed to create comment' },
-                { status: 500 }
-            );
-        }
+  const { data: comment, error } = await supabase
+    .from("task_comments")
+    .insert({
+      id: uuidv4(),
+      organization_id: orgId,
+      task_id: taskId,
+      task_source: taskSource || "actions",
+      content,
+      comment_type: comment_type || "comment",
+      attachments: attachments || [],
+      parent_comment_id: parent_comment_id || null,
+      user_id: userId || auth.userId,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .select()
+    .single();
 
-        // Update task's updated_at timestamp
-        const tableName = taskSource || 'actions';
-        await supabase
-            .from(tableName)
-            .update({ updated_at: new Date().toISOString() })
-            .eq('id', params.id)
-            .eq('organization_id', organizationId);
+  if (error) {
+    console.error("Error creating comment:", error);
+    return apiError("Failed to create comment", 500);
+  }
 
-        return NextResponse.json({ comment }, { status: 201 });
+  // Update task's updated_at timestamp
+  const tableName = taskSource || "actions";
+  await supabase
+    .from(tableName)
+    .update({ updated_at: new Date().toISOString() })
+    .eq("id", taskId)
+    .eq("organization_id", orgId);
 
-    } catch (error: any) {
-        console.error('Comment creation error:', error);
-        return NextResponse.json(
-            { error: error.message || 'Internal server error' },
-            { status: 500 }
-        );
-    }
-}
+  return apiSuccess({ comment }, 201);
+});
 
 /**
  * DELETE /api/tasks/[id]/comments
  * Delete a comment
  */
-export async function DELETE(
-    req: NextRequest,
-    { params }: { params: { id: string } }
-) {
-    try {
-        const { searchParams } = new URL(req.url);
-        const organizationId = searchParams.get('organizationId');
-        const commentId = searchParams.get('commentId');
+export const DELETE = protectedRoute(async (auth, req: NextRequest) => {
+  const { searchParams } = new URL(req.url);
+  const organizationId =
+    searchParams.get("organizationId") || auth.organizationId;
+  const commentId = searchParams.get("commentId");
 
-        if (!organizationId || !commentId) {
-            return NextResponse.json(
-                { error: 'Missing required parameters: organizationId, commentId' },
-                { status: 400 }
-            );
-        }
+  if (!commentId) {
+    return apiError("Missing required parameters: commentId", 400);
+  }
 
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  const supabase = createServiceRoleClient();
 
-        const { error } = await supabase
-            .from('task_comments')
-            .delete()
-            .eq('id', commentId)
-            .eq('organization_id', organizationId);
+  const { error } = await supabase
+    .from("task_comments")
+    .delete()
+    .eq("id", commentId)
+    .eq("organization_id", organizationId);
 
-        if (error) {
-            console.error('Error deleting comment:', error);
-            return NextResponse.json(
-                { error: 'Failed to delete comment' },
-                { status: 500 }
-            );
-        }
+  if (error) {
+    console.error("Error deleting comment:", error);
+    return apiError("Failed to delete comment", 500);
+  }
 
-        return NextResponse.json({ success: true });
-
-    } catch (error: any) {
-        console.error('Comment deletion error:', error);
-        return NextResponse.json(
-            { error: error.message || 'Internal server error' },
-            { status: 500 }
-        );
-    }
-}
+  return apiSuccess({ success: true });
+});

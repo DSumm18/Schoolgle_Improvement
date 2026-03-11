@@ -43,6 +43,7 @@ export default function ComplianceDashboard({
 }: ComplianceDashboardProps) {
   const [stats, setStats] = useState<ComplianceDashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState("");
   const [activeTab, setActiveTab] = useState("overview");
   const [view, setView] = useState<View>("dashboard");
   const [editPolicyId, setEditPolicyId] = useState<string | undefined>();
@@ -55,6 +56,7 @@ export default function ComplianceDashboard({
 
   const fetchDashboard = async () => {
     setLoading(true);
+    setFetchError("");
     try {
       const response = await fetch(
         `/api/compliance/dashboard?organizationId=${organizationId}`,
@@ -62,9 +64,14 @@ export default function ComplianceDashboard({
       if (response.ok) {
         const data = await response.json();
         setStats(data);
+      } else {
+        setFetchError("Failed to load compliance data. Please try again.");
       }
     } catch (error) {
       console.error("Failed to fetch compliance dashboard:", error);
+      setFetchError(
+        "Network error loading compliance data. Please check your connection.",
+      );
     } finally {
       setLoading(false);
     }
@@ -197,6 +204,23 @@ export default function ComplianceDashboard({
               </CardContent>
             </Card>
           ))}
+        </div>
+      )}
+
+      {/* Error Banner */}
+      {fetchError && (
+        <div className="flex items-center gap-3 px-4 py-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-xl">
+          <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 shrink-0" />
+          <p className="text-sm text-red-800 dark:text-red-300">{fetchError}</p>
+          <button
+            onClick={() => {
+              setFetchError("");
+              fetchDashboard();
+            }}
+            className="ml-auto text-sm font-medium text-red-600 hover:text-red-800 dark:text-red-400"
+          >
+            Retry
+          </button>
         </div>
       )}
 
@@ -342,7 +366,11 @@ function OverviewTab({
                   </p>
                 </div>
               </div>
-              <Button size="sm" variant="outline">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setActiveTab("policies")}
+              >
                 Review
               </Button>
             </div>
@@ -358,7 +386,11 @@ function OverviewTab({
                   </p>
                 </div>
               </div>
-              <Button size="sm" variant="outline">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setActiveTab("policies")}
+              >
                 Review
               </Button>
             </div>
@@ -374,7 +406,11 @@ function OverviewTab({
                   </p>
                 </div>
               </div>
-              <Button size="sm" variant="outline">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setActiveTab("training")}
+              >
                 Review
               </Button>
             </div>
@@ -390,7 +426,11 @@ function OverviewTab({
                   </p>
                 </div>
               </div>
-              <Button size="sm" variant="outline">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setActiveTab("gdpr")}
+              >
                 View
               </Button>
             </div>

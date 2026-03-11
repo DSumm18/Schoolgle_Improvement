@@ -18,6 +18,7 @@ import {
   buildEnrichedPrompt,
   getTypeSpecificGuidance,
   buildSchoolContextBlock,
+  buildIntelligenceContextBlock,
 } from "./context-loader";
 
 /**
@@ -77,11 +78,13 @@ export async function routeToSpecialist(
     throw new Error(`Specialist not found: ${classification.specialist}`);
   }
 
-  // 5. Build enriched prompt with school context
-  const enrichedPrompt = buildSpecialistPrompt(
+  // 5. Build enriched prompt with school context (+ intelligence data if applicable)
+  const enrichedPrompt = await buildSpecialistPrompt(
     agent.systemPrompt,
     context.schoolData,
     question,
+    context,
+    agent.domain,
   );
 
   // 6. Call LLM via OpenRouter with Tools
@@ -195,11 +198,13 @@ export async function routeToSpecialist(
 /**
  * Build specialist prompt with school context
  */
-function buildSpecialistPrompt(
+async function buildSpecialistPrompt(
   basePrompt: string,
   schoolContext: SchoolContext | null | undefined,
   question: string,
-): string {
+  context?: AppContext,
+  domain?: string,
+): Promise<string> {
   let prompt = basePrompt;
 
   // Add school context if available
@@ -211,6 +216,24 @@ function buildSpecialistPrompt(
     const typeGuidance = getTypeSpecificGuidance(schoolContext);
     if (typeGuidance.length > 0) {
       prompt = `${prompt}\n\n## Additional Context for This School\n\n${typeGuidance.join("\n")}`;
+    }
+  }
+
+  // Inject intelligence data when the intelligence specialist is handling
+  if (domain === "intelligence" && context?.orgId && context?.supabase) {
+    try {
+      const intelligenceBlock = await buildIntelligenceContextBlock(
+        context.orgId,
+        context.supabase,
+      );
+      if (intelligenceBlock) {
+        prompt = `${prompt}\n\n${intelligenceBlock}`;
+      }
+    } catch (error) {
+      console.error(
+        "[Agent Router] Intelligence context injection error:",
+        error,
+      );
     }
   }
 
@@ -250,6 +273,8 @@ function getUpgradeMessage(domain: string): string {
       "Governance support is available on the Trusts plan. Upgrade to access trust governance guidance.",
     communications:
       "Communications support is available on the Schools plan. Upgrade to access parent and media guidance.",
+    intelligence:
+      "School Intelligence is available on the Schools plan. Upgrade to access cohort tracking, attainment gap analysis, and EEF research recommendations.",
   };
 
   return (

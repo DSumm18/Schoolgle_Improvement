@@ -4,6 +4,8 @@ import { ShieldCheck } from "lucide-react";
 import { useAuth } from "@/context/SupabaseAuthContext";
 import { ComplianceDashboard } from "@/components/compliance";
 import { ModulePageHeader } from "@/components/ui/module-page-header";
+import { FeatureChecklist } from "@/components/ui/feature-discovery";
+import { COMPLIANCE_FEATURES } from "@/lib/feature-definitions";
 
 export default function CompliancePage() {
   const { organization } = useAuth();
@@ -19,6 +21,12 @@ export default function CompliancePage() {
       />
 
       <ComplianceDashboard organizationId={organizationId} />
+
+      <FeatureChecklist
+        features={COMPLIANCE_FEATURES}
+        moduleFilter="compliance"
+        accentColor="#E6C3FF"
+      />
     </div>
   );
 }

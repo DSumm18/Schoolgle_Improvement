@@ -8,8 +8,13 @@
  * - Summary notifications (daily/weekly)
  */
 
-import { getComplianceTasks, type ComplianceTask } from '../database/tasks';
-import type { TaskFilters } from '@/types/estates-compliance';
+import { getComplianceTasks, type ComplianceTask } from "../database/tasks";
+import type { TaskFilters } from "@/types/estates-compliance";
+import {
+  sendEmail,
+  complianceReminderHtml,
+  dailySummaryHtml,
+} from "@/lib/email-service";
 
 // ============================================================================
 // Types
@@ -33,7 +38,7 @@ export interface ReminderNotification {
   recipientName: string;
   dueDate: string;
   daysUntilDue: number;
-  reminderType: 'upcoming' | 'due_today' | 'overdue' | 'escalation';
+  reminderType: "upcoming" | "due_today" | "overdue" | "escalation";
   subject: string;
   body: string;
   complianceDomain: string;
@@ -64,14 +69,14 @@ export interface DailySummaryData {
  * Get tasks that need reminders sent today
  */
 export async function getTasksNeedingReminders(
-  organizationId: string
+  organizationId: string,
 ): Promise<ReminderConfig[]> {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
   // Get all pending and in-progress tasks
   const filters: TaskFilters = {
-    status: ['pending', 'in_progress'],
+    status: ["pending", "in_progress"],
   };
 
   const { data: tasks } = await getComplianceTasks(organizationId, filters, {
@@ -87,7 +92,9 @@ export async function getTasksNeedingReminders(
     const dueDate = new Date(task.due_date);
     dueDate.setHours(0, 0, 0, 0);
 
-    const daysUntilDue = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    const daysUntilDue = Math.ceil(
+      (dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
+    );
 
     // Check if today is a reminder day
     const reminderDays = task.reminder_days || [7, 3, 1];
@@ -98,8 +105,8 @@ export async function getTasksNeedingReminders(
         dueDate: task.due_date,
         assignedTo: task.assigned_to || undefined,
         reminderDays,
-        reminderTime: task.reminder_time || '09:00',
-        complianceDomain: task.compliance_domain || 'general',
+        reminderTime: task.reminder_time || "09:00",
+        complianceDomain: task.compliance_domain || "general",
         priority: task.priority,
       });
     }
@@ -112,13 +119,13 @@ export async function getTasksNeedingReminders(
  * Get overdue tasks for escalation
  */
 export async function getOverdueTasksForEscalation(
-  organizationId: string
+  organizationId: string,
 ): Promise<ReminderConfig[]> {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
   const filters: TaskFilters = {
-    status: ['pending', 'in_progress'],
+    status: ["pending", "in_progress"],
   };
 
   const { data: tasks } = await getComplianceTasks(organizationId, filters, {
@@ -132,7 +139,9 @@ export async function getOverdueTasksForEscalation(
     if (!task.due_date) continue;
 
     const dueDate = new Date(task.due_date);
-    const daysOverdue = Math.ceil((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+    const daysOverdue = Math.ceil(
+      (today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24),
+    );
 
     // Escalate tasks that are 1, 3, 7, 14 days overdue
     if (daysOverdue > 0 && [1, 3, 7, 14].includes(daysOverdue)) {
@@ -142,8 +151,8 @@ export async function getOverdueTasksForEscalation(
         dueDate: task.due_date,
         assignedTo: task.assigned_to || undefined,
         reminderDays: [-daysOverdue], // Negative for overdue
-        reminderTime: task.reminder_time || '09:00',
-        complianceDomain: task.compliance_domain || 'general',
+        reminderTime: task.reminder_time || "09:00",
+        complianceDomain: task.compliance_domain || "general",
         priority: task.priority,
       });
     }
@@ -156,7 +165,7 @@ export async function getOverdueTasksForEscalation(
  * Get daily summary data for notifications
  */
 export async function getDailySummaryData(
-  organizationId: string
+  organizationId: string,
 ): Promise<DailySummaryData> {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -168,12 +177,14 @@ export async function getDailySummaryData(
   const { data: allTasks } = await getComplianceTasks(
     organizationId,
     undefined,
-    { page: 1, pageSize: 1000 }
+    { page: 1, pageSize: 1000 },
   );
 
   // Tasks due today
   const tasksDueToday = allTasks.filter(
-    (t) => t.due_date && new Date(t.due_date).toDateString() === today.toDateString()
+    (t) =>
+      t.due_date &&
+      new Date(t.due_date).toDateString() === today.toDateString(),
   );
 
   // Tasks due this week
@@ -181,7 +192,7 @@ export async function getDailySummaryData(
     (t) =>
       t.due_date &&
       new Date(t.due_date) >= today &&
-      new Date(t.due_date) <= weekEnd
+      new Date(t.due_date) <= weekEnd,
   );
 
   // Overdue tasks
@@ -189,7 +200,7 @@ export async function getDailySummaryData(
     (t) =>
       t.due_date &&
       new Date(t.due_date) < today &&
-      !['completed', 'cancelled'].includes(t.status)
+      !["completed", "cancelled"].includes(t.status),
   );
 
   // Group by domain
@@ -205,13 +216,13 @@ export async function getDailySummaryData(
   const criticalTasks = allTasks
     .filter(
       (t) =>
-        (t.priority === 'critical' || t.priority === 'high') &&
-        !['completed', 'cancelled'].includes(t.status)
+        (t.priority === "critical" || t.priority === "high") &&
+        !["completed", "cancelled"].includes(t.status),
     )
     .map((t) => ({
       id: t.id,
       title: t.title,
-      dueDate: t.due_date || '',
+      dueDate: t.due_date || "",
       priority: t.priority,
     }));
 
@@ -237,18 +248,26 @@ export function generateReminderEmail(
   config: ReminderConfig,
   recipientEmail: string,
   recipientName: string,
-  baseUrl: string
+  baseUrl: string,
 ): ReminderNotification {
   const dueDate = new Date(config.dueDate);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const daysUntilDue = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  const daysUntilDue = Math.ceil(
+    (dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
+  );
 
-  let reminderType: 'upcoming' | 'due_today' | 'overdue' | 'escalation' = 'upcoming';
-  if (daysUntilDue === 0) reminderType = 'due_today';
-  if (daysUntilDue < 0) reminderType = daysUntilDue <= -7 ? 'escalation' : 'overdue';
+  let reminderType: "upcoming" | "due_today" | "overdue" | "escalation" =
+    "upcoming";
+  if (daysUntilDue === 0) reminderType = "due_today";
+  if (daysUntilDue < 0)
+    reminderType = daysUntilDue <= -7 ? "escalation" : "overdue";
 
-  const subject = getReminderSubject(reminderType, config.taskTitle, daysUntilDue);
+  const subject = getReminderSubject(
+    reminderType,
+    config.taskTitle,
+    daysUntilDue,
+  );
   const body = getReminderBody(reminderType, config, daysUntilDue, baseUrl);
 
   return {
@@ -271,23 +290,23 @@ export function generateReminderEmail(
  * Get email subject based on reminder type
  */
 function getReminderSubject(
-  type: 'upcoming' | 'due_today' | 'overdue' | 'escalation',
+  type: "upcoming" | "due_today" | "overdue" | "escalation",
   taskTitle: string,
-  daysUntilDue: number
+  daysUntilDue: number,
 ): string {
-  const domain = 'Schoolgle Estates Compliance';
+  const domain = "Schoolgle Estates Compliance";
 
   switch (type) {
-    case 'upcoming':
+    case "upcoming":
       if (daysUntilDue === 1) {
         return `[${domain}] Reminder: ${taskTitle} due tomorrow`;
       }
       return `[${domain}] Reminder: ${taskTitle} due in ${daysUntilDue} days`;
-    case 'due_today':
+    case "due_today":
       return `[${domain}] URGENT: ${taskTitle} due today`;
-    case 'overdue':
+    case "overdue":
       return `[${domain}] OVERDUE: ${taskTitle} is ${Math.abs(daysUntilDue)} days overdue`;
-    case 'escalation':
+    case "escalation":
       return `[${domain}] ESCALATION: ${taskTitle} significantly overdue`;
     default:
       return `[${domain}] Compliance Task Reminder`;
@@ -298,18 +317,21 @@ function getReminderSubject(
  * Get email body based on reminder type
  */
 function getReminderBody(
-  type: 'upcoming' | 'due_today' | 'overdue' | 'escalation',
+  type: "upcoming" | "due_today" | "overdue" | "escalation",
   config: ReminderConfig,
   daysUntilDue: number,
-  baseUrl: string
+  baseUrl: string,
 ): string {
   const taskUrl = `${baseUrl}/estates-compliance/tasks/${config.taskId}`;
-  const dueDateFormatted = new Date(config.dueDate).toLocaleDateString('en-GB', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
+  const dueDateFormatted = new Date(config.dueDate).toLocaleDateString(
+    "en-GB",
+    {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    },
+  );
 
   let body = `Dear User,\n\n`;
   body += `This is a reminder about a compliance task that requires your attention:\n\n`;
@@ -319,20 +341,20 @@ function getReminderBody(
   body += `**Due Date:** ${dueDateFormatted}\n\n`;
 
   switch (type) {
-    case 'upcoming':
+    case "upcoming":
       if (daysUntilDue === 1) {
         body += `This task is due **tomorrow**. Please ensure it is completed on time.\n\n`;
       } else {
         body += `This task is due in **${daysUntilDue} days**. Please plan accordingly.\n\n`;
       }
       break;
-    case 'due_today':
+    case "due_today":
       body += `This task is **due today**. Please complete it as soon as possible.\n\n`;
       break;
-    case 'overdue':
+    case "overdue":
       body += `This task is **${Math.abs(daysUntilDue)} days overdue**. Please address this immediately.\n\n`;
       break;
-    case 'escalation':
+    case "escalation":
       body += `This task is **significantly overdue** and has been escalated to management.\n\n`;
       body += `Immediate action is required to maintain compliance.\n\n`;
       break;
@@ -356,13 +378,13 @@ export function generateDailySummaryEmail(
   data: DailySummaryData,
   recipientEmail: string,
   recipientName: string,
-  baseUrl: string
+  baseUrl: string,
 ): { subject: string; body: string } {
-  const today = new Date(data.date).toLocaleDateString('en-GB', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
+  const today = new Date(data.date).toLocaleDateString("en-GB", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
   });
 
   let subject = `[Schoolgle] Daily Compliance Summary - ${today}`;
@@ -385,7 +407,7 @@ export function generateDailySummaryEmail(
   if (data.criticalTasks.length > 0) {
     body += `**High Priority Tasks:**\n`;
     data.criticalTasks.forEach((task) => {
-      const dueDate = new Date(task.dueDate).toLocaleDateString('en-GB');
+      const dueDate = new Date(task.dueDate).toLocaleDateString("en-GB");
       body += `- ${task.title} (Due: ${dueDate}) [${task.priority}]\n`;
     });
     body += `\n`;
@@ -401,64 +423,91 @@ export function generateDailySummaryEmail(
 }
 
 // ============================================================================
-// Email Sending (Placeholder for actual email service integration)
+// Email Sending (via Resend)
 // ============================================================================
 
 /**
- * Send reminder email via Ed's unified communication system
+ * Send reminder email via Resend
  */
 export async function sendReminderEmail(
   notification: ReminderNotification,
-  organizationId: string
+  organizationId: string,
 ): Promise<{ success: boolean; error?: string }> {
-  try {
-    // In a production environment, this would call the /api/ed/communication/send endpoint
-    // or use the EdOrchestrator directly if running on the server.
-    const response = await fetch('/api/ed/communication/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        organizationId,
-        to: notification.recipientEmail,
-        subject: notification.subject,
-        body: notification.body,
-        channel: 'email',
-        priority: notification.priority === 'critical' || notification.priority === 'high' ? 'high' : 'normal'
-      }),
-    });
+  const html = complianceReminderHtml({
+    recipientName: notification.recipientName,
+    taskTitle: notification.taskTitle,
+    dueDate: new Date(notification.dueDate).toLocaleDateString("en-GB", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    }),
+    daysUntilDue: notification.daysUntilDue,
+    priority: notification.priority,
+    domain: notification.complianceDomain,
+    actionUrl: notification.actionUrl,
+    reminderType: notification.reminderType,
+  });
 
-    return { success: response.ok };
-  } catch (error: any) {
-    console.error('[Reminder Service] Error sending via Ed:', error);
-    return { success: false, error: error.message };
-  }
+  return sendEmail({
+    to: notification.recipientEmail,
+    subject: notification.subject,
+    html,
+    text: notification.body,
+    tags: [
+      { name: "type", value: "compliance-reminder" },
+      { name: "org", value: organizationId },
+    ],
+  });
 }
 
 /**
- * Send daily summary email (placeholder)
+ * Send daily summary email via Resend
  */
 export async function sendDailySummary(
   data: DailySummaryData,
   recipientEmail: string,
   recipientName: string,
-  baseUrl: string
+  baseUrl: string,
 ): Promise<{ success: boolean; error?: string }> {
   const { subject, body } = generateDailySummaryEmail(
     data,
     recipientEmail,
     recipientName,
-    baseUrl
+    baseUrl,
   );
 
-  console.log('[Reminder Service] Sending daily summary:', {
-    to: recipientEmail,
-    subject,
-    totalTasks: data.totalDueToday + data.totalDueThisWeek,
+  const dateFormatted = new Date(data.date).toLocaleDateString("en-GB", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
   });
 
-  // TODO: Integrate with email service
+  const html = dailySummaryHtml({
+    recipientName,
+    date: dateFormatted,
+    dueToday: data.totalDueToday,
+    dueThisWeek: data.totalDueThisWeek,
+    overdue: data.totalOverdue,
+    criticalTasks: data.criticalTasks.map((t) => ({
+      title: t.title,
+      dueDate: new Date(t.dueDate).toLocaleDateString("en-GB"),
+      priority: t.priority,
+    })),
+    dashboardUrl: `${baseUrl}/estates-compliance/tasks`,
+  });
 
-  return { success: true };
+  return sendEmail({
+    to: recipientEmail,
+    subject,
+    html,
+    text: body,
+    tags: [
+      { name: "type", value: "daily-summary" },
+      { name: "org", value: data.organizationId },
+    ],
+  });
 }
 
 // ============================================================================
@@ -471,7 +520,7 @@ export async function sendDailySummary(
  */
 export async function processDailyReminders(
   organizationId: string,
-  baseUrl: string
+  baseUrl: string,
 ): Promise<{
   processed: number;
   sent: number;
@@ -497,14 +546,14 @@ export async function processDailyReminders(
       // 3. Send the email
 
       // For now, we'll log the reminder
-      const mockEmail = 'user@school.example.uk';
-      const mockName = 'Site Manager';
+      const mockEmail = "user@school.example.uk";
+      const mockName = "Site Manager";
 
       const notification = generateReminderEmail(
         config,
         mockEmail,
         mockName,
-        baseUrl
+        baseUrl,
       );
 
       const result = await sendReminderEmail(notification, organizationId);
@@ -515,14 +564,14 @@ export async function processDailyReminders(
         failed++;
         errors.push({
           taskId: config.taskId,
-          error: result.error || 'Unknown error',
+          error: result.error || "Unknown error",
         });
       }
     } catch (error: any) {
       failed++;
       errors.push({
         taskId: config.taskId,
-        error: error.message || 'Unknown error',
+        error: error.message || "Unknown error",
       });
     }
   }

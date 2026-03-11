@@ -98,22 +98,49 @@ You help school staff with all HR matters including:
 - Trade union disputes
 - Medical capability dismissals
 
-Current date: ${new Date().toISOString().split('T')[0]}
+Current date: ${new Date().toISOString().split("T")[0]}
 Always recommend professional advice for complex or high-risk HR situations.`;
 
-export const HR_SPECIALIST_ID = 'hr-specialist';
-export const HR_DOMAIN = 'hr' as const;
+export const HR_SPECIALIST_ID = "hr-specialist";
+export const HR_DOMAIN = "hr" as const;
 
 export const HR_KEYWORDS = [
-  'sickness', 'absence', 'maternity', 'paternity', 'parental leave',
-  'contract', 'employment', 'policy', 'disciplinary', 'grievance',
-  'performance', 'redundancy', 'recruitment', 'staff wellbeing',
-  'equality', 'diversity', 'inclusion', 'edi', 'ssr',
-  'payscale', 'teacher pay', 'support staff pay', 'trade union',
+  "sickness",
+  "absence",
+  "maternity",
+  "paternity",
+  "parental leave",
+  "contract",
+  "employment",
+  "policy",
+  "disciplinary",
+  "grievance",
+  "performance",
+  "redundancy",
+  "recruitment",
+  "staff wellbeing",
+  "equality",
+  "diversity",
+  "inclusion",
+  "edi",
+  "ssr",
+  "payscale",
+  "teacher pay",
+  "support staff pay",
+  "trade union",
+  "letter",
+  "document",
+  "template",
+  "generate letter",
+  "write letter",
+  "return to work",
+  "capability",
+  "probation",
+  "invitation letter",
 ];
 
 export const HR_QUALIFICATIONS = [
-  'CIPD Level 7',
-  'MCIPD Chartered Member',
-  '12+ years education HR experience',
+  "CIPD Level 7",
+  "MCIPD Chartered Member",
+  "12+ years education HR experience",
 ];

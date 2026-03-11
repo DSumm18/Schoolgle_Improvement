@@ -1,62 +1,37 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
+import { createServiceRoleClient } from "@/lib/supabase-server";
 
 /**
  * GET /api/compliance/training/courses
  * List training courses (global + org-specific)
  */
-export async function GET(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const organizationId = searchParams.get("organizationId");
+export const GET = protectedRoute(async (auth, request) => {
+  const { organizationId } = auth;
+  const supabase = createServiceRoleClient();
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  const { data, error } = await supabase
+    .from("compliance_training_courses")
+    .select("*")
+    .or(`is_global.eq.true,organization_id.eq.${organizationId}`)
+    .order("title", { ascending: true });
 
-    let query = supabase
-      .from("compliance_training_courses")
-      .select("*")
-      .order("title", { ascending: true });
-
-    if (organizationId) {
-      query = query.or(
-        `is_global.eq.true,organization_id.eq.${organizationId}`,
-      );
-    } else {
-      query = query.eq("is_global", true);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      console.error("Error fetching courses:", error);
-      return NextResponse.json(
-        { error: "Failed to fetch courses" },
-        { status: 500 },
-      );
-    }
-
-    return NextResponse.json({ courses: data || [] });
-  } catch (error: any) {
-    console.error("Courses API error:", error);
-    return NextResponse.json(
-      { error: error.message || "Internal server error" },
-      { status: 500 },
-    );
+  if (error) {
+    console.error("Error fetching courses:", error);
+    return apiError("Failed to fetch courses", 500);
   }
-}
+
+  return apiSuccess({ courses: data || [] });
+});
 
 /**
  * POST /api/compliance/training/courses
  * Create an org-specific training course
  */
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
+export const POST = protectedRoute(
+  async (auth, request) => {
+    const { organizationId, userId } = auth;
+    const body = await request.json();
     const {
-      organizationId,
       title,
       description,
       provider_name,
@@ -66,14 +41,11 @@ export async function POST(req: NextRequest) {
       category,
     } = body;
 
-    if (!organizationId || !title) {
-      return NextResponse.json(
-        { error: "Missing required fields: organizationId, title" },
-        { status: 400 },
-      );
+    if (!title) {
+      return apiError("Missing required field: title", 400);
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createServiceRoleClient();
 
     const { data: course, error } = await supabase
       .from("compliance_training_courses")
@@ -93,10 +65,7 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       console.error("Error creating course:", error);
-      return NextResponse.json(
-        { error: "Failed to create course" },
-        { status: 500 },
-      );
+      return apiError("Failed to create course", 500);
     }
 
     // Audit log
@@ -105,15 +74,11 @@ export async function POST(req: NextRequest) {
       entity_type: "training_course",
       entity_id: course.id,
       action: "created",
+      actor_user_id: userId,
       metadata: { title },
     });
 
-    return NextResponse.json({ course }, { status: 201 });
-  } catch (error: any) {
-    console.error("Course create error:", error);
-    return NextResponse.json(
-      { error: error.message || "Internal server error" },
-      { status: 500 },
-    );
-  }
-}
+    return apiSuccess({ course }, 201);
+  },
+  { requiredRole: "teacher" },
+);

@@ -1,59 +1,39 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { inviteUserSchema, validateRequest } from '@/lib/validations';
-import { standardLimiter } from '@/lib/rateLimit';
+import { NextRequest } from "next/server";
+import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
+import { createServiceRoleClient } from "@/lib/supabase-server";
+import { inviteUserSchema, validateRequest } from "@/lib/validations";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+export const POST = protectedRoute(async (auth, req: NextRequest) => {
+  const supabase = createServiceRoleClient();
 
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  // Parse and validate request body
+  const body = await req.json();
+  const validation = validateRequest(inviteUserSchema, body);
 
-export async function POST(req: NextRequest) {
-    try {
-        // Rate limiting check
-        const rateLimitResult = await standardLimiter.check(req);
-        if (!rateLimitResult.allowed) {
-            return rateLimitResult.response!;
-        }
+  if (!validation.success) {
+    return apiError(validation.error, 400);
+  }
 
-        // Parse and validate request body
-        const body = await req.json();
-        const validation = validateRequest(inviteUserSchema, body);
+  const { email, role, organizationId, invitedBy } = validation.data;
+  const orgId = organizationId || auth.organizationId;
 
-        if (!validation.success) {
-            return NextResponse.json({ error: validation.error }, { status: 400 });
-        }
+  // Create invitation
+  const { data: invitation, error } = await supabase
+    .from("invitations")
+    .insert({
+      email,
+      role,
+      organization_id: orgId,
+      invited_by: invitedBy,
+      status: "pending",
+    })
+    .select()
+    .single();
 
-        const { email, role, organizationId, invitedBy } = validation.data;
+  if (error) {
+    console.error("Error creating invitation:", error);
+    return apiError("Failed to create invitation", 500);
+  }
 
-        // Check if user is already a member
-        // (Optional check, but good UX)
-
-        // Create invitation
-        const { data: invitation, error } = await supabase
-            .from('invitations')
-            .insert({
-                email,
-                role,
-                organization_id: organizationId,
-                invited_by: invitedBy,
-                status: 'pending'
-            })
-            .select()
-            .single();
-
-        if (error) {
-            console.error('Error creating invitation:', error);
-            return NextResponse.json({ error: 'Failed to create invitation' }, { status: 500 });
-        }
-
-        // In a real app, we would send an email here using SendGrid/Resend.
-        // For now, we return the invitation so the frontend can show a link.
-
-        return NextResponse.json({ invitation });
-
-    } catch (error: any) {
-        console.error('Invite API error:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-}
+  return apiSuccess({ invitation });
+});

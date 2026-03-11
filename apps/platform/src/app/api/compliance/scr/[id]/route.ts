@@ -1,8 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+import { NextRequest } from "next/server";
+import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
+import { createServiceRoleClient } from "@/lib/supabase-server";
 
 /**
  * GET /api/compliance/scr/[id]
@@ -12,9 +10,9 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  try {
+  const wrappedHandler = protectedRoute(async (auth, request) => {
     const { id } = await params;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createServiceRoleClient();
 
     const { data: entry, error } = await supabase
       .from("compliance_scr_entries")
@@ -23,20 +21,13 @@ export async function GET(
       .single();
 
     if (error || !entry) {
-      return NextResponse.json(
-        { error: "SCR entry not found" },
-        { status: 404 },
-      );
+      return apiError("SCR entry not found", 404);
     }
 
-    return NextResponse.json({ entry });
-  } catch (error: any) {
-    console.error("SCR entry GET error:", error);
-    return NextResponse.json(
-      { error: error.message || "Internal server error" },
-      { status: 500 },
-    );
-  }
+    return apiSuccess({ entry });
+  });
+
+  return wrappedHandler(req);
 }
 
 /**
@@ -47,89 +38,84 @@ export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  try {
-    const { id } = await params;
-    const body = await req.json();
-    const { user_id, ...fields } = body;
+  const wrappedHandler = protectedRoute(
+    async (auth, request) => {
+      const { id } = await params;
+      const body = await request.json();
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+      const supabase = createServiceRoleClient();
 
-    const updateData: Record<string, any> = {
-      updated_at: new Date().toISOString(),
-    };
+      const updateData: Record<string, any> = {
+        updated_at: new Date().toISOString(),
+      };
 
-    const allowedFields = [
-      "staff_name",
-      "role",
-      "start_date",
-      "dbs_certificate_number",
-      "dbs_date",
-      "dbs_type",
-      "dbs_update_service",
-      "dbs_update_service_checked_date",
-      "barred_list_checked",
-      "barred_list_checked_date",
-      "identity_verified",
-      "identity_verified_date",
-      "qualifications_verified",
-      "qualifications_verified_date",
-      "right_to_work_verified",
-      "right_to_work_verified_date",
-      "prohibition_check",
-      "prohibition_check_date",
-      "section_128_check",
-      "section_128_check_date",
-      "overseas_check",
-      "overseas_check_date",
-      "references_received",
-      "references_received_date",
-      "medical_clearance",
-      "medical_clearance_date",
-      "safeguarding_training_date",
-      "safeguarding_training_level",
-      "notes",
-      "status",
-    ];
+      const allowedFields = [
+        "staff_name",
+        "role",
+        "start_date",
+        "dbs_certificate_number",
+        "dbs_date",
+        "dbs_type",
+        "dbs_update_service",
+        "dbs_update_service_checked_date",
+        "barred_list_checked",
+        "barred_list_checked_date",
+        "identity_verified",
+        "identity_verified_date",
+        "qualifications_verified",
+        "qualifications_verified_date",
+        "right_to_work_verified",
+        "right_to_work_verified_date",
+        "prohibition_check",
+        "prohibition_check_date",
+        "section_128_check",
+        "section_128_date",
+        "overseas_check",
+        "overseas_check_date",
+        "references_received",
+        "references_received_date",
+        "medical_clearance",
+        "medical_clearance_date",
+        "safeguarding_training_date",
+        "safeguarding_training_level",
+        "notes",
+        "status",
+      ];
 
-    for (const field of allowedFields) {
-      if (fields[field] !== undefined) {
-        updateData[field] = fields[field];
+      for (const field of allowedFields) {
+        if (body[field] !== undefined) {
+          updateData[field] = body[field];
+        }
       }
-    }
 
-    const { data, error } = await supabase
-      .from("compliance_scr_entries")
-      .update(updateData)
-      .eq("id", id)
-      .select()
-      .single();
+      const { data, error } = await supabase
+        .from("compliance_scr_entries")
+        .update(updateData)
+        .eq("id", id)
+        .select()
+        .single();
 
-    if (error) {
-      console.error("Error updating SCR entry:", error);
-      return NextResponse.json(
-        { error: "Failed to update SCR entry" },
-        { status: 500 },
-      );
-    }
+      if (error) {
+        console.error("Error updating SCR entry:", error);
+        return apiError("Failed to update SCR entry", 500);
+      }
 
-    // Audit log
-    await supabase.from("compliance_audit_log").insert({
-      organization_id: data.organization_id,
-      entity_type: "scr_entry",
-      entity_id: id,
-      action: "updated",
-      actor_user_id: user_id || null,
-      metadata: updateData,
-    });
+      // Audit log
+      await supabase.from("compliance_audit_log").insert({
+        organization_id: data.organization_id,
+        entity_type: "scr_entry",
+        entity_id: id,
+        action: "updated",
+        actor_user_id: auth.userId,
+        metadata: updateData,
+      });
 
-    return NextResponse.json({ entry: data });
-  } catch (error: any) {
-    console.error("SCR entry PUT error:", error);
-    return NextResponse.json(
-      { error: error.message || "Internal server error" },
-      { status: 500 },
-    );
-  }
+      return apiSuccess({ entry: data });
+    },
+    { requiredRole: "slt" },
+  );
+
+  return wrappedHandler(req);
 }
 
 /**
@@ -140,44 +126,37 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  try {
-    const { id } = await params;
-    const { searchParams } = new URL(req.url);
-    const actorUserId = searchParams.get("actorUserId");
+  const wrappedHandler = protectedRoute(
+    async (auth, request) => {
+      const { id } = await params;
+      const supabase = createServiceRoleClient();
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+      const { data, error } = await supabase
+        .from("compliance_scr_entries")
+        .update({ status: "leaver", updated_at: new Date().toISOString() })
+        .eq("id", id)
+        .select()
+        .single();
 
-    const { data, error } = await supabase
-      .from("compliance_scr_entries")
-      .update({ status: "leaver", updated_at: new Date().toISOString() })
-      .eq("id", id)
-      .select()
-      .single();
+      if (error) {
+        console.error("Error archiving SCR entry:", error);
+        return apiError("Failed to archive SCR entry", 500);
+      }
 
-    if (error) {
-      console.error("Error archiving SCR entry:", error);
-      return NextResponse.json(
-        { error: "Failed to archive SCR entry" },
-        { status: 500 },
-      );
-    }
+      // Audit log
+      await supabase.from("compliance_audit_log").insert({
+        organization_id: data.organization_id,
+        entity_type: "scr_entry",
+        entity_id: id,
+        action: "archived",
+        actor_user_id: auth.userId,
+        metadata: { status: "leaver" },
+      });
 
-    // Audit log
-    await supabase.from("compliance_audit_log").insert({
-      organization_id: data.organization_id,
-      entity_type: "scr_entry",
-      entity_id: id,
-      action: "archived",
-      actor_user_id: actorUserId,
-      metadata: { status: "leaver" },
-    });
+      return apiSuccess({ entry: data });
+    },
+    { requiredRole: "slt" },
+  );
 
-    return NextResponse.json({ entry: data });
-  } catch (error: any) {
-    console.error("SCR entry DELETE error:", error);
-    return NextResponse.json(
-      { error: error.message || "Internal server error" },
-      { status: 500 },
-    );
-  }
+  return wrappedHandler(req);
 }

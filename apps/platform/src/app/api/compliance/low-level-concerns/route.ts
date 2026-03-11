@@ -1,67 +1,46 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
+import { createServiceRoleClient } from "@/lib/supabase-server";
 
 /**
  * GET /api/compliance/low-level-concerns
  * List low-level concerns for an organization
  */
-export async function GET(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const organizationId = searchParams.get("organizationId");
-    const status = searchParams.get("status");
+export const GET = protectedRoute(async (auth, request) => {
+  const { organizationId } = auth;
+  const { searchParams } = new URL(request.url);
+  const status = searchParams.get("status");
 
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: "Missing organizationId parameter" },
-        { status: 400 },
-      );
-    }
+  const supabase = createServiceRoleClient();
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  let query = supabase
+    .from("compliance_low_level_concerns")
+    .select("*")
+    .eq("organization_id", organizationId)
+    .order("updated_at", { ascending: false });
 
-    let query = supabase
-      .from("compliance_low_level_concerns")
-      .select("*")
-      .eq("organization_id", organizationId)
-      .order("updated_at", { ascending: false });
-
-    if (status) {
-      query = query.eq("status", status);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      console.error("Error fetching low-level concerns:", error);
-      return NextResponse.json(
-        { error: "Failed to fetch low-level concerns" },
-        { status: 500 },
-      );
-    }
-
-    return NextResponse.json({ concerns: data || [] });
-  } catch (error: any) {
-    console.error("Low-level concerns API error:", error);
-    return NextResponse.json(
-      { error: error.message || "Internal server error" },
-      { status: 500 },
-    );
+  if (status) {
+    query = query.eq("status", status);
   }
-}
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error("Error fetching low-level concerns:", error);
+    return apiError("Failed to fetch low-level concerns", 500);
+  }
+
+  return apiSuccess({ concerns: data || [] });
+});
 
 /**
  * POST /api/compliance/low-level-concerns
  * Create a new low-level concern
  */
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
+export const POST = protectedRoute(
+  async (auth, request) => {
+    const { organizationId, userId } = auth;
+    const body = await request.json();
     const {
-      organizationId,
       subject_name,
       subject_role,
       reported_by,
@@ -83,20 +62,16 @@ export async function POST(req: NextRequest) {
       outcome,
       status,
       notes,
-      user_id,
     } = body;
 
-    if (!organizationId || !subject_name || !description) {
-      return NextResponse.json(
-        {
-          error:
-            "Missing required fields: organizationId, subject_name, description",
-        },
-        { status: 400 },
+    if (!subject_name || !description) {
+      return apiError(
+        "Missing required fields: subject_name, description",
+        400,
       );
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createServiceRoleClient();
 
     const { data: concern, error } = await supabase
       .from("compliance_low_level_concerns")
@@ -130,10 +105,7 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       console.error("Error creating low-level concern:", error);
-      return NextResponse.json(
-        { error: "Failed to create low-level concern" },
-        { status: 500 },
-      );
+      return apiError("Failed to create low-level concern", 500);
     }
 
     // Audit log
@@ -142,16 +114,11 @@ export async function POST(req: NextRequest) {
       entity_type: "low_level_concern",
       entity_id: concern.id,
       action: "created",
-      actor_user_id: user_id || null,
+      actor_user_id: userId,
       metadata: { subject_name, category, risk_level: risk_level || "low" },
     });
 
-    return NextResponse.json({ concern }, { status: 201 });
-  } catch (error: any) {
-    console.error("Low-level concern create error:", error);
-    return NextResponse.json(
-      { error: error.message || "Internal server error" },
-      { status: 500 },
-    );
-  }
-}
+    return apiSuccess({ concern }, 201);
+  },
+  { requiredRole: "slt" },
+);

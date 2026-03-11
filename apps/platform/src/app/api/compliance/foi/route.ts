@@ -1,8 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
+import { createServiceRoleClient } from "@/lib/supabase-server";
 
 /**
  * Calculate deadline date: received + 20 working days
@@ -25,53 +22,33 @@ function addWorkingDays(startDate: string, days: number): string {
  * GET /api/compliance/foi
  * List FOI requests for an organization
  */
-export async function GET(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const organizationId = searchParams.get("organizationId");
+export const GET = protectedRoute(async (auth, request) => {
+  const { organizationId } = auth;
+  const supabase = createServiceRoleClient();
 
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: "Missing organizationId parameter" },
-        { status: 400 },
-      );
-    }
+  const { data, error } = await supabase
+    .from("compliance_foi_requests")
+    .select("*")
+    .eq("organization_id", organizationId)
+    .order("updated_at", { ascending: false });
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    const { data, error } = await supabase
-      .from("compliance_foi_requests")
-      .select("*")
-      .eq("organization_id", organizationId)
-      .order("updated_at", { ascending: false });
-
-    if (error) {
-      console.error("Error fetching FOI requests:", error);
-      return NextResponse.json(
-        { error: "Failed to fetch FOI requests" },
-        { status: 500 },
-      );
-    }
-
-    return NextResponse.json({ requests: data || [] });
-  } catch (error: any) {
-    console.error("FOI API error:", error);
-    return NextResponse.json(
-      { error: error.message || "Internal server error" },
-      { status: 500 },
-    );
+  if (error) {
+    console.error("Error fetching FOI requests:", error);
+    return apiError("Failed to fetch FOI requests", 500);
   }
-}
+
+  return apiSuccess({ requests: data || [] });
+});
 
 /**
  * POST /api/compliance/foi
  * Create a new FOI request (auto-calculates deadline as received + 20 working days)
  */
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
+export const POST = protectedRoute(
+  async (auth, request) => {
+    const { organizationId, userId } = auth;
+    const body = await request.json();
     const {
-      organizationId,
       requester_name,
       requester_email,
       requester_address,
@@ -83,25 +60,21 @@ export async function POST(req: NextRequest) {
       exemptions_applied,
       response_summary,
       notes,
-      user_id,
     } = body;
 
-    if (!organizationId || !requester_name || !description) {
-      return NextResponse.json(
-        {
-          error:
-            "Missing required fields: organizationId, requester_name, description",
-        },
-        { status: 400 },
+    if (!requester_name || !description) {
+      return apiError(
+        "Missing required fields: requester_name, description",
+        400,
       );
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createServiceRoleClient();
 
     const received = date_received || new Date().toISOString().split("T")[0];
     const deadline_date = addWorkingDays(received, 20);
 
-    const { data: request, error } = await supabase
+    const { data: foiRequest, error } = await supabase
       .from("compliance_foi_requests")
       .insert({
         organization_id: organizationId,
@@ -123,28 +96,20 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       console.error("Error creating FOI request:", error);
-      return NextResponse.json(
-        { error: "Failed to create FOI request" },
-        { status: 500 },
-      );
+      return apiError("Failed to create FOI request", 500);
     }
 
     // Audit log
     await supabase.from("compliance_audit_log").insert({
       organization_id: organizationId,
       entity_type: "foi_request",
-      entity_id: request.id,
+      entity_id: foiRequest.id,
       action: "created",
-      actor_user_id: user_id || null,
+      actor_user_id: userId,
       metadata: { requester_name, deadline_date, description },
     });
 
-    return NextResponse.json({ request }, { status: 201 });
-  } catch (error: any) {
-    console.error("FOI create error:", error);
-    return NextResponse.json(
-      { error: error.message || "Internal server error" },
-      { status: 500 },
-    );
-  }
-}
+    return apiSuccess({ request: foiRequest }, 201);
+  },
+  { requiredRole: "slt" },
+);

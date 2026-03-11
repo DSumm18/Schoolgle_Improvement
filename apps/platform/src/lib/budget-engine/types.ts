@@ -91,6 +91,12 @@ export interface ICFPBenchmark {
   narrative: string;
 }
 
+export interface StructuralViabilityResult {
+  viable: boolean;
+  risks: string[];
+  suggestions: string[];
+}
+
 // =====================================================
 // BUDGET PLAN (what was agreed at start of year)
 // =====================================================
@@ -116,6 +122,25 @@ export interface BudgetPlan {
   strategic_priorities: StrategicPriority[];
   created_at: string;
   updated_at: string;
+
+  // --- ICFP workforce fields (from census / HR module) ---
+
+  /** Number on roll — total pupil count */
+  number_on_roll?: number;
+  /** Number of classes (teaching groups) */
+  number_of_classes?: number;
+  /** Total teacher FTE (classroom + leadership) */
+  teacher_fte?: number;
+  /** Total staff FTE across all roles */
+  total_staff_fte?: number;
+  /** Leadership FTE (head, deputies, assistant heads) */
+  leadership_fte?: number;
+  /** Leadership pay cost (head + deputies + assistant heads, including on-costs) */
+  leadership_cost?: number;
+  /** Total curriculum teaching periods per week (e.g. 25 × number_of_classes) */
+  teaching_periods?: number;
+  /** Total available teacher periods per week (teacher_fte × periods_per_teacher) */
+  total_available_periods?: number;
 }
 
 export interface BudgetLine {

@@ -3,11 +3,7 @@
  * Central registry of all specialist agents with their prompts and metadata
  */
 
-import type {
-  AgentDefinition,
-  Domain,
-  SpecialistId,
-} from '../types';
+import type { AgentDefinition, Domain, SpecialistId } from "../types";
 
 // Import all specialist prompts
 import {
@@ -16,7 +12,7 @@ import {
   ESTATES_DOMAIN,
   ESTATES_KEYWORDS,
   ESTATES_QUALIFICATIONS,
-} from './prompts/estates-specialist';
+} from "./prompts/estates-specialist";
 
 import {
   HR_SPECIALIST_PROMPT,
@@ -24,7 +20,7 @@ import {
   HR_DOMAIN,
   HR_KEYWORDS,
   HR_QUALIFICATIONS,
-} from './prompts/hr-specialist';
+} from "./prompts/hr-specialist";
 
 import {
   SEND_SPECIALIST_PROMPT,
@@ -32,7 +28,7 @@ import {
   SEND_DOMAIN,
   SEND_KEYWORDS,
   SEND_QUALIFICATIONS,
-} from './prompts/send-specialist';
+} from "./prompts/send-specialist";
 
 import {
   DATA_SPECIALIST_PROMPT,
@@ -40,7 +36,7 @@ import {
   DATA_DOMAIN,
   DATA_KEYWORDS,
   DATA_QUALIFICATIONS,
-} from './prompts/data-specialist';
+} from "./prompts/data-specialist";
 
 import {
   CURRICULUM_SPECIALIST_PROMPT,
@@ -48,7 +44,7 @@ import {
   CURRICULUM_DOMAIN,
   CURRICULUM_KEYWORDS,
   CURRICULUM_QUALIFICATIONS,
-} from './prompts/curriculum-specialist';
+} from "./prompts/curriculum-specialist";
 
 import {
   IT_TECH_SPECIALIST_PROMPT,
@@ -56,7 +52,7 @@ import {
   IT_TECH_DOMAIN,
   IT_TECH_KEYWORDS,
   IT_TECH_QUALIFICATIONS,
-} from './prompts/it-tech-specialist';
+} from "./prompts/it-tech-specialist";
 
 import {
   PROCUREMENT_SPECIALIST_PROMPT,
@@ -64,7 +60,7 @@ import {
   PROCUREMENT_DOMAIN,
   PROCUREMENT_KEYWORDS,
   PROCUREMENT_QUALIFICATIONS,
-} from './prompts/procurement-specialist';
+} from "./prompts/procurement-specialist";
 
 import {
   GOVERNANCE_SPECIALIST_PROMPT,
@@ -72,7 +68,7 @@ import {
   GOVERNANCE_DOMAIN,
   GOVERNANCE_KEYWORDS,
   GOVERNANCE_QUALIFICATIONS,
-} from './prompts/governance-specialist';
+} from "./prompts/governance-specialist";
 
 import {
   COMMUNICATIONS_SPECIALIST_PROMPT,
@@ -80,7 +76,7 @@ import {
   COMMUNICATIONS_DOMAIN,
   COMMUNICATIONS_KEYWORDS,
   COMMUNICATIONS_QUALIFICATIONS,
-} from './prompts/communications-specialist';
+} from "./prompts/communications-specialist";
 
 import {
   FORM_SPECIALIST_PROMPT,
@@ -88,7 +84,23 @@ import {
   FORM_DOMAIN,
   FORM_KEYWORDS,
   FORM_QUALIFICATIONS,
-} from './prompts/form-specialist';
+} from "./prompts/form-specialist";
+
+import {
+  INTELLIGENCE_SPECIALIST_PROMPT,
+  INTELLIGENCE_SPECIALIST_ID,
+  INTELLIGENCE_DOMAIN,
+  INTELLIGENCE_KEYWORDS,
+  INTELLIGENCE_QUALIFICATIONS,
+} from "./prompts/intelligence-specialist";
+
+import {
+  RISK_SPECIALIST_PROMPT,
+  RISK_SPECIALIST_ID,
+  RISK_DOMAIN,
+  RISK_KEYWORDS,
+  RISK_QUALIFICATIONS,
+} from "./prompts/risk-specialist";
 
 /**
  * Ed's base prompt when no specialist is needed
@@ -125,7 +137,7 @@ You help school staff with their day-to-day questions and tasks. You are:
 - Route to the appropriate specialist
 - Help the user ask the right question
 
-Current date: ${new Date().toISOString().split('T')[0]}
+Current date: ${new Date().toISOString().split("T")[0]}
 
 You're here to help. What work task can you assist with today?`;
 
@@ -133,195 +145,237 @@ You're here to help. What work task can you assist with today?`;
  * Registry of all specialist agents
  */
 export const AGENTS: Record<SpecialistId, AgentDefinition> = {
-  'estates-specialist': {
+  "estates-specialist": {
     id: ESTATES_SPECIALIST_ID,
-    name: 'Estates Compliance Specialist',
+    name: "Estates Compliance Specialist",
     domain: ESTATES_DOMAIN,
     qualifications: ESTATES_QUALIFICATIONS,
     capabilities: [
-      'RIDDOR reporting',
-      'Fire safety guidance',
-      'Asbestos management',
-      'Legionella and water safety',
-      'Electrical safety',
-      'Risk assessments',
-      'Premises maintenance',
-      'Contractor management',
+      "RIDDOR reporting",
+      "Fire safety guidance",
+      "Asbestos management",
+      "Legionella and water safety",
+      "Electrical safety",
+      "Risk assessments",
+      "Premises maintenance",
+      "Contractor management",
+      "Floor plan spatial analysis",
+      "Energy consumption monitoring",
+      "QR/NFC asset scanning",
+      "Data validation review",
     ],
     systemPrompt: ESTATES_SPECIALIST_PROMPT,
   },
 
-  'hr-specialist': {
+  "hr-specialist": {
     id: HR_SPECIALIST_ID,
-    name: 'HR Specialist',
+    name: "HR Specialist",
     domain: HR_DOMAIN,
     qualifications: HR_QUALIFICATIONS,
     capabilities: [
-      'Sickness and absence management',
-      'Maternity and paternity guidance',
-      'Employment contracts',
-      'HR policies and procedures',
-      'Disciplinary and grievance',
-      'Performance management',
-      'Staff wellbeing',
-      'Equality and diversity',
+      "Sickness and absence management",
+      "Maternity and paternity guidance",
+      "Employment contracts",
+      "HR policies and procedures",
+      "Disciplinary and grievance",
+      "Performance management",
+      "Staff wellbeing",
+      "Equality and diversity",
     ],
     systemPrompt: HR_SPECIALIST_PROMPT,
   },
 
-  'send-specialist': {
+  "send-specialist": {
     id: SEND_SPECIALIST_ID,
-    name: 'SEND Specialist',
+    name: "SEND Specialist",
     domain: SEND_DOMAIN,
     qualifications: SEND_QUALIFICATIONS,
     capabilities: [
-      'EHCP guidance',
-      'SEN support and graduated approach',
-      'Annual reviews',
-      'SEND Code of Practice',
-      'Specific learning difficulties',
-      'Autism guidance',
-      'Inclusive practice',
-      'SEND funding',
+      "EHCP guidance",
+      "SEN support and graduated approach",
+      "Annual reviews",
+      "SEND Code of Practice",
+      "Specific learning difficulties",
+      "Autism guidance",
+      "Inclusive practice",
+      "SEND funding",
     ],
     systemPrompt: SEND_SPECIALIST_PROMPT,
   },
 
-  'data-specialist': {
+  "data-specialist": {
     id: DATA_SPECIALIST_ID,
-    name: 'Data Specialist',
+    name: "Data Specialist",
     domain: DATA_DOMAIN,
     qualifications: DATA_QUALIFICATIONS,
     capabilities: [
-      'School census returns',
-      'CLLA (Collect) guidance',
-      'Attendance data',
-      'Performance data',
-      'Data protection and GDPR',
-      'Pupil registration',
-      'Exclusions data',
-      'Workforce census',
+      "School census returns",
+      "CLLA (Collect) guidance",
+      "Attendance data",
+      "Performance data",
+      "Data protection and GDPR",
+      "Pupil registration",
+      "Exclusions data",
+      "Workforce census",
     ],
     systemPrompt: DATA_SPECIALIST_PROMPT,
   },
 
-  'curriculum-specialist': {
+  "curriculum-specialist": {
     id: CURRICULUM_SPECIALIST_ID,
-    name: 'Curriculum Specialist',
+    name: "Curriculum Specialist",
     domain: CURRICULUM_DOMAIN,
     qualifications: CURRICULUM_QUALIFICATIONS,
     capabilities: [
-      'Curriculum design',
-      'Assessment and feedback',
-      'Ofsted preparation',
-      'Deep Dives',
-      'Quality of Education',
-      'Curriculum mapping',
-      'Pedagogy guidance',
-      'Key stage transitions',
+      "Curriculum design",
+      "Assessment and feedback",
+      "Ofsted preparation",
+      "Deep Dives",
+      "Quality of Education",
+      "Curriculum mapping",
+      "Pedagogy guidance",
+      "Key stage transitions",
     ],
     systemPrompt: CURRICULUM_SPECIALIST_PROMPT,
   },
 
-  'it-tech-specialist': {
+  "it-tech-specialist": {
     id: IT_TECH_SPECIALIST_ID,
-    name: 'IT Technical Support Specialist',
+    name: "IT Technical Support Specialist",
     domain: IT_TECH_DOMAIN,
     qualifications: IT_TECH_QUALIFICATIONS,
     capabilities: [
-      'Hardware troubleshooting',
-      'Network and connectivity',
-      'Google Workspace admin',
-      'Microsoft 365 admin',
-      'SIMS/Arbor technical support',
-      'Classroom technology',
-      'Chromebook management',
-      'Cybersecurity awareness',
+      "Hardware troubleshooting",
+      "Network and connectivity",
+      "Google Workspace admin",
+      "Microsoft 365 admin",
+      "SIMS/Arbor technical support",
+      "Classroom technology",
+      "Chromebook management",
+      "Cybersecurity awareness",
     ],
     systemPrompt: IT_TECH_SPECIALIST_PROMPT,
   },
 
-  'procurement-specialist': {
+  "procurement-specialist": {
     id: PROCUREMENT_SPECIALIST_ID,
-    name: 'Procurement Specialist',
+    name: "Procurement Specialist",
     domain: PROCUREMENT_DOMAIN,
     qualifications: PROCUREMENT_QUALIFICATIONS,
     capabilities: [
-      'Sourcing suppliers',
-      'Framework agreements',
-      'Procurement policy compliance',
-      'Tendering processes',
-      'Value for money assessment',
-      'Contract management',
-      'Specification writing',
+      "Sourcing suppliers",
+      "Framework agreements",
+      "Procurement policy compliance",
+      "Tendering processes",
+      "Value for money assessment",
+      "Contract management",
+      "Specification writing",
     ],
     systemPrompt: PROCUREMENT_SPECIALIST_PROMPT,
   },
 
-  'governance-specialist': {
+  "governance-specialist": {
     id: GOVERNANCE_SPECIALIST_ID,
-    name: 'Governance Specialist',
+    name: "Governance Specialist",
     domain: GOVERNANCE_DOMAIN,
     qualifications: GOVERNANCE_QUALIFICATIONS,
     capabilities: [
-      'Governing body responsibilities',
-      'Academy trust governance',
-      'Board committees',
-      'Governor/trustee recruitment',
-      'Ofsted and governance',
-      'Finance oversight',
-      'Strategic planning',
+      "Governing body responsibilities",
+      "Academy trust governance",
+      "Board committees",
+      "Governor/trustee recruitment",
+      "Ofsted and governance",
+      "Finance oversight",
+      "Strategic planning",
     ],
     systemPrompt: GOVERNANCE_SPECIALIST_PROMPT,
   },
 
-  'communications-specialist': {
+  "communications-specialist": {
     id: COMMUNICATIONS_SPECIALIST_ID,
-    name: 'Communications Specialist',
+    name: "Communications Specialist",
     domain: COMMUNICATIONS_DOMAIN,
     qualifications: COMMUNICATIONS_QUALIFICATIONS,
     capabilities: [
-      'Parent communications',
-      'Staff communications',
-      'Media relations',
-      'Social media management',
-      'Crisis communication',
-      'Newsletters and bulletins',
-      'Press releases',
+      "Parent communications",
+      "Staff communications",
+      "Media relations",
+      "Social media management",
+      "Crisis communication",
+      "Newsletters and bulletins",
+      "Press releases",
     ],
     systemPrompt: COMMUNICATIONS_SPECIALIST_PROMPT,
   },
 
-  'ed-general': {
-    id: 'ed-general',
-    name: 'Ed',
-    domain: 'general',
+  "ed-general": {
+    id: "ed-general",
+    name: "Ed",
+    domain: "general",
     qualifications: [],
     capabilities: [
-      'General school questions',
-      'Routing to specialists',
-      'Schoolgle platform guidance',
-      'General support',
+      "General school questions",
+      "Routing to specialists",
+      "Schoolgle platform guidance",
+      "General support",
     ],
     systemPrompt: ED_GENERAL_PROMPT,
   },
 
-  'form-specialist': {
+  "form-specialist": {
     id: FORM_SPECIALIST_ID,
-    name: 'Form Specialist',
+    name: "Form Specialist",
     domain: FORM_DOMAIN,
     qualifications: FORM_QUALIFICATIONS,
     capabilities: [
-      'Form field explanations',
-      'Professional wording suggestions',
-      'RIDDOR reporting guidance',
-      'Safeguarding form help',
-      'SEND EHCP applications',
-      'Free school meals forms',
-      'Red flag identification',
-      'Step-by-step form guidance',
+      "Form field explanations",
+      "Professional wording suggestions",
+      "RIDDOR reporting guidance",
+      "Safeguarding form help",
+      "SEND EHCP applications",
+      "Free school meals forms",
+      "Red flag identification",
+      "Step-by-step form guidance",
     ],
     systemPrompt: FORM_SPECIALIST_PROMPT,
+  },
+
+  "intelligence-specialist": {
+    id: INTELLIGENCE_SPECIALIST_ID,
+    name: "School Intelligence Specialist",
+    domain: INTELLIGENCE_DOMAIN,
+    qualifications: INTELLIGENCE_QUALIFICATIONS,
+    capabilities: [
+      "Cohort tracking and journey analysis",
+      "Attainment gap analysis (FSM, SEND, gender, PP)",
+      "Teacher assessment accuracy checking",
+      "EEF research-backed recommendations",
+      "DfE data trends (attendance, KS2, census)",
+      "Cross-module signal detection",
+      "Scheme effectiveness evaluation",
+      "COVID impact analysis",
+      "Pupil assessment analysis (pseudonymised)",
+    ],
+    systemPrompt: INTELLIGENCE_SPECIALIST_PROMPT,
+  },
+
+  "risk-specialist": {
+    id: RISK_SPECIALIST_ID,
+    name: "Risk Management Specialist",
+    domain: RISK_DOMAIN,
+    qualifications: RISK_QUALIFICATIONS,
+    capabilities: [
+      "Risk register management",
+      "5x5 heat map analysis",
+      "Risk scoring and dynamic recalculation",
+      "4T decision framework (treat/tolerate/transfer/terminate)",
+      "Risk appetite configuration",
+      "ATH 2025 compliance (para 2.35)",
+      "Trust hierarchy risk escalation",
+      "Mitigation tracking and overdue impact",
+      "Direction of travel analysis",
+    ],
+    systemPrompt: RISK_SPECIALIST_PROMPT,
   },
 };
 
@@ -334,10 +388,12 @@ export const DOMAIN_KEYWORDS: Record<Domain, string[]> = {
   send: SEND_KEYWORDS,
   data: DATA_KEYWORDS,
   curriculum: CURRICULUM_KEYWORDS,
-  'it-tech': IT_TECH_KEYWORDS,
+  "it-tech": IT_TECH_KEYWORDS,
   procurement: PROCUREMENT_KEYWORDS,
   governance: GOVERNANCE_KEYWORDS,
   communications: COMMUNICATIONS_KEYWORDS,
+  intelligence: INTELLIGENCE_KEYWORDS,
+  risk: RISK_KEYWORDS,
   general: [],
   // Form keywords are handled separately via detectFormRequest()
 };
@@ -354,16 +410,18 @@ export function getAgent(id: SpecialistId): AgentDefinition | undefined {
  */
 export function getAgentByDomain(domain: Domain): AgentDefinition {
   const entry = Object.entries(AGENTS).find(
-    ([_, agent]) => agent.domain === domain
+    ([_, agent]) => agent.domain === domain,
   );
-  return entry?.[1] || AGENTS['ed-general'];
+  return entry?.[1] || AGENTS["ed-general"];
 }
 
 /**
  * Get all specialist IDs
  */
 export function getSpecialistIds(): SpecialistId[] {
-  return Object.keys(AGENTS).filter(id => id !== 'ed-general') as SpecialistId[];
+  return Object.keys(AGENTS).filter(
+    (id) => id !== "ed-general",
+  ) as SpecialistId[];
 }
 
 /**

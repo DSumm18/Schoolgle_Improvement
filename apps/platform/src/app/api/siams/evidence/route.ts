@@ -1,248 +1,213 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { NextRequest } from "next/server";
+import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
+import { createServiceRoleClient } from "@/lib/supabase-server";
 import type {
-    SiamsEvidenceMatch,
-    SiamsStrandId,
-    SiamsQuestionId,
-    GetSiamsEvidenceRequest,
-    GetSiamsEvidenceResponse,
-    ConfidenceLevel,
-} from '@/lib/siams';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  SiamsEvidenceMatch,
+  SiamsStrandId,
+  SiamsQuestionId,
+  GetSiamsEvidenceRequest,
+  GetSiamsEvidenceResponse,
+  ConfidenceLevel,
+} from "@/lib/siams";
 
 /**
  * GET /api/siams/evidence
  * Get SIAMS evidence matches for an organization
  */
-export async function GET(req: NextRequest) {
-    try {
-        const { searchParams } = new URL(req.url);
-        const organizationId = searchParams.get('organizationId');
-        const strandId = searchParams.get('strandId') as SiamsStrandId | null;
-        const questionId = searchParams.get('questionId') as SiamsQuestionId | null;
-        const documentId = searchParams.get('documentId');
-        const limit = parseInt(searchParams.get('limit') || '100');
+export const GET = protectedRoute(async (auth, req) => {
+  const { searchParams } = new URL(req.url);
+  const organizationId =
+    searchParams.get("organizationId") || auth.organizationId;
+  const strandId = searchParams.get("strandId") as SiamsStrandId | null;
+  const questionId = searchParams.get("questionId") as SiamsQuestionId | null;
+  const documentId = searchParams.get("documentId");
+  const limit = parseInt(searchParams.get("limit") || "100");
 
-        if (!organizationId) {
-            return NextResponse.json(
-                { error: 'Missing organizationId parameter' },
-                { status: 400 }
-            );
-        }
+  if (!organizationId) {
+    return apiError("Missing organizationId parameter", 400);
+  }
 
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  const supabase = createServiceRoleClient();
 
-        let query = supabase
-            .from('siams_evidence_matches')
-            .select(`
-                *,
-                document:documents (
-                    id,
-                    name,
-                    web_view_link,
-                    folder_path
-                )
-            `)
-            .eq('organization_id', organizationId)
-            .order('created_at', { ascending: false })
-            .limit(limit);
+  let query = supabase
+    .from("siams_evidence_matches")
+    .select(
+      `
+            *,
+            document:documents (
+                id,
+                name,
+                web_view_link,
+                folder_path
+            )
+        `,
+    )
+    .eq("organization_id", organizationId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
 
-        if (strandId) {
-            query = query.eq('strand_id', strandId);
-        }
-        if (questionId) {
-            query = query.eq('question_id', questionId);
-        }
-        if (documentId) {
-            query = query.eq('document_id', documentId);
-        }
+  if (strandId) {
+    query = query.eq("strand_id", strandId);
+  }
+  if (questionId) {
+    query = query.eq("question_id", questionId);
+  }
+  if (documentId) {
+    query = query.eq("document_id", documentId);
+  }
 
-        const { data: evidence, error } = await query;
+  const { data: evidence, error } = await query;
 
-        if (error) {
-            console.error('Error fetching SIAMS evidence:', error);
-            return NextResponse.json(
-                { error: 'Failed to fetch evidence' },
-                { status: 500 }
-            );
-        }
+  if (error) {
+    console.error("Error fetching SIAMS evidence:", error);
+    return apiError("Failed to fetch evidence", 500);
+  }
 
-        // Flatten and enrich results
-        const enrichedEvidence = (evidence || []).map((item: any) => ({
-            ...item,
-            document_name: item.document?.name || 'Unknown',
-            document_link: item.document?.web_view_link || item.document_link,
-            folder_path: item.document?.folder_path || null,
-        }));
+  // Flatten and enrich results
+  const enrichedEvidence = (evidence || []).map((item: any) => ({
+    ...item,
+    document_name: item.document?.name || "Unknown",
+    document_link: item.document?.web_view_link || item.document_link,
+    folder_path: item.document?.folder_path || null,
+  }));
 
-        // Group by strand
-        const byStrand = enrichedEvidence.reduce((acc: any, ev: any) => {
-            acc[ev.strand_id] = (acc[ev.strand_id] || 0) + 1;
-            return acc;
-        }, {} as Record<SiamsStrandId, number>);
+  // Group by strand
+  const byStrand = enrichedEvidence.reduce(
+    (acc: any, ev: any) => {
+      acc[ev.strand_id] = (acc[ev.strand_id] || 0) + 1;
+      return acc;
+    },
+    {} as Record<SiamsStrandId, number>,
+  );
 
-        // Group by confidence
-        const byConfidence = enrichedEvidence.reduce((acc: any, ev: any) => {
-            acc[ev.confidence] = (acc[ev.confidence] || 0) + 1;
-            return acc;
-        }, {} as Record<ConfidenceLevel, number>);
+  // Group by confidence
+  const byConfidence = enrichedEvidence.reduce(
+    (acc: any, ev: any) => {
+      acc[ev.confidence] = (acc[ev.confidence] || 0) + 1;
+      return acc;
+    },
+    {} as Record<ConfidenceLevel, number>,
+  );
 
-        const response: GetSiamsEvidenceResponse = {
-            evidence: enrichedEvidence,
-            total: enrichedEvidence.length,
-            by_strand: byStrand,
-            by_confidence: byConfidence,
-        };
+  const response: GetSiamsEvidenceResponse = {
+    evidence: enrichedEvidence,
+    total: enrichedEvidence.length,
+    by_strand: byStrand,
+    by_confidence: byConfidence,
+  };
 
-        return NextResponse.json(response);
-
-    } catch (error: any) {
-        console.error('SIAMS Evidence API error:', error);
-        return NextResponse.json(
-            { error: error.message || 'Internal server error' },
-            { status: 500 }
-        );
-    }
-}
+  return apiSuccess(response);
+});
 
 /**
  * POST /api/siams/evidence
  * Manually link evidence to SIAMS questions
  */
-export async function POST(req: NextRequest) {
-    try {
-        const body = await req.json();
-        const {
-            organizationId,
-            documentId,
-            questionIds,
-            confidence,
-            relevance_explanation,
-            key_quotes,
-        } = body as {
-            organizationId: string;
-            documentId: string;
-            questionIds: SiamsQuestionId[];
-            confidence: ConfidenceLevel;
-            relevance_explanation: string;
-            key_quotes: string[];
-        };
+export const POST = protectedRoute(async (auth, req) => {
+  const body = await req.json();
+  const {
+    organizationId,
+    documentId,
+    questionIds,
+    confidence,
+    relevance_explanation,
+    key_quotes,
+  } = body as {
+    organizationId: string;
+    documentId: string;
+    questionIds: SiamsQuestionId[];
+    confidence: ConfidenceLevel;
+    relevance_explanation: string;
+    key_quotes: string[];
+  };
 
-        if (!organizationId || !documentId || !questionIds || questionIds.length === 0) {
-            return NextResponse.json(
-                { error: 'Missing required fields: organizationId, documentId, questionIds' },
-                { status: 400 }
-            );
-        }
+  const orgId = organizationId || auth.organizationId;
 
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  if (!orgId || !documentId || !questionIds || questionIds.length === 0) {
+    return apiError(
+      "Missing required fields: organizationId, documentId, questionIds",
+      400,
+    );
+  }
 
-        // Get document info
-        const { data: document } = await supabase
-            .from('documents')
-            .select('id, name, web_view_link, organization_id')
-            .eq('id', documentId)
-            .single();
+  const supabase = createServiceRoleClient();
 
-        if (!document) {
-            return NextResponse.json(
-                { error: 'Document not found' },
-                { status: 404 }
-            );
-        }
+  // Get document info
+  const { data: document } = await supabase
+    .from("documents")
+    .select("id, name, web_view_link, organization_id")
+    .eq("id", documentId)
+    .single();
 
-        // Get strand_id for each question
-        const { SIAMS_QUESTIONS } = await import('@/lib/siams');
+  if (!document) {
+    return apiError("Document not found", 404);
+  }
 
-        // Create evidence matches
-        const records = questionIds.map((questionId) => {
-            const questionInfo = SIAMS_QUESTIONS[questionId];
-            return {
-                id: crypto.randomUUID(),
-                organization_id: organizationId,
-                document_id: documentId,
-                strand_id: questionInfo?.strand || '',
-                question_id: questionId,
-                confidence,
-                matched_keywords: [],
-                relevance_explanation,
-                key_quotes,
-                document_link: document.web_view_link || '',
-            };
-        });
+  // Get strand_id for each question
+  const { SIAMS_QUESTIONS } = await import("@/lib/siams");
 
-        const { data, error } = await supabase
-            .from('siams_evidence_matches')
-            .upsert(records, {
-                onConflict: 'organization_id,document_id,question_id',
-            })
-            .select();
+  // Create evidence matches
+  const records = questionIds.map((questionId) => {
+    const questionInfo = SIAMS_QUESTIONS[questionId];
+    return {
+      id: crypto.randomUUID(),
+      organization_id: orgId,
+      document_id: documentId,
+      strand_id: questionInfo?.strand || "",
+      question_id: questionId,
+      confidence,
+      matched_keywords: [],
+      relevance_explanation,
+      key_quotes,
+      document_link: document.web_view_link || "",
+    };
+  });
 
-        if (error) {
-            console.error('Error linking SIAMS evidence:', error);
-            return NextResponse.json(
-                { error: 'Failed to link evidence' },
-                { status: 500 }
-            );
-        }
+  const { data, error } = await supabase
+    .from("siams_evidence_matches")
+    .upsert(records, {
+      onConflict: "organization_id,document_id,question_id",
+    })
+    .select();
 
-        return NextResponse.json({
-            success: true,
-            linked: records.length,
-            evidence: data,
-        });
+  if (error) {
+    console.error("Error linking SIAMS evidence:", error);
+    return apiError("Failed to link evidence", 500);
+  }
 
-    } catch (error: any) {
-        console.error('SIAMS Evidence link error:', error);
-        return NextResponse.json(
-            { error: error.message || 'Internal server error' },
-            { status: 500 }
-        );
-    }
-}
+  return apiSuccess({
+    success: true,
+    linked: records.length,
+    evidence: data,
+  });
+});
 
 /**
  * DELETE /api/siams/evidence
  * Delete SIAMS evidence matches
  */
-export async function DELETE(req: NextRequest) {
-    try {
-        const { searchParams } = new URL(req.url);
-        const organizationId = searchParams.get('organizationId');
-        const ids = searchParams.get('ids')?.split(',');
+export const DELETE = protectedRoute(async (auth, req) => {
+  const { searchParams } = new URL(req.url);
+  const organizationId =
+    searchParams.get("organizationId") || auth.organizationId;
+  const ids = searchParams.get("ids")?.split(",");
 
-        if (!organizationId || !ids || ids.length === 0) {
-            return NextResponse.json(
-                { error: 'Missing required parameters: organizationId, ids' },
-                { status: 400 }
-            );
-        }
+  if (!organizationId || !ids || ids.length === 0) {
+    return apiError("Missing required parameters: organizationId, ids", 400);
+  }
 
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  const supabase = createServiceRoleClient();
 
-        const { error } = await supabase
-            .from('siams_evidence_matches')
-            .delete()
-            .in('id', ids)
-            .eq('organization_id', organizationId);
+  const { error } = await supabase
+    .from("siams_evidence_matches")
+    .delete()
+    .in("id", ids)
+    .eq("organization_id", organizationId);
 
-        if (error) {
-            console.error('Error deleting SIAMS evidence:', error);
-            return NextResponse.json(
-                { error: 'Failed to delete evidence' },
-                { status: 500 }
-            );
-        }
+  if (error) {
+    console.error("Error deleting SIAMS evidence:", error);
+    return apiError("Failed to delete evidence", 500);
+  }
 
-        return NextResponse.json({ success: true, deleted: ids.length });
-
-    } catch (error: any) {
-        console.error('SIAMS Evidence deletion error:', error);
-        return NextResponse.json(
-            { error: error.message || 'Internal server error' },
-            { status: 500 }
-        );
-    }
-}
+  return apiSuccess({ success: true, deleted: ids.length });
+});

@@ -1,10 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
+import { createServiceRoleClient } from "@/lib/supabase-server";
 import OpenAI from "openai";
 import { generateMinutesContent, renderMinutesHtml } from "@/lib/meetings";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 const openrouter = new OpenAI({
   apiKey: process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY,
@@ -16,192 +13,175 @@ const openrouter = new OpenAI({
 });
 
 /**
+ * Extract meeting ID from the URL pathname.
+ * URL pattern: /api/meetings/[id]/minutes
+ */
+function getMeetingId(request: Request): string {
+  const segments = new URL(request.url).pathname.split("/");
+  // ["", "api", "meetings", "<id>", "minutes"]
+  return segments[3];
+}
+
+/**
  * GET /api/meetings/[id]/minutes
  * Get minutes for a meeting
  */
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    const { id } = await params;
-    const { searchParams } = new URL(req.url);
-    const organizationId = searchParams.get("organizationId");
+export const GET = protectedRoute(async (auth, request) => {
+  const id = getMeetingId(request);
+  const { searchParams } = new URL(request.url);
+  const organizationId =
+    searchParams.get("organizationId") || auth.organizationId;
 
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: "Missing organizationId" },
-        { status: 400 },
-      );
-    }
+  if (!organizationId) {
+    return apiError("Missing organizationId", 400);
+  }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  const supabase = createServiceRoleClient();
 
-    const { data: minutes, error } = await supabase
+  const [minutesRes, signaturesRes] = await Promise.all([
+    supabase
       .from("meeting_minutes")
       .select("*")
       .eq("meeting_id", id)
-      .maybeSingle();
+      .maybeSingle(),
+    supabase
+      .from("meeting_signatures")
+      .select("*")
+      .eq("meeting_id", id)
+      .order("signed_at"),
+  ]);
 
-    if (error) {
-      console.error("Error fetching minutes:", error);
-      return NextResponse.json(
-        { error: "Failed to fetch minutes" },
-        { status: 500 },
-      );
-    }
-
-    return NextResponse.json({ minutes });
-  } catch (error: any) {
-    console.error("Minutes fetch error:", error);
-    return NextResponse.json(
-      { error: error.message || "Internal server error" },
-      { status: 500 },
-    );
+  if (minutesRes.error) {
+    console.error("Error fetching minutes:", minutesRes.error);
+    return apiError("Failed to fetch minutes", 500);
   }
-}
+
+  return apiSuccess({
+    minutes: minutesRes.data,
+    signatures: signaturesRes.data || [],
+  });
+});
 
 /**
  * POST /api/meetings/[id]/minutes
  * Generate minutes from meeting data
  */
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    const { id } = await params;
-    const body = await req.json();
-    const { organizationId } = body;
+export const POST = protectedRoute(async (auth, request) => {
+  const id = getMeetingId(request);
+  const body = await request.json();
+  const { organizationId } = body;
 
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: "Missing organizationId" },
-        { status: 400 },
-      );
-    }
+  const resolvedOrgId = organizationId || auth.organizationId;
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    // Fetch meeting, template, and checklist
-    const [meetingRes, checklistRes] = await Promise.all([
-      supabase
-        .from("meetings")
-        .select("*")
-        .eq("id", id)
-        .eq("organization_id", organizationId)
-        .single(),
-      supabase
-        .from("meeting_checklist_items")
-        .select("*")
-        .eq("meeting_id", id)
-        .order("order_index"),
-    ]);
-
-    if (meetingRes.error || !meetingRes.data) {
-      return NextResponse.json({ error: "Meeting not found" }, { status: 404 });
-    }
-
-    const meeting = meetingRes.data;
-
-    const { data: template } = await supabase
-      .from("meeting_templates")
-      .select("*")
-      .eq("id", meeting.template_id)
-      .single();
-
-    if (!template) {
-      return NextResponse.json(
-        { error: "Template not found" },
-        { status: 404 },
-      );
-    }
-
-    // Check if we have a transcript (from Deepgram recording)
-    const { data: transcript } = await supabase
-      .from("meeting_transcripts")
-      .select("*")
-      .eq("meeting_id", id)
-      .maybeSingle();
-
-    let content;
-    let html;
-
-    if (transcript?.full_text) {
-      // AI-powered minutes from diarised transcript
-      const aiResult = await generateAiMinutes(
-        meeting,
-        template,
-        checklistRes.data || [],
-        transcript.full_text,
-      );
-      content = aiResult.content;
-      html = aiResult.html;
-    } else {
-      // Template-based minutes (free tier fallback)
-      content = generateMinutesContent(
-        meeting,
-        template,
-        checklistRes.data || [],
-      );
-      html = renderMinutesHtml(content);
-    }
-
-    // Check if minutes already exist for this meeting
-    const { data: existing } = await supabase
-      .from("meeting_minutes")
-      .select("id")
-      .eq("meeting_id", id)
-      .maybeSingle();
-
-    let minutes;
-    if (existing) {
-      // Update existing
-      const { data, error } = await supabase
-        .from("meeting_minutes")
-        .update({
-          content,
-          html,
-          status: "draft",
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", existing.id)
-        .select()
-        .single();
-      if (error) {
-        console.error("Error updating minutes:", error);
-        return NextResponse.json(
-          { error: "Failed to update minutes" },
-          { status: 500 },
-        );
-      }
-      minutes = data;
-    } else {
-      // Create new
-      const { data, error } = await supabase
-        .from("meeting_minutes")
-        .insert({ meeting_id: id, content, html, status: "draft" })
-        .select()
-        .single();
-      if (error) {
-        console.error("Error creating minutes:", error);
-        return NextResponse.json(
-          { error: "Failed to create minutes" },
-          { status: 500 },
-        );
-      }
-      minutes = data;
-    }
-
-    return NextResponse.json({ minutes }, { status: 201 });
-  } catch (error: any) {
-    console.error("Minutes generation error:", error);
-    return NextResponse.json(
-      { error: error.message || "Internal server error" },
-      { status: 500 },
-    );
+  if (!resolvedOrgId) {
+    return apiError("Missing organizationId", 400);
   }
-}
+
+  const supabase = createServiceRoleClient();
+
+  // Fetch meeting, template, and checklist
+  const [meetingRes, checklistRes] = await Promise.all([
+    supabase
+      .from("meetings")
+      .select("*")
+      .eq("id", id)
+      .eq("organization_id", resolvedOrgId)
+      .single(),
+    supabase
+      .from("meeting_checklist_items")
+      .select("*")
+      .eq("meeting_id", id)
+      .order("order_index"),
+  ]);
+
+  if (meetingRes.error || !meetingRes.data) {
+    return apiError("Meeting not found", 404);
+  }
+
+  const meeting = meetingRes.data;
+
+  const { data: template } = await supabase
+    .from("meeting_templates")
+    .select("*")
+    .eq("id", meeting.template_id)
+    .single();
+
+  if (!template) {
+    return apiError("Template not found", 404);
+  }
+
+  // Check if we have a transcript (from Deepgram recording)
+  const { data: transcript } = await supabase
+    .from("meeting_transcripts")
+    .select("*")
+    .eq("meeting_id", id)
+    .maybeSingle();
+
+  let content;
+  let html;
+
+  if (transcript?.full_text) {
+    // AI-powered minutes from diarised transcript
+    const aiResult = await generateAiMinutes(
+      meeting,
+      template,
+      checklistRes.data || [],
+      transcript.full_text,
+    );
+    content = aiResult.content;
+    html = aiResult.html;
+  } else {
+    // Template-based minutes (free tier fallback)
+    content = generateMinutesContent(
+      meeting,
+      template,
+      checklistRes.data || [],
+    );
+    html = renderMinutesHtml(content);
+  }
+
+  // Check if minutes already exist for this meeting
+  const { data: existing } = await supabase
+    .from("meeting_minutes")
+    .select("id")
+    .eq("meeting_id", id)
+    .maybeSingle();
+
+  let minutes;
+  if (existing) {
+    // Update existing
+    const { data, error } = await supabase
+      .from("meeting_minutes")
+      .update({
+        content,
+        html,
+        status: "draft",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", existing.id)
+      .select()
+      .single();
+    if (error) {
+      console.error("Error updating minutes:", error);
+      return apiError("Failed to update minutes", 500);
+    }
+    minutes = data;
+  } else {
+    // Create new
+    const { data, error } = await supabase
+      .from("meeting_minutes")
+      .insert({ meeting_id: id, content, html, status: "draft" })
+      .select()
+      .single();
+    if (error) {
+      console.error("Error creating minutes:", error);
+      return apiError("Failed to create minutes", 500);
+    }
+    minutes = data;
+  }
+
+  return apiSuccess({ minutes }, 201);
+});
 
 /**
  * Generate AI-powered minutes from a diarised transcript.
@@ -341,52 +321,37 @@ Return ONLY valid JSON in this exact format (no markdown, no code fences):
  * PATCH /api/meetings/[id]/minutes
  * Update minutes (edit content, finalise)
  */
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    const { id } = await params;
-    const body = await req.json();
-    const { organizationId, content, html, status: minutesStatus } = body;
+export const PATCH = protectedRoute(async (auth, request) => {
+  const id = getMeetingId(request);
+  const body = await request.json();
+  const { organizationId, content, html, status: minutesStatus } = body;
 
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: "Missing organizationId" },
-        { status: 400 },
-      );
-    }
+  const resolvedOrgId = organizationId || auth.organizationId;
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    const updates: Record<string, any> = {
-      updated_at: new Date().toISOString(),
-    };
-    if (content !== undefined) updates.content = content;
-    if (html !== undefined) updates.html = html;
-    if (minutesStatus !== undefined) updates.status = minutesStatus;
-
-    const { data: minutes, error } = await supabase
-      .from("meeting_minutes")
-      .update(updates)
-      .eq("meeting_id", id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Error updating minutes:", error);
-      return NextResponse.json(
-        { error: "Failed to update minutes" },
-        { status: 500 },
-      );
-    }
-
-    return NextResponse.json({ minutes });
-  } catch (error: any) {
-    console.error("Minutes update error:", error);
-    return NextResponse.json(
-      { error: error.message || "Internal server error" },
-      { status: 500 },
-    );
+  if (!resolvedOrgId) {
+    return apiError("Missing organizationId", 400);
   }
-}
+
+  const supabase = createServiceRoleClient();
+
+  const updates: Record<string, any> = {
+    updated_at: new Date().toISOString(),
+  };
+  if (content !== undefined) updates.content = content;
+  if (html !== undefined) updates.html = html;
+  if (minutesStatus !== undefined) updates.status = minutesStatus;
+
+  const { data: minutes, error } = await supabase
+    .from("meeting_minutes")
+    .update(updates)
+    .eq("meeting_id", id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error updating minutes:", error);
+    return apiError("Failed to update minutes", 500);
+  }
+
+  return apiSuccess({ minutes });
+});

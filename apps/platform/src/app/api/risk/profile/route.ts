@@ -1,15 +1,13 @@
-import { NextRequest } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { withErrorHandling, apiError, apiSuccess } from '@/lib/api-utils';
+import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
+import { createServiceRoleClient } from "@/lib/supabase-server";
 
 // --- Risk Calculation Helpers ---
-// ... (omitted for brevity in replacement, but I will keep them)
 
 function calculateRiskScore(
   daysSinceInspection: number | null,
   headteacherTenureMonths: number | null,
   lastRating: string | null,
-  performanceTrend: 'improving' | 'stable' | 'declining' | 'unknown'
+  performanceTrend: "improving" | "stable" | "declining" | "unknown",
 ): number {
   let riskScore = 0;
 
@@ -33,26 +31,43 @@ function calculateRiskScore(
   // Last rating (0-20)
   if (lastRating) {
     const rating = lastRating.toLowerCase();
-    if (rating.includes('inadequate') || rating.includes('serious weaknesses')) riskScore += 20;
-    else if (rating.includes('requires improvement') || rating.includes('special measures')) riskScore += 15;
+    if (rating.includes("inadequate") || rating.includes("serious weaknesses"))
+      riskScore += 20;
+    else if (
+      rating.includes("requires improvement") ||
+      rating.includes("special measures")
+    )
+      riskScore += 15;
   }
 
   // Trend (0-10)
-  if (performanceTrend === 'declining') riskScore += 10;
-  else if (performanceTrend === 'stable') riskScore += 5;
+  if (performanceTrend === "declining") riskScore += 10;
+  else if (performanceTrend === "stable") riskScore += 5;
 
   return Math.min(riskScore, 100);
 }
 
-function predictInspectionWindow(daysSinceInspection: number | null, riskScore: number) {
+function predictInspectionWindow(
+  daysSinceInspection: number | null,
+  riskScore: number,
+) {
   const now = new Date();
   let earliestMonths = 6;
   let latestMonths = 18;
 
-  if (riskScore >= 70) { earliestMonths = 0; latestMonths = 6; }
-  else if (riskScore >= 50) { earliestMonths = 3; latestMonths = 12; }
-  else if (riskScore >= 30) { earliestMonths = 6; latestMonths = 18; }
-  else { earliestMonths = 12; latestMonths = 24; }
+  if (riskScore >= 70) {
+    earliestMonths = 0;
+    latestMonths = 6;
+  } else if (riskScore >= 50) {
+    earliestMonths = 3;
+    latestMonths = 12;
+  } else if (riskScore >= 30) {
+    earliestMonths = 6;
+    latestMonths = 18;
+  } else {
+    earliestMonths = 12;
+    latestMonths = 24;
+  }
 
   if (daysSinceInspection && daysSinceInspection > 1500) {
     earliestMonths = Math.max(0, earliestMonths - 3);
@@ -65,79 +80,120 @@ function predictInspectionWindow(daysSinceInspection: number | null, riskScore: 
   latest.setMonth(latest.getMonth() + latestMonths);
 
   return {
-    earliest: earliest.toISOString().split('T')[0],
-    latest: latest.toISOString().split('T')[0],
+    earliest: earliest.toISOString().split("T")[0],
+    latest: latest.toISOString().split("T")[0],
   };
 }
 
-export async function POST(req: NextRequest) {
-  return withErrorHandling(async () => {
-    const { urn } = await req.json();
-    if (!urn) return apiError('URN is required', 400);
+export const POST = protectedRoute(async (auth, request) => {
+  const { urn } = await request.json();
+  if (!urn) return apiError("URN is required", 400);
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+  const supabase = createServiceRoleClient();
 
-    // Parallel Fetch of DfE Data via RPC
-    const [inspectionResult, htResult, performanceResult, schoolResult] = await Promise.all([
-      supabase.rpc('get_last_inspection', { lookup_urn: urn }),
-      supabase.rpc('get_headteacher_info', { lookup_urn: urn }),
-      supabase.rpc('get_performance_trends', { lookup_urn: urn }),
-      supabase.from('organizations').select('name').eq('urn', urn).single()
+  // Parallel Fetch of DfE Data via RPC
+  const [inspectionResult, htResult, performanceResult, schoolResult] =
+    await Promise.all([
+      supabase.rpc("get_last_inspection", { lookup_urn: urn }),
+      supabase.rpc("get_headteacher_info", { lookup_urn: urn }),
+      supabase.rpc("get_performance_trends", { lookup_urn: urn }),
+      supabase.from("organizations").select("name").eq("urn", urn).single(),
     ]);
 
-    const inspectionData = inspectionResult.data || {};
-    const headteacherData = htResult.data || {};
-    const performanceData = performanceResult.data || {};
-    const schoolName = schoolResult.data?.name || "Your School";
+  const inspectionData = inspectionResult.data || {};
+  const headteacherData = htResult.data || {};
+  const performanceData = performanceResult.data || {};
+  const schoolName = schoolResult.data?.name || "Your School";
 
-    // Logic processing
-    const lastInspectionDate = inspectionData.date || null;
-    const lastRating = inspectionData.rating || null;
-    let daysSinceInspection = null;
-    if (lastInspectionDate) {
-      daysSinceInspection = Math.floor((new Date().getTime() - new Date(lastInspectionDate).getTime()) / (1000 * 3600 * 24));
-    }
+  // Logic processing
+  const lastInspectionDate = inspectionData.date || null;
+  const lastRating = inspectionData.rating || null;
+  let daysSinceInspection = null;
+  if (lastInspectionDate) {
+    daysSinceInspection = Math.floor(
+      (new Date().getTime() - new Date(lastInspectionDate).getTime()) /
+        (1000 * 3600 * 24),
+    );
+  }
 
-    const headteacherStartDate = headteacherData.start_date || null;
-    const headteacherTenureMonths = headteacherData.tenure_months || null;
-    const isNewHeadteacher = headteacherData.is_new || false;
+  const headteacherStartDate = headteacherData.start_date || null;
+  const headteacherTenureMonths = headteacherData.tenure_months || null;
+  const isNewHeadteacher = headteacherData.is_new || false;
 
-    const performanceTrend = performanceData.trend || 'unknown';
+  const performanceTrend = performanceData.trend || "unknown";
 
-    const riskScore = calculateRiskScore(daysSinceInspection, headteacherTenureMonths, lastRating, performanceTrend);
-    const predictedWindow = predictInspectionWindow(daysSinceInspection, riskScore);
+  const riskScore = calculateRiskScore(
+    daysSinceInspection,
+    headteacherTenureMonths,
+    lastRating,
+    performanceTrend,
+  );
+  const predictedWindow = predictInspectionWindow(
+    daysSinceInspection,
+    riskScore,
+  );
 
-    // Mapping to UI format
-    const responseData = {
-      urn,
-      schoolName,
-      riskScore,
-      riskLevel: riskScore >= 70 ? 'critical' : riskScore >= 50 ? 'high' : riskScore >= 30 ? 'medium' : 'low',
-      predictedWindow,
-      lastInspection: {
-        date: lastInspectionDate,
-        rating: lastRating,
-        daysSince: daysSinceInspection
-      },
-      headteacher: {
-        startDate: headteacherStartDate,
-        tenureMonths: headteacherTenureMonths,
-        isNew: isNewHeadteacher
-      },
-      riskFactors: [
-        ...(daysSinceInspection && daysSinceInspection > 1500 ? [{ category: 'Time', severity: 'high', description: `Last inspection was ${Math.floor(daysSinceInspection / 365)} years ago`, impact: 30 }] : []),
-        ...(isNewHeadteacher ? [{ category: 'Leadership', severity: 'high', description: `Headteacher tenure is ${headteacherTenureMonths} months`, impact: 25 }] : []),
-        ...(performanceTrend === 'declining' ? [{ category: 'Performance', severity: 'medium', description: 'Declining trends detected', impact: 10 }] : [])
-      ],
-      recommendations: [
-        'Prioritize evidence gathering for key framework areas',
-        'Ensure SEF and SDP documents are up to date'
-      ]
-    };
+  // Mapping to UI format
+  const responseData = {
+    urn,
+    schoolName,
+    riskScore,
+    riskLevel:
+      riskScore >= 70
+        ? "critical"
+        : riskScore >= 50
+          ? "high"
+          : riskScore >= 30
+            ? "medium"
+            : "low",
+    predictedWindow,
+    lastInspection: {
+      date: lastInspectionDate,
+      rating: lastRating,
+      daysSince: daysSinceInspection,
+    },
+    headteacher: {
+      startDate: headteacherStartDate,
+      tenureMonths: headteacherTenureMonths,
+      isNew: isNewHeadteacher,
+    },
+    riskFactors: [
+      ...(daysSinceInspection && daysSinceInspection > 1500
+        ? [
+            {
+              category: "Time",
+              severity: "high",
+              description: `Last inspection was ${Math.floor(daysSinceInspection / 365)} years ago`,
+              impact: 30,
+            },
+          ]
+        : []),
+      ...(isNewHeadteacher
+        ? [
+            {
+              category: "Leadership",
+              severity: "high",
+              description: `Headteacher tenure is ${headteacherTenureMonths} months`,
+              impact: 25,
+            },
+          ]
+        : []),
+      ...(performanceTrend === "declining"
+        ? [
+            {
+              category: "Performance",
+              severity: "medium",
+              description: "Declining trends detected",
+              impact: 10,
+            },
+          ]
+        : []),
+    ],
+    recommendations: [
+      "Prioritize evidence gathering for key framework areas",
+      "Ensure SEF and SDP documents are up to date",
+    ],
+  };
 
-    return apiSuccess(responseData);
-  }, 'Risk Profile API');
-}
+  return apiSuccess(responseData);
+});

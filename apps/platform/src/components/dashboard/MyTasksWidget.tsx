@@ -16,6 +16,7 @@ import {
   GraduationCap,
   MoreHorizontal,
   Filter,
+  AlertTriangle,
 } from "lucide-react";
 import useSWR from "swr";
 import { useAuth } from "@/context/SupabaseAuthContext";
@@ -37,6 +38,8 @@ const ROLE_MODULES: Record<Role, string[]> = {
     "finance",
     "hr",
     "send",
+    "training",
+    "risk",
   ],
   headteacher: [
     "governance",
@@ -45,14 +48,24 @@ const ROLE_MODULES: Record<Role, string[]> = {
     "estates",
     "compliance",
     "hr",
+    "training",
+    "risk",
   ],
-  slt: ["improvement", "teaching-learning", "estates", "compliance", "hr"],
-  teacher: ["teaching-learning", "hr"],
-  governor: ["governance", "improvement"],
-  caretaker: ["estates", "compliance"],
+  slt: [
+    "improvement",
+    "teaching-learning",
+    "estates",
+    "compliance",
+    "hr",
+    "training",
+    "risk",
+  ],
+  teacher: ["teaching-learning", "hr", "training"],
+  governor: ["governance", "improvement", "risk"],
+  caretaker: ["estates", "compliance", "training"],
   viewer: ["improvement", "teaching-learning"],
-  sbm: ["finance", "estates", "compliance", "hr"],
-  senco: ["send", "teaching-learning", "hr"],
+  sbm: ["finance", "estates", "compliance", "hr", "training", "risk"],
+  senco: ["send", "teaching-learning", "hr", "training"],
 };
 
 // Module icons
@@ -68,6 +81,8 @@ const MODULE_ICONS: Record<
   finance: Building2,
   hr: User,
   send: BookOpen,
+  training: GraduationCap,
+  risk: AlertTriangle,
 };
 
 const MODULE_COLORS: Record<
@@ -113,6 +128,16 @@ const MODULE_COLORS: Record<
     bg: "bg-pink-50 dark:bg-pink-900/20",
     text: "text-pink-600 dark:text-pink-400",
     border: "border-pink-200 dark:border-pink-800",
+  },
+  training: {
+    bg: "bg-violet-50 dark:bg-violet-900/20",
+    text: "text-violet-600 dark:text-violet-400",
+    border: "border-violet-200 dark:border-violet-800",
+  },
+  risk: {
+    bg: "bg-red-50 dark:bg-red-900/20",
+    text: "text-red-600 dark:text-red-400",
+    border: "border-red-200 dark:border-red-800",
   },
 };
 

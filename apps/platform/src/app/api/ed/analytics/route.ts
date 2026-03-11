@@ -1,6 +1,7 @@
 // Ed Analytics API - Privacy-friendly usage tracking
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
+import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 
 interface AnalyticsEvent {
   type: string;
@@ -13,32 +14,27 @@ interface AnalyticsEvent {
 /**
  * POST /api/ed/analytics
  * Record anonymous usage analytics
- * 
- * Note: This is privacy-friendly - no PII is collected
+ *
+ * Note: This is privacy-friendly - no PII is collected.
+ * Anonymous POST is acceptable — no auth required.
  */
 export async function POST(request: NextRequest) {
   try {
     const event: AnalyticsEvent = await request.json();
-    
+
     // In production, this would write to a privacy-friendly analytics store
-    // For now, just log it
-    console.log('[Ed Analytics]', {
-      type: event.type,
-      toolId: event.toolId,
-      duration: event.duration,
-      version: event.version,
-      // Don't log timestamp - just use server time
-    });
-    
-    // Future: Write to database for aggregated reporting
-    // - Which tools are most used with Ed
-    // - What questions are asked most frequently
-    // - Where do users struggle
-    
+    if (process.env.NODE_ENV === "development") {
+      console.log("[Ed Analytics]", {
+        type: event.type,
+        toolId: event.toolId,
+        duration: event.duration,
+        version: event.version,
+      });
+    }
+
     return NextResponse.json({ success: true });
-    
   } catch (error) {
-    console.error('[Ed Analytics] Error:', error);
+    console.error("[Ed Analytics] Error:", error);
     return NextResponse.json({ success: false }, { status: 500 });
   }
 }
@@ -47,18 +43,18 @@ export async function POST(request: NextRequest) {
  * GET /api/ed/analytics
  * Get aggregated analytics (admin only)
  */
-export async function GET(request: NextRequest) {
-  // TODO: Add authentication check for admin
-  
-  // Return placeholder data
-  return NextResponse.json({
-    summary: {
-      totalQuestions: 0,
-      uniqueTools: 0,
-      avgResponseTime: 0,
-    },
-    topTools: [],
-    topQuestions: [],
-  });
-}
-
+export const GET = protectedRoute(
+  async (auth, request) => {
+    // Return placeholder data
+    return apiSuccess({
+      summary: {
+        totalQuestions: 0,
+        uniqueTools: 0,
+        avgResponseTime: 0,
+      },
+      topTools: [],
+      topQuestions: [],
+    });
+  },
+  { requiredRole: "admin" },
+);

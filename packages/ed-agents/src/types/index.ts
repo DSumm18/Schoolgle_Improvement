@@ -7,35 +7,39 @@
 // ============================================================================
 
 export type Domain =
-  | 'estates'
-  | 'hr'
-  | 'send'
-  | 'data'
-  | 'curriculum'
-  | 'it-tech'
-  | 'procurement'
-  | 'governance'
-  | 'communications'
-  | 'general';
+  | "estates"
+  | "hr"
+  | "send"
+  | "data"
+  | "curriculum"
+  | "it-tech"
+  | "procurement"
+  | "governance"
+  | "communications"
+  | "intelligence"
+  | "risk"
+  | "general";
 
 export type SpecialistId =
-  | 'estates-specialist'
-  | 'hr-specialist'
-  | 'send-specialist'
-  | 'data-specialist'
-  | 'curriculum-specialist'
-  | 'it-tech-specialist'
-  | 'procurement-specialist'
-  | 'governance-specialist'
-  | 'communications-specialist'
-  | 'form-specialist'
-  | 'ed-general';
+  | "estates-specialist"
+  | "hr-specialist"
+  | "send-specialist"
+  | "data-specialist"
+  | "curriculum-specialist"
+  | "it-tech-specialist"
+  | "procurement-specialist"
+  | "governance-specialist"
+  | "communications-specialist"
+  | "form-specialist"
+  | "intelligence-specialist"
+  | "risk-specialist"
+  | "ed-general";
 
 // ============================================================================
 // Confidence Levels
 // ============================================================================
 
-export type ConfidenceLevel = 'HIGH' | 'MEDIUM' | 'LOW';
+export type ConfidenceLevel = "HIGH" | "MEDIUM" | "LOW";
 
 export interface FreshnessInfo {
   lastVerified: Date;
@@ -78,16 +82,17 @@ export interface SourceInfo {
 // ============================================================================
 
 export type AppSlug =
-  | 'estates-compliance'
-  | 'hr'
-  | 'send'
-  | 'data'
-  | 'schoolgle-platform'
-  | 'unknown';
+  | "estates-compliance"
+  | "hr"
+  | "send"
+  | "data"
+  | "intelligence"
+  | "schoolgle-platform"
+  | "unknown";
 
-export type UserRole = 'admin' | 'staff' | 'viewer';
+export type UserRole = "admin" | "staff" | "viewer";
 
-export type SubscriptionPlan = 'free' | 'schools' | 'trusts';
+export type SubscriptionPlan = "free" | "schools" | "trusts";
 
 export interface SubscriptionContext {
   plan: SubscriptionPlan;
@@ -173,7 +178,7 @@ export interface KnowledgeQueryOptions {
 // Perspective Types
 // ============================================================================
 
-export type PerspectiveType = 'optimist' | 'critic' | 'neutral';
+export type PerspectiveType = "optimist" | "critic" | "neutral";
 
 export interface PerspectiveResponse {
   optimist: string;
@@ -203,16 +208,16 @@ export interface GuardrailCheck {
 // Model Types
 // ============================================================================
 
-export type ModelProvider = 'anthropic' | 'openai' | 'openrouter' | 'google';
+export type ModelProvider = "anthropic" | "openai" | "openrouter" | "google";
 
 export type TaskType =
-  | 'intent-classification'
-  | 'work-focus-check'
-  | 'specialist-response'
-  | 'perspective-generation'
-  | 'synthesis'
-  | 'ui-analysis'
-  | 'action-planning';
+  | "intent-classification"
+  | "work-focus-check"
+  | "specialist-response"
+  | "perspective-generation"
+  | "synthesis"
+  | "ui-analysis"
+  | "action-planning";
 
 export interface ModelConfig {
   id: string;
@@ -268,7 +273,7 @@ export interface EdResponse {
     redFlags?: Array<{
       type: string;
       message: string;
-      severity: 'low' | 'medium' | 'high';
+      severity: "low" | "medium" | "high";
     }>;
   };
 }
@@ -314,7 +319,7 @@ export interface FormQuestion {
 
 export interface FormFieldKnowledge {
   explanation: string;
-  explanation_level: 'layperson' | 'professional' | 'legal';
+  explanation_level: "layperson" | "professional" | "legal";
   red_flags: Array<{
     type: string;
     examples: string[];
@@ -334,7 +339,14 @@ export interface FormFieldKnowledge {
 // ============================================================================
 
 export interface BrowserAction {
-  type: 'navigate' | 'click' | 'fill' | 'select' | 'scroll' | 'screenshot' | 'wait';
+  type:
+    | "navigate"
+    | "click"
+    | "fill"
+    | "select"
+    | "scroll"
+    | "screenshot"
+    | "wait";
   selector?: string;
   value?: string;
   url?: string;
@@ -356,24 +368,27 @@ export class EdAgentError extends Error {
   constructor(
     message: string,
     public code: string,
-    public details?: Record<string, unknown>
+    public details?: Record<string, unknown>,
   ) {
     super(message);
-    this.name = 'EdAgentError';
+    this.name = "EdAgentError";
   }
 }
 
 export class SpecialistNotFoundError extends EdAgentError {
   constructor(specialistId: string) {
-    super(`Specialist not found: ${specialistId}`, 'SPECIALIST_NOT_FOUND');
-    this.name = 'SpecialistNotFoundError';
+    super(`Specialist not found: ${specialistId}`, "SPECIALIST_NOT_FOUND");
+    this.name = "SpecialistNotFoundError";
   }
 }
 
 export class GuardrailFailedError extends EdAgentError {
-  constructor(reason: string, public result: GuardrailResult) {
-    super(`Guardrail failed: ${reason}`, 'GUARDRAIL_FAILED');
-    this.name = 'GuardrailFailedError';
+  constructor(
+    reason: string,
+    public result: GuardrailResult,
+  ) {
+    super(`Guardrail failed: ${reason}`, "GUARDRAIL_FAILED");
+    this.name = "GuardrailFailedError";
   }
 }
 
@@ -381,16 +396,16 @@ export class InsufficientCreditsError extends EdAgentError {
   constructor(required: number, available: number) {
     super(
       `Insufficient credits: ${available} available, ${required} required`,
-      'INSUFFICIENT_CREDITS'
+      "INSUFFICIENT_CREDITS",
     );
-    this.name = 'InsufficientCreditsError';
+    this.name = "InsufficientCreditsError";
   }
 }
 
 export class KnowledgeNotFoundError extends EdAgentError {
   constructor(query: string) {
-    super(`No knowledge found for query: ${query}`, 'KNOWLEDGE_NOT_FOUND');
-    this.name = 'KnowledgeNotFoundError';
+    super(`No knowledge found for query: ${query}`, "KNOWLEDGE_NOT_FOUND");
+    this.name = "KnowledgeNotFoundError";
   }
 }
 

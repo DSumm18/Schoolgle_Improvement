@@ -1,73 +1,76 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
+import { createServiceRoleClient } from "@/lib/supabase-server";
+import { fireTrigger, TRIGGER_EVENTS } from "@/lib/document-engine";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+/**
+ * Extract meeting ID from the URL pathname.
+ * URL pattern: /api/meetings/[id]/complete
+ */
+function getMeetingId(request: Request): string {
+  const segments = new URL(request.url).pathname.split("/");
+  // ["", "api", "meetings", "<id>", "complete"]
+  return segments[3];
+}
 
 /**
  * POST /api/meetings/[id]/complete
  * Transition meeting to completed, calculate compliance score
  */
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    const { id } = await params;
-    const body = await req.json();
-    const { organizationId } = body;
+export const POST = protectedRoute(async (auth, request) => {
+  const id = getMeetingId(request);
+  const body = await request.json();
+  const { organizationId } = body;
 
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: "Missing organizationId" },
-        { status: 400 },
-      );
-    }
+  const resolvedOrgId = organizationId || auth.organizationId;
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  if (!resolvedOrgId) {
+    return apiError("Missing organizationId", 400);
+  }
 
-    // Calculate compliance score from checklist items
-    const { data: items } = await supabase
-      .from("meeting_checklist_items")
-      .select("*")
-      .eq("meeting_id", id);
+  const supabase = createServiceRoleClient();
 
-    const total = items?.length || 0;
-    const covered =
-      items?.filter((i: any) => i.status === "green" || i.manually_ticked)
-        .length || 0;
-    const score = total > 0 ? Math.round((covered / total) * 100) : 0;
+  // Calculate compliance score from checklist items
+  const { data: items } = await supabase
+    .from("meeting_checklist_items")
+    .select("*")
+    .eq("meeting_id", id);
 
-    const { data: meeting, error } = await supabase
-      .from("meetings")
-      .update({
-        status: "completed",
-        ended_at: new Date().toISOString(),
-        compliance_score: score,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", id)
-      .eq("organization_id", organizationId)
-      .eq("status", "in_progress")
-      .select()
-      .single();
+  const total = items?.length || 0;
+  const covered =
+    items?.filter((i: any) => i.status === "green" || i.manually_ticked)
+      .length || 0;
+  const score = total > 0 ? Math.round((covered / total) * 100) : 0;
 
-    if (error || !meeting) {
-      return NextResponse.json(
-        {
-          error:
-            "Meeting not found or cannot be completed (must be in_progress)",
-        },
-        { status: 400 },
-      );
-    }
+  const { data: meeting, error } = await supabase
+    .from("meetings")
+    .update({
+      status: "completed",
+      ended_at: new Date().toISOString(),
+      compliance_score: score,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+    .eq("organization_id", resolvedOrgId)
+    .eq("status", "in_progress")
+    .select()
+    .single();
 
-    return NextResponse.json({ meeting, compliance_score: score });
-  } catch (error: any) {
-    console.error("Meeting complete error:", error);
-    return NextResponse.json(
-      { error: error.message || "Internal server error" },
-      { status: 500 },
+  if (error || !meeting) {
+    return apiError(
+      "Meeting not found or cannot be completed (must be in_progress)",
+      400,
     );
   }
-}
+
+  // Fire meeting.completed trigger for auto-document generation
+  fireTrigger(supabase, TRIGGER_EVENTS.MEETING_COMPLETED, resolvedOrgId, {
+    meetingId: id,
+    staffId: meeting.attendee_name ? undefined : undefined,
+    compliance_score: score,
+    meeting_type: meeting.template_id,
+    contextType: "meeting",
+    contextId: id,
+  }).catch(() => {}); // Fire-and-forget
+
+  return apiSuccess({ meeting, compliance_score: score });
+});

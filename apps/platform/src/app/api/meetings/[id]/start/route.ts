@@ -1,60 +1,52 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
+import { createServiceRoleClient } from "@/lib/supabase-server";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+/**
+ * Extract meeting ID from the URL pathname.
+ * URL pattern: /api/meetings/[id]/start
+ */
+function getMeetingId(request: Request): string {
+  const segments = new URL(request.url).pathname.split("/");
+  // ["", "api", "meetings", "<id>", "start"]
+  return segments[3];
+}
 
 /**
  * POST /api/meetings/[id]/start
  * Transition meeting to in_progress
  */
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    const { id } = await params;
-    const body = await req.json();
-    const { organizationId } = body;
+export const POST = protectedRoute(async (auth, request) => {
+  const id = getMeetingId(request);
+  const body = await request.json();
+  const { organizationId } = body;
 
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: "Missing organizationId" },
-        { status: 400 },
-      );
-    }
+  const resolvedOrgId = organizationId || auth.organizationId;
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  if (!resolvedOrgId) {
+    return apiError("Missing organizationId", 400);
+  }
 
-    const { data: meeting, error } = await supabase
-      .from("meetings")
-      .update({
-        status: "in_progress",
-        started_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", id)
-      .eq("organization_id", organizationId)
-      .eq("status", "scheduled")
-      .select()
-      .single();
+  const supabase = createServiceRoleClient();
 
-    if (error || !meeting) {
-      return NextResponse.json(
-        {
-          error:
-            "Meeting not found or cannot be started (must be in scheduled status)",
-        },
-        { status: 400 },
-      );
-    }
+  const { data: meeting, error } = await supabase
+    .from("meetings")
+    .update({
+      status: "in_progress",
+      started_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+    .eq("organization_id", resolvedOrgId)
+    .eq("status", "scheduled")
+    .select()
+    .single();
 
-    return NextResponse.json({ meeting });
-  } catch (error: any) {
-    console.error("Meeting start error:", error);
-    return NextResponse.json(
-      { error: error.message || "Internal server error" },
-      { status: 500 },
+  if (error || !meeting) {
+    return apiError(
+      "Meeting not found or cannot be started (must be in scheduled status)",
+      400,
     );
   }
-}
+
+  return apiSuccess({ meeting });
+});

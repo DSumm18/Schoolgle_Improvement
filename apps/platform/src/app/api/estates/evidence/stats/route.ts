@@ -4,29 +4,17 @@
  * GET /api/estates/evidence/stats - Get evidence statistics
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { EvidenceService } from '@/lib/estates-compliance/services/EvidenceService';
+import { NextRequest } from "next/server";
+import { protectedRoute, apiSuccess } from "@/lib/api-utils";
+import { EvidenceService } from "@/lib/estates-compliance/services/EvidenceService";
 
 /**
  * GET /api/estates/evidence/stats
  */
-export async function GET(request: NextRequest) {
-  try {
-    const searchParams = request.nextUrl.searchParams;
-    const organizationId = searchParams.get('organization_id');
+export const GET = protectedRoute(async (auth, request) => {
+  const { organizationId } = auth;
 
-    if (!organizationId) {
-      return NextResponse.json({ error: 'organization_id is required' }, { status: 400 });
-    }
+  const stats = await EvidenceService.getStats(organizationId);
 
-    const stats = await EvidenceService.getStats(organizationId);
-
-    return NextResponse.json(stats);
-  } catch (error) {
-    console.error('Error in GET /api/estates/evidence/stats:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to fetch evidence stats' },
-      { status: 500 }
-    );
-  }
-}
+  return apiSuccess(stats);
+});

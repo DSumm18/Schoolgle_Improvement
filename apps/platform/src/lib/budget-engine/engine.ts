@@ -35,6 +35,7 @@ import type {
   CFRCode,
   MATOverview,
   MonthlySpend,
+  StructuralViabilityResult,
 } from "./types";
 import { CFR_EXPENDITURE } from "./types";
 
@@ -207,15 +208,164 @@ function calculateICFP(plan: BudgetPlan): ICFPMetrics {
 
   const income = plan.total_income || 1;
 
+  // 1. Staffing % = total staff costs / total income × 100
+  const staffing_percent = (totalStaff / income) * 100;
+
+  // 2. Pupil:teacher ratio = NOR / teacher FTE
+  const pupil_teacher_ratio =
+    plan.number_on_roll && plan.teacher_fte && plan.teacher_fte > 0
+      ? plan.number_on_roll / plan.teacher_fte
+      : 0;
+
+  // 3. Average class size = NOR / number of classes
+  const average_class_size =
+    plan.number_on_roll && plan.number_of_classes && plan.number_of_classes > 0
+      ? plan.number_on_roll / plan.number_of_classes
+      : 0;
+
+  // 4. Average teacher cost = total teaching cost / teacher FTE
+  const average_teacher_cost =
+    plan.teacher_fte && plan.teacher_fte > 0
+      ? totalTeaching / plan.teacher_fte
+      : 0;
+
+  // 5. Teacher contact ratio = teaching periods / total available periods
+  const teacher_contact_ratio =
+    plan.teaching_periods &&
+    plan.total_available_periods &&
+    plan.total_available_periods > 0
+      ? plan.teaching_periods / plan.total_available_periods
+      : 0;
+
+  // 6. Leadership % = leadership cost / total staff costs × 100
+  const leadership_percent =
+    plan.leadership_cost && totalStaff > 0
+      ? (plan.leadership_cost / totalStaff) * 100
+      : 0;
+
+  // 7. Leadership FTE % = leadership FTE / total staff FTE × 100
+  const leadership_fte_percent =
+    plan.leadership_fte && plan.total_staff_fte && plan.total_staff_fte > 0
+      ? (plan.leadership_fte / plan.total_staff_fte) * 100
+      : 0;
+
   return {
-    staffing_percent: (totalStaff / income) * 100,
-    pupil_teacher_ratio: 0,
-    average_class_size: 0,
-    average_teacher_cost: 0,
-    teacher_contact_ratio: 0,
-    leadership_percent: 0,
-    leadership_fte_percent: 0,
+    staffing_percent,
+    pupil_teacher_ratio,
+    average_class_size,
+    average_teacher_cost,
+    teacher_contact_ratio,
+    leadership_percent,
+    leadership_fte_percent,
   };
+}
+
+// =====================================================
+// STRUCTURAL VIABILITY ASSESSMENT
+// =====================================================
+
+/**
+ * Assess the structural viability of a school's staffing and financial model.
+ * Uses ICFP metrics and number on roll to detect structural risks that
+ * threaten long-term sustainability — particularly relevant for small schools,
+ * half-form entry schools, and those with expensive leadership structures.
+ */
+export function assessStructuralViability(
+  icfp: ICFPMetrics,
+  number_on_roll: number,
+): StructuralViabilityResult {
+  const risks: string[] = [];
+  const suggestions: string[] = [];
+
+  // --- Half-form entry / small school risk ---
+  if (number_on_roll < 120) {
+    risks.push(
+      `Half-form entry school (NOR ${number_on_roll}): fixed leadership costs are spread across very few pupils, making it difficult to achieve sustainable staffing ratios.`,
+    );
+    suggestions.push(
+      "Consider federation or executive headship to share leadership costs across schools.",
+    );
+    suggestions.push(
+      "Explore mixed-age class teaching to reduce the number of required class teachers.",
+    );
+  }
+
+  // --- Staffing > 85% of income (financial risk) ---
+  if (icfp.staffing_percent > 85) {
+    risks.push(
+      `Staffing costs at ${icfp.staffing_percent.toFixed(1)}% of income — critically above the 78% ICFP threshold. Very limited budget for non-staff expenditure (resources, premises, professional development).`,
+    );
+    suggestions.push(
+      "Conduct a full staffing structure review: identify posts that can be restructured at next natural vacancy.",
+    );
+    suggestions.push(
+      "Review supply/agency spend (E02, E26) — consider investing in cover supervisor posts instead.",
+    );
+  } else if (icfp.staffing_percent > 80) {
+    risks.push(
+      `Staffing costs at ${icfp.staffing_percent.toFixed(1)}% of income — above the 78% ICFP recommended maximum. Non-staff budgets are under pressure.`,
+    );
+    suggestions.push(
+      "Plan for natural attrition: when a post becomes vacant, review whether it needs replacing like-for-like.",
+    );
+  }
+
+  // --- Low pupil:teacher ratio (expensive structure) ---
+  if (icfp.pupil_teacher_ratio > 0 && icfp.pupil_teacher_ratio < 15) {
+    risks.push(
+      `Pupil:teacher ratio of ${icfp.pupil_teacher_ratio.toFixed(1)} is below 15 — the school is buying more teaching capacity than comparable schools. This drives high per-pupil staffing costs.`,
+    );
+    suggestions.push(
+      "Review class organisation: could any year groups be combined or classes reorganised to increase average class size?",
+    );
+    suggestions.push(
+      "Audit non-class-based teacher roles (e.g. TLR holders with significant non-teaching time) for cost-effectiveness.",
+    );
+  }
+
+  // --- Teacher contact ratio too low (teachers not teaching enough) ---
+  if (icfp.teacher_contact_ratio > 0 && icfp.teacher_contact_ratio < 0.7) {
+    risks.push(
+      `Teacher contact ratio of ${icfp.teacher_contact_ratio.toFixed(2)} is well below the 0.78 target — teachers are spending too little time in front of classes relative to their cost.`,
+    );
+    suggestions.push(
+      "Review PPA and leadership time allocations to ensure they align with STPCD minimums rather than exceeding them.",
+    );
+  }
+
+  // --- Leadership costs disproportionately high ---
+  if (icfp.leadership_percent > 20) {
+    risks.push(
+      `Leadership costs at ${icfp.leadership_percent.toFixed(1)}% of total staff spend — significantly above the typical 10-15% range.`,
+    );
+    suggestions.push(
+      "Consider whether all leadership posts are essential at current grades, or if responsibilities could be redistributed.",
+    );
+  }
+
+  // --- Average teacher cost very high ---
+  if (icfp.average_teacher_cost > 55000) {
+    risks.push(
+      `Average teacher cost of £${Math.round(icfp.average_teacher_cost).toLocaleString()} suggests a top-heavy pay profile. Limited room for future pay progression increases.`,
+    );
+    suggestions.push(
+      "As experienced staff retire, consider replacing with ECTs or less experienced teachers to rebalance the pay profile.",
+    );
+  }
+
+  // --- Combined risk: small school + high staffing ---
+  if (number_on_roll < 120 && icfp.staffing_percent > 80) {
+    risks.push(
+      "Combined structural risk: small school with high staffing ratio. This model is unlikely to be sustainable without external support or structural change.",
+    );
+    suggestions.push(
+      "Urgently explore MAT membership, hard federation, or shared services arrangements to achieve economies of scale.",
+    );
+  }
+
+  const viable = risks.length === 0;
+
+  return { viable, risks, suggestions };
 }
 
 // =====================================================

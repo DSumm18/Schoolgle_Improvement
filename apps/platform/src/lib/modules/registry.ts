@@ -26,6 +26,16 @@ import {
   MessageSquare,
   BarChart3,
   ClipboardCheck,
+  AlertTriangle,
+  FileSearch,
+  QrCode,
+  Calendar,
+  Eye,
+  UserCheck,
+  ThumbsUp,
+  Scale,
+  Accessibility,
+  Brain,
 } from "lucide-react";
 
 export type Role =
@@ -63,6 +73,15 @@ export const MODULES: ModuleDefinition[] = [
     color: "amber",
     icon: ShieldCheck,
     description: "Strategic oversight and governor portal.",
+    requiredPermissions: ["admin", "headteacher", "slt", "governor"],
+  },
+  {
+    id: "risk",
+    name: "Risk Register",
+    color: "rose",
+    icon: AlertTriangle,
+    description:
+      "Enterprise risk management with dynamic scoring and trust escalation.",
     requiredPermissions: ["admin", "headteacher", "slt", "governor"],
   },
   {
@@ -115,12 +134,48 @@ export const MODULES: ModuleDefinition[] = [
     requiredPermissions: ["admin", "headteacher", "slt"],
   },
   {
+    id: "safeguarding",
+    name: "Safeguarding",
+    color: "red",
+    icon: Eye,
+    description:
+      "Concern logging, DSL triage, chronology, and multi-agency referrals.",
+    requiredPermissions: ["admin", "headteacher", "slt"],
+  },
+  {
+    id: "attendance",
+    name: "Attendance",
+    color: "indigo",
+    icon: UserCheck,
+    description:
+      "Registration, persistent absence tracking, and intervention management.",
+    requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
+  },
+  {
     id: "send",
     name: "SEND",
     color: "emerald",
     icon: Heart,
-    description: "EHCP and provision mapping.",
+    description:
+      "SEN register, graduated approach, provision mapping, and referral tracking.",
     requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
+  },
+  {
+    id: "behaviour",
+    name: "Behaviour",
+    color: "orange",
+    icon: Scale,
+    description:
+      "Positive/negative incidents, consequence ladder, and exclusion tracking.",
+    requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
+  },
+  {
+    id: "calendar",
+    name: "Calendar",
+    color: "violet",
+    icon: Calendar,
+    description: "Term dates, school events, and parents' evening booking.",
+    requiredPermissions: ["admin", "headteacher", "slt", "teacher", "governor"],
   },
   {
     id: "surveys",
@@ -133,6 +188,26 @@ export const MODULES: ModuleDefinition[] = [
 ];
 
 export const APPS: AppDefinition[] = [
+  // Governance Apps
+  {
+    id: "governance-home",
+    moduleId: "governance",
+    name: "Governance Portal",
+    route: "/dashboard/governance",
+    icon: ShieldCheck,
+    shortDescription: "Governor directory, meetings and oversight.",
+    requiredPermissions: ["admin", "headteacher", "slt", "governor"],
+  },
+  {
+    id: "governor-visits",
+    moduleId: "governance",
+    name: "Visit Planning",
+    route: "/dashboard/governance/visits",
+    icon: ClipboardList,
+    shortDescription: "Plan and record governor monitoring visits.",
+    requiredPermissions: ["admin", "headteacher", "slt", "governor"],
+  },
+
   // Improvement Apps
   {
     id: "ofsted-readiness",
@@ -211,6 +286,15 @@ export const APPS: AppDefinition[] = [
     route: "/timeline",
     icon: Clock,
     shortDescription: "Historical record of changes.",
+    requiredPermissions: ["admin", "headteacher", "slt"],
+  },
+  {
+    id: "data-validation",
+    moduleId: "improvement",
+    name: "Data Validation",
+    route: "/dashboard/data-validation",
+    icon: FileSearch,
+    shortDescription: "Review AI-extracted data before it flows to modules.",
     requiredPermissions: ["admin", "headteacher", "slt"],
   },
 
@@ -464,6 +548,42 @@ export const APPS: AppDefinition[] = [
     shortDescription: "Monitor usage & costs.",
     requiredPermissions: ["admin", "headteacher", "slt", "caretaker"],
   },
+  {
+    id: "floor-plan",
+    moduleId: "estates",
+    name: "Floor Plan",
+    route: "/dashboard/estates/floor-plan",
+    icon: Building2,
+    shortDescription: "Interactive building map with overlays.",
+    requiredPermissions: ["admin", "headteacher", "slt", "caretaker"],
+  },
+  {
+    id: "asset-tags",
+    moduleId: "estates",
+    name: "Asset Tags",
+    route: "/dashboard/estates/asset-tags",
+    icon: QrCode,
+    shortDescription: "Generate and print QR codes for asset tracking.",
+    requiredPermissions: ["admin", "headteacher", "slt", "caretaker"],
+  },
+  {
+    id: "condition-survey",
+    moduleId: "estates",
+    name: "Condition Survey",
+    route: "/dashboard/estates/condition-survey",
+    icon: ClipboardCheck,
+    shortDescription: "Building condition grading with backlog costing.",
+    requiredPermissions: ["admin", "headteacher", "slt", "caretaker"],
+  },
+  {
+    id: "lettings",
+    moduleId: "estates",
+    name: "Lettings",
+    route: "/dashboard/estates/lettings",
+    icon: Calendar,
+    shortDescription: "Room bookings and lettings income management.",
+    requiredPermissions: ["admin", "headteacher", "slt"],
+  },
 
   // Finance Apps
   {
@@ -508,6 +628,143 @@ export const APPS: AppDefinition[] = [
       "caretaker",
     ],
   },
+  {
+    id: "payroll-parser",
+    moduleId: "finance",
+    name: "Payroll Import",
+    route: "/dashboard/finance/payroll",
+    icon: Users,
+    shortDescription: "Import payroll data for ICFP analysis.",
+    requiredPermissions: ["admin", "headteacher", "slt"],
+  },
+
+  // Performance Management
+  {
+    id: "performance-management",
+    moduleId: "hr",
+    name: "Performance Management",
+    route: "/dashboard/hr/performance",
+    icon: Target,
+    shortDescription: "Appraisals, objectives, and pay recommendations.",
+    requiredPermissions: ["admin", "headteacher", "slt"],
+  },
+  // Cover Management
+  {
+    id: "cover-management",
+    moduleId: "hr",
+    name: "Cover Management",
+    route: "/dashboard/hr/cover",
+    icon: UserCheck,
+    shortDescription: "Staff absence recording and cover arrangements.",
+    requiredPermissions: ["admin", "headteacher", "slt"],
+  },
+
+  // Pupil Premium
+  {
+    id: "pupil-premium",
+    moduleId: "improvement",
+    name: "Pupil Premium",
+    route: "/dashboard/pupil-premium",
+    icon: Heart,
+    shortDescription: "PP strategy, spend tracking, and impact measurement.",
+    requiredPermissions: ["admin", "headteacher", "slt"],
+  },
+  // Sports Premium
+  {
+    id: "sports-premium",
+    moduleId: "improvement",
+    name: "Sports Premium",
+    route: "/dashboard/sports-premium",
+    icon: Accessibility,
+    shortDescription: "PE & sport premium strategy and DfE reporting.",
+    requiredPermissions: ["admin", "headteacher", "slt"],
+  },
+  // Admissions
+  {
+    id: "admissions",
+    moduleId: "improvement",
+    name: "Admissions",
+    route: "/dashboard/admissions",
+    icon: Users,
+    shortDescription: "Admission rounds, applications, and waiting lists.",
+    requiredPermissions: ["admin", "headteacher", "slt"],
+  },
+  // Emergency Planning
+  {
+    id: "emergency-planning",
+    moduleId: "estates",
+    name: "Emergency Planning",
+    route: "/dashboard/emergency",
+    icon: AlertTriangle,
+    shortDescription: "Lockdown/evacuation plans and drill logging.",
+    requiredPermissions: ["admin", "headteacher", "slt", "caretaker"],
+  },
+  // School Meals
+  {
+    id: "school-meals",
+    moduleId: "compliance",
+    name: "School Meals",
+    route: "/dashboard/school-meals",
+    icon: ClipboardCheck,
+    shortDescription:
+      "FSM tracking, meal registrations, and dietary management.",
+    requiredPermissions: ["admin", "headteacher", "slt"],
+  },
+
+  // Safeguarding Apps
+  {
+    id: "safeguarding-home",
+    moduleId: "safeguarding",
+    name: "DSL Dashboard",
+    route: "/dashboard/safeguarding",
+    icon: Eye,
+    shortDescription: "Concern logging, triage, and chronology.",
+    requiredPermissions: ["admin", "headteacher", "slt"],
+  },
+
+  // Attendance Apps
+  {
+    id: "attendance-home",
+    moduleId: "attendance",
+    name: "Attendance",
+    route: "/dashboard/attendance",
+    icon: UserCheck,
+    shortDescription: "Registration, absence tracking, and interventions.",
+    requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
+  },
+
+  // SEND Apps
+  {
+    id: "send-home",
+    moduleId: "send",
+    name: "SENCO Dashboard",
+    route: "/dashboard/send",
+    icon: Heart,
+    shortDescription: "SEN register and provision mapping.",
+    requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
+  },
+
+  // Behaviour Apps
+  {
+    id: "behaviour-home",
+    moduleId: "behaviour",
+    name: "Behaviour",
+    route: "/dashboard/behaviour",
+    icon: Scale,
+    shortDescription: "Incident logging, consequences, and exclusion tracking.",
+    requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
+  },
+
+  // Calendar Apps
+  {
+    id: "calendar-home",
+    moduleId: "calendar",
+    name: "School Calendar",
+    route: "/dashboard/calendar",
+    icon: Calendar,
+    shortDescription: "Term dates, events, and parents' evening.",
+    requiredPermissions: ["admin", "headteacher", "slt", "teacher", "governor"],
+  },
 
   // Survey Apps
   {
@@ -536,6 +793,53 @@ export const APPS: AppDefinition[] = [
     icon: BarChart3,
     shortDescription: "Cross-survey analytics and insights.",
     requiredPermissions: ["admin", "headteacher", "slt"],
+  },
+
+  // Risk Apps
+  {
+    id: "risk-home",
+    moduleId: "risk",
+    name: "Risk Register",
+    route: "/dashboard/risk",
+    icon: AlertTriangle,
+    shortDescription: "Risk heat map and register overview.",
+    requiredPermissions: ["admin", "headteacher", "slt", "governor"],
+  },
+  {
+    id: "risk-decisions",
+    moduleId: "risk",
+    name: "Risk Decisions",
+    route: "/dashboard/risk/decisions",
+    icon: FileText,
+    shortDescription: "4T decisions and board meeting links.",
+    requiredPermissions: ["admin", "headteacher", "slt", "governor"],
+  },
+  {
+    id: "strategic-plan",
+    moduleId: "risk",
+    name: "Strategic Plan",
+    route: "/dashboard/risk/strategic-plan",
+    icon: TrendingUp,
+    shortDescription: "3-year capital and improvement planning.",
+    requiredPermissions: ["admin", "headteacher", "slt"],
+  },
+  {
+    id: "icfp",
+    moduleId: "risk",
+    name: "ICFP",
+    route: "/dashboard/risk/icfp",
+    icon: BarChart3,
+    shortDescription: "ICFP Magnificent Seven metrics and scenarios.",
+    requiredPermissions: ["admin", "headteacher", "slt"],
+  },
+  {
+    id: "trust-dashboard",
+    moduleId: "risk",
+    name: "Trust Overview",
+    route: "/dashboard/risk/trust",
+    icon: Building2,
+    shortDescription: "Trust-wide risk aggregation and board reporting.",
+    requiredPermissions: ["admin", "headteacher", "governor"],
   },
 ];
 
@@ -574,6 +878,53 @@ export const NAVBAR_CONFIG = [
           "viewer",
         ],
       },
+      {
+        id: "risk",
+        name: "Risk Register",
+        route: "/dashboard/risk",
+        icon: AlertTriangle,
+        permissions: ["admin", "headteacher", "slt", "governor"],
+      },
+      {
+        id: "safeguarding",
+        name: "Safeguarding",
+        route: "/dashboard/safeguarding",
+        icon: Eye,
+        color: "red",
+        permissions: ["admin", "headteacher", "slt"],
+      },
+      {
+        id: "attendance",
+        name: "Attendance",
+        route: "/dashboard/attendance",
+        icon: UserCheck,
+        color: "indigo",
+        permissions: ["admin", "headteacher", "slt", "teacher"],
+      },
+      {
+        id: "send",
+        name: "SEND",
+        route: "/dashboard/send",
+        icon: Heart,
+        color: "emerald",
+        permissions: ["admin", "headteacher", "slt", "teacher"],
+      },
+      {
+        id: "behaviour",
+        name: "Behaviour",
+        route: "/dashboard/behaviour",
+        icon: Scale,
+        color: "orange",
+        permissions: ["admin", "headteacher", "slt", "teacher"],
+      },
+      {
+        id: "calendar",
+        name: "Calendar",
+        route: "/dashboard/calendar",
+        icon: Calendar,
+        color: "violet",
+        permissions: ["admin", "headteacher", "slt", "teacher", "governor"],
+      },
     ],
   },
 ];
@@ -609,6 +960,28 @@ export function getModuleByPath(path: string): ModuleDefinition | undefined {
     return MODULES.find((m) => m.id === "improvement");
   if (path.startsWith("/dashboard/surveys"))
     return MODULES.find((m) => m.id === "surveys");
+  if (path.startsWith("/dashboard/risk"))
+    return MODULES.find((m) => m.id === "risk");
+  if (path.startsWith("/dashboard/pupil-premium"))
+    return MODULES.find((m) => m.id === "improvement");
+  if (path.startsWith("/dashboard/sports-premium"))
+    return MODULES.find((m) => m.id === "improvement");
+  if (path.startsWith("/dashboard/admissions"))
+    return MODULES.find((m) => m.id === "improvement");
+  if (path.startsWith("/dashboard/emergency"))
+    return MODULES.find((m) => m.id === "estates");
+  if (path.startsWith("/dashboard/school-meals"))
+    return MODULES.find((m) => m.id === "compliance");
+  if (path.startsWith("/dashboard/safeguarding"))
+    return MODULES.find((m) => m.id === "safeguarding");
+  if (path.startsWith("/dashboard/attendance"))
+    return MODULES.find((m) => m.id === "attendance");
+  if (path.startsWith("/dashboard/send"))
+    return MODULES.find((m) => m.id === "send");
+  if (path.startsWith("/dashboard/behaviour"))
+    return MODULES.find((m) => m.id === "behaviour");
+  if (path.startsWith("/dashboard/calendar"))
+    return MODULES.find((m) => m.id === "calendar");
 
   return undefined;
 }

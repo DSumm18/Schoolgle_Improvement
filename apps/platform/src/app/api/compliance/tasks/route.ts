@@ -1,71 +1,50 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
+import { createServiceRoleClient } from "@/lib/supabase-server";
 
 /**
  * GET /api/compliance/tasks
  * List compliance tasks for an organization
  */
-export async function GET(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const organizationId = searchParams.get("organizationId");
-    const status = searchParams.get("status");
-    const assignedTo = searchParams.get("assignedTo");
+export const GET = protectedRoute(async (auth, request) => {
+  const { organizationId } = auth;
+  const { searchParams } = new URL(request.url);
+  const status = searchParams.get("status");
+  const assignedTo = searchParams.get("assignedTo");
 
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: "Missing organizationId parameter" },
-        { status: 400 },
-      );
-    }
+  const supabase = createServiceRoleClient();
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  let query = supabase
+    .from("compliance_tasks")
+    .select("*, compliance_item:compliance_items(id, title, type, status)")
+    .eq("organization_id", organizationId)
+    .order("due_date", { ascending: true });
 
-    let query = supabase
-      .from("compliance_tasks")
-      .select("*, compliance_item:compliance_items(id, title, type, status)")
-      .eq("organization_id", organizationId)
-      .order("due_date", { ascending: true });
-
-    if (status) {
-      query = query.eq("status", status);
-    }
-    if (assignedTo) {
-      query = query.eq("assigned_to_user_id", assignedTo);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      console.error("Error fetching tasks:", error);
-      return NextResponse.json(
-        { error: "Failed to fetch tasks" },
-        { status: 500 },
-      );
-    }
-
-    return NextResponse.json({ tasks: data || [] });
-  } catch (error: any) {
-    console.error("Tasks API error:", error);
-    return NextResponse.json(
-      { error: error.message || "Internal server error" },
-      { status: 500 },
-    );
+  if (status) {
+    query = query.eq("status", status);
   }
-}
+  if (assignedTo) {
+    query = query.eq("assigned_to_user_id", assignedTo);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error("Error fetching tasks:", error);
+    return apiError("Failed to fetch tasks", 500);
+  }
+
+  return apiSuccess({ tasks: data || [] });
+});
 
 /**
  * POST /api/compliance/tasks
  * Create a new compliance task
  */
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
+export const POST = protectedRoute(
+  async (auth, request) => {
+    const { organizationId, userId } = auth;
+    const body = await request.json();
     const {
-      organizationId,
       compliance_item_id,
       title,
       description,
@@ -73,17 +52,13 @@ export async function POST(req: NextRequest) {
       assigned_to_role,
       due_date,
       evidence_required,
-      created_by_user_id,
     } = body;
 
-    if (!organizationId || !title) {
-      return NextResponse.json(
-        { error: "Missing required fields: organizationId, title" },
-        { status: 400 },
-      );
+    if (!title) {
+      return apiError("Missing required field: title", 400);
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createServiceRoleClient();
 
     const { data: task, error } = await supabase
       .from("compliance_tasks")
@@ -97,17 +72,14 @@ export async function POST(req: NextRequest) {
         due_date,
         status: "pending",
         evidence_required: evidence_required || false,
-        created_by_user_id,
+        created_by_user_id: userId,
       })
       .select("*, compliance_item:compliance_items(id, title, type, status)")
       .single();
 
     if (error) {
       console.error("Error creating task:", error);
-      return NextResponse.json(
-        { error: "Failed to create task" },
-        { status: 500 },
-      );
+      return apiError("Failed to create task", 500);
     }
 
     // Audit log
@@ -116,37 +88,30 @@ export async function POST(req: NextRequest) {
       entity_type: "compliance_task",
       entity_id: task.id,
       action: "created",
-      actor_user_id: created_by_user_id,
+      actor_user_id: userId,
       metadata: { title, due_date, assigned_to_user_id },
     });
 
-    return NextResponse.json({ task }, { status: 201 });
-  } catch (error: any) {
-    console.error("Task create error:", error);
-    return NextResponse.json(
-      { error: error.message || "Internal server error" },
-      { status: 500 },
-    );
-  }
-}
+    return apiSuccess({ task }, 201);
+  },
+  { requiredRole: "teacher" },
+);
 
 /**
  * PUT /api/compliance/tasks
  * Update task status
  */
-export async function PUT(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const { id, status, completed_at, actor_user_id } = body;
+export const PUT = protectedRoute(
+  async (auth, request) => {
+    const { userId } = auth;
+    const body = await request.json();
+    const { id, status, completed_at } = body;
 
     if (!id || !status) {
-      return NextResponse.json(
-        { error: "Missing required fields: id, status" },
-        { status: 400 },
-      );
+      return apiError("Missing required fields: id, status", 400);
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createServiceRoleClient();
 
     const updateData: Record<string, any> = {
       status,
@@ -166,10 +131,7 @@ export async function PUT(req: NextRequest) {
 
     if (error) {
       console.error("Error updating task:", error);
-      return NextResponse.json(
-        { error: "Failed to update task" },
-        { status: 500 },
-      );
+      return apiError("Failed to update task", 500);
     }
 
     // Audit log
@@ -178,16 +140,11 @@ export async function PUT(req: NextRequest) {
       entity_type: "compliance_task",
       entity_id: id,
       action: status === "completed" ? "completed" : "status_changed",
-      actor_user_id,
+      actor_user_id: userId,
       metadata: { status },
     });
 
-    return NextResponse.json({ task });
-  } catch (error: any) {
-    console.error("Task update error:", error);
-    return NextResponse.json(
-      { error: error.message || "Internal server error" },
-      { status: 500 },
-    );
-  }
-}
+    return apiSuccess({ task });
+  },
+  { requiredRole: "teacher" },
+);

@@ -25,13 +25,14 @@ skills-lab/             # Knowledge-based skills
 
 ## Skill Categories
 
-| Category | Skills | Purpose |
-|----------|--------|---------|
-| **School Management** | Staff Directory, Actions Hub | Core school operations |
-| **Governance & Compliance** | SIAMS, Ofsted, Compliance | Inspection readiness |
-| **Estates & Facilities** | Maintenance, Assets, Energy | Facilities management |
-| **HR & Finance** | Payroll, Budget, Staffing | Resource management |
-| **Research & Analysis** | Deep Research, EEF Toolkit | Evidence-based guidance |
+| Category                    | Skills                                | Purpose                                   |
+| --------------------------- | ------------------------------------- | ----------------------------------------- |
+| **School Management**       | Staff Directory, Actions Hub          | Core school operations                    |
+| **Governance & Compliance** | SIAMS, Ofsted, Compliance             | Inspection readiness                      |
+| **Estates & Facilities**    | Maintenance, Assets, Energy           | Facilities management                     |
+| **HR & Finance**            | Payroll, Budget, Staffing             | Resource management                       |
+| **Research & Analysis**     | Deep Research, EEF Toolkit            | Evidence-based guidance                   |
+| **Intelligence & Data**     | School Intelligence, Pupil Assessment | Cohort tracking, gap analysis, DfE trends |
 
 ## How Skills Work
 
@@ -42,6 +43,7 @@ User Message → Intent Detection → Skill Activation → Function Execution �
 ```
 
 **Example**:
+
 ```
 User: "Add a new teacher named Sarah Jones"
   ↓
@@ -59,6 +61,7 @@ Response: "Created staff member Sarah Jones (ID: abc123)"
 ### 2. Skill Definition Format
 
 Each skill has:
+
 - **Frontmatter**: Metadata (name, description, triggers, category)
 - **Capabilities**: What the skill can do
 - **API Endpoints**: Available backend functions
@@ -92,6 +95,7 @@ Functions are defined in TypeScript schemas:
 **Purpose**: Manage school staff directory
 
 **Capabilities**:
+
 - Add new staff members
 - Update existing records
 - Import/Export CSV (round-trip workflow)
@@ -99,6 +103,7 @@ Functions are defined in TypeScript schemas:
 - Activate/deactivate staff
 
 **Functions**:
+
 - `create_staff_member` - Add new staff
 - `update_staff_member` - Modify staff record
 - `list_staff` - List with filtering
@@ -115,6 +120,7 @@ Functions are defined in TypeScript schemas:
 **Purpose**: AI-augmented school improvement
 
 **Capabilities**:
+
 - Create improvement actions
 - Dual status tracking (user + AI)
 - EEF research backing
@@ -123,6 +129,7 @@ Functions are defined in TypeScript schemas:
 - Notes and updates
 
 **Functions**:
+
 - `create_action` - New improvement action
 - `update_action` - Modify action
 - `list_actions` - List with filters
@@ -139,6 +146,7 @@ Functions are defined in TypeScript schemas:
 **Purpose**: Coordinate estates operations
 
 **Capabilities**:
+
 - Triage estates issues
 - Delegate to specialists (Fire, Water, Gas)
 - Synthesize reports
@@ -151,10 +159,58 @@ Functions are defined in TypeScript schemas:
 **Purpose**: Comprehensive research tasks
 
 **Capabilities**:
+
 - Web searches with multiple sources
 - Document analysis
 - Summary generation
 - Citation tracking
+
+### 📊 School Intelligence
+
+**Purpose**: Cross-module intelligence analysis with cohort tracking and EEF research
+
+**Capabilities**:
+
+- Run full cross-referenced school analysis (DfE + pupil data + contextual factors + cross-module signals)
+- Trace cohort journeys backwards through time with COVID impact detection
+- Analyse pupil assessment data: attainment gaps (FSM/SEND/gender/PP), teacher accuracy, intervention recommendations
+- Retrieve DfE multi-year trends (attendance, KS2, census, workforce, exclusions)
+- Get contextual factors that explain data patterns
+- Pull cross-module alerts (Estates overdue tasks, HR staff absence, Compliance gaps)
+
+**Functions**:
+
+- `run_intelligence_analysis` - Full cross-referenced analysis with EEF recommendations
+- `get_cohort_journey` - Trace a year group backwards with COVID/event impact
+- `get_assessment_insights` - Pupil assessment gap analysis and teacher accuracy
+- `get_contextual_factors` - Active school events affecting data
+- `get_dfe_trends` - Multi-year DfE data for a school URN
+- `get_cross_module_signals` - Cross-module alerts affecting outcomes
+
+**Route**: `/dashboard/intelligence` (planned)
+
+**Triggers**: "cohort", "attainment gap", "EEF", "progress", "assessment", "KS2", "intervention", "teacher accuracy", "scaled score"
+
+**Privacy**: All pupil data is HMAC-SHA256 pseudonymised. Ed never sees or discusses individual pupil names.
+
+### 🏢 Estates Compliance (Extended)
+
+**Purpose**: Statutory compliance with contractor management
+
+**Functions**:
+
+- `create_helpdesk_ticket` - Log maintenance issues
+- `update_helpdesk_ticket` - Update ticket status
+- `search_contractors` - Find contractors by service type
+- `check_contractor_accreditation` - Verify DBS/accreditations
+- `list_compliance_tasks` - Upcoming/overdue compliance tasks
+- `search_knowledge` - Search statutory compliance knowledge base
+- `extract_estates_document` - Extract info from uploaded documents via vision
+- `analyze_spatial_impact` - Analyse impact on adjacent areas
+
+**Route**: `/estates-compliance`
+
+**Triggers**: "maintenance", "repair", "contractor", "fire safety", "legionella", "RIDDOR", "asbestos"
 
 ## Adding a New Skill
 
@@ -179,21 +235,27 @@ triggers:
 # Your Skill Name
 
 ## What You Can Do
+
 ### 1. Capability One
+
 Description...
 
 ### 2. Capability Two
+
 Description...
 
 ## API Endpoints
-| Method | Endpoint | Purpose |
-|--------|----------|---------|
-| GET | `/api/endpoint` | Description |
+
+| Method | Endpoint        | Purpose     |
+| ------ | --------------- | ----------- |
+| GET    | `/api/endpoint` | Description |
 
 ## Frontend Route
+
 `/dashboard/your-route`
 
 ## Conversation Flow Examples
+
 **User**: "..."
 **You**: ...
 ```
@@ -208,15 +270,17 @@ In `apps/platform/src/lib/skills/school-skills-registry.ts`:
 
 ```typescript
 export const YOUR_SKILL_SCHEMAS = [
-    {
-        name: 'your_function_name',
-        description: 'What this function does',
-        parameters: {
-            type: 'object',
-            properties: { /* ... */ },
-            required: ['param1', 'param2']
-        }
-    }
+  {
+    name: "your_function_name",
+    description: "What this function does",
+    parameters: {
+      type: "object",
+      properties: {
+        /* ... */
+      },
+      required: ["param1", "param2"],
+    },
+  },
 ];
 ```
 
@@ -277,6 +341,7 @@ The Staff Directory uses a round-trip CSV workflow:
 4. **Feedback**: API reports: added, updated, archived counts + errors
 
 **CSV Format**:
+
 ```csv
 # STAFF DIRECTORY IMPORT/EXPORT
 # Lines starting with # are ignored on import
@@ -290,23 +355,23 @@ salutation,first_name*,last_name*,email,phone,employee_id,job_title*,role_catego
 
 Actions track TWO separate statuses:
 
-| User Status | AI Status | Combined Meaning |
-|-------------|-----------|------------------|
-| complete | met | 🟢 Fully Achieved |
-| complete | partially_met | 🟡 Claimed but evidence incomplete |
-| in_progress | not_met | 🔴 Working but gaps remain |
-| draft | not_assessed | ⚪ Not yet reviewed |
+| User Status | AI Status     | Combined Meaning                   |
+| ----------- | ------------- | ---------------------------------- |
+| complete    | met           | 🟢 Fully Achieved                  |
+| complete    | partially_met | 🟡 Claimed but evidence incomplete |
+| in_progress | not_met       | 🔴 Working but gaps remain         |
+| draft       | not_assessed  | ⚪ Not yet reviewed                |
 
 ## EEF Integration
 
 Actions can link to Education Endowment Foundation strategies:
 
-| Strategy | Evidence | Cost | Impact Timeline |
-|----------|----------|------|-----------------|
-| Small group tuition | ⭐⭐⭐⭐ | £££ | +4 months |
-| Feedback | ⭐⭐⭐⭐⭐ | £ | +6 months |
-| Metacognition | ⭐⭐⭐⭐⭐ | £ | +7 months |
-| Early years intervention | ⭐⭐⭐⭐ | ££ | +5 months |
+| Strategy                 | Evidence   | Cost | Impact Timeline |
+| ------------------------ | ---------- | ---- | --------------- |
+| Small group tuition      | ⭐⭐⭐⭐   | £££  | +4 months       |
+| Feedback                 | ⭐⭐⭐⭐⭐ | £    | +6 months       |
+| Metacognition            | ⭐⭐⭐⭐⭐ | £    | +7 months       |
+| Early years intervention | ⭐⭐⭐⭐   | ££   | +5 months       |
 
 ## Troubleshooting
 

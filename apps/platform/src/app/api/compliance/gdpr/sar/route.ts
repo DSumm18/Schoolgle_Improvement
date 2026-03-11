@@ -1,74 +1,53 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
+import { createServiceRoleClient } from "@/lib/supabase-server";
 
 /**
  * GET /api/compliance/gdpr/sar
  * List Subject Access Requests for an organization
  */
-export async function GET(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const organizationId = searchParams.get("organizationId");
+export const GET = protectedRoute(async (auth, request) => {
+  const { organizationId } = auth;
+  const supabase = createServiceRoleClient();
 
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: "Missing organizationId parameter" },
-        { status: 400 },
-      );
-    }
+  const { data: items } = await supabase
+    .from("compliance_items")
+    .select("*")
+    .eq("organization_id", organizationId)
+    .eq("type", "sar")
+    .neq("status", "archived")
+    .order("updated_at", { ascending: false });
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    const { data: items } = await supabase
-      .from("compliance_items")
-      .select("*")
-      .eq("organization_id", organizationId)
-      .eq("type", "sar")
-      .neq("status", "archived")
-      .order("updated_at", { ascending: false });
-
-    if (!items || items.length === 0) {
-      return NextResponse.json({ sars: [] });
-    }
-
-    const { data: sarRecords } = await supabase
-      .from("compliance_sar_records")
-      .select("*")
-      .in(
-        "compliance_item_id",
-        items.map((i) => i.id),
-      );
-
-    const sars = items.map((item) => ({
-      ...item,
-      sar: sarRecords?.find((s) => s.compliance_item_id === item.id) || null,
-    }));
-
-    return NextResponse.json({ sars });
-  } catch (error: any) {
-    console.error("SAR API error:", error);
-    return NextResponse.json(
-      { error: error.message || "Internal server error" },
-      { status: 500 },
-    );
+  if (!items || items.length === 0) {
+    return apiSuccess({ sars: [] });
   }
-}
+
+  const { data: sarRecords } = await supabase
+    .from("compliance_sar_records")
+    .select("*")
+    .in(
+      "compliance_item_id",
+      items.map((i) => i.id),
+    );
+
+  const sars = items.map((item) => ({
+    ...item,
+    sar: sarRecords?.find((s) => s.compliance_item_id === item.id) || null,
+  }));
+
+  return apiSuccess({ sars });
+});
 
 /**
  * POST /api/compliance/gdpr/sar
  * Create a new Subject Access Request
  */
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
+export const POST = protectedRoute(
+  async (auth, request) => {
+    const { organizationId, userId } = auth;
+    const body = await request.json();
     const {
-      organizationId,
       title,
       owner_user_id,
-      created_by_user_id,
       requester_name,
       requester_relationship,
       date_received,
@@ -78,14 +57,11 @@ export async function POST(req: NextRequest) {
       notes,
     } = body;
 
-    if (!organizationId || !requester_name) {
-      return NextResponse.json(
-        { error: "Missing required fields: organizationId, requester_name" },
-        { status: 400 },
-      );
+    if (!requester_name) {
+      return apiError("Missing required field: requester_name", 400);
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createServiceRoleClient();
 
     const received = date_received || new Date().toISOString().split("T")[0];
     const deadline =
@@ -113,10 +89,7 @@ export async function POST(req: NextRequest) {
 
     if (itemError) {
       console.error("Error creating SAR item:", itemError);
-      return NextResponse.json(
-        { error: "Failed to create SAR" },
-        { status: 500 },
-      );
+      return apiError("Failed to create SAR", 500);
     }
 
     // Create SAR record
@@ -147,16 +120,11 @@ export async function POST(req: NextRequest) {
       entity_type: "sar",
       entity_id: item.id,
       action: "created",
-      actor_user_id: created_by_user_id,
+      actor_user_id: userId,
       metadata: { requester_name, deadline_date: deadline },
     });
 
-    return NextResponse.json({ item, sar }, { status: 201 });
-  } catch (error: any) {
-    console.error("SAR create error:", error);
-    return NextResponse.json(
-      { error: error.message || "Internal server error" },
-      { status: 500 },
-    );
-  }
-}
+    return apiSuccess({ item, sar }, 201);
+  },
+  { requiredRole: "slt" },
+);

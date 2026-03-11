@@ -4,75 +4,59 @@
  * GET    /api/estates/evidence/[id]         - Get evidence by ID
  * PUT    /api/estates/evidence/[id]         - Update evidence
  * DELETE /api/estates/evidence/[id]         - Delete evidence
- * POST   /api/estates/evidence/[id]/verify  - Verify evidence
- * POST   /api/estates/evidence/[id]/version - Create new version
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { EvidenceService } from '@/lib/estates-compliance/services/EvidenceService';
-
-type RouteContext = {
-  params: Promise<{ id: string }>;
-};
+import { NextRequest } from "next/server";
+import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
+import { EvidenceService } from "@/lib/estates-compliance/services/EvidenceService";
 
 /**
  * GET /api/estates/evidence/[id]
  */
-export async function GET(request: NextRequest, context: RouteContext) {
-  try {
-    const { id } = await context.params;
+export const GET = protectedRoute(async (auth, request) => {
+  const url = new URL(request.url);
+  const segments = url.pathname.split("/");
+  const id = segments[segments.length - 1];
 
-    const evidence = await EvidenceService.get(id);
+  const evidence = await EvidenceService.get(id);
 
-    if (!evidence) {
-      return NextResponse.json({ error: 'Evidence not found' }, { status: 404 });
-    }
-
-    return NextResponse.json({ data: evidence });
-  } catch (error) {
-    console.error('Error in GET /api/estates/evidence/[id]:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to fetch evidence' },
-      { status: 500 }
-    );
+  if (!evidence) {
+    return apiError("Evidence not found", 404);
   }
-}
+
+  return apiSuccess({ data: evidence });
+});
 
 /**
  * PUT /api/estates/evidence/[id]
  */
-export async function PUT(request: NextRequest, context: RouteContext) {
-  try {
-    const { id } = await context.params;
+export const PUT = protectedRoute(
+  async (auth, request) => {
+    const url = new URL(request.url);
+    const segments = url.pathname.split("/");
+    const id = segments[segments.length - 1];
+
     const updates = await request.json();
 
     const evidence = await EvidenceService.update(id, updates);
 
-    return NextResponse.json({ data: evidence });
-  } catch (error) {
-    console.error('Error in PUT /api/estates/evidence/[id]:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to update evidence' },
-      { status: 500 }
-    );
-  }
-}
+    return apiSuccess({ data: evidence });
+  },
+  { requiredRole: "caretaker" },
+);
 
 /**
  * DELETE /api/estates/evidence/[id]
  */
-export async function DELETE(request: NextRequest, context: RouteContext) {
-  try {
-    const { id } = await context.params;
+export const DELETE = protectedRoute(
+  async (auth, request) => {
+    const url = new URL(request.url);
+    const segments = url.pathname.split("/");
+    const id = segments[segments.length - 1];
 
     await EvidenceService.delete(id);
 
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error('Error in DELETE /api/estates/evidence/[id]:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to delete evidence' },
-      { status: 500 }
-    );
-  }
-}
+    return apiSuccess({ success: true });
+  },
+  { requiredRole: "caretaker" },
+);

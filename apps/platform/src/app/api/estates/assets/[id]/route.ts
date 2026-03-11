@@ -6,8 +6,8 @@
  * DELETE /api/estates/assets/[id]  - Delete asset
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { AssetService } from '@/lib/estates-compliance/services/AssetService';
+import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
+import { AssetService } from "@/lib/estates-compliance/services/AssetService";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -16,83 +16,62 @@ type RouteContext = {
 /**
  * GET /api/estates/assets/[id]
  */
-export async function GET(request: NextRequest, context: RouteContext) {
-  try {
-    const { id } = await context.params;
+export const GET = protectedRoute(async (auth, request) => {
+  const url = new URL(request.url);
+  const id = url.pathname.split("/").pop()!;
 
-    const asset = await AssetService.get(id);
+  const asset = await AssetService.get(id);
 
-    if (!asset) {
-      return NextResponse.json({ error: 'Asset not found' }, { status: 404 });
-    }
-
-    return NextResponse.json({ data: asset });
-  } catch (error) {
-    console.error('Error in GET /api/estates/assets/[id]:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to fetch asset' },
-      { status: 500 }
-    );
+  if (!asset) {
+    return apiError("Asset not found", 404);
   }
-}
+
+  return apiSuccess({ data: asset });
+});
 
 /**
  * PUT /api/estates/assets/[id]
  */
-export async function PUT(request: NextRequest, context: RouteContext) {
+export const PUT = protectedRoute(async (auth, request) => {
+  const url = new URL(request.url);
+  const id = url.pathname.split("/").pop()!;
+  const updates = await request.json();
+
   try {
-    const { id } = await context.params;
-    const updates = await request.json();
-
     const asset = await AssetService.update(id, updates);
-
-    return NextResponse.json({ data: asset });
+    return apiSuccess({ data: asset });
   } catch (error) {
-    console.error('Error in PUT /api/estates/assets/[id]:', error);
-
-    // Handle specific errors
     if (error instanceof Error) {
-      if (error.message.includes('not found')) {
-        return NextResponse.json({ error: error.message }, { status: 404 });
+      if (error.message.includes("not found")) {
+        return apiError(error.message, 404);
       }
-      if (error.message.includes('child assets')) {
-        return NextResponse.json({ error: error.message }, { status: 400 });
+      if (error.message.includes("child assets")) {
+        return apiError(error.message, 400);
       }
     }
-
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to update asset' },
-      { status: 500 }
-    );
+    throw error;
   }
-}
+});
 
 /**
  * DELETE /api/estates/assets/[id]
  */
-export async function DELETE(request: NextRequest, context: RouteContext) {
+export const DELETE = protectedRoute(async (auth, request) => {
+  const url = new URL(request.url);
+  const id = url.pathname.split("/").pop()!;
+
   try {
-    const { id } = await context.params;
-
     await AssetService.delete(id);
-
-    return NextResponse.json({ success: true });
+    return apiSuccess({ success: true });
   } catch (error) {
-    console.error('Error in DELETE /api/estates/assets/[id]:', error);
-
-    // Handle specific errors
     if (error instanceof Error) {
-      if (error.message.includes('not found')) {
-        return NextResponse.json({ error: error.message }, { status: 404 });
+      if (error.message.includes("not found")) {
+        return apiError(error.message, 404);
       }
-      if (error.message.includes('child assets')) {
-        return NextResponse.json({ error: error.message }, { status: 400 });
+      if (error.message.includes("child assets")) {
+        return apiError(error.message, 400);
       }
     }
-
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to delete asset' },
-      { status: 500 }
-    );
+    throw error;
   }
-}
+});

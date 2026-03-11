@@ -1,140 +1,123 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+import { NextRequest } from "next/server";
+import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
+import { createServiceRoleClient } from "@/lib/supabase-server";
 
 // GET - List pending invitations
-export async function GET(req: NextRequest) {
-    try {
-        const { searchParams } = new URL(req.url);
-        const organizationId = searchParams.get('organizationId');
+export const GET = protectedRoute(async (auth, req: NextRequest) => {
+  const supabase = createServiceRoleClient();
 
-        if (!organizationId) {
-            return NextResponse.json({ error: 'Missing organizationId' }, { status: 400 });
-        }
+  const { searchParams } = new URL(req.url);
+  const organizationId =
+    searchParams.get("organizationId") || auth.organizationId;
 
-        const { data, error } = await supabase
-            .from('invitations')
-            .select(`
-                id,
+  const { data, error } = await supabase
+    .from("invitations")
+    .select(
+      `
+            id,
+            email,
+            role,
+            status,
+            created_at,
+            expires_at,
+            invited_by_user:users!invited_by (
                 email,
-                role,
-                status,
-                created_at,
-                expires_at,
-                invited_by_user:users!invited_by (
-                    email,
-                    display_name
-                )
-            `)
-            .eq('organization_id', organizationId)
-            .eq('status', 'pending')
-            .order('created_at', { ascending: false });
+                display_name
+            )
+        `,
+    )
+    .eq("organization_id", organizationId)
+    .eq("status", "pending")
+    .order("created_at", { ascending: false });
 
-        if (error) {
-            console.error('Error fetching invitations:', error);
-            return NextResponse.json({ error: error.message }, { status: 500 });
-        }
+  if (error) {
+    console.error("Error fetching invitations:", error);
+    return apiError(error.message, 500);
+  }
 
-        return NextResponse.json({ invitations: data || [] });
-
-    } catch (error: any) {
-        console.error('Invitations API error:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-}
+  return apiSuccess({ invitations: data || [] });
+});
 
 // DELETE - Cancel/revoke invitation
-export async function DELETE(req: NextRequest) {
-    try {
-        const { searchParams } = new URL(req.url);
-        const invitationId = searchParams.get('invitationId');
-        const organizationId = searchParams.get('organizationId');
-        const requestedBy = searchParams.get('requestedBy');
+export const DELETE = protectedRoute(async (auth, req: NextRequest) => {
+  const supabase = createServiceRoleClient();
 
-        if (!invitationId || !organizationId || !requestedBy) {
-            return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-        }
+  const { searchParams } = new URL(req.url);
+  const invitationId = searchParams.get("invitationId");
+  const organizationId =
+    searchParams.get("organizationId") || auth.organizationId;
 
-        // Check if requester is admin
-        const { data: requesterMember } = await supabase
-            .from('organization_members')
-            .select('role')
-            .eq('organization_id', organizationId)
-            .eq('user_id', requestedBy)
-            .single();
+  if (!invitationId) {
+    return apiError("Missing required fields", 400);
+  }
 
-        if (!requesterMember || requesterMember.role !== 'admin') {
-            return NextResponse.json({ error: 'Only admins can cancel invitations' }, { status: 403 });
-        }
+  // Check if requester is admin
+  const { data: requesterMember } = await supabase
+    .from("organization_members")
+    .select("role")
+    .eq("organization_id", organizationId)
+    .eq("user_id", auth.userId)
+    .single();
 
-        // Delete invitation
-        const { error } = await supabase
-            .from('invitations')
-            .delete()
-            .eq('id', invitationId)
-            .eq('organization_id', organizationId);
+  if (!requesterMember || requesterMember.role !== "admin") {
+    return apiError("Only admins can cancel invitations", 403);
+  }
 
-        if (error) {
-            console.error('Error canceling invitation:', error);
-            return NextResponse.json({ error: 'Failed to cancel invitation' }, { status: 500 });
-        }
+  // Delete invitation
+  const { error } = await supabase
+    .from("invitations")
+    .delete()
+    .eq("id", invitationId)
+    .eq("organization_id", organizationId);
 
-        return NextResponse.json({ success: true });
+  if (error) {
+    console.error("Error canceling invitation:", error);
+    return apiError("Failed to cancel invitation", 500);
+  }
 
-    } catch (error: any) {
-        console.error('Cancel invitation API error:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-}
+  return apiSuccess({ success: true });
+});
 
 // POST - Resend invitation (update expires_at)
-export async function POST(req: NextRequest) {
-    try {
-        const { invitationId, organizationId, requestedBy } = await req.json();
+export const POST = protectedRoute(async (auth, req: NextRequest) => {
+  const supabase = createServiceRoleClient();
 
-        if (!invitationId || !organizationId || !requestedBy) {
-            return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-        }
+  const { invitationId, organizationId } = await req.json();
+  const orgId = organizationId || auth.organizationId;
 
-        // Check if requester is admin
-        const { data: requesterMember } = await supabase
-            .from('organization_members')
-            .select('role')
-            .eq('organization_id', organizationId)
-            .eq('user_id', requestedBy)
-            .single();
+  if (!invitationId) {
+    return apiError("Missing required fields", 400);
+  }
 
-        if (!requesterMember || requesterMember.role !== 'admin') {
-            return NextResponse.json({ error: 'Only admins can resend invitations' }, { status: 403 });
-        }
+  // Check if requester is admin
+  const { data: requesterMember } = await supabase
+    .from("organization_members")
+    .select("role")
+    .eq("organization_id", orgId)
+    .eq("user_id", auth.userId)
+    .single();
 
-        // Update invitation expiry
-        const newExpiry = new Date();
-        newExpiry.setDate(newExpiry.getDate() + 7);
+  if (!requesterMember || requesterMember.role !== "admin") {
+    return apiError("Only admins can resend invitations", 403);
+  }
 
-        const { error } = await supabase
-            .from('invitations')
-            .update({ 
-                expires_at: newExpiry.toISOString(),
-                status: 'pending'
-            })
-            .eq('id', invitationId)
-            .eq('organization_id', organizationId);
+  // Update invitation expiry
+  const newExpiry = new Date();
+  newExpiry.setDate(newExpiry.getDate() + 7);
 
-        if (error) {
-            console.error('Error resending invitation:', error);
-            return NextResponse.json({ error: 'Failed to resend invitation' }, { status: 500 });
-        }
+  const { error } = await supabase
+    .from("invitations")
+    .update({
+      expires_at: newExpiry.toISOString(),
+      status: "pending",
+    })
+    .eq("id", invitationId)
+    .eq("organization_id", orgId);
 
-        return NextResponse.json({ success: true });
+  if (error) {
+    console.error("Error resending invitation:", error);
+    return apiError("Failed to resend invitation", 500);
+  }
 
-    } catch (error: any) {
-        console.error('Resend invitation API error:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-}
-
+  return apiSuccess({ success: true });
+});

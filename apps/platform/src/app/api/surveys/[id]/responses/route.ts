@@ -1,65 +1,62 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { protectedRoute, apiSuccess } from "@/lib/api-utils";
+import { createServiceRoleClient } from "@/lib/supabase-server";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+export const GET = protectedRoute(async (auth, request) => {
+  const surveyId = request.nextUrl.pathname
+    .split("/surveys/")[1]
+    ?.split("/")[0];
+  const supabase = createServiceRoleClient();
+  const { searchParams } = new URL(request.url);
+  const page = parseInt(searchParams.get("page") || "1");
+  const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
+  const offset = (page - 1) * limit;
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    const { id: surveyId } = await params;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
-    const offset = (page - 1) * limit;
+  // Get total count
+  const { count } = await supabase
+    .from("survey_responses")
+    .select("*", { count: "exact", head: true })
+    .eq("survey_id", surveyId);
 
-    // Get total count
-    const { count } = await supabase
-      .from("survey_responses")
-      .select("*", { count: "exact", head: true })
-      .eq("survey_id", surveyId);
+  // Get responses with answers
+  const { data: responses, error } = await supabase
+    .from("survey_responses")
+    .select(
+      `
+      *,
+      survey_answers (*)
+    `,
+    )
+    .eq("survey_id", surveyId)
+    .order("created_at", { ascending: false })
+    .range(offset, offset + limit - 1);
 
-    // Get responses with answers
-    const { data: responses, error } = await supabase
-      .from("survey_responses")
-      .select(
-        `
-        *,
-        survey_answers (*)
-      `,
-      )
-      .eq("survey_id", surveyId)
-      .order("created_at", { ascending: false })
-      .range(offset, offset + limit - 1);
+  if (error) throw error;
 
-    if (error) throw error;
+  return apiSuccess({
+    responses: responses ?? [],
+    total: count ?? 0,
+    page,
+    limit,
+    totalPages: Math.ceil((count ?? 0) / limit),
+  });
+});
 
-    return NextResponse.json({
-      responses: responses ?? [],
-      total: count ?? 0,
-      page,
-      limit,
-      totalPages: Math.ceil((count ?? 0) / limit),
-    });
-  } catch (error) {
-    console.error("Error in GET /api/surveys/[id]/responses:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
-  }
-}
-
+/**
+ * POST /api/surveys/[id]/responses
+ *
+ * PUBLIC ENDPOINT: This route is intentionally left unprotected because it serves
+ * as the submission endpoint for survey respondents (parents, staff, students, etc.)
+ * who may not have Schoolgle accounts. Surveys are accessed via public slug URLs
+ * and responses are submitted anonymously or with optional respondent metadata.
+ */
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id: surveyId } = await params;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createServiceRoleClient();
     const body = await request.json();
 
     const { sessionId, answers, respondentId, status } = body;

@@ -3,6 +3,7 @@
 import React from "react";
 import Navbar from "@/components/website/Navbar";
 import Footer from "@/components/website/Footer";
+import CookieBanner from "@/components/cookie-consent/CookieBanner";
 
 export default function MarketingLayout({
   children,
@@ -16,6 +17,7 @@ export default function MarketingLayout({
         <div className="flex-1">{children}</div>
         <Footer />
       </div>
+      <CookieBanner />
     </div>
   );
 }

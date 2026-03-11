@@ -69,6 +69,16 @@ apps/platform/src/components/brand/tmpclaude-*
 audit_script.ps1
 *.old.css
 
+# Supabase temp
+**/supabase/.temp/
+
+# Large data files
+ofsted-as-at-aug-2025-all-schools.csv
+
+# Generated HTML artifacts
+dashboard.html
+schoolgle-delivery-plan.html
+
 # Environment files with secrets
 .env.local
 .env.*.local

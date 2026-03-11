@@ -1,316 +1,430 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React from "react";
+import { motion } from "framer-motion";
+import useSWR from "swr";
+import Link from "next/link";
 import { useAuth } from "@/context/SupabaseAuthContext";
-import { supabase } from "@/lib/supabase";
+import { fetcher } from "@/lib/fetchers";
 import {
-  Flag,
-  Download,
-  Sparkles,
-  ArrowRight,
-  TrendingUp,
-  Settings,
-  Eye,
-  ChevronLeft,
-  PieChart,
-  BarChart3,
+  Target,
+  ChevronRight,
+  User,
+  Wallet,
+  CalendarCheck,
   FileText,
-  Save,
+  AlertCircle,
+  Loader2,
+  ArrowRight,
+  CheckCircle2,
+  Clock,
+  AlertTriangle,
+  Milestone,
 } from "lucide-react";
-import {
-  SDPGenerator,
-  SDPPriorityData,
-  SDPDocumentData,
-} from "@/lib/sdp-generator";
-import SDPBuilder from "@/components/sdp/SDPBuilder";
 
-export default function SDPPage() {
-  const { organization } = useAuth();
-  const [sdp, setSdp] = useState<SDPDocumentData>({
-    title: `SDP 2023-2024`,
-    academicYear: "2023/24",
-    priorities: [],
-    totalBudget: 0,
-  });
-  const [activeTab, setActiveTab] = useState<"editor" | "preview">("editor");
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+// Status colors for milestones
+const milestoneStatusColors: Record<string, string> = {
+  completed:
+    "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
+  in_progress:
+    "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
+  pending: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
+  delayed: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
+};
 
-  useEffect(() => {
-    if (organization?.id) {
-      fetchLatestSDP();
-    }
-  }, [organization?.id]);
+const milestoneStatusIcons: Record<string, React.ElementType> = {
+  completed: CheckCircle2,
+  in_progress: Clock,
+  pending: Clock,
+  delayed: AlertTriangle,
+};
 
-  async function fetchLatestSDP() {
-    const { data } = await supabase
-      .from("sdp_documents")
-      .select("*")
-      .eq("organization_id", organization?.id)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .single();
+// Ofsted category label mapping
+const categoryLabels: Record<string, string> = {
+  "quality-of-education": "Quality of Education",
+  "behaviour-attitudes": "Behaviour & Attitudes",
+  "personal-development": "Personal Development",
+  "leadership-management": "Leadership & Management",
+  safeguarding: "Safeguarding",
+  inclusion: "Inclusion",
+  "curriculum-teaching": "Curriculum & Teaching",
+};
 
-    if (data) {
-      setSdp({
-        title: data.title,
-        academicYear: data.academic_year,
-        priorities: data.priorities || [],
-        totalBudget: data.total_budget || 0,
-      });
-    }
-  }
-
-  const handleSuggestPriorities = async () => {
-    setIsGenerating(true);
-    try {
-      const suggestions = await SDPGenerator.suggestPrioritiesFromData(
-        organization?.id!,
-      );
-      if (suggestions.length > 0) {
-        setSdp((prev) => ({
-          ...prev,
-          priorities: suggestions as SDPPriorityData[],
-        }));
-      } else {
-        alert(
-          "No specific areas for development found in assessments. Try scanning your evidence first.",
-        );
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  const handleSave = async (updatedPriorities?: SDPPriorityData[]) => {
-    setIsSaving(true);
-    try {
-      const finalSDP = {
-        ...sdp,
-        priorities: updatedPriorities || sdp.priorities,
-      };
-      await SDPGenerator.saveSDP(organization?.id!, finalSDP);
-      setSdp(finalSDP);
-      alert("School Development Plan Saved Successfully");
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleExportHTML = () => {
-    const html = SDPGenerator.exportToHTML(sdp);
-    const blob = new Blob([html], { type: "text/html" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `SDP_${sdp.academicYear.replace("/", "-")}.html`;
-    a.click();
-  };
+function ProgressBar({ value }: { value: number }) {
+  const clamped = Math.max(0, Math.min(100, value));
+  const color =
+    clamped >= 75
+      ? "bg-green-500"
+      : clamped >= 40
+        ? "bg-amber-500"
+        : "bg-red-500";
 
   return (
-    <div className="p-8 max-w-[1700px] mx-auto space-y-8">
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-        <div>
-          <div className="flex items-center gap-3 text-sky-500 font-black text-[10px] uppercase tracking-[0.2em] mb-3 bg-sky-50 dark:bg-sky-950/40 w-fit px-4 py-1.5 rounded-full border border-sky-100 dark:border-sky-900/50">
-            <Flag size={14} className="animate-pulse" />
-            Strategic Planning
-          </div>
-          <h1 className="text-5xl font-black text-slate-900 dark:text-white tracking-tight">
-            School Development Plan
-          </h1>
-        </div>
-
-        <div className="flex gap-4">
-          <div className="bg-slate-100 dark:bg-slate-800/50 p-1.5 rounded-[1.5rem] flex border border-slate-200 dark:border-slate-700 shadow-inner backdrop-blur-xl">
-            {["editor", "preview"].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab as any)}
-                className={`px-8 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all ${activeTab === tab ? "bg-white dark:bg-slate-700 text-sky-600 shadow-md scale-105" : "text-slate-500 hover:text-slate-700"}`}
-              >
-                {tab === "editor" && <Settings size={14} />}
-                {tab === "preview" && <Eye size={14} />}
-                {tab}
-              </button>
-            ))}
-          </div>
-          <button
-            onClick={handleExportHTML}
-            className="flex items-center gap-2.5 px-8 py-3.5 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-2xl text-xs font-black uppercase tracking-widest hover:scale-105 transition-all shadow-xl"
-          >
-            <Download size={18} /> Export PDF
-          </button>
-        </div>
-      </header>
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-        {/* Stats Sidebar */}
-        <div className="lg:col-span-3 space-y-6">
-          <div className="bg-gradient-to-br from-sky-600 to-sky-700 rounded-2xl p-8 text-white shadow-lg relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full -mr-24 -mt-24 blur-3xl" />
-            <h4 className="text-[10px] font-black uppercase tracking-widest mb-6 text-white/60">
-              Strategic Overview
-            </h4>
-            <div className="space-y-6">
-              <div>
-                <span className="text-3xl font-black block leading-none">
-                  £
-                  {sdp.priorities
-                    .reduce((acc, p) => acc + (p.budget || 0), 0)
-                    .toLocaleString()}
-                </span>
-                <span className="text-[10px] font-black uppercase tracking-widest text-sky-100/60 mt-2 block">
-                  Total Budget Committed
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-white/10 p-4 rounded-2xl backdrop-blur-md">
-                  <span className="text-xl font-black block">
-                    {sdp.priorities.length}
-                  </span>
-                  <span className="text-[8px] font-black uppercase tracking-widest text-sky-100/60">
-                    Priorities
-                  </span>
-                </div>
-                <div className="bg-white/10 p-4 rounded-2xl backdrop-blur-md">
-                  <span className="text-xl font-black block">
-                    {sdp.priorities.flatMap((p) => p.milestones).length}
-                  </span>
-                  <span className="text-[8px] font-black uppercase tracking-widest text-sky-100/60">
-                    Milestones
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-slate-900/50 backdrop-blur-3xl rounded-2xl p-8 border border-slate-100 dark:border-slate-800 shadow-md">
-            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">
-              Budget Distribution
-            </h4>
-            <div className="space-y-4">
-              {sdp.priorities.map((p) => (
-                <div key={p.id}>
-                  <div className="flex justify-between text-[10px] font-black uppercase tracking-widest mb-2">
-                    <span className="text-slate-500 truncate max-w-[150px]">
-                      {p.title}
-                    </span>
-                    <span className="text-slate-900 dark:text-white">
-                      £{p.budget?.toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{
-                        width: `${(p.budget / (sdp.priorities.reduce((acc, x) => acc + (x.budget || 0), 0) || 1)) * 100}%`,
-                      }}
-                      className="h-full bg-sky-500 rounded-full"
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {sdp.priorities.length === 0 && (
-            <div className="bg-amber-50 dark:bg-amber-900/20 rounded-2xl p-8 border border-amber-100 dark:border-amber-900/50 shadow-md">
-              <h4 className="text-xs font-black text-amber-900 dark:text-amber-400 uppercase tracking-widest mb-2 flex items-center gap-2">
-                <Sparkles size={16} /> Strategy Suggestion
-              </h4>
-              <p className="text-[11px] font-bold text-amber-700 dark:text-amber-500 leading-relaxed mb-6">
-                Based on your recent evidence scan, Ed can identify areas
-                needing attention and suggest strategic priorities for your SDP.
-              </p>
-              <button
-                onClick={handleSuggestPriorities}
-                disabled={isGenerating}
-                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-amber-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-700 transition-all shadow-lg active:scale-95 disabled:opacity-50"
-              >
-                {isGenerating ? (
-                  <RefreshCw size={14} className="animate-spin" />
-                ) : (
-                  <TrendingUp size={14} />
-                )}
-                Identify Priorities
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Main Content */}
-        <div className="lg:col-span-9">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="min-h-[800px]"
-            >
-              {activeTab === "editor" ? (
-                <SDPBuilder
-                  initialPriorities={sdp.priorities}
-                  onSave={handleSave}
-                />
-              ) : (
-                <div className="bg-white dark:bg-slate-900/50 backdrop-blur-3xl rounded-2xl p-10 border border-slate-200 dark:border-slate-800 shadow-lg h-full flex flex-col">
-                  <div className="flex justify-between items-center mb-10">
-                    <div>
-                      <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-                        Strategy Document Preview
-                      </h2>
-                      <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">
-                        High-Level Strategic Roadmap
-                      </p>
-                    </div>
-                    <button
-                      onClick={handleExportHTML}
-                      className="px-6 py-3 bg-sky-50 dark:bg-sky-900/50 text-sky-600 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-sky-100 dark:border-sky-800 shadow-sm"
-                    >
-                      Prepare for Governors
-                    </button>
-                  </div>
-                  <div className="flex-1 border-4 border-slate-100 dark:border-slate-800 rounded-2xl overflow-hidden shadow-inner">
-                    <iframe
-                      title="SDP Preview"
-                      srcDoc={SDPGenerator.exportToHTML(sdp)}
-                      className="w-full h-full min-h-[600px] border-none"
-                    />
-                  </div>
-                </div>
-              )}
-            </motion.div>
-          </AnimatePresence>
-        </div>
-      </div>
+    <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5">
+      <motion.div
+        className={`h-2.5 rounded-full ${color}`}
+        initial={{ width: 0 }}
+        animate={{ width: `${clamped}%` }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+      />
     </div>
   );
 }
 
-function RefreshCw({ size, className }: { size: number; className?: string }) {
+function formatCurrency(amount: number): string {
+  if (!amount || amount === 0) return "-";
+  return new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency: "GBP",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+function formatDate(dateStr: string): string {
+  if (!dateStr) return "-";
+  return new Date(dateStr).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+export default function SDPPage() {
+  const { organization } = useAuth();
+  const organizationId = organization?.id || "";
+
+  const {
+    data: priorities,
+    error,
+    isLoading,
+  } = useSWR(
+    organizationId
+      ? `/api/sdp/generate?organizationId=${organizationId}`
+      : null,
+    fetcher,
+  );
+
+  // The GET /api/sdp/generate uses protectedRoute which reads org from auth,
+  // but we still need to pass it for the fetcher URL pattern
+  const { data: sefData, error: sefError } = useSWR(
+    organizationId ? `/api/sef/generate` : null,
+    fetcher,
+  );
+
+  const sdpPriorities: any[] = Array.isArray(priorities) ? priorities : [];
+  const sefId = sefData?.sef?.id;
+
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <path d="M21 2v6h-6" />
-      <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
-      <path d="M3 22v-6h6" />
-      <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
-    </svg>
+    <div className="p-6 md:p-8 max-w-[1400px] mx-auto space-y-6">
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+      >
+        <div>
+          <div className="flex items-center gap-3 mb-1">
+            <div className="w-10 h-10 rounded-xl bg-sky-500 flex items-center justify-center text-white">
+              <Target className="w-5 h-5" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-black tracking-tight">
+                School Development Plan
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Strategic priorities generated from the Living SEF
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/dashboard/sef?tab=sdp"
+            className="text-sm font-medium text-primary hover:underline flex items-center gap-1"
+          >
+            View in Living SEF
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+      </motion.div>
+
+      {/* Loading State */}
+      {isLoading && (
+        <div className="flex items-center justify-center py-20">
+          <div className="text-center">
+            <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-3" />
+            <p className="text-sm text-muted-foreground">
+              Loading SDP priorities...
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="bg-destructive/10 border border-destructive/20 rounded-2xl p-6 text-center"
+        >
+          <AlertCircle className="w-8 h-8 text-destructive mx-auto mb-2" />
+          <p className="font-semibold text-destructive">
+            Failed to load SDP priorities
+          </p>
+          <p className="text-sm text-muted-foreground mt-1">
+            {error.message || "Please try again later."}
+          </p>
+        </motion.div>
+      )}
+
+      {/* Empty State */}
+      {!isLoading && !error && sdpPriorities.length === 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-card border border-border rounded-2xl p-12 text-center"
+        >
+          <Target className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
+          <h2 className="text-lg font-bold mb-2">No SDP Priorities Yet</h2>
+          <p className="text-sm text-muted-foreground max-w-md mx-auto mb-6">
+            SDP priorities are automatically generated from your Living SEF.
+            Generate a SEF first to create your School Development Plan.
+          </p>
+          <Link
+            href="/dashboard/sef"
+            className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-primary/90 transition-colors"
+          >
+            <FileText className="w-4 h-4" />
+            Go to Living SEF
+          </Link>
+        </motion.div>
+      )}
+
+      {/* Priority Cards */}
+      {!isLoading && sdpPriorities.length > 0 && (
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          {sdpPriorities.map((priority: any, index: number) => {
+            const milestones = Array.isArray(priority.milestones)
+              ? priority.milestones
+              : [];
+            const successCriteria = Array.isArray(priority.success_criteria)
+              ? priority.success_criteria
+              : [];
+            const eefStrategies = Array.isArray(priority.eef_strategies)
+              ? priority.eef_strategies
+              : [];
+            const crossModuleImpact = Array.isArray(
+              priority.cross_module_impact,
+            )
+              ? priority.cross_module_impact
+              : [];
+            const progress = priority.progress_percentage || 0;
+
+            return (
+              <motion.div
+                key={priority.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+                className="bg-card border border-border rounded-2xl overflow-hidden hover:shadow-md transition-shadow"
+              >
+                {/* Card Header */}
+                <div className="p-5 border-b border-border">
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 rounded-lg bg-sky-500/10 flex items-center justify-center text-sky-600 font-black text-sm shrink-0">
+                        {priority.priority_number || index + 1}
+                      </div>
+                      <h3 className="font-bold text-base leading-tight">
+                        {priority.title}
+                      </h3>
+                    </div>
+                    {priority.ofsted_category_id && (
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground bg-muted px-2 py-1 rounded-md shrink-0">
+                        {categoryLabels[priority.ofsted_category_id] ||
+                          priority.ofsted_category_id}
+                      </span>
+                    )}
+                  </div>
+
+                  {priority.rationale && (
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      {priority.rationale}
+                    </p>
+                  )}
+
+                  {/* Progress Bar */}
+                  <div className="mt-4">
+                    <div className="flex items-center justify-between text-xs mb-1.5">
+                      <span className="font-semibold text-muted-foreground">
+                        Progress
+                      </span>
+                      <span className="font-bold">{progress}%</span>
+                    </div>
+                    <ProgressBar value={progress} />
+                  </div>
+                </div>
+
+                {/* Card Body */}
+                <div className="p-5 space-y-4">
+                  {/* Meta Row */}
+                  <div className="grid grid-cols-2 gap-3">
+                    {priority.lead_person && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <User className="w-4 h-4 text-muted-foreground shrink-0" />
+                        <span className="truncate">{priority.lead_person}</span>
+                      </div>
+                    )}
+                    {priority.budget != null && priority.budget > 0 && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Wallet className="w-4 h-4 text-muted-foreground shrink-0" />
+                        <span>{formatCurrency(priority.budget)}</span>
+                        {priority.funding_source && (
+                          <span className="text-xs text-muted-foreground">
+                            ({priority.funding_source})
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    {priority.review_date && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <CalendarCheck className="w-4 h-4 text-muted-foreground shrink-0" />
+                        <span>Review: {formatDate(priority.review_date)}</span>
+                      </div>
+                    )}
+                    {priority.status && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <span
+                          className={`w-2 h-2 rounded-full shrink-0 ${
+                            priority.status === "active"
+                              ? "bg-green-500"
+                              : priority.status === "completed"
+                                ? "bg-blue-500"
+                                : "bg-slate-400"
+                          }`}
+                        />
+                        <span className="capitalize">{priority.status}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Success Criteria */}
+                  {successCriteria.length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">
+                        Success Criteria
+                      </h4>
+                      <ul className="space-y-1">
+                        {successCriteria
+                          .slice(0, 3)
+                          .map((c: string, i: number) => (
+                            <li
+                              key={i}
+                              className="text-xs text-muted-foreground flex items-start gap-2"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5 text-green-500 shrink-0 mt-0.5" />
+                              <span>{c}</span>
+                            </li>
+                          ))}
+                        {successCriteria.length > 3 && (
+                          <li className="text-xs text-muted-foreground italic">
+                            +{successCriteria.length - 3} more
+                          </li>
+                        )}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Milestones */}
+                  {milestones.length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">
+                        Milestones
+                      </h4>
+                      <div className="space-y-2">
+                        {milestones.map((m: any, i: number) => {
+                          const StatusIcon =
+                            milestoneStatusIcons[m.status] || Clock;
+                          return (
+                            <div
+                              key={i}
+                              className="flex items-center gap-2 text-xs"
+                            >
+                              <span
+                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-medium ${milestoneStatusColors[m.status] || milestoneStatusColors.pending}`}
+                              >
+                                <StatusIcon className="w-3 h-3" />
+                                {m.status?.replace("_", " ")}
+                              </span>
+                              <span className="font-medium truncate flex-1">
+                                {m.title}
+                              </span>
+                              {m.targetDate && (
+                                <span className="text-muted-foreground shrink-0">
+                                  {formatDate(m.targetDate || m.target_date)}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* EEF Strategies */}
+                  {eefStrategies.length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">
+                        EEF Strategies
+                      </h4>
+                      <div className="flex flex-wrap gap-1.5">
+                        {eefStrategies.map((s: string, i: number) => (
+                          <span
+                            key={i}
+                            className="text-[10px] font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 px-2 py-0.5 rounded-md"
+                          >
+                            {s}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Cross-Module Impact */}
+                  {crossModuleImpact.length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">
+                        Cross-Module Impact
+                      </h4>
+                      <div className="space-y-1">
+                        {crossModuleImpact.map((c: any, i: number) => (
+                          <div
+                            key={i}
+                            className="text-xs flex items-center gap-2"
+                          >
+                            <span className="font-semibold capitalize text-primary">
+                              {c.module}
+                            </span>
+                            <span className="text-muted-foreground">
+                              {c.impact}
+                            </span>
+                            {c.budgetImplication > 0 && (
+                              <span className="text-muted-foreground">
+                                ({formatCurrency(c.budgetImplication)})
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }

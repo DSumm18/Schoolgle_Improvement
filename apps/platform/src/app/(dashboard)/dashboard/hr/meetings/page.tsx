@@ -10,6 +10,9 @@ import {
   CheckCircle2,
   Clock,
   Sparkles,
+  Search,
+  ChevronRight,
+  Filter,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/SupabaseAuthContext";
@@ -22,6 +25,8 @@ export default function MeetingsLandingPage() {
 
   const [meetings, setMeetings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [counts, setCounts] = useState({
     total: 0,
     scheduled: 0,
@@ -47,6 +52,20 @@ export default function MeetingsLandingPage() {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [organizationId]);
+
+  const filteredMeetings = meetings.filter((meeting: any) => {
+    const matchesSearch =
+      !search ||
+      (meeting.attendee_name || "")
+        .toLowerCase()
+        .includes(search.toLowerCase()) ||
+      (meeting.meeting_templates?.name || "")
+        .toLowerCase()
+        .includes(search.toLowerCase());
+    const matchesStatus =
+      statusFilter === "all" || meeting.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
   return (
     <div className="p-6 md:p-8 space-y-6 min-h-screen max-w-[1400px] mx-auto">
@@ -109,7 +128,7 @@ export default function MeetingsLandingPage() {
             key={stat.label}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700"
+            className={`bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700${stat.value === 0 ? " opacity-50" : ""}`}
           >
             <div className="flex items-center gap-2 mb-2">
               <stat.icon size={16} className="text-slate-400" />
@@ -124,6 +143,40 @@ export default function MeetingsLandingPage() {
         ))}
       </div>
 
+      {/* Search & Filter */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search
+            size={16}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+          />
+          <input
+            type="text"
+            placeholder="Search by attendee or meeting type..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+          />
+        </div>
+        <div className="relative">
+          <Filter
+            size={16}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+          />
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="pl-9 pr-8 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40 appearance-none cursor-pointer"
+          >
+            <option value="all">All statuses</option>
+            <option value="scheduled">Scheduled</option>
+            <option value="in_progress">In Progress</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+      </div>
+
       {/* Meetings list */}
       <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
         <div className="p-5 border-b border-slate-200 dark:border-slate-700">
@@ -133,7 +186,30 @@ export default function MeetingsLandingPage() {
         </div>
         {loading ? (
           <div className="p-12 text-center text-slate-400">Loading...</div>
-        ) : meetings.length === 0 ? (
+        ) : filteredMeetings.length === 0 && meetings.length > 0 ? (
+          <div className="p-12 text-center">
+            <Search
+              size={48}
+              className="mx-auto text-slate-300 dark:text-slate-600 mb-4"
+            />
+            <h3 className="text-lg font-bold text-slate-700 dark:text-slate-300 mb-2">
+              No matching meetings
+            </h3>
+            <p className="text-sm text-slate-500 mb-6">
+              Try adjusting your search or filter criteria
+            </p>
+            <Button
+              variant="outline"
+              className="rounded-xl gap-2"
+              onClick={() => {
+                setSearch("");
+                setStatusFilter("all");
+              }}
+            >
+              Clear filters
+            </Button>
+          </div>
+        ) : filteredMeetings.length === 0 ? (
           <div className="p-12 text-center">
             <ClipboardCheck
               size={48}
@@ -155,11 +231,11 @@ export default function MeetingsLandingPage() {
           </div>
         ) : (
           <div className="divide-y divide-slate-100 dark:divide-slate-700">
-            {meetings.map((meeting: any) => (
+            {filteredMeetings.map((meeting: any) => (
               <Link
                 key={meeting.id}
                 href={`/dashboard/hr/meetings/${meeting.id}`}
-                className="flex items-center justify-between p-5 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                className="flex items-center justify-between p-5 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:shadow-md transition-all duration-150"
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3 mb-1">
@@ -195,6 +271,10 @@ export default function MeetingsLandingPage() {
                     <p className="text-xs text-slate-400">compliance</p>
                   </div>
                 )}
+                <ChevronRight
+                  size={16}
+                  className="text-slate-300 dark:text-slate-600 ml-3 shrink-0"
+                />
               </Link>
             ))}
           </div>

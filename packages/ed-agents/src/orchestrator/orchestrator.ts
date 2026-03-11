@@ -351,8 +351,12 @@ export class EdOrchestrator {
       );
 
       if (alerts.length > 0) {
-        greeting = `Hi ${context.userName || "there"}! I noticed you're looking at **${domain}**. 
+        if (domain === "intelligence") {
+          greeting = `Hi ${context.userName || "there"}! I'm your School Intelligence specialist. I've checked your school's data and found **${alerts.length}** item(s) to discuss. I can help you understand attainment gaps, cohort journeys, teacher assessment accuracy, and recommend EEF research-backed interventions.`;
+        } else {
+          greeting = `Hi ${context.userName || "there"}! I noticed you're looking at **${domain}**.
 I've scanned your school's compliance data and found **${alerts.length}** items that might need your attention.`;
+        }
       }
     }
 
@@ -369,6 +373,8 @@ I can help with things like:
 • School compliance (RIDDOR, fire safety, legionella)
 • HR questions (sickness, policies, contracts)
 • Data reporting (census, returns)
+• School intelligence (attainment gaps, cohort tracking, EEF research)
+• Pupil assessment analysis (with full GDPR privacy)
 • Using school systems (SIMS, Arbor, etc.)
 • And much more...
 

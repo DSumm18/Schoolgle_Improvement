@@ -1,8 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+import { NextRequest } from "next/server";
+import { protectedRoute, aiRoute, apiSuccess, apiError } from "@/lib/api-utils";
+import { createServiceRoleClient } from "@/lib/supabase-server";
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const AI_MODEL = "deepseek/deepseek-chat";
@@ -15,32 +13,27 @@ interface GenerateRequest {
   isToolbox?: boolean;
 }
 
-export async function POST(request: NextRequest) {
-  try {
-    const body: GenerateRequest = await request.json();
-    const {
-      prompt,
-      organizationId,
-      category,
-      questionCount = 10,
-      isToolbox,
-    } = body;
+export const POST = aiRoute(async (auth, request) => {
+  const body: GenerateRequest = await request.json();
+  const {
+    prompt,
+    organizationId,
+    category,
+    questionCount = 10,
+    isToolbox,
+  } = body;
 
-    if (!prompt) {
-      return NextResponse.json(
-        { error: "prompt is required" },
-        { status: 400 },
-      );
-    }
+  if (!prompt) {
+    return apiError("prompt is required", 400);
+  }
 
-    if (!OPENROUTER_API_KEY) {
-      return NextResponse.json(
-        { error: "AI service not configured" },
-        { status: 503 },
-      );
-    }
+  if (!OPENROUTER_API_KEY) {
+    return apiError("AI service not configured", 503);
+  }
 
-    const systemPrompt = `You are an expert UK school survey designer. Generate a survey based on the user's description.
+  const orgId = organizationId || auth.organizationId;
+
+  const systemPrompt = `You are an expert UK school survey designer. Generate a survey based on the user's description.
 
 RULES:
 - Generate questions appropriate for UK schools (primary, secondary, or all-through)
@@ -89,159 +82,143 @@ For nps: no choices needed (0-10 automatic)
 For slider: include "settings": { "min": 0, "max": 100, "step": 1 }
 For statement: no choices, just informational text`;
 
-    const aiResponse = await fetch(
-      "https://openrouter.ai/api/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${OPENROUTER_API_KEY}`,
-          "Content-Type": "application/json",
-          "HTTP-Referer": "https://schoolgle.co.uk",
-        },
-        body: JSON.stringify({
-          model: AI_MODEL,
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: prompt },
-          ],
-          temperature: 0.7,
-          max_tokens: 4000,
-        }),
+  const aiResponse = await fetch(
+    "https://openrouter.ai/api/v1/chat/completions",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://schoolgle.co.uk",
       },
-    );
+      body: JSON.stringify({
+        model: AI_MODEL,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: prompt },
+        ],
+        temperature: 0.7,
+        max_tokens: 4000,
+      }),
+    },
+  );
 
-    if (!aiResponse.ok) {
-      console.error("AI API error:", await aiResponse.text());
-      return NextResponse.json(
-        { error: "AI generation failed" },
-        { status: 502 },
-      );
-    }
+  if (!aiResponse.ok) {
+    console.error("AI API error:", await aiResponse.text());
+    return apiError("AI generation failed", 502);
+  }
 
-    const aiData = await aiResponse.json();
-    const content = aiData.choices?.[0]?.message?.content;
+  const aiData = await aiResponse.json();
+  const content = aiData.choices?.[0]?.message?.content;
 
-    if (!content) {
-      return NextResponse.json(
-        { error: "No response from AI" },
-        { status: 502 },
-      );
-    }
+  if (!content) {
+    return apiError("No response from AI", 502);
+  }
 
-    // Parse AI response - handle potential markdown wrapping
-    let surveyData;
-    try {
-      const jsonStr = content
-        .replace(/```json\n?/g, "")
-        .replace(/```\n?/g, "")
-        .trim();
-      surveyData = JSON.parse(jsonStr);
-    } catch {
-      console.error("Failed to parse AI response:", content);
-      return NextResponse.json(
-        { error: "Failed to parse AI response" },
-        { status: 502 },
-      );
-    }
+  // Parse AI response - handle potential markdown wrapping
+  let surveyData;
+  try {
+    const jsonStr = content
+      .replace(/```json\n?/g, "")
+      .replace(/```\n?/g, "")
+      .trim();
+    surveyData = JSON.parse(jsonStr);
+  } catch {
+    console.error("Failed to parse AI response:", content);
+    return apiError("Failed to parse AI response", 502);
+  }
 
-    // Create the survey in database
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  // Create the survey in database
+  const supabase = createServiceRoleClient();
 
-    const slug =
-      surveyData.title
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-|-$/g, "")
-        .slice(0, 50) +
-      "-" +
-      Math.random().toString(36).slice(2, 8);
+  const slug =
+    surveyData.title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 50) +
+    "-" +
+    Math.random().toString(36).slice(2, 8);
 
-    const { data: survey, error: surveyError } = await supabase
-      .from("surveys")
+  const { data: survey, error: surveyError } = await supabase
+    .from("surveys")
+    .insert({
+      title: surveyData.title,
+      description: surveyData.description || "",
+      slug,
+      organization_id: orgId,
+      category: surveyData.category || category || "general",
+      status: "draft",
+      is_anonymous: true,
+      is_toolbox: isToolbox || false,
+      settings: surveyData.settings || {},
+    })
+    .select()
+    .single();
+
+  if (surveyError) throw surveyError;
+
+  // Create pages and questions
+  for (let pi = 0; pi < (surveyData.pages || []).length; pi++) {
+    const page = surveyData.pages[pi];
+    const { data: pageData, error: pageError } = await supabase
+      .from("survey_pages")
       .insert({
-        title: surveyData.title,
-        description: surveyData.description || "",
-        slug,
-        organization_id: organizationId,
-        category: surveyData.category || category || "general",
-        status: "draft",
-        is_anonymous: true,
-        is_toolbox: isToolbox || false,
-        settings: surveyData.settings || {},
+        survey_id: survey.id,
+        title: page.title || `Page ${pi + 1}`,
+        description: page.description || null,
+        sort_order: pi,
       })
       .select()
       .single();
 
-    if (surveyError) throw surveyError;
+    if (pageError) throw pageError;
 
-    // Create pages and questions
-    for (let pi = 0; pi < (surveyData.pages || []).length; pi++) {
-      const page = surveyData.pages[pi];
-      const { data: pageData, error: pageError } = await supabase
-        .from("survey_pages")
+    for (let qi = 0; qi < (page.questions || []).length; qi++) {
+      const q = page.questions[qi];
+      const { data: questionData, error: qError } = await supabase
+        .from("survey_questions")
         .insert({
           survey_id: survey.id,
-          title: page.title || `Page ${pi + 1}`,
-          description: page.description || null,
-          sort_order: pi,
+          page_id: pageData.id,
+          title: q.title,
+          description: q.description || null,
+          question_type: q.question_type,
+          is_required: q.is_required ?? true,
+          sort_order: qi,
+          settings: q.settings || {},
         })
         .select()
         .single();
 
-      if (pageError) throw pageError;
+      if (qError) throw qError;
 
-      for (let qi = 0; qi < (page.questions || []).length; qi++) {
-        const q = page.questions[qi];
-        const { data: questionData, error: qError } = await supabase
-          .from("survey_questions")
-          .insert({
-            survey_id: survey.id,
-            page_id: pageData.id,
-            title: q.title,
-            description: q.description || null,
-            question_type: q.question_type,
-            is_required: q.is_required ?? true,
-            sort_order: qi,
-            settings: q.settings || {},
-          })
-          .select()
-          .single();
+      // Create choices if applicable
+      if (q.choices?.length > 0) {
+        const choiceInserts = q.choices.map((label: string, ci: number) => ({
+          question_id: questionData.id,
+          label,
+          value: label.toLowerCase().replace(/[^a-z0-9]+/g, "_"),
+          sort_order: ci,
+        }));
 
-        if (qError) throw qError;
+        const { error: choiceError } = await supabase
+          .from("survey_choices")
+          .insert(choiceInserts);
 
-        // Create choices if applicable
-        if (q.choices?.length > 0) {
-          const choiceInserts = q.choices.map((label: string, ci: number) => ({
-            question_id: questionData.id,
-            label,
-            value: label.toLowerCase().replace(/[^a-z0-9]+/g, "_"),
-            sort_order: ci,
-          }));
-
-          const { error: choiceError } = await supabase
-            .from("survey_choices")
-            .insert(choiceInserts);
-
-          if (choiceError) throw choiceError;
-        }
+        if (choiceError) throw choiceError;
       }
     }
-
-    return NextResponse.json({
-      surveyId: survey.id,
-      title: surveyData.title,
-      pageCount: surveyData.pages?.length || 0,
-      questionCount:
-        surveyData.pages?.reduce(
-          (acc: number, p: any) => acc + (p.questions?.length || 0),
-          0,
-        ) || 0,
-    });
-  } catch (error) {
-    console.error("Error in POST /api/surveys/generate:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
   }
-}
+
+  return apiSuccess({
+    surveyId: survey.id,
+    title: surveyData.title,
+    pageCount: surveyData.pages?.length || 0,
+    questionCount:
+      surveyData.pages?.reduce(
+        (acc: number, p: any) => acc + (p.questions?.length || 0),
+        0,
+      ) || 0,
+  });
+});

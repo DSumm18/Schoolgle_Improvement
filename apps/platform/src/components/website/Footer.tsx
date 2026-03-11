@@ -43,15 +43,36 @@ const Footer = () => {
             </div>
             <div className="space-y-2">
               <p className="font-bold text-foreground text-xs uppercase tracking-wider">
+                Legal
+              </p>
+              <Link
+                href="/privacy"
+                className="block text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Privacy Policy
+              </Link>
+              <Link
+                href="/cookies"
+                className="block text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Cookie Policy
+              </Link>
+            </div>
+            <div className="space-y-2">
+              <p className="font-bold text-foreground text-xs uppercase tracking-wider">
                 Contact
               </p>
               <p className="text-muted-foreground">admin@schoolgle.co.uk</p>
+              <p className="text-muted-foreground">dpo@schoolgle.co.uk</p>
             </div>
           </div>
         </div>
 
         <div className="mt-10 pt-6 border-t border-border text-xs text-muted-foreground/60">
-          <p>Schoolgle Limited 2025. All rights reserved.</p>
+          <p>
+            Schoolgle Limited 2025. All rights reserved. Registered in England
+            &amp; Wales. Company No. 16776489. ICO Registration Pending.
+          </p>
         </div>
       </div>
     </footer>

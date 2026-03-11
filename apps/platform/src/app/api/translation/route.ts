@@ -2,26 +2,26 @@
  * Translation API
  *
  * Provides endpoints for translation and language preferences:
- * - GET /api/translation/languages - Get supported languages
- * - GET /api/translation/detect - Detect language from text
- * - POST /api/translation/translate - Translate text
- * - GET /api/translation/preferences - Get user's language preferences
- * - POST /api/translation/preferences - Update user's language preferences
- * - POST /api/translation/fields - Translate form field labels
+ * - GET /api/translation?action=languages - Get supported languages
+ * - GET /api/translation?action=preferences - Get user's language preferences
+ * - POST /api/translation (action: detect) - Detect language from text
+ * - POST /api/translation (action: translate) - Translate text
+ * - POST /api/translation (action: translateFields) - Translate form field labels
+ * - POST /api/translation (action: updatePreferences) - Update user's language preferences
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase-server';
-import { getTranslationService, SUPPORTED_LANGUAGES } from '@/lib/translation-service';
-import type { LanguageCode } from '@/lib/translation-service';
+import { NextRequest, NextResponse } from "next/server";
+import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
+import { createServiceRoleClient } from "@/lib/supabase-server";
+import {
+  getTranslationService,
+  SUPPORTED_LANGUAGES,
+} from "@/lib/translation-service";
+import type { LanguageCode } from "@/lib/translation-service";
 
 // ============================================================================
 // TYPES
 // ============================================================================
-
-interface DetectRequest {
-  text: string;
-}
 
 interface TranslateRequest {
   text: string;
@@ -46,148 +46,96 @@ interface UpdatePreferencesRequest {
   secondaryLanguage?: LanguageCode;
   autoTranslate?: boolean;
   showSideBySide?: boolean;
-  fontSize?: 'small' | 'medium' | 'large';
+  fontSize?: "small" | "medium" | "large";
 }
 
 // ============================================================================
 // GET HANDLER
 // ============================================================================
 
-/**
- * GET /api/translation
- *
- * Get supported languages or user preferences
- */
-export async function GET(request: NextRequest) {
-  try {
-    const { user } = await createServerSupabaseClient();
-    const searchParams = request.nextUrl.searchParams;
-    const action = searchParams.get('action');
+export const GET = protectedRoute(async (auth, request) => {
+  const searchParams = request.nextUrl.searchParams;
+  const action = searchParams.get("action");
 
-    switch (action) {
-      case 'languages':
-        return handleGetLanguages();
+  switch (action) {
+    case "languages":
+      return apiSuccess({ languages: Object.values(SUPPORTED_LANGUAGES) });
 
-      case 'preferences':
-        return handleGetPreferences(user?.id);
+    case "preferences":
+      return handleGetPreferences(auth.userId);
 
-      default:
-        return NextResponse.json(
-          { error: 'Invalid Action', message: 'Specify action=languages or action=preferences' },
-          { status: 400 }
-        );
-    }
-  } catch (error) {
-    console.error('[Translation API] GET error:', error);
-    return NextResponse.json(
-      { error: 'Internal Server Error', message: 'An unexpected error occurred' },
-      { status: 500 }
-    );
+    default:
+      return apiError(
+        "Invalid Action. Specify action=languages or action=preferences",
+        400,
+      );
   }
-}
-
-/**
- * Get supported languages
- */
-async function handleGetLanguages() {
-  const languages = Object.values(SUPPORTED_LANGUAGES);
-  return NextResponse.json({ languages });
-}
+});
 
 /**
  * Get user's language preferences
  */
-async function handleGetPreferences(userId: string | undefined) {
-  if (!userId) {
-    return NextResponse.json(
-      { error: 'Unauthorized', message: 'You must be logged in' },
-      { status: 401 }
-    );
-  }
-
-  const supabase = await createServerSupabaseClient();
+async function handleGetPreferences(userId: string) {
+  const supabase = createServiceRoleClient();
 
   const { data, error } = await supabase
-    .from('user_language_preferences')
-    .select('*')
-    .eq('user_id', userId)
+    .from("user_language_preferences")
+    .select("*")
+    .eq("user_id", userId)
     .maybeSingle();
 
   if (error) {
-    return NextResponse.json(
-      { error: 'Database Error', message: error.message },
-      { status: 500 }
-    );
+    return apiError(error.message, 500);
   }
 
   // Return default preferences if none set
   if (!data) {
-    return NextResponse.json({
-      preferredLanguage: 'en',
+    return apiSuccess({
+      preferredLanguage: "en",
       secondaryLanguage: null,
       autoTranslate: true,
       showSideBySide: true,
-      fontSize: 'medium',
+      fontSize: "medium",
     });
   }
 
-  return NextResponse.json(data);
+  return apiSuccess(data);
 }
 
 // ============================================================================
 // POST HANDLER
 // ============================================================================
 
-/**
- * POST /api/translation
- *
- * Handle translation operations
- */
-export async function POST(request: NextRequest) {
-  try {
-    const { user } = await createServerSupabaseClient();
-    const body = await request.json();
-    const { action } = body;
+export const POST = protectedRoute(async (auth, request) => {
+  const body = await request.json();
+  const { action } = body;
 
-    switch (action) {
-      case 'detect':
-        return handleDetect(body);
+  switch (action) {
+    case "detect":
+      return handleDetect(body);
 
-      case 'translate':
-        return handleTranslate(body);
+    case "translate":
+      return handleTranslate(body);
 
-      case 'translateFields':
-        return handleTranslateFields(body);
+    case "translateFields":
+      return handleTranslateFields(body);
 
-      case 'updatePreferences':
-        return handleUpdatePreferences(body, user?.id);
+    case "updatePreferences":
+      return handleUpdatePreferences(body, auth.userId);
 
-      default:
-        return NextResponse.json(
-          { error: 'Invalid Action', message: `Unknown action: ${action}` },
-          { status: 400 }
-        );
-    }
-  } catch (error) {
-    console.error('[Translation API] POST error:', error);
-    return NextResponse.json(
-      { error: 'Internal Server Error', message: 'An unexpected error occurred' },
-      { status: 500 }
-    );
+    default:
+      return apiError(`Unknown action: ${action}`, 400);
   }
-}
+});
 
 /**
  * Detect language from text
  */
-async function handleDetect(body: DetectRequest) {
+async function handleDetect(body: { text: string }) {
   const { text } = body;
 
   if (!text) {
-    return NextResponse.json(
-      { error: 'Invalid Input', message: 'Text is required' },
-      { status: 400 }
-    );
+    return apiError("Text is required", 400);
   }
 
   const translationService = getTranslationService();
@@ -195,7 +143,7 @@ async function handleDetect(body: DetectRequest) {
 
   const language = SUPPORTED_LANGUAGES[detectedLanguage];
 
-  return NextResponse.json({
+  return apiSuccess({
     language: detectedLanguage,
     languageName: language?.name,
     nativeName: language?.nativeName,
@@ -210,10 +158,7 @@ async function handleTranslate(body: TranslateRequest) {
   const { text, sourceLanguage, targetLanguage, context } = body;
 
   if (!text || !targetLanguage) {
-    return NextResponse.json(
-      { error: 'Invalid Input', message: 'Text and targetLanguage are required' },
-      { status: 400 }
-    );
+    return apiError("Text and targetLanguage are required", 400);
   }
 
   const translationService = getTranslationService();
@@ -228,10 +173,10 @@ async function handleTranslate(body: TranslateRequest) {
     text,
     sourceLang,
     targetLanguage,
-    context
+    context,
   );
 
-  return NextResponse.json(result);
+  return apiSuccess(result);
 }
 
 /**
@@ -241,22 +186,19 @@ async function handleTranslateFields(body: TranslateFieldsRequest) {
   const { fields, targetLanguage, formType } = body;
 
   if (!fields || !targetLanguage) {
-    return NextResponse.json(
-      { error: 'Invalid Input', message: 'Fields and targetLanguage are required' },
-      { status: 400 }
-    );
+    return apiError("Fields and targetLanguage are required", 400);
   }
 
   const translationService = getTranslationService();
   const translatedFields = await translationService.translateFieldLabels(
     fields,
     targetLanguage,
-    formType
+    formType,
   );
 
-  return NextResponse.json({
+  return apiSuccess({
     translatedFields,
-    sourceLanguage: 'en',
+    sourceLanguage: "en",
     targetLanguage,
   });
 }
@@ -264,21 +206,17 @@ async function handleTranslateFields(body: TranslateFieldsRequest) {
 /**
  * Update user language preferences
  */
-async function handleUpdatePreferences(body: UpdatePreferencesRequest, userId: string | undefined) {
-  if (!userId) {
-    return NextResponse.json(
-      { error: 'Unauthorized', message: 'You must be logged in' },
-      { status: 401 }
-    );
-  }
-
-  const supabase = await createServerSupabaseClient();
+async function handleUpdatePreferences(
+  body: UpdatePreferencesRequest,
+  userId: string,
+) {
+  const supabase = createServiceRoleClient();
 
   // Check if preferences exist
   const { data: existing } = await supabase
-    .from('user_language_preferences')
-    .select('id')
-    .eq('user_id', userId)
+    .from("user_language_preferences")
+    .select("id")
+    .eq("user_id", userId)
     .maybeSingle();
 
   let result;
@@ -289,48 +227,53 @@ async function handleUpdatePreferences(body: UpdatePreferencesRequest, userId: s
       updated_at: new Date().toISOString(),
     };
 
-    if (body.preferredLanguage !== undefined) updateData.preferred_language = body.preferredLanguage;
-    if (body.secondaryLanguage !== undefined) updateData.secondary_language = body.secondaryLanguage;
-    if (body.autoTranslate !== undefined) updateData.auto_translate = body.autoTranslate;
-    if (body.showSideBySide !== undefined) updateData.show_side_by_side = body.showSideBySide;
+    if (body.preferredLanguage !== undefined)
+      updateData.preferred_language = body.preferredLanguage;
+    if (body.secondaryLanguage !== undefined)
+      updateData.secondary_language = body.secondaryLanguage;
+    if (body.autoTranslate !== undefined)
+      updateData.auto_translate = body.autoTranslate;
+    if (body.showSideBySide !== undefined)
+      updateData.show_side_by_side = body.showSideBySide;
     if (body.fontSize !== undefined) updateData.font_size = body.fontSize;
 
     result = await supabase
-      .from('user_language_preferences')
+      .from("user_language_preferences")
       .update(updateData)
-      .eq('user_id', userId);
+      .eq("user_id", userId);
   } else {
     // Create new preferences
     const insertData: any = {
       user_id: userId,
     };
 
-    if (body.preferredLanguage !== undefined) insertData.preferred_language = body.preferredLanguage;
-    if (body.secondaryLanguage !== undefined) insertData.secondary_language = body.secondaryLanguage;
-    if (body.autoTranslate !== undefined) insertData.auto_translate = body.autoTranslate;
-    if (body.showSideBySide !== undefined) insertData.show_side_by_side = body.showSideBySide;
+    if (body.preferredLanguage !== undefined)
+      insertData.preferred_language = body.preferredLanguage;
+    if (body.secondaryLanguage !== undefined)
+      insertData.secondary_language = body.secondaryLanguage;
+    if (body.autoTranslate !== undefined)
+      insertData.auto_translate = body.autoTranslate;
+    if (body.showSideBySide !== undefined)
+      insertData.show_side_by_side = body.showSideBySide;
     if (body.fontSize !== undefined) insertData.font_size = body.fontSize;
 
     result = await supabase
-      .from('user_language_preferences')
+      .from("user_language_preferences")
       .insert(insertData);
   }
 
   if (result.error) {
-    return NextResponse.json(
-      { error: 'Database Error', message: result.error.message },
-      { status: 500 }
-    );
+    return apiError(result.error.message, 500);
   }
 
   // Fetch and return updated preferences
   const { data: preferences } = await supabase
-    .from('user_language_preferences')
-    .select('*')
-    .eq('user_id', userId)
+    .from("user_language_preferences")
+    .select("*")
+    .eq("user_id", userId)
     .single();
 
-  return NextResponse.json({
+  return apiSuccess({
     success: true,
     preferences,
   });

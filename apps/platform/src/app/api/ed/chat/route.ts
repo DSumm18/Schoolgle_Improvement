@@ -236,12 +236,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(response);
     }
 
-    // Get user from Supabase
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    // Get user's organization and role
+    // Get user's organization and role (user already available from auth check above)
     let organization: any = null;
     let userRole: "viewer" = "viewer";
     let subscription = {

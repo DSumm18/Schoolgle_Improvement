@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createServiceRoleClient } from "@/lib/supabase-server";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
+/**
+ * GET /api/surveys/lookup
+ *
+ * PUBLIC ENDPOINT: This route is intentionally left unprotected because it is used
+ * by survey respondents to look up a survey by its public slug. Respondents access
+ * surveys via shared links (e.g. /s/parent-satisfaction-abc123) and do not have
+ * Schoolgle accounts. The slug acts as an unguessable access token.
+ */
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createServiceRoleClient();
     const { searchParams } = new URL(request.url);
     const slug = searchParams.get("slug");
 

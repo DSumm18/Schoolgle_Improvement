@@ -1,60 +1,37 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
+import { createServiceRoleClient } from "@/lib/supabase-server";
 
 /**
  * GET /api/compliance/dpo-service
  * Fetch DPO service record for an organization
  */
-export async function GET(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const organizationId = searchParams.get("organizationId");
+export const GET = protectedRoute(async (auth, request) => {
+  const { organizationId } = auth;
+  const supabase = createServiceRoleClient();
 
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: "Missing organizationId parameter" },
-        { status: 400 },
-      );
-    }
+  const { data: dpoService, error } = await supabase
+    .from("compliance_dpo_service")
+    .select("*")
+    .eq("organization_id", organizationId)
+    .maybeSingle();
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    const { data: dpoService, error } = await supabase
-      .from("compliance_dpo_service")
-      .select("*")
-      .eq("organization_id", organizationId)
-      .maybeSingle();
-
-    if (error) {
-      console.error("DPO service fetch error:", error);
-      return NextResponse.json(
-        { error: "Failed to fetch DPO service record" },
-        { status: 500 },
-      );
-    }
-
-    return NextResponse.json({ dpoService: dpoService || null });
-  } catch (error: any) {
-    console.error("DPO service API error:", error);
-    return NextResponse.json(
-      { error: error.message || "Internal server error" },
-      { status: 500 },
-    );
+  if (error) {
+    console.error("DPO service fetch error:", error);
+    return apiError("Failed to fetch DPO service record", 500);
   }
-}
+
+  return apiSuccess({ dpoService: dpoService || null });
+});
 
 /**
  * POST /api/compliance/dpo-service
  * Create or update DPO service record for an organization
  */
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
+export const POST = protectedRoute(
+  async (auth, request) => {
+    const { organizationId, userId } = auth;
+    const body = await request.json();
     const {
-      organizationId,
       service_tier,
       consultant_name,
       consultant_email,
@@ -65,17 +42,9 @@ export async function POST(req: NextRequest) {
       service_includes,
       sla_response_hours,
       ico_registration_number,
-      actor_user_id,
     } = body;
 
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: "Missing required field: organizationId" },
-        { status: 400 },
-      );
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createServiceRoleClient();
 
     // Check if a record already exists for this organization
     const { data: existing } = await supabase
@@ -124,10 +93,7 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       console.error("DPO service upsert error:", error);
-      return NextResponse.json(
-        { error: "Failed to save DPO service record" },
-        { status: 500 },
-      );
+      return apiError("Failed to save DPO service record", 500);
     }
 
     // Audit log
@@ -136,7 +102,7 @@ export async function POST(req: NextRequest) {
       entity_type: "dpo_service",
       entity_id: dpoService.id,
       action: isUpdate ? "updated" : "created",
-      actor_user_id: actor_user_id || null,
+      actor_user_id: userId,
       metadata: {
         service_tier,
         consultant_name,
@@ -144,12 +110,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return NextResponse.json({ dpoService }, { status: isUpdate ? 200 : 201 });
-  } catch (error: any) {
-    console.error("DPO service save error:", error);
-    return NextResponse.json(
-      { error: error.message || "Internal server error" },
-      { status: 500 },
-    );
-  }
-}
+    return apiSuccess({ dpoService }, isUpdate ? 200 : 201);
+  },
+  { requiredRole: "slt" },
+);

@@ -12,6 +12,10 @@ import {
   Zap,
   Accessibility,
   Sparkles,
+  Map,
+  QrCode,
+  ClipboardCheck,
+  Calendar,
 } from "lucide-react";
 
 const apps = [
@@ -53,6 +57,38 @@ const apps = [
     description:
       "Fire safety, asbestos, legionella, and statutory compliance monitoring.",
     href: "/estates-compliance",
+    status: "Live",
+  },
+  {
+    icon: Map,
+    title: "Floor Plan",
+    description:
+      "Interactive building map with 9 data overlays. Pin assets, track issues, and plan routes.",
+    href: "/dashboard/estates/floor-plan",
+    status: "Preview",
+  },
+  {
+    icon: QrCode,
+    title: "Asset Tags",
+    description:
+      "Generate and print QR code labels for physical assets. Scan to view compliance history instantly.",
+    href: "/dashboard/estates/asset-tags",
+    status: "Live",
+  },
+  {
+    icon: ClipboardCheck,
+    title: "Condition Survey",
+    description:
+      "Visual A-D grading of building elements with backlog costing. Feeds into risk register for urgent items.",
+    href: "/dashboard/estates/condition-survey",
+    status: "Live",
+  },
+  {
+    icon: Calendar,
+    title: "Lettings",
+    description:
+      "Manage room bookings, calculate hire charges, and track lettings income from community and commercial groups.",
+    href: "/dashboard/estates/lettings",
     status: "Live",
   },
   {

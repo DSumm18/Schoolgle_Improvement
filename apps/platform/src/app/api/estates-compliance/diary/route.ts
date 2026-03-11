@@ -8,312 +8,203 @@
  * - DELETE: Delete diary entry
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { NextRequest, NextResponse } from "next/server";
+import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
+import { createServiceRoleClient } from "@/lib/supabase-server";
 
-/**
- * GET /api/estates-compliance/diary
- *
- * Query params:
- * - organization_id: required
- * - user_id: optional (filter by user)
- * - search: optional (search in entry text)
- * - tags: optional (comma-separated tag filter)
- * - date_from: optional (ISO date string)
- * - date_to: optional (ISO date string)
- * - limit: optional (default 50)
- * - offset: optional (default 0)
- */
-export async function GET(request: NextRequest) {
-  try {
-    const searchParams = request.nextUrl.searchParams;
-    const organizationId = searchParams.get('organization_id');
-    const userId = searchParams.get('user_id');
-    const searchText = searchParams.get('search');
-    const tagsParam = searchParams.get('tags');
-    const dateFrom = searchParams.get('date_from');
-    const dateTo = searchParams.get('date_to');
-    const limit = parseInt(searchParams.get('limit') || '50');
-    const offset = parseInt(searchParams.get('offset') || '0');
+export const GET = protectedRoute(async (auth, request) => {
+  const searchParams = request.nextUrl.searchParams;
+  const organizationId =
+    searchParams.get("organization_id") || auth.organizationId;
+  const userId = searchParams.get("user_id");
+  const searchText = searchParams.get("search");
+  const tagsParam = searchParams.get("tags");
+  const dateFrom = searchParams.get("date_from");
+  const dateTo = searchParams.get("date_to");
+  const limit = parseInt(searchParams.get("limit") || "50");
+  const offset = parseInt(searchParams.get("offset") || "0");
 
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: 'organization_id is required' },
-        { status: 400 }
-      );
-    }
+  const supabase = createServiceRoleClient();
 
-    const supabase = await createClient();
+  let query = supabase
+    .from("estates_daily_diary")
+    .select("*")
+    .eq("organization_id", organizationId);
 
-    let query = supabase
-      .from('estates_daily_diary')
-      .select('*, user:user_id(id, email, user_metadata)')
-      .eq('organization_id', organizationId);
-
-    if (userId) {
-      query = query.eq('user_id', userId);
-    }
-
-    if (searchText) {
-      query = query.ilike('entry', `%${searchText}%`);
-    }
-
-    if (tagsParam) {
-      const tags = tagsParam.split(',').map(t => t.trim());
-      query = query.contains('tags', tags);
-    }
-
-    if (dateFrom) {
-      query = query.gte('created_at', dateFrom);
-    }
-
-    if (dateTo) {
-      query = query.lte('created_at', dateTo);
-    }
-
-    const { data: entries, error } = await query
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
-
-    if (error) {
-      console.error('Error fetching diary entries:', error);
-      return NextResponse.json(
-        { error: 'Failed to fetch diary entries' },
-        { status: 500 }
-      );
-    }
-
-    // Get total count
-    const { count } = await supabase
-      .from('estates_daily_diary')
-      .select('*', { count: 'exact', head: true })
-      .eq('organization_id', organizationId);
-
-    return NextResponse.json({
-      entries: entries || [],
-      count: count || 0,
-      limit,
-      offset,
-      has_more: (count || 0) > offset + limit,
-    });
-  } catch (error) {
-    console.error('Error in diary GET:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+  if (userId) {
+    query = query.eq("user_id", userId);
   }
-}
 
-/**
- * POST /api/estates-compliance/diary
- *
- * Body:
- * - organization_id: required
- * - user_id: required
- * - entry: required (diary text)
- * - photos: optional array of photo URLs
- * - tags: optional array of tags
- * - location: optional
- * - weather: optional object with temperature, conditions
- * - mood: optional ('positive' | 'neutral' | 'negative')
- * - visibility: optional ('private' | 'team' | 'organization')
- * - attachments: optional array of attachment URLs
- */
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const {
-      organization_id,
-      user_id,
-      entry,
-      photos = [],
-      tags = [],
+  if (searchText) {
+    query = query.ilike("entry", `%${searchText}%`);
+  }
+
+  if (tagsParam) {
+    const tags = tagsParam.split(",").map((t) => t.trim());
+    query = query.contains("tags", tags);
+  }
+
+  if (dateFrom) {
+    query = query.gte("created_at", dateFrom);
+  }
+
+  if (dateTo) {
+    query = query.lte("created_at", dateTo);
+  }
+
+  const { data: entries, error } = await query
+    .order("created_at", { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  if (error) {
+    console.error("Error fetching diary entries:", error);
+    return apiError("Failed to fetch diary entries", 500);
+  }
+
+  // Get total count
+  const { count } = await supabase
+    .from("estates_daily_diary")
+    .select("*", { count: "exact", head: true })
+    .eq("organization_id", organizationId);
+
+  return apiSuccess({
+    entries: entries || [],
+    count: count || 0,
+    limit,
+    offset,
+    has_more: (count || 0) > offset + limit,
+  });
+});
+
+export const POST = protectedRoute(async (auth, request) => {
+  const body = await request.json();
+  const {
+    organization_id,
+    user_id,
+    entry,
+    photos = [],
+    tags = [],
+    location,
+    weather,
+    mood,
+    visibility = "private",
+    attachments = [],
+  } = body;
+
+  const orgId = organization_id || auth.organizationId;
+  const uid = user_id || auth.userId;
+
+  if (!entry) {
+    return apiError("entry is required", 400);
+  }
+
+  if (entry.trim().length === 0) {
+    return apiError("Entry cannot be empty", 400);
+  }
+
+  const supabase = createServiceRoleClient();
+
+  const { data: newEntry, error } = await supabase
+    .from("estates_daily_diary")
+    .insert({
+      organization_id: orgId,
+      user_id: uid,
+      entry: entry.trim(),
+      photos,
+      tags,
       location,
       weather,
       mood,
-      visibility = 'private',
-      attachments = [],
-    } = body;
+      visibility,
+      attachments,
+    })
+    .select()
+    .single();
 
-    if (!organization_id || !user_id || !entry) {
-      return NextResponse.json(
-        { error: 'organization_id, user_id, and entry are required' },
-        { status: 400 }
-      );
-    }
+  if (error) {
+    console.error("Error creating diary entry:", error);
+    return apiError("Failed to create diary entry", 500);
+  }
 
-    if (entry.trim().length === 0) {
-      return NextResponse.json(
-        { error: 'Entry cannot be empty' },
-        { status: 400 }
-      );
-    }
-
-    const supabase = await createClient();
-
-    const { data: newEntry, error } = await supabase
-      .from('estates_daily_diary')
-      .insert({
-        organization_id,
-        user_id,
-        entry: entry.trim(),
-        photos,
-        tags,
-        location,
-        weather,
-        mood,
-        visibility,
-        attachments,
-      })
-      .select('*, user:user_id(id, email, user_metadata)')
-      .single();
-
-    if (error) {
-      console.error('Error creating diary entry:', error);
-      return NextResponse.json(
-        { error: 'Failed to create diary entry' },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({
+  return apiSuccess(
+    {
       entry: newEntry,
-      message: 'Diary entry created successfully',
-    }, { status: 201 });
-  } catch (error) {
-    console.error('Error in diary POST:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+      message: "Diary entry created successfully",
+    },
+    201,
+  );
+});
+
+export const PATCH = protectedRoute(async (auth, request) => {
+  const body = await request.json();
+  const { id, ...updates } = body;
+
+  if (!id) {
+    return apiError("Entry ID is required", 400);
   }
-}
 
-/**
- * PATCH /api/estates-compliance/diary
- *
- * Body:
- * - id: required (entry ID)
- * - entry: optional
- * - photos: optional
- * - tags: optional
- * - location: optional
- * - weather: optional
- * - mood: optional
- * - visibility: optional
- * - attachments: optional
- */
-export async function PATCH(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { id, ...updates } = body;
+  const supabase = createServiceRoleClient();
 
-    if (!id) {
-      return NextResponse.json(
-        { error: 'Entry ID is required' },
-        { status: 400 }
-      );
-    }
+  const { data: updatedEntry, error } = await supabase
+    .from("estates_daily_diary")
+    .update({
+      ...updates,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+    .select()
+    .single();
 
-    const supabase = await createClient();
-
-    const { data: updatedEntry, error } = await supabase
-      .from('estates_daily_diary')
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', id)
-      .select('*, user:user_id(id, email, user_metadata)')
-      .single();
-
-    if (error) {
-      console.error('Error updating diary entry:', error);
-      return NextResponse.json(
-        { error: 'Failed to update diary entry' },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({
-      entry: updatedEntry,
-      message: 'Diary entry updated successfully',
-    });
-  } catch (error) {
-    console.error('Error in diary PATCH:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+  if (error) {
+    console.error("Error updating diary entry:", error);
+    return apiError("Failed to update diary entry", 500);
   }
-}
 
-/**
- * DELETE /api/estates-compliance/diary
- *
- * Query params:
- * - id: required (entry ID)
- */
-export async function DELETE(request: NextRequest) {
-  try {
-    const searchParams = request.nextUrl.searchParams;
-    const id = searchParams.get('id');
+  return apiSuccess({
+    entry: updatedEntry,
+    message: "Diary entry updated successfully",
+  });
+});
 
-    if (!id) {
-      return NextResponse.json(
-        { error: 'Entry ID is required' },
-        { status: 400 }
-      );
-    }
+export const DELETE = protectedRoute(async (auth, request) => {
+  const searchParams = request.nextUrl.searchParams;
+  const id = searchParams.get("id");
 
-    const supabase = await createClient();
-
-    // First check if entry exists and is within 24 hours
-    const { data: entry } = await supabase
-      .from('estates_daily_diary')
-      .select('created_at')
-      .eq('id', id)
-      .single();
-
-    if (!entry) {
-      return NextResponse.json(
-        { error: 'Entry not found' },
-        { status: 404 }
-      );
-    }
-
-    const entryAge = Date.now() - new Date(entry.created_at).getTime();
-    const hours24 = 24 * 60 * 60 * 1000;
-
-    if (entryAge > hours24) {
-      return NextResponse.json(
-        { error: 'Entries older than 24 hours cannot be deleted' },
-        { status: 403 }
-      );
-    }
-
-    const { error } = await supabase
-      .from('estates_daily_diary')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      console.error('Error deleting diary entry:', error);
-      return NextResponse.json(
-        { error: 'Failed to delete diary entry' },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({
-      message: 'Diary entry deleted successfully',
-    });
-  } catch (error) {
-    console.error('Error in diary DELETE:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+  if (!id) {
+    return apiError("Entry ID is required", 400);
   }
-}
+
+  const supabase = createServiceRoleClient();
+
+  // First check if entry exists and is within 24 hours
+  const { data: entry } = await supabase
+    .from("estates_daily_diary")
+    .select("created_at")
+    .eq("id", id)
+    .single();
+
+  if (!entry) {
+    return apiError("Entry not found", 404);
+  }
+
+  const entryAge = Date.now() - new Date(entry.created_at).getTime();
+  const hours24 = 24 * 60 * 60 * 1000;
+
+  if (entryAge > hours24) {
+    return apiError("Entries older than 24 hours cannot be deleted", 403);
+  }
+
+  const { error } = await supabase
+    .from("estates_daily_diary")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    console.error("Error deleting diary entry:", error);
+    return apiError("Failed to delete diary entry", 500);
+  }
+
+  return apiSuccess({
+    message: "Diary entry deleted successfully",
+  });
+});

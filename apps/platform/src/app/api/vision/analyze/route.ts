@@ -7,6 +7,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { analyzeVision } from "@/lib/vision/service";
+import { handleVisionActions } from "@/lib/vision/action-handler";
+import { protectedRoute, apiSuccess } from "@/lib/api-utils";
 import type { VisionContextType, CheckType } from "@/lib/vision/types";
 
 const VALID_CONTEXTS: VisionContextType[] = [
@@ -16,25 +18,16 @@ const VALID_CONTEXTS: VisionContextType[] = [
   "lone-worker",
 ];
 
-export async function POST(request: NextRequest) {
-  try {
+export const POST = protectedRoute(
+  async (auth, request) => {
     const body = await request.json();
-
-    // Validate required fields
-    const { contextType, organizationId, media, mimeType, metadata } = body;
+    const { contextType, media, mimeType, metadata } = body;
 
     if (!contextType || !VALID_CONTEXTS.includes(contextType)) {
       return NextResponse.json(
         {
           error: `Invalid contextType. Must be one of: ${VALID_CONTEXTS.join(", ")}`,
         },
-        { status: 400 },
-      );
-    }
-
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: "organizationId is required" },
         { status: 400 },
       );
     }
@@ -53,10 +46,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Run analysis
     const output = await analyzeVision({
       contextType,
-      organizationId,
+      organizationId: auth.organizationId,
       mediaType: body.mediaType ?? "image",
       media,
       mimeType: mimeType ?? "image/jpeg",
@@ -66,23 +58,27 @@ export async function POST(request: NextRequest) {
         deviceGps: metadata.deviceGps,
         deviceId: metadata.deviceId,
         checkType: metadata.checkType as CheckType | undefined,
-        userId: metadata.userId,
+        userId: auth.userId,
       },
     });
 
-    return NextResponse.json({
-      success: true,
+    // Create real helpdesk tickets and notifications from findings
+    const actionResult = await handleVisionActions(
+      output.result,
+      output.result.dispatches || [],
+      {
+        organizationId: auth.organizationId,
+        userId: auth.userId,
+        roomName: metadata.roomName,
+        assetId: metadata.assetId,
+      },
+    );
+
+    return apiSuccess({
       result: output.result,
       evidence: output.evidence,
+      actions: actionResult,
     });
-  } catch (error) {
-    console.error("[Vision API] Error:", error);
-    return NextResponse.json(
-      {
-        error: "Vision analysis failed",
-        detail: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
-    );
-  }
-}
+  },
+  { requiredRole: "caretaker" },
+);

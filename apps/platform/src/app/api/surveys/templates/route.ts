@@ -1,27 +1,17 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { NextRequest } from "next/server";
+import { protectedRoute, apiSuccess } from "@/lib/api-utils";
+import { createServiceRoleClient } from "@/lib/supabase-server";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+export const GET = protectedRoute(async (auth, request) => {
+  const supabase = createServiceRoleClient();
 
-export async function GET() {
-  try {
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  const { data, error } = await supabase
+    .from("survey_templates")
+    .select("*")
+    .eq("is_system", true)
+    .order("usage_count", { ascending: false });
 
-    const { data, error } = await supabase
-      .from("survey_templates")
-      .select("*")
-      .eq("is_system", true)
-      .order("usage_count", { ascending: false });
+  if (error) throw error;
 
-    if (error) throw error;
-
-    return NextResponse.json(data ?? []);
-  } catch (error) {
-    console.error("Error in GET /api/surveys/templates:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
-  }
-}
+  return apiSuccess(data ?? []);
+});

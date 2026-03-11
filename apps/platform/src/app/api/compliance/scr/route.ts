@@ -1,67 +1,46 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
+import { createServiceRoleClient } from "@/lib/supabase-server";
 
 /**
  * GET /api/compliance/scr
  * List Single Central Record entries for an organization
  */
-export async function GET(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const organizationId = searchParams.get("organizationId");
-    const status = searchParams.get("status");
+export const GET = protectedRoute(async (auth, request) => {
+  const { organizationId } = auth;
+  const { searchParams } = new URL(request.url);
+  const status = searchParams.get("status");
 
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: "Missing organizationId parameter" },
-        { status: 400 },
-      );
-    }
+  const supabase = createServiceRoleClient();
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  let query = supabase
+    .from("compliance_scr_entries")
+    .select("*")
+    .eq("organization_id", organizationId)
+    .order("updated_at", { ascending: false });
 
-    let query = supabase
-      .from("compliance_scr_entries")
-      .select("*")
-      .eq("organization_id", organizationId)
-      .order("updated_at", { ascending: false });
-
-    if (status) {
-      query = query.eq("status", status);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      console.error("Error fetching SCR entries:", error);
-      return NextResponse.json(
-        { error: "Failed to fetch SCR entries" },
-        { status: 500 },
-      );
-    }
-
-    return NextResponse.json({ entries: data || [] });
-  } catch (error: any) {
-    console.error("SCR API error:", error);
-    return NextResponse.json(
-      { error: error.message || "Internal server error" },
-      { status: 500 },
-    );
+  if (status) {
+    query = query.eq("status", status);
   }
-}
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error("Error fetching SCR entries:", error);
+    return apiError("Failed to fetch SCR entries", 500);
+  }
+
+  return apiSuccess({ entries: data || [] });
+});
 
 /**
  * POST /api/compliance/scr
  * Create a new Single Central Record entry
  */
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
+export const POST = protectedRoute(
+  async (auth, request) => {
+    const { organizationId, userId } = auth;
+    const body = await request.json();
     const {
-      organizationId,
       staff_name,
       role,
       start_date,
@@ -90,17 +69,13 @@ export async function POST(req: NextRequest) {
       disqualification_declaration,
       notes,
       status,
-      user_id,
     } = body;
 
-    if (!organizationId || !staff_name || !role) {
-      return NextResponse.json(
-        { error: "Missing required fields: organizationId, staff_name, role" },
-        { status: 400 },
-      );
+    if (!staff_name || !role) {
+      return apiError("Missing required fields: staff_name, role", 400);
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createServiceRoleClient();
 
     const { data: entry, error } = await supabase
       .from("compliance_scr_entries")
@@ -140,10 +115,7 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       console.error("Error creating SCR entry:", error);
-      return NextResponse.json(
-        { error: "Failed to create SCR entry" },
-        { status: 500 },
-      );
+      return apiError("Failed to create SCR entry", 500);
     }
 
     // Audit log
@@ -152,16 +124,11 @@ export async function POST(req: NextRequest) {
       entity_type: "scr_entry",
       entity_id: entry.id,
       action: "created",
-      actor_user_id: user_id || null,
+      actor_user_id: userId,
       metadata: { staff_name, role, dbs_type },
     });
 
-    return NextResponse.json({ entry }, { status: 201 });
-  } catch (error: any) {
-    console.error("SCR create error:", error);
-    return NextResponse.json(
-      { error: error.message || "Internal server error" },
-      { status: 500 },
-    );
-  }
-}
+    return apiSuccess({ entry }, 201);
+  },
+  { requiredRole: "slt" },
+);

@@ -1,209 +1,157 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import type { Governor, GovernorForm } from '@/lib/governance';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+import { NextRequest } from "next/server";
+import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
+import { createServiceRoleClient } from "@/lib/supabase-server";
+import type { Governor, GovernorForm } from "@/lib/governance";
 
 interface RouteContext {
-    params: { id: string };
+  params: { id: string };
 }
 
 /**
  * GET /api/governance/governors/[id]
  * Get a specific governor by ID
  */
-export async function GET(
-    req: NextRequest,
-    context: RouteContext
-) {
-    try {
-        const { id } = context.params;
-        const { searchParams } = new URL(req.url);
-        const organizationId = searchParams.get('organizationId');
+export const GET = protectedRoute(async (auth, req) => {
+  const id = req.nextUrl.pathname.split("/").pop()!;
+  const { searchParams } = new URL(req.url);
+  const organizationId =
+    searchParams.get("organizationId") || auth.organizationId;
 
-        if (!organizationId) {
-            return NextResponse.json(
-                { error: 'Missing organizationId parameter' },
-                { status: 400 }
-            );
-        }
+  if (!organizationId) {
+    return apiError("Missing organizationId parameter", 400);
+  }
 
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  const supabase = createServiceRoleClient();
 
-        const { data: governor, error } = await supabase
-            .from('governors')
-            .select('*')
-            .eq('id', id)
-            .eq('organization_id', organizationId)
-            .single();
+  const { data: governor, error } = await supabase
+    .from("governors")
+    .select("*")
+    .eq("id", id)
+    .eq("organization_id", organizationId)
+    .single();
 
-        if (error || !governor) {
-            return NextResponse.json(
-                { error: 'Governor not found' },
-                { status: 404 }
-            );
-        }
+  if (error || !governor) {
+    return apiError("Governor not found", 404);
+  }
 
-        // Get governor's training records
-        const { data: training } = await supabase
-            .from('governor_training')
-            .select('*')
-            .eq('governor_id', id)
-            .order('completed_date', { ascending: false });
+  // Get governor's training records
+  const { data: training } = await supabase
+    .from("governor_training")
+    .select("*")
+    .eq("governor_id", id)
+    .order("completed_date", { ascending: false });
 
-        // Get governor's attendance at meetings
-        const today = new Date();
-        const pastYear = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
+  // Get governor's attendance at meetings
+  const today = new Date();
+  const pastYear = new Date(
+    today.getFullYear() - 1,
+    today.getMonth(),
+    today.getDate(),
+  );
 
-        const { data: meetings } = await supabase
-            .from('governor_meetings')
-            .select('id, title, scheduled_date, status, attended_governors')
-            .eq('organization_id', organizationId)
-            .gte('scheduled_date', pastYear.toISOString())
-            .contains('attended_governors', [id])
-            .order('scheduled_date', { ascending: false });
+  const { data: meetings } = await supabase
+    .from("governor_meetings")
+    .select("id, title, scheduled_date, status, attended_governors")
+    .eq("organization_id", organizationId)
+    .gte("scheduled_date", pastYear.toISOString())
+    .contains("attended_governors", [id])
+    .order("scheduled_date", { ascending: false });
 
-        const attendedMeetings = meetings?.filter(m =>
-            m.attended_governors?.includes(id)
-        ).length || 0;
+  const attendedMeetings =
+    meetings?.filter((m) => m.attended_governors?.includes(id)).length || 0;
 
-        return NextResponse.json({
-            governor: {
-                ...governor,
-                training_records: training || [],
-                meetings_attended_this_year: attendedMeetings,
-            }
-        });
-
-    } catch (error: any) {
-        console.error('Governor detail API error:', error);
-        return NextResponse.json(
-            { error: error.message || 'Internal server error' },
-            { status: 500 }
-        );
-    }
-}
+  return apiSuccess({
+    governor: {
+      ...governor,
+      training_records: training || [],
+      meetings_attended_this_year: attendedMeetings,
+    },
+  });
+});
 
 /**
  * PATCH /api/governance/governors/[id]
  * Update a specific governor
  */
-export async function PATCH(
-    req: NextRequest,
-    context: RouteContext
-) {
-    try {
-        const { id } = context.params;
-        const body = await req.json();
-        const { organizationId, ...changes } = body as {
-            organizationId: string;
-        } & Partial<Governor>;
+export const PATCH = protectedRoute(async (auth, req) => {
+  const id = req.nextUrl.pathname.split("/").pop()!;
+  const body = await req.json();
+  const { organizationId, ...changes } = body as {
+    organizationId: string;
+  } & Partial<Governor>;
 
-        if (!organizationId) {
-            return NextResponse.json(
-                { error: 'Missing organizationId' },
-                { status: 400 }
-            );
-        }
+  const orgId = organizationId || auth.organizationId;
 
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  if (!orgId) {
+    return apiError("Missing organizationId", 400);
+  }
 
-        const { data: governor, error } = await supabase
-            .from('governors')
-            .update({
-                ...changes,
-                updated_at: new Date().toISOString(),
-            })
-            .eq('id', id)
-            .eq('organization_id', organizationId)
-            .select()
-            .single();
+  const supabase = createServiceRoleClient();
 
-        if (error || !governor) {
-            return NextResponse.json(
-                { error: 'Governor not found or update failed' },
-                { status: 404 }
-            );
-        }
+  const { data: governor, error } = await supabase
+    .from("governors")
+    .update({
+      ...changes,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+    .eq("organization_id", orgId)
+    .select()
+    .single();
 
-        return NextResponse.json({ governor });
+  if (error || !governor) {
+    return apiError("Governor not found or update failed", 404);
+  }
 
-    } catch (error: any) {
-        console.error('Governor update error:', error);
-        return NextResponse.json(
-            { error: error.message || 'Internal server error' },
-            { status: 500 }
-        );
-    }
-}
+  return apiSuccess({ governor });
+});
 
 /**
  * DELETE /api/governance/governors/[id]
  * Delete a governor (soft delete by setting status to inactive)
  */
-export async function DELETE(
-    req: NextRequest,
-    context: RouteContext
-) {
-    try {
-        const { id } = context.params;
-        const { searchParams } = new URL(req.url);
-        const organizationId = searchParams.get('organizationId');
-        const hard = searchParams.get('hard') === 'true';
+export const DELETE = protectedRoute(async (auth, req) => {
+  const id = req.nextUrl.pathname.split("/").pop()!;
+  const { searchParams } = new URL(req.url);
+  const organizationId =
+    searchParams.get("organizationId") || auth.organizationId;
+  const hard = searchParams.get("hard") === "true";
 
-        if (!organizationId) {
-            return NextResponse.json(
-                { error: 'Missing organizationId parameter' },
-                { status: 400 }
-            );
-        }
+  if (!organizationId) {
+    return apiError("Missing organizationId parameter", 400);
+  }
 
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  const supabase = createServiceRoleClient();
 
-        if (hard) {
-            // Permanent delete
-            const { error } = await supabase
-                .from('governors')
-                .delete()
-                .eq('id', id)
-                .eq('organization_id', organizationId);
+  if (hard) {
+    // Permanent delete
+    const { error } = await supabase
+      .from("governors")
+      .delete()
+      .eq("id", id)
+      .eq("organization_id", organizationId);
 
-            if (error) {
-                console.error('Error deleting governor:', error);
-                return NextResponse.json(
-                    { error: 'Failed to delete governor' },
-                    { status: 500 }
-                );
-            }
-        } else {
-            // Soft delete - set to inactive
-            const { error } = await supabase
-                .from('governors')
-                .update({
-                    status: 'inactive',
-                    end_date: new Date().toISOString().split('T')[0],
-                    updated_at: new Date().toISOString(),
-                })
-                .eq('id', id)
-                .eq('organization_id', organizationId);
-
-            if (error) {
-                console.error('Error deactivating governor:', error);
-                return NextResponse.json(
-                    { error: 'Failed to deactivate governor' },
-                    { status: 500 }
-                );
-            }
-        }
-
-        return NextResponse.json({ success: true });
-
-    } catch (error: any) {
-        console.error('Governor deletion error:', error);
-        return NextResponse.json(
-            { error: error.message || 'Internal server error' },
-            { status: 500 }
-        );
+    if (error) {
+      console.error("Error deleting governor:", error);
+      return apiError("Failed to delete governor", 500);
     }
-}
+  } else {
+    // Soft delete - set to inactive
+    const { error } = await supabase
+      .from("governors")
+      .update({
+        status: "inactive",
+        end_date: new Date().toISOString().split("T")[0],
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .eq("organization_id", organizationId);
+
+    if (error) {
+      console.error("Error deactivating governor:", error);
+      return apiError("Failed to deactivate governor", 500);
+    }
+  }
+
+  return apiSuccess({ success: true });
+});

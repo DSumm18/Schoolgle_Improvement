@@ -1,45 +1,47 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
+import { createServiceRoleClient } from "@/lib/supabase-server";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+/**
+ * Extract meeting ID from the URL pathname.
+ * URL pattern: /api/meetings/[id] or /api/meetings/[id]/...
+ */
+function getMeetingId(request: Request): string {
+  const segments = new URL(request.url).pathname.split("/");
+  // ["", "api", "meetings", "<id>", ...]
+  return segments[3];
+}
 
 /**
  * GET /api/meetings/[id]
  * Get a single meeting with template, checklist, and minutes
  */
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    const { id } = await params;
-    const { searchParams } = new URL(req.url);
-    const organizationId = searchParams.get("organizationId");
+export const GET = protectedRoute(async (auth, request) => {
+  const id = getMeetingId(request);
+  const { searchParams } = new URL(request.url);
+  const organizationId =
+    searchParams.get("organizationId") || auth.organizationId;
 
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: "Missing organizationId" },
-        { status: 400 },
-      );
-    }
+  if (!organizationId) {
+    return apiError("Missing organizationId", 400);
+  }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  const supabase = createServiceRoleClient();
 
-    // Fetch meeting
-    const { data: meeting, error } = await supabase
-      .from("meetings")
-      .select("*")
-      .eq("id", id)
-      .eq("organization_id", organizationId)
-      .single();
+  // Fetch meeting
+  const { data: meeting, error } = await supabase
+    .from("meetings")
+    .select("*")
+    .eq("id", id)
+    .eq("organization_id", organizationId)
+    .single();
 
-    if (error || !meeting) {
-      return NextResponse.json({ error: "Meeting not found" }, { status: 404 });
-    }
+  if (error || !meeting) {
+    return apiError("Meeting not found", 404);
+  }
 
-    // Fetch template, checklist, and minutes in parallel
-    const [templateRes, checklistRes, minutesRes] = await Promise.all([
+  // Fetch template, checklist, minutes, and attendees in parallel
+  const [templateRes, checklistRes, minutesRes, attendeesRes] =
+    await Promise.all([
       supabase
         .from("meeting_templates")
         .select("*")
@@ -55,148 +57,112 @@ export async function GET(
         .select("*")
         .eq("meeting_id", id)
         .maybeSingle(),
+      supabase.from("meeting_attendees").select("*").eq("meeting_id", id),
     ]);
 
-    return NextResponse.json({
-      meeting,
-      template: templateRes.data,
-      checklist_items: checklistRes.data || [],
-      minutes: minutesRes.data,
-    });
-  } catch (error: any) {
-    console.error("Meeting detail error:", error);
-    return NextResponse.json(
-      { error: error.message || "Internal server error" },
-      { status: 500 },
-    );
-  }
-}
+  return apiSuccess({
+    meeting,
+    template: templateRes.data,
+    checklist_items: checklistRes.data || [],
+    attendees: attendeesRes.data || [],
+    minutes: minutesRes.data,
+  });
+});
 
 /**
  * PATCH /api/meetings/[id]
  * Update meeting details
  */
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    const { id } = await params;
-    const body = await req.json();
-    const { organizationId, ...updates } = body;
+export const PATCH = protectedRoute(async (auth, request) => {
+  const id = getMeetingId(request);
+  const body = await request.json();
+  const { organizationId, ...updates } = body;
 
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: "Missing organizationId" },
-        { status: 400 },
-      );
-    }
+  const resolvedOrgId = organizationId || auth.organizationId;
 
-    // Only allow safe fields to be updated
-    const allowedFields = [
-      "attendee_name",
-      "attendee_role",
-      "purpose",
-      "scheduled_at",
-      "location",
-      "status",
-      "notes",
-    ];
-    const safeUpdates: Record<string, any> = {};
-    for (const key of allowedFields) {
-      if (key in updates) safeUpdates[key] = updates[key];
-    }
-    safeUpdates.updated_at = new Date().toISOString();
-
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    const { data: meeting, error } = await supabase
-      .from("meetings")
-      .update(safeUpdates)
-      .eq("id", id)
-      .eq("organization_id", organizationId)
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Error updating meeting:", error);
-      return NextResponse.json(
-        { error: "Failed to update meeting" },
-        { status: 500 },
-      );
-    }
-
-    return NextResponse.json({ meeting });
-  } catch (error: any) {
-    console.error("Meeting update error:", error);
-    return NextResponse.json(
-      { error: error.message || "Internal server error" },
-      { status: 500 },
-    );
+  if (!resolvedOrgId) {
+    return apiError("Missing organizationId", 400);
   }
-}
+
+  // Only allow safe fields to be updated
+  const allowedFields = [
+    "attendee_name",
+    "attendee_role",
+    "purpose",
+    "scheduled_at",
+    "location",
+    "status",
+    "notes",
+  ];
+  const safeUpdates: Record<string, any> = {};
+  for (const key of allowedFields) {
+    if (key in updates) safeUpdates[key] = updates[key];
+  }
+  safeUpdates.updated_at = new Date().toISOString();
+
+  const supabase = createServiceRoleClient();
+
+  const { data: meeting, error } = await supabase
+    .from("meetings")
+    .update(safeUpdates)
+    .eq("id", id)
+    .eq("organization_id", resolvedOrgId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error updating meeting:", error);
+    return apiError("Failed to update meeting", 500);
+  }
+
+  return apiSuccess({ meeting });
+});
 
 /**
  * DELETE /api/meetings/[id]
  * Delete a meeting (only if scheduled or cancelled)
  */
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    const { id } = await params;
-    const { searchParams } = new URL(req.url);
-    const organizationId = searchParams.get("organizationId");
+export const DELETE = protectedRoute(async (auth, request) => {
+  const id = getMeetingId(request);
+  const { searchParams } = new URL(request.url);
+  const organizationId =
+    searchParams.get("organizationId") || auth.organizationId;
 
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: "Missing organizationId" },
-        { status: 400 },
-      );
-    }
+  if (!organizationId) {
+    return apiError("Missing organizationId", 400);
+  }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  const supabase = createServiceRoleClient();
 
-    // Only delete if not completed
-    const { data: meeting } = await supabase
-      .from("meetings")
-      .select("status")
-      .eq("id", id)
-      .eq("organization_id", organizationId)
-      .single();
+  // Only delete if not completed
+  const { data: meeting } = await supabase
+    .from("meetings")
+    .select("status")
+    .eq("id", id)
+    .eq("organization_id", organizationId)
+    .single();
 
-    if (!meeting) {
-      return NextResponse.json({ error: "Meeting not found" }, { status: 404 });
-    }
+  if (!meeting) {
+    return apiError("Meeting not found", 404);
+  }
 
-    if (meeting.status === "completed") {
-      return NextResponse.json(
-        { error: "Cannot delete a completed meeting. Cancel it instead." },
-        { status: 400 },
-      );
-    }
-
-    const { error } = await supabase
-      .from("meetings")
-      .delete()
-      .eq("id", id)
-      .eq("organization_id", organizationId);
-
-    if (error) {
-      console.error("Error deleting meeting:", error);
-      return NextResponse.json(
-        { error: "Failed to delete meeting" },
-        { status: 500 },
-      );
-    }
-
-    return NextResponse.json({ success: true });
-  } catch (error: any) {
-    console.error("Meeting delete error:", error);
-    return NextResponse.json(
-      { error: error.message || "Internal server error" },
-      { status: 500 },
+  if (meeting.status === "completed") {
+    return apiError(
+      "Cannot delete a completed meeting. Cancel it instead.",
+      400,
     );
   }
-}
+
+  const { error } = await supabase
+    .from("meetings")
+    .delete()
+    .eq("id", id)
+    .eq("organization_id", organizationId);
+
+  if (error) {
+    console.error("Error deleting meeting:", error);
+    return apiError("Failed to delete meeting", 500);
+  }
+
+  return apiSuccess({ success: true });
+});

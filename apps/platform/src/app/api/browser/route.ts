@@ -2,27 +2,22 @@
  * Browser Automation API
  *
  * Provides endpoints for Ed's browser automation capabilities:
- * - POST /api/browser/session - Create a new browser session
- * - POST /api/browser/navigate - Navigate to a URL
- * - POST /api/browser/snapshot - Get page snapshot with refs
- * - POST /api/browser/fill - Fill a form field
- * - POST /api/browser/click - Click an element
- * - POST /api/browser/submit - Submit a form
- * - POST /api/browser/screenshot - Capture screenshot
- * - DELETE /api/browser/session - Close a session
+ * - POST /api/browser - Dispatch to action handlers (createSession, navigate, fill, click, etc.)
+ * - GET /api/browser?sessionId=xxx - Get session status
+ * - DELETE /api/browser - Close a session
  *
  * All endpoints require authentication and domain approval verification.
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase-server';
-import { getBrowserService } from '@/lib/browser-service';
-import { getGuardrails } from '@/lib/guardrails';
+import { NextRequest, NextResponse } from "next/server";
+import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
+import { getBrowserService } from "@/lib/browser-service";
+import { getGuardrails } from "@/lib/guardrails";
 import type {
   BrowserAction,
   SensitiveFieldWarning,
   ApprovalPrompt,
-} from '@/lib/guardrails';
+} from "@/lib/guardrails";
 
 // ============================================================================
 // TYPES
@@ -68,94 +63,13 @@ interface ScreenshotRequest {
   sessionId: string;
   options?: {
     full?: boolean;
-    format?: 'png' | 'jpeg';
+    format?: "png" | "jpeg";
     quality?: number;
   };
 }
 
 interface CloseSessionRequest {
   sessionId: string;
-}
-
-// ============================================================================
-// AUTHENTICATION HELPERS
-// ============================================================================
-
-/**
- * Get authenticated user and organization from request
- */
-async function getAuthContext(request: NextRequest) {
-  const supabase = await createServerSupabaseClient();
-
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError || !user) {
-    throw new Error('Unauthorized');
-  }
-
-  // Get user's organization ID
-  // This assumes organization_id is in user metadata or via a join
-  // Adjust based on your actual auth structure
-  const { data: userData, error: userDataError } = await supabase
-    .from('organization_members')
-    .select('organization_id')
-    .eq('user_id', user.id)
-    .limit(1)
-    .single();
-
-  if (userDataError || !userData) {
-    throw new Error('User not associated with an organization');
-  }
-
-  return {
-    user,
-    organizationId: userData.organization_id,
-  };
-}
-
-/**
- * Handle API errors consistently
- */
-function handleError(error: unknown, context: string) {
-  console.error(`[Browser API] ${context}:`, error);
-
-  if (error instanceof Error) {
-    if (error.message.includes('Unauthorized')) {
-      return NextResponse.json(
-        { error: 'Unauthorized', message: 'You must be logged in' },
-        { status: 401 }
-      );
-    }
-
-    if (error.message.includes('Domain not allowed')) {
-      return NextResponse.json(
-        { error: 'DomainNotAllowed', message: error.message },
-        { status: 403 }
-      );
-    }
-
-    if (error.message.includes('not found')) {
-      return NextResponse.json(
-        { error: 'NotFound', message: error.message },
-        { status: 404 }
-      );
-    }
-
-    if (error.message.includes('expired')) {
-      return NextResponse.json(
-        { error: 'SessionExpired', message: error.message },
-        { status: 410 }
-      );
-    }
-  }
-
-  return NextResponse.json(
-    { error: 'Internal Server Error', message: 'An unexpected error occurred' },
-    { status: 500 }
-  );
 }
 
 // ============================================================================
@@ -167,72 +81,90 @@ function handleError(error: unknown, context: string) {
  *
  * Route handler that dispatches to specific actions based on request body
  */
-export async function POST(request: NextRequest) {
-  try {
-    // Get authenticated user context
-    const { user, organizationId } = await getAuthContext(request);
+export const POST = protectedRoute(async (auth, request) => {
+  const body = await request.json();
+  const { action } = body;
+  const organizationId = auth.organizationId;
 
-    const body = await request.json();
-    const { action } = body;
+  // Dispatch to specific action handler
+  switch (action) {
+    case "createSession":
+      return handleCreateSession(body, auth.userId, organizationId);
 
-    // Dispatch to specific action handler
-    switch (action) {
-      case 'createSession':
-        return handleCreateSession(body, user.id, organizationId);
+    case "navigate":
+      return handleNavigate(body, auth.userId, organizationId);
 
-      case 'navigate':
-        return handleNavigate(body, user.id, organizationId);
+    case "snapshot":
+      return handleSnapshot(body, auth.userId);
 
-      case 'snapshot':
-        return handleSnapshot(body, user.id);
+    case "fill":
+      return handleFill(body, auth.userId);
 
-      case 'fill':
-        return handleFill(body, user.id);
+    case "click":
+      return handleClick(body, auth.userId);
 
-      case 'click':
-        return handleClick(body, user.id);
+    case "submit":
+      return handleSubmit(body, auth.userId, organizationId);
 
-      case 'submit':
-        return handleSubmit(body, user.id, organizationId);
+    case "screenshot":
+      return handleScreenshot(body, auth.userId);
 
-      case 'screenshot':
-        return handleScreenshot(body, user.id);
+    case "checkDomain":
+      return handleCheckDomain(body, organizationId);
 
-      case 'checkDomain':
-        return handleCheckDomain(body, organizationId);
+    case "getApprovalPrompt":
+      return handleGetApprovalPrompt(body, auth.userId, organizationId);
 
-      case 'getApprovalPrompt':
-        return handleGetApprovalPrompt(body, user.id, organizationId);
-
-      default:
-        return NextResponse.json(
-          { error: 'Invalid Action', message: `Unknown action: ${action}` },
-          { status: 400 }
-        );
-    }
-  } catch (error) {
-    return handleError(error, 'POST request failed');
+    default:
+      return apiError(`Unknown action: ${action}`, 400);
   }
-}
+});
 
 /**
  * DELETE /api/browser
  *
  * Close a browser session
  */
-export async function DELETE(request: NextRequest) {
-  try {
-    const { user } = await getAuthContext(request);
-    const body: CloseSessionRequest = await request.json();
+export const DELETE = protectedRoute(async (auth, request) => {
+  const body: CloseSessionRequest = await request.json();
 
-    const browserService = getBrowserService();
-    await browserService.close(body.sessionId);
+  const browserService = getBrowserService();
+  await browserService.close(body.sessionId);
 
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    return handleError(error, 'DELETE request failed');
+  return apiSuccess({ success: true });
+});
+
+/**
+ * GET /api/browser?sessionId=xxx
+ *
+ * Get session status
+ */
+export const GET = protectedRoute(async (auth, request) => {
+  const searchParams = new URL(request.url).searchParams;
+  const sessionId = searchParams.get("sessionId");
+
+  if (!sessionId) {
+    return apiError("Session ID is required", 400);
   }
-}
+
+  const browserService = getBrowserService();
+  const session = await browserService.getSession(sessionId);
+
+  // Verify user owns this session
+  if (session.user_id !== auth.userId) {
+    return apiError("You do not have access to this session", 403);
+  }
+
+  return apiSuccess({
+    session: {
+      id: session.id,
+      status: session.status,
+      currentUrl: session.current_url,
+      startedAt: session.started_at,
+      expiresAt: session.expires_at,
+    },
+  });
+});
 
 // ============================================================================
 // ACTION HANDLERS
@@ -244,15 +176,12 @@ export async function DELETE(request: NextRequest) {
 async function handleCreateSession(
   body: CreateSessionRequest,
   userId: string,
-  organizationId: string
+  organizationId: string,
 ) {
   const { url, durationSeconds } = body;
 
   if (!url) {
-    return NextResponse.json(
-      { error: 'Invalid Input', message: 'URL is required' },
-      { status: 400 }
-    );
+    return apiError("URL is required", 400);
   }
 
   const browserService = getBrowserService();
@@ -260,14 +189,15 @@ async function handleCreateSession(
     userId,
     organizationId,
     url,
-    durationSeconds
+    durationSeconds,
   );
 
-  return NextResponse.json({
-    success: true,
+  return apiSuccess({
     sessionId,
     url,
-    expiresAt: new Date(Date.now() + (durationSeconds || 1800) * 1000).toISOString(),
+    expiresAt: new Date(
+      Date.now() + (durationSeconds || 1800) * 1000,
+    ).toISOString(),
   });
 }
 
@@ -277,15 +207,12 @@ async function handleCreateSession(
 async function handleNavigate(
   body: NavigateRequest,
   userId: string,
-  organizationId: string
+  organizationId: string,
 ) {
   const { sessionId, url } = body;
 
   if (!sessionId || !url) {
-    return NextResponse.json(
-      { error: 'Invalid Input', message: 'Session ID and URL are required' },
-      { status: 400 }
-    );
+    return apiError("Session ID and URL are required", 400);
   }
 
   // Verify domain is approved
@@ -293,23 +220,13 @@ async function handleNavigate(
   const domainApproval = await guardrails.isDomainApproved(url, organizationId);
 
   if (!domainApproval.isApproved) {
-    return NextResponse.json(
-      {
-        error: 'DomainNotAllowed',
-        message: `Domain is not approved for this organization`,
-        url,
-      },
-      { status: 403 }
-    );
+    return apiError("Domain is not approved for this organization", 403);
   }
 
   const browserService = getBrowserService();
   const snapshot = await browserService.navigate(sessionId, url);
 
-  return NextResponse.json({
-    success: true,
-    snapshot,
-  });
+  return apiSuccess({ snapshot });
 }
 
 /**
@@ -319,19 +236,13 @@ async function handleSnapshot(body: SnapshotRequest, userId: string) {
   const { sessionId, options = {} } = body;
 
   if (!sessionId) {
-    return NextResponse.json(
-      { error: 'Invalid Input', message: 'Session ID is required' },
-      { status: 400 }
-    );
+    return apiError("Session ID is required", 400);
   }
 
   const browserService = getBrowserService();
   const snapshot = await browserService.getSnapshot(sessionId, options);
 
-  return NextResponse.json({
-    success: true,
-    snapshot,
-  });
+  return apiSuccess({ snapshot });
 }
 
 /**
@@ -341,22 +252,13 @@ async function handleFill(body: FillRequest, userId: string) {
   const { sessionId, ref, value } = body;
 
   if (!sessionId || !ref || value === undefined) {
-    return NextResponse.json(
-      {
-        error: 'Invalid Input',
-        message: 'Session ID, ref, and value are required',
-      },
-      { status: 400 }
-    );
+    return apiError("Session ID, ref, and value are required", 400);
   }
 
   const browserService = getBrowserService();
   await browserService.fill(sessionId, ref, value);
 
-  return NextResponse.json({
-    success: true,
-    message: 'Field filled successfully',
-  });
+  return apiSuccess({ message: "Field filled successfully" });
 }
 
 /**
@@ -366,19 +268,13 @@ async function handleClick(body: ClickRequest, userId: string) {
   const { sessionId, ref } = body;
 
   if (!sessionId || !ref) {
-    return NextResponse.json(
-      { error: 'Invalid Input', message: 'Session ID and ref are required' },
-      { status: 400 }
-    );
+    return apiError("Session ID and ref are required", 400);
   }
 
   const browserService = getBrowserService();
   await browserService.click(sessionId, ref);
 
-  return NextResponse.json({
-    success: true,
-    message: 'Element clicked successfully',
-  });
+  return apiSuccess({ message: "Element clicked successfully" });
 }
 
 /**
@@ -387,21 +283,18 @@ async function handleClick(body: ClickRequest, userId: string) {
 async function handleSubmit(
   body: SubmitRequest,
   userId: string,
-  organizationId: string
+  organizationId: string,
 ) {
   const { sessionId, formRef } = body;
 
   if (!sessionId || !formRef) {
-    return NextResponse.json(
-      { error: 'Invalid Input', message: 'Session ID and form ref are required' },
-      { status: 400 }
-    );
+    return apiError("Session ID and form ref are required", 400);
   }
 
   const browserService = getBrowserService();
   const result = await browserService.submit(sessionId, formRef);
 
-  return NextResponse.json({
+  return apiSuccess({
     success: result.success,
     message: result.message,
     screenshotUrl: result.screenshotUrl,
@@ -416,41 +309,32 @@ async function handleScreenshot(body: ScreenshotRequest, userId: string) {
   const { sessionId, options = {} } = body;
 
   if (!sessionId) {
-    return NextResponse.json(
-      { error: 'Invalid Input', message: 'Session ID is required' },
-      { status: 400 }
-    );
+    return apiError("Session ID is required", 400);
   }
 
   const browserService = getBrowserService();
   const screenshotPath = await browserService.screenshot(sessionId, options);
 
-  return NextResponse.json({
-    success: true,
-    screenshotPath,
-  });
+  return apiSuccess({ screenshotPath });
 }
 
 /**
  * Check if a domain is approved
  */
-async function handleCheckDomain(body: { url: string }, organizationId: string) {
+async function handleCheckDomain(
+  body: { url: string },
+  organizationId: string,
+) {
   const { url } = body;
 
   if (!url) {
-    return NextResponse.json(
-      { error: 'Invalid Input', message: 'URL is required' },
-      { status: 400 }
-    );
+    return apiError("URL is required", 400);
   }
 
   const guardrails = getGuardrails();
   const approval = await guardrails.isDomainApproved(url, organizationId);
 
-  return NextResponse.json({
-    ...approval,
-    url,
-  });
+  return apiSuccess({ ...approval, url });
 }
 
 /**
@@ -459,70 +343,16 @@ async function handleCheckDomain(body: { url: string }, organizationId: string) 
 async function handleGetApprovalPrompt(
   body: { action: BrowserAction },
   userId: string,
-  organizationId: string
+  organizationId: string,
 ) {
   const { action } = body;
 
   if (!action) {
-    return NextResponse.json(
-      { error: 'Invalid Input', message: 'Action is required' },
-      { status: 400 }
-    );
+    return apiError("Action is required", 400);
   }
 
   const guardrails = getGuardrails();
   const prompt = await guardrails.generateApprovalPrompt(action);
 
-  return NextResponse.json({
-    success: true,
-    prompt,
-  });
-}
-
-// ============================================================================
-// SESSION STATUS ENDPOINT
-// ============================================================================
-
-/**
- * GET /api/browser?sessionId=xxx
- *
- * Get session status
- */
-export async function GET(request: NextRequest) {
-  try {
-    const { user } = await getAuthContext(request);
-    const searchParams = request.nextUrl.searchParams;
-    const sessionId = searchParams.get('sessionId');
-
-    if (!sessionId) {
-      return NextResponse.json(
-        { error: 'Invalid Input', message: 'Session ID is required' },
-        { status: 400 }
-      );
-    }
-
-    const browserService = getBrowserService();
-    const session = await browserService.getSession(sessionId);
-
-    // Verify user owns this session
-    if (session.user_id !== user.id) {
-      return NextResponse.json(
-        { error: 'Forbidden', message: 'You do not have access to this session' },
-        { status: 403 }
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      session: {
-        id: session.id,
-        status: session.status,
-        currentUrl: session.current_url,
-        startedAt: session.started_at,
-        expiresAt: session.expires_at,
-      },
-    });
-  } catch (error) {
-    return handleError(error, 'GET request failed');
-  }
+  return apiSuccess({ prompt });
 }

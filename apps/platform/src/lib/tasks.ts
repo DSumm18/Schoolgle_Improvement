@@ -4,8 +4,8 @@
  * Shared types for task-related components and APIs.
  */
 
-export type TaskStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled';
-export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent' | 'critical';
+export type TaskStatus = "pending" | "in_progress" | "completed" | "cancelled";
+export type TaskPriority = "low" | "medium" | "high" | "urgent" | "critical";
 
 export interface UnifiedTask {
   id: string;
@@ -15,19 +15,20 @@ export interface UnifiedTask {
   priority?: TaskPriority;
   due_date?: string | null;
   progress?: number; // 0-100
-  module?: string; // e.g., 'estates', 'hr', 'governance', etc.
+  module?: string; // e.g., 'estates', 'compliance', 'actions', 'training', 'risk', etc.
   assignee_id?: string;
   organization_id?: string;
   created_at?: string;
   updated_at?: string;
   tags?: string[];
   metadata?: Record<string, any>;
+  risk_score?: number | null; // Effective residual score for risk-related tasks (1-25)
 }
 
 export interface TaskFilter {
-  status?: TaskStatus | 'all';
-  priority?: TaskPriority | 'all';
-  module?: string | 'all';
+  status?: TaskStatus | "all";
+  priority?: TaskPriority | "all";
+  module?: string | "all";
   assignee_id?: string;
   search?: string;
 }

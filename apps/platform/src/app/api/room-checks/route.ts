@@ -3,33 +3,21 @@
  * POST /api/room-checks -- Log a new room check (from Ed or direct)
  */
 
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-function getServiceClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  );
-}
+import { NextRequest } from "next/server";
+import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
+import { createServiceRoleClient } from "@/lib/supabase-server";
 
 /**
  * GET: Fetch today's room check status for an organization
  */
-export async function GET(request: NextRequest) {
+export const GET = protectedRoute(async (auth, request) => {
   const { searchParams } = new URL(request.url);
-  const organizationId = searchParams.get("organization_id");
+  const organizationId =
+    searchParams.get("organization_id") || auth.organizationId;
   const date =
     searchParams.get("date") ?? new Date().toISOString().split("T")[0];
 
-  if (!organizationId) {
-    return NextResponse.json(
-      { error: "organization_id required" },
-      { status: 400 },
-    );
-  }
-
-  const supabase = getServiceClient();
+  const supabase = createServiceRoleClient();
 
   // Get scheduled rooms
   const { data: schedule, error: schedError } = await supabase
@@ -38,7 +26,7 @@ export async function GET(request: NextRequest) {
     .eq("organization_id", organizationId);
 
   if (schedError) {
-    return NextResponse.json({ error: schedError.message }, { status: 500 });
+    return apiError(schedError.message, 500);
   }
 
   // Get today's checks
@@ -54,7 +42,7 @@ export async function GET(request: NextRequest) {
     .order("checked_at", { ascending: true });
 
   if (checksError) {
-    return NextResponse.json({ error: checksError.message }, { status: 500 });
+    return apiError(checksError.message, 500);
   }
 
   // Build status per room
@@ -121,7 +109,7 @@ export async function GET(request: NextRequest) {
     0,
   );
 
-  return NextResponse.json({
+  return apiSuccess({
     date,
     rooms,
     summary: {
@@ -139,93 +127,81 @@ export async function GET(request: NextRequest) {
       issueCount,
     },
   });
-}
+});
 
 /**
  * POST: Log a new room check (called by Ed or room check UI)
  */
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const {
-      organizationId,
-      assetId,
-      checkedBy,
-      checkType,
-      mediaType,
-      mediaUrls,
-      mediaHash,
-      deviceGps,
-      deviceId,
-      captureTimestamp,
-      visionScanId,
-      aiSummary,
-      itemsDetected,
-      issuesFound,
-      complianceScore,
-      dispatchedTo,
-      workNotes,
-      contractorName,
-      isSnagging,
-    } = body;
+export const POST = protectedRoute(async (auth, request) => {
+  const body = await request.json();
+  const {
+    organizationId,
+    assetId,
+    checkedBy,
+    checkType,
+    mediaType,
+    mediaUrls,
+    mediaHash,
+    deviceGps,
+    deviceId,
+    captureTimestamp,
+    visionScanId,
+    aiSummary,
+    itemsDetected,
+    issuesFound,
+    complianceScore,
+    dispatchedTo,
+    workNotes,
+    contractorName,
+    isSnagging,
+  } = body;
 
-    if (!organizationId || !assetId || !checkedBy || !checkType) {
-      return NextResponse.json(
-        {
-          error:
-            "organizationId, assetId, checkedBy, and checkType are required",
-        },
-        { status: 400 },
-      );
-    }
+  const orgId = organizationId || auth.organizationId;
 
-    const supabase = getServiceClient();
-
-    // Set GDPR retention (30 days from now)
-    const retentionDate = new Date();
-    retentionDate.setDate(retentionDate.getDate() + 30);
-
-    const { data, error } = await supabase
-      .from("room_checks")
-      .insert({
-        organization_id: organizationId,
-        asset_id: assetId,
-        checked_by: checkedBy,
-        check_type: checkType,
-        checked_at: new Date().toISOString(),
-        media_type: mediaType ?? "image",
-        media_urls: mediaUrls ?? [],
-        media_retention_until: retentionDate.toISOString().split("T")[0],
-        media_hash: mediaHash,
-        device_gps: deviceGps ? `(${deviceGps.lat},${deviceGps.lng})` : null,
-        device_id: deviceId,
-        capture_timestamp: captureTimestamp,
-        server_received_at: new Date().toISOString(),
-        vision_scan_id: visionScanId,
-        ai_summary: aiSummary,
-        items_detected: itemsDetected ?? 0,
-        issues_found: issuesFound ?? 0,
-        compliance_score: complianceScore,
-        dispatched_to: dispatchedTo ?? [],
-        work_notes: workNotes,
-        contractor_name: contractorName,
-        is_snagging: isSnagging ?? false,
-        evidence_locked: false,
-        status: (issuesFound ?? 0) > 0 ? "issues_flagged" : "complete",
-      })
-      .select()
-      .single();
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({ success: true, check: data });
-  } catch (error) {
-    console.error("[Room Checks API] Error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unknown error" },
-      { status: 500 },
-    );
+  if (!assetId || !checkType) {
+    return apiError("assetId and checkType are required", 400);
   }
-}
+
+  const supabase = createServiceRoleClient();
+
+  // Set GDPR retention (30 days from now)
+  const retentionDate = new Date();
+  retentionDate.setDate(retentionDate.getDate() + 30);
+
+  const { data, error } = await supabase
+    .from("room_checks")
+    .insert({
+      organization_id: orgId,
+      asset_id: assetId,
+      checked_by: checkedBy || auth.userId,
+      check_type: checkType,
+      checked_at: new Date().toISOString(),
+      media_type: mediaType ?? "image",
+      media_urls: mediaUrls ?? [],
+      media_retention_until: retentionDate.toISOString().split("T")[0],
+      media_hash: mediaHash,
+      device_gps: deviceGps ? `(${deviceGps.lat},${deviceGps.lng})` : null,
+      device_id: deviceId,
+      capture_timestamp: captureTimestamp,
+      server_received_at: new Date().toISOString(),
+      vision_scan_id: visionScanId,
+      ai_summary: aiSummary,
+      items_detected: itemsDetected ?? 0,
+      issues_found: issuesFound ?? 0,
+      compliance_score: complianceScore,
+      dispatched_to: dispatchedTo ?? [],
+      work_notes: workNotes,
+      contractor_name: contractorName,
+      is_snagging: isSnagging ?? false,
+      evidence_locked: false,
+      status: (issuesFound ?? 0) > 0 ? "issues_flagged" : "complete",
+    })
+    .select()
+    .single();
+
+  if (error) {
+    return apiError(error.message, 500);
+  }
+
+  return apiSuccess({ success: true, check: data });
+});

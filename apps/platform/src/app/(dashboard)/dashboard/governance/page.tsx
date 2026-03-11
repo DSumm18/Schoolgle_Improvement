@@ -39,11 +39,11 @@ export default function GovernancePage() {
   const [isPolicyModalOpen, setIsPolicyModalOpen] = useState(false);
   const [isVisitModalOpen, setIsVisitModalOpen] = useState(false);
 
+  const [refreshKey, setRefreshKey] = useState(0);
   const organizationId = organization?.id || "";
 
   const handleRefresh = () => {
-    // Force re-fetch by triggering a state update
-    window.location.reload();
+    setRefreshKey((k) => k + 1);
   };
 
   return (
@@ -58,6 +58,7 @@ export default function GovernancePage() {
       {/* Main Dashboard */}
       <GovernanceDashboard
         organizationId={organizationId}
+        refreshKey={refreshKey}
         onAddGovernor={() => {
           setSelectedGovernor(null);
           setIsGovernorModalOpen(true);

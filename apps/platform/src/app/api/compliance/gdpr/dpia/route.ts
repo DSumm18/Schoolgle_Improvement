@@ -1,76 +1,55 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
+import { createServiceRoleClient } from "@/lib/supabase-server";
 
 /**
  * GET /api/compliance/gdpr/dpia
  * List DPIAs for an organization
  */
-export async function GET(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const organizationId = searchParams.get("organizationId");
+export const GET = protectedRoute(async (auth, request) => {
+  const { organizationId } = auth;
+  const supabase = createServiceRoleClient();
 
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: "Missing organizationId parameter" },
-        { status: 400 },
-      );
-    }
+  // Get DPIA items
+  const { data: items } = await supabase
+    .from("compliance_items")
+    .select("*")
+    .eq("organization_id", organizationId)
+    .eq("type", "dpia")
+    .neq("status", "archived")
+    .order("updated_at", { ascending: false });
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    // Get DPIA items
-    const { data: items } = await supabase
-      .from("compliance_items")
-      .select("*")
-      .eq("organization_id", organizationId)
-      .eq("type", "dpia")
-      .neq("status", "archived")
-      .order("updated_at", { ascending: false });
-
-    if (!items || items.length === 0) {
-      return NextResponse.json({ dpias: [] });
-    }
-
-    // Get DPIA records
-    const { data: dpiaRecords } = await supabase
-      .from("compliance_dpia_records")
-      .select("*")
-      .in(
-        "compliance_item_id",
-        items.map((i) => i.id),
-      );
-
-    const dpias = items.map((item) => ({
-      ...item,
-      dpia: dpiaRecords?.find((d) => d.compliance_item_id === item.id) || null,
-    }));
-
-    return NextResponse.json({ dpias });
-  } catch (error: any) {
-    console.error("DPIA API error:", error);
-    return NextResponse.json(
-      { error: error.message || "Internal server error" },
-      { status: 500 },
-    );
+  if (!items || items.length === 0) {
+    return apiSuccess({ dpias: [] });
   }
-}
+
+  // Get DPIA records
+  const { data: dpiaRecords } = await supabase
+    .from("compliance_dpia_records")
+    .select("*")
+    .in(
+      "compliance_item_id",
+      items.map((i) => i.id),
+    );
+
+  const dpias = items.map((item) => ({
+    ...item,
+    dpia: dpiaRecords?.find((d) => d.compliance_item_id === item.id) || null,
+  }));
+
+  return apiSuccess({ dpias });
+});
 
 /**
  * POST /api/compliance/gdpr/dpia
  * Create a new DPIA (creates compliance_item + dpia record)
  */
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
+export const POST = protectedRoute(
+  async (auth, request) => {
+    const { organizationId, userId } = auth;
+    const body = await request.json();
     const {
-      organizationId,
       title,
       owner_user_id,
-      created_by_user_id,
       processing_description,
       purpose,
       lawful_basis,
@@ -87,14 +66,11 @@ export async function POST(req: NextRequest) {
       review_date,
     } = body;
 
-    if (!organizationId || !title) {
-      return NextResponse.json(
-        { error: "Missing required fields: organizationId, title" },
-        { status: 400 },
-      );
+    if (!title) {
+      return apiError("Missing required field: title", 400);
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createServiceRoleClient();
 
     // Create compliance item
     const { data: item, error: itemError } = await supabase
@@ -113,10 +89,7 @@ export async function POST(req: NextRequest) {
 
     if (itemError) {
       console.error("Error creating DPIA item:", itemError);
-      return NextResponse.json(
-        { error: "Failed to create DPIA" },
-        { status: 500 },
-      );
+      return apiError("Failed to create DPIA", 500);
     }
 
     // Create DPIA record
@@ -152,16 +125,11 @@ export async function POST(req: NextRequest) {
       entity_type: "dpia",
       entity_id: item.id,
       action: "created",
-      actor_user_id: created_by_user_id,
+      actor_user_id: userId,
       metadata: { title },
     });
 
-    return NextResponse.json({ item, dpia }, { status: 201 });
-  } catch (error: any) {
-    console.error("DPIA create error:", error);
-    return NextResponse.json(
-      { error: error.message || "Internal server error" },
-      { status: 500 },
-    );
-  }
-}
+    return apiSuccess({ item, dpia }, 201);
+  },
+  { requiredRole: "slt" },
+);

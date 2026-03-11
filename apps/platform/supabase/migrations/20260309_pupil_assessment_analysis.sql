@@ -1,0 +1,10 @@
+-- Pupil Assessment Analysis — Zero-Knowledge Privacy Architecture
+-- Applied via Supabase MCP on 2026-03-09
+--
+-- Tables: school_assessment_imports, pupil_assessments_pseudo, pupil_analysis_insights
+-- Views: cohort_journey_ks2, cohort_journey_attendance
+--
+-- GDPR Design: ZERO PII stored. All pupil data uses HMAC-SHA256 pseudonymisation.
+-- Only the school holds the salt (in browser localStorage) to re-identify pupils.
+-- See: apps/platform/src/lib/pupil-pseudonymiser.ts (client-side)
+-- See: apps/platform/src/lib/pupil-assessment-analyser.ts (server-side analysis)

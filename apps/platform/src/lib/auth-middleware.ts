@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerSupabaseClient } from "./supabase-server";
+import { createClient } from "@supabase/supabase-js";
+import {
+  createServerSupabaseClient,
+  createServiceRoleClient,
+} from "./supabase-server";
 
 /**
  * Authenticated user context returned by withAuth
@@ -49,11 +53,47 @@ function hasMinimumRole(
 }
 
 /**
+ * Resolve the authenticated Supabase user from the request.
+ * Tries cookie-based session first (SSR), then falls back to
+ * Authorization: Bearer <token> header (client-side fetch with localStorage sessions).
+ */
+async function resolveUser(request: NextRequest) {
+  // 1. Try cookie-based session (works when @supabase/ssr sets cookies)
+  try {
+    const supabase = await createServerSupabaseClient();
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
+    if (!error && user) return { user, supabase };
+  } catch {
+    // Cookie-based auth failed, try Bearer token
+  }
+
+  // 2. Fall back to Authorization header (client stores session in localStorage)
+  const authHeader = request.headers.get("authorization");
+  if (authHeader?.startsWith("Bearer ")) {
+    const token = authHeader.slice(7);
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    );
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser(token);
+    if (!error && user) return { user, supabase };
+  }
+
+  return null;
+}
+
+/**
  * Authentication middleware for API routes.
  *
- * Validates the Supabase session from cookies and resolves the user's
- * organization membership. Returns 401 if not authenticated, 403 if
- * the user lacks the required role.
+ * Validates the Supabase session from cookies or Authorization header
+ * and resolves the user's organization membership. Returns 401 if not
+ * authenticated, 403 if the user lacks the required role.
  *
  * Usage:
  * ```ts
@@ -71,19 +111,16 @@ export async function withAuth(
   options: WithAuthOptions = {},
 ): Promise<NextResponse> {
   try {
-    const supabase = await createServerSupabaseClient();
+    const resolved = await resolveUser(request);
 
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
+    if (!resolved) {
       return NextResponse.json(
         { error: "Unauthorized", code: "UNAUTHORIZED" },
         { status: 401 },
       );
     }
+
+    const { user } = resolved;
 
     // Get organizationId from request (query param or body)
     let organizationId: string | null = null;
@@ -110,11 +147,12 @@ export async function withAuth(
       );
     }
 
-    // Verify organization membership
+    // Verify organization membership (use service role to bypass RLS)
     let role: AuthContext["role"] = "viewer";
+    const adminClient = createServiceRoleClient();
 
     if (organizationId) {
-      const { data: membership, error: memberError } = await supabase
+      const { data: membership, error: memberError } = await adminClient
         .from("organization_members")
         .select("role")
         .eq("user_id", user.id)

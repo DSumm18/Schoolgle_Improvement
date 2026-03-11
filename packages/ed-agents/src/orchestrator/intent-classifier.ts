@@ -3,23 +3,35 @@
  * Determines which specialist should handle a user's question
  */
 
-import type {
-  Domain,
-  SpecialistId,
-  IntentClassification,
-} from '../types';
-import { DOMAIN_KEYWORDS, getAgent } from '../agents';
+import type { Domain, SpecialistId, IntentClassification } from "../types";
+import { DOMAIN_KEYWORDS, getAgent } from "../agents";
 
 // Import form specialist directly
-import { FORM_KEYWORDS, FORM_SPECIALIST_ID } from '../agents/prompts/form-specialist';
+import {
+  FORM_KEYWORDS,
+  FORM_SPECIALIST_ID,
+} from "../agents/prompts/form-specialist";
 
 /**
  * Work-focused keywords - indicates user is asking about work tasks
  */
 const WORK_KEYWORDS = [
-  'help with', 'how do i', 'what is the', 'how to', 'can you help',
-  'need to', 'want to', 'report', 'fill in', 'complete', 'submit',
-  'guidance', 'advice', 'requirements', 'policy', 'procedure',
+  "help with",
+  "how do i",
+  "what is the",
+  "how to",
+  "can you help",
+  "need to",
+  "want to",
+  "report",
+  "fill in",
+  "complete",
+  "submit",
+  "guidance",
+  "advice",
+  "requirements",
+  "policy",
+  "procedure",
 ];
 
 /**
@@ -27,17 +39,36 @@ const WORK_KEYWORDS = [
  * Note: "hi" and "hello" are excluded - they're handled as greetings in the chat route
  */
 const CHAT_KEYWORDS = [
-  'tell me a joke', 'how are you', 'what do you think', 'lets chat',
-  'conversation', 'just saying', 'bored', 'nothing',
+  "tell me a joke",
+  "how are you",
+  "what do you think",
+  "lets chat",
+  "conversation",
+  "just saying",
+  "bored",
+  "nothing",
 ];
 
 /**
  * Complex decision keywords - indicates multi-perspective may be useful
  */
 const COMPLEX_DECISION_KEYWORDS = [
-  'should we', 'should i', 'recommend', 'decision', 'choose',
-  'best', 'better', 'versus', 'vs', 'compare', 'option',
-  'switch', 'change', 'implement', 'introduce', 'start using',
+  "should we",
+  "should i",
+  "recommend",
+  "decision",
+  "choose",
+  "best",
+  "better",
+  "versus",
+  "vs",
+  "compare",
+  "option",
+  "switch",
+  "change",
+  "implement",
+  "introduce",
+  "start using",
 ];
 
 /**
@@ -52,7 +83,7 @@ function scoreDomain(query: string, domain: Domain): number {
     if (queryLower.includes(keyword.toLowerCase())) {
       score += 1;
       // Bonus for multi-word matches
-      if (keyword.split(' ').length > 1) {
+      if (keyword.split(" ").length > 1) {
         score += 0.5;
       }
     }
@@ -64,24 +95,34 @@ function scoreDomain(query: string, domain: Domain): number {
 /**
  * Check if the query is work-related or general chat
  */
-export function isWorkRelated(query: string): { isWorkRelated: boolean; confidence: number } {
+export function isWorkRelated(query: string): {
+  isWorkRelated: boolean;
+  confidence: number;
+} {
   const queryLower = query.toLowerCase().trim();
 
   // Check for explicit chat keywords
-  const hasChatKeywords = CHAT_KEYWORDS.some(kw => queryLower.includes(kw));
+  const hasChatKeywords = CHAT_KEYWORDS.some((kw) => queryLower.includes(kw));
 
   // Check for work keywords
-  const hasWorkKeywords = WORK_KEYWORDS.some(kw => queryLower.includes(kw));
+  const hasWorkKeywords = WORK_KEYWORDS.some((kw) => queryLower.includes(kw));
 
   // Also check domain keywords (if any, it's work-related)
-  const hasDomainKeywords = Object.values(DOMAIN_KEYWORDS).some(keywords =>
-    keywords.some(kw => queryLower.includes(kw.toLowerCase()))
+  const hasDomainKeywords = Object.values(DOMAIN_KEYWORDS).some((keywords) =>
+    keywords.some((kw) => queryLower.includes(kw.toLowerCase())),
   );
 
   // Phase 2: Check form keywords
-  const hasFormKeywords = FORM_KEYWORDS.some(kw => queryLower.includes(kw.toLowerCase()));
+  const hasFormKeywords = FORM_KEYWORDS.some((kw) =>
+    queryLower.includes(kw.toLowerCase()),
+  );
 
-  if (hasChatKeywords && !hasWorkKeywords && !hasDomainKeywords && !hasFormKeywords) {
+  if (
+    hasChatKeywords &&
+    !hasWorkKeywords &&
+    !hasDomainKeywords &&
+    !hasFormKeywords
+  ) {
     return { isWorkRelated: false, confidence: 0.9 };
   }
 
@@ -100,8 +141,8 @@ export function requiresMultiPerspective(query: string): boolean {
   const queryLower = query.toLowerCase();
 
   // Check for complex decision keywords
-  const hasComplexKeyword = COMPLEX_DECISION_KEYWORDS.some(kw =>
-    queryLower.includes(kw)
+  const hasComplexKeyword = COMPLEX_DECISION_KEYWORDS.some((kw) =>
+    queryLower.includes(kw),
   );
 
   return hasComplexKeyword;
@@ -113,7 +154,7 @@ export function requiresMultiPerspective(query: string): boolean {
 export function classifyIntent(
   query: string,
   activeApp?: string,
-  userRole?: string
+  userRole?: string,
 ): IntentClassification {
   const queryLower = query.toLowerCase();
 
@@ -121,7 +162,7 @@ export function classifyIntent(
   const formScore = scoreDomain(query, FORM_KEYWORDS);
   if (formScore > 0) {
     return {
-      domain: 'general',
+      domain: "general",
       specialist: FORM_SPECIALIST_ID,
       confidence: Math.min(0.95, 0.7 + formScore * 0.1),
       reasoning: `Form-related request detected (score: ${formScore})`,
@@ -135,10 +176,10 @@ export function classifyIntent(
 
   if (!workRelated) {
     return {
-      domain: 'general',
-      specialist: 'ed-general',
+      domain: "general",
+      specialist: "ed-general",
       confidence: 0.9,
-      reasoning: 'Query appears to be general chat, not work-related',
+      reasoning: "Query appears to be general chat, not work-related",
       requiresMultiPerspective: false,
       isWorkRelated: false,
     };
@@ -151,7 +192,7 @@ export function classifyIntent(
   const domainScores: { domain: Domain; score: number }[] = [];
 
   for (const domain of Object.keys(DOMAIN_KEYWORDS) as Domain[]) {
-    if (domain === 'general') continue;
+    if (domain === "general") continue;
     const score = scoreDomain(query, domain);
     if (score > 0) {
       domainScores.push({ domain, score });
@@ -173,19 +214,23 @@ export function classifyIntent(
     confidence = Math.min(0.95, 0.6 + (topScore - secondScore) * 0.1);
   } else {
     // No clear domain - use active app if available
-    bestDomain = 'general';
+    bestDomain = "general";
     confidence = 0.3;
   }
 
   // Override based on active app if no clear keywords
   if (confidence < 0.5 && activeApp) {
     switch (activeApp) {
-      case 'estates-compliance':
-        bestDomain = 'estates';
+      case "estates-compliance":
+        bestDomain = "estates";
         confidence = 0.7;
         break;
-      case 'hr':
-        bestDomain = 'hr';
+      case "hr":
+        bestDomain = "hr";
+        confidence = 0.7;
+        break;
+      case "intelligence":
+        bestDomain = "intelligence";
         confidence = 0.7;
         break;
     }
@@ -199,9 +244,10 @@ export function classifyIntent(
     domain: bestDomain,
     specialist,
     confidence,
-    reasoning: domainScores.length > 0
-      ? `Matched keywords for ${bestDomain} domain (score: ${domainScores[0].score})`
-      : `Using ${bestDomain} based on app context`,
+    reasoning:
+      domainScores.length > 0
+        ? `Matched keywords for ${bestDomain} domain (score: ${domainScores[0].score})`
+        : `Using ${bestDomain} based on app context`,
     requiresMultiPerspective: needsMultiPerspective,
     isWorkRelated: true,
   };
@@ -222,8 +268,8 @@ export function explainRouting(classification: IntentClassification): string {
   }
 
   if (classification.requiresMultiPerspective) {
-    parts.push('Multi-perspective: Yes (complex decision)');
+    parts.push("Multi-perspective: Yes (complex decision)");
   }
 
-  return parts.join(' | ');
+  return parts.join(" | ");
 }

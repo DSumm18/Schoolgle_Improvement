@@ -5,3 +5,7 @@ export { MeetingScriptDisplay } from "./MeetingScriptDisplay";
 export { MeetingNotesInput } from "./MeetingNotesInput";
 export { MeetingPreparationPack } from "./MeetingPreparationPack";
 export { MeetingRecorder } from "./MeetingRecorder";
+export { MeetingSignaturePad } from "./MeetingSignaturePad";
+export { MeetingDocUpload } from "./MeetingDocUpload";
+export { StaffPicker } from "./StaffPicker";
+export { PostMeetingActions } from "./PostMeetingActions";

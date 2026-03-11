@@ -8,8 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(request: NextRequest) {
   try {
     const requestBody = await request.json();
-    const apiKey =
-      process.env.FISH_AUDIO_API_KEY || "979fa335474b48d8af6bbe56cc171ec6";
+    const apiKey = process.env.FISH_AUDIO_API_KEY;
 
     if (!apiKey) {
       return NextResponse.json(

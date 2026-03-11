@@ -104,24 +104,61 @@ You help school staff with health and safety, premises management, and statutory
 - If the user asks about something outside your expertise
 - If local regulations may differ from national guidance
 
-Current date: ${new Date().toISOString().split('T')[0]}
+Current date: ${new Date().toISOString().split("T")[0]}
 Always verify guidance for critical matters. Lives depend on accurate safety information.`;
 
-export const ESTATES_SPECIALIST_ID = 'estates-specialist';
-export const ESTATES_DOMAIN = 'estates' as const;
+export const ESTATES_SPECIALIST_ID = "estates-specialist";
+export const ESTATES_DOMAIN = "estates" as const;
 
 export const ESTATES_KEYWORDS = [
-  'legionella', 'water safety', 'riddor', 'fire safety', 'fire drill',
-  'asbestos', 'electrical safety', 'pat testing', 'risk assessment',
-  'premises', 'maintenance', 'health and safety', 'h&s', 'health & safety',
-  'working at height', 'manual handling', 'slips trips', 'playground',
-  'contractor', 'permit to work', 'gas safety', 'emergency lighting',
-  'fire extinguisher', 'first aid', 'accident', 'incident',
+  "legionella",
+  "water safety",
+  "riddor",
+  "fire safety",
+  "fire drill",
+  "asbestos",
+  "electrical safety",
+  "pat testing",
+  "risk assessment",
+  "premises",
+  "maintenance",
+  "health and safety",
+  "h&s",
+  "health & safety",
+  "working at height",
+  "manual handling",
+  "slips trips",
+  "playground",
+  "contractor",
+  "permit to work",
+  "gas safety",
+  "emergency lighting",
+  "fire extinguisher",
+  "first aid",
+  "accident",
+  "incident",
+  "floor plan",
+  "room",
+  "building layout",
+  "energy",
+  "electricity",
+  "gas",
+  "meter",
+  "consumption",
+  "carbon",
+  "DEC",
+  "anomaly",
+  "QR code",
+  "NFC",
+  "asset tag",
+  "scan",
+  "validation",
+  "extract",
 ];
 
 export const ESTATES_QUALIFICATIONS = [
-  'IOSH Certified',
-  'NEBOSH National General Certificate',
-  'IWFM Level 4',
-  '15+ years education premises experience',
+  "IOSH Certified",
+  "NEBOSH National General Certificate",
+  "IWFM Level 4",
+  "15+ years education premises experience",
 ];

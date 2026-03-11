@@ -1,70 +1,50 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
+import { createServiceRoleClient } from "@/lib/supabase-server";
 
 /**
  * GET /api/compliance/training
  * List courses, requirements, and completions for an organization
  */
-export async function GET(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const organizationId = searchParams.get("organizationId");
+export const GET = protectedRoute(async (auth, request) => {
+  const { organizationId } = auth;
+  const supabase = createServiceRoleClient();
 
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: "Missing organizationId parameter" },
-        { status: 400 },
-      );
-    }
+  // Courses (global + org-specific)
+  const { data: courses } = await supabase
+    .from("compliance_training_courses")
+    .select("*")
+    .or(`is_global.eq.true,organization_id.eq.${organizationId}`)
+    .order("title", { ascending: true });
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  // Requirements for this org
+  const { data: requirements } = await supabase
+    .from("compliance_training_requirements")
+    .select("*, course:compliance_training_courses(*)")
+    .eq("organization_id", organizationId);
 
-    // Courses (global + org-specific)
-    const { data: courses } = await supabase
-      .from("compliance_training_courses")
-      .select("*")
-      .or(`is_global.eq.true,organization_id.eq.${organizationId}`)
-      .order("title", { ascending: true });
+  // Completions for this org
+  const { data: completions } = await supabase
+    .from("compliance_training_completions")
+    .select("*, course:compliance_training_courses(*)")
+    .eq("organization_id", organizationId)
+    .order("completed_at", { ascending: false });
 
-    // Requirements for this org
-    const { data: requirements } = await supabase
-      .from("compliance_training_requirements")
-      .select("*, course:compliance_training_courses(*)")
-      .eq("organization_id", organizationId);
-
-    // Completions for this org
-    const { data: completions } = await supabase
-      .from("compliance_training_completions")
-      .select("*, course:compliance_training_courses(*)")
-      .eq("organization_id", organizationId)
-      .order("completed_at", { ascending: false });
-
-    return NextResponse.json({
-      courses: courses || [],
-      requirements: requirements || [],
-      completions: completions || [],
-    });
-  } catch (error: any) {
-    console.error("Training API error:", error);
-    return NextResponse.json(
-      { error: error.message || "Internal server error" },
-      { status: 500 },
-    );
-  }
-}
+  return apiSuccess({
+    courses: courses || [],
+    requirements: requirements || [],
+    completions: completions || [],
+  });
+});
 
 /**
  * POST /api/compliance/training
  * Record a training completion
  */
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
+export const POST = protectedRoute(
+  async (auth, request) => {
+    const { organizationId, userId } = auth;
+    const body = await request.json();
     const {
-      organizationId,
       user_id,
       course_id,
       completed_at,
@@ -74,22 +54,17 @@ export async function POST(req: NextRequest) {
       notes,
     } = body;
 
-    if (!organizationId || !user_id || !course_id) {
-      return NextResponse.json(
-        {
-          error: "Missing required fields: organizationId, user_id, course_id",
-        },
-        { status: 400 },
-      );
+    if (!course_id) {
+      return apiError("Missing required field: course_id", 400);
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createServiceRoleClient();
 
     const { data: completion, error } = await supabase
       .from("compliance_training_completions")
       .insert({
         organization_id: organizationId,
-        user_id,
+        user_id: user_id || userId,
         course_id,
         completed_at: completed_at || new Date().toISOString(),
         expires_at,
@@ -102,10 +77,7 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       console.error("Error recording training completion:", error);
-      return NextResponse.json(
-        { error: "Failed to record training completion" },
-        { status: 500 },
-      );
+      return apiError("Failed to record training completion", 500);
     }
 
     // Audit log
@@ -114,16 +86,11 @@ export async function POST(req: NextRequest) {
       entity_type: "training_completion",
       entity_id: completion.id,
       action: "completed",
-      actor_user_id: user_id,
+      actor_user_id: userId,
       metadata: { course_id, completed_at: completion.completed_at },
     });
 
-    return NextResponse.json({ completion }, { status: 201 });
-  } catch (error: any) {
-    console.error("Training completion error:", error);
-    return NextResponse.json(
-      { error: error.message || "Internal server error" },
-      { status: 500 },
-    );
-  }
-}
+    return apiSuccess({ completion }, 201);
+  },
+  { requiredRole: "teacher" },
+);

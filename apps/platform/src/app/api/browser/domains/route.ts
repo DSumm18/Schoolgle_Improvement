@@ -3,15 +3,16 @@
  *
  * Provides endpoints for managing approved browser domains:
  * - GET /api/browser/domains - List approved domains for organization
- * - POST /api/browser/domains - Add a new approved domain
- * - PATCH /api/browser/domains - Update domain settings
- * - DELETE /api/browser/domains - Remove an approved domain
+ * - POST /api/browser/domains - Add a new approved domain (admin only)
+ * - PATCH /api/browser/domains - Update domain settings (admin only)
+ * - DELETE /api/browser/domains - Remove an approved domain (admin only)
  *
  * All endpoints require authentication and organization membership.
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { NextRequest } from "next/server";
+import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
+import { createServiceRoleClient } from "@/lib/supabase-server";
 
 // ============================================================================
 // TYPES
@@ -20,9 +21,9 @@ import { createServerSupabaseClient } from '@/lib/supabase-server';
 interface CreateDomainRequest {
   domain: string;
   description?: string;
-  category: 'government' | 'internal' | 'vendor' | 'other';
+  category: "government" | "internal" | "vendor" | "other";
   requiresAuth?: boolean;
-  authMethod?: 'sso' | 'headers' | 'credentials' | 'none';
+  authMethod?: "sso" | "headers" | "credentials" | "none";
   authConfig?: Record<string, any>;
   allowedPaths?: string[];
   deniedPaths?: string[];
@@ -33,7 +34,7 @@ interface UpdateDomainRequest {
   domainId: string;
   description?: string;
   requiresAuth?: boolean;
-  authMethod?: 'sso' | 'headers' | 'credentials' | 'none';
+  authMethod?: "sso" | "headers" | "credentials" | "none";
   authConfig?: Record<string, any>;
   allowedPaths?: string[];
   deniedPaths?: string[];
@@ -46,101 +47,32 @@ interface DeleteDomainRequest {
 }
 
 // ============================================================================
-// AUTHENTICATION HELPERS
-// ============================================================================
-
-/**
- * Get authenticated user and organization from request
- */
-async function getAuthContext(request: NextRequest) {
-  const supabase = await createServerSupabaseClient();
-
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError || !user) {
-    throw new Error('Unauthorized');
-  }
-
-  // Get user's organization ID and role
-  const { data: memberData, error: memberError } = await supabase
-    .from('organization_members')
-    .select('organization_id, role')
-    .eq('user_id', user.id)
-    .limit(1)
-    .single();
-
-  if (memberError || !memberData) {
-    throw new Error('User not associated with an organization');
-  }
-
-  return {
-    user,
-    organizationId: memberData.organization_id,
-    userRole: memberData.role,
-  };
-}
-
-/**
- * Check if user is admin or owner
- */
-function isAdmin(role: string): boolean {
-  return role === 'admin' || role === 'owner';
-}
-
-// ============================================================================
 // GET - List approved domains
 // ============================================================================
 
-export async function GET(request: NextRequest) {
-  try {
-    const { organizationId } = await getAuthContext(request);
+export const GET = protectedRoute(async (auth, request) => {
+  const supabase = createServiceRoleClient();
+  const organizationId = auth.organizationId;
 
-    const supabase = await createServerSupabaseClient();
+  const { data: domains, error } = await supabase
+    .from("browser_approved_domains")
+    .select("*")
+    .eq("organization_id", organizationId)
+    .order("created_at", { ascending: false });
 
-    const { data: domains, error } = await supabase
-      .from('browser_approved_domains')
-      .select('*')
-      .eq('organization_id', organizationId)
-      .order('created_at', { ascending: false });
+  if (error) throw error;
 
-    if (error) {
-      return NextResponse.json(
-        { error: 'Failed to fetch domains', message: error.message },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      domains,
-    });
-  } catch (error) {
-    console.error('[Browser Domains API] GET error:', error);
-    return NextResponse.json(
-      { error: 'Unauthorized', message: 'You must be logged in' },
-      { status: 401 }
-    );
-  }
-}
+  return apiSuccess({ domains });
+});
 
 // ============================================================================
-// POST - Add a new approved domain
+// POST - Add a new approved domain (admin only)
 // ============================================================================
 
-export async function POST(request: NextRequest) {
-  try {
-    const { user, organizationId, userRole } = await getAuthContext(request);
-
-    // Only admins can add domains
-    if (!isAdmin(userRole)) {
-      return NextResponse.json(
-        { error: 'Forbidden', message: 'Only admins can add approved domains' },
-        { status: 403 }
-      );
-    }
+export const POST = protectedRoute(
+  async (auth, request) => {
+    const supabase = createServiceRoleClient();
+    const organizationId = auth.organizationId;
 
     const body: CreateDomainRequest = await request.json();
     const {
@@ -148,40 +80,32 @@ export async function POST(request: NextRequest) {
       description,
       category,
       requiresAuth = false,
-      authMethod = 'none',
+      authMethod = "none",
       authConfig = {},
-      allowedPaths = ['/**'],
+      allowedPaths = ["/**"],
       deniedPaths = [],
       maxSessionDuration = 1800,
     } = body;
 
     if (!domain || !category) {
-      return NextResponse.json(
-        { error: 'Invalid Input', message: 'Domain and category are required' },
-        { status: 400 }
-      );
+      return apiError("Domain and category are required", 400);
     }
-
-    const supabase = await createServerSupabaseClient();
 
     // Check if domain already exists
     const { data: existing } = await supabase
-      .from('browser_approved_domains')
-      .select('id')
-      .eq('organization_id', organizationId)
-      .eq('domain', domain)
+      .from("browser_approved_domains")
+      .select("id")
+      .eq("organization_id", organizationId)
+      .eq("domain", domain)
       .maybeSingle();
 
     if (existing) {
-      return NextResponse.json(
-        { error: 'Conflict', message: 'Domain already exists for this organization' },
-        { status: 409 }
-      );
+      return apiError("Domain already exists for this organization", 409);
     }
 
     // Insert new domain
     const { data: newDomain, error } = await supabase
-      .from('browser_approved_domains')
+      .from("browser_approved_domains")
       .insert({
         organization_id: organizationId,
         domain: domain.toLowerCase(),
@@ -193,170 +117,101 @@ export async function POST(request: NextRequest) {
         allowed_paths: allowedPaths,
         denied_paths: deniedPaths,
         max_session_duration: maxSessionDuration,
-        created_by: user.id,
+        created_by: auth.userId,
       })
       .select()
       .single();
 
-    if (error) {
-      return NextResponse.json(
-        { error: 'Failed to create domain', message: error.message },
-        { status: 500 }
-      );
-    }
+    if (error) throw error;
 
-    return NextResponse.json({
-      success: true,
-      domain: newDomain,
-    });
-  } catch (error) {
-    console.error('[Browser Domains API] POST error:', error);
-    return NextResponse.json(
-      { error: 'Unauthorized', message: 'You must be logged in' },
-      { status: 401 }
-    );
-  }
-}
+    return apiSuccess({ domain: newDomain });
+  },
+  { requiredRole: "admin" },
+);
 
 // ============================================================================
-// PATCH - Update domain settings
+// PATCH - Update domain settings (admin only)
 // ============================================================================
 
-export async function PATCH(request: NextRequest) {
-  try {
-    const { organizationId, userRole } = await getAuthContext(request);
-
-    // Only admins can update domains
-    if (!isAdmin(userRole)) {
-      return NextResponse.json(
-        { error: 'Forbidden', message: 'Only admins can update approved domains' },
-        { status: 403 }
-      );
-    }
+export const PATCH = protectedRoute(
+  async (auth, request) => {
+    const supabase = createServiceRoleClient();
+    const organizationId = auth.organizationId;
 
     const body: UpdateDomainRequest = await request.json();
     const { domainId, ...updates } = body;
 
     if (!domainId) {
-      return NextResponse.json(
-        { error: 'Invalid Input', message: 'Domain ID is required' },
-        { status: 400 }
-      );
+      return apiError("Domain ID is required", 400);
     }
-
-    const supabase = await createServerSupabaseClient();
 
     // Verify domain belongs to organization
     const { data: existing } = await supabase
-      .from('browser_approved_domains')
-      .select('id')
-      .eq('id', domainId)
-      .eq('organization_id', organizationId)
+      .from("browser_approved_domains")
+      .select("id")
+      .eq("id", domainId)
+      .eq("organization_id", organizationId)
       .maybeSingle();
 
     if (!existing) {
-      return NextResponse.json(
-        { error: 'Not Found', message: 'Domain not found or access denied' },
-        { status: 404 }
-      );
+      return apiError("Domain not found or access denied", 404);
     }
 
     // Update domain
     const { data: updatedDomain, error } = await supabase
-      .from('browser_approved_domains')
+      .from("browser_approved_domains")
       .update({
         ...updates,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', domainId)
+      .eq("id", domainId)
       .select()
       .single();
 
-    if (error) {
-      return NextResponse.json(
-        { error: 'Failed to update domain', message: error.message },
-        { status: 500 }
-      );
-    }
+    if (error) throw error;
 
-    return NextResponse.json({
-      success: true,
-      domain: updatedDomain,
-    });
-  } catch (error) {
-    console.error('[Browser Domains API] PATCH error:', error);
-    return NextResponse.json(
-      { error: 'Unauthorized', message: 'You must be logged in' },
-      { status: 401 }
-    );
-  }
-}
+    return apiSuccess({ domain: updatedDomain });
+  },
+  { requiredRole: "admin" },
+);
 
 // ============================================================================
-// DELETE - Remove an approved domain
+// DELETE - Remove an approved domain (admin only)
 // ============================================================================
 
-export async function DELETE(request: NextRequest) {
-  try {
-    const { organizationId, userRole } = await getAuthContext(request);
-
-    // Only admins can delete domains
-    if (!isAdmin(userRole)) {
-      return NextResponse.json(
-        { error: 'Forbidden', message: 'Only admins can remove approved domains' },
-        { status: 403 }
-      );
-    }
+export const DELETE = protectedRoute(
+  async (auth, request) => {
+    const supabase = createServiceRoleClient();
+    const organizationId = auth.organizationId;
 
     const body: DeleteDomainRequest = await request.json();
     const { domainId } = body;
 
     if (!domainId) {
-      return NextResponse.json(
-        { error: 'Invalid Input', message: 'Domain ID is required' },
-        { status: 400 }
-      );
+      return apiError("Domain ID is required", 400);
     }
-
-    const supabase = await createServerSupabaseClient();
 
     // Verify domain belongs to organization
     const { data: existing } = await supabase
-      .from('browser_approved_domains')
-      .select('id')
-      .eq('id', domainId)
-      .eq('organization_id', organizationId)
+      .from("browser_approved_domains")
+      .select("id")
+      .eq("id", domainId)
+      .eq("organization_id", organizationId)
       .maybeSingle();
 
     if (!existing) {
-      return NextResponse.json(
-        { error: 'Not Found', message: 'Domain not found or access denied' },
-        { status: 404 }
-      );
+      return apiError("Domain not found or access denied", 404);
     }
 
     // Delete domain
     const { error } = await supabase
-      .from('browser_approved_domains')
+      .from("browser_approved_domains")
       .delete()
-      .eq('id', domainId);
+      .eq("id", domainId);
 
-    if (error) {
-      return NextResponse.json(
-        { error: 'Failed to delete domain', message: error.message },
-        { status: 500 }
-      );
-    }
+    if (error) throw error;
 
-    return NextResponse.json({
-      success: true,
-      message: 'Domain removed successfully',
-    });
-  } catch (error) {
-    console.error('[Browser Domains API] DELETE error:', error);
-    return NextResponse.json(
-      { error: 'Unauthorized', message: 'You must be logged in' },
-      { status: 401 }
-    );
-  }
-}
+    return apiSuccess({ message: "Domain removed successfully" });
+  },
+  { requiredRole: "admin" },
+);

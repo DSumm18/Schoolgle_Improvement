@@ -1,8 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
+import { createServiceRoleClient } from "@/lib/supabase-server";
 
 /**
  * POST /api/compliance/reminders
@@ -12,19 +9,10 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
  * - Pending approvals
  * - Overdue SAR deadlines
  */
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const { organizationId, actor_user_id } = body;
-
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: "Missing required field: organizationId" },
-        { status: 400 },
-      );
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+export const POST = protectedRoute(
+  async (auth, request) => {
+    const { organizationId, userId } = auth;
+    const supabase = createServiceRoleClient();
     const today = new Date().toISOString().split("T")[0];
     const in14Days = new Date();
     in14Days.setDate(in14Days.getDate() + 14);
@@ -215,20 +203,15 @@ export async function POST(req: NextRequest) {
       entity_type: "reminders",
       entity_id: organizationId,
       action: "reminders_generated",
-      actor_user_id: actor_user_id,
+      actor_user_id: userId,
       metadata: { generated: notifications.length, inserted },
     });
 
-    return NextResponse.json({
+    return apiSuccess({
       generated: notifications.length,
       inserted,
       notifications: validNotifications,
     });
-  } catch (error: any) {
-    console.error("Reminders API error:", error);
-    return NextResponse.json(
-      { error: error.message || "Internal server error" },
-      { status: 500 },
-    );
-  }
-}
+  },
+  { requiredRole: "teacher" },
+);

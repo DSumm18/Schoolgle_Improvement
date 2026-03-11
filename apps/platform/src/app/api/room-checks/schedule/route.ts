@@ -3,28 +3,16 @@
  * PUT /api/room-checks/schedule -- Update room check schedule
  */
 
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { NextRequest } from "next/server";
+import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
+import { createServiceRoleClient } from "@/lib/supabase-server";
 
-function getServiceClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  );
-}
-
-export async function GET(request: NextRequest) {
+export const GET = protectedRoute(async (auth, request) => {
   const { searchParams } = new URL(request.url);
-  const organizationId = searchParams.get("organization_id");
+  const organizationId =
+    searchParams.get("organization_id") || auth.organizationId;
 
-  if (!organizationId) {
-    return NextResponse.json(
-      { error: "organization_id required" },
-      { status: 400 },
-    );
-  }
-
-  const supabase = getServiceClient();
+  const supabase = createServiceRoleClient();
 
   const { data, error } = await supabase
     .from("room_check_schedule")
@@ -33,55 +21,47 @@ export async function GET(request: NextRequest) {
     .order("created_at", { ascending: true });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return apiError(error.message, 500);
   }
 
-  return NextResponse.json({ schedule: data ?? [] });
-}
+  return apiSuccess({ schedule: data ?? [] });
+});
 
-export async function PUT(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { organizationId, assetId, ...updates } = body;
+export const PUT = protectedRoute(async (auth, request) => {
+  const body = await request.json();
+  const { organizationId, assetId, ...updates } = body;
 
-    if (!organizationId || !assetId) {
-      return NextResponse.json(
-        { error: "organizationId and assetId required" },
-        { status: 400 },
-      );
-    }
+  const orgId = organizationId || auth.organizationId;
 
-    const supabase = getServiceClient();
-
-    const { data, error } = await supabase
-      .from("room_check_schedule")
-      .upsert(
-        {
-          organization_id: organizationId,
-          asset_id: assetId,
-          am_check_required: updates.amCheckRequired ?? true,
-          pm_check_required: updates.pmCheckRequired ?? true,
-          am_deadline: updates.amDeadline ?? "08:00",
-          pm_deadline: updates.pmDeadline ?? "18:00",
-          default_checker_id: updates.defaultCheckerId ?? null,
-          check_mode: updates.checkMode ?? "term",
-          holiday_check_frequency: updates.holidayCheckFrequency ?? null,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "organization_id,asset_id" },
-      )
-      .select()
-      .single();
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({ success: true, schedule: data });
-  } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unknown error" },
-      { status: 500 },
-    );
+  if (!assetId) {
+    return apiError("assetId required", 400);
   }
-}
+
+  const supabase = createServiceRoleClient();
+
+  const { data, error } = await supabase
+    .from("room_check_schedule")
+    .upsert(
+      {
+        organization_id: orgId,
+        asset_id: assetId,
+        am_check_required: updates.amCheckRequired ?? true,
+        pm_check_required: updates.pmCheckRequired ?? true,
+        am_deadline: updates.amDeadline ?? "08:00",
+        pm_deadline: updates.pmDeadline ?? "18:00",
+        default_checker_id: updates.defaultCheckerId ?? null,
+        check_mode: updates.checkMode ?? "term",
+        holiday_check_frequency: updates.holidayCheckFrequency ?? null,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "organization_id,asset_id" },
+    )
+    .select()
+    .single();
+
+  if (error) {
+    return apiError(error.message, 500);
+  }
+
+  return apiSuccess({ success: true, schedule: data });
+});

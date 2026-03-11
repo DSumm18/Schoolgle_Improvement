@@ -1,71 +1,50 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
+import { createServiceRoleClient } from "@/lib/supabase-server";
 
 /**
  * GET /api/compliance/consent
  * List consent records for an organization
  */
-export async function GET(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const organizationId = searchParams.get("organizationId");
-    const consent_type = searchParams.get("consent_type");
-    const academic_year = searchParams.get("academic_year");
+export const GET = protectedRoute(async (auth, request) => {
+  const { organizationId } = auth;
+  const { searchParams } = new URL(request.url);
+  const consent_type = searchParams.get("consent_type");
+  const academic_year = searchParams.get("academic_year");
 
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: "Missing organizationId parameter" },
-        { status: 400 },
-      );
-    }
+  const supabase = createServiceRoleClient();
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  let query = supabase
+    .from("compliance_consent_records")
+    .select("*")
+    .eq("organization_id", organizationId)
+    .order("updated_at", { ascending: false });
 
-    let query = supabase
-      .from("compliance_consent_records")
-      .select("*")
-      .eq("organization_id", organizationId)
-      .order("updated_at", { ascending: false });
-
-    if (consent_type) {
-      query = query.eq("consent_type", consent_type);
-    }
-    if (academic_year) {
-      query = query.eq("academic_year", academic_year);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      console.error("Error fetching consent records:", error);
-      return NextResponse.json(
-        { error: "Failed to fetch consent records" },
-        { status: 500 },
-      );
-    }
-
-    return NextResponse.json({ records: data || [] });
-  } catch (error: any) {
-    console.error("Consent API error:", error);
-    return NextResponse.json(
-      { error: error.message || "Internal server error" },
-      { status: 500 },
-    );
+  if (consent_type) {
+    query = query.eq("consent_type", consent_type);
   }
-}
+  if (academic_year) {
+    query = query.eq("academic_year", academic_year);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error("Error fetching consent records:", error);
+    return apiError("Failed to fetch consent records", 500);
+  }
+
+  return apiSuccess({ records: data || [] });
+});
 
 /**
  * POST /api/compliance/consent
  * Create a new consent record
  */
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
+export const POST = protectedRoute(
+  async (auth, request) => {
+    const { organizationId, userId } = auth;
+    const body = await request.json();
     const {
-      organizationId,
       pupil_name,
       pupil_id,
       parent_guardian_name,
@@ -76,20 +55,13 @@ export async function POST(req: NextRequest) {
       academic_year,
       expiry_date,
       notes,
-      user_id,
     } = body;
 
-    if (!organizationId || !pupil_name || !consent_type) {
-      return NextResponse.json(
-        {
-          error:
-            "Missing required fields: organizationId, pupil_name, consent_type",
-        },
-        { status: 400 },
-      );
+    if (!pupil_name || !consent_type) {
+      return apiError("Missing required fields: pupil_name, consent_type", 400);
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createServiceRoleClient();
 
     const { data: record, error } = await supabase
       .from("compliance_consent_records")
@@ -112,10 +84,7 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       console.error("Error creating consent record:", error);
-      return NextResponse.json(
-        { error: "Failed to create consent record" },
-        { status: 500 },
-      );
+      return apiError("Failed to create consent record", 500);
     }
 
     // Audit log
@@ -124,7 +93,7 @@ export async function POST(req: NextRequest) {
       entity_type: "consent_record",
       entity_id: record.id,
       action: "created",
-      actor_user_id: user_id || null,
+      actor_user_id: userId,
       metadata: {
         pupil_name,
         consent_type,
@@ -132,33 +101,26 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return NextResponse.json({ record }, { status: 201 });
-  } catch (error: any) {
-    console.error("Consent create error:", error);
-    return NextResponse.json(
-      { error: error.message || "Internal server error" },
-      { status: 500 },
-    );
-  }
-}
+    return apiSuccess({ record }, 201);
+  },
+  { requiredRole: "slt" },
+);
 
 /**
  * PUT /api/compliance/consent
  * Update a consent record (e.g., withdraw consent by setting withdrawn_date)
  */
-export async function PUT(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const { id, user_id, ...fields } = body;
+export const PUT = protectedRoute(
+  async (auth, request) => {
+    const { userId } = auth;
+    const body = await request.json();
+    const { id, ...fields } = body;
 
     if (!id) {
-      return NextResponse.json(
-        { error: "Missing required field: id" },
-        { status: 400 },
-      );
+      return apiError("Missing required field: id", 400);
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createServiceRoleClient();
 
     const updateData: Record<string, any> = {
       updated_at: new Date().toISOString(),
@@ -193,10 +155,7 @@ export async function PUT(req: NextRequest) {
 
     if (error) {
       console.error("Error updating consent record:", error);
-      return NextResponse.json(
-        { error: "Failed to update consent record" },
-        { status: 500 },
-      );
+      return apiError("Failed to update consent record", 500);
     }
 
     // Audit log
@@ -206,16 +165,11 @@ export async function PUT(req: NextRequest) {
       entity_type: "consent_record",
       entity_id: id,
       action,
-      actor_user_id: user_id || null,
+      actor_user_id: userId,
       metadata: updateData,
     });
 
-    return NextResponse.json({ record: data });
-  } catch (error: any) {
-    console.error("Consent PUT error:", error);
-    return NextResponse.json(
-      { error: error.message || "Internal server error" },
-      { status: 500 },
-    );
-  }
-}
+    return apiSuccess({ record: data });
+  },
+  { requiredRole: "slt" },
+);
