@@ -524,6 +524,73 @@ When a SENCO asks Ed "Is this EHCP application strong enough?", Ed analyses:
 
 ---
 
+## 9. EHCP Sections A-K: Evidence Mapping
+
+The EHC Plan has a prescribed structure (Sections A-K). Each section draws from specific evidence types, all of which map to Schoolgle modules:
+
+| Section | Content | Evidence Sources | Schoolgle Module |
+|---------|---------|-----------------|-----------------|
+| **A** | Views, interests and aspirations of child/parent | Parent views form, pupil views, one-page profile | Surveys, Document Production |
+| **B** | Special educational needs | EP report, school assessments, SALT/OT reports, APDR cycles | Intelligence Engine, SEND Hub (file upload + APDR) |
+| **C** | Health needs related to SEN | Paediatric reports, therapy records, health care plans | SEND Hub (file upload) |
+| **D** | Social care needs related to SEN | Social worker assessments, CIN/CP plans, Early Help records | SEND Hub (file upload, restricted access) |
+| **E** | Outcomes sought | Agreed at drafting, informed by all professional evidence | SEND Hub (targets/outcomes) |
+| **F** | Special educational provision | Based on professional recommendations, costed provision map | SEND Hub (provision map), Staff Directory |
+| **G** | Health provision | Based on health professional advice | SEND Hub (file upload) |
+| **H1/H2** | Social care provision | Based on social care advice | SEND Hub (file upload) |
+| **I** | Placement | School/setting | SEND Hub (register) |
+| **J** | Personal budget | Where applicable | Funding Intelligence |
+| **K** | Appendices | ALL professional reports, assessments, meeting notes | All modules — the evidence pack |
+
+---
+
+## 10. Standardised Assessments Reference
+
+Common standardised tests referenced in EHCP evidence, and where results are stored in Schoolgle:
+
+| Test | Measures | Used By | Schoolgle Storage |
+|------|----------|---------|-------------------|
+| **WISC-V** (Wechsler Intelligence Scale) | Cognitive ability / IQ | EP | Intelligence Engine (via CSV) or SEND Hub (EP report upload) |
+| **BAS-3** (British Ability Scales) | Cognitive ability | EP | Intelligence Engine or EP report |
+| **CELF-5** (Clinical Evaluation of Language) | Receptive/expressive language | SALT | SEND Hub (SALT report) |
+| **BPVS-3** (British Picture Vocabulary Scale) | Receptive vocabulary | SALT / EP | SEND Hub or Intelligence Engine |
+| **YARC** (York Assessment of Reading) | Reading accuracy, rate, comprehension | School / EP | Intelligence Engine (pupil assessments) |
+| **WRAT-5** (Wide Range Achievement Test) | Reading, spelling, maths | EP | EP report or Intelligence Engine |
+| **Boxall Profile** | Social/emotional/behavioural development | SENCO / class teacher | SEND Hub (SEMH assessment tracker) |
+| **SDQ** (Strengths & Difficulties Questionnaire) | Emotional/behavioural screening | School / parents / clinicians | SEND Hub (SEMH tracker) or Surveys |
+| **Conners Rating Scales** | ADHD screening | Paediatrician | SEND Hub (medical report) |
+| **ADOS-2** (Autism Diagnostic Observation) | ASD diagnosis | Specialist clinician | SEND Hub (medical report) |
+| **Sensory Profile** (Dunn) | Sensory processing | OT | SEND Hub (OT report) |
+| **Movement ABC-2** | Motor coordination / DCD | OT / Physio | SEND Hub (OT/physio report) |
+| **B-Squared** | SEN-specific progress (SLD/PMLD) | School | Intelligence Engine (specialist import) |
+| **PIVATS** | Value-added target setting | School | Intelligence Engine (specialist import) |
+
+---
+
+## 11. Evidence Quality: What Makes Applications Succeed or Fail
+
+### Common Reasons SEND Panels Reject Applications
+
+| Rejection Reason | What Our AI Checks |
+|-----------------|-------------------|
+| "Insufficient graduated approach evidence" | Are there 2+ complete APDR cycles? Are targets SMART? |
+| "Child is making progress" | Does progress data show rate of progress, not just attainment? Is the gap widening? |
+| "Needs being met by current provision" | Does provision map show costs exceeding £6,000? Is there evidence provision is unsustainable? |
+| "Lack of quantified targets" | Are IEP/support plan targets specific and measurable? |
+| "No evidence of intervention impact" | Do intervention logs show what was tried, for how long, and what happened? |
+| "Professional reports not yet implemented" | Has the school acted on existing EP/SALT/OT recommendations? |
+
+### Critical Legal Points for Ed's AI Coaching
+
+1. **The threshold is "may"** — schools only need to show a child *may* have needs requiring an EHCP, not prove it definitively
+2. **No diagnosis required** — the SEND CoP is clear that a medical diagnosis is not necessary for an EHCP
+3. **"Despite" is the key word** — evidence must show lack of progress *despite* relevant and purposeful action
+4. **Quantitative beats qualitative** — standardised scores and percentiles are more compelling than narrative descriptions
+5. **Tribunal success is high** — refusal-to-assess appeals have a high success rate at the First-tier Tribunal (SEND)
+6. **Parents can submit their own evidence** — there is no legal requirement to use the LA's template for parent views
+
+---
+
 ## Sources
 
 ### SEND Code of Practice
@@ -543,3 +610,13 @@ When a SENCO asks Ed "Is this EHCP application strong enough?", Ed analyses:
 - [BPS: Standards for EP Reports](https://www.bps.org.uk/) — Educational Psychology report structure
 - [RCSLT: SALT Report Standards](https://www.rcslt.org/) — Speech & Language Therapy reporting
 - [RCOT: OT Report Standards](https://www.rcot.co.uk/) — Occupational Therapy reporting
+- [AEP: Guidance for EPs providing EHCNA advice](https://www.aep.org.uk/) — EP report structure for statutory assessments
+
+### Additional Research Sources
+- [Special Needs Jungle: What evidence do I need?](https://www.specialneedsjungle.com/send-law-research/special-needs/what-evidence-do-i-need-to-collect-to-apply-for-an-ehc-plan/)
+- [Education Advocacy: EHCP Annual Review Guide](https://educationadvocacy.co.uk/what-is-a-ehcp/ehcp-annual-review-guide/)
+- [IPSEA: Refusal to Assess Appeals](https://www.ipsea.org.uk/refusal-to-assess-appeals)
+- [Evisense: SEND Evidence System](https://evisense.com/send/) — Competitor for photo/video evidence
+- [Structural Learning: 2025 Guide to EHCPs](https://www.structural-learning.com/post/ehcps)
+- [KELSI Kent: EHC Needs Assessment Requests](https://www.kelsi.org.uk/special-education-needs/special-educational-needs/education,-health-and-care/Education-Health-and-Care-EHC-Needs-Assessments-requests) — LA-specific forms example
+- [SENsible SENCO: Provision Mapping Resources](https://sensiblesenco.org.uk/senco-hub/sen-resource-library/) — Provision mapping templates
