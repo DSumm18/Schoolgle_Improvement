@@ -340,65 +340,136 @@ By building SEND Hub now with a flexible, modern architecture:
 | **Pupil Assessment Analyser** (`pupil-assessment-analyser.ts`) | Gap analysis feeds into band validation — FSM/SEND/PP intersections |
 | **School Intelligence Engine** (`school-intelligence-engine.ts`) | DfE data trends, cohort tracking, contextual factors |
 | **Ed SEND Specialist Agent** (`agents.ts`) | Already has 60+ SEND routing keywords. Add funding skills. |
-| **Skills Registry** (`school-skills-registry.ts`) | Add SEND Hub skill group (6-8 functions) |
+| **Skills Registry** (`school-skills-registry.ts`) | Add SEND Hub skill group (12 functions) |
 | **Staff Directory** (`staff-directory.ts`) | Link provision costs to staff assignments |
 | **Module Registry** (`registry.ts`) | Register as new module with accent colour and icon |
 | **Protected Route Pattern** (`api-utils.ts`) | All API routes use existing auth middleware |
 | **Supabase + RLS** | Organization-based access control for SEND data |
 
-### New Database Tables Needed
+### Existing SEND Module (60-70% Built)
+
+The codebase already contains a substantial SEND module with 4 database tables and full CRUD APIs:
+
+| Component | Status | What It Does |
+|-----------|--------|-------------|
+| `send_register` table + `/api/send/register` | Built | Full SEN register: pupil_code, sen_status (K/E/monitoring), primary/secondary need, EHCP tracking, key_worker, parent_views, pupil_views |
+| `send_graduated_approach` table + `/api/send/graduated-approach` | Built | APDR cycle tracking: 4-stage workflow (assess→plan→do→review), targets, outcomes, evidence references |
+| `send_provision_map` table + `/api/send/provision-map` | Built | Costed provisions: intervention types, frequency, duration, cost, funding source, impact rating |
+| `send_referrals` table + `/api/send/referrals` | Built | External agency referrals: 10 referral types, full lifecycle tracking, outcome recording |
+| `/dashboard/send` page | Built | Multi-tab SENCO dashboard with register, provisions, referrals views |
+| `/api/send/dashboard` | Built | SENCO dashboard statistics endpoint |
+| Ed SEND Specialist Agent | Built | NASENCO-qualified AI persona with 30+ SEND keywords for routing |
+
+### 14 Cross-Module Integration Points
+
+SEND Hub is an **orchestration layer** — it connects existing modules rather than replacing them. Full details in `EVIDENCE_ECOSYSTEM.md`.
+
+| # | Module | Integration | Key Value |
+|---|--------|------------|-----------|
+| 1 | **Meetings** | Annual review recording → AI transcript → evidence pack | Recorded meetings become submission-ready evidence |
+| 2 | **Surveys** | Parent/pupil views questionnaires → linked to pupil | Statutory requirement met digitally, multi-language |
+| 3 | **Document Production** | Auto-generate SENCO reports, one-page profiles, governor reports | Hours of Word template work → minutes |
+| 4 | **Intelligence Engine** | Assessment gap analysis, cohort tracking, DfE benchmarks | Data-driven evidence for band validation |
+| 5 | **Staff Directory** | Staff hourly rates → auto-calculate provision costs | Provision map costs always accurate and up-to-date |
+| 6 | **Risk Register** | Risk assessments for complex needs pupils | Evidence of environmental modifications |
+| 7 | **Compliance** | SEND policy, accessibility plan, SEN Information Report | Statutory documents linked to SEND profile |
+| 8 | **Governance** | Governor SEND reports, monitoring visit records | Evidence of governor oversight |
+| 9 | **Actions Hub** | Post-review actions with EEF-backed interventions | Track improvement actions with research backing |
+| 10 | **SDP** | SEND priorities in school development plan | Strategic SEND goals linked to provision |
+| 11 | **SEF** | SEND evidence feeds into self-evaluation | Automated SEF SEND sections |
+| 12 | **Cloud Storage** | Auto-detect SEND documents in Google Drive/OneDrive | EP reports found in shared drives auto-linked |
+| 13 | **Email Service** | LA deadline chasers, parent notifications, report requests | Automated communications when deadlines approach |
+| 14 | **Behaviour Module** | Behaviour logs for SEMH pupils | Evidence of behavioural needs for EHCP applications |
+
+### Database Tables
+
+#### Already Built (migration: `20260311_safeguarding_attendance_send_behaviour.sql`)
 
 ```sql
--- LA banding configuration
-sen_funding_configs (la_code, funding_year, band_system_type, payment_schedule)
+-- These 4 tables already exist with full CRUD APIs
+send_register (org_id, pupil_code, pupil_name, year_group, sen_status, primary_need, secondary_need,
+               ehcp_start_date, ehcp_review_date, key_worker, parent_views, pupil_views, ...)
+send_graduated_approach (register_id, cycle_number, stage, assess_date, plan_date, do_start,
+                         review_date, targets, outcomes, evidence_refs, ...)
+send_provision_map (register_id, provision_type, intervention_name, frequency, duration,
+                    cost_per_session, funding_source, impact_rating, ...)
+send_referrals (register_id, referral_type, agency_name, referral_date, status, outcome, ...)
+```
+
+#### New Tables Needed
+
+```sql
+-- LA banding configuration (the financial intelligence moat)
+sen_funding_configs (la_code, la_name, funding_year, band_system_type, payment_schedule, notes)
 sen_funding_bands (config_id, band_id, band_name, value_mainstream, value_special, value_arp, value_post16, descriptors)
 
--- Pupil SEND records (pseudonymised)
-sen_pupil_records (org_id, pupil_hash, upn_hash, sen_status, primary_need, secondary_need, ehcp_start_date, current_band, placement_type)
+-- Funding tracking (links to existing send_register)
+sen_funding_allocations (register_id, funding_year, la_code, band_id, allocated_amount, actual_received, variance, notes)
+sen_funding_schedules (org_id, la_code, period, import_date, raw_data, status, file_reference)
 
--- Funding tracking
-sen_funding_allocations (pupil_id, funding_year, la_code, band_id, allocated_amount, actual_received, variance, notes)
-sen_funding_schedules (org_id, la_code, period, import_date, status, file_reference)
+-- EHCP lifecycle (extends existing send_register)
+sen_ehcp_applications (register_id, request_date, la_decision_date, assessment_start, draft_ehcp_date,
+                       final_ehcp_date, status, evidence_score, timeline_status)
+sen_annual_reviews (register_id, due_date, meeting_id, submitted_to_la_date, la_response_date,
+                    outcome, band_change_requested, new_band_id, la_response_notes)
 
--- Provision costing
-sen_provisions (pupil_id, provision_type, staff_id, hours_per_week, hourly_rate, annual_cost, start_date, end_date)
-
--- EHCP lifecycle
-sen_ehcp_applications (pupil_id, request_date, decision_date, status, evidence_score)
-sen_annual_reviews (pupil_id, due_date, meeting_date, submitted_to_la_date, la_response_date, outcome, band_change)
-
--- APDR cycles
-sen_apdr_cycles (pupil_id, cycle_number, assess_date, plan_date, do_start, review_date, outcome, targets, evidence_refs)
+-- Evidence file storage (for external professional reports, photos, etc.)
+sen_evidence_files (register_id, file_name, file_type, file_path, professional_name,
+                    professional_role, report_date, ai_extracted_text, ai_summary, access_level, tags)
 ```
 
-### New API Routes
+### API Routes
 
+#### Already Built
 ```
-/api/send/register          — CRUD for SEND register
-/api/send/import             — MIS CSV import
-/api/send/funding/config     — LA banding configuration
+/api/send/register          — Full CRUD for SEND register (GET, POST)
+/api/send/register/[id]     — Individual pupil CRUD (GET, PUT, DELETE)
+/api/send/dashboard         — SENCO dashboard statistics
+/api/send/graduated-approach — APDR cycle CRUD (GET, POST)
+/api/send/graduated-approach/[id] — Individual cycle CRUD (GET, PUT, DELETE)
+/api/send/provision-map     — Costed provision CRUD (GET, POST)
+/api/send/referrals         — External referral CRUD (GET, POST)
+```
+
+#### New API Routes Needed
+```
+/api/send/import             — MIS CSV import (Arbor/SIMS/Bromcom)
+/api/send/funding/config     — LA banding configuration CRUD
+/api/send/funding/bands      — Band values per LA per year
 /api/send/funding/schedule   — Import/manage LA funding schedules
-/api/send/funding/reconcile  — Run reconciliation
-/api/send/funding/forecast   — Income projections
-/api/send/ehcp               — EHCP lifecycle management
-/api/send/reviews             — Annual review CRUD and tracking
-/api/send/provisions          — Costed provision management
-/api/send/apdr               — Graduated approach cycles
-/api/send/reports             — Dashboard and governor reports
+/api/send/funding/reconcile  — Run reconciliation engine
+/api/send/funding/forecast   — Income projections + scenarios
+/api/send/ehcp               — EHCP application lifecycle
+/api/send/ehcp/[id]/timeline — 20-week statutory timeline
+/api/send/reviews            — Annual review CRUD + tracking
+/api/send/reviews/calendar   — Upcoming reviews with deadline status
+/api/send/evidence           — File upload/management for external reports
+/api/send/reports            — Dashboard, governor, and benchmarking reports
 ```
 
-### New Ed Skills (for AI Assistant)
+### Ed Skills (for AI Assistant)
 
 ```
-SEND_HUB (8 functions):
+SEND_HUB (12 functions):
+-- Funding Intelligence
 - get_send_register          — List all SEND pupils with status/band/funding
 - run_funding_reconciliation — Compare school register vs LA schedule
 - get_funding_forecast       — Project income based on current cohort
 - validate_band_allocation   — AI check: does evidence support current band?
 - build_escalation_case      — Generate evidence summary for band review
+
+-- Evidence & Workflow
+- score_ehcp_application     — Rate strength of EHCP evidence pack (0-100)
+- get_missing_evidence       — What's missing from the evidence pack
+- summarise_professional_reports — AI summary of uploaded EP/SALT/OT reports
+
+-- Calendar & Tracking
 - get_review_calendar        — Upcoming annual reviews and deadlines
+- prepare_annual_review      — Pre-populate review pack from all modules
+- track_ehcp_timeline        — 20-week application progress
+
+-- Reporting
 - generate_governor_report   — Auto-generate termly SEND report
-- score_ehcp_application     — Rate strength of EHCP evidence pack
 ```
 
 ---
