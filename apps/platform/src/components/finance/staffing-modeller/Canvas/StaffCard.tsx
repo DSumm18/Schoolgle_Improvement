@@ -5,7 +5,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { X } from "lucide-react";
 import type { ScenarioPost, StaffPost } from "@/types/staffing";
 import { TIER_CONFIG } from "../tier-config";
-import { fmt, DEFAULT_TIER, SCENARIO_STATUS } from "../utils";
+import { fmt, postCost, DEFAULT_TIER, SCENARIO_STATUS } from "../utils";
 
 interface StaffCardProps {
   scenarioPost: ScenarioPost & { staff_post: StaffPost };
@@ -17,8 +17,7 @@ export function StaffCard({ scenarioPost, onRelease }: StaffCardProps) {
   const tier = post.tier ?? DEFAULT_TIER;
   const config = TIER_CONFIG[tier];
   const fte = scenarioPost.override_fte ?? post.fte;
-  const salary = scenarioPost.override_salary ?? post.salary;
-  const cost = fte * salary * (1 + post.on_cost_rate);
+  const cost = postCost(scenarioPost);
   const isNew = scenarioPost.status === SCENARIO_STATUS.ADDED;
 
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({

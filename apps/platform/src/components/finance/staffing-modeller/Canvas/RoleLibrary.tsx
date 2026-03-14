@@ -3,9 +3,8 @@
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { TIER_CONFIG, TIER_ORDER, ROLE_LIBRARY } from "../tier-config";
+import { fmt } from "../utils";
 import type { Tier } from "@/types/staffing";
-
-const fmt = (n: number) => "£" + Math.round(n).toLocaleString("en-GB");
 
 interface LibraryItemProps {
   item: (typeof ROLE_LIBRARY)[number];

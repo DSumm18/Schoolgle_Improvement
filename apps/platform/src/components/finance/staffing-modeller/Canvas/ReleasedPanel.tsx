@@ -6,7 +6,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { RotateCcw } from "lucide-react";
 import type { ScenarioPost, StaffPost } from "@/types/staffing";
 import { TIER_CONFIG } from "../tier-config";
-import { fmt, DEFAULT_TIER } from "../utils";
+import { fmt, postCost, DEFAULT_TIER } from "../utils";
 
 interface ReleasedCardProps {
   scenarioPost: ScenarioPost & { staff_post: StaffPost };
@@ -17,7 +17,7 @@ function ReleasedCard({ scenarioPost, onRestore }: ReleasedCardProps) {
   const post = scenarioPost.staff_post;
   const tier = post.tier ?? DEFAULT_TIER;
   const config = TIER_CONFIG[tier];
-  const cost = (scenarioPost.override_fte ?? post.fte) * (scenarioPost.override_salary ?? post.salary) * (1 + post.on_cost_rate);
+  const cost = postCost(scenarioPost);
 
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `released-${scenarioPost.id}`,

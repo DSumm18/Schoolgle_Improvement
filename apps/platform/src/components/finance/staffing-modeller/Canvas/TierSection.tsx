@@ -3,7 +3,7 @@
 import { useDroppable } from "@dnd-kit/core";
 import type { ScenarioPost, StaffPost, Tier } from "@/types/staffing";
 import { TIER_CONFIG } from "../tier-config";
-import { fmt } from "../utils";
+import { fmt, postCost } from "../utils";
 import { StaffCard } from "./StaffCard";
 
 interface TierSectionProps {
@@ -16,11 +16,7 @@ interface TierSectionProps {
 export function TierSection({ tier, posts, payRate, onRelease }: TierSectionProps) {
   const config = TIER_CONFIG[tier];
   const activePosts = posts.filter((p) => p.status !== "released");
-  const totalCost = activePosts.reduce((a, sp) => {
-    const fte = sp.override_fte ?? sp.staff_post.fte;
-    const salary = sp.override_salary ?? sp.staff_post.salary;
-    return a + fte * salary * (1 + sp.staff_post.on_cost_rate);
-  }, 0);
+  const totalCost = activePosts.reduce((a, sp) => a + postCost(sp), 0);
 
   const { isOver, setNodeRef } = useDroppable({
     id: `tier-${tier}`,

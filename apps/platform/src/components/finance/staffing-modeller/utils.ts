@@ -1,4 +1,13 @@
-import type { Tier, ScenarioPostStatus } from "@/types/staffing";
+import type { Tier, ScenarioPost, StaffPost, ScenarioPostStatus } from "@/types/staffing";
+
+// ─── Cost calculation ─────────────────────────────────────────────
+
+/** Fully-loaded cost for a scenario post (FTE × salary × (1 + on-costs)). */
+export function postCost(sp: ScenarioPost & { staff_post: StaffPost }): number {
+  const fte = sp.override_fte ?? sp.staff_post.fte;
+  const salary = sp.override_salary ?? sp.staff_post.salary;
+  return fte * salary * (1 + sp.staff_post.on_cost_rate);
+}
 
 // ─── Currency / percentage formatters ───────────────────────────────
 
