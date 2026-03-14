@@ -7,17 +7,30 @@ import {
   CheckCircle2, AlertTriangle, XCircle, Clock, ChevronRight,
   Users
 } from "lucide-react";
-import { ConnectorCategory, ComplianceStatus } from "@/lib/connectors/types";
+import { ConnectorCategory, ComplianceStatus, CONNECTOR_CATEGORIES } from "@/lib/connectors/types";
 
-const CATEGORY_CONFIG: Record<ConnectorCategory, { label: string; icon: typeof Shield; color: string }> = {
-  safeguarding: { label: "Safeguarding", icon: Shield, color: "#dc2626" },
-  send: { label: "SEND", icon: Brain, color: "#2563eb" },
-  health_safety: { label: "Health & Safety", icon: HardHat, color: "#f59e0b" },
-  data_governance: { label: "Data & Governance", icon: Lock, color: "#7c3aed" },
-  curriculum: { label: "Curriculum", icon: GraduationCap, color: "#16a34a" },
-  estates: { label: "Estates", icon: Building, color: "#0891b2" },
-  custom: { label: "Custom", icon: Users, color: "#6b7280" },
+const ICON_MAP: Record<string, React.ComponentType<any>> = {
+  Shield, Brain, HardHat, Lock, GraduationCap, Building, Settings: Users,
 };
+
+/** Short display labels per category (full labels live in CONNECTOR_CATEGORIES). */
+const SHORT_LABELS: Record<ConnectorCategory, string> = {
+  safeguarding: "Safeguarding",
+  send: "SEND",
+  health_safety: "Health & Safety",
+  data_governance: "Data & Governance",
+  curriculum: "Curriculum",
+  estates: "Estates",
+  custom: "Custom",
+};
+
+/** Derived from the single-source CONNECTOR_CATEGORIES in types.ts. */
+const CATEGORY_CONFIG: Record<ConnectorCategory, { label: string; icon: React.ComponentType<any>; color: string }> = Object.fromEntries(
+  CONNECTOR_CATEGORIES.map((c) => [
+    c.value,
+    { label: SHORT_LABELS[c.value], icon: ICON_MAP[c.icon] ?? Users, color: c.color },
+  ]),
+) as Record<ConnectorCategory, { label: string; icon: React.ComponentType<any>; color: string }>;
 
 const STATUS_CONFIG: Record<ComplianceStatus, { label: string; icon: typeof CheckCircle2; color: string; bg: string }> = {
   compliant: { label: "Compliant", icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-50 border-emerald-200" },

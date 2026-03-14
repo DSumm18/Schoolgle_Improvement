@@ -254,6 +254,11 @@ export const CONNECTOR_CATEGORIES = [
   { value: 'custom' as const, label: 'Custom', icon: 'Settings', color: '#6b7280' },
 ] as const;
 
+/** Quick color lookup derived from CONNECTOR_CATEGORIES. */
+export const CATEGORY_COLORS: Record<ConnectorCategory, string> = Object.fromEntries(
+  CONNECTOR_CATEGORIES.map((c) => [c.value, c.color]),
+) as Record<ConnectorCategory, string>;
+
 export const SCOPE_TYPES = [
   { value: 'whole_school' as const, label: 'Whole School' },
   { value: 'key_stage' as const, label: 'Key Stage' },

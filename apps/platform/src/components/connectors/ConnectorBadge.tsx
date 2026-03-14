@@ -7,22 +7,12 @@ import {
   Cross, Baby, Flame, HardHat, Map, Lock, FileCheck,
   Flower2, Compass, GraduationCap, Settings, Building
 } from "lucide-react";
-import { ConnectorCategory } from "@/lib/connectors/types";
+import { ConnectorCategory, CATEGORY_COLORS } from "@/lib/connectors/types";
 
 const ICON_MAP: Record<string, React.ComponentType<any>> = {
   Shield, ShieldCheck, Eye, Wifi, Heart, Brain, HeartPulse,
   Cross, Baby, Flame, HardHat, Map, Lock, FileCheck,
   Flower2, Compass, GraduationCap, Settings, Building,
-};
-
-const CATEGORY_COLORS: Record<ConnectorCategory, string> = {
-  safeguarding: "#dc2626",
-  send: "#2563eb",
-  health_safety: "#f59e0b",
-  data_governance: "#7c3aed",
-  curriculum: "#16a34a",
-  estates: "#0891b2",
-  custom: "#6b7280",
 };
 
 interface ConnectorBadgeProps {
