@@ -95,16 +95,26 @@ Bradford introduced their current **Banded Model** in April 2020, replacing the 
 
 The banded model has **6 bands** (Band 1 to Band 6) with increasing levels of need and funding:
 
-| Band | Top-Up Value (indicative) | Description |
-|------|--------------------------|-------------|
-| Band 1 | Lowest | Mild/moderate needs that can be mostly met within school's SEN budget |
-| Band 2 | Low-moderate | Needs requiring some additional specialist support |
-| Band 3 | Moderate | Significant needs requiring regular specialist intervention |
-| Band 4 | Moderate-high | Complex needs requiring substantial specialist support |
-| Band 5 | High | Very complex needs requiring intensive support |
-| Band 6 | Highest | Exceptional/profound needs requiring maximum support |
+| Band | Typical Setting | Description |
+|------|----------------|-------------|
+| Band 1-2 | N/A | Below top-up threshold — school meets from own resources |
+| Band 3 (Low/High) | Mainstream | EHCP top-up for mainstream. Bottom threshold: **16 hours support/week** |
+| Band 4 (Low/High) | Specialist | EHCP Plus — typically for specialist provisions |
+| Band 5 | Specialist | Higher-level specialist needs |
+| Band 6 | Specialist/Independent | Most complex needs |
 
-**Note**: Exact £ values are set annually by Bradford Council via Schools Forum and published in the budget documents. The key documents are:
+#### How Bradford Calculates Band Values
+
+Band values are calculated using **hourly cost rates** (2024/25 values):
+- **Support Assistant time**: £17.12 per hour (1:1 bespoke or 1:3 group)
+- **Teacher time**: £50.30 per hour (group sizes 1:12, 1:8, 1:6)
+- **Band 3** = support assistant hours × £17.12
+- **Band 4** = support assistant hours × £17.12 + teacher hours × £50.30
+- **Stacking**: SEND Panel can combine more than one band value for pupils with significant secondary needs
+- **Post-16 FE colleges**: Receive **60%** of band value (reflecting ~60% of school hours), except sensory impairment which is funded on actual cost
+- **Element 2 (£6,000)** is contributed by the school in all bands, except pre-reception ages 2-4
+
+**Note**: Exact £ values per band step are set annually by Bradford Council via Schools Forum. The key documents are:
 - **"The EHCP Banded Model for Funding Pupil-Led Need Top-up"** — published annually as an appendix to the Schools Budget
 - Available at: `bradford.moderngov.co.uk` (search for EHCP Banded Model Appendix 3)
 - Latest confirmed: 2024/25 version (ID=46338), 2023/24 (ID=40945), 2022/23 (ID=36784)
@@ -163,11 +173,29 @@ Unlike Bradford's numeric bands, Leeds categorises by **area of need**:
 
 Each band has **multiple levels** within it (e.g., Level 1, Level 2, Level 3+) with increasing funding amounts. A child can receive funding from **more than one band** simultaneously.
 
-#### FFI Funding Levels
-- Leeds publishes FFI funding level documents annually: **"EYFFI / FFI Funding Levels"**
+#### FFI Funding Levels — Unit-Based System
+
+Leeds FFI uses a **unit system** rather than fixed band values:
+- Funding ranges from **4 units to 26 units** per pupil
+- Unit value: approximately **£684** per unit (subject to annual uplift)
+- **Total top-up range: £2,736 (4 units) to £17,784 (26 units)**
+- Examples:
+  - E Band Pragmatics Tier 2/3 = 10 units ≈ £6,960/year
+  - A Band Tier 1 = 8 units ≈ £5,200/year
+- Payments calculated over 12 months
+- Multiple bands can apply per pupil simultaneously
+
+Leeds publishes FFI funding level documents annually: **"EYFFI / FFI Funding Levels"**
 - Available from: `leedsforlearning.co.uk` (Key Information & Funding Levels page)
 - Latest: 2024/25 funding levels document published July 2024
 - Provisional allocations are sent to schools each year
+
+#### Important: FFI Has Ceased for New Applications (April 2025)
+- From April 2025, **FFI has ceased** for new applications
+- All high needs funding now requires an EHCP (aligning with national practice)
+- Children already on FFI continue during a **7-year transition** period until their EHCNA is completed
+- The **EHCP Multi-Agency Panel (MAP)** now makes funding decisions
+- **SENDIF** (SEN Inclusion Fund) remains for early years: £2,088 pro rata/year for 3-4 year olds with low-level needs
 
 #### SENDIF+ (New from April 2025)
 - A new funding model called **SENDIF+** was introduced from 1 April 2025
@@ -195,6 +223,22 @@ Each band has **multiple levels** within it (e.g., Level 1, Level 2, Level 3+) w
 - **Leeds Local Offer**: `leedslocaloffer.org.uk` — parent/public-facing
 - **Leeds SENDIASS**: Independent advice service
 - **Leeds Schools Forum**: Approves high needs budget
+
+### Bradford vs Leeds Comparison
+
+| Feature | Bradford | Leeds |
+|---------|----------|-------|
+| **Funding model** | EHCP Banded Model (6 bands, 6 steps) since 2020 | FFI (7 need areas, unit-based) → EHCP-only from April 2025 |
+| **EHCP required for top-up?** | Yes | Historically no (FFI), now yes |
+| **Band structure** | Bands 3-6 with Low/High steps | Bands A-G by need type, with tiers |
+| **Calculation basis** | Hourly cost (£17.12/hr support, £50.30/hr teacher) | Unit-based (~£684/unit) |
+| **Top-up range** | From Band 3 Low (16hrs/wk support) upwards | 4-26 units (£2,736-£17,784) |
+| **Stacking** | Yes, multiple bands can be combined | Multiple bands possible per pupil |
+| **Assessment portal** | Capita SEND Portal | Online form to SENSAP |
+| **Annual review deadline** | 10 days to submit report | 2 weeks to submit Review Proforma |
+| **Post-16 FE** | 60% of band value | Being reformed |
+| **DSG position** | Under pressure (Safety Valve) | Deficit (1.28% DSG), £15.8M transferred since 2017-18 |
+| **Current status** | Stable model since 2020 | Major transformation (7-year transition) |
 
 ---
 
