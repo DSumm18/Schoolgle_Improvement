@@ -47,6 +47,9 @@ SEN funding in England operates through a "Place-Plus" system with three layered
   - Lump sum allocation
 - For 2025-26, the DfE requires LAs to allocate the notional SEN budget using these NFF factor weightings
 - Schools must demonstrate they are using this £6,000 before requesting top-up
+- **DfE validation check**: If the total notional SEN budget provides less than **£1,800 per SEN Support pupil** (after deducting £6,000 per EHCP pupil), the LA must review its calculations
+- Average SEN Support pupil costs ~£3,500/year; high needs pupil ~£6,000/year
+- **The £6,000 threshold has NOT changed since 2014** — significantly eroded by inflation
 - **Key point for our module**: This £6,000 is notional — it doesn't mean a school gets £6,000 per SEN pupil. It's the amount they're expected to contribute from their overall budget before the LA provides additional funding
 
 #### Element 3: Top-Up/High Needs Funding
@@ -315,15 +318,23 @@ Schools should be able to cross-reference:
 
 ### Standard Annual Review Timeline
 
-1. **School convenes review meeting** — must be within 12 months of EHCP issue/last review (6 months for under-5s)
-2. **Invite participants** — at least 2 weeks' notice (parents, LA rep, health, social care, other professionals)
-3. **Gather reports** — school sends request for advice to all parties at least 2 weeks before
-4. **Hold meeting** — discuss outcomes, provision, progress, any changes needed
-5. **School sends paperwork to LA** — within 2 weeks of meeting
-6. **LA decision** — within 4 weeks of receiving paperwork:
-   - **Maintain** — EHCP unchanged
-   - **Amend** — EHCP updated (may include band change)
-   - **Cease** — EHCP discontinued (needs met without it)
+| Step | Timeframe |
+|------|-----------|
+| Reports circulated to all parties | **2 weeks before** meeting |
+| Annual Review meeting held | Within 12 months of last review (6 months for under-5s) |
+| School submits paperwork to LA | **10 working days** after meeting (Bradford) / **2 weeks** (Leeds) |
+| LA decides on next steps | **4 weeks** after review meeting |
+| If amending: draft amended EHCP sent | Within the 4-week decision period |
+| Parent/YP response to amendments | **15 calendar days** from receipt |
+| Final amended EHCP issued | **8 weeks** from proposed amendments |
+| **Total maximum process time** | **12 weeks** from meeting to final EHCP |
+
+LA decision options:
+- **Maintain** — EHCP unchanged
+- **Amend** — EHCP updated (may include band change)
+- **Cease** — EHCP discontinued (needs met without it)
+
+**Phase transfer deadlines**: Secondary to post-16 by **31 March**; all others by **15 February**. Year 11 leavers: review must be held **before December** of that academic year.
 
 ### When Funding Bands Can Change
 
@@ -498,6 +509,34 @@ Total SEN Expenditure = All SEN-related costs
 Net SEN Position = (Top-Up + Notional) - Expenditure
 ```
 
+### Other LA Banding Examples (for Comparison)
+
+Understanding how other LAs structure their bands helps design a flexible, configurable system:
+
+| LA | Bands | Structure | Example Values |
+|-----|-------|-----------|----------------|
+| **Ealing** | A1→E | Letter+number | B1: £364 top-up → E: £10,898 top-up |
+| **Solihull** | 2b, 2c, etc. | Numerical sub-bands | 3% uplift for 2025-26. ARPs have separate per-place funding |
+| **North Yorkshire** | 1-7 | Needs-based (not diagnosis) | Higher bands: cognitive assessment below SS 68 |
+| **Essex** | Levels 0-6 | Descriptors Matrix | Split across 4 SEND Code areas; hierarchical within each |
+| **Staffordshire** | Algorithm | Imosphere Education Banding Tool | £815 per band level. Note: EBT was **suspended** due to issues |
+| **Hertfordshire** | 7 levels | Descriptors of Need | Additional "Awaiting Specialist Placement" = £2,000/term |
+| **Sheffield** | 11 bands | Fine-grained | Points-based allocation |
+
+**Key pattern**: Most LAs have 5-11 bands. Almost all that changed banding applied **real-terms cuts**. The s.42 duty (LA must fund EHCP provision) should prevail regardless.
+
+### National Context: High Needs Crisis
+
+- As of January 2025: **1.7 million** SEND pupils in England
+- ~1.3 million on SEN Support, ~576,000 with EHCPs
+- EHCPs have **more than doubled** since 2015 (from 240,000)
+- National high needs in-year funding gaps: ~**£480 million/year** (2018-23)
+- Accumulated LA deficits: **£1.5 billion** by 2022-23
+- DSG statutory override extended to end of **2027-28**
+- Most common primary need: ASD (31.5%), SLCN (21.3%), SEMH (20.7%)
+- 71.3% of EHCP holders are male, 28.7% female
+- 43.6% in mainstream schools, 30.4% in special schools
+
 ---
 
 ## 8. Post-16 SEN Funding Differences
@@ -563,21 +602,23 @@ An Additionally Resourced Provision (ARP) is a specialist unit within a mainstre
 | **LA Expenditure** | Annual | How LAs spend their HNB |
 | **EHCP Statistics** | Annual | National/LA trends in EHCPs |
 
-### SEN2 Return Data
+### SEN2 Return Data (Person-Level since 2023)
 
-The SEN2 is a statutory return that LAs must submit annually to the DfE. Key data collected:
-- Total EHCPs by the LA
-- New EHCPs issued during the year
-- EHCPs ceased during the year
-- Timeliness of assessments (% completed within 20 weeks)
-- Placement types
-- Need type breakdowns
-- Age profiles
-- Mediation and tribunal data
+The SEN2 is a statutory return that LAs submit annually. Since 2023, it is a **person-level** collection (previously aggregated). Key modules:
+
+| Module | Data Collected |
+|--------|---------------|
+| **Module 1** | LA summary: DMO, DCO, DSCO presence |
+| **Module 2** | Person identifiers: UPN, ULN, postcode, DOB, ethnicity, sex |
+| **Module 3** | Requests & assessments: dates, decisions, 20-week compliance |
+| **Module 4** | EHCP details: start date, primary need, placement (URN/UKPRN), personal budgets |
+| **Module 5** | Ceased plans: reason for ending |
 
 **2025 headline data (England)**:
 - 22.5% rise in pupils "educated elsewhere" than in schools
 - Continued growth in EHCP numbers nationally
+- 19,600 EHCPs with personal budgets (7.3% increase YoY)
+- For the first time, tribunal data by LA and appeal rates are published
 - Many LAs not meeting 20-week timeliness targets
 
 ### Relevant DfE URLs
@@ -675,6 +716,17 @@ funding_forecast
 ├── scenario (baseline/optimistic/pessimistic)
 └── assumptions[]
 ```
+
+### Key Design Decisions
+
+Based on cross-LA research:
+
+1. **No national banding standard** — the module MUST be configurable per LA. Some use 5 bands, some 11, some use algorithms. Store band configs as LA-specific data.
+2. **Pro-rating is essential** — if a pupil starts/leaves mid-year, both the £6,000 Element 2 and top-up are pro-rated for school days on roll.
+3. **Cross-border placements** — the placing (home) LA pays top-up, not the provider LA. Must track which LA is paying for each pupil.
+4. **EHCP and funding are not linked in MIS** — Arbor/SIMS do not auto-create funding records when EHCPs are added. This is a key gap our module fills.
+5. **The £6,000 threshold is frozen since 2014** — our module should highlight the real-terms erosion and its impact on school budgets.
+6. **National banding reform is coming** — DfE's SEND & AP Improvement Plan proposes national funding bands and tariffs. Design for flexibility.
 
 ### Integration Points
 
