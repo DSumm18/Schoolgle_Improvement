@@ -7,7 +7,7 @@ import { validateBody } from "@/lib/validation";
 const transferSchema = z.object({
   connector_id: z.string().uuid(),
   to_staff_id: z.string().uuid(),
-  reason: z.string().optional(),
+  reason: z.string().max(500).optional(),
 });
 
 const bulkTransferSchema = z.object({
@@ -15,8 +15,8 @@ const bulkTransferSchema = z.object({
   transfers: z.array(z.object({
     connector_id: z.string().uuid(),
     to_staff_id: z.string().uuid(),
-  })),
-  reason: z.string().optional(),
+  })).max(50),
+  reason: z.string().max(500).optional(),
 });
 
 // POST /api/connectors/transfer - Transfer a single connector to another staff member
@@ -136,7 +136,7 @@ async function transferConnector(
       .update({ status: "active", end_date: null })
       .eq("id", connectorId);
 
-    return { error: `Failed to transfer: ${createError.message}` };
+    return { error: `Failed to transfer connector ${connectorId}` };
   }
 
   // Transfer active tasks to the new connector

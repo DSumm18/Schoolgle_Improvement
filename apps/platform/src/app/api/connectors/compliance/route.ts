@@ -3,6 +3,7 @@ import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
 
 // GET /api/connectors/compliance - Get statutory connector compliance overview
+// SLT+ only — contains per-staff training detail
 export const GET = protectedRoute(async (auth) => {
   const supabase = createServiceRoleClient();
 
@@ -15,7 +16,7 @@ export const GET = protectedRoute(async (auth) => {
 
   if (typesError) {
     console.error("Error fetching connector types:", typesError);
-    return apiError(typesError.message, 500);
+    return apiError("Failed to fetch compliance data", 500);
   }
 
   // Get all active connectors for this org
@@ -86,4 +87,4 @@ export const GET = protectedRoute(async (auth) => {
   };
 
   return apiSuccess({ summary, compliance });
-});
+}, { requiredRole: "slt" });

@@ -14,7 +14,7 @@ export const GET = protectedRoute(async (auth, request) => {
   // Get the staff member
   const { data: staff, error: staffError } = await supabase
     .from("staff_directory")
-    .select("id, first_name, last_name, display_name, job_title, email")
+    .select("id, first_name, last_name, display_name, job_title")
     .eq("id", staffId)
     .eq("organization_id", auth.organizationId)
     .single();
@@ -36,7 +36,7 @@ export const GET = protectedRoute(async (auth, request) => {
 
   if (connError) {
     console.error("Error fetching connectors:", connError);
-    return apiError(connError.message, 500);
+    return apiError("Failed to fetch connector data", 500);
   }
 
   if (!connectors || connectors.length === 0) {
@@ -178,4 +178,4 @@ export const GET = protectedRoute(async (auth, request) => {
       `${impact.filter((i: any) => i.severity === "important").length} important. ` +
       `${totalAffectedTasks} tasks will need reassignment.`,
   });
-});
+}, { requiredRole: "slt" });

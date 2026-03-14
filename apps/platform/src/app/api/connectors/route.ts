@@ -3,6 +3,7 @@ import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
 
 // GET /api/connectors - List all connectors for the organization with staff + type details
+// Requires teacher role minimum — viewers should not see staff training details
 export const GET = protectedRoute(async (auth, request) => {
   const supabase = createServiceRoleClient();
   const { searchParams } = new URL(request.url);
@@ -36,7 +37,7 @@ export const GET = protectedRoute(async (auth, request) => {
 
   if (error) {
     console.error("Error fetching connectors:", error);
-    return apiError(error.message, 500);
+    return apiError("Failed to fetch connectors", 500);
   }
 
   // If typeSlug filter, post-filter on joined data
@@ -54,7 +55,7 @@ export const GET = protectedRoute(async (auth, request) => {
   if (staffIds.length > 0) {
     const { data: staffData } = await supabase
       .from("staff_directory")
-      .select("id, first_name, last_name, display_name, job_title, email, avatar_url")
+      .select("id, first_name, last_name, display_name, job_title, avatar_url")
       .in("id", staffIds);
 
     if (staffData) {
@@ -62,12 +63,16 @@ export const GET = protectedRoute(async (auth, request) => {
     }
   }
 
+  // Strip sensitive fields from response — notes and certificate URLs
+  // are only visible in the detail/edit views, not in list responses
   const enriched = filtered.map((c: any) => ({
     ...c,
+    notes: undefined, // Do not expose free-text notes in list view
+    training_certificate_url: undefined, // Do not expose certificate URLs in list view
     connector_type: c.connector_types,
     connector_types: undefined,
     staff: staffMap[c.staff_id] || null,
   }));
 
   return apiSuccess(enriched);
-});
+}, { requiredRole: "teacher" });

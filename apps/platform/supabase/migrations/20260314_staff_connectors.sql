@@ -145,6 +145,12 @@ CREATE TABLE IF NOT EXISTS connector_tasks (
 
 -- =====================================================
 -- 4. CONNECTOR CHANGE LOG (AUDIT TRAIL)
+-- GDPR NOTE: This table retains data for compliance audit purposes.
+-- Under UK GDPR Art. 17(3)(b), retention is justified for statutory
+-- compliance obligations (tracking who held statutory roles and when).
+-- A scheduled job should purge records older than 7 years (matching
+-- standard UK employment record retention) or upon DSAR erasure request
+-- where no statutory retention obligation applies.
 -- =====================================================
 
 CREATE TABLE IF NOT EXISTS connector_change_log (
@@ -171,6 +177,10 @@ CREATE TABLE IF NOT EXISTS connector_change_log (
 
 -- =====================================================
 -- 5. CONTRACT CONNECTOR LINKS
+-- GDPR NOTE: This table stores contractor contact details (name, email,
+-- phone). These are business contacts, not personal data in most cases,
+-- but should still be included in data mapping / ROPA. Contractor contacts
+-- should be updated when contracts change and removed when contracts end.
 -- =====================================================
 
 CREATE TABLE IF NOT EXISTS contract_connector_links (
@@ -233,28 +243,63 @@ ALTER TABLE connector_tasks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE connector_change_log ENABLE ROW LEVEL SECURITY;
 ALTER TABLE contract_connector_links ENABLE ROW LEVEL SECURITY;
 
--- Connector types: org can see statutory (org_id IS NULL) + own custom
-CREATE POLICY "View connector types" ON connector_types
-  FOR SELECT USING (organization_id IS NULL OR organization_id = organization_id);
+-- NOTE: These policies apply to anon/authenticated key access.
+-- Our API routes use the service_role key (bypasses RLS) and filter
+-- by organization_id in application code. These policies are a
+-- defence-in-depth layer — if someone accesses Supabase directly
+-- with an anon key, they still can't see other orgs' data.
 
-CREATE POLICY "Manage own connector types" ON connector_types
-  FOR ALL USING (organization_id IS NOT NULL);
+-- Connector types: anyone can see statutory (org_id IS NULL),
+-- orgs can only see their own custom types
+CREATE POLICY "View statutory connector types" ON connector_types
+  FOR SELECT USING (organization_id IS NULL);
 
--- Staff connectors: org-level access
+CREATE POLICY "View own custom connector types" ON connector_types
+  FOR SELECT USING (
+    organization_id IN (
+      SELECT organization_id FROM users WHERE id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Manage own custom connector types" ON connector_types
+  FOR ALL USING (
+    organization_id IS NOT NULL AND
+    organization_id IN (
+      SELECT organization_id FROM users WHERE id = auth.uid()
+    )
+  );
+
+-- Staff connectors: org-level access only
 CREATE POLICY "Org access staff connectors" ON staff_connectors
-  FOR ALL USING (true);
+  FOR ALL USING (
+    organization_id IN (
+      SELECT organization_id FROM users WHERE id = auth.uid()
+    )
+  );
 
--- Connector tasks: org-level access
+-- Connector tasks: org-level access only
 CREATE POLICY "Org access connector tasks" ON connector_tasks
-  FOR ALL USING (true);
+  FOR ALL USING (
+    organization_id IN (
+      SELECT organization_id FROM users WHERE id = auth.uid()
+    )
+  );
 
--- Change log: org-level access
-CREATE POLICY "Org access change log" ON connector_change_log
-  FOR ALL USING (true);
+-- Change log: org-level read-only (insert via service role)
+CREATE POLICY "Org read change log" ON connector_change_log
+  FOR SELECT USING (
+    organization_id IN (
+      SELECT organization_id FROM users WHERE id = auth.uid()
+    )
+  );
 
--- Contract links: org-level access
+-- Contract links: org-level access only
 CREATE POLICY "Org access contract links" ON contract_connector_links
-  FOR ALL USING (true);
+  FOR ALL USING (
+    organization_id IN (
+      SELECT organization_id FROM users WHERE id = auth.uid()
+    )
+  );
 
 -- =====================================================
 -- 8. VIEWS

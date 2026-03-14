@@ -8,33 +8,35 @@ const assignSchema = z.object({
   staff_id: z.string().uuid(),
   connector_type_id: z.string().uuid(),
   is_primary: z.boolean().default(true),
-  scope: z.string().default("whole school"),
+  scope: z.string().max(200).default("whole school"),
   scope_type: z.enum([
     "whole_school", "key_stage", "year_group", "building", "department", "custom",
   ]).default("whole_school"),
   training_completed: z.boolean().default(false),
   training_completed_date: z.string().nullable().optional(),
   training_expiry_date: z.string().nullable().optional(),
-  training_certificate_url: z.string().nullable().optional(),
-  training_provider: z.string().nullable().optional(),
-  notes: z.string().nullable().optional(),
+  training_certificate_url: z.string().url().max(2000).nullable().optional(),
+  training_provider: z.string().max(200).nullable().optional(),
+  // NOTE: Do NOT store personal/sensitive information in notes.
+  // This field is for role-related context only (e.g. "covers Block B on Tuesdays").
+  notes: z.string().max(1000).nullable().optional(),
 });
 
 const updateSchema = z.object({
   id: z.string().uuid(),
   is_primary: z.boolean().optional(),
-  scope: z.string().optional(),
+  scope: z.string().max(200).optional(),
   scope_type: z.enum([
     "whole_school", "key_stage", "year_group", "building", "department", "custom",
   ]).optional(),
   training_completed: z.boolean().optional(),
   training_completed_date: z.string().nullable().optional(),
   training_expiry_date: z.string().nullable().optional(),
-  training_certificate_url: z.string().nullable().optional(),
-  training_provider: z.string().nullable().optional(),
+  training_certificate_url: z.string().url().max(2000).nullable().optional(),
+  training_provider: z.string().max(200).nullable().optional(),
   status: z.enum(["active", "pending_training", "expired_training", "ended"]).optional(),
   end_date: z.string().nullable().optional(),
-  notes: z.string().nullable().optional(),
+  notes: z.string().max(1000).nullable().optional(),
 });
 
 // POST /api/connectors/assign - Assign a connector to a staff member
@@ -86,7 +88,7 @@ export const POST = protectedRoute(
       if (error.code === "23505") {
         return apiError("This staff member already has this connector in this scope", 409);
       }
-      return apiError(error.message, 500);
+      return apiError("Failed to assign connector", 500);
     }
 
     // Auto-generate tasks from connector type definition
@@ -155,7 +157,7 @@ export const PUT = protectedRoute(
 
     if (error) {
       console.error("Error updating connector:", error);
-      return apiError(error.message, 500);
+      return apiError("Failed to update connector", 500);
     }
 
     // Log training update if training fields changed
@@ -167,7 +169,11 @@ export const PUT = protectedRoute(
         change_type: "training_updated",
         to_staff_id: connector.staff_id,
         changed_by: auth.userId,
-        details: updateData,
+        details: {
+          training_completed: updateData.training_completed,
+          training_expiry_date: updateData.training_expiry_date,
+          training_completed_date: updateData.training_completed_date,
+        },
       });
     }
 
@@ -204,7 +210,7 @@ export const DELETE = protectedRoute(
 
     if (error) {
       console.error("Error removing connector:", error);
-      return apiError(error.message, 500);
+      return apiError("Failed to remove connector", 500);
     }
 
     // Log

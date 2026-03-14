@@ -28,7 +28,7 @@ export default function ConnectorsPage() {
 
   // Data fetching
   const { data: complianceData, isLoading: compLoading } = useSWR(
-    organizationId ? "/api/connectors/compliance" : null,
+    organizationId && canManage ? "/api/connectors/compliance" : null,
     fetcher
   );
 
@@ -40,14 +40,17 @@ export default function ConnectorsPage() {
   );
 
   const { data: staff = [] } = useSWR(
-    organizationId && activeTab === "impact" ? "/api/staff" : null,
+    organizationId && activeTab === "impact" && canManage ? "/api/staff" : null,
     fetcher
   );
 
   const tabs = [
     { id: "compliance" as const, label: "Compliance", icon: Shield },
     { id: "all" as const, label: "All Connectors", icon: Users },
-    { id: "impact" as const, label: "Impact Analysis", icon: UserMinus },
+    // Impact Analysis contains sensitive leaving/replacement data — SLT+ only
+    ...(canManage
+      ? [{ id: "impact" as const, label: "Impact Analysis", icon: UserMinus }]
+      : []),
   ];
 
   // Filter connectors

@@ -108,7 +108,6 @@ export interface StaffConnector {
     last_name: string;
     display_name: string;
     job_title: string;
-    email: string;
     avatar_url: string | null;
   };
 }

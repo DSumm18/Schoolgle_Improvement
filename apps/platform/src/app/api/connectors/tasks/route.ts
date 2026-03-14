@@ -6,8 +6,8 @@ import { validateBody } from "@/lib/validation";
 
 const completeTaskSchema = z.object({
   id: z.string().uuid(),
-  completion_notes: z.string().optional(),
-  completion_evidence_url: z.string().optional(),
+  completion_notes: z.string().max(1000).optional(),
+  completion_evidence_url: z.string().url().max(2000).optional(),
 });
 
 // GET /api/connectors/tasks - List tasks for the current user or all org tasks
@@ -47,7 +47,7 @@ export const GET = protectedRoute(async (auth, request) => {
 
   if (error) {
     console.error("Error fetching tasks:", error);
-    return apiError(error.message, 500);
+    return apiError("Failed to fetch tasks", 500);
   }
 
   // Filter by staff if requested
@@ -123,7 +123,7 @@ export const POST = protectedRoute(async (auth, request) => {
 
   if (updateError) {
     console.error("Error completing task:", updateError);
-    return apiError(updateError.message, 500);
+    return apiError("Failed to complete task", 500);
   }
 
   // If recurring, create next instance
