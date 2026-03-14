@@ -97,6 +97,7 @@ export interface ICFPScenarioSnapshot {
 export interface ICFPMetrics {
   totalIncome: number;
   totalStaffingCost: number;
+  baselineCost: number;
   staffingPct: number;
   pupilTeacherRatio: number;
   averageTeacherCost: number;

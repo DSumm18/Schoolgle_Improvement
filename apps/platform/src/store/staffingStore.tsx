@@ -41,6 +41,10 @@ const initialState: StaffingState = {
   loading: true,
 };
 
+// ─── Constants ──────────────────────────────────────────────────────
+
+const DEFAULT_TIER: Tier = "support";
+
 // ─── Actions ────────────────────────────────────────────────────────
 
 type StaffingAction =
@@ -100,11 +104,22 @@ function staffingReducer(state: StaffingState, action: StaffingAction): Staffing
   }
 }
 
+// ─── Cost calculation helper ────────────────────────────────────────
+
+function postCost(
+  sp: ScenarioPost & { staff_post: StaffPost },
+): number {
+  const fte = sp.override_fte ?? sp.staff_post.fte;
+  const salary = sp.override_salary ?? sp.staff_post.salary;
+  return fte * salary * (1 + sp.staff_post.on_cost_rate);
+}
+
 // ─── Computed Metrics ───────────────────────────────────────────────
 
 function computeMetrics(
-  scenarioPosts: (ScenarioPost & { staff_post: StaffPost })[],
+  activePosts: (ScenarioPost & { staff_post: StaffPost })[],
   schoolSettings: SchoolSettings | null,
+  baselineCost: number,
 ): ICFPMetrics {
   const tiers: Tier[] = ["headteacher", "slt", "teachers", "tas", "support", "volunteers"];
   const tierBreakdown = {} as Record<Tier, { cost: number; fte: number; count: number }>;
@@ -113,7 +128,6 @@ function computeMetrics(
     tierBreakdown[t] = { cost: 0, fte: 0, count: 0 };
   }
 
-  const activePosts = scenarioPosts.filter((sp) => sp.status !== "released");
   let totalCost = 0;
   let totalFte = 0;
   let teacherFte = 0;
@@ -121,13 +135,12 @@ function computeMetrics(
   for (const sp of activePosts) {
     const post = sp.staff_post;
     const fte = sp.override_fte ?? post.fte;
-    const salary = sp.override_salary ?? post.salary;
-    const cost = fte * salary * (1 + post.on_cost_rate);
+    const cost = postCost(sp);
 
     totalCost += cost;
     totalFte += fte;
 
-    const tier = post.tier ?? "support";
+    const tier = post.tier ?? DEFAULT_TIER;
     tierBreakdown[tier].cost += cost;
     tierBreakdown[tier].fte += fte;
     tierBreakdown[tier].count += 1;
@@ -157,6 +170,7 @@ function computeMetrics(
   return {
     totalIncome,
     totalStaffingCost: totalCost,
+    baselineCost,
     staffingPct,
     pupilTeacherRatio: ptr,
     averageTeacherCost,
@@ -170,17 +184,50 @@ function computeMetrics(
   };
 }
 
+// ─── Derived post lists ─────────────────────────────────────────────
+
+type ScenarioPostWithStaff = ScenarioPost & { staff_post: StaffPost };
+
+function derivePostLists(scenarioPosts: ScenarioPostWithStaff[]) {
+  const activePosts: ScenarioPostWithStaff[] = [];
+  const releasedPosts: ScenarioPostWithStaff[] = [];
+  const addedPosts: ScenarioPostWithStaff[] = [];
+  const postsByTier = new Map<Tier, ScenarioPostWithStaff[]>();
+
+  for (const sp of scenarioPosts) {
+    if (sp.status === "released") {
+      releasedPosts.push(sp);
+    } else {
+      activePosts.push(sp);
+      if (sp.status === "added") addedPosts.push(sp);
+      const tier = sp.staff_post.tier ?? DEFAULT_TIER;
+      const arr = postsByTier.get(tier);
+      if (arr) arr.push(sp);
+      else postsByTier.set(tier, [sp]);
+    }
+  }
+
+  return { activePosts, releasedPosts, addedPosts, postsByTier };
+}
+
 // ─── Context ────────────────────────────────────────────────────────
+
+interface DerivedPosts {
+  activePosts: ScenarioPostWithStaff[];
+  releasedPosts: ScenarioPostWithStaff[];
+  addedPosts: ScenarioPostWithStaff[];
+  postsByTier: Map<Tier, ScenarioPostWithStaff[]>;
+}
 
 interface StaffingContextValue {
   state: StaffingState;
   computedMetrics: ICFPMetrics;
+  derived: DerivedPosts;
   dispatch: React.Dispatch<StaffingAction>;
-  // Convenience actions
   switchScenario: (scenarioId: string) => void;
   releasePost: (scenarioPostId: string) => void;
   restorePost: (scenarioPostId: string) => void;
-  addPost: (scenarioPost: ScenarioPost & { staff_post: StaffPost }) => void;
+  addPost: (scenarioPost: ScenarioPostWithStaff) => void;
   updatePayAssumptions: (assumptions: PayAssumption[]) => void;
 }
 
@@ -195,7 +242,7 @@ interface StaffingProviderProps {
     staffPosts: StaffPost[];
     scenarios: StaffingScenario[];
     activeScenarioId: string | null;
-    scenarioPosts: (ScenarioPost & { staff_post: StaffPost })[];
+    scenarioPosts: ScenarioPostWithStaff[];
     payAssumptions: PayAssumption[];
   };
 }
@@ -226,7 +273,7 @@ export function StaffingProvider({ children, initialData }: StaffingProviderProp
   );
 
   const addPost = useCallback(
-    (scenarioPost: ScenarioPost & { staff_post: StaffPost }) =>
+    (scenarioPost: ScenarioPostWithStaff) =>
       dispatch({ type: "ADD_SCENARIO_POST", payload: scenarioPost }),
     [],
   );
@@ -237,15 +284,28 @@ export function StaffingProvider({ children, initialData }: StaffingProviderProp
     [],
   );
 
+  // Derive post lists once — consumed by all views
+  const derived = useMemo(
+    () => derivePostLists(state.scenarioPosts),
+    [state.scenarioPosts],
+  );
+
+  // Compute baseline cost from raw staffPosts (the "before" state)
+  const baselineCost = useMemo(
+    () => state.staffPosts.reduce((a, p) => a + p.salary * p.fte * (1 + p.on_cost_rate), 0),
+    [state.staffPosts],
+  );
+
   const computedMetrics = useMemo(
-    () => computeMetrics(state.scenarioPosts, state.schoolSettings),
-    [state.scenarioPosts, state.schoolSettings],
+    () => computeMetrics(derived.activePosts, state.schoolSettings, baselineCost),
+    [derived.activePosts, state.schoolSettings, baselineCost],
   );
 
   const value = useMemo<StaffingContextValue>(
     () => ({
       state,
       computedMetrics,
+      derived,
       dispatch,
       switchScenario,
       releasePost,
@@ -253,7 +313,7 @@ export function StaffingProvider({ children, initialData }: StaffingProviderProp
       addPost,
       updatePayAssumptions,
     }),
-    [state, computedMetrics, switchScenario, releasePost, restorePost, addPost, updatePayAssumptions],
+    [state, computedMetrics, derived, switchScenario, releasePost, restorePost, addPost, updatePayAssumptions],
   );
 
   return (

@@ -3,10 +3,8 @@
 import { useMemo } from "react";
 import { useStaffing } from "@/store/staffingStore";
 import { TIER_CONFIG, CODE_ORDER, DFE_CODES, MONTHS } from "./tier-config";
-import type { ScenarioPost, StaffPost, Tier } from "@/types/staffing";
-
-const fmt = (n: number) => "£" + Math.round(n).toLocaleString("en-GB");
-const fk = (n: number) => "£" + Math.round(n / 1000) + "k";
+import { fmt, fk, DEFAULT_TIER } from "./utils";
+import type { StaffPost, Tier } from "@/types/staffing";
 
 function monthCost(
   post: StaffPost,
@@ -40,8 +38,8 @@ function monthCost(
 }
 
 export function MonthlyView() {
-  const { state } = useStaffing();
-  const activePosts = state.scenarioPosts.filter((sp) => sp.status !== "released");
+  const { derived } = useStaffing();
+  const { activePosts } = derived;
 
   // Default pay config — in production wired from PayAssumptionsBar
   const payConfig: Record<string, { rate: number; mo: number }> = {
@@ -55,7 +53,7 @@ export function MonthlyView() {
   const yr = new Date().getFullYear();
 
   const visCodes = useMemo(
-    () => CODE_ORDER.filter((c) => activePosts.some((sp) => getCode(sp.staff_post.tier ?? "support") === c)),
+    () => CODE_ORDER.filter((c) => activePosts.some((sp) => getCode(sp.staff_post.tier ?? DEFAULT_TIER) === c)),
     [activePosts],
   );
 
@@ -82,7 +80,7 @@ export function MonthlyView() {
       visCodes.forEach((c) => { byCode[c] = 0; });
 
       activePosts.forEach((sp) => {
-        const tier = sp.staff_post.tier ?? "support";
+        const tier = sp.staff_post.tier ?? DEFAULT_TIER;
         const pg = getPayGroup(tier);
         const pay = payConfig[pg];
         const code = getCode(tier);

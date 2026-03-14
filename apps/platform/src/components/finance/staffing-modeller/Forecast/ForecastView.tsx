@@ -3,10 +3,8 @@
 import { useMemo } from "react";
 import { useStaffing } from "@/store/staffingStore";
 import { TIER_CONFIG, TIER_ORDER, CODE_ORDER, DFE_CODES } from "../tier-config";
+import { fmt, DEFAULT_TIER } from "../utils";
 import type { ScenarioPost, StaffPost, Tier } from "@/types/staffing";
-
-const fmt = (n: number) => "£" + Math.round(n).toLocaleString("en-GB");
-const fk = (n: number) => "£" + Math.round(n / 1000) + "k";
 
 function projAnnual(
   post: StaffPost,
@@ -20,23 +18,21 @@ function projAnnual(
   return fte * salary * Math.pow(1 + payRate, year) * (1 + post.on_cost_rate);
 }
 
+const getRate = (tier: Tier) => {
+  const pg = TIER_CONFIG[tier].payGroup;
+  const rates: Record<string, number> = { head: 0.055, teacher: 0.055, support: 0.04 };
+  return rates[pg] ?? 0.05;
+};
+
+const getCode = (tier: Tier) => TIER_CONFIG[tier].dfeCode;
+
 export function ForecastView() {
-  const { state, computedMetrics: m } = useStaffing();
+  const { state, derived } = useStaffing();
   const roll = state.schoolSettings?.roll ?? 420;
   const gag = state.schoolSettings?.gag_per_pupil ?? 5200;
   const income = roll * gag;
 
-  // Default pay rates — in a real app these would come from PayAssumptionsBar
-  const payRates: Record<string, number> = {
-    head: 0.055,
-    teacher: 0.055,
-    support: 0.04,
-  };
-
-  const getRate = (tier: Tier) => payRates[TIER_CONFIG[tier].payGroup] ?? 0.05;
-  const getCode = (tier: Tier) => TIER_CONFIG[tier].dfeCode;
-
-  const activePosts = state.scenarioPosts.filter((sp) => sp.status !== "released");
+  const { activePosts } = derived;
   const baselinePosts = state.staffPosts;
 
   const yr = new Date().getFullYear();
@@ -46,26 +42,36 @@ export function ForecastView() {
     `${yr + 2}/${(yr + 3).toString().slice(-2)}`,
   ];
 
-  const projScenario = (posts: (ScenarioPost & { staff_post: StaffPost })[], Y: number) =>
-    posts.reduce((a, sp) => a + projAnnual(sp.staff_post, sp.override_fte, sp.override_salary, Y, getRate(sp.staff_post.tier ?? "support")), 0);
+  // Memoize all projections in a single pass
+  const projections = useMemo(() => {
+    const bv = [1, 2, 3].map((Y) =>
+      baselinePosts.reduce((a, p) => a + p.fte * p.salary * Math.pow(1 + getRate(p.tier ?? DEFAULT_TIER), Y) * (1 + p.on_cost_rate), 0),
+    );
+    const mv = [1, 2, 3].map((Y) =>
+      activePosts.reduce((a, sp) => a + projAnnual(sp.staff_post, sp.override_fte, sp.override_salary, Y, getRate(sp.staff_post.tier ?? DEFAULT_TIER)), 0),
+    );
 
-  const projBaseline = (Y: number) =>
-    baselinePosts.reduce((a, p) => a + p.fte * p.salary * Math.pow(1 + getRate(p.tier ?? "support"), Y) * (1 + p.on_cost_rate), 0);
+    // Per-post projections for the table
+    const perPost = activePosts.map((sp) => {
+      const tier = sp.staff_post.tier ?? DEFAULT_TIER;
+      const rate = getRate(tier);
+      return [1, 2, 3].map((Y) => projAnnual(sp.staff_post, sp.override_fte, sp.override_salary, Y, rate));
+    });
 
-  const bv = [projBaseline(1), projBaseline(2), projBaseline(3)];
-  const mv = [projScenario(activePosts, 1), projScenario(activePosts, 2), projScenario(activePosts, 3)];
-
-  // DfE code breakdown
-  const codeData = useMemo(() => {
-    return CODE_ORDER.map((code) => {
-      const posts = activePosts.filter((sp) => getCode(sp.staff_post.tier ?? "support") === code);
-      if (posts.length === 0) return null;
-      const totals = [1, 2, 3].map((Y) =>
-        posts.reduce((a, sp) => a + projAnnual(sp.staff_post, sp.override_fte, sp.override_salary, Y, getRate(sp.staff_post.tier ?? "support")), 0),
-      );
-      return { code, ...DFE_CODES[code], count: posts.length, totals };
+    // DfE code breakdown
+    const codeData = CODE_ORDER.map((code) => {
+      const indices = activePosts
+        .map((sp, i) => (getCode(sp.staff_post.tier ?? DEFAULT_TIER) === code ? i : -1))
+        .filter((i) => i >= 0);
+      if (indices.length === 0) return null;
+      const totals = [0, 1, 2].map((yi) => indices.reduce((a, i) => a + perPost[i][yi], 0));
+      return { code, ...DFE_CODES[code as keyof typeof DFE_CODES], count: indices.length, totals };
     }).filter(Boolean) as { code: string; label: string; col: string; bg: string; count: number; totals: number[] }[];
-  }, [activePosts]);
+
+    return { bv, mv, perPost, codeData };
+  }, [activePosts, baselinePosts]);
+
+  const { bv, mv, perPost, codeData } = projections;
 
   return (
     <div className="p-3 flex flex-col gap-3">
@@ -158,7 +164,7 @@ export function ForecastView() {
           <tbody>
             {activePosts.map((sp, ri) => {
               const p = sp.staff_post;
-              const tier = p.tier ?? "support";
+              const tier = p.tier ?? DEFAULT_TIER;
               const config = TIER_CONFIG[tier];
               const code = config.dfeCode;
               const cd = DFE_CODES[code as keyof typeof DFE_CODES];
@@ -177,15 +183,14 @@ export function ForecastView() {
                   </td>
                   <td className="px-2 py-1 text-[9px] text-slate-500 dark:text-slate-400">{(rate * 100).toFixed(1)}%</td>
                   <td className="px-2 py-1 text-right">{fmt(salary * fte)}</td>
-                  {[1, 2, 3].map((Y) => (
-                    <td key={Y} className="px-2 py-1 text-right text-blue-700 dark:text-blue-400">
-                      {fmt(projAnnual(p, sp.override_fte, sp.override_salary, Y, rate))}
+                  {perPost[ri].map((cost, yi) => (
+                    <td key={yi} className="px-2 py-1 text-right text-blue-700 dark:text-blue-400">
+                      {fmt(cost)}
                     </td>
                   ))}
                 </tr>
               );
             })}
-            {/* Total row */}
             <tr className="bg-slate-100 dark:bg-slate-800/50 border-t border-slate-300 dark:border-slate-600">
               <td colSpan={4} className="px-2 py-1 font-medium">Total (incl. on-costs)</td>
               <td className="px-2 py-1 text-right font-medium">
@@ -195,8 +200,8 @@ export function ForecastView() {
                   return a + fte * salary * (1 + sp.staff_post.on_cost_rate);
                 }, 0))}
               </td>
-              {[1, 2, 3].map((Y) => (
-                <td key={Y} className="px-2 py-1 text-right font-medium">{fmt(mv[Y - 1])}</td>
+              {mv.map((v, i) => (
+                <td key={i} className="px-2 py-1 text-right font-medium">{fmt(v)}</td>
               ))}
             </tr>
           </tbody>

@@ -5,8 +5,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { X } from "lucide-react";
 import type { ScenarioPost, StaffPost } from "@/types/staffing";
 import { TIER_CONFIG } from "../tier-config";
-
-const fmt = (n: number) => "£" + Math.round(n).toLocaleString("en-GB");
+import { fmt, DEFAULT_TIER, SCENARIO_STATUS } from "../utils";
 
 interface StaffCardProps {
   scenarioPost: ScenarioPost & { staff_post: StaffPost };
@@ -15,12 +14,12 @@ interface StaffCardProps {
 
 export function StaffCard({ scenarioPost, onRelease }: StaffCardProps) {
   const post = scenarioPost.staff_post;
-  const tier = post.tier ?? "support";
+  const tier = post.tier ?? DEFAULT_TIER;
   const config = TIER_CONFIG[tier];
   const fte = scenarioPost.override_fte ?? post.fte;
   const salary = scenarioPost.override_salary ?? post.salary;
   const cost = fte * salary * (1 + post.on_cost_rate);
-  const isNew = scenarioPost.status === "added";
+  const isNew = scenarioPost.status === SCENARIO_STATUS.ADDED;
 
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `active-${scenarioPost.id}`,
@@ -28,8 +27,8 @@ export function StaffCard({ scenarioPost, onRelease }: StaffCardProps) {
   });
 
   const style = transform
-    ? { transform: CSS.Translate.toString(transform) }
-    : undefined;
+    ? { transform: CSS.Translate.toString(transform), borderLeftWidth: 3, borderLeftColor: config.color }
+    : { borderLeftWidth: 3, borderLeftColor: config.color };
 
   return (
     <div
@@ -40,7 +39,6 @@ export function StaffCard({ scenarioPost, onRelease }: StaffCardProps) {
       className={`relative border border-slate-200/60 dark:border-slate-700/50 rounded-md px-2 py-1.5 pr-5 min-w-[115px] max-w-[165px] cursor-grab bg-white dark:bg-slate-900 select-none transition-opacity ${
         isDragging ? "opacity-30" : "hover:border-slate-300 dark:hover:border-slate-600"
       }`}
-      style={{ ...style, borderLeftWidth: 3, borderLeftColor: config.color }}
     >
       <div className="text-[11px] font-medium text-slate-900 dark:text-white truncate">
         {post.name || post.role}

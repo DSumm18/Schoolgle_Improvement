@@ -3,9 +3,8 @@
 import { useDroppable } from "@dnd-kit/core";
 import type { ScenarioPost, StaffPost, Tier } from "@/types/staffing";
 import { TIER_CONFIG } from "../tier-config";
+import { fmt } from "../utils";
 import { StaffCard } from "./StaffCard";
-
-const fmt = (n: number) => "£" + Math.round(n).toLocaleString("en-GB");
 
 interface TierSectionProps {
   tier: Tier;

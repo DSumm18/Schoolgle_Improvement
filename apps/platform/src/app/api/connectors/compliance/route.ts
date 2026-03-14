@@ -7,57 +7,66 @@ import { createServiceRoleClient } from "@/lib/supabase-server";
 export const GET = protectedRoute(async (auth) => {
   const supabase = createServiceRoleClient();
 
-  // Get all statutory connector types
-  const { data: types, error: typesError } = await supabase
-    .from("connector_types")
-    .select("*")
-    .eq("is_statutory", true)
-    .order("sort_order", { ascending: true });
+  // Run both queries in parallel
+  const [typesResult, connectorsResult] = await Promise.all([
+    supabase
+      .from("connector_types")
+      .select("*")
+      .eq("is_statutory", true)
+      .order("sort_order", { ascending: true }),
+    supabase
+      .from("staff_connectors")
+      .select(`
+        id, staff_id, connector_type_id, is_primary, scope, status,
+        training_completed, training_expiry_date
+      `)
+      .eq("organization_id", auth.organizationId)
+      .eq("status", "active"),
+  ]);
 
-  if (typesError) {
-    console.error("Error fetching connector types:", typesError);
+  if (typesResult.error) {
+    console.error("Error fetching connector types:", typesResult.error);
     return apiError("Failed to fetch compliance data", 500);
   }
 
-  // Get all active connectors for this org
-  const { data: connectors, error: connectorsError } = await supabase
-    .from("staff_connectors")
-    .select(`
-      id, staff_id, connector_type_id, is_primary, scope, status,
-      training_completed, training_expiry_date
-    `)
-    .eq("organization_id", auth.organizationId)
-    .eq("status", "active");
-
-  if (connectorsError) {
-    console.error("Error fetching connectors:", connectorsError);
-    return apiError(connectorsError.message, 500);
+  if (connectorsResult.error) {
+    console.error("Error fetching connectors:", connectorsResult.error);
+    return apiError("Failed to fetch compliance data", 500);
   }
 
-  // Build compliance status for each statutory type
-  const now = new Date();
-  const ninetyDaysFromNow = new Date();
-  ninetyDaysFromNow.setDate(ninetyDaysFromNow.getDate() + 90);
+  const types = typesResult.data || [];
+  const connectors = connectorsResult.data || [];
 
-  const compliance = (types || []).map((type: any) => {
-    const typeConnectors = (connectors || []).filter(
-      (c: any) => c.connector_type_id === type.id
-    );
+  // Pre-parse expiry dates once and group connectors by type
+  const now = new Date();
+  const ninetyDaysFromNow = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
+
+  const connectorsByType = new Map<string, typeof connectors>();
+  for (const c of connectors) {
+    const arr = connectorsByType.get(c.connector_type_id);
+    if (arr) arr.push(c);
+    else connectorsByType.set(c.connector_type_id, [c]);
+  }
+
+  // Build compliance + summary in a single pass
+  const summary = { total_statutory: types.length, compliant: 0, at_risk: 0, expiring_soon: 0, non_compliant: 0 };
+
+  const compliance = types.map((type: any) => {
+    const typeConnectors = connectorsByType.get(type.id) || [];
     const activeCount = typeConnectors.length;
-    const expiredTraining = typeConnectors.filter(
-      (c: any) => c.training_expiry_date && new Date(c.training_expiry_date) < now
-    ).length;
-    const expiringSoon = typeConnectors.filter(
-      (c: any) =>
-        c.training_expiry_date &&
-        new Date(c.training_expiry_date) >= now &&
-        new Date(c.training_expiry_date) <= ninetyDaysFromNow
-    ).length;
+    let expiredTraining = 0;
+    let expiringSoon = 0;
+
+    // Single pass over connectors for this type — parse dates once
+    for (const c of typeConnectors) {
+      if (!c.training_expiry_date) continue;
+      const expiry = new Date(c.training_expiry_date);
+      if (expiry < now) expiredTraining++;
+      else if (expiry <= ninetyDaysFromNow) expiringSoon++;
+    }
 
     let status: string;
-    if (type.min_count && activeCount < type.min_count) {
-      status = "non_compliant";
-    } else if (activeCount === 0 && type.min_count > 0) {
+    if ((type.min_count && activeCount < type.min_count) || (activeCount === 0 && type.min_count > 0)) {
       status = "non_compliant";
     } else if (expiredTraining > 0) {
       status = "at_risk";
@@ -66,6 +75,9 @@ export const GET = protectedRoute(async (auth) => {
     } else {
       status = "compliant";
     }
+
+    // Accumulate summary counts inline
+    summary[status as keyof typeof summary]++;
 
     return {
       connector_type: type,
@@ -76,15 +88,6 @@ export const GET = protectedRoute(async (auth) => {
       holders: typeConnectors,
     };
   });
-
-  // Summary counts
-  const summary = {
-    total_statutory: types?.length || 0,
-    compliant: compliance.filter((c: any) => c.compliance_status === "compliant").length,
-    at_risk: compliance.filter((c: any) => c.compliance_status === "at_risk").length,
-    expiring_soon: compliance.filter((c: any) => c.compliance_status === "expiring_soon").length,
-    non_compliant: compliance.filter((c: any) => c.compliance_status === "non_compliant").length,
-  };
 
   return apiSuccess({ summary, compliance });
 }, { requiredRole: "slt" });

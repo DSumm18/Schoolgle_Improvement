@@ -1,30 +1,19 @@
 "use client";
 
 import { useStaffing } from "@/store/staffingStore";
-
-const fmt = (n: number) => "£" + Math.round(n).toLocaleString("en-GB");
-const pct = (n: number) => (Math.round(n * 10) / 10).toFixed(1) + "%";
+import { fmt, pct } from "./utils";
 
 export function TopMetricsBar() {
-  const { computedMetrics, state } = useStaffing();
-  const m = computedMetrics;
-
-  // Baseline cost: sum all posts' raw cost (before scenario changes)
-  const baselineCost = state.staffPosts.reduce((a, p) => {
-    return a + p.salary * p.fte * (1 + p.on_cost_rate);
-  }, 0);
+  const { computedMetrics: m, derived } = useStaffing();
 
   const surplus = m.totalIncome - m.totalStaffingCost;
-  const netVsBaseline = m.totalStaffingCost - baselineCost;
-
-  const released = state.scenarioPosts.filter((sp) => sp.status === "released").length;
-  const added = state.scenarioPosts.filter((sp) => sp.status === "added").length;
+  const netVsBaseline = m.totalStaffingCost - m.baselineCost;
 
   const kpis = [
     {
       label: "Income (GAG est.)",
       value: fmt(m.totalIncome),
-      sub: `${state.schoolSettings?.roll ?? 420} pupils × £${state.schoolSettings?.gag_per_pupil ?? 5200}`,
+      sub: `${Math.round(m.totalIncome / (m.totalIncome / (m.totalIncome > 0 ? m.totalIncome : 1)))} pupils`,
     },
     {
       label: "Total staffing",
@@ -58,7 +47,7 @@ export function TopMetricsBar() {
         netVsBaseline === 0
           ? "—"
           : (netVsBaseline < 0 ? "-" : "+") + fmt(Math.abs(netVsBaseline)),
-      sub: `${released} released, ${added} added`,
+      sub: `${derived.releasedPosts.length} released, ${derived.addedPosts.length} added`,
       color:
         netVsBaseline < 0
           ? "text-green-700 dark:text-green-400"

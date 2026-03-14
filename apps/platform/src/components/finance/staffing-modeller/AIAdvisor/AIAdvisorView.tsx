@@ -4,10 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useStaffing } from "@/store/staffingStore";
 import { Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { TIER_CONFIG } from "../tier-config";
-
-const fmt = (n: number) => "£" + Math.round(n).toLocaleString("en-GB");
-const pct = (n: number) => (Math.round(n * 10) / 10).toFixed(1) + "%";
+import { fmt, pct } from "../utils";
 
 interface ChatMessage {
   role: "ai" | "user";
