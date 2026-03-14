@@ -233,6 +233,27 @@ Models configured in `apps/platform/src/lib/ai-evidence-matcher.ts`:
 - **Documentation**: `docs/ED_FORM_HELPER_SUMMARY.md` - Complete implementation guide
 - **Status**: Ready for integration testing and extension build
 
+### SEND Hub (`/modules/send`) — Specced, Not Yet Built
+
+- **Purpose**: Complete SEND management — SEN register, EHCP lifecycle, funding tracking, evidence packs, provision mapping
+- **Key Features**: LA funding reconciliation (Element 1/2/3), EHCP annual review workflow, graduated approach (APDR) documentation, tribunal-ready evidence bundles
+- **Cross-Module Integration**: Finance (CFR I03/E03), HR (staff allocation + payroll costing), Meetings (5 SEND templates), Governance (governor SEND report), Estates (accessibility), Intelligence (pupil assessment gaps)
+- **Documentation**: `docs/modules/sen-funding/` — PRODUCT_SPEC.md, CROSS_MODULE_INTEGRATION.md, EVIDENCE_ECOSYSTEM.md, RESEARCH.md
+- **Database**: `send_register`, `send_funding_allocations`, `send_provision_costs`, `send_evidence_files`, `send_review_history`
+- **Status**: Fully specced, awaiting implementation
+
+### Staff Connectors (Cross-Module) — Specced, Not Yet Built
+
+- **Purpose**: Responsibility engine — tracks who holds which roles/duties, auto-generates tasks, monitors training/ratios, manages handover when staff leave
+- **Two Types**: Statutory (platform-defined, ~20 types: DSL, SENCO, Fire Marshal, First Aider, etc.) and Custom (school-defined: subject leads, key holders, contract managers, etc.)
+- **Key Features**: Active task generation from connector definitions, training expiry monitoring, ratio compliance (e.g. 1:100 first aiders), leaving staff impact analysis with one-click transfer
+- **Cross-Module Surfacing**: Lives on staff profiles in HR; surfaces in Estates (fire marshals), SEND (SENCO), Compliance (statutory roles), Governance (governor link roles), Meetings (auto-invite)
+- **Homepage Integration**: Each staff member sees "Your Responsibilities" dashboard with all tasks from all connectors
+- **Ed AI Skills**: 6 new skills — list_my_connectors, get_connector_holder, check_compliance, get_leaving_impact, get_overdue_tasks, schedule_task
+- **Database**: `connector_types`, `staff_connectors`, `connector_tasks`, `connector_change_log`, `contract_connector_links`
+- **Documentation**: `docs/STAFF_CONNECTORS.md` — Full specification with data model, UI designs, implementation phases
+- **Status**: Fully specced, awaiting implementation
+
 ### School Intelligence Engine (built March 2026)
 
 - **Purpose**: Cross-references ALL data sources (DfE warehouse, contextual factors, cross-module signals from HR/Estates/Compliance/Governance) with EEF research to produce cohort-aware, research-backed analysis
@@ -688,6 +709,9 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
 | Auth context          | `apps/platform/src/context/SupabaseAuthContext.tsx`     |
 | API routes            | `apps/platform/src/app/api/`                            |
 | Components            | `apps/platform/src/components/`                         |
+| Cross-module map      | `docs/CROSS_MODULE_ARCHITECTURE.md`                     |
+| Staff Connectors spec | `docs/STAFF_CONNECTORS.md`                              |
+| SEND Hub specs        | `docs/modules/sen-funding/`                             |
 | Auto memory           | `.claude/projects/C--Git-Schoolgle-Improvement/memory/` |
 
 ---
