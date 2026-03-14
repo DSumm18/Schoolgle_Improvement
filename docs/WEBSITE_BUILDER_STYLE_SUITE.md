@@ -300,20 +300,66 @@ interface WebsiteStylePreset {
 
 ---
 
-## School Customisation (On Top of Preset)
+## The Setup Flow: Logo → Everything
 
-After selecting a preset, schools configure 6 things:
+The entire visual identity derives from one input: **the school logo**.
 
-| Setting | Input | Auto-Detection |
-|---------|-------|----------------|
-| **Primary colour** | Colour picker | Auto-extracted from logo upload |
-| **Secondary colour** | Colour picker (auto-suggested) | Complementary of primary |
-| **Logo** | File upload | Pulled from existing website via crawler |
-| **Hero image/video** | File upload or stock pick | Best image from existing site |
-| **School motto** | Text input | Extracted from existing site meta/hero |
-| **Accent override** | Optional colour picker | Derived from primary |
+```
+Step 1: Upload Logo
+         │
+Step 2: Auto-Extract Colours (k-means clustering on canvas)
+         │  "We found Navy Blue (42%), Gold (28%), White (30%)"
+         │
+Step 3: Present 3-4 Palette Options
+         │  "Brand Faithful" — navy primary, gold secondary
+         │  "Bold & Vibrant" — gold primary, navy secondary
+         │  "Deep & Professional" — dark navy, light gold accent
+         │  "Fresh Take" — shifted hue for modern twist
+         │
+Step 4: Pick a Preset (cards with live preview)
+         │  Each card shows the school's chosen palette applied
+         │
+Step 5: Choose Font Pairing (live swap on preview)
+         │  Click through 10 pairings, see text change in real-time
+         │
+Step 6: Choose Hero Mask (20 shapes, live on preview)
+         │  The shape of the hero image — biggest visual differentiator
+         │
+Step 7: Done. Publish.
+```
 
-Everything else comes from the preset. Schools can later go deeper in an "Advanced" panel to override individual layer settings, but 95% won't need to.
+Schools configure **nothing manually** — no hex codes, no colour pickers, no font names. Upload logo, make 4 visual choices (palette, preset, font, mask), done.
+
+### Hero Mask System (Why No Two Sites Look Alike)
+
+The hero mask is the single biggest visual differentiator. It clips the hero image into a distinctive shape using CSS `clip-path`. 20 mask options:
+
+| Category | Masks | Effect |
+|----------|-------|--------|
+| **Full** | Full Width | Classic banner |
+| **Diagonal** | Diagonal Right, Diagonal Left | Angled bottom edge |
+| **Slant** | Slant Right, Slant Left | Image fills one side, text fills the other |
+| **Wave** | Wave Bottom | Organic flowing edge |
+| **Arch** | Arch, Scoop | Rounded/concave bottom |
+| **Corner** | Corner Reveal BR, Corner Reveal BL | Triangle cut from corner |
+| **Stepped** | Stepped Right, Stepped Left | Staircase edge |
+| **Shape** | Circle, Rounded Rectangle, Organic Blob | Image contained in shape |
+| **Split** | Split Left, Split Right | Half-and-half with text |
+| **Point** | Pointed, Peak | V-shape or mountain |
+| **Texture** | Torn Paper | Rough organic edge |
+
+Same photo + different mask = completely different website. Two schools on the same preset with different masks and colours won't look alike.
+
+### For Schools Without Photos
+
+| Tier | Source | What It Does |
+|------|--------|-------------|
+| **Auto-import** | Crawler pulls images from existing website | Free, authentic, already theirs |
+| **Curated stock** | Pre-tagged school photo library (classroom, playground, sports) | Free, professional but generic |
+| **AI backgrounds** | Abstract patterns/textures in school brand colours | ~£0.01/image, unique per school |
+| **AI illustrations** | Watercolour/line-art school scenes (not photorealistic children) | ~£0.02/image, distinctive |
+
+We **never** generate AI photos of children — safeguarding optics. AI generates abstract backgrounds and illustrated scenes only.
 
 ---
 
