@@ -36,6 +36,11 @@ import {
   Scale,
   Accessibility,
   Brain,
+  Globe,
+  Palette,
+  PenTool,
+  FileImage,
+  Newspaper,
 } from "lucide-react";
 
 export type Role =
@@ -184,6 +189,14 @@ export const MODULES: ModuleDefinition[] = [
     icon: MessageSquare,
     description: "Create surveys and collect stakeholder feedback.",
     requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
+  },
+  {
+    id: "website",
+    name: "School Website",
+    color: "fuchsia",
+    icon: Globe,
+    description: "Design, build, and publish your school website with AI-powered compliance checking.",
+    requiredPermissions: ["admin", "headteacher", "slt"],
   },
 ];
 
@@ -795,6 +808,62 @@ export const APPS: AppDefinition[] = [
     requiredPermissions: ["admin", "headteacher", "slt"],
   },
 
+  // Website Builder Apps
+  {
+    id: "website-home",
+    moduleId: "website",
+    name: "Website Builder",
+    route: "/dashboard/website",
+    icon: Globe,
+    shortDescription: "Design and manage your school website.",
+    requiredPermissions: ["admin", "headteacher", "slt"],
+  },
+  {
+    id: "website-pages",
+    moduleId: "website",
+    name: "Pages",
+    route: "/dashboard/website/pages",
+    icon: FileText,
+    shortDescription: "Edit and manage website pages.",
+    requiredPermissions: ["admin", "headteacher", "slt"],
+  },
+  {
+    id: "website-design",
+    moduleId: "website",
+    name: "Design Studio",
+    route: "/dashboard/website/design",
+    icon: Palette,
+    shortDescription: "Customise colours, fonts, and layout.",
+    requiredPermissions: ["admin", "headteacher", "slt"],
+  },
+  {
+    id: "website-news",
+    moduleId: "website",
+    name: "News & Blog",
+    route: "/dashboard/website/news",
+    icon: Newspaper,
+    shortDescription: "Publish news articles and updates.",
+    requiredPermissions: ["admin", "headteacher", "slt"],
+  },
+  {
+    id: "website-media",
+    moduleId: "website",
+    name: "Media Library",
+    route: "/dashboard/website/media",
+    icon: FileImage,
+    shortDescription: "Upload and manage images and files.",
+    requiredPermissions: ["admin", "headteacher", "slt"],
+  },
+  {
+    id: "website-compliance",
+    moduleId: "website",
+    name: "Web Compliance",
+    route: "/dashboard/website/compliance",
+    icon: ShieldCheck,
+    shortDescription: "DfE statutory website requirements checker.",
+    requiredPermissions: ["admin", "headteacher", "slt"],
+  },
+
   // Risk Apps
   {
     id: "risk-home",
@@ -982,6 +1051,8 @@ export function getModuleByPath(path: string): ModuleDefinition | undefined {
     return MODULES.find((m) => m.id === "behaviour");
   if (path.startsWith("/dashboard/calendar"))
     return MODULES.find((m) => m.id === "calendar");
+  if (path.startsWith("/dashboard/website"))
+    return MODULES.find((m) => m.id === "website");
 
   return undefined;
 }
