@@ -173,6 +173,8 @@ Models configured in `apps/platform/src/lib/ai-evidence-matcher.ts`:
 | `cloud-service.ts`              | Google Drive/OneDrive API integration                     |
 | `extractors.ts`                 | Document text extraction                                  |
 | `embeddings.ts`                 | Vector embeddings for semantic search                     |
+| `firecrawl-crawler.ts`          | Firecrawl-based website crawler (primary, with Playwright fallback) |
+| `website-crawler.ts`            | Playwright-based website crawler (fallback when no Firecrawl key)   |
 | `assessment-updater.ts`         | Auto-update assessments based on evidence                 |
 | `supabase.ts`                   | Supabase client configuration                             |
 | `school-intelligence-engine.ts` | Cross-module intelligence analysis with DfE + EEF         |
@@ -361,6 +363,11 @@ OPENROUTER_API_KEY=
 # OAuth Providers
 NEXT_PUBLIC_GOOGLE_CLIENT_ID=
 NEXT_PUBLIC_MICROSOFT_CLIENT_ID=
+
+# Firecrawl (Website Crawling — used by website compliance scanner & Ofsted readiness)
+# If set, uses Firecrawl API for faster, more reliable website crawling
+# If not set, falls back to Playwright-based crawler
+FIRECRAWL_API_KEY=
 ```
 
 ---

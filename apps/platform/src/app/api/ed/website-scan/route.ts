@@ -6,7 +6,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase-server';
-import { crawlWebsite, type CrawledPage } from '@/lib/website-crawler';
+import { smartCrawlWebsite } from '@/lib/firecrawl-crawler';
+import type { CrawledPage } from '@/lib/website-crawler';
 
 interface ScanRequest {
   websiteUrl: string;
@@ -84,13 +85,13 @@ export async function POST(request: NextRequest) {
 
     console.log('[Website Scan] Organization found:', org.name);
 
-    // 2. Use Playwright crawler for JavaScript-rendered sites
+    // 2. Crawl website — uses Firecrawl if API key available, falls back to Playwright
     const maxPages = fullScan ? 100 : 30;
-    console.log(`[Website Scan] Starting Playwright crawl, max pages: ${maxPages}`);
+    console.log(`[Website Scan] Starting crawl, max pages: ${maxPages}`);
 
-    const crawlResult = await crawlWebsite(websiteUrl, {
+    const crawlResult = await smartCrawlWebsite(websiteUrl, {
       maxPages,
-      requestDelay: 500, // 500ms between requests
+      requestDelay: 500, // 500ms between requests (Playwright only)
       pageTimeout: 30000,
       sameDomainOnly: true,
       processPDFs: true,
@@ -99,13 +100,13 @@ export async function POST(request: NextRequest) {
       headless: true,
     });
 
-    console.log(`[Website Scan] Playwright crawl complete:`, {
+    console.log(`[Website Scan] Crawl complete [${crawlResult.backend}]:`, {
       pagesFound: crawlResult.pages.length,
       successful: crawlResult.stats.successfulPages,
       failed: crawlResult.stats.failedPages,
       pdfs: crawlResult.stats.pdfsProcessed,
       documents: crawlResult.stats.documentsProcessed,
-      duration: crawlResult.stats.durationMs + 'ms'
+      duration: crawlResult.stats.duration + 'ms'
     });
 
     // Convert CrawledPage to PageContent format
