@@ -36,6 +36,7 @@ import {
   Scale,
   Accessibility,
   Brain,
+  Settings,
 } from "lucide-react";
 
 export type Role =
@@ -499,6 +500,16 @@ export const APPS: AppDefinition[] = [
     route: "/dashboard/hr/meetings",
     icon: ClipboardCheck,
     shortDescription: "AI-guided HR meeting management.",
+    requiredPermissions: ["admin", "headteacher", "slt"],
+  },
+
+  {
+    id: "staff-connectors",
+    moduleId: "hr",
+    name: "Staff Connectors",
+    route: "/dashboard/connectors",
+    icon: Settings,
+    shortDescription: "Statutory roles, responsibilities, and compliance tracking.",
     requiredPermissions: ["admin", "headteacher", "slt"],
   },
 
