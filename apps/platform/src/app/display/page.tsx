@@ -17,6 +17,8 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { EmergencyListener } from "@/components/emergency/EmergencyListener";
+import { EventCountdown, WeatherWidget, SchoolDayProgress, Screensaver } from "@/components/display/DisplayWidgets";
+import { AnnouncementPlayer } from "@/components/display/AnnouncementPlayer";
 import type { Notice } from "@/components/notices/NoticeFeed";
 
 // ─── Types ───────────────────────────────────────────────────────────
@@ -458,12 +460,30 @@ export default function DisplayPage() {
             <ClockWidget />
           </div>
 
+          {/* School Day Progress */}
+          <SchoolDayProgress />
+
+          {/* Weather */}
+          <WeatherWidget />
+
+          {/* Event Countdown (next upcoming event) */}
+          {(() => {
+            const nextEvent = notices.find((n) => n.notice_type === "event" && n.event_date);
+            return nextEvent && nextEvent.event_date ? (
+              <EventCountdown
+                eventName={nextEvent.title}
+                eventDate={nextEvent.event_date}
+                eventTime={nextEvent.event_time}
+              />
+            ) : null;
+          })()}
+
           {/* Upcoming Video Meetings */}
           {videoRooms.length > 0 && (
             <div className="bg-white/80 rounded-2xl shadow-sm border p-4">
               <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2 mb-3">
                 <Video className="w-4 h-4 text-green-600" />
-                Upcoming Meetings
+                Meetings
               </h3>
               <div className="space-y-2">
                 {videoRooms.slice(0, 3).map((room) => (
@@ -498,6 +518,9 @@ export default function DisplayPage() {
           <div className="bg-white/80 rounded-2xl shadow-sm border p-4 flex-1 overflow-y-auto">
             <UpcomingEvents notices={notices} />
           </div>
+
+          {/* Hidden: TTS announcement player */}
+          <AnnouncementPlayer enabled={true} />
         </div>
       </div>
 
