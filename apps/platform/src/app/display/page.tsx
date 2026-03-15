@@ -12,6 +12,9 @@ import {
   WifiOff,
   Maximize2,
   MapPin,
+  Video,
+  Radio,
+  ExternalLink,
 } from "lucide-react";
 import { EmergencyListener } from "@/components/emergency/EmergencyListener";
 import type { Notice } from "@/components/notices/NoticeFeed";
@@ -25,6 +28,20 @@ interface Branding {
   primary_color: string;
   secondary_color: string;
   display_theme: string;
+}
+
+interface VideoRoom {
+  id: string;
+  room_name: string;
+  room_type: string;
+  provider: string;
+  meeting_url?: string;
+  status: string;
+  host_name?: string;
+  scheduled_start?: string;
+  scheduled_end?: string;
+  is_whole_school: boolean;
+  auto_join_display: boolean;
 }
 
 // ─── Clock Widget ────────────────────────────────────────────────────
@@ -267,11 +284,13 @@ function Ticker({ notices }: { notices: Notice[] }) {
 export default function DisplayPage() {
   const [branding, setBranding] = useState<Branding | null>(null);
   const [notices, setNotices] = useState<Notice[]>([]);
+  const [videoRooms, setVideoRooms] = useState<VideoRoom[]>([]);
+  const [liveAssembly, setLiveAssembly] = useState<VideoRoom | null>(null);
   const [orgId, setOrgId] = useState<string>("");
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
 
-  // Load branding and notices
+  // Load branding, notices, and video rooms
   useEffect(() => {
     fetch("/api/branding")
       .then((r) => r.json())
@@ -283,17 +302,43 @@ export default function DisplayPage() {
       .then((d) => setNotices(d.notices || []))
       .catch(() => {});
 
+    fetch("/api/video-rooms?display=true&limit=10")
+      .then((r) => r.json())
+      .then((d) => {
+        const rooms = d.rooms || [];
+        setVideoRooms(rooms);
+        // Auto-detect live assembly for this display
+        const live = rooms.find(
+          (r: VideoRoom) => r.status === "live" && r.auto_join_display
+        );
+        setLiveAssembly(live || null);
+      })
+      .catch(() => {});
+
     // Get org ID for emergency stream
-    // In production this would come from auth context
     setOrgId("demo");
 
-    // Refresh notices every 2 minutes
-    const refresh = setInterval(() => {
+    // Refresh notices every 2 minutes, video rooms every 30 seconds
+    const noticeRefresh = setInterval(() => {
       fetch("/api/notices?display=true&limit=30")
         .then((r) => r.json())
         .then((d) => setNotices(d.notices || []))
         .catch(() => setIsOnline(false));
     }, 120000);
+
+    const videoRefresh = setInterval(() => {
+      fetch("/api/video-rooms?display=true&limit=10")
+        .then((r) => r.json())
+        .then((d) => {
+          const rooms = d.rooms || [];
+          setVideoRooms(rooms);
+          const live = rooms.find(
+            (r: VideoRoom) => r.status === "live" && r.auto_join_display
+          );
+          setLiveAssembly(live || null);
+        })
+        .catch(() => {});
+    }, 30000);
 
     // Online status
     const handleOnline = () => setIsOnline(true);
@@ -302,7 +347,8 @@ export default function DisplayPage() {
     window.addEventListener("offline", handleOffline);
 
     return () => {
-      clearInterval(refresh);
+      clearInterval(noticeRefresh);
+      clearInterval(videoRefresh);
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
@@ -368,6 +414,33 @@ export default function DisplayPage() {
         </div>
       </div>
 
+      {/* Live Assembly Overlay */}
+      {liveAssembly && liveAssembly.meeting_url && (
+        <div className="bg-gray-900 text-white px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Radio className="w-6 h-6 text-red-500 animate-pulse" />
+            <div>
+              <span className="text-lg font-bold">LIVE: {liveAssembly.room_name}</span>
+              {liveAssembly.host_name && (
+                <span className="text-sm text-gray-300 ml-3">
+                  Hosted by {liveAssembly.host_name}
+                </span>
+              )}
+            </div>
+          </div>
+          <a
+            href={liveAssembly.meeting_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 px-5 py-2 bg-green-600 hover:bg-green-700 rounded-xl font-bold transition"
+          >
+            <Video className="w-5 h-5" />
+            Join Assembly
+            <ExternalLink className="w-4 h-4" />
+          </a>
+        </div>
+      )}
+
       {/* Ticker */}
       <Ticker notices={notices} />
 
@@ -384,6 +457,42 @@ export default function DisplayPage() {
           <div className="bg-white rounded-2xl shadow-sm border p-6">
             <ClockWidget />
           </div>
+
+          {/* Upcoming Video Meetings */}
+          {videoRooms.length > 0 && (
+            <div className="bg-white/80 rounded-2xl shadow-sm border p-4">
+              <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2 mb-3">
+                <Video className="w-4 h-4 text-green-600" />
+                Upcoming Meetings
+              </h3>
+              <div className="space-y-2">
+                {videoRooms.slice(0, 3).map((room) => (
+                  <div
+                    key={room.id}
+                    className={`
+                      rounded-lg p-2 text-xs
+                      ${room.status === "live" ? "bg-red-50 border border-red-200" : "bg-gray-50"}
+                    `}
+                  >
+                    <div className="flex items-center gap-1">
+                      {room.status === "live" && (
+                        <Radio className="w-3 h-3 text-red-500 animate-pulse" />
+                      )}
+                      <span className="font-semibold text-gray-800">{room.room_name}</span>
+                    </div>
+                    {room.scheduled_start && (
+                      <div className="text-gray-500 mt-0.5">
+                        {new Date(room.scheduled_start).toLocaleTimeString("en-GB", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Upcoming Events */}
           <div className="bg-white/80 rounded-2xl shadow-sm border p-4 flex-1 overflow-y-auto">
