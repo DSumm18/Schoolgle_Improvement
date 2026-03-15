@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { NoticeFeed } from "@/components/notices/NoticeFeed";
 import { QuickMessageBar } from "@/components/notices/QuickMessageBar";
+import { ParentNotificationPreview } from "@/components/notices/ParentNotificationPreview";
 
 const NOTICE_TYPES = [
   { value: "announcement", label: "Announcement", icon: Megaphone },
@@ -317,6 +318,21 @@ export default function NoticesPage() {
                   ))}
                 </div>
               </div>
+
+              {/* Parent Notification Preview */}
+              {(form.audience === "all" || form.audience === "parents") && form.title.trim() && (
+                <ParentNotificationPreview
+                  content={{
+                    title: form.title,
+                    body: form.body,
+                    notice_type: form.notice_type,
+                    priority: form.priority,
+                    event_date: form.event_date || undefined,
+                    event_time: form.event_time || undefined,
+                    event_location: form.event_location || undefined,
+                  }}
+                />
+              )}
 
               {/* Expiry */}
               <div>

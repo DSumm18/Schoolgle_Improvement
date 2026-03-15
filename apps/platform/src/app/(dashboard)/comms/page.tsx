@@ -21,6 +21,7 @@ import {
 import { VideoRoomCard } from "@/components/video/VideoRoomEmbed";
 import { NoticeFeed } from "@/components/notices/NoticeFeed";
 import { QuickMessageBar } from "@/components/notices/QuickMessageBar";
+import { PAComposer } from "@/components/display/AnnouncementPlayer";
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -54,7 +55,38 @@ interface AssemblySchedule {
   target_year_groups: string[];
 }
 
-type Tab = "overview" | "video" | "notices" | "assemblies";
+import {
+  Tv,
+  Tablet,
+  Laptop,
+  Smartphone,
+  Wifi,
+  WifiOff,
+  Volume2,
+  VolumeX,
+  MapPin,
+} from "lucide-react";
+
+type Tab = "overview" | "video" | "notices" | "assemblies" | "pa" | "displays";
+
+interface DisplayDevice {
+  id: string;
+  device_name: string;
+  device_type: string;
+  room_name?: string;
+  zone_name?: string;
+  is_online: boolean;
+  has_audio: boolean;
+  last_heartbeat?: string;
+}
+
+const DEVICE_TYPE_ICONS: Record<string, typeof Monitor> = {
+  display: Tv,
+  kiosk: Monitor,
+  tablet: Tablet,
+  desktop: Laptop,
+  mobile: Smartphone,
+};
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -241,6 +273,7 @@ export default function CommsHubPage() {
   const [tab, setTab] = useState<Tab>("overview");
   const [rooms, setRooms] = useState<VideoRoom[]>([]);
   const [assemblies, setAssemblies] = useState<AssemblySchedule[]>([]);
+  const [devices, setDevices] = useState<DisplayDevice[]>([]);
   const [liveCount, setLiveCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showCreateRoom, setShowCreateRoom] = useState(false);
@@ -253,10 +286,14 @@ export default function CommsHubPage() {
       fetch("/api/assemblies")
         .then((r) => r.json())
         .catch(() => ({ schedules: [] })),
-    ]).then(([roomData, assemblyData]) => {
+      fetch("/api/emergency/devices")
+        .then((r) => r.json())
+        .catch(() => ({ devices: [] })),
+    ]).then(([roomData, assemblyData, deviceData]) => {
       setRooms(roomData.rooms || []);
       setLiveCount(roomData.liveCount || 0);
       setAssemblies(assemblyData.schedules || []);
+      setDevices(deviceData.devices || []);
       setLoading(false);
     });
   }, []);
@@ -323,6 +360,8 @@ export default function CommsHubPage() {
           { id: "video" as Tab, label: "Video Rooms", icon: Video },
           { id: "notices" as Tab, label: "Notices", icon: Megaphone },
           { id: "assemblies" as Tab, label: "Assemblies", icon: Calendar },
+          { id: "pa" as Tab, label: "PA System", icon: Megaphone },
+          { id: "displays" as Tab, label: "Displays", icon: Monitor },
         ].map(({ id, label, icon: Icon }) => (
           <button
             key={id}
@@ -351,6 +390,9 @@ export default function CommsHubPage() {
                 <div className="bg-white border border-gray-200 rounded-xl p-4">
                   <QuickMessageBar />
                 </div>
+
+                {/* PA Announcements */}
+                <PAComposer />
 
                 {/* Live rooms */}
                 {liveRooms.length > 0 && (
@@ -456,6 +498,150 @@ export default function CommsHubPage() {
           {/* Notices Tab */}
           {tab === "notices" && (
             <NoticeFeed mode="page" maxItems={50} />
+          )}
+
+          {/* PA System Tab */}
+          {tab === "pa" && (
+            <div className="max-w-2xl mx-auto space-y-6">
+              <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-2xl p-6 border border-indigo-100">
+                <h3 className="text-lg font-bold text-gray-800 mb-2">PA Announcement System</h3>
+                <p className="text-sm text-gray-500 mb-4">
+                  Type a message below to broadcast it through all connected display speakers using text-to-speech.
+                  Perfect for wet play announcements, assembly reminders, or end-of-day messages.
+                </p>
+                <PAComposer />
+              </div>
+              <div className="bg-white border rounded-xl p-5">
+                <h4 className="font-semibold text-gray-800 mb-3">How it works</h4>
+                <ul className="space-y-2 text-sm text-gray-600">
+                  <li className="flex items-start gap-2">
+                    <span className="text-indigo-500 font-bold mt-0.5">1.</span>
+                    Type your message in the box above
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-indigo-500 font-bold mt-0.5">2.</span>
+                    A three-note chime plays to get attention
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-indigo-500 font-bold mt-0.5">3.</span>
+                    Your message is spoken in clear British English through all connected display speakers
+                  </li>
+                </ul>
+                <p className="text-xs text-gray-400 mt-3">
+                  Uses Web Speech API — works on Chrome, Edge, and Safari. Displays must have audio enabled in their setup.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Displays Tab */}
+          {tab === "displays" && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-800">Connected Displays</h3>
+                  <p className="text-sm text-gray-500">
+                    {devices.filter((d) => d.is_online).length} online · {devices.length} registered
+                  </p>
+                </div>
+                <a
+                  href="/display/setup"
+                  className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-xl font-semibold text-sm hover:bg-indigo-700 transition"
+                >
+                  <Plus className="w-4 h-4" />
+                  Register Display
+                </a>
+              </div>
+
+              {devices.length === 0 ? (
+                <div className="text-center py-16 bg-gray-50 rounded-2xl">
+                  <Monitor className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                  <p className="text-gray-500 font-medium">No displays registered yet</p>
+                  <p className="text-sm text-gray-400 mt-1">
+                    Set up classroom boards, digital signage, and tablets to receive broadcasts
+                  </p>
+                  <a
+                    href="/display/setup"
+                    className="inline-flex items-center gap-2 mt-4 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-semibold text-sm hover:bg-indigo-700 transition"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Set Up First Display
+                  </a>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {devices.map((device) => {
+                    const DeviceIcon = DEVICE_TYPE_ICONS[device.device_type] || Monitor;
+                    return (
+                      <div
+                        key={device.id}
+                        className={`bg-white border rounded-2xl p-4 transition hover:shadow-md ${
+                          device.is_online ? "border-green-200" : "border-gray-200"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <div className={`p-2.5 rounded-xl ${device.is_online ? "bg-green-50" : "bg-gray-100"}`}>
+                              <DeviceIcon className={`w-5 h-5 ${device.is_online ? "text-green-600" : "text-gray-400"}`} />
+                            </div>
+                            <div>
+                              <h4 className="font-semibold text-gray-900 text-sm">{device.device_name}</h4>
+                              <div className="text-xs text-gray-400 capitalize">{device.device_type.replace("_", " ")}</div>
+                            </div>
+                          </div>
+                          <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                            device.is_online
+                              ? "bg-green-100 text-green-700"
+                              : "bg-gray-100 text-gray-500"
+                          }`}>
+                            {device.is_online ? (
+                              <><Wifi className="w-3 h-3" /> Online</>
+                            ) : (
+                              <><WifiOff className="w-3 h-3" /> Offline</>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="space-y-1.5 text-xs text-gray-500">
+                          {device.room_name && (
+                            <div className="flex items-center gap-1.5">
+                              <MapPin className="w-3 h-3" />
+                              {device.room_name}
+                            </div>
+                          )}
+                          {device.zone_name && (
+                            <div className="flex items-center gap-1.5">
+                              <Settings className="w-3 h-3" />
+                              Zone: {device.zone_name}
+                            </div>
+                          )}
+                          <div className="flex items-center gap-1.5">
+                            {device.has_audio ? (
+                              <><Volume2 className="w-3 h-3 text-green-500" /> Audio enabled</>
+                            ) : (
+                              <><VolumeX className="w-3 h-3 text-gray-400" /> Audio disabled</>
+                            )}
+                          </div>
+                        </div>
+
+                        {device.is_online && (
+                          <div className="mt-3 pt-3 border-t border-gray-100 flex gap-2">
+                            <a
+                              href={`/display?device=${device.id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex-1 text-center px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-medium hover:bg-indigo-100 transition"
+                            >
+                              Open Display
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           )}
 
           {/* Assemblies Tab */}
