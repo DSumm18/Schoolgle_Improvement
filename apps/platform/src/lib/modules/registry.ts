@@ -36,6 +36,7 @@ import {
   Scale,
   Accessibility,
   Brain,
+  Sparkles,
   Settings,
 } from "lucide-react";
 
@@ -300,6 +301,15 @@ export const APPS: AppDefinition[] = [
   },
 
   // Teaching & Learning Apps
+  {
+    id: "lesson-studio",
+    moduleId: "teaching-learning",
+    name: "Lesson Studio",
+    route: "/dashboard/teaching-learning/lesson-studio",
+    icon: Sparkles,
+    shortDescription: "AI-powered connected lesson planning that knows your pupils.",
+    requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
+  },
   {
     id: "lesson-planning",
     moduleId: "teaching-learning",

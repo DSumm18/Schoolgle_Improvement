@@ -8,6 +8,7 @@ import {
   Mail,
   ClipboardList,
   Gamepad2,
+  Sparkles,
 } from "lucide-react";
 import {
   ModulePageHeader,
@@ -15,6 +16,14 @@ import {
 } from "@/components/ui/module-page-header";
 
 const apps = [
+  {
+    icon: Sparkles,
+    title: "Lesson Studio",
+    description:
+      "AI-powered connected lesson planning that knows your pupils, your scheme, and your timetable. Generate differentiated lessons in seconds.",
+    href: "/dashboard/teaching-learning/lesson-studio",
+    status: "Live",
+  },
   {
     icon: BookOpen,
     title: "Lesson Planning",
