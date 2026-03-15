@@ -16,10 +16,13 @@ import {
   Monitor,
   Send,
   X,
+  FileText,
+  Clock,
 } from "lucide-react";
 import { NoticeFeed } from "@/components/notices/NoticeFeed";
 import { QuickMessageBar } from "@/components/notices/QuickMessageBar";
 import { ParentNotificationPreview } from "@/components/notices/ParentNotificationPreview";
+import { NoticeTemplates } from "@/components/notices/NoticeTemplates";
 
 const NOTICE_TYPES = [
   { value: "announcement", label: "Announcement", icon: Megaphone },
@@ -56,7 +59,11 @@ const DISPLAY_STYLES = [
 
 export default function NoticesPage() {
   const [showComposer, setShowComposer] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [scheduleMode, setScheduleMode] = useState(false);
+  const [scheduledFor, setScheduledFor] = useState("");
+  const [recurrence, setRecurrence] = useState("none");
 
   // Form state
   const [form, setForm] = useState({
@@ -80,22 +87,58 @@ export default function NoticesPage() {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
+  const handleSelectTemplate = (template: any) => {
+    setForm((prev) => ({
+      ...prev,
+      title: template.title_template,
+      body: template.body_template,
+      notice_type: template.notice_type,
+      audience: template.default_audience,
+      priority: template.default_priority,
+      display_style: template.default_display_style,
+      show_on_display: template.default_show_on_display,
+      show_on_dashboard: template.default_show_on_dashboard,
+    }));
+    setShowTemplates(false);
+    setShowComposer(true);
+  };
+
   const handleSubmit = useCallback(async () => {
     if (!form.title.trim()) return;
     setSaving(true);
     try {
-      await fetch("/api/notices", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...form,
-          event_date: form.event_date || undefined,
-          event_time: form.event_time || undefined,
-          expires_at: form.expires_at || undefined,
-          image_url: form.image_url || undefined,
-        }),
-      });
+      const noticePayload = {
+        ...form,
+        event_date: form.event_date || undefined,
+        event_time: form.event_time || undefined,
+        expires_at: form.expires_at || undefined,
+        image_url: form.image_url || undefined,
+      };
+
+      if (scheduleMode && scheduledFor) {
+        // Schedule for later
+        await fetch("/api/notices/schedule", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...noticePayload,
+            scheduled_for: scheduledFor,
+            recurrence,
+          }),
+        });
+      } else {
+        // Publish immediately
+        await fetch("/api/notices", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(noticePayload),
+        });
+      }
+
       setShowComposer(false);
+      setScheduleMode(false);
+      setScheduledFor("");
+      setRecurrence("none");
       setForm({
         title: "",
         body: "",
@@ -112,14 +155,13 @@ export default function NoticesPage() {
         expires_at: "",
         image_url: "",
       });
-      // Refresh page to show new notice
       window.location.reload();
     } catch {
       // error
     } finally {
       setSaving(false);
     }
-  }, [form]);
+  }, [form, scheduleMode, scheduledFor, recurrence]);
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
@@ -134,13 +176,22 @@ export default function NoticesPage() {
             Announcements, events, reminders, and celebrations — shown across displays and the dashboard
           </p>
         </div>
-        <button
-          onClick={() => setShowComposer(true)}
-          className="flex items-center gap-2 px-5 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition"
-        >
-          <Plus className="w-5 h-5" />
-          New Notice
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowTemplates(true)}
+            className="flex items-center gap-2 px-4 py-3 bg-white border border-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition"
+          >
+            <FileText className="w-5 h-5 text-indigo-600" />
+            Templates
+          </button>
+          <button
+            onClick={() => setShowComposer(true)}
+            className="flex items-center gap-2 px-5 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition"
+          >
+            <Plus className="w-5 h-5" />
+            New Notice
+          </button>
+        </div>
       </div>
 
       {/* Quick Messages */}
@@ -346,6 +397,48 @@ export default function NoticesPage() {
                   className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                 />
               </div>
+
+              {/* Schedule toggle */}
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-blue-800 mb-2">
+                  <input
+                    type="checkbox"
+                    checked={scheduleMode}
+                    onChange={(e) => setScheduleMode(e.target.checked)}
+                    className="rounded border-blue-300"
+                  />
+                  <Clock className="w-4 h-4" />
+                  Schedule for later
+                </label>
+                {scheduleMode && (
+                  <div className="grid grid-cols-2 gap-3 mt-2">
+                    <div>
+                      <label className="block text-xs font-semibold text-blue-700 mb-1">Send at</label>
+                      <input
+                        type="datetime-local"
+                        value={scheduledFor}
+                        onChange={(e) => setScheduledFor(e.target.value)}
+                        className="w-full px-3 py-2 border border-blue-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-400 focus:outline-none bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-blue-700 mb-1">Repeat</label>
+                      <select
+                        value={recurrence}
+                        onChange={(e) => setRecurrence(e.target.value)}
+                        className="w-full px-3 py-2 border border-blue-200 rounded-lg text-sm focus:outline-none bg-white"
+                      >
+                        <option value="none">Once only</option>
+                        <option value="daily">Daily</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                        <option value="term_start">Every term start</option>
+                        <option value="term_end">Every term end</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Footer */}
@@ -358,15 +451,32 @@ export default function NoticesPage() {
               </button>
               <button
                 onClick={handleSubmit}
-                disabled={!form.title.trim() || saving}
+                disabled={!form.title.trim() || saving || (scheduleMode && !scheduledFor)}
                 className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition disabled:opacity-50"
               >
-                <Send className="w-4 h-4" />
-                {saving ? "Publishing..." : "Publish Notice"}
+                {scheduleMode ? (
+                  <>
+                    <Clock className="w-4 h-4" />
+                    {saving ? "Scheduling..." : "Schedule Notice"}
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    {saving ? "Publishing..." : "Publish Notice"}
+                  </>
+                )}
               </button>
             </div>
           </div>
         </div>
+      )}
+
+      {/* Templates Modal */}
+      {showTemplates && (
+        <NoticeTemplates
+          onSelect={handleSelectTemplate}
+          onClose={() => setShowTemplates(false)}
+        />
       )}
 
       {/* Notice Feed */}

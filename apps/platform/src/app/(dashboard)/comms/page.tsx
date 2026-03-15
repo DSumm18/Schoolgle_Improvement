@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import {
   Radio,
   Video,
@@ -17,6 +18,9 @@ import {
   Zap,
   Settings,
   X,
+  BarChart3,
+  Shield,
+  CalendarDays,
 } from "lucide-react";
 import { VideoRoomCard } from "@/components/video/VideoRoomEmbed";
 import { NoticeFeed } from "@/components/notices/NoticeFeed";
@@ -386,6 +390,25 @@ export default function CommsHubPage() {
             <div className="grid grid-cols-3 gap-6">
               {/* Left: Live + upcoming rooms */}
               <div className="col-span-2 space-y-6">
+                {/* Quick Actions */}
+                <div className="grid grid-cols-4 gap-3">
+                  {[
+                    { label: "Analytics", href: "/comms/analytics", icon: BarChart3, color: "bg-indigo-50 text-indigo-600 hover:bg-indigo-100" },
+                    { label: "Calendar", href: "/calendar", icon: CalendarDays, color: "bg-blue-50 text-blue-600 hover:bg-blue-100" },
+                    { label: "Emergency", href: "/emergency-broadcast", icon: Shield, color: "bg-red-50 text-red-600 hover:bg-red-100" },
+                    { label: "Drills", href: "/emergency-broadcast/drills", icon: Shield, color: "bg-orange-50 text-orange-600 hover:bg-orange-100" },
+                  ].map(({ label, href, icon: QIcon, color }) => (
+                    <Link
+                      key={href}
+                      href={href}
+                      className={`flex flex-col items-center gap-2 p-4 rounded-xl transition border border-transparent hover:border-gray-200 ${color}`}
+                    >
+                      <QIcon className="w-6 h-6" />
+                      <span className="text-xs font-semibold">{label}</span>
+                    </Link>
+                  ))}
+                </div>
+
                 {/* Quick messages */}
                 <div className="bg-white border border-gray-200 rounded-xl p-4">
                   <QuickMessageBar />
