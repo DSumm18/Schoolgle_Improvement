@@ -147,7 +147,7 @@ export const GET = protectedRoute(async (auth, req) => {
           evidence_count: assessment.evidence_count,
           school_rating: assessment.school_rating || "not_assessed",
           ai_rating: assessment.ai_rating || "not_assessed",
-          gap_level,
+          gap_level: gapLevel,
           needs_attention: gapLevel !== "none",
           missing_evidence: hasNoEvidence
             ? ["No evidence found for this subcategory"]
@@ -309,7 +309,7 @@ export const POST = protectedRoute(async (auth, req) => {
     overall_rating: data.overall_rating,
     category_scores: data.category_scores,
     total_evidence: data.total_evidence,
-    evidence_by_category: {}, // Would need to calculate
+    evidence_by_category: {} as Record<OfstedCategoryId, number>, // Would need to calculate
     critical_gaps: data.critical_gaps,
     gap_details: [],
     safeguarding_met: null,

@@ -122,9 +122,9 @@ async function generateGovernorReport(
     generatedAt: new Date().toISOString(),
     generatedBy: "System",
     title: getReportTitle(reportType),
-    reportingPeriod: reportingPeriod || {
-      startDate: getDefaultStartDate(reportType),
-      endDate: new Date().toISOString(),
+    reportingPeriod: {
+      startDate: reportingPeriod?.startDate || getDefaultStartDate(reportType),
+      endDate: reportingPeriod?.endDate || new Date().toISOString(),
     },
     preparedFor,
     executiveSummary,
@@ -207,6 +207,7 @@ async function generateDomainSummaries(
       goodPracticeChecksTotal: goodPracticeChecks.length,
       overdueChecks,
       nextReviewDate: getNextWeekDate().toISOString(),
+      keyIssues,
     });
   }
 
@@ -243,9 +244,9 @@ async function generateActionsRequired(
     title: task.task_name,
     description: task.description || "",
     domain: task.compliance_domain as ComplianceDomain,
-    classification: "statutory",
+    classification: "statutory" as const,
     severity: task.priority as "critical" | "high" | "medium" | "low",
-    targetDate: task.due_date,
+    targetDate: task.due_date || new Date().toISOString(),
     estimatedCost: task.findings?.[0]?.estimated_cost,
     assignedTo: task.assigned_to,
     source: "Compliance Task",

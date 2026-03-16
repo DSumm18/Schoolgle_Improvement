@@ -20,13 +20,13 @@ import {
   deleteContract as dbDeleteContract,
   getExpiringContracts,
   getAssetContracts,
-} from '../database/contractors';
+} from "../database/contractors";
 import type {
   Contractor,
   Contract,
   ContractorInput,
   ContractInput,
-} from '@/types/estates-compliance';
+} from "@/types/estates-compliance";
 
 /**
  * Contractor Service class
@@ -39,7 +39,10 @@ export class ContractorService {
    */
   static async listContractors(
     organizationId: string,
-    filters?: { status?: 'active' | 'inactive' | 'restricted'; preferred?: boolean }
+    filters?: {
+      status?: "active" | "inactive" | "restricted";
+      preferred?: boolean;
+    },
   ): Promise<Contractor[]> {
     return getContractors(organizationId, filters);
   }
@@ -54,15 +57,18 @@ export class ContractorService {
   /**
    * Create a new contractor
    */
-  static async createContractor(organizationId: string, input: ContractorInput): Promise<Contractor> {
+  static async createContractor(
+    organizationId: string,
+    input: ContractorInput,
+  ): Promise<Contractor> {
     // Validate required fields
-    if (!input.company_name || input.company_name.trim() === '') {
-      throw new Error('Company name is required');
+    if (!input.company_name || input.company_name.trim() === "") {
+      throw new Error("Company name is required");
     }
 
     // Validate email format if provided
     if (input.email && !this.isValidEmail(input.email)) {
-      throw new Error('Invalid email format');
+      throw new Error("Invalid email format");
     }
 
     return dbCreateContractor(organizationId, input);
@@ -71,7 +77,10 @@ export class ContractorService {
   /**
    * Update a contractor
    */
-  static async updateContractor(contractorId: string, updates: Partial<ContractorInput>): Promise<Contractor> {
+  static async updateContractor(
+    contractorId: string,
+    updates: Partial<ContractorInput>,
+  ): Promise<Contractor> {
     // Check contractor exists
     const existing = await getContractorById(contractorId);
     if (!existing) {
@@ -80,7 +89,7 @@ export class ContractorService {
 
     // Validate email format if provided
     if (updates.email && !this.isValidEmail(updates.email)) {
-      throw new Error('Invalid email format');
+      throw new Error("Invalid email format");
     }
 
     return dbUpdateContractor(contractorId, updates);
@@ -91,12 +100,12 @@ export class ContractorService {
    */
   static async deleteContractor(contractorId: string): Promise<void> {
     // Check for active contracts
-    const contracts = await getContracts('', { contractor_id: contractorId });
-    const activeContracts = contracts.filter((c) => c.status === 'active');
+    const contracts = await getContracts("", { contractor_id: contractorId });
+    const activeContracts = contracts.filter((c) => c.status === "active");
 
     if (activeContracts.length > 0) {
       throw new Error(
-        `Cannot delete contractor with ${activeContracts.length} active contract(s). End or reassign contracts first.`
+        `Cannot delete contractor with ${activeContracts.length} active contract(s). End or reassign contracts first.`,
       );
     }
 
@@ -106,14 +115,20 @@ export class ContractorService {
   /**
    * Search contractors
    */
-  static async searchContractors(organizationId: string, searchTerm: string): Promise<Contractor[]> {
+  static async searchContractors(
+    organizationId: string,
+    searchTerm: string,
+  ): Promise<Contractor[]> {
     return searchContractors(organizationId, searchTerm);
   }
 
   /**
    * Get contractors by service type
    */
-  static async getContractorsByServiceType(organizationId: string, serviceType: string): Promise<Contractor[]> {
+  static async getContractorsByServiceType(
+    organizationId: string,
+    serviceType: string,
+  ): Promise<Contractor[]> {
     return getContractorsByService(organizationId, serviceType);
   }
 
@@ -122,7 +137,7 @@ export class ContractorService {
    */
   static async getContractorsWithExpiringDocs(
     organizationId: string,
-    daysUntilExpiry = 30
+    daysUntilExpiry = 30,
   ): Promise<Array<{ contractor: Contractor; expiring_items: string[] }>> {
     return getContractorsWithExpiringDocuments(organizationId, daysUntilExpiry);
   }
@@ -136,7 +151,9 @@ export class ContractorService {
       throw new Error(`Contractor not found: ${contractorId}`);
     }
 
-    return dbUpdateContractor(contractorId, { preferred: !contractor.preferred });
+    return dbUpdateContractor(contractorId, {
+      preferred: !contractor.preferred,
+    });
   }
 
   /**
@@ -144,7 +161,7 @@ export class ContractorService {
    */
   static async setStatus(
     contractorId: string,
-    status: 'active' | 'inactive' | 'restricted'
+    status: "active" | "inactive" | "restricted",
   ): Promise<Contractor> {
     return dbUpdateContractor(contractorId, { status });
   }
@@ -160,14 +177,17 @@ export class ContractorService {
       expiry_date?: string;
       issuing_body?: string;
       certificate_url?: string;
-    }
+    },
   ): Promise<Contractor> {
     const contractor = await getContractorById(contractorId);
     if (!contractor) {
       throw new Error(`Contractor not found: ${contractorId}`);
     }
 
-    const accreditations = [...(contractor.accreditations || []), accreditation];
+    const accreditations = [
+      ...(contractor.accreditations || []),
+      accreditation,
+    ];
 
     return dbUpdateContractor(contractorId, { accreditations });
   }
@@ -175,13 +195,18 @@ export class ContractorService {
   /**
    * Remove accreditation from contractor
    */
-  static async removeAccreditation(contractorId: string, accreditationType: string): Promise<Contractor> {
+  static async removeAccreditation(
+    contractorId: string,
+    accreditationType: string,
+  ): Promise<Contractor> {
     const contractor = await getContractorById(contractorId);
     if (!contractor) {
       throw new Error(`Contractor not found: ${contractorId}`);
     }
 
-    const accreditations = (contractor.accreditations || []).filter((a) => a.type !== accreditationType);
+    const accreditations = (contractor.accreditations || []).filter(
+      (a) => a.type !== accreditationType,
+    );
 
     return dbUpdateContractor(contractorId, { accreditations });
   }
@@ -193,7 +218,7 @@ export class ContractorService {
    */
   static async listContracts(
     organizationId: string,
-    filters?: { status?: string; contractor_id?: string }
+    filters?: { status?: string; contractor_id?: string },
   ): Promise<Contract[]> {
     return getContracts(organizationId, filters);
   }
@@ -208,7 +233,10 @@ export class ContractorService {
   /**
    * Create a new contract
    */
-  static async createContract(organizationId: string, input: ContractInput): Promise<Contract> {
+  static async createContract(
+    organizationId: string,
+    input: ContractInput,
+  ): Promise<Contract> {
     // Validate contractor exists
     const contractor = await getContractorById(input.contractor_id);
     if (!contractor) {
@@ -217,16 +245,16 @@ export class ContractorService {
 
     // Validate contractor belongs to same organization
     if (contractor.organization_id !== organizationId) {
-      throw new Error('Contractor must belong to the same organization');
+      throw new Error("Contractor must belong to the same organization");
     }
 
     // Validate dates
     if (input.end_date && input.end_date <= input.start_date) {
-      throw new Error('End date must be after start date');
+      throw new Error("End date must be after start date");
     }
 
     if (input.renewal_date && input.start_date > input.renewal_date) {
-      throw new Error('Renewal date must be after start date');
+      throw new Error("Renewal date must be after start date");
     }
 
     return dbCreateContract(organizationId, input);
@@ -235,16 +263,23 @@ export class ContractorService {
   /**
    * Update a contract
    */
-  static async updateContract(contractId: string, updates: Partial<ContractInput>): Promise<Contract> {
+  static async updateContract(
+    contractId: string,
+    updates: Partial<ContractInput>,
+  ): Promise<Contract> {
     // Check contract exists
     const existing = await getContractById(contractId);
     if (!existing) {
-      throw new Error(`Contract not found: ${contractIdId}`);
+      throw new Error(`Contract not found: ${contractId}`);
     }
 
     // Validate dates if being updated
-    if (updates.start_date && updates.end_date && updates.end_date <= updates.start_date) {
-      throw new Error('End date must be after start date');
+    if (
+      updates.start_date &&
+      updates.end_date &&
+      updates.end_date <= updates.start_date
+    ) {
+      throw new Error("End date must be after start date");
     }
 
     return dbUpdateContract(contractId, updates);
@@ -262,7 +297,7 @@ export class ContractorService {
    */
   static async getExpiringContracts(
     organizationId: string,
-    daysUntilExpiry = 90
+    daysUntilExpiry = 90,
   ): Promise<Contract[]> {
     return getExpiringContracts(organizationId, daysUntilExpiry);
   }
@@ -277,9 +312,11 @@ export class ContractorService {
   /**
    * Get active contracts for a contractor
    */
-  static async getContractorActiveContracts(contractorId: string): Promise<Contract[]> {
-    return getContracts('', { contractor_id: contractorId }).then((contracts) =>
-      contracts.filter((c) => c.status === 'active')
+  static async getContractorActiveContracts(
+    contractorId: string,
+  ): Promise<Contract[]> {
+    return getContracts("", { contractor_id: contractorId }).then((contracts) =>
+      contracts.filter((c) => c.status === "active"),
     );
   }
 

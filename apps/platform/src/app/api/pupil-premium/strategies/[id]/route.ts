@@ -237,10 +237,11 @@ const DEMO_STRATEGY_WITH_INTERVENTIONS = {
  * GET /api/pupil-premium/strategies/[id]
  * Get a single strategy with its interventions
  */
-export const GET = protectedRoute(async (auth, request, context) => {
+export const GET = protectedRoute(async (auth, request) => {
   const { organizationId } = auth;
   const supabase = createServiceRoleClient();
-  const id = (context as any).params?.id;
+  const segments = request.nextUrl.pathname.split("/");
+  const id = segments[segments.indexOf("strategies") + 1];
 
   if (!id) {
     return apiError("Strategy ID is required", 400);
@@ -286,10 +287,11 @@ export const GET = protectedRoute(async (auth, request, context) => {
  * PUT /api/pupil-premium/strategies/[id]
  * Update a strategy
  */
-export const PUT = protectedRoute(async (auth, request, context) => {
+export const PUT = protectedRoute(async (auth, request) => {
   const { organizationId } = auth;
   const supabase = createServiceRoleClient();
-  const id = (context as any).params?.id;
+  const segments = request.nextUrl.pathname.split("/");
+  const id = segments[segments.indexOf("strategies") + 1];
   const body = await request.json();
 
   if (!id) {

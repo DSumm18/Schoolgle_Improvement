@@ -14,13 +14,13 @@ import {
   getChildAssets,
   searchAssets,
   getAssetStats,
-} from '../database/assets';
+} from "../database/assets";
 import type {
   Asset,
   AssetInput,
   AssetFilters,
   PaginatedResponse,
-} from '@/types/estates-compliance';
+} from "@/types/estates-compliance";
 
 /**
  * Asset Service class
@@ -32,7 +32,7 @@ export class AssetService {
   static async list(
     organizationId: string,
     filters?: AssetFilters,
-    pagination?: { page: number; pageSize: number }
+    pagination?: { page: number; pageSize: number },
   ): Promise<PaginatedResponse<Asset>> {
     return getAssets(organizationId, filters, pagination);
   }
@@ -47,19 +47,22 @@ export class AssetService {
   /**
    * Create a new asset with validation
    */
-  static async create(organizationId: string, input: AssetInput): Promise<Asset> {
+  static async create(
+    organizationId: string,
+    input: AssetInput,
+  ): Promise<Asset> {
     // Validate asset type
     const validAssetTypes = [
-      'building',
-      'room',
-      'outlet',
-      'equipment',
-      'fire_extinguisher',
-      'emergency_light',
-      'lift',
-      'playground_equipment',
-      'accessibility_equipment',
-      'vehicle',
+      "building",
+      "room",
+      "outlet",
+      "equipment",
+      "fire_extinguisher",
+      "emergency_light",
+      "lift",
+      "playground_equipment",
+      "accessibility_equipment",
+      "vehicle",
     ];
 
     if (!validAssetTypes.includes(input.asset_type)) {
@@ -75,7 +78,7 @@ export class AssetService {
 
       // Parent must belong to same organization
       if (parent.organization_id !== organizationId) {
-        throw new Error('Parent asset must belong to the same organization');
+        throw new Error("Parent asset must belong to the same organization");
       }
     }
 
@@ -96,7 +99,10 @@ export class AssetService {
   /**
    * Update an existing asset with validation
    */
-  static async update(assetId: string, updates: Partial<AssetInput>): Promise<Asset> {
+  static async update(
+    assetId: string,
+    updates: Partial<AssetInput>,
+  ): Promise<Asset> {
     // Check asset exists
     const existing = await getAssetById(assetId);
     if (!existing) {
@@ -106,7 +112,7 @@ export class AssetService {
     // Validate parent asset if being changed
     if (updates.parent_asset_id) {
       if (updates.parent_asset_id === assetId) {
-        throw new Error('Asset cannot be its own parent');
+        throw new Error("Asset cannot be its own parent");
       }
 
       const parent = await getAssetById(updates.parent_asset_id);
@@ -132,7 +138,7 @@ export class AssetService {
     const children = await getChildAssets(assetId);
     if (children.length > 0) {
       throw new Error(
-        `Cannot delete asset with ${children.length} child assets. Reassign or delete children first.`
+        `Cannot delete asset with ${children.length} child assets. Reassign or delete children first.`,
       );
     }
 
@@ -144,7 +150,10 @@ export class AssetService {
   /**
    * Get assets by compliance domain
    */
-  static async getByDomain(organizationId: string, domain: string): Promise<Asset[]> {
+  static async getByDomain(
+    organizationId: string,
+    domain: string,
+  ): Promise<Asset[]> {
     return getAssetsByDomain(organizationId, domain);
   }
 
@@ -158,7 +167,11 @@ export class AssetService {
   /**
    * Search assets
    */
-  static async search(organizationId: string, searchTerm: string, limit?: number): Promise<Asset[]> {
+  static async search(
+    organizationId: string,
+    searchTerm: string,
+    limit?: number,
+  ): Promise<Asset[]> {
     return searchAssets(organizationId, searchTerm, limit);
   }
 
@@ -179,10 +192,11 @@ export class AssetService {
     }
 
     if (!asset.code) {
-      throw new Error('Asset must have a code to generate QR code');
+      throw new Error("Asset must have a code to generate QR code");
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://schoolgle.co.uk';
+    const baseUrl =
+      process.env.NEXT_PUBLIC_APP_URL || "https://schoolgle.co.uk";
     const qrUrl = `${baseUrl}/estates/assets/scan/${asset.code}`;
 
     // Update asset with QR code
@@ -195,7 +209,7 @@ export class AssetService {
    * Deactivate an asset (soft delete)
    */
   static async deactivate(assetId: string): Promise<Asset> {
-    return this.update(assetId, { status: 'inactive' });
+    return this.update(assetId, { status: "inactive" });
   }
 
   /**
@@ -229,7 +243,9 @@ export class AssetService {
 
     return {
       asset,
-      parent: asset.parent_asset_id ? await getAssetById(asset.parent_asset_id) : undefined,
+      parent: asset.parent_asset_id
+        ? ((await getAssetById(asset.parent_asset_id)) ?? undefined)
+        : undefined,
       children,
       path,
     };
@@ -240,7 +256,7 @@ export class AssetService {
    */
   static async bulkImport(
     organizationId: string,
-    assets: Array<AssetInput & { temp_id?: string }>
+    assets: Array<AssetInput & { temp_id?: string }>,
   ): Promise<{
     created: Asset[];
     errors: Array<{ temp_id?: string; row: number; error: string }>;
@@ -275,7 +291,7 @@ export class AssetService {
         errors.push({
           temp_id: input.temp_id,
           row: i + 1,
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: error instanceof Error ? error.message : "Unknown error",
         });
       }
     }
@@ -288,19 +304,19 @@ export class AssetService {
    */
   private static getAssetCodePrefix(assetType: string): string {
     const prefixes: Record<string, string> = {
-      building: 'BLD',
-      room: 'ROM',
-      outlet: 'OUT',
-      equipment: 'EQP',
-      fire_extinguisher: 'FE',
-      emergency_light: 'EL',
-      lift: 'LFT',
-      playground_equipment: 'PGE',
-      accessibility_equipment: 'ACE',
-      vehicle: 'VHC',
+      building: "BLD",
+      room: "ROM",
+      outlet: "OUT",
+      equipment: "EQP",
+      fire_extinguisher: "FE",
+      emergency_light: "EL",
+      lift: "LFT",
+      playground_equipment: "PGE",
+      accessibility_equipment: "ACE",
+      vehicle: "VHC",
     };
 
-    return prefixes[assetType] || 'AST';
+    return prefixes[assetType] || "AST";
   }
 }
 

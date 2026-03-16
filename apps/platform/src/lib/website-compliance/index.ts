@@ -24,3 +24,14 @@ export type {
   CategorySummary,
   AssessmentOptions,
 } from "./assessor";
+
+export {
+  scrapeSchoolWebsite,
+  getScrapedPages,
+  getScrapedDocuments,
+  getSessionInfo,
+} from "./phase1-scraper";
+export type { ScrapeOptions, ScrapeResult } from "./phase1-scraper";
+
+export { assessScrapedWebsite } from "./phase2-assessor";
+export type { AssessOptions, AssessResult } from "./phase2-assessor";

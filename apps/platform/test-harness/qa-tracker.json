@@ -1,0 +1,362 @@
+{
+  "version": "1.0.0",
+  "last_updated": "2026-03-12",
+  "description": "QA tracker for Schoolgle platform modules. Tracks what's built, tested, and needs attention.",
+
+  "modules": [
+    {
+      "name": "H&S Incident Reporting",
+      "status": "built",
+      "priority": "critical",
+      "build_date": "2026-03-12",
+      "files": {
+        "migration": "supabase/migrations/20260313_incident_reports.sql",
+        "api_list": "src/app/api/incidents/route.ts",
+        "api_detail": "src/app/api/incidents/[id]/route.ts",
+        "ui": "src/app/(dashboard)/dashboard/estates/incidents/page.tsx",
+        "engine": "src/lib/riddor-engine.ts",
+        "tests": "src/lib/__tests__/riddor-engine.test.ts",
+        "touchpoints": "src/lib/incidents/touchpoint-map.ts",
+        "data_sources": "src/lib/incidents/data-sources.ts"
+      },
+      "test_coverage": {
+        "unit_tests": {
+          "status": "done",
+          "count": 132,
+          "passing": 131,
+          "notes": "RIDDOR detection engine fully tested. 1 working-day calc edge case to fix."
+        },
+        "api_tests": {
+          "status": "todo",
+          "notes": "Need integration tests for POST/GET/PATCH incidents"
+        },
+        "ui_tests": {
+          "status": "todo",
+          "notes": "Need Playwright E2E for multi-step form wizard"
+        },
+        "cross_module": {
+          "status": "todo",
+          "notes": "Test: incident → risk register, incident → workflow, incident → SOP"
+        }
+      },
+      "data_flows": [
+        {
+          "from": "Incident Form (UI)",
+          "to": "incident_reports (DB)",
+          "via": "POST /api/incidents",
+          "tested": false
+        },
+        {
+          "from": "incident_reports",
+          "to": "risk_register",
+          "via": "createRiskFromIncident()",
+          "tested": false,
+          "condition": "severity = major|critical"
+        },
+        {
+          "from": "incident_reports",
+          "to": "riddor_form_data (JSONB)",
+          "via": "generateF2508FormData()",
+          "tested": true,
+          "notes": "Unit tested"
+        },
+        {
+          "from": "RIDDOR engine",
+          "to": "incident_reports.is_riddor_reportable",
+          "via": "detectRIDDOR()",
+          "tested": true,
+          "notes": "132 unit tests"
+        },
+        {
+          "from": "incident_reports",
+          "to": "workflows",
+          "via": "workflow_engine",
+          "tested": false
+        },
+        {
+          "from": "incident_reports",
+          "to": "sop_runs",
+          "via": "linked_sop_run_id",
+          "tested": false
+        },
+        {
+          "from": "Ed AI skills",
+          "to": "incident_reports",
+          "via": "POST /api/skills/invoke",
+          "tested": false
+        }
+      ],
+      "known_issues": [
+        "Aurora seed data doesn't populate new RIDDOR detection fields (injury_type, hospital_admission_type)",
+        "Ed F2508 presentation formatter not yet built",
+        "SOP auto-trigger from incident creation not wired"
+      ]
+    },
+    {
+      "name": "Workflow Engine",
+      "status": "built",
+      "priority": "high",
+      "build_date": "2026-03-12",
+      "files": {
+        "migration": "supabase/migrations/20260313_workflow_engine.sql",
+        "api_list": "src/app/api/workflows/route.ts",
+        "api_detail": "src/app/api/workflows/[id]/route.ts",
+        "api_steps": "src/app/api/workflows/[id]/steps/[stepId]/route.ts",
+        "api_procurement": "src/app/api/procurement/route.ts",
+        "engine": "src/lib/workflow-engine.ts",
+        "ui": "src/app/(dashboard)/dashboard/workflows/page.tsx"
+      },
+      "test_coverage": {
+        "unit_tests": {
+          "status": "todo",
+          "notes": "workflow-engine.ts functions untested"
+        },
+        "api_tests": {
+          "status": "todo",
+          "notes": "Need CRUD tests for workflow lifecycle"
+        },
+        "ui_tests": {
+          "status": "todo",
+          "notes": "Need E2E for workflow creation and step progression"
+        },
+        "cross_module": {
+          "status": "todo",
+          "notes": "Test: workflow → helpdesk ticket, workflow → procurement, workflow → risk"
+        }
+      },
+      "data_flows": [
+        {
+          "from": "Template",
+          "to": "workflows + phases + steps",
+          "via": "createFromTemplate()",
+          "tested": false
+        },
+        {
+          "from": "Step completion",
+          "to": "Phase auto-advance",
+          "via": "advancePhase()",
+          "tested": false
+        },
+        {
+          "from": "Procurement step",
+          "to": "procurement_requests",
+          "via": "POST /api/procurement",
+          "tested": false
+        },
+        {
+          "from": "Ed AI skills",
+          "to": "workflows",
+          "via": "POST /api/skills/invoke",
+          "tested": false
+        }
+      ],
+      "known_issues": [
+        "Workflow detail page not built (list only)",
+        "Procurement quote comparison AI not implemented",
+        "Notification on phase handover not wired"
+      ]
+    },
+    {
+      "name": "SOP Engine",
+      "status": "schema_only",
+      "priority": "high",
+      "build_date": "2026-01-10",
+      "files": {
+        "migration": "supabase/migrations/20260110120000_navigator_mvp.sql",
+        "seeds": "supabase/seeds/002_sop_templates.sql",
+        "incident_sops": "supabase/migrations/20260313_incident_sop_link.sql"
+      },
+      "test_coverage": {
+        "unit_tests": {
+          "status": "todo",
+          "notes": "No engine code exists yet"
+        },
+        "api_tests": { "status": "todo", "notes": "No API routes exist yet" },
+        "ui_tests": { "status": "todo", "notes": "No UI exists yet" }
+      },
+      "data_flows": [
+        {
+          "from": "sop_templates",
+          "to": "sop_runs",
+          "via": "TBD - createSopRun()",
+          "tested": false
+        },
+        {
+          "from": "sop_runs",
+          "to": "evidence_items",
+          "via": "TBD - uploadEvidence()",
+          "tested": false
+        },
+        {
+          "from": "incident_reports",
+          "to": "sop_runs",
+          "via": "linked_sop_run_id",
+          "tested": false
+        }
+      ],
+      "known_issues": [
+        "SOP reminders/scheduling not yet implemented",
+        "Evidence upload within SOP steps not wired to storage"
+      ],
+      "recently_completed": [
+        "API routes: GET /api/sops/templates, GET/POST /api/sops/runs, GET/PATCH /api/sops/runs/[id], PATCH /api/sops/runs/[id]/steps/[stepId], POST /api/sops/triggers",
+        "SOP runner UI at /dashboard/sops with template browser, active runs, step-by-step guided flow",
+        "SOP engine library (src/lib/sop-engine.ts) with full CRUD + progress tracking",
+        "6 Ed AI skills (start_sop, get_sop_status, update_sop_step, get_sop_templates, get_my_sop_runs, suggest_sops_for_incident)",
+        "Auto-trigger: incidents auto-start appropriate SOP and link via linked_sop_run_id",
+        "11 SOP templates seeded (5 original + 6 H&S new)",
+        "Module registry entry for SOPs at /dashboard/sops",
+        "Estates landing page: SOPs card added"
+      ]
+    },
+    {
+      "name": "Risk Register",
+      "status": "built",
+      "priority": "high",
+      "build_date": "2026-03-01",
+      "test_coverage": {
+        "unit_tests": { "status": "todo" },
+        "api_tests": { "status": "todo" },
+        "cross_module": {
+          "status": "todo",
+          "notes": "Test: incident auto-creates risk, workflow closes risk"
+        }
+      }
+    },
+    {
+      "name": "Estates Compliance",
+      "status": "built",
+      "priority": "medium",
+      "build_date": "2026-02-01",
+      "test_coverage": {
+        "unit_tests": { "status": "todo" },
+        "api_tests": { "status": "todo" }
+      }
+    },
+    {
+      "name": "Website Compliance Scanner",
+      "status": "built",
+      "priority": "medium",
+      "build_date": "2026-03-10",
+      "test_coverage": {
+        "unit_tests": { "status": "todo" },
+        "api_tests": { "status": "todo" }
+      }
+    },
+    {
+      "name": "Document Engine",
+      "status": "built",
+      "priority": "medium",
+      "build_date": "2026-03-05",
+      "test_coverage": {
+        "unit_tests": { "status": "todo" },
+        "api_tests": { "status": "todo" }
+      }
+    }
+  ],
+
+  "data_source_types": {
+    "internal": {
+      "description": "Data created within Schoolgle by user actions or system automation",
+      "examples": [
+        "Incident forms",
+        "Risk assessments",
+        "Helpdesk tickets",
+        "Workflow steps",
+        "Approvals"
+      ],
+      "management": "Full CRUD via Schoolgle APIs, stored in Supabase"
+    },
+    "mis_import": {
+      "description": "Data imported from school MIS systems (Arbor, SIMS, Bromcom, etc.)",
+      "examples": [
+        "Pupil demographics",
+        "Staff details",
+        "Attendance",
+        "Timetable",
+        "Class assignments"
+      ],
+      "management": "Imported via data_imports pipeline or Wonde API, read-only in Schoolgle, school is data controller"
+    },
+    "external": {
+      "description": "Data from external systems we track but don't control",
+      "examples": [
+        "HSE RIDDOR reference",
+        "Finance PO numbers",
+        "Contractor invoices",
+        "DBS checks"
+      ],
+      "management": "We track status (yes/no + reference number), actual data lives in external system"
+    },
+    "public_data": {
+      "description": "Publicly available datasets enriching school context",
+      "examples": [
+        "DfE performance data",
+        "IMD/IDACI deprivation",
+        "Ofsted reports",
+        "Census demographics"
+      ],
+      "management": "Fetched and cached, refreshed on published schedule"
+    }
+  },
+
+  "testing_priorities": [
+    {
+      "priority": 1,
+      "area": "RIDDOR Auto-Detection",
+      "reason": "Legal liability — wrong detection has HSE compliance consequences",
+      "type": "unit + integration",
+      "status": "in_progress",
+      "notes": "132 unit tests written, need integration test with actual API"
+    },
+    {
+      "priority": 2,
+      "area": "Cross-Module Data Flow (Incident → Risk)",
+      "reason": "Core platform value prop — modules must link correctly",
+      "type": "integration",
+      "status": "todo"
+    },
+    {
+      "priority": 3,
+      "area": "Workflow Phase Progression",
+      "reason": "Workflow engine is demo-critical, phase gates must work",
+      "type": "integration",
+      "status": "todo"
+    },
+    {
+      "priority": 4,
+      "area": "Ed AI Skills Invocation",
+      "reason": "Ed must correctly call and return from all 46+ skills",
+      "type": "integration",
+      "status": "todo"
+    },
+    {
+      "priority": 5,
+      "area": "Multi-Step Form Wizard (Incidents)",
+      "reason": "User-facing form, must collect all RIDDOR data correctly",
+      "type": "e2e",
+      "status": "todo"
+    }
+  ],
+
+  "handover_checklist": {
+    "description": "Checklist for QA team when picking up a module to test",
+    "steps": [
+      "1. Read the module entry in this qa-tracker.json",
+      "2. Check known_issues — some are expected, don't re-report",
+      "3. Run existing unit tests: npx vitest run <test-file>",
+      "4. Test API endpoints with curl/Postman using Aurora org credentials",
+      "5. Test UI at localhost:3002/dashboard/<module-path>",
+      "6. Verify data flows: create record → check linked modules updated",
+      "7. Check Ed can invoke the module's skills via /api/skills/invoke",
+      "8. Report: what works, what's broken, what's missing vs spec",
+      "9. Update this file with test results"
+    ],
+    "aurora_test_org": {
+      "org_id": "092478fd-b68f-40de-85f7-cff62be993e4",
+      "org_name": "Aurora Multi-Academy Trust",
+      "test_user": "ui-test@schoolgle.co.uk",
+      "login": "Supabase auth, admin role"
+    }
+  }
+}

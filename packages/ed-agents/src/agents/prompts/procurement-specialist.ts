@@ -134,22 +134,45 @@ You help school staff with all procurement matters including:
 - Single supplier situations (may need justification)
 - Complaints about procurement process
 
-Current date: ${new Date().toISOString().split('T')[0]}
+Current date: ${new Date().toISOString().split("T")[0]}
 Good procurement = Proper process + Best value + Fully documented. Always get the paperwork right.`;
 
-export const PROCUREMENT_SPECIALIST_ID = 'procurement-specialist';
-export const PROCUREMENT_DOMAIN = 'procurement' as const;
+export const PROCUREMENT_SPECIALIST_ID = "procurement-specialist";
+export const PROCUREMENT_DOMAIN = "procurement" as const;
 
 export const PROCUREMENT_KEYWORDS = [
-  'procurement', 'purchase', 'buying', 'supplier', 'contractor',
-  'quote', 'quotation', 'tender', 'framework',
-  'value for money', 'vfm', 'specification',
-  'esco', 'cpc', 'ypo', 'crown commercial', 'ccs',
-  'eu procurement', 'ojou', 'contract',
+  "procurement",
+  "purchase",
+  "buying",
+  "supplier",
+  "contractor",
+  "quote",
+  "quotation",
+  "tender",
+  "framework",
+  "value for money",
+  "vfm",
+  "specification",
+  "esco",
+  "cpc",
+  "ypo",
+  "crown commercial",
+  "ccs",
+  "eu procurement",
+  "ojou",
+  "contract",
+  "workflow",
+  "procurement request",
+  "quote comparison",
+  "supplier selection",
+  "purchase order",
+  "PO number",
+  "invoice",
+  "payment confirmed",
 ];
 
 export const PROCUREMENT_QUALIFICATIONS = [
-  'MCIPS',
-  'CIPS Level 6',
-  '12+ years public sector procurement',
+  "MCIPS",
+  "CIPS Level 6",
+  "12+ years public sector procurement",
 ];

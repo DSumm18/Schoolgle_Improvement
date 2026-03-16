@@ -91,10 +91,20 @@ async function calculateReadiness(
   let totalScore = 0;
   let strandCount = 0;
 
-  Object.values(SIAMS_STRANDS).forEach((strand) => {
-    const strandQuestions = Object.values(SIAMS_QUESTIONS)
-      .filter((q) => q.strand === strand.id)
-      .map((q) => q.id);
+  (
+    Object.entries(SIAMS_STRANDS) as [
+      SiamsStrandId,
+      (typeof SIAMS_STRANDS)[SiamsStrandId],
+    ][]
+  ).forEach(([strandId, strand]) => {
+    const strandQuestions = (
+      Object.entries(SIAMS_QUESTIONS) as [
+        string,
+        (typeof SIAMS_QUESTIONS)[SiamsQuestionId],
+      ][]
+    )
+      .filter(([, q]) => q.strand === strandId)
+      .map(([qId]) => qId);
 
     let strandTotal = 0;
     let assessedCount = 0;
@@ -111,13 +121,11 @@ async function calculateReadiness(
     });
 
     if (assessedCount > 0) {
-      strandScores[strand.id as SiamsStrandId] = Math.round(
-        strandTotal / assessedCount,
-      );
-      totalScore += strandScores[strand.id as SiamsStrandId];
+      strandScores[strandId] = Math.round(strandTotal / assessedCount);
+      totalScore += strandScores[strandId];
       strandCount++;
     }
-    evidenceByStrand[strand.id as SiamsStrandId] = strandEvidence;
+    evidenceByStrand[strandId] = strandEvidence;
   });
 
   // Calculate overall score and rating
@@ -126,56 +134,71 @@ async function calculateReadiness(
   const overallRating = calculateRatingFromScore(overallScore);
 
   // Build strand summaries
-  const strands: SiamsStrandSummary[] = Object.values(SIAMS_STRANDS).map(
-    (strand) => {
-      const strandQuestions = Object.values(SIAMS_QUESTIONS)
-        .filter((q) => q.strand === strand.id)
-        .map((q) => q.id);
+  const strands: SiamsStrandSummary[] = (
+    Object.entries(SIAMS_STRANDS) as [
+      SiamsStrandId,
+      (typeof SIAMS_STRANDS)[SiamsStrandId],
+    ][]
+  ).map(([strandId, strand]) => {
+    const strandQuestions = (
+      Object.entries(SIAMS_QUESTIONS) as [
+        string,
+        (typeof SIAMS_QUESTIONS)[SiamsQuestionId],
+      ][]
+    )
+      .filter(([, q]) => q.strand === strandId)
+      .map(([qId]) => qId);
 
-      const assessedQuestions = strandQuestions.filter((qId) =>
-        assessmentsMap.has(qId as SiamsQuestionId),
-      );
-      const questionsWithEvidence = strandQuestions.filter((qId) => {
-        const assessment = assessmentsMap.get(qId as SiamsQuestionId);
-        return assessment && assessment.evidence_count > 0;
-      });
+    const assessedQuestions = strandQuestions.filter((qId) =>
+      assessmentsMap.has(qId as SiamsQuestionId),
+    );
+    const questionsWithEvidence = strandQuestions.filter((qId) => {
+      const assessment = assessmentsMap.get(qId as SiamsQuestionId);
+      return assessment && assessment.evidence_count > 0;
+    });
 
-      const scores = assessedQuestions.map((qId) => {
-        const assessment = assessmentsMap.get(qId as SiamsQuestionId);
-        return calculateRatingScore(assessment?.school_rating);
-      });
+    const scores = assessedQuestions.map((qId) => {
+      const assessment = assessmentsMap.get(qId as SiamsQuestionId);
+      return calculateRatingScore(assessment?.school_rating);
+    });
 
-      const averageScore =
-        scores.length > 0
-          ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
-          : 0;
+    const averageScore =
+      scores.length > 0
+        ? Math.round(
+            scores.reduce((a: number, b: number) => a + b, 0) / scores.length,
+          )
+        : 0;
 
-      const assessmentsForStrand = assessedQuestions.map((qId) =>
-        assessmentsMap.get(qId as SiamsQuestionId),
-      );
-      const averageRating = getAverageRating(assessmentsForStrand);
+    const assessmentsForStrand = assessedQuestions.map((qId) =>
+      assessmentsMap.get(qId as SiamsQuestionId),
+    );
+    const averageRating = getAverageRating(assessmentsForStrand);
 
-      return {
-        strand_id: strand.id as SiamsStrandId,
-        strand_name: strand.name,
-        strand_short_name: strand.shortName,
-        strand_color: strand.color,
-        total_questions: strandQuestions.length,
-        questions_with_evidence: questionsWithEvidence.length,
-        total_evidence: evidenceByStrand[strand.id as SiamsStrandId] || 0,
-        average_score: averageScore,
-        average_rating: averageRating,
-        last_updated: "", // Could be calculated from assessments
-      };
-    },
-  );
+    return {
+      strand_id: strandId,
+      strand_name: strand.name,
+      strand_short_name: strand.shortName,
+      strand_color: strand.color,
+      total_questions: strandQuestions.length,
+      questions_with_evidence: questionsWithEvidence.length,
+      total_evidence: evidenceByStrand[strandId] || 0,
+      average_score: averageScore,
+      average_rating: averageRating,
+      last_updated: "", // Could be calculated from assessments
+    };
+  });
 
   // Calculate gaps
   const gaps: SiamsGapsAnalysis[] = [];
   const gapDetails: SiamsGapDetail[] = [];
 
-  Object.values(SIAMS_QUESTIONS).forEach((question) => {
-    const assessment = assessmentsMap.get(question.id as SiamsQuestionId);
+  (
+    Object.entries(SIAMS_QUESTIONS) as [
+      SiamsQuestionId,
+      (typeof SIAMS_QUESTIONS)[SiamsQuestionId],
+    ][]
+  ).forEach(([questionId, question]) => {
+    const assessment = assessmentsMap.get(questionId);
     const evidenceCount = assessment?.evidence_count || 0;
     const schoolRating = assessment?.school_rating;
 
@@ -187,7 +210,7 @@ async function calculateReadiness(
       needsAttention = true;
       gapDetails.push({
         strand: question.strand,
-        question: question.id,
+        question: questionId,
         missing_evidence: ["No evidence found"],
         priority: "critical",
       });
@@ -206,7 +229,7 @@ async function calculateReadiness(
     if (gapLevel !== "none" || needsAttention) {
       gaps.push({
         strand_id: question.strand,
-        question_id: question.id as SiamsQuestionId,
+        question_id: questionId,
         question_text: question.text,
         evidence_count: evidenceCount,
         school_rating: schoolRating || "not_assessed",

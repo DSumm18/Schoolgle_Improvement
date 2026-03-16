@@ -28,7 +28,7 @@ interface MyTasksWidgetProps {
 }
 
 // Role to modules mapping
-const ROLE_MODULES: Record<Role, string[]> = {
+const ROLE_MODULES: Record<string, string[]> = {
   admin: [
     "governance",
     "improvement",
@@ -71,7 +71,7 @@ const ROLE_MODULES: Record<Role, string[]> = {
 // Module icons
 const MODULE_ICONS: Record<
   string,
-  React.ComponentType<{ className?: string }>
+  React.ComponentType<{ className?: string; size?: number }>
 > = {
   governance: Shield,
   improvement: BookOpen,
@@ -546,7 +546,7 @@ export function MyTasksWidget({ limit = 5 }: MyTasksWidgetProps) {
                     </div>
 
                     {/* Progress bar if progress > 0 */}
-                    {task.progress > 0 && task.progress < 100 && (
+                    {(task.progress ?? 0) > 0 && (task.progress ?? 0) < 100 && (
                       <div className="mt-3 h-1 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                         <motion.div
                           initial={{ width: 0 }}

@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Swords,
   Trophy,
@@ -13,9 +13,13 @@ import {
   SkipForward,
   Play,
   Star,
-} from 'lucide-react';
-import { QuestRunner, QuestState, SCAFFOLD_PRESETS } from '@/lib/sim-studio/quest-engine/quest-runner';
-import { QuestDef, ScaffoldPreset, ThemePack } from '@/lib/sim-studio/types';
+} from "lucide-react";
+import {
+  QuestRunner,
+  QuestState,
+  SCAFFOLD_PRESETS,
+} from "@/lib/sim-studio/quest-engine/quest-runner";
+import { QuestDef, ScaffoldPreset, ThemePack } from "@/lib/sim-studio/types";
 
 interface QuestRunnerUIProps {
   questDef: QuestDef;
@@ -32,13 +36,15 @@ export default function QuestRunnerUI({
   theme,
   onComplete,
 }: QuestRunnerUIProps) {
-  const [runner] = useState(() => new QuestRunner(questDef, pupilId, scaffoldPreset, theme));
+  const [runner] = useState(
+    () => new QuestRunner(questDef, pupilId, scaffoldPreset, theme),
+  );
   const [state, setState] = useState<QuestState>(runner.getState());
   const [currentAnswer, setCurrentAnswer] = useState<any>(null);
   const [showHint, setShowHint] = useState(false);
-  const [hintText, setHintText] = useState<string>('');
+  const [hintText, setHintText] = useState<string>("");
   const [feedback, setFeedback] = useState<{
-    type: 'success' | 'error' | 'partial';
+    type: "success" | "error" | "partial";
     message: string;
   } | null>(null);
 
@@ -67,21 +73,27 @@ export default function QuestRunnerUI({
     // Show feedback
     if (result.score >= 80) {
       setFeedback({
-        type: 'success',
-        message: theme.copy_pack.feedback_messages.success[
-          Math.floor(Math.random() * theme.copy_pack.feedback_messages.success.length)
-        ],
+        type: "success",
+        message:
+          theme.copy_pack.feedback_messages.success[
+            Math.floor(
+              Math.random() * theme.copy_pack.feedback_messages.success.length,
+            )
+          ],
       });
     } else if (result.score >= 50) {
       setFeedback({
-        type: 'partial',
-        message: theme.copy_pack.feedback_messages.partial[
-          Math.floor(Math.random() * theme.copy_pack.feedback_messages.partial.length)
-        ],
+        type: "partial",
+        message:
+          theme.copy_pack.feedback_messages.partial[
+            Math.floor(
+              Math.random() * theme.copy_pack.feedback_messages.partial.length,
+            )
+          ],
       });
     } else {
       setFeedback({
-        type: 'error',
+        type: "error",
         message: theme.copy_pack.ui_strings.incorrect,
       });
     }
@@ -128,7 +140,9 @@ export default function QuestRunnerUI({
             <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
               {questDef.title}
             </h1>
-            <p className="text-slate-600 dark:text-slate-400">{questDef.description}</p>
+            <p className="text-slate-600 dark:text-slate-400">
+              {questDef.description}
+            </p>
           </div>
 
           <div className="grid grid-cols-3 gap-4 mb-8">
@@ -137,21 +151,27 @@ export default function QuestRunnerUI({
               <div className="text-2xl font-bold text-slate-900 dark:text-white">
                 {questDef.items.length}
               </div>
-              <div className="text-sm text-slate-600 dark:text-slate-400">Challenges</div>
+              <div className="text-sm text-slate-600 dark:text-slate-400">
+                Challenges
+              </div>
             </div>
             <div className="text-center p-4 bg-slate-50 dark:bg-slate-700 rounded-lg">
               <Trophy className="w-6 h-6 mx-auto mb-2 text-yellow-500" />
               <div className="text-2xl font-bold text-slate-900 dark:text-white">
                 {questDef.reward_coins * theme.reward_catalog.coins_multiplier}
               </div>
-              <div className="text-sm text-slate-600 dark:text-slate-400">{theme.copy_pack.ui_strings.coins_earned}</div>
+              <div className="text-sm text-slate-600 dark:text-slate-400">
+                {theme.copy_pack.ui_strings.coins_earned}
+              </div>
             </div>
             <div className="text-center p-4 bg-slate-50 dark:bg-slate-700 rounded-lg">
               <Star className="w-6 h-6 mx-auto mb-2 text-purple-500" />
               <div className="text-2xl font-bold text-slate-900 dark:text-white capitalize">
                 {questDef.difficulty_level}
               </div>
-              <div className="text-sm text-slate-600 dark:text-slate-400">Difficulty</div>
+              <div className="text-sm text-slate-600 dark:text-slate-400">
+                Difficulty
+              </div>
             </div>
           </div>
 
@@ -189,7 +209,9 @@ export default function QuestRunnerUI({
               <div className="text-4xl font-bold text-green-600 dark:text-green-400 mb-2">
                 {state.totalScore}%
               </div>
-              <div className="text-sm text-slate-600 dark:text-slate-400">Total Score</div>
+              <div className="text-sm text-slate-600 dark:text-slate-400">
+                Total Score
+              </div>
             </div>
             <div className="p-6 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl">
               <div className="text-4xl font-bold text-yellow-600 dark:text-yellow-400 mb-2">
@@ -239,8 +261,12 @@ export default function QuestRunnerUI({
               </div>
             </div>
             <div className="text-right">
-              <div className="text-3xl font-bold text-blue-600">{progress.percentage}%</div>
-              <div className="text-sm text-slate-600 dark:text-slate-400">Complete</div>
+              <div className="text-3xl font-bold text-blue-600">
+                {progress.percentage}%
+              </div>
+              <div className="text-sm text-slate-600 dark:text-slate-400">
+                Complete
+              </div>
             </div>
           </div>
 
@@ -259,20 +285,20 @@ export default function QuestRunnerUI({
         <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-8 mb-6">
           <AnimatePresence mode="wait">
             <motion.div
-              key={currentItem.id}
+              key={currentItem?.id}
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.3 }}
             >
               <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-6">
-                {currentItem.task_prompt}
+                {currentItem?.task_prompt}
               </h2>
 
               {/* Sim Player would go here for simulation-based quests */}
               <div className="aspect-video bg-slate-100 dark:bg-slate-700 rounded-lg mb-6 flex items-center justify-center">
                 <p className="text-slate-600 dark:text-slate-400">
-                  [Simulation placeholder for {currentItem.id}]
+                  [Simulation placeholder for {currentItem?.id}]
                 </p>
               </div>
 
@@ -281,7 +307,7 @@ export default function QuestRunnerUI({
                 {showHint && (
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
+                    animate={{ opacity: 1, height: "auto" }}
                     exit={{ opacity: 0, height: 0 }}
                     className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-500 rounded"
                   >
@@ -291,7 +317,9 @@ export default function QuestRunnerUI({
                         <p className="font-medium text-yellow-900 dark:text-yellow-300 mb-1">
                           Hint
                         </p>
-                        <p className="text-sm text-yellow-800 dark:text-yellow-400">{hintText}</p>
+                        <p className="text-sm text-yellow-800 dark:text-yellow-400">
+                          {hintText}
+                        </p>
                       </div>
                     </div>
                   </motion.div>
@@ -306,28 +334,28 @@ export default function QuestRunnerUI({
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                     className={`mb-6 p-4 rounded-lg border-l-4 ${
-                      feedback.type === 'success'
-                        ? 'bg-green-50 dark:bg-green-900/20 border-green-500'
-                        : feedback.type === 'error'
-                        ? 'bg-red-50 dark:bg-red-900/20 border-red-500'
-                        : 'bg-amber-50 dark:bg-amber-900/20 border-amber-500'
+                      feedback.type === "success"
+                        ? "bg-green-50 dark:bg-green-900/20 border-green-500"
+                        : feedback.type === "error"
+                          ? "bg-red-50 dark:bg-red-900/20 border-red-500"
+                          : "bg-amber-50 dark:bg-amber-900/20 border-amber-500"
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      {feedback.type === 'success' ? (
+                      {feedback.type === "success" ? (
                         <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
-                      ) : feedback.type === 'error' ? (
+                      ) : feedback.type === "error" ? (
                         <XCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
                       ) : (
                         <Target className="w-5 h-5 text-amber-600 dark:text-amber-400" />
                       )}
                       <p
                         className={`font-medium ${
-                          feedback.type === 'success'
-                            ? 'text-green-900 dark:text-green-300'
-                            : feedback.type === 'error'
-                            ? 'text-red-900 dark:text-red-300'
-                            : 'text-amber-900 dark:text-amber-300'
+                          feedback.type === "success"
+                            ? "text-green-900 dark:text-green-300"
+                            : feedback.type === "error"
+                              ? "text-red-900 dark:text-red-300"
+                              : "text-amber-900 dark:text-amber-300"
                         }`}
                       >
                         {feedback.message}
@@ -341,7 +369,10 @@ export default function QuestRunnerUI({
               <div className="flex gap-4">
                 <button
                   onClick={handleHint}
-                  disabled={state.items[state.currentItemIndex]?.hintsUsed >= SCAFFOLD_PRESETS[scaffoldPreset].hintsAvailable}
+                  disabled={
+                    state.items[state.currentItemIndex]?.hintsUsed >=
+                    SCAFFOLD_PRESETS[scaffoldPreset].hintsAvailable
+                  }
                   className="flex-1 py-3 px-6 bg-yellow-500 text-white font-semibold rounded-lg hover:bg-yellow-600 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   <Lightbulb className="w-5 h-5" />
@@ -376,19 +407,28 @@ export default function QuestRunnerUI({
               <div className="text-lg font-bold text-slate-900 dark:text-white">
                 {state.items[state.currentItemIndex]?.attempts || 0}
               </div>
-              <div className="text-xs text-slate-600 dark:text-slate-400">Attempts</div>
+              <div className="text-xs text-slate-600 dark:text-slate-400">
+                Attempts
+              </div>
             </div>
             <div>
               <div className="text-lg font-bold text-slate-900 dark:text-white">
                 {state.items[state.currentItemIndex]?.hintsUsed || 0}
               </div>
-              <div className="text-xs text-slate-600 dark:text-slate-400">Hints Used</div>
+              <div className="text-xs text-slate-600 dark:text-slate-400">
+                Hints Used
+              </div>
             </div>
             <div>
               <div className="text-lg font-bold text-slate-900 dark:text-white">
-                {Math.round((state.items[state.currentItemIndex]?.timeSpent || 0) / 60)}s
+                {Math.round(
+                  (state.items[state.currentItemIndex]?.timeSpent || 0) / 60,
+                )}
+                s
               </div>
-              <div className="text-xs text-slate-600 dark:text-slate-400">Time</div>
+              <div className="text-xs text-slate-600 dark:text-slate-400">
+                Time
+              </div>
             </div>
           </div>
         </div>

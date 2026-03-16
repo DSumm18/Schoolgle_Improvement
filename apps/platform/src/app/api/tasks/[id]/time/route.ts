@@ -91,8 +91,18 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
  */
 export const POST = protectedRoute(async (auth, req: NextRequest) => {
   const body = await req.json();
-  const { organizationId, taskSource, minutes, description, date, userId } =
-    body as TaskTimeEntryForm & { organizationId: string; userId?: string };
+  const {
+    organizationId,
+    task_source: taskSource,
+    minutes,
+    description,
+    date,
+    userId,
+  } = body as TaskTimeEntryForm & {
+    organizationId: string;
+    userId?: string;
+    taskSource?: string;
+  };
 
   const orgId = organizationId || auth.organizationId;
   const segments = req.nextUrl.pathname.split("/");

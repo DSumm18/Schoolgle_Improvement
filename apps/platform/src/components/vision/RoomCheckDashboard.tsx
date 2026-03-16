@@ -132,7 +132,7 @@ export function RoomCheckDashboard({
     try {
       setLoading(true);
       const res = await fetch(
-        `/api/room-checks?organization_id=${organizationId}&date=${date}`,
+        `/api/room-checks?organizationId=${organizationId}&date=${date}`,
       );
       if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();

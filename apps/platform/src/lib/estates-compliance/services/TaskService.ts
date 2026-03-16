@@ -14,8 +14,8 @@ import {
   type UpdateTaskInput,
   type TaskFilters,
   type PaginatedResponse,
-} from '../database/tasks';
-import type { ComplianceTask, TaskStatus, RecurrencePattern } from '@/types/estates-compliance';
+} from "../database/tasks";
+import type { ComplianceTask, TaskStatus } from "@/types/estates-compliance";
 
 /**
  * Service class for managing compliance tasks
@@ -27,7 +27,7 @@ export class TaskService {
   static async list(
     organizationId: string,
     filters?: TaskFilters,
-    pagination?: { page: number; pageSize: number }
+    pagination?: { page: number; pageSize: number },
   ): Promise<PaginatedResponse<ComplianceTask>> {
     return getComplianceTasks(organizationId, filters, pagination);
   }
@@ -42,7 +42,10 @@ export class TaskService {
   /**
    * Create a new task
    */
-  static async create(organizationId: string, input: Omit<CreateTaskInput, 'organization_id'>): Promise<ComplianceTask> {
+  static async create(
+    organizationId: string,
+    input: Omit<CreateTaskInput, "organization_id">,
+  ): Promise<ComplianceTask> {
     return createComplianceTask({
       ...input,
       organization_id: organizationId,
@@ -52,7 +55,10 @@ export class TaskService {
   /**
    * Update an existing task
    */
-  static async update(taskId: string, updates: UpdateTaskInput): Promise<ComplianceTask> {
+  static async update(
+    taskId: string,
+    updates: UpdateTaskInput,
+  ): Promise<ComplianceTask> {
     return updateComplianceTask(taskId, updates);
   }
 
@@ -69,22 +75,22 @@ export class TaskService {
   static async complete(
     taskId: string,
     userId: string,
-    completionNotes?: string
+    completionNotes?: string,
   ): Promise<ComplianceTask> {
     const task = await this.getById(taskId);
     if (!task) {
-      throw new Error('Task not found');
+      throw new Error("Task not found");
     }
 
     const updatedTask = await updateComplianceTask(taskId, {
-      status: 'completed',
+      status: "completed",
       completed_at: new Date().toISOString(),
       completed_by: userId,
       completion_notes: completionNotes,
     });
 
     // If this is a recurring task, create the next occurrence
-    if (task.recurring && task.recurrence_pattern) {
+    if (task.is_recurring && task.recurrence_pattern) {
       await this.createNextOccurrence(task);
     }
 
@@ -94,11 +100,18 @@ export class TaskService {
   /**
    * Create the next occurrence of a recurring task
    */
-  private static async createNextOccurrence(previousTask: ComplianceTask): Promise<ComplianceTask | null> {
+  private static async createNextOccurrence(
+    previousTask: ComplianceTask,
+  ): Promise<ComplianceTask | null> {
+    const pattern = previousTask.recurrence_pattern as
+      | Record<string, unknown>
+      | undefined;
+    const patternType = (pattern?.type as string) || "monthly";
+    const interval = (pattern?.interval as number) || 1;
     const nextDueDate = this.calculateNextDueDate(
-      previousTask.due_date,
-      previousTask.recurrence_pattern!,
-      previousTask.recurrence_interval || 1
+      previousTask.due_by,
+      patternType,
+      interval,
     );
 
     if (!nextDueDate) {
@@ -107,19 +120,25 @@ export class TaskService {
 
     return createComplianceTask({
       organization_id: previousTask.organization_id,
-      title: previousTask.title,
+      title: previousTask.task_name,
       description: previousTask.description,
-      task_type: previousTask.task_type,
-      compliance_domain: previousTask.compliance_domain,
-      priority: previousTask.priority,
+      task_type: previousTask.task_type as
+        | "inspection"
+        | "maintenance"
+        | "testing"
+        | "review"
+        | "certification"
+        | "monitoring",
+      compliance_domain: previousTask.compliance_domain as any,
+      priority: "medium" as any,
       due_date: nextDueDate,
       assigned_to: previousTask.assigned_to,
       asset_id: previousTask.asset_id,
-      contractor_id: previousTask.contractor_id,
-      recurring: previousTask.recurring,
-      recurrence_pattern: previousTask.recurrence_pattern,
-      recurrence_interval: previousTask.recurrence_interval,
-      checklist_items: previousTask.checklist_items,
+      contractor_id: previousTask.assigned_contractor_id,
+      recurring: previousTask.is_recurring,
+      recurrence_pattern: patternType as any,
+      recurrence_interval: interval,
+      checklist_items: previousTask.checklist as any,
     });
   }
 
@@ -128,8 +147,8 @@ export class TaskService {
    */
   private static calculateNextDueDate(
     currentDueDate: string | null,
-    pattern: RecurrencePattern,
-    interval: number
+    pattern: string,
+    interval: number,
   ): string | null {
     if (!currentDueDate) return null;
 
@@ -137,19 +156,19 @@ export class TaskService {
     const nextDate = new Date(date);
 
     switch (pattern) {
-      case 'daily':
+      case "daily":
         nextDate.setDate(nextDate.getDate() + interval);
         break;
-      case 'weekly':
-        nextDate.setDate(nextDate.getDate() + (7 * interval));
+      case "weekly":
+        nextDate.setDate(nextDate.getDate() + 7 * interval);
         break;
-      case 'monthly':
+      case "monthly":
         nextDate.setMonth(nextDate.getMonth() + interval);
         break;
-      case 'quarterly':
-        nextDate.setMonth(nextDate.getMonth() + (3 * interval));
+      case "quarterly":
+        nextDate.setMonth(nextDate.getMonth() + 3 * interval);
         break;
-      case 'annually':
+      case "annually":
         nextDate.setFullYear(nextDate.getFullYear() + interval);
         break;
       default:
@@ -164,7 +183,7 @@ export class TaskService {
    */
   static async getOverdue(
     organizationId: string,
-    pagination?: { page: number; pageSize: number }
+    pagination?: { page: number; pageSize: number },
   ): Promise<PaginatedResponse<ComplianceTask>> {
     return getOverdueTasks(organizationId, pagination);
   }
@@ -175,7 +194,7 @@ export class TaskService {
   static async getUpcoming(
     organizationId: string,
     daysAhead: number = 7,
-    pagination?: { page: number; pageSize: number }
+    pagination?: { page: number; pageSize: number },
   ): Promise<PaginatedResponse<ComplianceTask>> {
     return getUpcomingTasks(organizationId, daysAhead, pagination);
   }
@@ -197,9 +216,13 @@ export class TaskService {
       this.getUpcoming(organizationId, 7, { page: 1, pageSize: 1000 }),
     ]);
 
-    const pending = allTasks.data.filter(t => t.status === 'pending').length;
-    const inProgress = allTasks.data.filter(t => t.status === 'in_progress').length;
-    const completed = allTasks.data.filter(t => t.status === 'completed').length;
+    const pending = allTasks.data.filter((t) => t.status === "pending").length;
+    const inProgress = allTasks.data.filter(
+      (t) => t.status === "in_progress",
+    ).length;
+    const completed = allTasks.data.filter(
+      (t) => t.status === "completed",
+    ).length;
 
     return {
       total: allTasks.total,
@@ -216,7 +239,7 @@ export class TaskService {
    */
   static async bulkCreate(
     organizationId: string,
-    tasks: Array<Omit<CreateTaskInput, 'organization_id'>>
+    tasks: Array<Omit<CreateTaskInput, "organization_id">>,
   ): Promise<ComplianceTask[]> {
     const createdTasks: ComplianceTask[] = [];
 
@@ -238,7 +261,10 @@ export class TaskService {
   /**
    * Update task status
    */
-  static async updateStatus(taskId: string, status: TaskStatus): Promise<ComplianceTask> {
+  static async updateStatus(
+    taskId: string,
+    status: TaskStatus,
+  ): Promise<ComplianceTask> {
     return this.update(taskId, { status });
   }
 }

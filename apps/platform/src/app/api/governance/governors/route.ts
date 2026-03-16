@@ -73,11 +73,10 @@ export const POST = protectedRoute(
   async (auth, req: NextRequest) => {
     const body = await req.json();
     const {
-      userId,
+      user_id: userId,
       full_name,
       email,
       phone,
-      photo_url,
       governor_type,
       role,
       committee_assignment,
@@ -88,6 +87,7 @@ export const POST = protectedRoute(
       skills,
       declarations_of_interest,
     } = body as UpsertGovernorRequest;
+    const photo_url = (body as any).photo_url;
 
     const organizationId = auth.organizationId;
 

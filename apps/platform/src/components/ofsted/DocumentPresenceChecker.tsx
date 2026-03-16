@@ -116,7 +116,7 @@ export default function DocumentPresenceChecker({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          organization_id: organizationId,
+          organizationId: organizationId,
           provider,
           access_token: accessToken,
           folder_id: folderId,

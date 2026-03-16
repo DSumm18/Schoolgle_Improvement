@@ -106,13 +106,13 @@ export const GET = protectedRoute(async (auth, req) => {
   >();
 
   // Initialize categories
-  Object.values(OFSTED_JUDGEMENTS).forEach((category) => {
+  Object.entries(OFSTED_JUDGEMENTS).forEach(([categoryId, category]) => {
     const subcategoryCount = Object.values(OFSTED_SUBCATEGORIES).filter(
-      (sc) => sc.category === category.id,
+      (sc) => sc.category === categoryId,
     ).length;
 
-    categoriesMap.set(category.id as OfstedCategoryId, {
-      category_id: category.id as OfstedCategoryId,
+    categoriesMap.set(categoryId as OfstedCategoryId, {
+      category_id: categoryId as OfstedCategoryId,
       category_name: category.name,
       category_short_name: category.shortName,
       category_color: category.color,

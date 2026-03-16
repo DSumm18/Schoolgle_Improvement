@@ -40,7 +40,11 @@ interface TemplateBrowserProps {
 
 const MODULE_ICONS: Record<
   DocumentModule,
-  React.ComponentType<{ size?: number; className?: string }>
+  React.ComponentType<{
+    size?: number;
+    className?: string;
+    style?: React.CSSProperties;
+  }>
 > = {
   hr: Users,
   compliance: Shield,

@@ -2,7 +2,12 @@
  * Ed Orchestrator - Main entry point for processing user questions through the agent framework
  */
 
-import type { OrchestratorConfig, AppContext, EdResponse } from "../types";
+import type {
+  OrchestratorConfig,
+  AppContext,
+  EdResponse,
+  Domain,
+} from "../types";
 import { routeToSpecialist } from "./agent-router";
 import { classifyIntent, isWorkRelated } from "./intent-classifier";
 import { createCreditManager } from "../credit/manager";
@@ -111,7 +116,7 @@ export class EdOrchestrator {
       subscription: this.config.subscription,
       activeApp: (context.app as any) || this.config.activeApp,
       currentTask: context.page,
-      schoolData: this.schoolContext,
+      schoolData: this.schoolContext ?? undefined,
       sessionId: this.generateSessionId(),
       openRouterApiKey: this.config.openRouterApiKey,
       supabase: this.config.supabase,
@@ -124,7 +129,7 @@ export class EdOrchestrator {
           this.config.orgId,
           this.config.supabase,
         );
-        appContext.schoolData = this.schoolContext;
+        appContext.schoolData = this.schoolContext ?? undefined;
       } catch {
         // Don't fail if context loading fails
       }
@@ -218,7 +223,7 @@ export class EdOrchestrator {
 
       // Step 5: Format final response
       const response: EdResponse = {
-        response: guardedResponse.response,
+        response: guardedResponse.response || finalContent,
         specialist: agentResponse.agentId,
         confidence: agentResponse.confidence,
         sources: agentResponse.sources || [],
@@ -230,8 +235,9 @@ export class EdOrchestrator {
         perspectives,
         metadata: {
           domain:
-            (await this.getDomainForSpecialist(agentResponse.agentId)) ||
-            "general",
+            ((await this.getDomainForSpecialist(
+              agentResponse.agentId,
+            )) as Domain) || "general",
           tokensUsed: {
             input: Math.round(this.totalTokensUsed * 0.4),
             output: Math.round(this.totalTokensUsed * 0.6),
@@ -240,7 +246,6 @@ export class EdOrchestrator {
           },
           processedAt: new Date(),
           cached: (agentResponse.metadata as any)?.cached,
-          perspectiveUsed: !!perspectives,
         },
       };
 
@@ -255,9 +260,8 @@ export class EdOrchestrator {
         requiresHuman: true,
         warnings: ["An error occurred while processing your question."],
         metadata: {
-          domain: "general",
+          domain: "general" as Domain,
           processedAt: new Date(),
-          error: error instanceof Error ? error.message : "Unknown error",
         },
       };
     }
@@ -429,7 +433,8 @@ export async function createOrchestrator(
   let schoolContext = config.schoolData;
   if (config.orgId && !schoolContext && config.supabase) {
     try {
-      schoolContext = await loadSchoolContext(config.orgId, config.supabase);
+      schoolContext =
+        (await loadSchoolContext(config.orgId, config.supabase)) ?? undefined;
     } catch {
       // Don't fail entire orchestrator if context loading fails
     }
@@ -437,7 +442,7 @@ export async function createOrchestrator(
 
   return new EdOrchestrator({
     ...config,
-    schoolData: schoolContext || undefined,
+    schoolData: schoolContext ?? undefined,
   });
 }
 

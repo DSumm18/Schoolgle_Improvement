@@ -15,6 +15,7 @@ interface EdWidgetWrapperProps {
    * - 'user': For logged-in users - full functionality with access to user data
    */
   mode?: "demo" | "user";
+  context?: any;
 }
 
 export default function EdWidgetWrapper({

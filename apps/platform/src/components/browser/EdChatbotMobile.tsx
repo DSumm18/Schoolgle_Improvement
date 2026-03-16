@@ -23,7 +23,7 @@ import {
   AlertCircle,
   ChevronDown,
   Globe,
-  Robot,
+  Bot,
   User,
   Volume2,
   VolumeX,
@@ -143,7 +143,7 @@ export function EdChatbotMobile({
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Auto-scroll to bottom when messages change
@@ -363,7 +363,7 @@ export function EdChatbotMobile({
           {/* Left: Bot info */}
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-sky-500 to-purple-600 flex items-center justify-center">
-              <Robot className="w-5 h-5 text-white" />
+              <Bot className="w-5 h-5 text-white" />
             </div>
             <div>
               <h2 className="font-semibold text-gray-900">Ed Assistant</h2>
@@ -496,7 +496,7 @@ export function EdChatbotMobile({
                   }`}
                 >
                   {message.role === "assistant" ? (
-                    <Robot className="w-4 h-4 text-sky-600" />
+                    <Bot className="w-4 h-4 text-sky-600" />
                   ) : (
                     <AlertCircle className="w-4 h-4 text-amber-600" />
                   )}
@@ -701,7 +701,7 @@ export function EdChatbotMobile({
                 conversationHistory={messages
                   .filter((m) => m.role !== "system")
                   .map((m) => ({
-                    role: m.role,
+                    role: m.role as "user" | "assistant",
                     content: m.content,
                     timestamp: m.timestamp,
                   }))}

@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * AssetTable Component
@@ -6,20 +6,32 @@
  * Table view for displaying multiple assets with sorting and filtering support.
  */
 
-import Link from 'next/link';
-import { Asset, AssetStatus } from '@/types/estates-compliance';
+import Link from "next/link";
+import { Asset, AssetStatus } from "@/types/estates-compliance";
 
 interface AssetTableProps {
   assets: Asset[];
 }
 
-const statusConfig: Record<AssetStatus, { label: string; className: string }> = {
-  active: { label: 'Active', className: 'bg-green-100 text-green-800' },
-  inactive: { label: 'Inactive', className: 'bg-gray-100 text-gray-800' },
-  under_maintenance: { label: 'Maintenance', className: 'bg-yellow-100 text-yellow-800' },
-  retired: { label: 'Retired', className: 'bg-red-100 text-red-800' },
-  requires_inspection: { label: 'Inspection Due', className: 'bg-orange-100 text-orange-800' },
-};
+const statusConfig: Record<AssetStatus, { label: string; className: string }> =
+  {
+    active: { label: "Active", className: "bg-green-100 text-green-800" },
+    inactive: { label: "Inactive", className: "bg-gray-100 text-gray-800" },
+    disposed: { label: "Disposed", className: "bg-gray-100 text-gray-800" },
+    under_repair: {
+      label: "Under Repair",
+      className: "bg-yellow-100 text-yellow-800",
+    },
+    under_maintenance: {
+      label: "Maintenance",
+      className: "bg-yellow-100 text-yellow-800",
+    },
+    requires_inspection: {
+      label: "Inspection Due",
+      className: "bg-orange-100 text-orange-800",
+    },
+    retired: { label: "Retired", className: "bg-red-100 text-red-800" },
+  };
 
 export function AssetTable({ assets }: AssetTableProps) {
   if (assets.length === 0) {
@@ -54,7 +66,7 @@ export function AssetTable({ assets }: AssetTableProps) {
               return (
                 <tr key={asset.id} className="text-sm hover:bg-muted/30">
                   <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
-                    {asset.code || '-'}
+                    {asset.code || "-"}
                   </td>
                   <td className="px-4 py-3">
                     <div className="font-medium">{asset.name}</div>
@@ -66,10 +78,12 @@ export function AssetTable({ assets }: AssetTableProps) {
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <span className="capitalize">{asset.asset_type.replace('_', ' ')}</span>
+                    <span className="capitalize">
+                      {asset.asset_type.replace("_", " ")}
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
-                    {asset.location || '-'}
+                    {asset.location || "-"}
                   </td>
                   <td className="px-4 py-3">
                     <span
@@ -88,11 +102,12 @@ export function AssetTable({ assets }: AssetTableProps) {
                           {domain}
                         </span>
                       ))}
-                      {asset.compliance_domains && asset.compliance_domains.length > 2 && (
-                        <span className="text-xs text-muted-foreground">
-                          +{asset.compliance_domains.length - 2}
-                        </span>
-                      )}
+                      {asset.compliance_domains &&
+                        asset.compliance_domains.length > 2 && (
+                          <span className="text-xs text-muted-foreground">
+                            +{asset.compliance_domains.length - 2}
+                          </span>
+                        )}
                     </div>
                   </td>
                   <td className="px-4 py-3 text-right">

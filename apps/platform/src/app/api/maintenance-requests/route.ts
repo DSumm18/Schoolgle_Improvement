@@ -1,7 +1,21 @@
 import { NextRequest } from "next/server";
 import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
-import type { CreateTaskRequest, Module } from "@/types/universal-task";
+
+type Module = "estates" | "teaching" | "finance" | "hr" | "compliance";
+
+interface CreateTaskRequest {
+  title: string;
+  description?: string;
+  module: Module;
+  task_type: string;
+  priority?: string;
+  visibility?: string;
+  due_date?: string;
+  estimated_duration_minutes?: number;
+  school_id?: string;
+  context_data?: Record<string, any>;
+}
 
 export const POST = protectedRoute(async (auth, request) => {
   const body: CreateTaskRequest = await request.json();

@@ -4,7 +4,7 @@
  */
 
 import type { Domain, SpecialistId, IntentClassification } from "../types";
-import { DOMAIN_KEYWORDS, getAgent } from "../agents";
+import { DOMAIN_KEYWORDS, getAgent, getAgentByDomain } from "../agents";
 
 // Import form specialist directly
 import {
@@ -70,6 +70,23 @@ const COMPLEX_DECISION_KEYWORDS = [
   "introduce",
   "start using",
 ];
+
+/**
+ * Score a list of keywords against a query
+ */
+function scoreKeywords(query: string, keywords: string[]): number {
+  const queryLower = query.toLowerCase();
+  let score = 0;
+  for (const keyword of keywords) {
+    if (queryLower.includes(keyword.toLowerCase())) {
+      score += 1;
+      if (keyword.split(" ").length > 1) {
+        score += 0.5;
+      }
+    }
+  }
+  return score;
+}
 
 /**
  * Score a domain based on keyword matches in the query
@@ -159,7 +176,7 @@ export function classifyIntent(
   const queryLower = query.toLowerCase();
 
   // Phase 2: Check for form-related requests FIRST (highest priority)
-  const formScore = scoreDomain(query, FORM_KEYWORDS);
+  const formScore = scoreKeywords(query, FORM_KEYWORDS);
   if (formScore > 0) {
     return {
       domain: "general",

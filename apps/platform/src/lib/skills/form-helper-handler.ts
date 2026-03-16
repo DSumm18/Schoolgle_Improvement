@@ -345,7 +345,7 @@ Generate a simple, conversational question. Keep it under 15 words.`;
   } catch (error) {
     console.error("[FormHelper] Question generation error:", error);
     // Fallback to basic question
-    const fallbackQuestion = `What is your ${field.label || field.name}?`;
+    const fallbackQuestion = `What is your ${params.field.label || params.field.name}?`;
     return {
       question: fallbackQuestion,
       questionEnglish: fallbackQuestion,
@@ -424,11 +424,11 @@ export async function processUserResponse(params: {
   } catch (error) {
     console.error("[FormHelper] Response processing error:", error);
     return {
-      value: userResponse,
-      originalText: userResponse,
-      detectedLanguage: expectedLanguage,
+      value: params.userResponse,
+      originalText: params.userResponse,
+      detectedLanguage: params.expectedLanguage,
       confidence: 0.5,
-      questionForUser: `Is this correct: "${userResponse}"?`,
+      questionForUser: `Is this correct: "${params.userResponse}"?`,
     };
   }
 }
@@ -864,6 +864,7 @@ function parseChangeRequestFallback(
 
   return {
     intent: "unclear",
+    understoodChange: false,
     clarificationQuestion: "Which field would you like to change?",
   };
 }

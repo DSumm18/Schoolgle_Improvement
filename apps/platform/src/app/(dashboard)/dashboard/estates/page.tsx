@@ -16,6 +16,9 @@ import {
   QrCode,
   ClipboardCheck,
   Calendar,
+  AlertTriangle,
+  Workflow,
+  ListChecks,
 } from "lucide-react";
 
 const apps = [
@@ -89,6 +92,30 @@ const apps = [
     description:
       "Manage room bookings, calculate hire charges, and track lettings income from community and commercial groups.",
     href: "/dashboard/estates/lettings",
+    status: "Live",
+  },
+  {
+    icon: AlertTriangle,
+    title: "Incident Reports",
+    description:
+      "RIDDOR-compliant incident and near-miss reporting with investigation tracking and corrective actions.",
+    href: "/dashboard/estates/incidents",
+    status: "Live",
+  },
+  {
+    icon: Workflow,
+    title: "Workflows",
+    description:
+      "Ed-orchestrated multi-step processes. Equipment failure, incident response, and onboarding workflows.",
+    href: "/dashboard/workflows",
+    status: "Live",
+  },
+  {
+    icon: ListChecks,
+    title: "Procedures (SOPs)",
+    description:
+      "Step-by-step guided checklists for H&S, fire safety, premises checks, and incident response procedures.",
+    href: "/dashboard/sops",
     status: "Live",
   },
   {

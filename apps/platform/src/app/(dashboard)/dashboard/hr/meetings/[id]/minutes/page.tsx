@@ -95,7 +95,7 @@ export default function MeetingMinutesPage() {
     try {
       const signerName =
         role === "leader"
-          ? user?.displayName || user?.email || "Meeting Leader"
+          ? (user as any)?.displayName || user?.email || "Meeting Leader"
           : meeting?.attendee_name || "Attendee";
 
       const res = await fetch(`/api/meetings/${meetingId}/sign`, {
@@ -157,7 +157,8 @@ export default function MeetingMinutesPage() {
   }
 
   const isFinalised = minutes.status === "finalised";
-  const leaderName = user?.displayName || user?.email || "Meeting Leader";
+  const leaderName =
+    (user as any)?.displayName || user?.email || "Meeting Leader";
   const attendeeName = meeting?.attendee_name || "Attendee";
   const existingSignatureSlots = signatures.map((s: any) => ({
     name: s.signer_name,

@@ -408,8 +408,9 @@ export default function ActionPlanPage() {
       >
         <div className="p-8">
           <ActionsDashboard
-            actions={actions}
-            onUpdateAction={handleUpdateAction}
+            actions={actions as any}
+            onUpdateAction={handleUpdateAction as any}
+            onEditAction={() => {}}
           />
         </div>
       </motion.div>

@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * ContractorTable Component
@@ -6,18 +6,21 @@
  * Table view for displaying multiple contractors with sorting and filtering support.
  */
 
-import Link from 'next/link';
-import { Contractor, ContractorStatus } from '@/types/estates-compliance';
+import Link from "next/link";
+import { Contractor } from "@/types/estates-compliance";
 
 interface ContractorTableProps {
   contractors: Contractor[];
 }
 
-const statusConfig: Record<ContractorStatus, { label: string; className: string }> = {
-  active: { label: 'Active', className: 'bg-green-100 text-green-800' },
-  inactive: { label: 'Inactive', className: 'bg-gray-100 text-gray-800' },
-  restricted: { label: 'Restricted', className: 'bg-red-100 text-red-800' },
-  under_review: { label: 'Under Review', className: 'bg-yellow-100 text-yellow-800' },
+const statusConfig: Record<string, { label: string; className: string }> = {
+  active: { label: "Active", className: "bg-green-100 text-green-800" },
+  inactive: { label: "Inactive", className: "bg-gray-100 text-gray-800" },
+  restricted: { label: "Restricted", className: "bg-red-100 text-red-800" },
+  under_review: {
+    label: "Under Review",
+    className: "bg-yellow-100 text-yellow-800",
+  },
 };
 
 export function ContractorTable({ contractors }: ContractorTableProps) {
@@ -47,14 +50,17 @@ export function ContractorTable({ contractors }: ContractorTableProps) {
           </thead>
           <tbody className="divide-y">
             {contractors.map((contractor) => {
-              const status = statusConfig[contractor.status] || statusConfig.active;
+              const status =
+                statusConfig[contractor.status] || statusConfig.active;
 
               return (
                 <tr key={contractor.id} className="text-sm hover:bg-muted/30">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium">{contractor.company_name}</span>
-                      {contractor.is_preferred && (
+                      <span className="font-medium">
+                        {contractor.company_name}
+                      </span>
+                      {contractor.preferred && (
                         <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
                           Preferred
                         </span>
@@ -62,9 +68,9 @@ export function ContractorTable({ contractors }: ContractorTableProps) {
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <div>{contractor.contact_name || '-'}</div>
+                    <div>{contractor.contact_name || "-"}</div>
                     <div className="text-xs text-muted-foreground">
-                      {contractor.contact_email || contractor.contact_phone || '-'}
+                      {contractor.email || contractor.phone || "-"}
                     </div>
                   </td>
                   <td className="px-4 py-3">
@@ -74,31 +80,35 @@ export function ContractorTable({ contractors }: ContractorTableProps) {
                           key={service.service_type}
                           className="inline-flex items-center rounded bg-muted px-1.5 py-0.5 text-xs"
                         >
-                          {service.service_type.replace('_', ' ')}
+                          {service.service_type.replace("_", " ")}
                         </span>
                       ))}
-                      {contractor.services && contractor.services.length > 2 && (
-                        <span className="text-xs text-muted-foreground">
-                          +{contractor.services.length - 2}
-                        </span>
-                      )}
+                      {contractor.services &&
+                        contractor.services.length > 2 && (
+                          <span className="text-xs text-muted-foreground">
+                            +{contractor.services.length - 2}
+                          </span>
+                        )}
                     </div>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
-                      {contractor.accreditations?.slice(0, 2).map((acc, idx) => (
-                        <span
-                          key={idx}
-                          className="inline-flex items-center rounded bg-green-50 px-1.5 py-0.5 text-xs text-green-700"
-                        >
-                          {acc.certificate_type}
-                        </span>
-                      ))}
-                      {contractor.accreditations && contractor.accreditations.length > 2 && (
-                        <span className="text-xs text-muted-foreground">
-                          +{contractor.accreditations.length - 2}
-                        </span>
-                      )}
+                      {contractor.accreditations
+                        ?.slice(0, 2)
+                        .map((acc, idx) => (
+                          <span
+                            key={idx}
+                            className="inline-flex items-center rounded bg-green-50 px-1.5 py-0.5 text-xs text-green-700"
+                          >
+                            {acc.type}
+                          </span>
+                        ))}
+                      {contractor.accreditations &&
+                        contractor.accreditations.length > 2 && (
+                          <span className="text-xs text-muted-foreground">
+                            +{contractor.accreditations.length - 2}
+                          </span>
+                        )}
                     </div>
                   </td>
                   <td className="px-4 py-3">

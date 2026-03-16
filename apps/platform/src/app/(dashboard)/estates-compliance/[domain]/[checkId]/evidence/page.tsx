@@ -30,6 +30,7 @@ import {
   Image as ImageIcon,
   File,
   ExternalLink,
+  Plus,
 } from "lucide-react";
 import {
   DOMAIN_METADATA,

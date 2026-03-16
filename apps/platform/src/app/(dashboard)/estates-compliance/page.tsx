@@ -81,7 +81,7 @@ interface DomainCompletion {
   checks: CheckCompletion[];
 }
 
-interface TodayTask {
+export interface TodayTask {
   checkId: string;
   checkName: string;
   domain: ComplianceDomain;
@@ -416,7 +416,7 @@ export default function EstatesComplianceDashboard() {
 
       try {
         const response = await fetch(
-          `/api/estates/statutory-completions?organization_id=${organizationId}&summary=true`,
+          `/api/estates/statutory-completions?organizationId=${organizationId}&summary=true`,
           {
             headers,
             signal: controller.signal,
@@ -515,7 +515,7 @@ export default function EstatesComplianceDashboard() {
         method: "POST",
         headers,
         body: JSON.stringify({
-          organization_id: organizationId,
+          organizationId: organizationId,
           action: "initialize",
         }),
         signal: controller.signal,
@@ -531,7 +531,7 @@ export default function EstatesComplianceDashboard() {
 
       // Fetch again after initialization
       const retryResponse = await fetch(
-        `/api/estates/statutory-completions?organization_id=${organizationId}&summary=true`,
+        `/api/estates/statutory-completions?organizationId=${organizationId}&summary=true`,
         {
           headers,
           signal: controller.signal,
@@ -959,7 +959,12 @@ export default function EstatesComplianceDashboard() {
                           checkId={task.checkId}
                           checkName={task.checkName}
                           domain={task.domain}
-                          status={task.status}
+                          status={
+                            task.status === "due_today" ||
+                            task.status === "due_soon"
+                              ? "pending"
+                              : task.status
+                          }
                           size="sm"
                           iconOnly
                         />
@@ -1445,7 +1450,7 @@ export default function EstatesComplianceDashboard() {
           isMinimized={edMinimized}
           onToggleMinimize={() => setEdMinimized(!edMinimized)}
           mode="user"
-          organizationId={organizationId}
+          organizationId={organizationId ?? undefined}
         />
       </div>
     </EdBrowserControlWrapper>

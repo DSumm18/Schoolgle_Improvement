@@ -3,8 +3,8 @@
  * Applies all guardrails to responses before returning to user
  */
 
-import type { GuardrailResult, AppContext } from '../types';
-import { getModelRouter } from '../models';
+import type { GuardrailResult, AppContext } from "../types";
+import { getModelRouter } from "../models";
 
 // ============================================================================
 // Guardrail Result Types
@@ -59,7 +59,7 @@ Be cautious - if in doubt, FAIL.`;
  */
 export async function safetyCheck(
   response: string,
-  context?: AppContext
+  context?: AppContext,
 ): Promise<GuardrailCheckResult> {
   // Fast pattern-based check first
   for (const pattern of HARMFUL_PATTERNS) {
@@ -68,7 +68,8 @@ export async function safetyCheck(
         passed: false,
         confidence: 0.9,
         reason: `Response may contain unsafe advice (matched pattern: ${pattern.source})`,
-        suggestion: 'Please review this guidance for safety concerns before following it.',
+        suggestion:
+          "Please review this guidance for safety concerns before following it.",
       };
     }
   }
@@ -80,20 +81,21 @@ export async function safetyCheck(
       SAFETY_CHECK_PROMPT,
       `**Response to check:**\n\n${response}`,
       {
-        model: 'openai/gpt-4o-mini',
+        model: "openai/gpt-4o-mini",
         temperature: 0.1,
         maxTokens: 50,
-      }
+      },
     );
 
     const result = llmCheck.content.trim().toUpperCase();
 
-    if (result.startsWith('FAIL')) {
+    if (result.startsWith("FAIL")) {
       return {
         passed: false,
         confidence: 0.8,
-        reason: result.substring(5).trim() || 'LLM safety check failed',
-        suggestion: 'This response may need review. Please verify guidance with official sources.',
+        reason: result.substring(5).trim() || "LLM safety check failed",
+        suggestion:
+          "This response may need review. Please verify guidance with official sources.",
       };
     }
 
@@ -141,7 +143,7 @@ Respond with ONLY:
  */
 export async function complianceCheck(
   response: string,
-  context?: AppContext
+  context?: AppContext,
 ): Promise<GuardrailCheckResult> {
   // Pattern-based check for uncertainty indicators
   for (const pattern of COMPLIANCE_UNCERTAINTY) {
@@ -149,24 +151,26 @@ export async function complianceCheck(
       return {
         passed: true, // Still pass, but with warning
         confidence: 0.6,
-        reason: 'Response indicates guidance may need verification',
-        suggestion: 'Please verify this guidance is current before acting on it.',
+        reason: "Response indicates guidance may need verification",
+        suggestion:
+          "Please verify this guidance is current before acting on it.",
       };
     }
   }
 
   // Check if response has source citation (good sign for compliance)
-  const hasSource = response.toLowerCase().includes('source:') ||
-                    response.toLowerCase().includes('source:') ||
-                    response.toLowerCase().includes('hse.gov.uk') ||
-                    response.toLowerCase().includes('gov.uk');
+  const hasSource =
+    response.toLowerCase().includes("source:") ||
+    response.toLowerCase().includes("source:") ||
+    response.toLowerCase().includes("hse.gov.uk") ||
+    response.toLowerCase().includes("gov.uk");
 
   if (!hasSource) {
     return {
       passed: true,
       confidence: 0.7,
-      reason: 'No source citation provided',
-      suggestion: 'Guidance would be more reliable with source citation.',
+      reason: "No source citation provided",
+      suggestion: "Guidance would be more reliable with source citation.",
     };
   }
 
@@ -182,21 +186,29 @@ export async function complianceCheck(
  */
 export async function confidenceCheck(
   response: string,
-  context?: AppContext
-): Promise<GuardrailCheckResult & { confidence: 'HIGH' | 'MEDIUM' | 'LOW' }> {
+  context?: AppContext,
+): Promise<
+  Omit<GuardrailCheckResult, "confidence"> & {
+    confidence: "HIGH" | "MEDIUM" | "LOW";
+  }
+> {
   let score = 0;
 
   // Has source citation (+2)
-  if (response.toLowerCase().includes('source:') ||
-      response.toLowerCase().includes('hse') ||
-      response.toLowerCase().includes('gov.uk')) {
+  if (
+    response.toLowerCase().includes("source:") ||
+    response.toLowerCase().includes("hse") ||
+    response.toLowerCase().includes("gov.uk")
+  ) {
     score += 2;
   }
 
   // Has date/freshness info (+1)
-  if (response.toLowerCase().includes('last updated') ||
-      response.toLowerCase().includes('2024') ||
-      response.toLowerCase().includes('2025')) {
+  if (
+    response.toLowerCase().includes("last updated") ||
+    response.toLowerCase().includes("2024") ||
+    response.toLowerCase().includes("2025")
+  ) {
     score += 1;
   }
 
@@ -209,7 +221,11 @@ export async function confidenceCheck(
   }
 
   // Specific and actionable (+1)
-  if (response.includes('###') || response.includes('1.') || response.includes('-')) {
+  if (
+    response.includes("###") ||
+    response.includes("1.") ||
+    response.includes("-")
+  ) {
     score += 1;
   }
 
@@ -219,20 +235,23 @@ export async function confidenceCheck(
   }
 
   // Determine confidence level
-  let confidence: 'HIGH' | 'MEDIUM' | 'LOW';
+  let confidence: "HIGH" | "MEDIUM" | "LOW";
   if (score >= 3) {
-    confidence = 'HIGH';
+    confidence = "HIGH";
   } else if (score >= 1) {
-    confidence = 'MEDIUM';
+    confidence = "MEDIUM";
   } else {
-    confidence = 'LOW';
+    confidence = "LOW";
   }
 
   return {
     passed: true, // Confidence check never blocks
     confidence,
     reason: `Confidence score: ${score}/5`,
-    suggestion: confidence === 'LOW' ? 'Please verify this guidance for critical matters.' : undefined,
+    suggestion:
+      confidence === "LOW"
+        ? "Please verify this guidance for critical matters."
+        : undefined,
   };
 }
 
@@ -244,11 +263,17 @@ export async function confidenceCheck(
  * Tone issues to detect
  */
 const TONE_ISSUES = [
-  { pattern: /stupid|idiotic|dumb|idiot|moron/gi, issue: 'Inappropriate language' },
-  { pattern: /whatever|doesn't matter|who cares/gi, issue: 'Dismissive tone' },
-  { pattern: /i don't care|not my problem/gi, issue: 'Unhelpful attitude' },
-  { pattern: /obviously|clearly.*you should.*know/gi, issue: 'Condescending tone' },
-  { pattern: /just.*do.*it|stop.*asking/gi, issue: 'Impatient tone' },
+  {
+    pattern: /stupid|idiotic|dumb|idiot|moron/gi,
+    issue: "Inappropriate language",
+  },
+  { pattern: /whatever|doesn't matter|who cares/gi, issue: "Dismissive tone" },
+  { pattern: /i don't care|not my problem/gi, issue: "Unhelpful attitude" },
+  {
+    pattern: /obviously|clearly.*you should.*know/gi,
+    issue: "Condescending tone",
+  },
+  { pattern: /just.*do.*it|stop.*asking/gi, issue: "Impatient tone" },
 ];
 
 /**
@@ -271,7 +296,7 @@ Check if the response has appropriate tone. Respond with ONLY:
  */
 export async function toneCheck(
   response: string,
-  context?: AppContext
+  context?: AppContext,
 ): Promise<GuardrailCheckResult> {
   // Fast pattern-based check
   for (const { pattern, issue } of TONE_ISSUES) {
@@ -280,7 +305,8 @@ export async function toneCheck(
         passed: false,
         confidence: 0.9,
         reason: `Tone issue: ${issue}`,
-        suggestion: 'The response should be rephrased in a more professional, supportive manner.',
+        suggestion:
+          "The response should be rephrased in a more professional, supportive manner.",
       };
     }
   }
@@ -292,20 +318,21 @@ export async function toneCheck(
       TONE_CHECK_PROMPT,
       `**Response to check:**\n\n${response}`,
       {
-        model: 'openai/gpt-4o-mini',
+        model: "openai/gpt-4o-mini",
         temperature: 0.1,
         maxTokens: 50,
-      }
+      },
     );
 
     const result = llmCheck.content.trim().toUpperCase();
 
-    if (result.startsWith('FAIL')) {
+    if (result.startsWith("FAIL")) {
       return {
         passed: false,
         confidence: 0.7,
-        reason: result.substring(5).trim() || 'Tone check failed',
-        suggestion: 'Response tone should be adjusted to be more supportive and professional.',
+        reason: result.substring(5).trim() || "Tone check failed",
+        suggestion:
+          "Response tone should be adjusted to be more supportive and professional.",
       };
     }
 
@@ -324,19 +351,19 @@ export async function toneCheck(
  */
 export async function permissionCheck(
   response: string,
-  context: AppContext
+  context: AppContext,
 ): Promise<GuardrailCheckResult> {
   const { userRole, subscription, activeApp } = context;
 
   // Viewer role gets limited access
-  if (userRole === 'viewer') {
+  if (userRole === "viewer") {
     // Check for restricted content
     const restrictedKeywords = [
-      'salary details',
-      'contract details',
-      'confidential information',
-      'sensitive information',
-      'staff personal data',
+      "salary details",
+      "contract details",
+      "confidential information",
+      "sensitive information",
+      "staff personal data",
     ];
 
     for (const keyword of restrictedKeywords) {
@@ -344,16 +371,25 @@ export async function permissionCheck(
         return {
           passed: false,
           confidence: 0.95,
-          reason: 'Content requires higher permissions',
-          suggestion: 'You do not have permission to view this information. Please contact your administrator.',
+          reason: "Content requires higher permissions",
+          suggestion:
+            "You do not have permission to view this information. Please contact your administrator.",
         };
       }
     }
   }
 
   // Check feature access based on subscription
-  if (subscription.plan === 'free') {
-    const paidFeatures = ['estates', 'hr', 'send', 'data', 'curriculum', 'procurement', 'governance'];
+  if (subscription.plan === "free") {
+    const paidFeatures = [
+      "estates",
+      "hr",
+      "send",
+      "data",
+      "curriculum",
+      "procurement",
+      "governance",
+    ];
     // This would be set by the agent-router earlier, but we double-check
     // If response contains detailed specialist advice, flag it
   }
@@ -370,13 +406,14 @@ export async function permissionCheck(
  */
 export function ensureSourceCitation(
   response: string,
-  domain?: string
+  domain?: string,
 ): string {
   // Check if source already cited
-  const hasSource = response.toLowerCase().includes('source:') ||
-                    response.toLowerCase().includes('source:') ||
-                    response.toLowerCase().includes('**source**') ||
-                    response.toLowerCase().includes('*source*');
+  const hasSource =
+    response.toLowerCase().includes("source:") ||
+    response.toLowerCase().includes("source:") ||
+    response.toLowerCase().includes("**source**") ||
+    response.toLowerCase().includes("*source*");
 
   if (hasSource) {
     return response;
@@ -384,18 +421,20 @@ export function ensureSourceCitation(
 
   // Add generic source citation
   const domainSources: Record<string, string> = {
-    estates: 'HSE',
-    hr: 'ACAS / Gov.uk',
-    send: 'SEND Code of Practice',
-    data: 'DfE',
-    curriculum: 'DfE / Ofsted',
-    'it-tech': 'DfE / vendor documentation',
-    procurement: 'CIPS / Gov.uk',
-    governance: 'DfE / NGA',
-    communications: 'CIPR / Gov.uk',
+    estates: "HSE",
+    hr: "ACAS / Gov.uk",
+    send: "SEND Code of Practice",
+    data: "DfE",
+    curriculum: "DfE / Ofsted",
+    "it-tech": "DfE / vendor documentation",
+    procurement: "CIPS / Gov.uk",
+    governance: "DfE / NGA",
+    communications: "CIPR / Gov.uk",
   };
 
-  const sourceName = domain ? domainSources[domain] || 'Schoolgle Knowledge Base' : 'Schoolgle Knowledge Base';
+  const sourceName = domain
+    ? domainSources[domain] || "Schoolgle Knowledge Base"
+    : "Schoolgle Knowledge Base";
 
   return `${response}
 
@@ -414,15 +453,10 @@ export function ensureSourceCitation(
 export async function applyGuardrails(
   response: string,
   context: AppContext,
-  domain?: string
+  domain?: string,
 ): Promise<GuardrailResult> {
   // Run all checks in parallel where possible
-  const [
-    safety,
-    compliance,
-    tone,
-    permission,
-  ] = await Promise.all([
+  const [safety, compliance, tone, permission] = await Promise.all([
     safetyCheck(response, context),
     complianceCheck(response, context),
     toneCheck(response, context),
@@ -446,7 +480,7 @@ export async function applyGuardrails(
   if (!tone.passed && tone.confidence > 0.7) {
     return {
       passed: true,
-      warning: 'Tone adjustment recommended',
+      warning: "Tone adjustment recommended",
       response: await adjustTone(response, tone.reason),
     };
   }
@@ -455,7 +489,9 @@ export async function applyGuardrails(
   if (!permission.passed) {
     return {
       passed: false,
-      response: permission.suggestion || "I don't have access to that information. Please contact your administrator.",
+      response:
+        permission.suggestion ||
+        "I don't have access to that information. Please contact your administrator.",
       reason: permission.reason,
     };
   }
@@ -466,12 +502,14 @@ export async function applyGuardrails(
 
   // Add compliance warning if needed
   if (compliance.reason && compliance.confidence < 0.7) {
-    warnings.push(compliance.suggestion || 'Please verify this guidance is current.');
+    warnings.push(
+      compliance.suggestion || "Please verify this guidance is current.",
+    );
   }
 
   // Add confidence warning if low
-  if (confidenceResult.confidence === 'LOW') {
-    warnings.push('Low confidence - please verify for critical matters.');
+  if (confidenceResult.confidence === "LOW") {
+    warnings.push("Low confidence - please verify for critical matters.");
   }
 
   // 5. Ensure source citation
@@ -479,17 +517,17 @@ export async function applyGuardrails(
 
   // 6. Add warnings if present
   if (warnings.length > 0) {
-    finalResponse = `${finalResponse}\n\n⚠️ **Note:** ${warnings.join(' ')}`;
+    finalResponse = `${finalResponse}\n\n⚠️ **Note:** ${warnings.join(" ")}`;
   }
 
   return {
     passed: true,
     response: finalResponse,
-    warning: warnings.length > 0 ? warnings.join(' ') : undefined,
+    warning: warnings.length > 0 ? warnings.join(" ") : undefined,
     metadata: {
       safetyPassed: safety.passed,
       confidenceLevel: confidenceResult.confidence,
-      hasSource: finalResponse.toLowerCase().includes('source'),
+      hasSource: finalResponse.toLowerCase().includes("source"),
     },
   };
 }
@@ -514,13 +552,13 @@ If this is a safety-critical matter, please seek professional advice immediately
 function formatWithWarning(
   response: string,
   warning: string,
-  suggestion?: string
+  suggestion?: string,
 ): string {
   return `${response}
 
 ${warning}
 
-${suggestion ? `**Suggestion:** ${suggestion}` : ''}`;
+${suggestion ? `**Suggestion:** ${suggestion}` : ""}`;
 }
 
 /**
@@ -531,5 +569,5 @@ async function adjustTone(response: string, reason?: string): Promise<string> {
   // For now, return as-is with note
   return `${response}
 
-*(Note: This response may need tone adjustment - ${reason || 'be more professional'})*`;
+*(Note: This response may need tone adjustment - ${reason || "be more professional"})*`;
 }

@@ -58,13 +58,17 @@ export const POST = protectedRoute(async (auth, req: NextRequest) => {
   const body = await req.json();
   const {
     organizationId,
-    taskSource,
+    task_source: taskSource,
     content,
     comment_type,
     parent_comment_id,
     attachments,
     userId,
-  } = body as TaskCommentForm & { organizationId: string; userId?: string };
+  } = body as TaskCommentForm & {
+    organizationId: string;
+    userId?: string;
+    taskSource?: string;
+  };
 
   const orgId = organizationId || auth.organizationId;
   const segments = req.nextUrl.pathname.split("/");

@@ -702,7 +702,7 @@ export async function POST(req: NextRequest) {
               const smartTasks = generateSmartTasks(
                 assessmentUpdates as any,
                 allEvidenceMatches,
-                { organizationId, userId, authId },
+                { organizationId, userId: userId || "", authId },
               );
 
               if (smartTasks.length > 0) {

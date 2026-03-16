@@ -98,6 +98,23 @@ You help school staff with health and safety, premises management, and statutory
 - Only licensed contractors for removal
 - Source: https://www.hse.gov.uk/asbestos/
 
+## Incident & SOP Capabilities
+You can help with H&S incidents and SOPs through callable functions:
+- **report_incident**: Log a new H&S incident with auto-RIDDOR detection
+- **get_incidents**: View incident history, filter by type/severity/RIDDOR status
+- **suggest_sops_for_incident**: Given incident details, recommend which SOPs to follow
+- **start_sop**: Start a Standard Operating Procedure (e.g. riddor_assessment, incident_investigation, near_miss_recording)
+- **get_sop_status**: Check progress on an active SOP run
+- **update_sop_step**: Mark SOP steps as done/skipped/blocked with notes
+- **get_sop_templates**: List available SOP templates by category
+
+When a user reports an incident, you should:
+1. Help them log it via report_incident
+2. Tell them the RIDDOR detection result
+3. Suggest relevant SOPs via suggest_sops_for_incident
+4. Offer to start the most urgent SOP immediately
+5. If RIDDOR: walk them through the riddor_assessment SOP step by step
+
 ## When to Escalate
 - If you're unsure about guidance currency
 - If the question involves life-safety situations
@@ -154,6 +171,37 @@ export const ESTATES_KEYWORDS = [
   "scan",
   "validation",
   "extract",
+  "workflow",
+  "checklist",
+  "inspection failure",
+  "equipment failure",
+  "climbing frame",
+  "cordon",
+  "procurement",
+  "quote",
+  "quotes",
+  "purchase order",
+  "PO",
+  "sign-off",
+  "sign off",
+  "handover",
+  "phase",
+  "step",
+  "SOP",
+  "standard operating procedure",
+  "procedure",
+  "near miss",
+  "near-miss",
+  "dangerous occurrence",
+  "F2508",
+  "HSE report",
+  "reportable",
+  "injury",
+  "fracture",
+  "hospital",
+  "corrective action",
+  "investigation",
+  "root cause",
 ];
 
 export const ESTATES_QUALIFICATIONS = [

@@ -9,20 +9,20 @@
  * - Path restrictions (allowed/denied paths)
  */
 
-import { createClient } from '@supabase/supabase-js';
-import type { SnapshotElement } from './browser-service';
+import { createClient } from "@supabase/supabase-js";
+import type { SnapshotElement } from "./browser-service";
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
 export type BrowserActionType =
-  | 'navigate'
-  | 'fill'
-  | 'click'
-  | 'submit'
-  | 'screenshot'
-  | 'close';
+  | "navigate"
+  | "fill"
+  | "click"
+  | "submit"
+  | "screenshot"
+  | "close";
 
 export interface BrowserAction {
   type: BrowserActionType;
@@ -38,16 +38,16 @@ export interface SensitiveFieldWarning {
   field: string;
   label: string;
   type: SensitiveFieldType;
-  action: 'manual_entry' | 'approve_required' | 'blocked';
+  action: "manual_entry" | "approve_required" | "blocked";
   reason: string;
 }
 
 export type SensitiveFieldType =
-  | 'password'
-  | 'payment'
-  | 'personal'
-  | 'medical'
-  | 'financial';
+  | "password"
+  | "payment"
+  | "personal"
+  | "medical"
+  | "financial";
 
 export interface SafetyValidationResult {
   isSafe: boolean;
@@ -60,10 +60,10 @@ export interface ApprovalPrompt {
   title: string;
   description: string;
   details: Record<string, any>;
-  riskLevel: 'low' | 'medium' | 'high';
+  riskLevel: "low" | "medium" | "high";
   actions: {
-    approve: { label: string; variant: 'primary' | 'danger' };
-    deny: { label: string; variant: 'secondary' };
+    approve: { label: string; variant: "primary" | "danger" };
+    deny: { label: string; variant: "secondary" };
     edit?: { label: string };
   };
 }
@@ -116,7 +116,7 @@ class GuardrailsMiddleware {
    */
   async isDomainApproved(
     url: string,
-    organizationId: string
+    organizationId: string,
   ): Promise<DomainApproval> {
     // Extract domain from URL
     const domain = this.extractDomain(url);
@@ -124,11 +124,11 @@ class GuardrailsMiddleware {
 
     // Query approved domains
     const { data, error } = await this.supabase
-      .from('browser_approved_domains')
-      .select('*')
-      .eq('organization_id', organizationId)
-      .eq('domain', domain)
-      .eq('is_active', true)
+      .from("browser_approved_domains")
+      .select("*")
+      .eq("organization_id", organizationId)
+      .eq("domain", domain)
+      .eq("is_active", true)
       .maybeSingle();
 
     if (error || !data) {
@@ -141,17 +141,23 @@ class GuardrailsMiddleware {
       };
     }
 
+    const row = data as any;
+
     // Check path restrictions
-    const isPathAllowed = this.checkPathAllowed(path, data.allowed_paths, data.denied_paths);
+    const isPathAllowed = this.checkPathAllowed(
+      path,
+      row.allowed_paths,
+      row.denied_paths,
+    );
 
     return {
       isApproved: isPathAllowed,
-      domainId: data.id,
-      requiresAuth: data.requires_auth,
-      authMethod: data.auth_method || undefined,
-      maxSessionDuration: data.max_session_duration,
-      allowedPaths: data.allowed_paths,
-      deniedPaths: data.denied_paths,
+      domainId: row.id,
+      requiresAuth: row.requires_auth,
+      authMethod: row.auth_method || undefined,
+      maxSessionDuration: row.max_session_duration,
+      allowedPaths: row.allowed_paths,
+      deniedPaths: row.denied_paths,
     };
   }
 
@@ -161,7 +167,7 @@ class GuardrailsMiddleware {
   private checkPathAllowed(
     path: string,
     allowedPaths: string[],
-    deniedPaths: string[]
+    deniedPaths: string[],
   ): boolean {
     // Check denied paths first (these take precedence)
     for (const pattern of deniedPaths) {
@@ -171,7 +177,7 @@ class GuardrailsMiddleware {
     }
 
     // If no allowed paths specified, allow all (except denied)
-    if (allowedPaths.length === 0 || allowedPaths[0] === '/**') {
+    if (allowedPaths.length === 0 || allowedPaths[0] === "/**") {
       return true;
     }
 
@@ -190,9 +196,7 @@ class GuardrailsMiddleware {
    */
   private matchPattern(path: string, pattern: string): boolean {
     // Convert glob pattern to regex
-    const regexPattern = pattern
-      .replace(/\*/g, '.*')
-      .replace(/\?/g, '.');
+    const regexPattern = pattern.replace(/\*/g, ".*").replace(/\?/g, ".");
 
     const regex = new RegExp(`^${regexPattern}$`);
     return regex.test(path);
@@ -210,34 +214,34 @@ class GuardrailsMiddleware {
    */
   async requiresApproval(action: BrowserAction): Promise<boolean> {
     // Navigate actions don't require approval (domain check is done separately)
-    if (action.type === 'navigate') {
+    if (action.type === "navigate") {
       return false;
     }
 
     // Screenshot actions don't require approval
-    if (action.type === 'screenshot') {
+    if (action.type === "screenshot") {
       return false;
     }
 
     // Close actions don't require approval
-    if (action.type === 'close') {
+    if (action.type === "close") {
       return false;
     }
 
     // Fill, click, and submit actions may require approval based on context
     // For now, be conservative and require approval for submit
-    if (action.type === 'submit') {
+    if (action.type === "submit") {
       return true;
     }
 
     // Check if organization has strict approval enabled
     const { data: orgSettings } = await this.supabase
-      .from('organizations')
-      .select('require_browser_approval')
-      .eq('id', action.organizationId)
+      .from("organizations")
+      .select("require_browser_approval")
+      .eq("id", action.organizationId)
       .single();
 
-    return orgSettings?.require_browser_approval || false;
+    return (orgSettings as any)?.require_browser_approval || false;
   }
 
   /**
@@ -251,40 +255,42 @@ class GuardrailsMiddleware {
       ? await this.isDomainApproved(action.targetUrl, action.organizationId)
       : null;
 
-    let title = 'Confirm Action';
-    let description = 'Ed is about to perform an action.';
-    let riskLevel: 'low' | 'medium' | 'high' = 'low';
+    let title = "Confirm Action";
+    let description = "Ed is about to perform an action.";
+    let riskLevel: "low" | "medium" | "high" = "low";
     let details: Record<string, any> = {
       action: action.type,
     };
 
     switch (action.type) {
-      case 'submit':
-        title = 'Confirm Form Submission';
+      case "submit":
+        title = "Confirm Form Submission";
         description =
-          'Ed has completed filling the form. Please review the details before submitting.';
-        riskLevel = 'medium';
-        details.domain = domainApproval ? this.extractDomain(action.targetUrl!) : 'Unknown';
+          "Ed has completed filling the form. Please review the details before submitting.";
+        riskLevel = "medium";
+        details.domain = domainApproval
+          ? this.extractDomain(action.targetUrl!)
+          : "Unknown";
         break;
 
-      case 'fill':
-        title = 'Confirm Form Entry';
+      case "fill":
+        title = "Confirm Form Entry";
         description = `Ed wants to enter information into a form field.`;
-        riskLevel = 'low';
+        riskLevel = "low";
         details.field = action.targetRef;
         break;
 
-      case 'click':
-        title = 'Confirm Click';
+      case "click":
+        title = "Confirm Click";
         description = `Ed wants to click on an element.`;
-        riskLevel = 'low';
+        riskLevel = "low";
         details.element = action.targetRef;
         break;
 
-      case 'navigate':
-        title = 'Confirm Navigation';
+      case "navigate":
+        title = "Confirm Navigation";
         description = `Ed wants to navigate to a new page.`;
-        riskLevel = 'low';
+        riskLevel = "low";
         details.url = action.targetUrl;
         break;
     }
@@ -296,12 +302,15 @@ class GuardrailsMiddleware {
       riskLevel,
       actions: {
         approve: {
-          label: riskLevel === 'high' ? 'I understand, proceed' : 'Approve',
-          variant: riskLevel === 'high' ? 'danger' : 'primary',
+          label:
+            (riskLevel as string) === "high"
+              ? "I understand, proceed"
+              : "Approve",
+          variant: (riskLevel as string) === "high" ? "danger" : "primary",
         },
         deny: {
-          label: 'Cancel',
-          variant: 'secondary',
+          label: "Cancel",
+          variant: "secondary",
         },
       },
     };
@@ -336,95 +345,95 @@ class GuardrailsMiddleware {
   private detectSensitiveField(field: FormField): SensitiveFieldWarning | null {
     const fieldType = this.getFieldType(field);
     const fieldName = field.name.toLowerCase();
-    const fieldId = (field.ref || '').toLowerCase();
+    const fieldId = (field.ref || "").toLowerCase();
 
     // Password fields
     if (
-      fieldType === 'password' ||
-      fieldName.includes('password') ||
-      fieldId.includes('password') ||
-      fieldName.includes('pass') ||
-      fieldId.includes('pass')
+      fieldType === "password" ||
+      fieldName.includes("password") ||
+      fieldId.includes("password") ||
+      fieldName.includes("pass") ||
+      fieldId.includes("pass")
     ) {
       return {
         field: field.ref,
         label: field.name,
-        type: 'password',
-        action: 'blocked',
-        reason: 'Password fields cannot be auto-filled for security reasons',
+        type: "password",
+        action: "blocked",
+        reason: "Password fields cannot be auto-filled for security reasons",
       };
     }
 
     // Payment fields (credit card, cvv, etc.)
     if (
-      fieldName.includes('credit') ||
-      fieldName.includes('card') ||
-      fieldName.includes('cvv') ||
-      fieldName.includes('cvc') ||
-      fieldName.includes('expiry') ||
-      fieldId.includes('card') ||
-      fieldId.includes('cvv')
+      fieldName.includes("credit") ||
+      fieldName.includes("card") ||
+      fieldName.includes("cvv") ||
+      fieldName.includes("cvc") ||
+      fieldName.includes("expiry") ||
+      fieldId.includes("card") ||
+      fieldId.includes("cvv")
     ) {
       return {
         field: field.ref,
         label: field.name,
-        type: 'payment',
-        action: 'blocked',
-        reason: 'Payment information cannot be auto-filled',
+        type: "payment",
+        action: "blocked",
+        reason: "Payment information cannot be auto-filled",
       };
     }
 
     // Bank account fields
     if (
-      fieldName.includes('bank') ||
-      fieldName.includes('account') ||
-      fieldName.includes('sort') ||
-      fieldName.includes('iban') ||
-      fieldName.includes('bic') ||
-      fieldId.includes('bank') ||
-      fieldId.includes('account')
+      fieldName.includes("bank") ||
+      fieldName.includes("account") ||
+      fieldName.includes("sort") ||
+      fieldName.includes("iban") ||
+      fieldName.includes("bic") ||
+      fieldId.includes("bank") ||
+      fieldId.includes("account")
     ) {
       return {
         field: field.ref,
         label: field.name,
-        type: 'financial',
-        action: 'blocked',
-        reason: 'Bank account information cannot be auto-filled',
+        type: "financial",
+        action: "blocked",
+        reason: "Bank account information cannot be auto-filled",
       };
     }
 
     // National Insurance / SSN
     if (
-      fieldName.includes('national insurance') ||
-      fieldName.includes('nino') ||
-      fieldName.includes('ssn') ||
-      fieldName.includes('social security') ||
-      fieldId.includes('nino') ||
-      fieldId.includes('ssn')
+      fieldName.includes("national insurance") ||
+      fieldName.includes("nino") ||
+      fieldName.includes("ssn") ||
+      fieldName.includes("social security") ||
+      fieldId.includes("nino") ||
+      fieldId.includes("ssn")
     ) {
       return {
         field: field.ref,
         label: field.name,
-        type: 'personal',
-        action: 'approve_required',
-        reason: 'Sensitive personal identifier - requires manual confirmation',
+        type: "personal",
+        action: "approve_required",
+        reason: "Sensitive personal identifier - requires manual confirmation",
       };
     }
 
     // Medical information
     if (
-      fieldName.includes('medical') ||
-      fieldName.includes('health') ||
-      fieldName.includes('doctor') ||
-      fieldName.includes('medication') ||
-      fieldName.includes('condition')
+      fieldName.includes("medical") ||
+      fieldName.includes("health") ||
+      fieldName.includes("doctor") ||
+      fieldName.includes("medication") ||
+      fieldName.includes("condition")
     ) {
       return {
         field: field.ref,
         label: field.name,
-        type: 'medical',
-        action: 'approve_required',
-        reason: 'Medical information - requires confirmation',
+        type: "medical",
+        action: "approve_required",
+        reason: "Medical information - requires confirmation",
       };
     }
 
@@ -435,7 +444,7 @@ class GuardrailsMiddleware {
    * Get the input type from a field element
    */
   private getFieldType(field: FormField): string {
-    return field.type || field.role || 'text';
+    return field.type || field.role || "text";
   }
 
   // ==========================================================================
@@ -451,7 +460,7 @@ class GuardrailsMiddleware {
    */
   async validateFormData(
     formSchema: FormSchema,
-    data: Record<string, string>
+    data: Record<string, string>,
   ): Promise<SafetyValidationResult> {
     const warnings: SensitiveFieldWarning[] = [];
     const blockedFields: string[] = [];
@@ -469,13 +478,13 @@ class GuardrailsMiddleware {
       }
 
       // Check for passwords in value (shouldn't happen, but check anyway)
-      if (key.toLowerCase().includes('password') && value) {
+      if (key.toLowerCase().includes("password") && value) {
         blockedFields.push(key);
       }
     }
 
     // Determine if approval is required
-    if (warnings.some((w) => w.action === 'approve_required')) {
+    if (warnings.some((w) => w.action === "approve_required")) {
       requiresApproval = true;
     }
 
@@ -491,7 +500,7 @@ class GuardrailsMiddleware {
    * Check if a string looks like a credit card number
    */
   private looksLikeCreditCard(value: string): boolean {
-    const digitsOnly = value.replace(/\s/g, '').replace(/-/g, '');
+    const digitsOnly = value.replace(/\s/g, "").replace(/-/g, "");
     return /^\d{13,19}$/.test(digitsOnly);
   }
 
@@ -507,7 +516,7 @@ class GuardrailsMiddleware {
       const urlObj = new URL(url);
       return urlObj.hostname;
     } catch {
-      return '';
+      return "";
     }
   }
 
@@ -519,7 +528,7 @@ class GuardrailsMiddleware {
       const urlObj = new URL(url);
       return urlObj.pathname;
     } catch {
-      return '/';
+      return "/";
     }
   }
 }
@@ -536,7 +545,7 @@ export function getGuardrails(): GuardrailsMiddleware {
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
     if (!supabaseUrl || !supabaseKey) {
-      throw new Error('Missing Supabase environment variables');
+      throw new Error("Missing Supabase environment variables");
     }
 
     guardrailsInstance = new GuardrailsMiddleware(supabaseUrl, supabaseKey);

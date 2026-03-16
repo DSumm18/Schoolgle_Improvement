@@ -32,7 +32,7 @@ const staggerContainer = {
   },
 };
 
-const staggerItem = {
+const staggerItem: import("framer-motion").Variants = {
   initial: { opacity: 0, y: 16, scale: 0.98 },
   animate: {
     opacity: 1,

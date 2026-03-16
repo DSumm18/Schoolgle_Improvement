@@ -475,7 +475,7 @@ export async function analysePupilAssessments(
 
   // 5. Store insights in database
   await storeInsights(
-    supabase,
+    supabase as any,
     organizationId,
     importId,
     insights,
@@ -612,7 +612,7 @@ and whether current attainment matches expected trajectories.
  * Store generated insights in the database
  */
 async function storeInsights(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   organizationId: string,
   importId: string,
   insights: AssessmentInsight[],

@@ -16,8 +16,8 @@
  * @see packages/ed-extension/SETUP_FISH_AUDIO.md
  */
 
-import { useState, useCallback, useRef } from 'react';
-import { Volume2, VolumeX, Play, Stop } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Volume2, VolumeX, Play, Square as Stop } from "lucide-react";
 
 // ============================================================================
 // TYPES
@@ -42,7 +42,7 @@ export interface VoiceState {
 // ============================================================================
 
 const EDWINA_DEFAULTS: Partial<VoiceConfig> = {
-  voiceId: '72e3a3135204461ba041df787dc5c834', // Edwina's voice ID
+  voiceId: "72e3a3135204461ba041df787dc5c834", // Edwina's voice ID
   speed: 1.0,
   pitch: 0,
 };
@@ -70,11 +70,11 @@ class EdwinaVoiceService {
 
     try {
       // Call Fish Audio Text-to-Speech API
-      const response = await fetch('https://api.fish.audio/v1/tts', {
-        method: 'POST',
+      const response = await fetch("https://api.fish.audio/v1/tts", {
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${this.config.apiKey}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.config.apiKey}`,
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           text: text.trim(),
@@ -86,7 +86,7 @@ class EdwinaVoiceService {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Failed to generate speech');
+        throw new Error(error.message || "Failed to generate speech");
       }
 
       // Get audio data
@@ -102,7 +102,7 @@ class EdwinaVoiceService {
         };
         audio.onerror = () => {
           URL.revokeObjectURL(audioUrl);
-          reject(new Error('Audio playback failed'));
+          reject(new Error("Audio playback failed"));
         };
 
         audio.play();
@@ -116,9 +116,8 @@ class EdwinaVoiceService {
           this.isPlaying = true;
         };
       });
-
     } catch (error) {
-      console.error('[EdwinaVoiceService] Error:', error);
+      console.error("[EdwinaVoiceService] Error:", error);
       throw error;
     }
   }
@@ -127,7 +126,7 @@ class EdwinaVoiceService {
    * Stop current playback
    */
   stop(): void {
-    this.audioQueue.forEach(audio => {
+    this.audioQueue.forEach((audio) => {
       audio.pause();
       audio.currentTime = 0;
     });
@@ -185,15 +184,15 @@ export function useEdwinaVoice(options: UseEdwinaVoiceOptions = {}) {
   // Get API key from environment or options
   const getApiKey = useCallback((): string => {
     if (options.apiKey) return options.apiKey;
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       // Check for Fish Audio API key in various locations
       return (
         (window as any).FISH_AUDIO_API_KEY ||
         process.env.NEXT_PUBLIC_FISH_AUDIO_API_KEY ||
-        ''
+        ""
       );
     }
-    return process.env.NEXT_PUBLIC_FISH_AUDIO_API_KEY || '';
+    return process.env.NEXT_PUBLIC_FISH_AUDIO_API_KEY || "";
   }, [options.apiKey]);
 
   // Get voice ID
@@ -215,35 +214,43 @@ export function useEdwinaVoice(options: UseEdwinaVoiceOptions = {}) {
   /**
    * Speak text with Edwina's voice
    */
-  const speak = useCallback(async (text: string) => {
-    if (!serviceRef.current) {
-      console.warn('[EdwinaVoice] Service not initialized - missing API key');
-      setState(prev => ({ ...prev, error: 'Voice not configured' }));
-      return;
-    }
-
-    setState({ isPlaying: true, isLoading: true, error: null, currentText: text });
-
-    if (options.onStart) {
-      options.onStart();
-    }
-
-    try {
-      await serviceRef.current.speak(text);
-      setState({ isPlaying: false, isLoading: false, error: null });
-
-      if (options.onEnd) {
-        options.onEnd();
+  const speak = useCallback(
+    async (text: string) => {
+      if (!serviceRef.current) {
+        console.warn("[EdwinaVoice] Service not initialized - missing API key");
+        setState((prev) => ({ ...prev, error: "Voice not configured" }));
+        return;
       }
-    } catch (error) {
-      const err = error as Error;
-      setState({ isPlaying: false, isLoading: false, error: err.message });
 
-      if (options.onError) {
-        options.onError(err);
+      setState({
+        isPlaying: true,
+        isLoading: true,
+        error: null,
+        currentText: text,
+      });
+
+      if (options.onStart) {
+        options.onStart();
       }
-    }
-  }, [options]);
+
+      try {
+        await serviceRef.current.speak(text);
+        setState({ isPlaying: false, isLoading: false, error: null });
+
+        if (options.onEnd) {
+          options.onEnd();
+        }
+      } catch (error) {
+        const err = error as Error;
+        setState({ isPlaying: false, isLoading: false, error: err.message });
+
+        if (options.onError) {
+          options.onError(err);
+        }
+      }
+    },
+    [options],
+  );
 
   /**
    * Stop current speech
@@ -258,13 +265,16 @@ export function useEdwinaVoice(options: UseEdwinaVoiceOptions = {}) {
   /**
    * Toggle speech on/off
    */
-  const toggle = useCallback(async (text: string) => {
-    if (state.isPlaying) {
-      stop();
-    } else {
-      await speak(text);
-    }
-  }, [state.isPlaying, speak, stop]);
+  const toggle = useCallback(
+    async (text: string) => {
+      if (state.isPlaying) {
+        stop();
+      } else {
+        await speak(text);
+      }
+    },
+    [state.isPlaying, speak, stop],
+  );
 
   return {
     ...state,
@@ -284,9 +294,9 @@ interface EdwinaVoiceControlProps {
   onPlay?: () => void;
   onStop?: () => void;
   disabled?: boolean;
-  size?: 'sm' | 'md' | 'lg';
+  size?: "sm" | "md" | "lg";
   showLabel?: boolean;
-  variant?: 'button' | 'icon' | 'card';
+  variant?: "button" | "icon" | "card";
 }
 
 export function EdwinaVoiceControl({
@@ -294,17 +304,18 @@ export function EdwinaVoiceControl({
   onPlay,
   onStop,
   disabled = false,
-  size = 'md',
+  size = "md",
   showLabel = false,
-  variant = 'button',
+  variant = "button",
 }: EdwinaVoiceControlProps) {
-  const { isPlaying, isLoading, error, speak, stop, isConfigured, toggle } = useEdwinaVoice({
-    onStart: onPlay,
-    onEnd: onStop,
-  });
+  const { isPlaying, isLoading, error, speak, stop, isConfigured, toggle } =
+    useEdwinaVoice({
+      onStart: onPlay,
+      onEnd: onStop,
+    });
 
   // Icon button variant
-  if (variant === 'icon') {
+  if (variant === "icon") {
     return (
       <button
         onClick={() => {
@@ -315,10 +326,10 @@ export function EdwinaVoiceControl({
         disabled={disabled || isLoading || !text || !isConfigured}
         className={`p-2 rounded-full transition-all ${
           isPlaying
-            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'
-            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-        } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-        title={isPlaying ? 'Stop speaking' : 'Listen with Edwina'}
+            ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200"
+            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+        } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+        title={isPlaying ? "Stop speaking" : "Listen with Edwina"}
       >
         {isLoading ? (
           <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
@@ -332,7 +343,7 @@ export function EdwinaVoiceControl({
   }
 
   // Card variant (shows Edwina info)
-  if (variant === 'card') {
+  if (variant === "card") {
     return (
       <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-4 border border-purple-200">
         <div className="flex items-center gap-3">
@@ -342,7 +353,9 @@ export function EdwinaVoiceControl({
           <div className="flex-1">
             <h4 className="font-semibold text-purple-900">Edwina's Voice</h4>
             <p className="text-sm text-purple-700">
-              {isPlaying ? 'Speaking...' : 'Click to hear Edwina read this aloud'}
+              {isPlaying
+                ? "Speaking..."
+                : "Click to hear Edwina read this aloud"}
             </p>
           </div>
           <button
@@ -354,9 +367,9 @@ export function EdwinaVoiceControl({
             disabled={disabled || isLoading || !text || !isConfigured}
             className={`p-3 rounded-full transition-all ${
               isPlaying
-                ? 'bg-purple-600 text-white'
-                : 'bg-white text-purple-600 hover:bg-purple-50'
-            } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                ? "bg-purple-600 text-white"
+                : "bg-white text-purple-600 hover:bg-purple-50"
+            } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
           >
             {isLoading ? (
               <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
@@ -374,11 +387,7 @@ export function EdwinaVoiceControl({
           </p>
         )}
 
-        {error && (
-          <p className="text-xs text-red-600 mt-2">
-            ⚠️ {error}
-          </p>
-        )}
+        {error && <p className="text-xs text-red-600 mt-2">⚠️ {error}</p>}
       </div>
     );
   }
@@ -394,9 +403,9 @@ export function EdwinaVoiceControl({
       disabled={disabled || isLoading || !text || !isConfigured}
       className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
         isPlaying
-          ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'
-          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-      } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+          ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200"
+          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+      } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
     >
       {isLoading ? (
         <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
@@ -407,8 +416,8 @@ export function EdwinaVoiceControl({
       )}
 
       {showLabel && (
-        <span className={size === 'sm' ? 'text-sm' : 'text-base'}>
-          {isPlaying ? 'Stop' : 'Listen'}
+        <span className={size === "sm" ? "text-sm" : "text-base"}>
+          {isPlaying ? "Stop" : "Listen"}
         </span>
       )}
     </button>
@@ -425,7 +434,11 @@ interface TTSMessageProps {
   showControl?: boolean;
 }
 
-export function TTSMessage({ message, autoPlay = false, showControl = true }: TTSMessageProps) {
+export function TTSMessage({
+  message,
+  autoPlay = false,
+  showControl = true,
+}: TTSMessageProps) {
   const { isPlaying, isLoading, speak, stop } = useEdwinaVoice({
     autoPlay,
   });
@@ -453,7 +466,7 @@ export function TTSMessage({ message, autoPlay = false, showControl = true }: TT
         }}
         disabled={isLoading || !message}
         className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50"
-        title={isPlaying ? 'Stop' : 'Listen to this message'}
+        title={isPlaying ? "Stop" : "Listen to this message"}
       >
         {isLoading ? (
           <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />

@@ -152,6 +152,21 @@ export const INTELLIGENCE_KEYWORDS = [
   "explain the data",
   "what happened",
   "factors",
+  // MIS intelligence & data analysis
+  "teacher performance",
+  "assessment inflation",
+  "declining pupil",
+  "cohort anomaly",
+  "pupil premium gap",
+  "sen progress",
+  "bradford factor",
+  "staff absence",
+  "ofsted readiness scan",
+  "governor report",
+  "mis data",
+  "arbor",
+  "insight tracker",
+  "supply cover impact",
 ];
 
 export const INTELLIGENCE_QUALIFICATIONS = [

@@ -238,7 +238,7 @@ export async function POST(request: NextRequest) {
 
     // Get user's organization and role (user already available from auth check above)
     let organization: any = null;
-    let userRole: "viewer" = "viewer";
+    let userRole: "admin" | "staff" | "viewer" = "viewer";
     let subscription = {
       plan: "free" as const,
       features: [] as string[],
@@ -277,21 +277,32 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Determine active app based on context
+    let activeApp: any;
+    if (context?.tool?.id) {
+      const appMap: Record<string, string> = {
+        sims: "schoolgle-platform",
+        arbor: "schoolgle-platform",
+        cpoms: "schoolgle-platform",
+      };
+      activeApp = appMap[context.tool.id];
+    }
+
     // Check for greetings first - before any other processing
     if (isGreeting(question)) {
       // Create orchestrator for greeting context
-      const apiKey = process.env.OPENROUTER_API_KEY || "";
-      const orchestratorConfig: OrchestratorConfig = {
+      const greetApiKey = process.env.OPENROUTER_API_KEY || "";
+      const greetConfig: OrchestratorConfig = {
         supabase,
         userId: user?.id || "anonymous",
         orgId: organization?.id || "unknown",
         userRole,
         subscription,
         activeApp,
-        openRouterApiKey: apiKey,
+        openRouterApiKey: greetApiKey,
       };
 
-      const orchestrator = await createOrchestrator(orchestratorConfig);
+      const orchestrator = await createOrchestrator(greetConfig);
       const { greeting, alerts } = await orchestrator.handleProactiveGreeting({
         url: context?.url,
         title: context?.title,
@@ -306,17 +317,6 @@ export async function POST(request: NextRequest) {
         suggestions: alerts.length > 0 ? alerts : undefined,
       };
       return NextResponse.json(response);
-    }
-
-    // Determine active app based on context
-    let activeApp: string | undefined;
-    if (context?.tool?.id) {
-      const appMap: Record<string, string> = {
-        sims: "schoolgle-platform",
-        arbor: "schoolgle-platform",
-        cpoms: "schoolgle-platform",
-      };
-      activeApp = appMap[context.tool.id];
     }
 
     // Create orchestrator config
@@ -722,8 +722,7 @@ The user is currently viewing this form. Guide them through it step by step.
   const edResponse = await orchestrator.processQuestion(enhancedQuestion, {
     app: "form-helper",
     page: context?.title,
-    formTemplate: template?.form_key,
-  });
+  } as any);
 
   // Check for red flags and suggested wording in the response
   const formModeResponse = analyzeResponseForFormHints(

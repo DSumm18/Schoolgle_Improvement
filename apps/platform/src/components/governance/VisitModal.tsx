@@ -35,6 +35,7 @@ interface VisitModalProps {
   onSave: () => void;
   organizationId: string;
   initialData?: GovernorVisitWithGovernor | null;
+  governors?: any[];
 }
 
 const VISIT_TYPES: { value: VisitType; label: string }[] = [

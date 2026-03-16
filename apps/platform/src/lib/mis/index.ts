@@ -1,0 +1,43 @@
+export * from "./types";
+export {
+  getMISDataService,
+  LocalMISDataService,
+  readPupils,
+  readAttendance,
+  readStatutoryResults,
+  readTermlyAssessments,
+  readBehaviour,
+  readStaff,
+  readTeacherHistory,
+  readSENRegister,
+  readHistoricalKS2,
+} from "./data-service";
+export {
+  resolveStaffList,
+  resolveStaffMember,
+  resolveSCR,
+  type ResolvedStaffMember,
+  type SCREntry,
+} from "./staff-resolver";
+export {
+  MISAnalysisEngine,
+  getMISAnalysisEngine,
+  type AnalysisResult,
+  type TeacherPerformancePattern,
+  type AssessmentInflationAlert,
+  type DecliningPupilAlert,
+  type PupilProgressStory,
+  type CohortAnomaly,
+  type PPGapAnalysis,
+  type GenderGapAnalysis,
+  type SENProgressSummary,
+  type AttendanceAttainmentBand,
+  type AttendanceAttainmentCorrelation,
+  type BradfordFactorAlert,
+  type StaffAbsenceImpact,
+  type OfstedReadinessCheck,
+  type OfstedReadinessScan,
+  type GovernorReportSection,
+  type GovernorReportData,
+  type RAGRating,
+} from "./analysis-engine";

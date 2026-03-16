@@ -206,6 +206,7 @@ const DEFAULT_CONFIG: Required<CrawlerConfig> = {
   pageTimeout: 30000,
   sameDomainOnly: true,
   allowedDomains: [],
+  seedUrls: [],
   skipExtensions: [
     ".jpg",
     ".jpeg",
@@ -1358,7 +1359,7 @@ export class WebsiteCrawler {
     // Check if it's a document
     let docType = this.isDocumentUrl(normalizedUrl);
     // Force PDF type for Google Drive conversions
-    if (driveConversion?.isPdf) docType = "pdf";
+    if ((driveConversion as any)?.isPdf) docType = "pdf";
     if (docType === "pdf" && this.config.processPDFs) {
       // Need to navigate first to trigger download
       logger.debug("PDF detected, navigating to trigger download", context);
@@ -1408,10 +1409,59 @@ export class WebsiteCrawler {
       }
 
       // Regular page navigation
-      const response = await this.page.goto(normalizedUrl, {
-        waitUntil: "domcontentloaded",
-        timeout: this.config.pageTimeout,
-      });
+      // Some CMS URLs serve file downloads without a file extension (e.g. /Snapchat-Advice
+      // triggers a PDF download). We race navigation against a download event so we can
+      // intercept these instead of failing with "Download is starting".
+      let response: any;
+      let unexpectedDownload: any = null;
+
+      const downloadCatcher = this.page
+        .waitForEvent("download", { timeout: this.config.pageTimeout })
+        .catch(() => null);
+
+      try {
+        response = await this.page.goto(normalizedUrl, {
+          waitUntil: "domcontentloaded",
+          timeout: this.config.pageTimeout,
+        });
+      } catch (navError: any) {
+        // Check if navigation failed because a download was triggered
+        const errMsg = navError?.message || "";
+        if (
+          errMsg.includes("Download is starting") ||
+          errMsg.includes("download")
+        ) {
+          unexpectedDownload = await downloadCatcher;
+          if (unexpectedDownload) {
+            logger.info("URL triggered download instead of page", context, {
+              filename: unexpectedDownload.suggestedFilename(),
+            });
+            const suggestedFilename =
+              unexpectedDownload.suggestedFilename() || "";
+            if (suggestedFilename.toLowerCase().endsWith(".pdf")) {
+              const result = await this.processPDF(
+                unexpectedDownload,
+                normalizedUrl,
+              );
+              if (result) {
+                this.crawledUrls.add(normalizedUrl);
+                this.crawledPages.push(result);
+              }
+              return result;
+            } else {
+              // Non-PDF download (DOCX, XLSX, etc.) — process as document
+              const result = await this.processDocument(normalizedUrl);
+              if (result) {
+                this.crawledUrls.add(normalizedUrl);
+                this.crawledPages.push(result);
+              }
+              return result;
+            }
+          }
+        }
+        // Not a download error — rethrow
+        throw navError;
+      }
 
       if (!response) {
         throw new Error("No response received");
@@ -1448,20 +1498,41 @@ export class WebsiteCrawler {
         throw new Error(`HTTP ${status}`);
       }
 
-      // Check content type
+      // Check content type — server may serve documents without file extensions
       const contentType = response.headers()["content-type"] || "";
-      if (contentType.includes("application/pdf")) {
-        // PDF that wasn't detected by extension
-        logger.debug("PDF detected by content-type", context);
-        // Try to get download
-        const downloadPromise = this.page
-          .waitForEvent("download", { timeout: 5000 })
-          .catch(() => null);
-        await this.page.waitForTimeout(1000);
-        const download = await downloadPromise;
-        if (download) {
-          const result = await this.processPDF(download, normalizedFinalUrl);
+      const isDocumentContentType =
+        contentType.includes("application/pdf") ||
+        contentType.includes("application/msword") ||
+        contentType.includes("application/vnd.openxmlformats") ||
+        contentType.includes("application/vnd.ms-excel") ||
+        contentType.includes("application/vnd.ms-powerpoint") ||
+        contentType.includes("application/octet-stream") ||
+        contentType.includes("application/zip");
+
+      if (isDocumentContentType) {
+        logger.debug("Document detected by content-type", context, {
+          contentType,
+        });
+
+        if (contentType.includes("application/pdf")) {
+          // Try to get download
+          const downloadPromise = this.page
+            .waitForEvent("download", { timeout: 5000 })
+            .catch(() => null);
+          await this.page.waitForTimeout(1000);
+          const download = await downloadPromise;
+          if (download) {
+            const result = await this.processPDF(download, normalizedFinalUrl);
+            if (result) {
+              this.crawledPages.push(result);
+            }
+            return result;
+          }
+        } else {
+          // DOCX, XLSX, PPTX etc. — process as document
+          const result = await this.processDocument(normalizedFinalUrl);
           if (result) {
+            this.crawledUrls.add(normalizedFinalUrl);
             this.crawledPages.push(result);
           }
           return result;
@@ -1626,7 +1697,7 @@ export class WebsiteCrawler {
         this.crawledUrls.size < this.config.maxPages
       ) {
         // Get next URL from queue (FIFO-ish)
-        const nextUrl = this.queuedUrls.values().next().value;
+        const nextUrl = this.queuedUrls.values().next().value as string;
         this.queuedUrls.delete(nextUrl);
 
         // Respectful delay between requests

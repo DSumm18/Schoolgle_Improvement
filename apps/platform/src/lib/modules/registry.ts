@@ -36,6 +36,7 @@ import {
   Scale,
   Accessibility,
   Brain,
+  Globe,
 } from "lucide-react";
 
 export type Role =
@@ -463,6 +464,15 @@ export const APPS: AppDefinition[] = [
     shortDescription: "Outsourced DPO service via Vrisk.",
     requiredPermissions: ["admin", "headteacher"],
   },
+  {
+    id: "compliance-website",
+    moduleId: "compliance",
+    name: "Website Compliance",
+    route: "/dashboard/website-compliance",
+    icon: Globe,
+    shortDescription: "Scan website against 28+ statutory requirements.",
+    requiredPermissions: ["admin", "headteacher", "slt"],
+  },
 
   // HR Apps
   {
@@ -583,6 +593,33 @@ export const APPS: AppDefinition[] = [
     icon: Calendar,
     shortDescription: "Room bookings and lettings income management.",
     requiredPermissions: ["admin", "headteacher", "slt"],
+  },
+
+  {
+    id: "workflows",
+    moduleId: "estates",
+    name: "Workflows",
+    route: "/dashboard/workflows",
+    icon: ClipboardCheck,
+    shortDescription: "Ed-orchestrated multi-step processes and checklists.",
+    requiredPermissions: ["admin", "headteacher", "slt", "caretaker"],
+  },
+
+  {
+    id: "sops",
+    moduleId: "estates",
+    name: "Procedures (SOPs)",
+    route: "/dashboard/sops",
+    icon: ClipboardCheck,
+    shortDescription:
+      "Step-by-step guided checklists for H&S and compliance procedures.",
+    requiredPermissions: [
+      "admin",
+      "headteacher",
+      "slt",
+      "caretaker",
+      "teacher",
+    ],
   },
 
   // Finance Apps

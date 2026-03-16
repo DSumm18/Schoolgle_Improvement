@@ -6,8 +6,8 @@
  * contextual help for compliance tasks.
  */
 
-import { useAuth } from '@/context/SupabaseAuthContext';
-import type { ComplianceDomain } from './statutory-checks';
+import { useAuth } from "@/context/SupabaseAuthContext";
+import type { ComplianceDomain } from "./statutory-checks";
 
 // ============================================================================
 // TYPES
@@ -15,7 +15,12 @@ import type { ComplianceDomain } from './statutory-checks';
 
 export interface EdContext {
   /** Current page identifier */
-  page: 'estates-compliance' | 'estates-domain' | 'estates-task' | 'estates-diary' | 'estates-assets';
+  page:
+    | "estates-compliance"
+    | "estates-domain"
+    | "estates-task"
+    | "estates-diary"
+    | "estates-assets";
   /** Compliance domain (if applicable) */
   domain?: ComplianceDomain;
   /** Check/task ID (if applicable) */
@@ -23,7 +28,13 @@ export interface EdContext {
   /** Check/task name (if applicable) */
   checkName?: string;
   /** Current task status */
-  taskStatus?: 'pending' | 'in_progress' | 'completed' | 'overdue' | 'skipped' | 'not_applicable';
+  taskStatus?:
+    | "pending"
+    | "in_progress"
+    | "completed"
+    | "overdue"
+    | "skipped"
+    | "not_applicable";
   /** User ID (from auth context) */
   userId?: string;
   /** Organization ID (from auth context) */
@@ -36,7 +47,7 @@ export interface EdContext {
 
 export interface EdContextOptions {
   /** The page where the user is */
-  page: EdContext['page'];
+  page: EdContext["page"];
   /** Compliance domain */
   domain?: ComplianceDomain;
   /** Check ID */
@@ -44,7 +55,7 @@ export interface EdContextOptions {
   /** Check name */
   checkName?: string;
   /** Task status */
-  taskStatus?: EdContext['taskStatus'];
+  taskStatus?: EdContext["taskStatus"];
   /** Custom initial message */
   initialMessage?: string;
   /** Additional metadata */
@@ -55,175 +66,255 @@ export interface EdContextOptions {
 // DOMAIN MAPPING
 // ============================================================================
 
-const DOMAIN_INFO: Record<ComplianceDomain, {
-  name: string;
-  description: string;
-  icon: string;
-  regulatoryReferences: string[];
-  expertise: string[];
-}> = {
+const DOMAIN_INFO: Record<
+  ComplianceDomain,
+  {
+    name: string;
+    description: string;
+    icon: string;
+    regulatoryReferences: string[];
+    expertise: string[];
+  }
+> = {
   legionella: {
-    name: 'Legionella Control',
-    description: 'Water system monitoring and temperature checks (HSE L8)',
-    icon: '💧',
-    regulatoryReferences: ['HSE L8', 'HSE HSG274'],
+    name: "Legionella Control",
+    description: "Water system monitoring and temperature checks (HSE L8)",
+    icon: "💧",
+    regulatoryReferences: ["HSE L8", "HSE HSG274"],
     expertise: [
-      'Water temperature monitoring',
-      'Sentinel outlet checks',
-      'Flushing procedures',
-      'Risk assessment requirements',
-      'Record keeping',
+      "Water temperature monitoring",
+      "Sentinel outlet checks",
+      "Flushing procedures",
+      "Risk assessment requirements",
+      "Record keeping",
     ],
   },
   fire: {
-    name: 'Fire Safety',
-    description: 'Fire alarms, extinguishers, escape routes (RRO 2005)',
-    icon: '🔥',
-    regulatoryReferences: ['RRO 2005', 'BS5839', 'BS5266', 'BS5306'],
+    name: "Fire Safety",
+    description: "Fire alarms, extinguishers, escape routes (RRO 2005)",
+    icon: "🔥",
+    regulatoryReferences: ["RRO 2005", "BS5839", "BS5266", "BS5306"],
     expertise: [
-      'Weekly alarm testing',
-      'Emergency lighting checks',
-      'Extinguisher inspections',
-      'Escape route maintenance',
-      'Fire door checks',
-      'Log book requirements',
+      "Weekly alarm testing",
+      "Emergency lighting checks",
+      "Extinguisher inspections",
+      "Escape route maintenance",
+      "Fire door checks",
+      "Log book requirements",
     ],
   },
   asbestos: {
-    name: 'Asbestos Management',
-    description: 'Register maintenance and re-inspection (CAR 2012)',
-    icon: '☣️',
-    regulatoryReferences: ['CAR 2012', 'Control of Asbestos Regulations'],
+    name: "Asbestos Management",
+    description: "Register maintenance and re-inspection (CAR 2012)",
+    icon: "☣️",
+    regulatoryReferences: ["CAR 2012", "Control of Asbestos Regulations"],
     expertise: [
-      'Asbestos register management',
-      'Annual visual inspections',
-      'Re-survey requirements',
-      'Management plan reviews',
-      'Training requirements',
+      "Asbestos register management",
+      "Annual visual inspections",
+      "Re-survey requirements",
+      "Management plan reviews",
+      "Training requirements",
     ],
   },
   electrical: {
-    name: 'Electrical Safety',
-    description: 'Fixed wiring, PAT testing, emergency lighting',
-    icon: '⚡',
-    regulatoryReferences: ['EAWR 1989', 'BS7671', 'BS5266'],
+    name: "Electrical Safety",
+    description: "Fixed wiring, PAT testing, emergency lighting",
+    icon: "⚡",
+    regulatoryReferences: ["EAWR 1989", "BS7671", "BS5266"],
     expertise: [
-      'Fixed wire testing (EICR)',
-      'Portable appliance testing (PAT)',
-      'RCD testing',
-      'Emergency lighting duration tests',
-      'Visual inspections',
+      "Fixed wire testing (EICR)",
+      "Portable appliance testing (PAT)",
+      "RCD testing",
+      "Emergency lighting duration tests",
+      "Visual inspections",
     ],
   },
   gas: {
-    name: 'Gas Safety',
-    description: 'Annual safety checks and appliance inspection',
-    icon: '🔥',
-    regulatoryReferences: ['GFPA 1995', 'Gas Safety Regulations'],
+    name: "Gas Safety",
+    description: "Annual safety checks and appliance inspection",
+    icon: "🔥",
+    regulatoryReferences: ["GFPA 1995", "Gas Safety Regulations"],
     expertise: [
-      'Annual gas safety checks',
-      'CP12 certificates',
-      'Gas Safe register requirements',
-      'Emergency controls',
-      'Visual inspections',
+      "Annual gas safety checks",
+      "CP12 certificates",
+      "Gas Safe register requirements",
+      "Emergency controls",
+      "Visual inspections",
     ],
   },
   water: {
-    name: 'Water Quality',
-    description: 'Drinking water testing and tank inspections',
-    icon: '🚰',
-    regulatoryReferences: ['Water Supply Regulations 1999', 'Water Quality Regulations 2016'],
+    name: "Water Quality",
+    description: "Drinking water testing and tank inspections",
+    icon: "🚰",
+    regulatoryReferences: [
+      "Water Supply Regulations 1999",
+      "Water Quality Regulations 2016",
+    ],
     expertise: [
-      'Drinking water quality testing',
-      'Cold water tank inspections',
-      'UKAS laboratory requirements',
-      'Sample collection procedures',
+      "Drinking water quality testing",
+      "Cold water tank inspections",
+      "UKAS laboratory requirements",
+      "Sample collection procedures",
     ],
   },
   mechanical: {
-    name: 'Mechanical & Heating',
-    description: 'Boilers, ventilation, and plant room equipment',
-    icon: '🔧',
-    regulatoryReferences: ['Gas Safety Regulations', 'Workplace Regulations 1992'],
+    name: "Mechanical & Heating",
+    description: "Boilers, ventilation, and plant room equipment",
+    icon: "🔧",
+    regulatoryReferences: [
+      "Gas Safety Regulations",
+      "Workplace Regulations 1992",
+    ],
     expertise: [
-      'Boiler servicing',
-      'Ventilation system maintenance',
-      'AHU filter checks',
-      'Plant room procedures',
+      "Boiler servicing",
+      "Ventilation system maintenance",
+      "AHU filter checks",
+      "Plant room procedures",
     ],
   },
   lifts: {
-    name: 'Lifts & LOLER',
-    description: 'Lift examinations and maintenance (LOLER 1998)',
-    icon: '🛗',
-    regulatoryReferences: ['LOLER 1998', 'PUWER 1998'],
+    name: "Lifts & LOLER",
+    description: "Lift examinations and maintenance (LOLER 1998)",
+    icon: "🛗",
+    regulatoryReferences: ["LOLER 1998", "PUWER 1998"],
     expertise: [
-      '6-monthly LOLER examinations',
-      'Daily lift inspections',
-      'Maintenance records',
-      'Emergency telephone checks',
+      "6-monthly LOLER examinations",
+      "Daily lift inspections",
+      "Maintenance records",
+      "Emergency telephone checks",
     ],
   },
   playground: {
-    name: 'Playground Safety',
-    description: 'Equipment inspection and surfacing checks',
-    icon: '🎠',
-    regulatoryReferences: ['PUWER 1998', 'EN 1177', 'RoSPA guidance'],
+    name: "Playground Safety",
+    description: "Equipment inspection and surfacing checks",
+    icon: "🎠",
+    regulatoryReferences: ["PUWER 1998", "EN 1177", "RoSPA guidance"],
     expertise: [
-      'Annual equipment inspections',
-      'Weekly visual checks',
-      'Surfacing inspections',
-      'RPII inspector requirements',
-      'Impact absorption testing',
+      "Annual equipment inspections",
+      "Weekly visual checks",
+      "Surfacing inspections",
+      "RPII inspector requirements",
+      "Impact absorption testing",
     ],
   },
   accessibility: {
-    name: 'Accessibility',
-    description: 'Accessible routes and facilities (Equality Act)',
-    icon: '♿',
-    regulatoryReferences: ['Equality Act 2010'],
+    name: "Accessibility",
+    description: "Accessible routes and facilities (Equality Act)",
+    icon: "♿",
+    regulatoryReferences: ["Equality Act 2010"],
     expertise: [
-      'Accessibility statement reviews',
-      'Accessible route inspections',
-      'Facility checks',
-      'Reasonable adjustments',
+      "Accessibility statement reviews",
+      "Accessible route inspections",
+      "Facility checks",
+      "Reasonable adjustments",
     ],
   },
   security: {
-    name: 'Security',
-    description: 'Perimeter, access control, and CCTV',
-    icon: '🔒',
-    regulatoryReferences: ['Independent School Standards Regulations 2014'],
+    name: "Security",
+    description: "Perimeter, access control, and CCTV",
+    icon: "🔒",
+    regulatoryReferences: ["Independent School Standards Regulations 2014"],
     expertise: [
-      'Perimeter security checks',
-      'CCTV system maintenance',
-      'Access control procedures',
-      'Lock and key management',
+      "Perimeter security checks",
+      "CCTV system maintenance",
+      "Access control procedures",
+      "Lock and key management",
     ],
   },
   manual_handling: {
-    name: 'Manual Handling',
-    description: 'Risk assessments and equipment',
-    icon: '📦',
-    regulatoryReferences: ['Manual Handling Operations Regulations 1992'],
+    name: "Manual Handling",
+    description: "Risk assessments and equipment",
+    icon: "📦",
+    regulatoryReferences: ["Manual Handling Operations Regulations 1992"],
     expertise: [
-      'Risk assessment reviews',
-      'Training requirements',
-      'Equipment provision',
-      'Safe handling techniques',
+      "Risk assessment reviews",
+      "Training requirements",
+      "Equipment provision",
+      "Safe handling techniques",
     ],
   },
   working_at_height: {
-    name: 'Working at Height',
-    description: 'Access equipment and fall protection (WAH 2005)',
-    icon: '🪜',
-    regulatoryReferences: ['Work at Height Regulations 2005'],
+    name: "Working at Height",
+    description: "Access equipment and fall protection (WAH 2005)",
+    icon: "🪜",
+    regulatoryReferences: ["Work at Height Regulations 2005"],
     expertise: [
-      'Equipment inspections',
-      'Ladder safety',
-      'Fall protection',
-      'Training requirements',
-      'Competence assessments',
+      "Equipment inspections",
+      "Ladder safety",
+      "Fall protection",
+      "Training requirements",
+      "Competence assessments",
+    ],
+  },
+  coshh: {
+    name: "COSHH",
+    description: "Control of Substances Hazardous to Health regulations",
+    icon: "⚗️",
+    regulatoryReferences: ["COSHH Regulations 2002"],
+    expertise: [
+      "Hazardous substance identification",
+      "Risk assessments",
+      "Safe storage and handling",
+      "PPE requirements",
+      "COSHH data sheets",
+    ],
+  },
+  food_safety: {
+    name: "Food Safety",
+    description: "Food hygiene and safety standards for school kitchens",
+    icon: "🍽️",
+    regulatoryReferences: [
+      "Food Safety Act 1990",
+      "Food Hygiene Regulations 2006",
+    ],
+    expertise: [
+      "Food hygiene ratings",
+      "Kitchen inspections",
+      "Allergen management",
+      "Temperature monitoring",
+      "Staff training (Level 2/3)",
+    ],
+  },
+  transport: {
+    name: "Transport",
+    description: "Vehicle safety and transport compliance for school use",
+    icon: "🚌",
+    regulatoryReferences: ["Road Traffic Act 1988", "DVSA guidelines"],
+    expertise: [
+      "Minibus compliance",
+      "Driver checks",
+      "Vehicle inspections",
+      "Insurance requirements",
+      "D1 licence checks",
+    ],
+  },
+  safeguarding: {
+    name: "Safeguarding",
+    description: "Physical safeguarding measures for school premises",
+    icon: "🛡️",
+    regulatoryReferences: [
+      "KCSIE 2025",
+      "Working Together to Safeguard Children",
+    ],
+    expertise: [
+      "Perimeter security",
+      "Visitor management",
+      "CCTV systems",
+      "Access control",
+      "Secure areas",
+    ],
+  },
+  seasonal: {
+    name: "Seasonal Checks",
+    description: "Seasonal maintenance and safety inspections",
+    icon: "🌦️",
+    regulatoryReferences: ["HSE guidance on seasonal risks"],
+    expertise: [
+      "Winter gritting and snow clearance",
+      "Gutter and drain clearance",
+      "Heating system preparation",
+      "Summer grounds maintenance",
+      "Storm damage checks",
     ],
   },
 };
@@ -256,15 +347,15 @@ export function buildEdContext(options: EdContextOptions): EdContext {
 function buildDefaultMessage(options: EdContextOptions): string {
   const { page, domain, checkName, taskStatus } = options;
 
-  if (page === 'estates-compliance' && !checkName) {
+  if (page === "estates-compliance" && !checkName) {
     return "Hi Ed! I'm on the Estates Compliance dashboard. Can you help me understand my statutory obligations?";
   }
 
-  if (page === 'estates-diary') {
+  if (page === "estates-diary") {
     return "Hi Ed! I'm reviewing my compliance diary. What should I prioritize today?";
   }
 
-  if (page === 'estates-assets') {
+  if (page === "estates-assets") {
     return "Hi Ed! I'm looking at my asset register. What compliance checks are linked to these assets?";
   }
 
@@ -278,11 +369,11 @@ function buildDefaultMessage(options: EdContextOptions): string {
 
   let message = `I'm working on "${checkName}" in ${domainName}.`;
 
-  if (taskStatus === 'overdue') {
+  if (taskStatus === "overdue") {
     message += ` This task is overdue. What are the immediate actions I should take?`;
-  } else if (taskStatus === 'completed') {
+  } else if (taskStatus === "completed") {
     message += ` I've just completed this. What evidence should I retain for the records?`;
-  } else if (taskStatus === 'in_progress') {
+  } else if (taskStatus === "in_progress") {
     message += ` I'm currently working through this. Can you guide me on the requirements?`;
   } else {
     message += ` Can you explain the statutory requirements for this check?`;
@@ -308,7 +399,7 @@ export function getToolContextForDomain(domain?: ComplianceDomain): {
 
   return {
     name: domainInfo.name,
-    category: 'Estates',
+    category: "Estates",
     url: `/estates-compliance/${domain}`,
     expertise: domainInfo.expertise,
   };
@@ -321,7 +412,7 @@ export function getToolContextForDomain(domain?: ComplianceDomain): {
  */
 export function openEdWithContext(context: EdContext): void {
   // Dispatch custom event that Ed widget will listen to
-  const event = new CustomEvent('ed-open-with-context', {
+  const event = new CustomEvent("ed-open-with-context", {
     detail: context,
   });
   window.dispatchEvent(event);
@@ -330,12 +421,12 @@ export function openEdWithContext(context: EdContext): void {
   const ed = (window as any).__ED_INSTANCE__;
   if (ed) {
     // Open the widget if closed
-    if (ed.open && typeof ed.open === 'function') {
+    if (ed.open && typeof ed.open === "function") {
       ed.open();
     }
 
     // Set tool context for domain-specific expertise
-    if (ed.setToolContext && typeof ed.setToolContext === 'function') {
+    if (ed.setToolContext && typeof ed.setToolContext === "function") {
       const toolContext = getToolContextForDomain(context.domain);
       if (toolContext) {
         ed.setToolContext(toolContext);
@@ -347,12 +438,14 @@ export function openEdWithContext(context: EdContext): void {
       // Small delay to ensure widget is open
       setTimeout(() => {
         // Check if there's an input field we can populate
-        const input = document.querySelector('#chat-input') as HTMLInputElement;
+        const input = document.querySelector("#chat-input") as HTMLInputElement;
         if (input) {
-          input.value = context.initialMessage || '';
-          input.dispatchEvent(new Event('input', { bubbles: true }));
+          input.value = context.initialMessage || "";
+          input.dispatchEvent(new Event("input", { bubbles: true }));
           // Trigger send if available
-          const sendBtn = document.querySelector('#send-btn') as HTMLButtonElement;
+          const sendBtn = document.querySelector(
+            "#send-btn",
+          ) as HTMLButtonElement;
           if (sendBtn) {
             sendBtn.click();
           }
@@ -380,20 +473,23 @@ export function openEdWithContext(context: EdContext): void {
  * });
  */
 export function useEdContext() {
-  const { userId, organizationId } = useAuth();
+  const { user, organizationId } = useAuth();
+  const userId = user?.id;
 
   /**
    * Open Ed chat with task context
    */
-  const openEdWithTaskContext = (options: Omit<EdContextOptions, 'page'> & { page?: EdContext['page'] }) => {
+  const openEdWithTaskContext = (
+    options: Omit<EdContextOptions, "page"> & { page?: EdContext["page"] },
+  ) => {
     const context: EdContext = {
-      page: options.page || 'estates-compliance',
+      page: options.page || "estates-compliance",
       domain: options.domain,
       checkId: options.checkId,
       checkName: options.checkName,
       taskStatus: options.taskStatus,
       userId,
-      organizationId,
+      organizationId: organizationId ?? undefined,
       initialMessage: options.initialMessage,
       metadata: options.metadata,
     };
@@ -404,10 +500,12 @@ export function useEdContext() {
   /**
    * Build context without opening Ed
    */
-  const buildContext = (options: Omit<EdContextOptions, 'page'> & { page?: EdContext['page'] }): EdContext => {
+  const buildContext = (
+    options: Omit<EdContextOptions, "page"> & { page?: EdContext["page"] },
+  ): EdContext => {
     return buildEdContext({
       ...options,
-      page: options.page || 'estates-compliance',
+      page: options.page || "estates-compliance",
     });
   };
 

@@ -1,22 +1,26 @@
-'use client';
+"use client";
 
 /**
  * Compliance Tasks Page
  */
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { ComplianceTask, TaskStatus, TaskPriority } from '@/types/estates-compliance';
-import { useAuth } from '@/context/SupabaseAuthContext';
+import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
+import {
+  ComplianceTask,
+  TaskStatus,
+  TaskPriority,
+} from "@/types/estates-compliance";
+import { useAuth } from "@/context/SupabaseAuthContext";
 
-type TabMode = 'all' | 'pending' | 'overdue' | 'upcoming' | 'completed';
+type TabMode = "all" | "pending" | "overdue" | "upcoming" | "completed";
 
 export default function TasksPage() {
   const { organizationId, session } = useAuth();
   const [tasks, setTasks] = useState<ComplianceTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<TabMode>('all');
+  const [activeTab, setActiveTab] = useState<TabMode>("all");
   const [stats, setStats] = useState({
     total: 0,
     pending: 0,
@@ -31,99 +35,118 @@ export default function TasksPage() {
       fetchTasks(controller.signal);
       fetchStats();
     }
-    return () => controller.abort('Component updated or unmounted');
+    return () => controller.abort("Component updated or unmounted");
   }, [activeTab, organizationId]);
 
-  const fetchTasks = useCallback(async (signal?: AbortSignal) => {
-    // If already aborted, don't start
-    if (signal?.aborted) return;
+  const fetchTasks = useCallback(
+    async (signal?: AbortSignal) => {
+      // If already aborted, don't start
+      if (signal?.aborted) return;
 
-    // Use a local controller to manage the fetch timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort('Tasks fetch timed out'), 30000);
+      // Use a local controller to manage the fetch timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(
+        () => controller.abort("Tasks fetch timed out"),
+        30000,
+      );
 
-    // Link the passed signal to our local controller
-    const onAbort = () => controller.abort(signal?.reason);
-    if (signal) {
-      if (signal.aborted) onAbort();
-      else signal.addEventListener('abort', onAbort, { once: true });
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-      const filters: any = {};
-      if (activeTab === 'pending') filters.status = 'pending';
-      if (activeTab === 'completed') filters.status = 'completed';
-      if (activeTab === 'overdue') filters.overdue_only = true;
-      filters.organization_id = organizationId;
-
-      const params = new URLSearchParams();
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value) params.append(key, String(value));
-      });
-
-      const response = await fetch(`/api/estates/tasks?${params.toString()}`, {
-        headers: {
-          'Authorization': `Bearer ${session?.access_token}`,
-        },
-        signal: controller.signal,
-      });
-      if (!response.ok) {
-        throw new Error('Failed to fetch tasks');
+      // Link the passed signal to our local controller
+      const onAbort = () => controller.abort(signal?.reason);
+      if (signal) {
+        if (signal.aborted) onAbort();
+        else signal.addEventListener("abort", onAbort, { once: true });
       }
-      const data = await response.json();
-      setTasks(data.tasks || []);
-    } catch (err: any) {
-      const errorString = typeof err === 'string' ? err : err?.message || '';
-      const isAbort = err.name === 'AbortError' || errorString.toLowerCase().includes('abort') || errorString.toLowerCase().includes('unmounted') || errorString.toLowerCase().includes('refreshed');
 
-      if (isAbort) {
-        console.info('[TasksPage] Fetch aborted:', errorString);
-      } else {
-        setError(err instanceof Error ? err.message : 'Failed to load tasks');
+      try {
+        setLoading(true);
+        setError(null);
+        const filters: any = {};
+        if (activeTab === "pending") filters.status = "pending";
+        if (activeTab === "completed") filters.status = "completed";
+        if (activeTab === "overdue") filters.overdue_only = true;
+        filters.organizationId = organizationId;
+
+        const params = new URLSearchParams();
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value) params.append(key, String(value));
+        });
+
+        const response = await fetch(
+          `/api/estates/tasks?${params.toString()}`,
+          {
+            headers: {
+              Authorization: `Bearer ${session?.access_token}`,
+            },
+            signal: controller.signal,
+          },
+        );
+        if (!response.ok) {
+          throw new Error("Failed to fetch tasks");
+        }
+        const data = await response.json();
+        setTasks(data.tasks || []);
+      } catch (err: any) {
+        const errorString = typeof err === "string" ? err : err?.message || "";
+        const isAbort =
+          err.name === "AbortError" ||
+          errorString.toLowerCase().includes("abort") ||
+          errorString.toLowerCase().includes("unmounted") ||
+          errorString.toLowerCase().includes("refreshed");
+
+        if (isAbort) {
+          console.info("[TasksPage] Fetch aborted:", errorString);
+        } else {
+          setError(err instanceof Error ? err.message : "Failed to load tasks");
+        }
+      } finally {
+        clearTimeout(timeoutId);
+        if (signal) signal.removeEventListener("abort", onAbort);
+        setLoading(false);
       }
-    } finally {
-      clearTimeout(timeoutId);
-      if (signal) signal.removeEventListener('abort', onAbort);
-      setLoading(false);
-    }
-  }, [organizationId, activeTab, session]);
+    },
+    [organizationId, activeTab, session],
+  );
 
   const fetchStats = async () => {
     try {
-      const response = await fetch(`/api/estates/tasks/stats?organization_id=${organizationId}`, {
-        headers: {
-          'Authorization': `Bearer ${session?.access_token}`,
+      const response = await fetch(
+        `/api/estates/tasks/stats?organizationId=${organizationId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${session?.access_token}`,
+          },
         },
-      });
+      );
       if (response.ok) {
         const data = await response.json();
         setStats(data);
       }
     } catch (err) {
-      console.error('Failed to fetch task stats:', err);
+      console.error("Failed to fetch task stats:", err);
     }
   };
 
   const getPriorityColor = (priority: TaskPriority) => {
     const colors = {
-      critical: 'bg-red-100 text-red-800',
-      high: 'bg-orange-100 text-orange-800',
-      medium: 'bg-yellow-100 text-yellow-800',
-      low: 'bg-gray-100 text-gray-800',
+      critical: "bg-red-100 text-red-800",
+      high: "bg-orange-100 text-orange-800",
+      medium: "bg-yellow-100 text-yellow-800",
+      low: "bg-gray-100 text-gray-800",
     };
     return colors[priority];
   };
 
   const getStatusColor = (status: TaskStatus) => {
-    const colors = {
-      pending: 'bg-blue-100 text-blue-800',
-      in_progress: 'bg-purple-100 text-purple-800',
-      completed: 'bg-green-100 text-green-800',
-      cancelled: 'bg-gray-100 text-gray-800',
+    const colors: Record<string, string> = {
+      pending: "bg-blue-100 text-blue-800",
+      in_progress: "bg-purple-100 text-purple-800",
+      awaiting_contractor: "bg-yellow-100 text-yellow-800",
+      contractor_scheduled: "bg-indigo-100 text-indigo-800",
+      completed: "bg-green-100 text-green-800",
+      overdue: "bg-red-100 text-red-800",
+      skipped: "bg-gray-100 text-gray-800",
     };
-    return colors[status];
+    return colors[status] || "bg-gray-100 text-gray-800";
   };
 
   return (
@@ -138,7 +161,9 @@ export default function TasksPage() {
             <span>/</span>
             <span>Tasks</span>
           </nav>
-          <h1 className="text-3xl font-bold tracking-tight">Compliance Tasks</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Compliance Tasks
+          </h1>
           <p className="text-muted-foreground mt-1">
             Manage inspections, maintenance, and testing schedules
           </p>
@@ -153,24 +178,54 @@ export default function TasksPage() {
 
       {/* Stats Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <StatCard label="Total" value={stats.total} onClick={() => setActiveTab('all')} active={activeTab === 'all'} />
-        <StatCard label="Pending" value={stats.pending} onClick={() => setActiveTab('pending')} active={activeTab === 'pending'} />
-        <StatCard label="Overdue" value={stats.overdue} onClick={() => setActiveTab('overdue')} active={activeTab === 'overdue'} variant="danger" />
-        <StatCard label="Upcoming" value={stats.upcoming} onClick={() => setActiveTab('upcoming')} active={activeTab === 'upcoming'} />
-        <StatCard label="Completed" value={stats.completed} onClick={() => setActiveTab('completed')} active={activeTab === 'completed'} variant="success" />
+        <StatCard
+          label="Total"
+          value={stats.total}
+          onClick={() => setActiveTab("all")}
+          active={activeTab === "all"}
+        />
+        <StatCard
+          label="Pending"
+          value={stats.pending}
+          onClick={() => setActiveTab("pending")}
+          active={activeTab === "pending"}
+        />
+        <StatCard
+          label="Overdue"
+          value={stats.overdue}
+          onClick={() => setActiveTab("overdue")}
+          active={activeTab === "overdue"}
+          variant="danger"
+        />
+        <StatCard
+          label="Upcoming"
+          value={stats.upcoming}
+          onClick={() => setActiveTab("upcoming")}
+          active={activeTab === "upcoming"}
+        />
+        <StatCard
+          label="Completed"
+          value={stats.completed}
+          onClick={() => setActiveTab("completed")}
+          active={activeTab === "completed"}
+          variant="success"
+        />
       </div>
 
       {/* Tabs */}
       <div className="border-b">
         <nav className="flex gap-4">
-          {(['all', 'pending', 'overdue', 'upcoming', 'completed'] as TabMode[]).map((tab) => (
+          {(
+            ["all", "pending", "overdue", "upcoming", "completed"] as TabMode[]
+          ).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors capitalize ${activeTab === tab
-                ? 'border-primary text-foreground'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-                }`}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors capitalize ${
+                activeTab === tab
+                  ? "border-primary text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
             >
               {tab}
             </button>
@@ -194,11 +249,11 @@ export default function TasksPage() {
           </div>
           <h3 className="text-lg font-semibold mb-2">No tasks found</h3>
           <p className="text-muted-foreground mb-4 max-w-sm mx-auto">
-            {activeTab === 'all'
-              ? 'Get started by creating your first compliance task.'
+            {activeTab === "all"
+              ? "Get started by creating your first compliance task."
               : `No ${activeTab} tasks found.`}
           </p>
-          {activeTab === 'all' && (
+          {activeTab === "all" && (
             <Link
               href="/estates-compliance/tasks/new"
               className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
@@ -229,23 +284,37 @@ export default function TasksPage() {
                     <td className="px-4 py-3">
                       <div className="font-medium">{task.title}</div>
                       {task.description && (
-                        <div className="text-xs text-muted-foreground line-clamp-1">{task.description}</div>
+                        <div className="text-xs text-muted-foreground line-clamp-1">
+                          {task.description}
+                        </div>
                       )}
                     </td>
-                    <td className="px-4 py-3 capitalize">{task.task_type.replace('_', ' ')}</td>
-                    <td className="px-4 py-3 capitalize">{task.compliance_domain}</td>
+                    <td className="px-4 py-3 capitalize">
+                      {task.task_type.replace("_", " ")}
+                    </td>
+                    <td className="px-4 py-3 capitalize">
+                      {task.compliance_domain}
+                    </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${getPriorityColor(task.priority)}`}>
+                      <span
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${getPriorityColor(task.priority || "medium")}`}
+                      >
                         {task.priority}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
-                      {task.due_date ? new Date(task.due_date).toLocaleDateString() : '-'}
+                      {task.due_date
+                        ? new Date(task.due_date).toLocaleDateString()
+                        : "-"}
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground">{task.assigned_to || '-'}</td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {task.assigned_to || "-"}
+                    </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${getStatusColor(task.status)}`}>
-                        {task.status.replace('_', ' ')}
+                      <span
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${getStatusColor(task.status)}`}
+                      >
+                        {task.status.replace("_", " ")}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">
@@ -272,20 +341,26 @@ interface StatCardProps {
   value: number;
   onClick?: () => void;
   active?: boolean;
-  variant?: 'default' | 'danger' | 'success';
+  variant?: "default" | "danger" | "success";
 }
 
-function StatCard({ label, value, onClick, active, variant = 'default' }: StatCardProps) {
+function StatCard({
+  label,
+  value,
+  onClick,
+  active,
+  variant = "default",
+}: StatCardProps) {
   const variantStyles = {
-    default: 'bg-card border-card hover:bg-accent',
-    danger: 'bg-red-50 border-red-200 hover:bg-red-100',
-    success: 'bg-green-50 border-green-200 hover:bg-green-100',
+    default: "bg-card border-card hover:bg-accent",
+    danger: "bg-red-50 border-red-200 hover:bg-red-100",
+    success: "bg-green-50 border-green-200 hover:bg-green-100",
   };
 
   return (
     <button
       onClick={onClick}
-      className={`rounded-lg border p-4 transition-colors text-left ${variantStyles[variant]} ${active ? 'ring-2 ring-primary' : ''}`}
+      className={`rounded-lg border p-4 transition-colors text-left ${variantStyles[variant]} ${active ? "ring-2 ring-primary" : ""}`}
     >
       <p className="text-sm font-medium text-muted-foreground">{label}</p>
       <p className="text-2xl font-bold mt-1">{value}</p>

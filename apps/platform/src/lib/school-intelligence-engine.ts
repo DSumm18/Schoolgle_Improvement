@@ -942,13 +942,13 @@ ${factors
       ? `\n  MEASURED OUTCOME: ${f.measured_outcome} (impact score: ${f.measured_impact_score})`
       : "";
     const eef = f.eef_strategy_id
-      ? `\n  EEF Strategy: ${f.eef_strategy_id} (expected +${f.eef_expected_months_progress} months)`
+      ? `\n  EEF Strategy: ${f.eef_strategy_id} (expected +${(f as any).eef_expected_months_progress} months)`
       : "";
     return `• [${f.factor_type.toUpperCase()}] ${f.title}
   Affects: ${yearGroups} | Period: ${duration}
   ${f.description || ""}
   Rationale: ${f.rationale || "Not provided"}
-  Expected impact: ${f.expected_impact || "Not specified"} (${f.impact_direction || "unknown"} direction, ${f.impact_severity || "unknown"} severity)${impact}${eef}`;
+  Expected impact: ${(f as any).expected_impact || "Not specified"} (${f.impact_direction || "unknown"} direction, ${f.impact_severity || "unknown"} severity)${impact}${eef}`;
   })
   .join("\n\n")}`);
     } else {

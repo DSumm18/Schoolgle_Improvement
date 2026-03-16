@@ -4,8 +4,8 @@
  * Functions for tracking completion status of predefined statutory checks
  */
 
-import { createClient } from '@/lib/supabase/server';
-import type { ComplianceDomain } from '@/types/estates-compliance';
+import { createClient } from "@/lib/supabase/server";
+import type { ComplianceDomain } from "@/types/estates-compliance";
 
 /**
  * Completion record for a statutory check
@@ -15,7 +15,13 @@ export interface StatutoryCompletion {
   organization_id: string;
   check_id: string;
   compliance_domain: ComplianceDomain;
-  status: 'pending' | 'completed' | 'overdue' | 'not_applicable' | 'in_progress' | 'awaiting_documentation';
+  status:
+    | "pending"
+    | "completed"
+    | "overdue"
+    | "not_applicable"
+    | "in_progress"
+    | "awaiting_documentation";
   completed_at?: string;
   completed_by?: string;
   completion_notes?: string;
@@ -26,7 +32,7 @@ export interface StatutoryCompletion {
   contractor_id?: string;
   completion_duration_minutes?: number;
   findings: unknown[];
-  rag_status: 'red' | 'amber' | 'green';
+  rag_status: "red" | "amber" | "green";
   created_at: string;
   updated_at: string;
 }
@@ -40,7 +46,7 @@ export interface DomainCompletionSummary {
   completedChecks: number;
   overdueChecks: number;
   pendingChecks: number;
-  status: 'compliant' | 'attention' | 'critical';
+  status: "compliant" | "attention" | "critical";
   completions: StatutoryCompletion[];
 }
 
@@ -58,7 +64,7 @@ export interface CreateCompletionInput {
  * Input for updating a completion record
  */
 export interface UpdateCompletionInput {
-  status?: StatutoryCompletion['status'];
+  status?: StatutoryCompletion["status"];
   completed_at?: string;
   completed_by?: string;
   completion_notes?: string;
@@ -68,7 +74,8 @@ export interface UpdateCompletionInput {
   contractor_id?: string;
   completion_duration_minutes?: number;
   findings?: unknown[];
-  rag_status?: 'red' | 'amber' | 'green';
+  compliance_domain?: string;
+  rag_status?: "red" | "amber" | "green";
 }
 
 /**
@@ -78,34 +85,34 @@ export async function getStatutoryCompletions(
   organizationId: string,
   filters?: {
     domain?: ComplianceDomain;
-    status?: StatutoryCompletion['status'];
+    status?: StatutoryCompletion["status"];
     check_id?: string;
-  }
+  },
 ): Promise<StatutoryCompletion[]> {
   const supabase = await createClient();
 
   let query = supabase
-    .from('estates_statutory_completions')
-    .select('*')
-    .eq('organization_id', organizationId);
+    .from("estates_statutory_completions")
+    .select("*")
+    .eq("organization_id", organizationId);
 
   if (filters?.domain) {
-    query = query.eq('compliance_domain', filters.domain);
+    query = query.eq("compliance_domain", filters.domain);
   }
   if (filters?.status) {
-    query = query.eq('status', filters.status);
+    query = query.eq("status", filters.status);
   }
   if (filters?.check_id) {
-    query = query.eq('check_id', filters.check_id);
+    query = query.eq("check_id", filters.check_id);
   }
 
   // Order by next due date
-  query = query.order('next_due_date', { ascending: true });
+  query = query.order("next_due_date", { ascending: true });
 
   const { data, error } = await query;
 
   if (error) {
-    console.error('Error fetching statutory completions:', error);
+    console.error("Error fetching statutory completions:", error);
     throw error;
   }
 
@@ -117,24 +124,24 @@ export async function getStatutoryCompletions(
  */
 export async function getLatestCompletion(
   organizationId: string,
-  checkId: string
+  checkId: string,
 ): Promise<StatutoryCompletion | null> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
-    .from('estates_statutory_completions')
-    .select('*')
-    .eq('organization_id', organizationId)
-    .eq('check_id', checkId)
-    .order('next_due_date', { ascending: false })
+    .from("estates_statutory_completions")
+    .select("*")
+    .eq("organization_id", organizationId)
+    .eq("check_id", checkId)
+    .order("next_due_date", { ascending: false })
     .limit(1)
     .single();
 
   if (error) {
-    if (error.code === 'PGRST116') {
+    if (error.code === "PGRST116") {
       return null; // No completion record found
     }
-    console.error('Error fetching latest completion:', error);
+    console.error("Error fetching latest completion:", error);
     throw error;
   }
 
@@ -148,12 +155,13 @@ export async function getLatestCompletion(
  */
 export async function getDomainsCompletionSummary(
   organizationId: string,
-  domains: ComplianceDomain[]
+  domains: ComplianceDomain[],
 ): Promise<DomainCompletionSummary[]> {
   const completions = await getStatutoryCompletions(organizationId);
 
   // Import here to avoid circular dependency
-  const { getChecksForDomain } = await import('@/lib/estates-compliance/statutory-checks');
+  const { getChecksForDomain } =
+    await import("@/lib/estates-compliance/statutory-checks");
 
   // Group by domain
   const domainMap = new Map<ComplianceDomain, DomainCompletionSummary>();
@@ -164,7 +172,9 @@ export async function getDomainsCompletionSummary(
     const totalChecks = allStatutoryChecks.length;
 
     // Get existing completions from database
-    const domainCompletions = completions.filter(c => c.compliance_domain === domain);
+    const domainCompletions = completions.filter(
+      (c) => c.compliance_domain === domain,
+    );
 
     // Create a map of check_id -> completion for easy lookup
     const completionMap = new Map<string, StatutoryCompletion>();
@@ -173,40 +183,48 @@ export async function getDomainsCompletionSummary(
     }
 
     // Build completions array with ALL checks, using pending status for missing ones
-    const allCompletions: StatutoryCompletion[] = allStatutoryChecks.map(check => {
-      const existing = completionMap.get(check.id);
-      if (existing) {
-        return existing;
-      }
-      // Return a pending completion record for checks not yet in database
-      return {
-        id: '', // Will be generated when first completed
-        organization_id: organizationId,
-        check_id: check.id,
-        compliance_domain: domain,
-        status: 'pending',
-        next_due_date: calculateNextDueDate(check.frequency),
-        evidence_ids: [],
-        documents_received: false,
-        findings: [],
-        rag_status: 'amber',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-    });
+    const allCompletions: StatutoryCompletion[] = allStatutoryChecks.map(
+      (check) => {
+        const existing = completionMap.get(check.id);
+        if (existing) {
+          return existing;
+        }
+        // Return a pending completion record for checks not yet in database
+        return {
+          id: "", // Will be generated when first completed
+          organization_id: organizationId,
+          check_id: check.id,
+          compliance_domain: domain,
+          status: "pending",
+          next_due_date: calculateNextDueDate(check.frequency),
+          evidence_ids: [],
+          documents_received: false,
+          findings: [],
+          rag_status: "amber",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+      },
+    );
 
-    const completedChecks = allCompletions.filter(c => c.status === 'completed').length;
-    const overdueChecks = allCompletions.filter(c => c.status === 'overdue').length;
-    const pendingChecks = allCompletions.filter(c => c.status === 'pending' || c.status === 'in_progress').length;
+    const completedChecks = allCompletions.filter(
+      (c) => c.status === "completed",
+    ).length;
+    const overdueChecks = allCompletions.filter(
+      (c) => c.status === "overdue",
+    ).length;
+    const pendingChecks = allCompletions.filter(
+      (c) => c.status === "pending" || c.status === "in_progress",
+    ).length;
 
     // Determine domain status
-    let status: 'compliant' | 'attention' | 'critical';
+    let status: "compliant" | "attention" | "critical";
     if (overdueChecks > 0) {
-      status = 'critical';
-    } else if (totalChecks > 0 && (completedChecks / totalChecks) < 0.8) {
-      status = 'attention';
+      status = "critical";
+    } else if (totalChecks > 0 && completedChecks / totalChecks < 0.8) {
+      status = "attention";
     } else {
-      status = 'compliant';
+      status = "compliant";
     }
 
     domainMap.set(domain, {
@@ -228,26 +246,26 @@ export async function getDomainsCompletionSummary(
  */
 export async function createCompletion(
   organizationId: string,
-  input: CreateCompletionInput
+  input: CreateCompletionInput,
 ): Promise<StatutoryCompletion> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
-    .from('estates_statutory_completions')
+    .from("estates_statutory_completions")
     .insert({
       organization_id: organizationId,
       check_id: input.check_id,
       compliance_domain: input.compliance_domain,
       next_due_date: input.next_due_date,
       last_due_date: input.last_due_date,
-      status: 'pending',
-      rag_status: 'amber',
+      status: "pending",
+      rag_status: "amber",
     })
     .select()
     .single();
 
   if (error) {
-    console.error('Error creating completion record:', error);
+    console.error("Error creating completion record:", error);
     throw error;
   }
 
@@ -259,22 +277,22 @@ export async function createCompletion(
  */
 export async function updateCompletion(
   completionId: string,
-  updates: UpdateCompletionInput
+  updates: UpdateCompletionInput,
 ): Promise<StatutoryCompletion> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
-    .from('estates_statutory_completions')
+    .from("estates_statutory_completions")
     .update({
       ...updates,
       updated_at: new Date().toISOString(),
     })
-    .eq('id', completionId)
+    .eq("id", completionId)
     .select()
     .single();
 
   if (error) {
-    console.error('Error updating completion record:', error);
+    console.error("Error updating completion record:", error);
     throw error;
   }
 
@@ -287,9 +305,9 @@ export async function updateCompletion(
 export async function completeStatutoryCheck(
   organizationId: string,
   checkId: string,
-  updates: Omit<UpdateCompletionInput, 'next_due_date'> & {
+  updates: Omit<UpdateCompletionInput, "next_due_date"> & {
     next_due_date?: string;
-  }
+  },
 ): Promise<StatutoryCompletion> {
   // First get the existing completion
   const existing = await getLatestCompletion(organizationId, checkId);
@@ -298,22 +316,22 @@ export async function completeStatutoryCheck(
     // Update existing record
     return updateCompletion(existing.id, {
       ...updates,
-      status: updates.status || 'completed',
-      rag_status: updates.rag_status || 'green',
+      status: updates.status || "completed",
+      rag_status: updates.rag_status || "green",
       completed_at: updates.completed_at || new Date().toISOString(),
     });
   } else {
     // Create new completion record
     const supabase = await createClient();
     const { data, error } = await supabase
-      .from('estates_statutory_completions')
+      .from("estates_statutory_completions")
       .insert({
         organization_id: organizationId,
         check_id: checkId,
         compliance_domain: updates.compliance_domain,
-        next_due_date: updates.next_due_date || calculateNextDueDate('annual'),
-        status: 'completed',
-        rag_status: 'green',
+        next_due_date: updates.next_due_date || calculateNextDueDate("annual"),
+        status: "completed",
+        rag_status: "green",
         completed_at: updates.completed_at || new Date().toISOString(),
         completed_by: updates.completed_by,
         completion_notes: updates.completion_notes,
@@ -327,7 +345,7 @@ export async function completeStatutoryCheck(
       .single();
 
     if (error) {
-      console.error('Error creating completion record:', error);
+      console.error("Error creating completion record:", error);
       throw error;
     }
 
@@ -338,8 +356,10 @@ export async function completeStatutoryCheck(
 /**
  * Get overdue checks
  */
-export async function getOverdueChecks(organizationId: string): Promise<StatutoryCompletion[]> {
-  return getStatutoryCompletions(organizationId, { status: 'overdue' });
+export async function getOverdueChecks(
+  organizationId: string,
+): Promise<StatutoryCompletion[]> {
+  return getStatutoryCompletions(organizationId, { status: "overdue" });
 }
 
 /**
@@ -347,7 +367,7 @@ export async function getOverdueChecks(organizationId: string): Promise<Statutor
  */
 export async function getUpcomingChecks(
   organizationId: string,
-  daysAhead: number = 30
+  daysAhead: number = 30,
 ): Promise<StatutoryCompletion[]> {
   const supabase = await createClient();
 
@@ -355,16 +375,16 @@ export async function getUpcomingChecks(
   futureDate.setDate(futureDate.getDate() + daysAhead);
 
   const { data, error } = await supabase
-    .from('estates_statutory_completions')
-    .select('*')
-    .eq('organization_id', organizationId)
-    .gte('next_due_date', new Date().toISOString().split('T')[0])
-    .lte('next_due_date', futureDate.toISOString().split('T')[0])
-    .in('status', ['pending', 'in_progress'])
-    .order('next_due_date', { ascending: true });
+    .from("estates_statutory_completions")
+    .select("*")
+    .eq("organization_id", organizationId)
+    .gte("next_due_date", new Date().toISOString().split("T")[0])
+    .lte("next_due_date", futureDate.toISOString().split("T")[0])
+    .in("status", ["pending", "in_progress"])
+    .order("next_due_date", { ascending: true });
 
   if (error) {
-    console.error('Error fetching upcoming checks:', error);
+    console.error("Error fetching upcoming checks:", error);
     throw error;
   }
 
@@ -378,23 +398,23 @@ export function calculateNextDueDate(frequency: string): string {
   const date = new Date();
 
   switch (frequency) {
-    case 'daily':
+    case "daily":
       date.setDate(date.getDate() + 1);
       break;
-    case 'weekly':
+    case "weekly":
       date.setDate(date.getDate() + 7);
       break;
-    case 'monthly':
+    case "monthly":
       date.setMonth(date.getMonth() + 1);
       break;
-    case 'quarterly':
+    case "quarterly":
       date.setMonth(date.getMonth() + 3);
       break;
-    case 'annual':
-    case 'annually':
+    case "annual":
+    case "annually":
       date.setFullYear(date.getFullYear() + 1);
       break;
-    case 'termly':
+    case "termly":
       // Approximate 3 months
       date.setMonth(date.getMonth() + 3);
       break;
@@ -402,7 +422,7 @@ export function calculateNextDueDate(frequency: string): string {
       date.setFullYear(date.getFullYear() + 1);
   }
 
-  return date.toISOString().split('T')[0];
+  return date.toISOString().split("T")[0];
 }
 
 /**
@@ -411,7 +431,7 @@ export function calculateNextDueDate(frequency: string): string {
 export async function initializeDomainCompletions(
   organizationId: string,
   domain: ComplianceDomain,
-  checkIds: string[]
+  checkIds: string[],
 ): Promise<void> {
   for (const checkId of checkIds) {
     const existing = await getLatestCompletion(organizationId, checkId);
@@ -423,7 +443,7 @@ export async function initializeDomainCompletions(
       await createCompletion(organizationId, {
         check_id: checkId,
         compliance_domain: domain,
-        next_due_date: calculateNextDueDate('annual'),
+        next_due_date: calculateNextDueDate("annual"),
       });
     }
   }
@@ -435,7 +455,7 @@ export async function initializeDomainCompletions(
 export async function initializeAllStatutoryCompletions(
   organizationId: string,
   domains: ComplianceDomain[],
-  domainCheckIds: Record<ComplianceDomain, string[]>
+  domainCheckIds: Record<ComplianceDomain, string[]>,
 ): Promise<void> {
   for (const domain of domains) {
     const checkIds = domainCheckIds[domain] || [];

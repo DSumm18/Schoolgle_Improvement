@@ -165,56 +165,10 @@ export const OPENROUTER_MODELS: Record<string, ModelConfig> = {
   // Note: Free models change frequently - check openrouter.ai for current free options
 
   // ========== VISION MODELS ==========
-
-  "anthropic/claude-3.5-sonnet": {
-    id: "anthropic/claude-3.5-sonnet",
-    provider: "openrouter",
-    model: "anthropic/claude-3.5-sonnet",
-    costPerMillionTokens: 3.0,
-    capabilities: {
-      vision: true,
-      streaming: true,
-      jsonMode: false,
-    },
-  },
-
-  "openai/gpt-4o": {
-    id: "openai/gpt-4o",
-    provider: "openrouter",
-    model: "openai/gpt-4o",
-    costPerMillionTokens: 2.5,
-    capabilities: {
-      vision: true,
-      streaming: true,
-      jsonMode: true,
-    },
-  },
-
-  "google/gemini-2.0-flash-exp": {
-    id: "google/gemini-2.0-flash-exp",
-    provider: "openrouter",
-    model: "google/gemini-2.0-flash-exp",
-    costPerMillionTokens: 0.075,
-    capabilities: {
-      vision: true,
-      streaming: true,
-      jsonMode: false,
-    },
-  },
+  // (claude-3.5-sonnet, gpt-4o, gemini-2.0-flash-exp already defined above)
 
   // ========== REASONING MODELS ==========
-
-  "deepseek/deepseek-r1": {
-    id: "deepseek/deepseek-r1",
-    provider: "openrouter",
-    model: "deepseek/deepseek-r1",
-    costPerMillionTokens: 0.55,
-    capabilities: {
-      vision: false,
-      streaming: true,
-      jsonMode: true,
-    },
-  },
+  // (deepseek-r1 already defined above)
 };
 
 /**

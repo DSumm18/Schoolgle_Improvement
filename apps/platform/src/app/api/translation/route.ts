@@ -191,7 +191,7 @@ async function handleTranslateFields(body: TranslateFieldsRequest) {
 
   const translationService = getTranslationService();
   const translatedFields = await translationService.translateFieldLabels(
-    fields,
+    fields as any,
     targetLanguage,
     formType,
   );

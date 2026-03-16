@@ -130,23 +130,36 @@ export const peSportPremiumExpert: ComplianceExpert = {
     let hasContent = false;
     let hasAmount = false;
     let hasSpending = false;
+    let hasSwimming = false;
+    let hasImpact = false;
     let foundUrl = "";
     const evidence: string[] = [];
 
     for (const page of match.matchingPages) {
       const contentLower = (page.content || "").toLowerCase();
+      const titleLower = (page.title || "").toLowerCase();
+      const urlLower = page.url.toLowerCase();
 
-      if (
+      // Check if page is about PE/sport premium — content, title, or URL
+      const isPEPremiumPage =
         contentLower.includes("sport premium") ||
         contentLower.includes("sports premium") ||
         contentLower.includes("pe premium") ||
         contentLower.includes("pe and sport") ||
         contentLower.includes("pe & sport") ||
+        contentLower.includes("sports grant") ||
+        contentLower.includes("sport grant") ||
+        titleLower.includes("sport premium") ||
+        titleLower.includes("sports premium") ||
+        titleLower.includes("sports grant") ||
+        titleLower.includes("pe sport") ||
         (contentLower.includes("physical education") &&
-          contentLower.includes("premium")) ||
-        (page.url.toLowerCase().includes("sport") &&
-          page.url.toLowerCase().includes("premium"))
-      ) {
+          (contentLower.includes("premium") ||
+            contentLower.includes("grant"))) ||
+        (urlLower.includes("sport") &&
+          (urlLower.includes("premium") || urlLower.includes("grant")));
+
+      if (isPEPremiumPage) {
         hasContent = true;
         foundUrl = foundUrl || page.url;
 
@@ -159,24 +172,88 @@ export const peSportPremiumExpert: ComplianceExpert = {
           contentLower.includes("spending") ||
           contentLower.includes("expenditure") ||
           contentLower.includes("how we") ||
-          contentLower.includes("used for")
+          contentLower.includes("used for") ||
+          contentLower.includes("allocated") ||
+          contentLower.includes("allocation") ||
+          contentLower.includes("funded") ||
+          contentLower.includes("grant report") ||
+          contentLower.includes("grant spend")
         ) {
           hasSpending = true;
           evidence.push("Spending details found");
+        }
+
+        if (
+          contentLower.includes("swimming") ||
+          contentLower.includes("swim ")
+        ) {
+          hasSwimming = true;
+          evidence.push("Swimming data found");
+        }
+
+        if (
+          contentLower.includes("impact") ||
+          contentLower.includes("outcome") ||
+          contentLower.includes("improvement") ||
+          contentLower.includes("achievement") ||
+          contentLower.includes("participation")
+        ) {
+          hasImpact = true;
+          evidence.push("Impact/outcomes information found");
+        }
+      }
+
+      // Also check for PDF documents that ARE the report (title/filename match)
+      if (!hasContent && (page as any).contentType === "pdf") {
+        const isReportPdf =
+          titleLower.includes("sport") &&
+          (titleLower.includes("premium") || titleLower.includes("grant"));
+        const urlIsReport =
+          urlLower.includes("sport") &&
+          (urlLower.includes("premium") || urlLower.includes("grant")) &&
+          urlLower.endsWith(".pdf");
+
+        if (isReportPdf || urlIsReport) {
+          hasContent = true;
+          foundUrl = foundUrl || page.url;
+          evidence.push(
+            `PE Sport Premium report PDF: "${page.title || page.url}"`,
+          );
+
+          // If it's a proper report PDF, it likely has spending detail
+          // (content extraction may have failed but the document exists)
+          if (contentLower.length < 100) {
+            // Content extraction failed — treat report PDF as having spending info
+            hasSpending = true;
+            evidence.push(
+              "Report document found (PDF content extraction limited)",
+            );
+          }
         }
       }
     }
 
     if (hasContent && hasSpending) {
-      const score = 75 + (hasAmount ? 25 : 0);
+      let score = 70;
+      if (hasAmount) score += 10;
+      if (hasSwimming) score += 10;
+      if (hasImpact) score += 10;
+      const gaps: string[] = [];
+      if (!hasAmount) gaps.push("PE/sport premium total amount not stated");
+      if (!hasSwimming) gaps.push("Year 6 swimming data not found");
+      if (!hasImpact)
+        gaps.push("Impact/outcomes evidence could be strengthened");
       return {
         status: "compliant",
         complianceScore: score,
-        qualityScore: score >= 90 ? 4 : 3,
+        qualityScore: score >= 90 ? 4 : score >= 80 ? 3 : 2,
         clarityScore: 3,
         evidenceQuotes: [...evidence, `Found on ${foundUrl}`],
-        gaps: !hasAmount ? ["PE/sport premium total not stated"] : [],
-        recommendations: [],
+        gaps,
+        recommendations:
+          gaps.length > 0
+            ? ["Address the identified gaps to achieve full compliance"]
+            : [],
         redFlags: [],
         confidence: 0.8,
       };

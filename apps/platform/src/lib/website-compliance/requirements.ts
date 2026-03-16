@@ -144,13 +144,7 @@ export const WEBSITE_COMPLIANCE_REQUIREMENTS: ComplianceRequirement[] = [
       "office",
       "tel",
     ],
-    urlPatterns: [
-      "/contact",
-      "/about",
-      "/about-us",
-      "/school-information",
-      "/",
-    ],
+    urlPatterns: ["/contact", "/about", "/about-us", "/school-information"],
     documentPatterns: [],
     complianceCriteria: [
       "Full school name is displayed",
@@ -481,10 +475,10 @@ export const WEBSITE_COMPLIANCE_REQUIREMENTS: ComplianceRequirement[] = [
     updateFrequency: "as_needed",
     searchKeywords: [
       "religious education",
-      "RE",
-      "withdrawal",
       "right to withdraw",
       "collective worship",
+      "withdraw from re",
+      "withdrawal from re",
     ],
     urlPatterns: [
       "/curriculum/re",
@@ -776,18 +770,27 @@ export const WEBSITE_COMPLIANCE_REQUIREMENTS: ComplianceRequirement[] = [
       "primary PE",
       "swimming",
       "sports grant",
+      "PE sports grant",
+      "sport grant",
     ],
     urlPatterns: [
       "/pe-sport-premium",
+      "/pe-sports-premium",
       "/sport-premium",
       "/pe-premium",
       "/sports-premium",
+      "/current-year-pe-sports-premium",
       "/curriculum/pe",
+      "/physical-education",
+      "/pe-and-sport-premium",
     ],
     documentPatterns: [
       "PE Sport Premium",
       "Sports Premium Report",
       "PE Premium Report",
+      "Sports Grant Report",
+      "PE Sports Grant",
+      "Sport Grant Report",
     ],
     complianceCriteria: [
       "PE and sport premium report is published",
@@ -895,13 +898,13 @@ export const WEBSITE_COMPLIANCE_REQUIREMENTS: ComplianceRequirement[] = [
     legislation: ["Academy Trust Handbook 2025"],
     updateFrequency: "as_needed",
     searchKeywords: [
-      "trust",
       "academy trust",
-      "MAT",
       "multi-academy trust",
       "articles of association",
-      "memorandum",
+      "memorandum of association",
       "funding agreement",
+      "trust board",
+      "trust website",
     ],
     urlPatterns: [
       "/about/trust",
@@ -949,7 +952,7 @@ export const WEBSITE_COMPLIANCE_REQUIREMENTS: ComplianceRequirement[] = [
       "raising concerns",
       "public interest disclosure",
     ],
-    urlPatterns: ["/policies", "/governance", "/key-information"],
+    urlPatterns: ["/policies", "/governance", "/whistleblowing"],
     documentPatterns: [
       "Whistleblowing Policy",
       "Whistleblowing Procedure",
@@ -1102,12 +1105,7 @@ export const WEBSITE_COMPLIANCE_REQUIREMENTS: ComplianceRequirement[] = [
       "make a complaint",
       "formal complaint",
     ],
-    urlPatterns: [
-      "/complaints",
-      "/policies/complaints",
-      "/parents/complaints",
-      "/key-information",
-    ],
+    urlPatterns: ["/complaints", "/policies/complaints", "/parents/complaints"],
     documentPatterns: ["Complaints Policy", "Complaints Procedure"],
     complianceCriteria: [
       "Complaints procedure is published",
@@ -1140,7 +1138,7 @@ export const WEBSITE_COMPLIANCE_REQUIREMENTS: ComplianceRequirement[] = [
       "voluntary contributions",
       "trips cost",
     ],
-    urlPatterns: ["/policies", "/key-information", "/parents/policies"],
+    urlPatterns: ["/policies", "/charges", "/parents/policies"],
     documentPatterns: ["Charging and Remissions Policy", "Charging Policy"],
     complianceCriteria: ["Charging and remissions policy is published"],
     qualityCriteria: [
@@ -1260,7 +1258,7 @@ export const WEBSITE_COMPLIANCE_REQUIREMENTS: ComplianceRequirement[] = [
       "DfE performance",
       "performance tables",
     ],
-    urlPatterns: ["/results", "/performance", "/data", "/key-information"],
+    urlPatterns: ["/results", "/performance", "/data", "/ks2-results"],
     documentPatterns: [],
     complianceCriteria: [
       "Link to Compare School Performance service is present",
@@ -1287,19 +1285,18 @@ export const WEBSITE_COMPLIANCE_REQUIREMENTS: ComplianceRequirement[] = [
     ],
     updateFrequency: "annually",
     searchKeywords: [
-      "salary",
-      "pay",
-      "100k",
       "£100,000",
+      "100k",
       "pay banding",
       "executive pay",
       "remuneration",
+      "staff earning",
+      "salary banding",
     ],
     urlPatterns: [
       "/finance",
       "/financial-information",
       "/governance",
-      "/key-information",
       "/about/finance",
     ],
     documentPatterns: [
@@ -1339,7 +1336,7 @@ export const WEBSITE_COMPLIANCE_REQUIREMENTS: ComplianceRequirement[] = [
       "financial benchmarking and insights",
       "DfE benchmarking",
     ],
-    urlPatterns: ["/finance", "/financial-information", "/key-information"],
+    urlPatterns: ["/finance", "/financial-information", "/benchmarking"],
     documentPatterns: [],
     complianceCriteria: [
       "Link to Financial Benchmarking and Insights Tool (FBIT) is present",
@@ -1410,7 +1407,6 @@ export const WEBSITE_COMPLIANCE_REQUIREMENTS: ComplianceRequirement[] = [
     ],
     updateFrequency: "every_4_years",
     searchKeywords: [
-      "equality",
       "equality objectives",
       "equality duty",
       "public sector equality duty",
@@ -1421,7 +1417,7 @@ export const WEBSITE_COMPLIANCE_REQUIREMENTS: ComplianceRequirement[] = [
       "/equality",
       "/policies/equality",
       "/about/equality",
-      "/key-information",
+      "/equality-objectives",
     ],
     documentPatterns: [
       "Equality Objectives",
@@ -1455,7 +1451,7 @@ export const WEBSITE_COMPLIANCE_REQUIREMENTS: ComplianceRequirement[] = [
     ],
     updateFrequency: "annually",
     searchKeywords: ["gender pay gap", "pay gap", "gender pay"],
-    urlPatterns: ["/gender-pay-gap", "/equality", "/finance", "/governance"],
+    urlPatterns: ["/gender-pay-gap", "/equality", "/pay-gap"],
     documentPatterns: ["Gender Pay Gap Report", "Gender Pay Gap"],
     complianceCriteria: ["Gender pay gap report published (if 250+ employees)"],
     qualityCriteria: [
@@ -1605,11 +1601,12 @@ export const WEBSITE_COMPLIANCE_REQUIREMENTS: ComplianceRequirement[] = [
     ],
     updateFrequency: "annually",
     searchKeywords: [
-      "accessibility",
       "accessibility statement",
       "WCAG",
+      "WCAG 2",
       "screen reader",
-      "accessible",
+      "assistive technology",
+      "web content accessibility",
     ],
     urlPatterns: [
       "/accessibility",
@@ -1828,15 +1825,15 @@ export const WEBSITE_COMPLIANCE_REQUIREMENTS: ComplianceRequirement[] = [
     ],
     updateFrequency: "annually",
     searchKeywords: [
-      "filtering",
-      "monitoring",
+      "filtering and monitoring",
       "internet filter",
       "web filter",
       "content filter",
+      "web filtering",
       "SWGFL",
       "internet watch foundation",
-      "IWF",
-      "filtering and monitoring",
+      "filtering standard",
+      "monitoring standard",
     ],
     urlPatterns: [
       "/online-safety",
@@ -1897,7 +1894,7 @@ export const WEBSITE_COMPLIANCE_REQUIREMENTS: ComplianceRequirement[] = [
       "/equality",
       "/policies/equality",
       "/about/equality",
-      "/key-information",
+      "/equality-information",
     ],
     documentPatterns: [
       "Equality Information",
@@ -1951,7 +1948,6 @@ export const WEBSITE_COMPLIANCE_REQUIREMENTS: ComplianceRequirement[] = [
       "/finance",
       "/financial-information",
       "/governance",
-      "/key-information",
       "/trust/finance",
     ],
     documentPatterns: [
@@ -2001,7 +1997,6 @@ export const WEBSITE_COMPLIANCE_REQUIREMENTS: ComplianceRequirement[] = [
       "/trustees",
       "/about/governance",
       "/trust/governance",
-      "/key-information",
     ],
     documentPatterns: [
       "Register of Interests",

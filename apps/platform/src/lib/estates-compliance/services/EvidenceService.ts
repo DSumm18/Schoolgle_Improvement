@@ -18,13 +18,13 @@ import {
   searchEvidence,
   getEvidenceStats,
   createEvidenceVersion,
-} from '../database/evidence';
+} from "../database/evidence";
 import type {
   EstatesEvidence,
   EstatesEvidenceInput,
   EvidenceFilters,
   PaginatedResponse,
-} from '@/types/estates-compliance';
+} from "@/types/estates-compliance";
 
 /**
  * Evidence Service class
@@ -36,7 +36,7 @@ export class EvidenceService {
   static async list(
     organizationId: string,
     filters?: EvidenceFilters,
-    pagination?: { page: number; pageSize: number }
+    pagination?: { page: number; pageSize: number },
   ): Promise<PaginatedResponse<EstatesEvidence>> {
     return getEvidence(organizationId, filters, pagination);
   }
@@ -54,7 +54,7 @@ export class EvidenceService {
   static async upload(
     organizationId: string,
     userId: string,
-    input: EstatesEvidenceInput & { file?: File }
+    input: EstatesEvidenceInput & { file?: File },
   ): Promise<EstatesEvidence> {
     // If file is provided, upload to Supabase storage
     let fileUrl = input.file_url;
@@ -64,23 +64,23 @@ export class EvidenceService {
 
     if (input.file) {
       const file = input.file;
-      const fileExt = file.name.split('.').pop();
-      const fileNameWithoutExt = file.name.replace(`.${fileExt}`, '');
+      const fileExt = file.name.split(".").pop();
+      const fileNameWithoutExt = file.name.replace(`.${fileExt}`, "");
       const timestamp = Date.now();
       const filePath = `${organizationId}/${timestamp}-${fileNameWithoutExt}.${fileExt}`;
 
       // Determine bucket based on file type
-      const isImage = file.type.startsWith('image/');
-      const bucket = isImage ? 'estates-images' : 'estates-documents';
+      const isImage = file.type.startsWith("image/");
+      const bucket = isImage ? "estates-images" : "estates-documents";
 
       // Upload to Supabase storage
       const { data: uploadData, error: uploadError } = await fetch(
         `/api/upload?bucket=${bucket}&path=${filePath}`,
         {
-          method: 'POST',
-          headers: { 'Content-Type': file.type },
+          method: "POST",
+          headers: { "Content-Type": file.type },
           body: file,
-        }
+        },
       ).then((res) => res.json());
 
       if (uploadError) {
@@ -108,14 +108,14 @@ export class EvidenceService {
   static async linkGoogleDrive(
     organizationId: string,
     userId: string,
-    input: Omit<EstatesEvidenceInput, 'source_type'> & { driveFileId: string }
+    input: Omit<EstatesEvidenceInput, "source_type"> & { driveFileId: string },
   ): Promise<EstatesEvidence> {
     // TODO: Implement Google Drive picker integration
     // For now, just create a link record
     return dbCreateEvidence(organizationId, userId, {
       ...input,
-      source_type: 'google_drive',
-      cloud_provider: 'google',
+      source_type: "google_drive",
+      cloud_provider: "google",
       cloud_file_id: input.driveFileId,
     });
   }
@@ -135,19 +135,19 @@ export class EvidenceService {
       task_id?: string;
       contractor_id?: string;
       contract_id?: string;
-    }
+    },
   ): Promise<EstatesEvidence> {
     return dbCreateEvidence(organizationId, userId, {
-      title: linkData.title || 'Linked Evidence',
+      title: linkData.title || "Linked Evidence",
       description: linkData.description,
-      source_type: 'existing',
+      source_type: "existing",
       existing_evidence_id: existingEvidenceId,
       compliance_domain: linkData.compliance_domain,
       asset_id: linkData.asset_id,
       task_id: linkData.task_id,
       contractor_id: linkData.contractor_id,
       contract_id: linkData.contract_id,
-      evidence_type: 'document',
+      evidence_type: "document",
     });
   }
 
@@ -160,7 +160,7 @@ export class EvidenceService {
       status?: string;
       ai_verified?: boolean;
       verification_notes?: string;
-    }
+    },
   ): Promise<EstatesEvidence> {
     // Check evidence exists
     const existing = await getEvidenceById(evidenceId);
@@ -178,7 +178,7 @@ export class EvidenceService {
     evidenceId: string,
     verifierId: string,
     approved: boolean,
-    notes?: string
+    notes?: string,
   ): Promise<EstatesEvidence> {
     const existing = await getEvidenceById(evidenceId);
     if (!existing) {
@@ -186,7 +186,7 @@ export class EvidenceService {
     }
 
     return dbUpdateEvidence(evidenceId, {
-      status: approved ? 'verified' : 'rejected',
+      status: approved ? "verified" : "rejected",
       verified_by: verifierId,
       verified_at: new Date().toISOString(),
       verification_notes: notes,
@@ -210,7 +210,10 @@ export class EvidenceService {
   /**
    * Get evidence by compliance domain
    */
-  static async getByDomain(organizationId: string, domain: string): Promise<EstatesEvidence[]> {
+  static async getByDomain(
+    organizationId: string,
+    domain: string,
+  ): Promise<EstatesEvidence[]> {
     return getEvidenceByDomain(organizationId, domain);
   }
 
@@ -231,21 +234,30 @@ export class EvidenceService {
   /**
    * Get evidence linked to a contractor
    */
-  static async getByContractor(contractorId: string): Promise<EstatesEvidence[]> {
+  static async getByContractor(
+    contractorId: string,
+  ): Promise<EstatesEvidence[]> {
     return getEvidenceByContractor(contractorId);
   }
 
   /**
    * Get expiring evidence (certificates)
    */
-  static async getExpiring(organizationId: string, daysAhead = 30): Promise<EstatesEvidence[]> {
+  static async getExpiring(
+    organizationId: string,
+    daysAhead = 30,
+  ): Promise<EstatesEvidence[]> {
     return getExpiringEvidence(organizationId, daysAhead);
   }
 
   /**
    * Search evidence
    */
-  static async search(organizationId: string, searchTerm: string, limit = 20): Promise<EstatesEvidence[]> {
+  static async search(
+    organizationId: string,
+    searchTerm: string,
+    limit = 20,
+  ): Promise<EstatesEvidence[]> {
     return searchEvidence(organizationId, searchTerm, limit);
   }
 
@@ -263,9 +275,14 @@ export class EvidenceService {
     originalEvidenceId: string,
     userId: string,
     newFileUrl: string,
-    newFileName?: string
+    newFileName?: string,
   ): Promise<EstatesEvidence> {
-    return createEvidenceVersion(originalEvidenceId, userId, newFileUrl, newFileName);
+    return createEvidenceVersion(
+      originalEvidenceId,
+      userId,
+      newFileUrl,
+      newFileName,
+    );
   }
 
   /**
@@ -274,7 +291,7 @@ export class EvidenceService {
   static async uploadVersion(
     originalEvidenceId: string,
     userId: string,
-    file: File
+    file: File,
   ): Promise<EstatesEvidence> {
     const original = await getEvidenceById(originalEvidenceId);
     if (!original) {
@@ -282,28 +299,33 @@ export class EvidenceService {
     }
 
     // Upload new file
-    const fileExt = file.name.split('.').pop();
-    const fileNameWithoutExt = file.name.replace(`.${fileExt}`, '');
+    const fileExt = file.name.split(".").pop();
+    const fileNameWithoutExt = file.name.replace(`.${fileExt}`, "");
     const timestamp = Date.now();
     const filePath = `${original.organization_id}/${timestamp}-${fileNameWithoutExt}.${fileExt}`;
 
-    const isImage = file.type.startsWith('image/');
-    const bucket = isImage ? 'estates-images' : 'estates-documents';
+    const isImage = file.type.startsWith("image/");
+    const bucket = isImage ? "estates-images" : "estates-documents";
 
     const { data: uploadData, error: uploadError } = await fetch(
       `/api/upload?bucket=${bucket}&path=${filePath}`,
       {
-        method: 'POST',
-        headers: { 'Content-Type': file.type },
+        method: "POST",
+        headers: { "Content-Type": file.type },
         body: file,
-      }
+      },
     ).then((res) => res.json());
 
     if (uploadError) {
       throw new Error(`Failed to upload file: ${uploadError.message}`);
     }
 
-    return createEvidenceVersion(originalEvidenceId, userId, uploadData.publicUrl, file.name);
+    return createEvidenceVersion(
+      originalEvidenceId,
+      userId,
+      uploadData.publicUrl,
+      file.name,
+    );
   }
 
   /**
@@ -316,49 +338,52 @@ export class EvidenceService {
     }
 
     // Import the verifier dynamically to avoid issues when not needed
-    const { verifyComplianceDocument } = await import('../ai-document-verifier');
+    const { verifyComplianceDocument } =
+      await import("../ai-document-verifier");
 
     // Run AI verification
     const result = await verifyComplianceDocument({
       evidenceId: evidence.id,
-      fileUrl: evidence.file_url,
-      fileName: evidence.file_name,
-      fileType: evidence.file_type,
-      evidenceType: evidence.evidence_type,
+      fileUrl: evidence.file_url || "",
+      fileName: evidence.file_name || "",
+      fileType: evidence.file_type || "",
+      evidenceType: evidence.evidence_type as any,
       complianceDomain: evidence.compliance_domain || undefined,
       expectedDetails: {
         issuingBody: evidence.issuing_body || undefined,
         documentNumber: evidence.document_number || undefined,
         issuedDate: evidence.issued_date || undefined,
         expiryDate: evidence.expiry_date || undefined,
-      }
+      },
     });
 
     // Update evidence with verification results
     return dbUpdateEvidence(evidenceId, {
       ai_verified: result.verified,
       ai_confidence_score: result.confidence,
-      ai_insights: {
-        ...result,
-        verified_at: new Date().toISOString(),
-      },
       // Auto-fill extracted data if available
-      certificate_number: result.certificateInfo?.certificateNumber || evidence.certificate_number,
-      issuing_body: result.certificateInfo?.issuingBody || evidence.issuing_body,
+      document_number:
+        result.certificateInfo?.certificateNumber || evidence.document_number,
+      issuing_body:
+        result.certificateInfo?.issuingBody || evidence.issuing_body,
       issued_date: result.certificateInfo?.issuedDate || evidence.issued_date,
       expiry_date: result.certificateInfo?.expiryDate || evidence.expiry_date,
       // Update status based on verification
-      status: result.verified ? 'verified' : evidence.status,
-      verification_notes: result.issues.length > 0
-        ? `Issues: ${result.issues.join('; ')}`
-        : result.warnings.join('; ') || undefined,
-    });
+      status: result.verified ? "verified" : evidence.status,
+      verification_notes:
+        result.issues.length > 0
+          ? `Issues: ${result.issues.join("; ")}`
+          : result.warnings.join("; ") || undefined,
+    } as any);
   }
 
   /**
    * Batch link evidence to task
    */
-  static async linkToTask(taskId: string, evidenceIds: string[]): Promise<void> {
+  static async linkToTask(
+    taskId: string,
+    evidenceIds: string[],
+  ): Promise<void> {
     for (const evidenceId of evidenceIds) {
       await dbUpdateEvidence(evidenceId, { task_id: taskId });
     }
@@ -367,7 +392,10 @@ export class EvidenceService {
   /**
    * Batch link evidence to asset
    */
-  static async linkToAsset(assetId: string, evidenceIds: string[]): Promise<void> {
+  static async linkToAsset(
+    assetId: string,
+    evidenceIds: string[],
+  ): Promise<void> {
     for (const evidenceId of evidenceIds) {
       await dbUpdateEvidence(evidenceId, { asset_id: assetId });
     }

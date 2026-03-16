@@ -146,7 +146,7 @@ export default function CheckHistoryPage() {
           }
 
           const response = await fetch(
-            `/api/estates/statutory-completions?organization_id=${organizationId}&domain=${domainSlug}`,
+            `/api/estates/statutory-completions?organizationId=${organizationId}&domain=${domainSlug}`,
             {
               headers,
               signal: controller.signal,

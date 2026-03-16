@@ -311,7 +311,7 @@ export default function PupilAssessmentUploader({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          organization_id: organizationId,
+          organizationId: organizationId,
           source_system: rawPreview?.detectedSystem || "manual_csv",
           academic_year_start: currentAcademicYear,
           assessment_period: assessmentPeriod,
@@ -338,8 +338,8 @@ export default function PupilAssessmentUploader({
       }
 
       // Clean up
-      delete win._fullRows;
-      delete win._fullHeaders;
+      (win as any)._fullRows = undefined;
+      (win as any)._fullHeaders = undefined;
     } catch (err) {
       setState({
         step: "error",

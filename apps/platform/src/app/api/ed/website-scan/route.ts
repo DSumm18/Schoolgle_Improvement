@@ -4,9 +4,12 @@
  * Uses Playwright for JavaScript-rendered sites
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase-server';
-import { crawlWebsite, type CrawledPage } from '@/lib/website-crawler';
+import { NextRequest, NextResponse } from "next/server";
+import {
+  createServerSupabaseClient,
+  createServiceRoleClient,
+} from "@/lib/supabase-server";
+import { crawlWebsite, type CrawledPage } from "@/lib/website-crawler";
 
 interface ScanRequest {
   websiteUrl: string;
@@ -32,7 +35,7 @@ interface PageContent {
   headings: string[];
   links: string[];
   lastModified?: string;
-  contentType: 'page' | 'news' | 'event' | 'policy' | 'other';
+  contentType: "page" | "news" | "event" | "policy" | "other";
 }
 
 /**
@@ -47,8 +50,8 @@ export async function POST(request: NextRequest) {
 
     if (!body.websiteUrl || !body.organizationId) {
       return NextResponse.json(
-        { error: 'websiteUrl and organizationId are required' },
-        { status: 400 }
+        { error: "websiteUrl and organizationId are required" },
+        { status: 400 },
       );
     }
 
@@ -58,9 +61,9 @@ export async function POST(request: NextRequest) {
     const baseUrl = new URL(websiteUrl);
     const domain = baseUrl.hostname;
 
-    console.log('[Website Scan] Starting scan for:', domain);
-    console.log('[Website Scan] Organization ID:', organizationId);
-    console.log('[Website Scan] Full scan:', fullScan);
+    console.log("[Website Scan] Starting scan for:", domain);
+    console.log("[Website Scan] Organization ID:", organizationId);
+    console.log("[Website Scan] Full scan:", fullScan);
 
     // 1. Verify organization exists
     const supabase = await createServerSupabaseClient();
@@ -68,25 +71,27 @@ export async function POST(request: NextRequest) {
 
     // Get organization - just verify it exists
     const { data: org, error: orgError } = await supabaseAdmin
-      .from('organizations')
-      .select('id, name')
-      .eq('id', organizationId)
+      .from("organizations")
+      .select("id, name")
+      .eq("id", organizationId)
       .maybeSingle();
 
-    console.log('[Website Scan] Org lookup result:', { org, orgError });
+    console.log("[Website Scan] Org lookup result:", { org, orgError });
 
     if (!org) {
       return NextResponse.json(
-        { error: 'Organization not found', details: orgError?.message },
-        { status: 404 }
+        { error: "Organization not found", details: orgError?.message },
+        { status: 404 },
       );
     }
 
-    console.log('[Website Scan] Organization found:', org.name);
+    console.log("[Website Scan] Organization found:", org.name);
 
     // 2. Use Playwright crawler for JavaScript-rendered sites
     const maxPages = fullScan ? 100 : 30;
-    console.log(`[Website Scan] Starting Playwright crawl, max pages: ${maxPages}`);
+    console.log(
+      `[Website Scan] Starting Playwright crawl, max pages: ${maxPages}`,
+    );
 
     const crawlResult = await crawlWebsite(websiteUrl, {
       maxPages,
@@ -95,7 +100,7 @@ export async function POST(request: NextRequest) {
       sameDomainOnly: true,
       processPDFs: true,
       processDocuments: true,
-      userAgent: 'Schoolgle-Ed/1.0 (+https://schoolgle.co.uk)',
+      userAgent: "Schoolgle-Ed/1.0 (+https://schoolgle.co.uk)",
       headless: true,
     });
 
@@ -105,31 +110,39 @@ export async function POST(request: NextRequest) {
       failed: crawlResult.stats.failedPages,
       pdfs: crawlResult.stats.pdfsProcessed,
       documents: crawlResult.stats.documentsProcessed,
-      duration: crawlResult.stats.durationMs + 'ms'
+      duration: crawlResult.stats.duration + "ms",
     });
 
     // Convert CrawledPage to PageContent format
     // Map crawler content types to database content types
-    const contentTypeMap: Record<string, 'page' | 'news' | 'event' | 'policy' | 'other'> = {
-      'html': 'page',
-      'pdf': 'policy',
-      'document': 'policy',
-      'image': 'other',
-      'other': 'other'
+    const contentTypeMap: Record<
+      string,
+      "page" | "news" | "event" | "policy" | "other"
+    > = {
+      html: "page",
+      pdf: "policy",
+      document: "policy",
+      image: "other",
+      other: "other",
     };
 
-    const scannedPages: PageContent[] = crawlResult.pages.map(page => ({
+    const scannedPages: PageContent[] = crawlResult.pages.map((page) => ({
       url: page.url,
       title: page.title,
       content: page.content,
       metaDescription: page.metadata?.description,
-      headings: page.headings.map(h => h.text),
+      headings: page.headings.map((h) => h.text),
       links: page.links,
-      contentType: contentTypeMap[page.contentType || 'other'] || 'other',
+      contentType: contentTypeMap[page.contentType || "other"] || "other",
     }));
 
     // 3. Store/update knowledge base (using service role to bypass RLS)
-    const stats = await updateKnowledgeBase(organizationId, domain, scannedPages, supabaseAdmin);
+    const stats = await updateKnowledgeBase(
+      organizationId,
+      domain,
+      scannedPages,
+      supabaseAdmin,
+    );
 
     const scanDuration = Date.now() - startTime;
 
@@ -143,17 +156,16 @@ export async function POST(request: NextRequest) {
       scanDuration,
     };
 
-    console.log('[Website Scan] Completed:', response);
+    console.log("[Website Scan] Completed:", response);
 
     return NextResponse.json(response);
-
   } catch (error) {
-    console.error('[Website Scan] Error:', error);
+    console.error("[Website Scan] Error:", error);
 
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
         pagesScanned: 0,
         pagesUpdated: 0,
         knowledgeItems: 0,
@@ -161,7 +173,7 @@ export async function POST(request: NextRequest) {
         updatedPages: [],
         scanDuration: 0,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -172,12 +184,12 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const organizationId = searchParams.get('organizationId');
+  const organizationId = searchParams.get("organizationId");
 
   if (!organizationId) {
     return NextResponse.json(
-      { error: 'organizationId is required' },
-      { status: 400 }
+      { error: "organizationId is required" },
+      { status: 400 },
     );
   }
 
@@ -185,27 +197,29 @@ export async function GET(request: NextRequest) {
 
   // Get knowledge base summary
   const { data: knowledge } = await supabase
-    .from('ed_website_knowledge')
-    .select('id, page_url, page_title, content_type, last_scanned')
-    .eq('organization_id', organizationId)
-    .order('last_scanned', { ascending: false });
+    .from("ed_website_knowledge")
+    .select("id, page_url, page_title, content_type, last_scanned")
+    .eq("organization_id", organizationId)
+    .order("last_scanned", { ascending: false });
 
   // Get scan stats
   const { count } = await supabase
-    .from('ed_website_knowledge')
-    .select('*', { count: 'exact', head: true })
-    .eq('organization_id', organizationId);
+    .from("ed_website_knowledge")
+    .select("*", { count: "exact", head: true })
+    .eq("organization_id", organizationId);
 
   return NextResponse.json({
     success: true,
     totalKnowledgeItems: count || 0,
-    lastScan: knowledge && knowledge.length > 0 ? knowledge[0].last_scanned : null,
-    recentPages: knowledge?.slice(0, 10).map(k => ({
-      url: k.page_url,
-      title: k.page_title,
-      type: k.content_type,
-      scannedAt: k.last_scanned,
-    })) || [],
+    lastScan:
+      knowledge && knowledge.length > 0 ? knowledge[0].last_scanned : null,
+    recentPages:
+      knowledge?.slice(0, 10).map((k) => ({
+        url: k.page_url,
+        title: k.page_title,
+        type: k.content_type,
+        scannedAt: k.last_scanned,
+      })) || [],
   });
 }
 
@@ -216,7 +230,7 @@ async function updateKnowledgeBase(
   organizationId: string,
   domain: string,
   pages: PageContent[],
-  supabase: any
+  supabase: any,
 ): Promise<{
   total: number;
   updated: number;
@@ -227,31 +241,40 @@ async function updateKnowledgeBase(
   const updatedPages: string[] = [];
   let total = 0;
 
-  console.log('[Website Scan] updateKnowledgeBase: Starting with', pages.length, 'pages');
+  console.log(
+    "[Website Scan] updateKnowledgeBase: Starting with",
+    pages.length,
+    "pages",
+  );
 
   for (const page of pages) {
     try {
       // Check if page already exists
       const { data: existing, error: selectError } = await supabase
-        .from('ed_website_knowledge')
-        .select('id, page_url, content_hash')
-        .eq('organization_id', organizationId)
-        .eq('page_url', page.url)
+        .from("ed_website_knowledge")
+        .select("id, page_url, content_hash")
+        .eq("organization_id", organizationId)
+        .eq("page_url", page.url)
         .maybeSingle(); // Use maybeSingle instead of single to avoid errors
 
       if (selectError) {
-        console.error('[Website Scan] Error checking existing page:', selectError);
+        console.error(
+          "[Website Scan] Error checking existing page:",
+          selectError,
+        );
         continue;
       }
 
       // Create simple hash of content
-      const contentHash = Buffer.from(page.content).toString('base64').substring(0, 32);
+      const contentHash = Buffer.from(page.content)
+        .toString("base64")
+        .substring(0, 32);
 
       if (existing) {
         // Check if content changed
         if (existing.content_hash !== contentHash) {
           const { error: updateError } = await supabase
-            .from('ed_website_knowledge')
+            .from("ed_website_knowledge")
             .update({
               page_title: page.title,
               content: page.content,
@@ -260,10 +283,10 @@ async function updateKnowledgeBase(
               content_hash: contentHash,
               last_scanned: new Date().toISOString(),
             })
-            .eq('id', existing.id);
+            .eq("id", existing.id);
 
           if (updateError) {
-            console.error('[Website Scan] Error updating page:', updateError);
+            console.error("[Website Scan] Error updating page:", updateError);
           } else {
             updatedPages.push(page.url);
             total++;
@@ -274,7 +297,7 @@ async function updateKnowledgeBase(
       } else {
         // Insert new page
         const { error: insertError } = await supabase
-          .from('ed_website_knowledge')
+          .from("ed_website_knowledge")
           .insert({
             organization_id: organizationId,
             domain,
@@ -290,18 +313,26 @@ async function updateKnowledgeBase(
           });
 
         if (insertError) {
-          console.error('[Website Scan] Error inserting page:', page.url, insertError);
+          console.error(
+            "[Website Scan] Error inserting page:",
+            page.url,
+            insertError,
+          );
         } else {
           newPages.push(page.url);
           total++;
         }
       }
     } catch (err) {
-      console.error('[Website Scan] Unexpected error processing page:', err);
+      console.error("[Website Scan] Unexpected error processing page:", err);
     }
   }
 
-  console.log('[Website Scan] updateKnowledgeBase: Completed with', total, 'pages processed');
+  console.log(
+    "[Website Scan] updateKnowledgeBase: Completed with",
+    total,
+    "pages processed",
+  );
 
   return {
     total,

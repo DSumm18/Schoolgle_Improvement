@@ -8,8 +8,21 @@
  * - Summary notifications (daily/weekly)
  */
 
-import { getComplianceTasks, type ComplianceTask } from "../database/tasks";
-import type { TaskFilters } from "@/types/estates-compliance";
+import { getComplianceTasks } from "../database/tasks";
+import type { ComplianceTask, TaskFilters } from "@/types/estates-compliance";
+
+/**
+ * Extended task type for reminder service - includes DB columns
+ * not yet in the shared ComplianceTask type definition.
+ */
+type ReminderTask = ComplianceTask & {
+  due_date?: string;
+  title?: string;
+  priority?: string;
+  reminders_enabled?: boolean;
+  reminder_days?: number[];
+  reminder_time?: string;
+};
 import {
   sendEmail,
   complianceReminderHtml,
@@ -76,7 +89,7 @@ export async function getTasksNeedingReminders(
 
   // Get all pending and in-progress tasks
   const filters: TaskFilters = {
-    status: ["pending", "in_progress"],
+    status: "pending" as const,
   };
 
   const { data: tasks } = await getComplianceTasks(organizationId, filters, {
@@ -86,14 +99,16 @@ export async function getTasksNeedingReminders(
 
   const reminders: ReminderConfig[] = [];
 
-  for (const task of tasks) {
-    if (!task.due_date || !task.reminders_enabled) continue;
+  for (const task of tasks as ReminderTask[]) {
+    const dueDate = task.due_date || task.due_by;
+    const taskTitle = task.title || task.task_name;
+    if (!dueDate || !task.reminders_enabled) continue;
 
-    const dueDate = new Date(task.due_date);
-    dueDate.setHours(0, 0, 0, 0);
+    const dueDateObj = new Date(dueDate);
+    dueDateObj.setHours(0, 0, 0, 0);
 
     const daysUntilDue = Math.ceil(
-      (dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
+      (dueDateObj.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
     );
 
     // Check if today is a reminder day
@@ -101,13 +116,13 @@ export async function getTasksNeedingReminders(
     if (reminderDays.includes(daysUntilDue)) {
       reminders.push({
         taskId: task.id,
-        taskTitle: task.title,
-        dueDate: task.due_date,
+        taskTitle: taskTitle || "Untitled Task",
+        dueDate,
         assignedTo: task.assigned_to || undefined,
         reminderDays,
         reminderTime: task.reminder_time || "09:00",
         complianceDomain: task.compliance_domain || "general",
-        priority: task.priority,
+        priority: task.priority || "medium",
       });
     }
   }
@@ -125,7 +140,7 @@ export async function getOverdueTasksForEscalation(
   today.setHours(0, 0, 0, 0);
 
   const filters: TaskFilters = {
-    status: ["pending", "in_progress"],
+    status: "pending" as const,
   };
 
   const { data: tasks } = await getComplianceTasks(organizationId, filters, {
@@ -135,25 +150,27 @@ export async function getOverdueTasksForEscalation(
 
   const escalations: ReminderConfig[] = [];
 
-  for (const task of tasks) {
-    if (!task.due_date) continue;
+  for (const task of tasks as ReminderTask[]) {
+    const dueDate = task.due_date || task.due_by;
+    const taskTitle = task.title || task.task_name;
+    if (!dueDate) continue;
 
-    const dueDate = new Date(task.due_date);
+    const dueDateObj = new Date(dueDate);
     const daysOverdue = Math.ceil(
-      (today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24),
+      (today.getTime() - dueDateObj.getTime()) / (1000 * 60 * 60 * 24),
     );
 
     // Escalate tasks that are 1, 3, 7, 14 days overdue
     if (daysOverdue > 0 && [1, 3, 7, 14].includes(daysOverdue)) {
       escalations.push({
         taskId: task.id,
-        taskTitle: task.title,
-        dueDate: task.due_date,
+        taskTitle: taskTitle || "Untitled Task",
+        dueDate,
         assignedTo: task.assigned_to || undefined,
         reminderDays: [-daysOverdue], // Negative for overdue
         reminderTime: task.reminder_time || "09:00",
         complianceDomain: task.compliance_domain || "general",
-        priority: task.priority,
+        priority: task.priority || "medium",
       });
     }
   }
@@ -180,28 +197,31 @@ export async function getDailySummaryData(
     { page: 1, pageSize: 1000 },
   );
 
+  const tasksWithDates = allTasks as ReminderTask[];
+
   // Tasks due today
-  const tasksDueToday = allTasks.filter(
-    (t) =>
-      t.due_date &&
-      new Date(t.due_date).toDateString() === today.toDateString(),
-  );
+  const tasksDueToday = tasksWithDates.filter((t) => {
+    const dueDate = t.due_date || t.due_by;
+    return dueDate && new Date(dueDate).toDateString() === today.toDateString();
+  });
 
   // Tasks due this week
-  const tasksDueThisWeek = allTasks.filter(
-    (t) =>
-      t.due_date &&
-      new Date(t.due_date) >= today &&
-      new Date(t.due_date) <= weekEnd,
-  );
+  const tasksDueThisWeek = tasksWithDates.filter((t) => {
+    const dueDate = t.due_date || t.due_by;
+    return (
+      dueDate && new Date(dueDate) >= today && new Date(dueDate) <= weekEnd
+    );
+  });
 
   // Overdue tasks
-  const overdueTasks = allTasks.filter(
-    (t) =>
-      t.due_date &&
-      new Date(t.due_date) < today &&
-      !["completed", "cancelled"].includes(t.status),
-  );
+  const overdueTasks = tasksWithDates.filter((t) => {
+    const dueDate = t.due_date || t.due_by;
+    return (
+      dueDate &&
+      new Date(dueDate) < today &&
+      !["completed", "cancelled"].includes(t.status)
+    );
+  });
 
   // Group by domain
   const tasksByDomain: Record<string, number> = {};
@@ -213,7 +233,7 @@ export async function getDailySummaryData(
   });
 
   // Critical/high priority tasks
-  const criticalTasks = allTasks
+  const criticalTasks = tasksWithDates
     .filter(
       (t) =>
         (t.priority === "critical" || t.priority === "high") &&
@@ -221,9 +241,9 @@ export async function getDailySummaryData(
     )
     .map((t) => ({
       id: t.id,
-      title: t.title,
-      dueDate: t.due_date || "",
-      priority: t.priority,
+      title: t.title || t.task_name || "Untitled",
+      dueDate: t.due_date || t.due_by || "",
+      priority: t.priority || "medium",
     }));
 
   return {

@@ -5,15 +5,15 @@
  * the overall compliance status and per-domain status.
  */
 
-import { TaskService } from './TaskService';
-import { AssetService } from './AssetService';
-import { HelpdeskService } from './HelpdeskService';
-import type { ComplianceDomain } from '@/types/estates-compliance';
+import { TaskService } from "./TaskService";
+import { AssetService } from "./AssetService";
+import { HelpdeskService } from "./HelpdeskService";
+import type { ComplianceDomain } from "@/types/estates-compliance";
 
 /**
  * Status level for RAG reporting
  */
-export type RAGStatus = 'red' | 'amber' | 'green';
+export type RAGStatus = "red" | "amber" | "green";
 
 /**
  * Domain-specific status
@@ -51,18 +51,24 @@ export class RAGStatusService {
    */
   static async calculateDomainStatus(
     organizationId: string,
-    domain: ComplianceDomain
+    domain: ComplianceDomain,
   ): Promise<DomainStatus> {
     const issues: string[] = [];
     let score = 100;
 
     // Get tasks for this domain
-    const tasksResult = await TaskService.list(organizationId, { domain }, { page: 1, pageSize: 1000 });
+    const tasksResult = await TaskService.list(
+      organizationId,
+      { domain },
+      { page: 1, pageSize: 1000 },
+    );
 
     // Deduct points for overdue tasks
-    const overdueTasks = tasksResult.data.filter(t => {
-      if (!t.due_date || t.status === 'completed' || t.status === 'cancelled') return false;
-      return new Date(t.due_date) < new Date();
+    const overdueTasks = tasksResult.data.filter((t) => {
+      const dueDate = t.due_by || t.scheduled_for;
+      if (!dueDate || t.status === "completed" || t.status === "cancelled")
+        return false;
+      return new Date(dueDate) < new Date();
     });
 
     if (overdueTasks.length > 0) {
@@ -72,7 +78,7 @@ export class RAGStatusService {
 
     // Deduct points for pending high-priority tasks
     const pendingCriticalTasks = tasksResult.data.filter(
-      t => t.status === 'pending' && t.priority === 'critical'
+      (t) => t.status === "pending" && (t as any).priority === "critical",
     );
 
     if (pendingCriticalTasks.length > 0) {
@@ -81,10 +87,16 @@ export class RAGStatusService {
     }
 
     // Get assets for this domain
-    const assetsResult = await AssetService.list(organizationId, { compliance_domains: [domain] }, { page: 1, pageSize: 1000 });
+    const assetsResult = await AssetService.list(
+      organizationId,
+      { compliance_domain: domain },
+      { page: 1, pageSize: 1000 },
+    );
 
     // Check for assets requiring inspection
-    const needsInspection = assetsResult.data.filter(a => a.status === 'requires_inspection');
+    const needsInspection = assetsResult.data.filter(
+      (a) => a.status === "requires_inspection",
+    );
 
     if (needsInspection.length > 0) {
       score -= needsInspection.length * 5;
@@ -92,8 +104,14 @@ export class RAGStatusService {
     }
 
     // Get open helpdesk tickets for this domain
-    const ticketsResult = await HelpdeskService.list(organizationId, { status: 'open' }, { page: 1, pageSize: 1000 });
-    const domainTickets = ticketsResult.data.filter(t => t.category === domain);
+    const ticketsResult = await HelpdeskService.list(
+      organizationId,
+      { status: "open" },
+      { page: 1, pageSize: 1000 },
+    );
+    const domainTickets = ticketsResult.data.filter(
+      (t) => t.category === domain,
+    );
 
     if (domainTickets.length > 5) {
       score -= (domainTickets.length - 5) * 2;
@@ -106,11 +124,11 @@ export class RAGStatusService {
     // Determine status based on score
     let status: RAGStatus;
     if (score >= 85) {
-      status = 'green';
+      status = "green";
     } else if (score >= 60) {
-      status = 'amber';
+      status = "amber";
     } else {
-      status = 'red';
+      status = "red";
     }
 
     return {
@@ -125,19 +143,23 @@ export class RAGStatusService {
   /**
    * Calculate the overall RAG status for an organization
    */
-  static async calculateOverallStatus(organizationId: string): Promise<RAGReport> {
+  static async calculateOverallStatus(
+    organizationId: string,
+  ): Promise<RAGReport> {
     const domains: ComplianceDomain[] = [
-      'legionella',
-      'fire',
-      'asbestos',
-      'electrical',
-      'gas',
-      'water',
-      'mechanical',
+      "legionella",
+      "fire",
+      "asbestos",
+      "electrical",
+      "gas",
+      "water",
+      "mechanical",
     ];
 
     const domainStatuses = await Promise.all(
-      domains.map(domain => this.calculateDomainStatus(organizationId, domain))
+      domains.map((domain) =>
+        this.calculateDomainStatus(organizationId, domain),
+      ),
     );
 
     // Calculate overall score (average of all domains)
@@ -147,18 +169,18 @@ export class RAGStatusService {
     // Determine overall status
     let overall: RAGStatus;
     if (overallScore >= 85) {
-      overall = 'green';
+      overall = "green";
     } else if (overallScore >= 60) {
-      overall = 'amber';
+      overall = "amber";
     } else {
-      overall = 'red';
+      overall = "red";
     }
 
     const summary = {
       totalDomains: domainStatuses.length,
-      redDomains: domainStatuses.filter(d => d.status === 'red').length,
-      amberDomains: domainStatuses.filter(d => d.status === 'amber').length,
-      greenDomains: domainStatuses.filter(d => d.status === 'green').length,
+      redDomains: domainStatuses.filter((d) => d.status === "red").length,
+      amberDomains: domainStatuses.filter((d) => d.status === "amber").length,
+      greenDomains: domainStatuses.filter((d) => d.status === "green").length,
     };
 
     return {
@@ -183,7 +205,7 @@ export class RAGStatusService {
     return {
       overall: fullReport.overall,
       score: fullReport.overallScore,
-      domains: fullReport.domains.map(d => ({
+      domains: fullReport.domains.map((d) => ({
         name: d.domain,
         status: d.status,
       })),
@@ -193,19 +215,24 @@ export class RAGStatusService {
   /**
    * Check if a domain requires attention
    */
-  static async requiresAttention(organizationId: string, domain: ComplianceDomain): Promise<boolean> {
+  static async requiresAttention(
+    organizationId: string,
+    domain: ComplianceDomain,
+  ): Promise<boolean> {
     const status = await this.calculateDomainStatus(organizationId, domain);
-    return status.status !== 'green';
+    return status.status !== "green";
   }
 
   /**
    * Get all domains that require attention
    */
-  static async getDomainsRequiringAttention(organizationId: string): Promise<ComplianceDomain[]> {
+  static async getDomainsRequiringAttention(
+    organizationId: string,
+  ): Promise<ComplianceDomain[]> {
     const report = await this.calculateOverallStatus(organizationId);
 
     return report.domains
-      .filter(d => d.status !== 'green')
-      .map(d => d.domain);
+      .filter((d) => d.status !== "green")
+      .map((d) => d.domain);
   }
 }

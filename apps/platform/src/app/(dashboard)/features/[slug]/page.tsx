@@ -3,6 +3,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import Navbar from "@/components/website/Navbar";
 import Footer from "@/components/website/Footer";
 

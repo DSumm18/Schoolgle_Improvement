@@ -6,9 +6,10 @@ import { createServiceRoleClient } from "@/lib/supabase-server";
  * Get a single concern with its chronology and referrals
  */
 export const GET = protectedRoute(
-  async (auth, request, { params }: { params: Promise<{ id: string }> }) => {
+  async (auth, request) => {
     const { organizationId } = auth;
-    const { id } = await params;
+    const segments = request.nextUrl.pathname.split("/");
+    const id = segments[segments.indexOf("concerns") + 1];
     const supabase = createServiceRoleClient();
 
     // Fetch concern
@@ -54,9 +55,10 @@ export const GET = protectedRoute(
  * Auto-creates chronology entry on status change
  */
 export const PUT = protectedRoute(
-  async (auth, request, { params }: { params: Promise<{ id: string }> }) => {
+  async (auth, request) => {
     const { organizationId, userId } = auth;
-    const { id } = await params;
+    const segments = request.nextUrl.pathname.split("/");
+    const id = segments[segments.indexOf("concerns") + 1];
     const body = await request.json();
     const supabase = createServiceRoleClient();
 
