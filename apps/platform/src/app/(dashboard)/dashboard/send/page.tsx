@@ -3,6 +3,7 @@
 import React, { useState, useCallback, useMemo } from "react";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetchers";
+import { useAuth } from "@/context/SupabaseAuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Heart,
@@ -368,32 +369,56 @@ function getPupilLabel(pupil: SENPupil): string {
 // ─── Data Fetching Hook ──────────────────────────────────────────────
 
 function useSENDData() {
+  const { organizationId } = useAuth();
+  const orgId = organizationId || "";
   const swrOpts = { revalidateOnFocus: false };
   const {
     data: statsRes,
     error: statsErr,
     mutate: mutateStats,
-  } = useSWR("/api/send/dashboard", fetcher, swrOpts);
+  } = useSWR(
+    orgId ? `/api/send/dashboard?organizationId=${orgId}` : null,
+    fetcher,
+    swrOpts,
+  );
   const {
     data: registerRes,
     error: registerErr,
     mutate: mutateRegister,
-  } = useSWR("/api/send/register", fetcher, swrOpts);
+  } = useSWR(
+    orgId ? `/api/send/register?organizationId=${orgId}` : null,
+    fetcher,
+    swrOpts,
+  );
   const {
     data: cyclesRes,
     error: cyclesErr,
     mutate: mutateCycles,
-  } = useSWR("/api/send/graduated-approach", fetcher, swrOpts);
+  } = useSWR(
+    orgId ? `/api/send/graduated-approach?organizationId=${orgId}` : null,
+    fetcher,
+    swrOpts,
+  );
   const {
     data: provisionsRes,
     error: provisionsErr,
     mutate: mutateProvisions,
-  } = useSWR("/api/send/provision-map?active=true", fetcher, swrOpts);
+  } = useSWR(
+    orgId
+      ? `/api/send/provision-map?active=true&organizationId=${orgId}`
+      : null,
+    fetcher,
+    swrOpts,
+  );
   const {
     data: referralsRes,
     error: referralsErr,
     mutate: mutateReferrals,
-  } = useSWR("/api/send/referrals", fetcher, swrOpts);
+  } = useSWR(
+    orgId ? `/api/send/referrals?organizationId=${orgId}` : null,
+    fetcher,
+    swrOpts,
+  );
 
   const anyError =
     statsErr || registerErr || cyclesErr || provisionsErr || referralsErr;

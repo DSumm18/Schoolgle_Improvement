@@ -801,6 +801,7 @@ function AddInterventionModal({
 
 export default function PupilPremiumPage() {
   const { organization } = useAuth();
+  const orgId = organization?.id || "";
   const [activeSection, setActiveSection] = useState<string>("overview");
   const [showAddModal, setShowAddModal] = useState(false);
   const [expandedIntervention, setExpandedIntervention] = useState<
@@ -812,7 +813,7 @@ export default function PupilPremiumPage() {
 
   const swrOpts = { revalidateOnFocus: false };
   const { data: dashboardData, error: dashErr } = useSWR<DashboardData>(
-    "/api/pupil-premium/dashboard",
+    orgId ? `/api/pupil-premium/dashboard?organizationId=${orgId}` : null,
     fetcher,
     swrOpts,
   );
@@ -820,7 +821,11 @@ export default function PupilPremiumPage() {
     data: stratData,
     error: stratErr,
     mutate: mutateStrategies,
-  } = useSWR("/api/pupil-premium/strategies", fetcher, swrOpts);
+  } = useSWR(
+    orgId ? `/api/pupil-premium/strategies?organizationId=${orgId}` : null,
+    fetcher,
+    swrOpts,
+  );
 
   const currentStrategy = (stratData?.strategies || [])[0] || null;
   const strategyId = currentStrategy?.id;

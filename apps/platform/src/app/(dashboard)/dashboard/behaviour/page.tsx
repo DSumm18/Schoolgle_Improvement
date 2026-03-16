@@ -298,7 +298,7 @@ export default function BehaviourPage() {
     data: exclusionsData,
     error: exclusionsError,
     mutate: mutateExclusions,
-  } = useSWR(orgId ? "/api/behaviour/exclusions" : null, fetcher, swrOpts);
+  } = useSWR(orgId ? `/api/behaviour/exclusions?organizationId=${orgId}` : null, fetcher, swrOpts);
   const {
     data: patternsData,
     error: patternsError,
