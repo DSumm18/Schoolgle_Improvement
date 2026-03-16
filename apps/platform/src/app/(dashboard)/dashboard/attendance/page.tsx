@@ -1769,7 +1769,9 @@ export default function AttendanceDashboardPage() {
   const [activeTab, setActiveTab] = useState<TabId>("overview");
   const { data: dashboardData, isLoading: loadingDashboard } =
     useSWR<DashboardData>(
-      organizationId ? "/api/attendance/dashboard" : null,
+      organizationId
+        ? `/api/attendance/dashboard?organizationId=${organizationId}`
+        : null,
       fetcher,
       { revalidateOnFocus: false },
     );
