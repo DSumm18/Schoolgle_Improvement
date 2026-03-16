@@ -21,6 +21,10 @@ import {
   type Mitigation,
 } from "@/lib/risk-engine";
 import { NotificationService } from "@/lib/notification-service";
+import {
+  getAllStatutoryChecks,
+  type StatutoryCheck,
+} from "@/lib/estates-compliance/statutory-checks";
 
 // ---------------------------------------------------------------------------
 // Service-role Supabase client (bypasses RLS)
@@ -48,6 +52,8 @@ export interface OverdueTaskRow {
   /** Which source module this comes from — "estates" | "compliance" */
   _source_module: string;
   _source_table: string;
+  /** Task type ID that maps to a statutory check definition */
+  task_type?: string;
 }
 
 export interface IncidentParams {
@@ -84,10 +90,19 @@ export async function checkAndCreateRisksFromOverdueTasks(
   let created = 0;
   let updated = 0;
 
+  // Build a lookup map from statutory check ID → risk_level
+  const statutoryChecks = getAllStatutoryChecks();
+  const checkSeverityMap = new Map<string, "low" | "medium" | "high" | "critical">();
+  for (const check of statutoryChecks) {
+    if (check.risk_level) {
+      checkSeverityMap.set(check.id, check.risk_level);
+    }
+  }
+
   // --- Fetch overdue statutory estates tasks ---
   const { data: estatesTasks, error: estatesErr } = await supabase
     .from("estates_compliance_tasks")
-    .select("id, title, due_date, priority, is_statutory, organization_id")
+    .select("id, title, due_date, priority, is_statutory, organization_id, task_type")
     .eq("organization_id", organizationId)
     .neq("status", "completed")
     .eq("is_statutory", true)
@@ -174,6 +189,9 @@ export async function checkAndCreateRisksFromOverdueTasks(
       overdue_days: overdueDays,
       has_safeguarding_impact: task.has_safeguarding_impact,
       title: task.title,
+      check_severity: task.task_type
+        ? checkSeverityMap.get(task.task_type)
+        : undefined,
     });
 
     const existingRisk = riskByTaskId.get(task.id);
