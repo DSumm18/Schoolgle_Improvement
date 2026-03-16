@@ -14,6 +14,7 @@ import {
   Loader2,
   Check,
   AlertCircle,
+  Type,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { motion } from "framer-motion";
+import {
+  extractColorsFromImage,
+  getContrastColor,
+} from "@/lib/color-extractor";
 
 interface BrandingSettings {
   logo_url?: string;
@@ -29,11 +34,140 @@ interface BrandingSettings {
   email?: string;
   website?: string;
   primary_color?: string;
+  secondary_color?: string;
+  accent_color?: string;
+  font_family?: string;
   footer_text?: string;
 }
 
+/** Curated Google Fonts suitable for school documents and dashboards */
+const FONT_OPTIONS = [
+  {
+    value: "",
+    label: "System Default",
+    preview: "ui-sans-serif, system-ui, sans-serif",
+    category: "default",
+  },
+  {
+    value: "Inter",
+    label: "Inter",
+    preview: "'Inter', sans-serif",
+    category: "modern",
+  },
+  {
+    value: "Open Sans",
+    label: "Open Sans",
+    preview: "'Open Sans', sans-serif",
+    category: "modern",
+  },
+  {
+    value: "Roboto",
+    label: "Roboto",
+    preview: "'Roboto', sans-serif",
+    category: "modern",
+  },
+  {
+    value: "Lato",
+    label: "Lato",
+    preview: "'Lato', sans-serif",
+    category: "modern",
+  },
+  {
+    value: "Poppins",
+    label: "Poppins",
+    preview: "'Poppins', sans-serif",
+    category: "modern",
+  },
+  {
+    value: "Nunito",
+    label: "Nunito",
+    preview: "'Nunito', sans-serif",
+    category: "friendly",
+  },
+  {
+    value: "Quicksand",
+    label: "Quicksand",
+    preview: "'Quicksand', sans-serif",
+    category: "friendly",
+  },
+  {
+    value: "Mulish",
+    label: "Mulish",
+    preview: "'Mulish', sans-serif",
+    category: "friendly",
+  },
+  {
+    value: "Source Sans 3",
+    label: "Source Sans 3",
+    preview: "'Source Sans 3', sans-serif",
+    category: "professional",
+  },
+  {
+    value: "Merriweather Sans",
+    label: "Merriweather Sans",
+    preview: "'Merriweather Sans', sans-serif",
+    category: "professional",
+  },
+  {
+    value: "Libre Franklin",
+    label: "Libre Franklin",
+    preview: "'Libre Franklin', sans-serif",
+    category: "professional",
+  },
+  {
+    value: "Playfair Display",
+    label: "Playfair Display",
+    preview: "'Playfair Display', serif",
+    category: "traditional",
+  },
+  {
+    value: "Merriweather",
+    label: "Merriweather",
+    preview: "'Merriweather', serif",
+    category: "traditional",
+  },
+  {
+    value: "Lora",
+    label: "Lora",
+    preview: "'Lora', serif",
+    category: "traditional",
+  },
+  {
+    value: "Crimson Text",
+    label: "Crimson Text",
+    preview: "'Crimson Text', serif",
+    category: "traditional",
+  },
+  {
+    value: "Lexend",
+    label: "Lexend",
+    preview: "'Lexend', sans-serif",
+    category: "accessibility",
+  },
+  {
+    value: "Atkinson Hyperlegible",
+    label: "Atkinson Hyperlegible",
+    preview: "'Atkinson Hyperlegible', sans-serif",
+    category: "accessibility",
+  },
+] as const;
+
+const FONT_CATEGORIES: Record<string, string> = {
+  default: "Default",
+  modern: "Modern & Clean",
+  friendly: "Friendly & Rounded",
+  professional: "Professional",
+  traditional: "Traditional & Serif",
+  accessibility: "Accessibility-Focused",
+};
+
 export default function BrandingSettingsPage() {
-  const { user, organization, loading: authLoading } = useAuth();
+  const {
+    user,
+    organization,
+    organizationId,
+    loading: authLoading,
+  } = useAuth();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -43,9 +177,14 @@ export default function BrandingSettingsPage() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
-
+  const [extractedColors, setExtractedColors] = useState<
+    { hex: string; percentage: number }[]
+  >([]);
+  const [extractingColors, setExtractingColors] = useState(false);
   const { data, isLoading, mutate } = useSWR(
-    user ? "/api/settings/branding" : null,
+    user && organizationId
+      ? `/api/settings/branding?organizationId=${organizationId}`
+      : null,
     fetcher,
   );
 
@@ -58,11 +197,48 @@ export default function BrandingSettingsPage() {
         email: data.settings.email || "",
         website: data.settings.website || "",
         primary_color: data.settings.primary_color || "#1e40af",
+        secondary_color: data.settings.secondary_color || "",
+        accent_color: data.settings.accent_color || "",
+        font_family: data.settings.font_family || "",
         footer_text: data.settings.footer_text || "",
         logo_url: data.settings.logo_url || "",
       });
+      // Extract colors from existing logo
+      if (data.settings.logo_url) {
+        extractColorsFromLogo(data.settings.logo_url);
+      }
     }
   }, [data]);
+
+  const extractColorsFromLogo = async (url: string, autoAssign = false) => {
+    setExtractingColors(true);
+    try {
+      const colors = await extractColorsFromImage(url);
+      setExtractedColors(colors);
+      // Auto-assign first 3 extracted colors to empty color fields
+      if (autoAssign && colors.length > 0) {
+        setForm((prev) => {
+          const updated = { ...prev };
+          if (!updated.primary_color && colors[0]) {
+            updated.primary_color = colors[0].hex;
+          }
+          if (!updated.secondary_color && colors[1]) {
+            updated.secondary_color = colors[1].hex;
+          }
+          if (!updated.accent_color && colors[2]) {
+            updated.accent_color = colors[2].hex;
+          }
+          return updated;
+        });
+        setSaved(false);
+      }
+    } catch (err) {
+      console.warn("Could not extract colors from logo:", err);
+      setExtractedColors([]);
+    } finally {
+      setExtractingColors(false);
+    }
+  };
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -80,14 +256,17 @@ export default function BrandingSettingsPage() {
     setError(null);
     try {
       const token = await getSessionToken();
-      const res = await fetch("/api/settings/branding", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      const res = await fetch(
+        `/api/settings/branding?organizationId=${organizationId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ ...form, organizationId }),
         },
-        body: JSON.stringify(form),
-      });
+      );
 
       if (!res.ok) {
         const info = await res.json().catch(() => ({}));
@@ -140,8 +319,14 @@ export default function BrandingSettingsPage() {
         }
 
         const result = await res.json();
-        setForm((prev) => ({ ...prev, logo_url: result.logo_url }));
+        const logoUrl = result.logo_url;
+        setForm((prev) => ({ ...prev, logo_url: logoUrl }));
         await mutate();
+
+        // Auto-extract colors from uploaded logo and assign to empty fields
+        if (logoUrl) {
+          await extractColorsFromLogo(logoUrl, true);
+        }
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -410,35 +595,275 @@ export default function BrandingSettingsPage() {
           <CardHeader>
             <CardTitle className="text-base">Document Branding</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Primary colour */}
+          <CardContent className="space-y-6">
+            {/* Extracted palette from logo */}
+            {extractedColors.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-sm">Colours from Your Logo</Label>
+                <p className="text-xs text-muted-foreground">
+                  Click a colour to set it as primary, secondary, or accent.
+                  These are used across documents, reports, and charts.
+                </p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {extractedColors.map((c, i) => (
+                    <div key={i} className="flex flex-col items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          // Smart assign: first click = primary, second = secondary, third = accent
+                          if (
+                            !form.primary_color ||
+                            form.primary_color === "#1e40af"
+                          ) {
+                            handleChange("primary_color", c.hex);
+                          } else if (!form.secondary_color) {
+                            handleChange("secondary_color", c.hex);
+                          } else if (!form.accent_color) {
+                            handleChange("accent_color", c.hex);
+                          } else {
+                            handleChange("primary_color", c.hex);
+                          }
+                        }}
+                        className={`w-12 h-12 rounded-lg border-2 transition-all hover:scale-110 ${
+                          c.hex === form.primary_color
+                            ? "border-blue-500 ring-2 ring-blue-200"
+                            : c.hex === form.secondary_color
+                              ? "border-purple-500 ring-2 ring-purple-200"
+                              : c.hex === form.accent_color
+                                ? "border-amber-500 ring-2 ring-amber-200"
+                                : "border-slate-200 dark:border-slate-700"
+                        }`}
+                        style={{ backgroundColor: c.hex }}
+                        title={`${c.hex} (${Math.round(c.percentage)}%)`}
+                      >
+                        <span
+                          className="text-[7px] font-bold"
+                          style={{ color: getContrastColor(c.hex) }}
+                        >
+                          {c.hex === form.primary_color
+                            ? "P"
+                            : c.hex === form.secondary_color
+                              ? "S"
+                              : c.hex === form.accent_color
+                                ? "A"
+                                : ""}
+                        </span>
+                      </button>
+                      <span className="text-[8px] text-muted-foreground font-mono">
+                        {c.hex}
+                      </span>
+                    </div>
+                  ))}
+                  {extractingColors && (
+                    <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Colour assignments */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {/* Primary */}
+              <div className="space-y-1.5">
+                <Label className="text-sm">Primary</Label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={form.primary_color || "#1e40af"}
+                    onChange={(e) =>
+                      handleChange("primary_color", e.target.value)
+                    }
+                    className="w-9 h-9 rounded-lg border border-slate-200 dark:border-slate-700 cursor-pointer p-0.5"
+                  />
+                  <Input
+                    value={form.primary_color || "#1e40af"}
+                    onChange={(e) =>
+                      handleChange("primary_color", e.target.value)
+                    }
+                    placeholder="#1e40af"
+                    className="font-mono text-xs flex-1"
+                  />
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  Headings, borders, document accents
+                </p>
+              </div>
+              {/* Secondary */}
+              <div className="space-y-1.5">
+                <Label className="text-sm">Secondary</Label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={
+                      form.secondary_color || form.primary_color || "#1e40af"
+                    }
+                    onChange={(e) =>
+                      handleChange("secondary_color", e.target.value)
+                    }
+                    className="w-9 h-9 rounded-lg border border-slate-200 dark:border-slate-700 cursor-pointer p-0.5"
+                  />
+                  <Input
+                    value={form.secondary_color || ""}
+                    onChange={(e) =>
+                      handleChange("secondary_color", e.target.value)
+                    }
+                    placeholder="Auto"
+                    className="font-mono text-xs flex-1"
+                  />
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  Charts, graphs, reports
+                </p>
+              </div>
+              {/* Accent */}
+              <div className="space-y-1.5">
+                <Label className="text-sm">Accent</Label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={form.accent_color || form.primary_color || "#1e40af"}
+                    onChange={(e) =>
+                      handleChange("accent_color", e.target.value)
+                    }
+                    className="w-9 h-9 rounded-lg border border-slate-200 dark:border-slate-700 cursor-pointer p-0.5"
+                  />
+                  <Input
+                    value={form.accent_color || ""}
+                    onChange={(e) =>
+                      handleChange("accent_color", e.target.value)
+                    }
+                    placeholder="Auto"
+                    className="font-mono text-xs flex-1"
+                  />
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  Highlights, badges, calls to action
+                </p>
+              </div>
+            </div>
+
+            {/* Colour preview bar */}
             <div className="space-y-1.5">
-              <Label className="text-sm">Primary Brand Colour</Label>
-              <div className="flex items-center gap-3">
-                <input
-                  type="color"
-                  value={form.primary_color || "#1e40af"}
-                  onChange={(e) =>
-                    handleChange("primary_color", e.target.value)
-                  }
-                  className="w-10 h-10 rounded-lg border border-slate-200 dark:border-slate-700 cursor-pointer p-0.5"
-                />
-                <Input
-                  value={form.primary_color || "#1e40af"}
-                  onChange={(e) =>
-                    handleChange("primary_color", e.target.value)
-                  }
-                  placeholder="#1e40af"
-                  className="w-32 font-mono text-sm"
-                />
+              <Label className="text-sm">Preview</Label>
+              <div className="flex h-8 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700">
                 <div
-                  className="h-10 flex-1 rounded-lg border"
+                  className="flex-1"
                   style={{ backgroundColor: form.primary_color || "#1e40af" }}
                 />
+                <div
+                  className="flex-1"
+                  style={{
+                    backgroundColor:
+                      form.secondary_color || form.primary_color || "#1e40af",
+                    opacity: 0.75,
+                  }}
+                />
+                <div
+                  className="flex-1"
+                  style={{
+                    backgroundColor:
+                      form.accent_color || form.primary_color || "#1e40af",
+                    opacity: 0.5,
+                  }}
+                />
               </div>
-              <p className="text-xs text-muted-foreground">
-                Used for headings and accents in generated documents.
-              </p>
+            </div>
+
+            {/* Font picker */}
+            <div className="space-y-3">
+              <div>
+                <Label className="text-sm flex items-center gap-1.5">
+                  <Type className="w-3.5 h-3.5" />
+                  School Font
+                </Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Applied across the dashboard, documents, reports, and letters.
+                </p>
+              </div>
+              {/* Load ALL Google Fonts so previews render in the correct typeface */}
+              {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+              <link
+                rel="stylesheet"
+                href={`https://fonts.googleapis.com/css2?${FONT_OPTIONS.filter(
+                  (f) => f.value,
+                )
+                  .map(
+                    (f) =>
+                      `family=${encodeURIComponent(f.value)}:wght@400;600;700`,
+                  )
+                  .join("&")}&display=swap`}
+              />
+              <div className="grid grid-cols-1 gap-1.5 max-h-[280px] overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-700 p-2">
+                {Object.entries(FONT_CATEGORIES).map(([catKey, catLabel]) => {
+                  const fonts = FONT_OPTIONS.filter(
+                    (f) => f.category === catKey,
+                  );
+                  if (fonts.length === 0) return null;
+                  return (
+                    <div key={catKey}>
+                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold px-2 pt-1.5 pb-0.5">
+                        {catLabel}
+                      </p>
+                      {fonts.map((font) => (
+                        <button
+                          key={font.value}
+                          type="button"
+                          onClick={() =>
+                            handleChange("font_family", font.value)
+                          }
+                          className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
+                            (form.font_family || "") === font.value
+                              ? "bg-primary/10 text-primary font-medium"
+                              : "hover:bg-slate-50 dark:hover:bg-slate-800 text-foreground"
+                          }`}
+                          style={{
+                            fontFamily: font.value
+                              ? font.preview
+                              : "ui-sans-serif, system-ui, sans-serif",
+                          }}
+                        >
+                          <span className="text-sm">{font.label}</span>
+                          <span
+                            className="block text-xs text-muted-foreground mt-0.5"
+                            style={{
+                              fontFamily: font.value
+                                ? font.preview
+                                : "ui-sans-serif, system-ui, sans-serif",
+                            }}
+                          >
+                            The quick brown fox jumps over the lazy dog
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+              {form.font_family && (
+                <div
+                  className="rounded-lg border border-slate-200 dark:border-slate-700 p-4 space-y-1"
+                  style={{
+                    fontFamily: FONT_OPTIONS.find(
+                      (f) => f.value === form.font_family,
+                    )?.preview,
+                  }}
+                >
+                  <p className="text-sm font-bold">
+                    {schoolName} &mdash; {form.font_family}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    This is how body text will appear across your documents,
+                    reports, and dashboard.
+                  </p>
+                  <p className="text-base font-semibold mt-2">
+                    Heading Example
+                  </p>
+                  <p className="text-sm">
+                    Regular paragraph text showing how content will read in
+                    letters, policies, and generated materials.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Footer text */}

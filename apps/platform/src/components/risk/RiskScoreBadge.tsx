@@ -13,17 +13,18 @@ const sizeClasses = {
   lg: "w-12 h-12 text-base",
 };
 
+// Traditional risk colours — same in light and dark mode for universal recognition
 function getBandStyles(score: number): string {
   const band = getRiskBand(score);
   switch (band) {
     case "low":
-      return "bg-emerald-100 text-emerald-800 ring-emerald-300 dark:bg-emerald-900/40 dark:text-emerald-300 dark:ring-emerald-700";
+      return "bg-[#4caf50] text-white ring-[#388e3c]";
     case "medium":
-      return "bg-yellow-100 text-yellow-800 ring-yellow-300 dark:bg-yellow-900/40 dark:text-yellow-300 dark:ring-yellow-700";
+      return "bg-[#fbc02d] text-[#3e2723] ring-[#f9a825]";
     case "high":
-      return "bg-orange-100 text-orange-800 ring-orange-300 dark:bg-orange-900/40 dark:text-orange-300 dark:ring-orange-700";
+      return "bg-[#f57c00] text-white ring-[#e65100]";
     case "critical":
-      return "bg-rose-100 text-rose-800 ring-rose-300 dark:bg-rose-900/40 dark:text-rose-300 dark:ring-rose-700";
+      return "bg-[#d32f2f] text-white ring-[#b71c1c]";
   }
 }
 

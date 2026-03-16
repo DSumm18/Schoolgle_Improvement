@@ -297,7 +297,7 @@ export default function UnifiedTaskList({
                   placeholder="Search tasks..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  className="w-full pl-10 pr-4 py-2 bg-card border border-border rounded-xl text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
                 />
               </div>
 
@@ -377,31 +377,6 @@ export default function UnifiedTaskList({
             </div>
 
             <div className="flex items-center gap-2">
-              <div className="bg-slate-100 dark:bg-slate-800 p-1 rounded-lg flex">
-                <button
-                  onClick={() => setViewMode("list")}
-                  className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-                    viewMode === "list"
-                      ? "bg-white text-blue-600 shadow-sm"
-                      : "text-slate-500 hover:text-slate-700"
-                  }`}
-                >
-                  <List className="w-4 h-4 inline mr-1" />
-                  List
-                </button>
-                <button
-                  onClick={() => setViewMode("kanban")}
-                  className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-                    viewMode === "kanban"
-                      ? "bg-white text-blue-600 shadow-sm"
-                      : "text-slate-500 hover:text-slate-700"
-                  }`}
-                >
-                  <LayoutGrid className="w-4 h-4 inline mr-1" />
-                  Kanban
-                </button>
-              </div>
-
               <Button
                 onClick={() => {
                   setSelectedTask(null);
@@ -558,7 +533,7 @@ function TaskListView({
       <CardContent className="p-0">
         <table className="w-full">
           <thead>
-            <tr className="border-b bg-slate-50/50 dark:bg-slate-800/50">
+            <tr className="border-b bg-muted/50">
               <th className="text-left py-3 px-4 text-xs font-black uppercase text-slate-500">
                 Task
               </th>
@@ -790,7 +765,7 @@ function KanbanCard({
       layout
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white dark:bg-slate-900 rounded-lg p-3 shadow-sm border hover:shadow-md transition-shadow cursor-pointer"
+      className="bg-card rounded-lg p-3 shadow-sm border border-border hover:shadow-md transition-shadow cursor-pointer"
       onClick={() => onEdit(task)}
     >
       <div className="flex items-start justify-between gap-2 mb-2">

@@ -315,10 +315,10 @@ function BudgetUploadView({
           <Sparkles size={14} />
           Budget Decision Engine
         </div>
-        <h1 className="text-4xl lg:text-5xl font-black text-slate-900 dark:text-white tracking-tight">
+        <h1 className="text-4xl lg:text-5xl font-black text-foreground tracking-tight">
           Upload your budget report
         </h1>
-        <p className="text-lg text-slate-500 dark:text-slate-400 max-w-xl mx-auto">
+        <p className="text-lg text-muted-foreground max-w-xl mx-auto">
           Drop in your school's budget CSV and the AI engine analyses spend,
           flags risks, generates decision cards, and suggests savings — all
           automatically.
@@ -332,16 +332,14 @@ function BudgetUploadView({
         transition={{ delay: 0.1 }}
         className="flex items-center justify-center gap-3"
       >
-        <span className="text-sm text-slate-500 dark:text-slate-400">
-          Budget cycle:
-        </span>
-        <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+        <span className="text-sm text-muted-foreground">Budget cycle:</span>
+        <div className="flex bg-muted p-1 rounded-xl">
           <button
             onClick={() => setBudgetCycle("la")}
             className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${
               budgetCycle === "la"
-                ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
-                : "text-slate-500"
+                ? "bg-card text-foreground shadow-sm"
+                : "text-muted-foreground"
             }`}
           >
             LA (April - March)
@@ -350,8 +348,8 @@ function BudgetUploadView({
             onClick={() => setBudgetCycle("academy")}
             className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${
               budgetCycle === "academy"
-                ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
-                : "text-slate-500"
+                ? "bg-card text-foreground shadow-sm"
+                : "text-muted-foreground"
             }`}
           >
             Academy (Sept - Aug)
@@ -451,7 +449,7 @@ function BudgetUploadView({
       >
         <button
           onClick={handleDownloadTemplate}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-border text-sm font-semibold text-foreground hover:bg-muted transition-colors"
         >
           <Download size={16} />
           Download CSV template
@@ -470,9 +468,9 @@ function BudgetUploadView({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.3 }}
-        className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-6"
+        className="rounded-2xl border border-border bg-card p-6"
       >
-        <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-4">
+        <h3 className="font-bold text-foreground flex items-center gap-2 mb-4">
           <Info size={16} className="text-amber-500" />
           What happens when you upload
         </h3>
@@ -505,7 +503,7 @@ function BudgetUploadView({
           ].map((item, i) => (
             <div
               key={i}
-              className="flex items-start gap-2.5 text-slate-600 dark:text-slate-400"
+              className="flex items-start gap-2.5 text-muted-foreground"
             >
               <item.icon size={16} className="text-amber-500 mt-0.5 shrink-0" />
               <span>{item.text}</span>

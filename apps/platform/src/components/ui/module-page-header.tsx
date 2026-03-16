@@ -133,11 +133,11 @@ export function ModulePageHeader({
           >
             {label}
           </div>
-          <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+          <h1 className="text-3xl md:text-4xl font-black text-foreground tracking-tight">
             {title}
           </h1>
           {description && (
-            <p className="text-slate-500 dark:text-slate-400 mt-2 max-w-2xl leading-relaxed">
+            <p className="text-muted-foreground mt-2 max-w-2xl leading-relaxed">
               {description}
             </p>
           )}
@@ -185,7 +185,7 @@ export function ModuleAppCard({
       whileHover={{ y: -2 }}
       className="block group"
     >
-      <div className="h-full p-6 rounded-2xl bg-white dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50 shadow-sm hover:shadow-lg transition-all duration-200">
+      <div className="h-full p-6 rounded-2xl bg-card border border-border shadow-sm hover:shadow-lg transition-all duration-200">
         <div className="flex items-start justify-between mb-4">
           <div
             className={`p-2.5 ${colors.iconBg} rounded-xl group-hover:scale-105 transition-transform duration-200`}
@@ -201,17 +201,17 @@ export function ModuleAppCard({
                       status === "Preview" ||
                       status === "Pilot"
                     ? "bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400"
-                    : "bg-slate-50 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                    : "bg-muted text-muted-foreground"
               }`}
             >
               {status}
             </span>
           )}
         </div>
-        <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1.5 group-hover:text-slate-700 dark:group-hover:text-slate-200 transition-colors">
+        <h3 className="text-base font-bold text-foreground mb-1.5 group-hover:text-foreground/80 transition-colors">
           {title}
         </h3>
-        <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+        <p className="text-sm text-muted-foreground leading-relaxed">
           {description}
         </p>
       </div>
@@ -243,9 +243,7 @@ export function ModuleFeatureBanner({
     >
       <div className="flex items-start gap-4">
         {Icon && (
-          <div
-            className={`p-2.5 rounded-xl bg-white dark:bg-slate-800 shadow-sm`}
-          >
+          <div className={`p-2.5 rounded-xl bg-card shadow-sm`}>
             <Icon className={`w-5 h-5 ${colors.iconText}`} />
           </div>
         )}
@@ -253,7 +251,7 @@ export function ModuleFeatureBanner({
           <h3 className={`font-bold text-base ${colors.accentText}`}>
             {title}
           </h3>
-          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
+          <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
             {description}
           </p>
         </div>

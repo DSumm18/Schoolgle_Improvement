@@ -8,6 +8,7 @@
 import { NextRequest } from "next/server";
 import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
+import { handleStatusChangeRisk } from "@/lib/estates-compliance/services/helpdesk-risk-service";
 
 export const GET = protectedRoute(async (auth, request) => {
   const { organizationId } = auth;
@@ -72,6 +73,7 @@ export const PATCH = protectedRoute(async (auth, request) => {
     "status",
     "priority",
     "assigned_to",
+    "assigned_contractor_id",
     "resolution",
     "category",
     "attachment_urls",
@@ -129,6 +131,38 @@ export const PATCH = protectedRoute(async (auth, request) => {
       to_value: body.priority,
       description: `Priority changed from ${current.priority} to ${body.priority}`,
       actor_id: userId,
+    });
+  }
+
+  // Log contractor assignment
+  if (
+    body.assigned_contractor_id &&
+    body.assigned_contractor_id !== current.assigned_contractor_id
+  ) {
+    const { data: contractor } = await supabase
+      .from("estates_contractors")
+      .select("company_name")
+      .eq("id", body.assigned_contractor_id)
+      .maybeSingle();
+
+    await supabase.from("estates_helpdesk_activity").insert({
+      ticket_id: id,
+      activity_type: "contractor_assigned",
+      to_value: contractor?.company_name || body.assigned_contractor_id,
+      description: `Contractor assigned: ${contractor?.company_name || "Unknown"}`,
+      actor_id: userId,
+    });
+  }
+
+  // Wire status changes to risk mitigations (async, don't block response)
+  if (body.status && body.status !== current.status) {
+    handleStatusChangeRisk(
+      id,
+      organizationId,
+      current.status,
+      body.status,
+    ).catch((err) => {
+      console.error("[Helpdesk] Risk mitigation update failed:", err);
     });
   }
 

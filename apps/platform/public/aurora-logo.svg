@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 280" fill="none">
+  <!-- Shield -->
+  <path d="M120 8 L224 56 L224 160 Q224 232 120 268 Q16 232 16 160 L16 56 Z" fill="#0e4f8c"/>
+  <path d="M120 18 L214 62 L214 158 Q214 224 120 258 Q26 224 26 158 L26 62 Z" fill="#1268b3"/>
+
+  <!-- Horizontal band -->
+  <rect x="26" y="130" width="188" height="28" fill="#0e4f8c" opacity="0.6"/>
+
+  <!-- Aurora sunrise rays -->
+  <g opacity="0.85">
+    <path d="M120 145 L120 70" stroke="#fbbf24" stroke-width="3" stroke-linecap="round"/>
+    <path d="M120 145 L80 78" stroke="#fbbf24" stroke-width="2.5" stroke-linecap="round" opacity="0.8"/>
+    <path d="M120 145 L160 78" stroke="#fbbf24" stroke-width="2.5" stroke-linecap="round" opacity="0.8"/>
+    <path d="M120 145 L55 100" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+    <path d="M120 145 L185 100" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+    <path d="M120 145 L42 130" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/>
+    <path d="M120 145 L198 130" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/>
+  </g>
+
+  <!-- Sun -->
+  <circle cx="120" cy="145" r="22" fill="#fbbf24"/>
+  <circle cx="120" cy="145" r="16" fill="#f59e0b"/>
+  <circle cx="120" cy="145" r="8" fill="#fbbf24" opacity="0.6"/>
+
+  <!-- Book (open) -->
+  <g transform="translate(120,200)">
+    <path d="M-32 -8 L0 0 L0 28 L-32 20 Z" fill="white" opacity="0.9"/>
+    <path d="M32 -8 L0 0 L0 28 L32 20 Z" fill="#e2e8f0" opacity="0.9"/>
+    <line x1="-24" y1="2" x2="-4" y2="7" stroke="#0e4f8c" stroke-width="1" opacity="0.4"/>
+    <line x1="-24" y1="7" x2="-4" y2="12" stroke="#0e4f8c" stroke-width="1" opacity="0.4"/>
+    <line x1="-24" y1="12" x2="-4" y2="17" stroke="#0e4f8c" stroke-width="1" opacity="0.4"/>
+    <line x1="4" y1="7" x2="24" y2="2" stroke="#0e4f8c" stroke-width="1" opacity="0.3"/>
+    <line x1="4" y1="12" x2="24" y2="7" stroke="#0e4f8c" stroke-width="1" opacity="0.3"/>
+    <line x1="4" y1="17" x2="24" y2="12" stroke="#0e4f8c" stroke-width="1" opacity="0.3"/>
+  </g>
+
+  <!-- Stars -->
+  <circle cx="60" cy="55" r="3" fill="white" opacity="0.7"/>
+  <circle cx="180" cy="55" r="3" fill="white" opacity="0.7"/>
+  <circle cx="120" cy="38" r="3.5" fill="white" opacity="0.8"/>
+
+  <!-- School name banner -->
+  <text x="120" y="177" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="16" font-weight="bold" fill="white" letter-spacing="3">AURORA</text>
+  <text x="120" y="248" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="10" fill="white" opacity="0.85" letter-spacing="1.5">PRIMARY SCHOOL</text>
+
+  <!-- Motto ribbon -->
+  <text x="120" y="162" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="7" fill="#fbbf24" font-style="italic" letter-spacing="1">Inspiring Bright Futures</text>
+</svg>

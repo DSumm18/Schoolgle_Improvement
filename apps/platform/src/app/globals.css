@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Tailwind v4: use class-based dark mode instead of prefers-color-scheme */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-display:
@@ -56,29 +59,29 @@
 }
 
 :root {
-  --background: #ffffff;
-  --foreground: #020617;
+  --background: #f8fafc;
+  --foreground: #0f172a;
 
   --card: #ffffff;
-  --card-foreground: #020617;
+  --card-foreground: #0f172a;
 
   --popover: #ffffff;
-  --popover-foreground: #020617;
+  --popover-foreground: #0f172a;
 
   --primary: #0ea5e9;
-  --primary-foreground: #f8fafc;
+  --primary-foreground: #ffffff;
 
   --secondary: #f1f5f9;
-  --secondary-foreground: #0f172a;
+  --secondary-foreground: #1e293b;
 
   --muted: #f1f5f9;
   --muted-foreground: #64748b;
 
   --accent: #f1f5f9;
-  --accent-foreground: #0f172a;
+  --accent-foreground: #1e293b;
 
   --destructive: #ef4444;
-  --destructive-foreground: #f8fafc;
+  --destructive-foreground: #ffffff;
 
   --border: #e2e8f0;
   --input: #e2e8f0;
@@ -209,15 +212,7 @@ h6 {
   background: var(--slate-400);
 }
 
-@media (prefers-color-scheme: dark) {
-  ::-webkit-scrollbar-thumb {
-    background: var(--slate-800);
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    background: var(--slate-700);
-  }
-}
+/* Dark scrollbar handled by .dark class below (not media query) */
 
 /* Animated Gradient Background */
 .animated-mesh {
@@ -377,4 +372,68 @@ img {
 
 .dark .sidebar-scroll-container::-webkit-scrollbar-thumb:hover {
   background: var(--slate-600);
+}
+
+/* ─── Accessibility: High Contrast Mode ─── */
+.high-contrast {
+  --border: #334155;
+  --muted-foreground: #475569;
+}
+.high-contrast.dark {
+  --border: #94a3b8;
+  --card: #0a0f1a;
+  --muted-foreground: #cbd5e1;
+  --muted: #0f172a;
+}
+.high-contrast .glass-panel,
+.high-contrast .glass-card {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.high-contrast *:focus-visible {
+  outline-width: 3px;
+}
+
+/* ─── Accessibility: Dyslexia Font ─── */
+@font-face {
+  font-family: "OpenDyslexic";
+  src: url("https://cdn.jsdelivr.net/npm/open-dyslexic@1.0.3/woff/OpenDyslexic-Regular.woff")
+    format("woff");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "OpenDyslexic";
+  src: url("https://cdn.jsdelivr.net/npm/open-dyslexic@1.0.3/woff/OpenDyslexic-Bold.woff")
+    format("woff");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+.dyslexia-font,
+.dyslexia-font * {
+  font-family: "OpenDyslexic", ui-sans-serif, system-ui, sans-serif !important;
+  letter-spacing: 0.05em;
+  word-spacing: 0.1em;
+  line-height: 1.8;
+}
+
+/* ─── Accessibility: Reduced Motion (manual override) ─── */
+.reduce-motion *,
+.reduce-motion *::before,
+.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* ─── Scrollbar theming respects class-based dark mode ─── */
+.dark ::-webkit-scrollbar-thumb {
+  background: var(--slate-800);
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: var(--slate-700);
 }
