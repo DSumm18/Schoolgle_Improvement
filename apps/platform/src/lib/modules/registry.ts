@@ -37,6 +37,14 @@ import {
   Accessibility,
   Brain,
   Globe,
+  Sparkles,
+  Settings,
+  Radio,
+  Megaphone,
+  Monitor,
+  Video,
+  Palette,
+  Siren,
 } from "lucide-react";
 
 export type Role =
@@ -171,6 +179,21 @@ export const MODULES: ModuleDefinition[] = [
     requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
   },
   {
+    id: "communications",
+    name: "Communications",
+    color: "indigo",
+    icon: Radio,
+    description:
+      "School-wide comms hub — notices, video meetings, PA announcements, emergency broadcasts, and classroom displays.",
+    requiredPermissions: [
+      "admin",
+      "headteacher",
+      "slt",
+      "teacher",
+      "caretaker",
+    ],
+  },
+  {
     id: "calendar",
     name: "Calendar",
     color: "violet",
@@ -300,6 +323,16 @@ export const APPS: AppDefinition[] = [
   },
 
   // Teaching & Learning Apps
+  {
+    id: "lesson-studio",
+    moduleId: "teaching-learning",
+    name: "Lesson Studio",
+    route: "/dashboard/teaching-learning/lesson-studio",
+    icon: Sparkles,
+    shortDescription:
+      "AI-powered connected lesson planning that knows your pupils.",
+    requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
+  },
   {
     id: "lesson-planning",
     moduleId: "teaching-learning",
@@ -509,6 +542,17 @@ export const APPS: AppDefinition[] = [
     route: "/dashboard/hr/meetings",
     icon: ClipboardCheck,
     shortDescription: "AI-guided HR meeting management.",
+    requiredPermissions: ["admin", "headteacher", "slt"],
+  },
+
+  {
+    id: "staff-connectors",
+    moduleId: "hr",
+    name: "Staff Connectors",
+    route: "/dashboard/connectors",
+    icon: Settings,
+    shortDescription:
+      "Statutory roles, responsibilities, and compliance tracking.",
     requiredPermissions: ["admin", "headteacher", "slt"],
   },
 
@@ -729,11 +773,22 @@ export const APPS: AppDefinition[] = [
   // Emergency Planning
   {
     id: "emergency-planning",
-    moduleId: "estates",
-    name: "Emergency Planning",
-    route: "/dashboard/emergency",
-    icon: AlertTriangle,
-    shortDescription: "Lockdown/evacuation plans and drill logging.",
+    moduleId: "communications",
+    name: "Emergency Broadcast",
+    route: "/dashboard/emergency-broadcast",
+    icon: Siren,
+    shortDescription:
+      "Zone-aware emergency broadcasts, lockdown, and evacuation alerts.",
+    requiredPermissions: ["admin", "headteacher", "slt", "caretaker"],
+  },
+  {
+    id: "drill-scheduler",
+    moduleId: "communications",
+    name: "Drill Scheduler",
+    route: "/dashboard/emergency-broadcast/drills",
+    icon: Shield,
+    shortDescription:
+      "Schedule drills, log reports, and track statutory compliance.",
     requiredPermissions: ["admin", "headteacher", "slt", "caretaker"],
   },
   // School Meals
@@ -790,6 +845,64 @@ export const APPS: AppDefinition[] = [
     icon: Scale,
     shortDescription: "Incident logging, consequences, and exclusion tracking.",
     requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
+  },
+
+  // Communications Apps
+  {
+    id: "comms-hub",
+    moduleId: "communications",
+    name: "Comms Hub",
+    route: "/dashboard/comms",
+    icon: Radio,
+    shortDescription: "Overview of all school communications in one place.",
+    requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
+  },
+  {
+    id: "school-notices",
+    moduleId: "communications",
+    name: "Notices",
+    route: "/dashboard/notices",
+    icon: Megaphone,
+    shortDescription: "School notices, announcements, and quick messages.",
+    requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
+  },
+  {
+    id: "video-rooms",
+    moduleId: "communications",
+    name: "Video Rooms",
+    route: "/dashboard/comms",
+    icon: Video,
+    shortDescription: "Google Meet, Teams, and Zoom meetings.",
+    requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
+  },
+  {
+    id: "comms-analytics",
+    moduleId: "communications",
+    name: "Comms Analytics",
+    route: "/dashboard/comms/analytics",
+    icon: BarChart3,
+    shortDescription:
+      "Message reach, engagement, and device connectivity stats.",
+    requiredPermissions: ["admin", "headteacher", "slt"],
+  },
+  {
+    id: "classroom-display",
+    moduleId: "communications",
+    name: "Display Setup",
+    route: "/display/setup",
+    icon: Monitor,
+    shortDescription: "Register and manage classroom display boards.",
+    requiredPermissions: ["admin", "headteacher", "slt", "caretaker"],
+  },
+  {
+    id: "school-branding",
+    moduleId: "communications",
+    name: "School Branding",
+    route: "/dashboard/settings/branding",
+    icon: Palette,
+    shortDescription:
+      "Logo, colours, motto — used across displays and documents.",
+    requiredPermissions: ["admin", "headteacher"],
   },
 
   // Calendar Apps
@@ -962,6 +1075,14 @@ export const NAVBAR_CONFIG = [
         color: "violet",
         permissions: ["admin", "headteacher", "slt", "teacher", "governor"],
       },
+      {
+        id: "communications",
+        name: "Comms Hub",
+        route: "/dashboard/comms",
+        icon: Radio,
+        color: "indigo",
+        permissions: ["admin", "headteacher", "slt", "teacher", "caretaker"],
+      },
     ],
   },
 ];
@@ -1006,7 +1127,13 @@ export function getModuleByPath(path: string): ModuleDefinition | undefined {
   if (path.startsWith("/dashboard/admissions"))
     return MODULES.find((m) => m.id === "improvement");
   if (path.startsWith("/dashboard/emergency"))
-    return MODULES.find((m) => m.id === "estates");
+    return MODULES.find((m) => m.id === "communications");
+  if (path.startsWith("/dashboard/comms"))
+    return MODULES.find((m) => m.id === "communications");
+  if (path.startsWith("/dashboard/notices"))
+    return MODULES.find((m) => m.id === "communications");
+  if (path.startsWith("/display"))
+    return MODULES.find((m) => m.id === "communications");
   if (path.startsWith("/dashboard/school-meals"))
     return MODULES.find((m) => m.id === "compliance");
   if (path.startsWith("/dashboard/safeguarding"))

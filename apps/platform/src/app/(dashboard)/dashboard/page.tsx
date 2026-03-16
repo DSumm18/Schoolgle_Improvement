@@ -7,6 +7,7 @@ import { useAuth } from "@/context/SupabaseAuthContext";
 import { fetcher } from "@/lib/fetchers";
 import { MODULES, APPS, canUserAccess, Role } from "@/lib/modules/registry";
 import { MyTasksWidget } from "@/components/dashboard/MyTasksWidget";
+import { DashboardFeed } from "@/components/display/DashboardFeed";
 import Link from "next/link";
 import {
   Megaphone,
@@ -910,6 +911,16 @@ export default function DashboardPage() {
                 })
               )}
             </div>
+          </motion.div>
+
+          {/* School Feed */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="bg-card border border-border rounded-2xl overflow-hidden p-4"
+          >
+            <DashboardFeed className="w-full" />
           </motion.div>
 
           {/* My Modules */}
