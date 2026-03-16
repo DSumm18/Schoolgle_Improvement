@@ -281,7 +281,7 @@ export default function BehaviourPage() {
     error: statsError,
     mutate: mutateStats,
   } = useSWR<DashboardStats>(
-    orgId ? "/api/behaviour/dashboard" : null,
+    orgId ? `/api/behaviour/dashboard?organizationId=${orgId}` : null,
     fetcher,
     swrOpts,
   );
@@ -290,7 +290,9 @@ export default function BehaviourPage() {
     error: incidentsError,
     mutate: mutateIncidents,
   } = useSWR(
-    orgId ? "/api/behaviour/incidents?pageSize=100" : null,
+    orgId
+      ? `/api/behaviour/incidents?pageSize=100&organizationId=${orgId}`
+      : null,
     fetcher,
     swrOpts,
   );
@@ -298,13 +300,17 @@ export default function BehaviourPage() {
     data: exclusionsData,
     error: exclusionsError,
     mutate: mutateExclusions,
-  } = useSWR(orgId ? `/api/behaviour/exclusions?organizationId=${orgId}` : null, fetcher, swrOpts);
+  } = useSWR(
+    orgId ? `/api/behaviour/exclusions?organizationId=${orgId}` : null,
+    fetcher,
+    swrOpts,
+  );
   const {
     data: patternsData,
     error: patternsError,
     mutate: mutatePatterns,
   } = useSWR<PatternData>(
-    orgId ? "/api/behaviour/patterns" : null,
+    orgId ? `/api/behaviour/patterns?organizationId=${orgId}` : null,
     fetcher,
     swrOpts,
   );
