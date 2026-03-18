@@ -373,12 +373,15 @@ export class Ed {
   }
 
   private makeDraggable(launcher: HTMLElement): void {
+    let activePointerId: number | null = null;
+
     const onPointerDown = (e: PointerEvent) => {
       // Only drag with primary button
       if (e.button !== 0) return;
 
       this.isDragging = false;
       this.wasDragged = false;
+      activePointerId = e.pointerId;
 
       const rect = launcher.getBoundingClientRect();
       this.dragStartX = e.clientX;
@@ -386,20 +389,30 @@ export class Ed {
       this.dragStartLeft = rect.left;
       this.dragStartTop = rect.top;
 
-      launcher.setPointerCapture(e.pointerId);
-      launcher.style.cursor = "grabbing";
-      launcher.style.transition = "none";
+      // Don't capture yet — capture only when drag threshold is met
+      // This allows click events to fire normally for non-drag clicks
     };
 
     const onPointerMove = (e: PointerEvent) => {
-      if (!launcher.hasPointerCapture(e.pointerId)) return;
+      if (e.pointerId !== activePointerId) return;
 
       const dx = e.clientX - this.dragStartX;
       const dy = e.clientY - this.dragStartY;
 
       // Require minimum movement to start drag (prevents accidental drags on click)
       if (!this.isDragging && Math.abs(dx) < 5 && Math.abs(dy) < 5) return;
-      this.isDragging = true;
+
+      // First time crossing threshold — capture pointer and begin drag
+      if (!this.isDragging) {
+        this.isDragging = true;
+        try {
+          launcher.setPointerCapture(e.pointerId);
+        } catch {
+          /* ok */
+        }
+        launcher.style.cursor = "grabbing";
+        launcher.style.transition = "none";
+      }
 
       // Calculate new position, clamped to viewport
       const x = Math.max(
@@ -416,9 +429,12 @@ export class Ed {
     };
 
     const onPointerUp = (e: PointerEvent) => {
-      if (!launcher.hasPointerCapture(e.pointerId)) return;
+      if (e.pointerId !== activePointerId) return;
+      activePointerId = null;
 
-      launcher.releasePointerCapture(e.pointerId);
+      if (launcher.hasPointerCapture(e.pointerId)) {
+        launcher.releasePointerCapture(e.pointerId);
+      }
       launcher.style.cursor = "";
       launcher.style.transition = "";
 
