@@ -217,9 +217,16 @@ export async function getDomainsCompletionSummary(
       (c) => c.status === "pending" || c.status === "in_progress",
     ).length;
 
+    // Check if any critical-severity statutory checks are incomplete
+    const hasCriticalIncomplete = allStatutoryChecks.some((check) => {
+      if (check.risk_level !== "critical") return false;
+      const completion = completionMap.get(check.id);
+      return !completion || completion.status !== "completed";
+    });
+
     // Determine domain status
     let status: "compliant" | "attention" | "critical";
-    if (overdueChecks > 0) {
+    if (overdueChecks > 0 || hasCriticalIncomplete) {
       status = "critical";
     } else if (totalChecks > 0 && completedChecks / totalChecks < 0.8) {
       status = "attention";

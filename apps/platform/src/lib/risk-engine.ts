@@ -500,6 +500,8 @@ export function assessRiskFromTask(task: {
   overdue_days?: number;
   has_safeguarding_impact?: boolean;
   title?: string;
+  /** Severity of the underlying statutory check (from statutory-checks or findings-database) */
+  check_severity?: "low" | "medium" | "high" | "critical";
 }): {
   inherent_likelihood: number;
   inherent_impact: number;
@@ -516,6 +518,16 @@ export function assessRiskFromTask(task: {
     if (mapped) mapped.forEach((c) => categories.add(c));
   }
 
+  // Critical statutory checks (e.g. fire risk assessment) must have minimum
+  // high scores even before considering overdue escalation.
+  if (task.check_severity === "critical") {
+    likelihood = Math.max(likelihood, 4);
+    impact = Math.max(impact, 4);
+  } else if (task.check_severity === "high") {
+    likelihood = Math.max(likelihood, 3);
+    impact = Math.max(impact, 3);
+  }
+
   // Safeguarding always high impact
   if (task.has_safeguarding_impact) {
     categories.add("safeguarding");
@@ -524,11 +536,21 @@ export function assessRiskFromTask(task: {
 
   // Statutory + overdue → high likelihood
   if (task.is_statutory && (task.overdue_days ?? 0) > 14) {
-    likelihood = 4;
+    likelihood = Math.max(likelihood, 4);
     impact = Math.max(impact, domainImpact(task.domain));
+    // Critical checks that are overdue >14 days → almost certain + catastrophic
+    if (task.check_severity === "critical") {
+      likelihood = 5;
+      impact = 5;
+    }
   } else if (task.is_statutory && (task.overdue_days ?? 0) > 0) {
-    likelihood = 3;
+    likelihood = Math.max(likelihood, 3);
     impact = Math.max(impact, domainImpact(task.domain) - 1);
+    // Critical checks that are overdue at all → escalate further
+    if (task.check_severity === "critical") {
+      likelihood = Math.max(likelihood, 4);
+      impact = Math.max(impact, 5);
+    }
   }
 
   // Priority escalation

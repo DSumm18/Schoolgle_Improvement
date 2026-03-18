@@ -38,6 +38,8 @@ export interface StatutoryCheck {
   evidenceRequired: string[];
   goodPracticeAlternatives?: string[];
   notes?: string;
+  /** Inherent risk level when this check is not completed. Defaults to "medium". */
+  risk_level?: "low" | "medium" | "high" | "critical";
 }
 
 export type ComplianceDomain =
@@ -112,6 +114,7 @@ export const STATUTORY_CHECKS: Record<ComplianceDomain, StatutoryCheck[]> = {
       estimatedDuration: 120,
       requiresQualification: "Competent person (ACoP L8 compliant)",
       evidenceRequired: ["Updated risk assessment", "Assessor certification"],
+      risk_level: "critical",
     },
     {
       id: "leg_two_yearly_review",
@@ -271,6 +274,7 @@ export const STATUTORY_CHECKS: Record<ComplianceDomain, StatutoryCheck[]> = {
       estimatedDuration: 180,
       requiresQualification: "Competent fire risk assessor",
       evidenceRequired: ["Updated fire risk assessment", "Action plan"],
+      risk_level: "critical",
     },
     {
       id: "fire_exit_routes",
@@ -529,6 +533,7 @@ export const STATUTORY_CHECKS: Record<ComplianceDomain, StatutoryCheck[]> = {
       estimatedDuration: 180,
       requiresQualification: "Gas Safe registered engineer",
       evidenceRequired: ["Gas safety certificate (CP12)", "Engineer report"],
+      risk_level: "critical",
     },
     {
       id: "gas_government_check",
