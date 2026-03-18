@@ -34,7 +34,7 @@ import { useAnalytics } from "@/hooks/useAnalytics";
 import { Toaster } from "@/components/ui/toaster";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetchers";
-import SchoolglePlanets from "@/components/brand/SchoolglePlanets";
+import { EdChatbotProvider } from "@/components/EdChatbotProvider";
 import { getContrastColor } from "@/lib/color-extractor";
 import AccessibilityToolbar from "@/components/AccessibilityToolbar";
 
@@ -689,12 +689,24 @@ export default function DashboardLayout({
               <LogOut size={16} />
               {isSidebarExpanded && <span>Sign Out</span>}
             </button>
-            {/* Powered by Schoolgle with orbiting planets */}
-            <div className="mt-3 pt-3 border-t border-border/50 flex justify-center">
-              <SchoolglePlanets collapsed={!isSidebarExpanded} />
-            </div>
           </div>
         </aside>
+
+        {/* Ed AI Assistant — full widget with voice, languages, personas */}
+        <EdChatbotProvider />
+
+        {/* Offset Ed widget to clear the sidebar */}
+        <style>{`
+          .ed-widget-container.ed-position-bottom-left {
+            left: ${isSidebarExpanded ? "272px" : "88px"} !important;
+            transition: left 300ms ease !important;
+          }
+          @media (max-width: 1024px) {
+            .ed-widget-container.ed-position-bottom-left {
+              left: 20px !important;
+            }
+          }
+        `}</style>
 
         <main
           className={`flex-1 overflow-y-auto transition-all duration-500 ease-in-out bg-background text-foreground max-lg:ml-0 max-lg:pt-14 ${isSidebarExpanded ? "lg:ml-64" : "lg:ml-20"}`}

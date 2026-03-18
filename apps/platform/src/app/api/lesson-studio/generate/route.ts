@@ -2,7 +2,12 @@ import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
 import { NextRequest } from "next/server";
 import OpenAI from "openai";
-import type { LSPupil, LSSchemeMapping, LSSchemeProgression, LSTimetableSlot } from "@/types/lesson-studio";
+import type {
+  LSPupil,
+  LSSchemeMapping,
+  LSSchemeProgression,
+  LSTimetableSlot,
+} from "@/types/lesson-studio";
 
 const openai = new OpenAI({
   baseURL: "https://openrouter.ai/api/v1",
@@ -18,9 +23,18 @@ function decodeName(pupil: LSPupil): string {
   return pupil.pupil_ref;
 }
 
-function buildClassProfile(pupils: LSPupil[]): string {
-  const gds = pupils.filter((p) => p.attainment_maths === "GDS" || p.attainment_reading === "GDS");
-  const exs = pupils.filter((p) => !gds.includes(p) && (p.attainment_maths === "EXS" || p.attainment_reading === "EXS"));
+function buildClassProfile(
+  pupils: LSPupil[],
+  adaptationProfiles?: Record<string, Record<string, unknown>>,
+): string {
+  const gds = pupils.filter(
+    (p) => p.attainment_maths === "GDS" || p.attainment_reading === "GDS",
+  );
+  const exs = pupils.filter(
+    (p) =>
+      !gds.includes(p) &&
+      (p.attainment_maths === "EXS" || p.attainment_reading === "EXS"),
+  );
   const wts = pupils.filter((p) => !gds.includes(p) && !exs.includes(p));
 
   const lines: string[] = [
@@ -29,18 +43,127 @@ function buildClassProfile(pupils: LSPupil[]): string {
     `- Expected Standard: ${exs.map(decodeName).join(", ") || "None"} (${exs.length} pupils)`,
     `- Working Towards: ${wts.map(decodeName).join(", ") || "None"} (${wts.length} pupils)`,
     "",
-    "SEND/ADDITIONAL NEEDS:",
   ];
 
+  // Build detailed per-pupil adaptation profiles
+  lines.push("PUPIL ADAPTATION PROFILES:");
+  lines.push(
+    "(Generate individualised resources for EVERY pupil, not just SEND pupils)",
+  );
+  lines.push("");
+
   for (const p of pupils) {
-    const needs: string[] = [];
-    if (p.has_ehcp) needs.push(`EHCP-${p.send_primary_need || "SEN"}`);
-    else if (p.has_send_support) needs.push(`SEN Support-${p.send_primary_need || "SEN"}`);
-    if (p.accessibility_needs?.length) needs.push(p.accessibility_needs.join(", "));
-    if (p.is_eal) needs.push(`EAL Stage ${p.eal_stage || "?"}`);
-    if (p.is_pupil_premium) needs.push("Pupil Premium");
-    if (p.is_looked_after) needs.push("LAC");
-    if (needs.length) lines.push(`${decodeName(p)}: ${needs.join("; ")}`);
+    const name = decodeName(p);
+    const profile = adaptationProfiles?.[p.pupil_ref] || {};
+    const parts: string[] = [];
+
+    // Identity & attainment
+    const attainments: string[] = [];
+    if (p.attainment_reading) attainments.push(`R:${p.attainment_reading}`);
+    if (p.attainment_writing) attainments.push(`W:${p.attainment_writing}`);
+    if (p.attainment_maths) attainments.push(`M:${p.attainment_maths}`);
+    if (attainments.length) parts.push(attainments.join(" "));
+
+    // Standardised scores (more granular than attainment bands)
+    const ext = p as unknown as Record<string, unknown>;
+    if (ext.standardised_score_reading)
+      parts.push(`StdRd:${ext.standardised_score_reading}`);
+    if (ext.standardised_score_maths)
+      parts.push(`StdMa:${ext.standardised_score_maths}`);
+    if (ext.reading_age) parts.push(`ReadAge:${ext.reading_age}`);
+
+    // SEND status
+    if (p.has_ehcp) parts.push(`EHCP-${p.send_primary_need || "SEN"}`);
+    else if (p.has_send_support)
+      parts.push(`SEN Support-${p.send_primary_need || "SEN"}`);
+
+    // Vulnerability flags
+    if (p.is_pupil_premium) parts.push("PP");
+    if (p.is_looked_after) parts.push("LAC");
+    if (p.is_eal) parts.push(`EAL Stage ${p.eal_stage || "?"}`);
+
+    // Medical
+    if (ext.medical_conditions)
+      parts.push(`Medical: ${ext.medical_conditions}`);
+
+    // Communication
+    if (ext.communication_method && ext.communication_method !== "Verbal") {
+      parts.push(`Communication: ${ext.communication_method}`);
+    }
+
+    // EHCP provisions (legally mandated)
+    if (ext.ehcp_provisions) {
+      parts.push(`EHCP provisions: ${ext.ehcp_provisions}`);
+    }
+
+    // Accessibility needs
+    if (p.accessibility_needs?.length) {
+      parts.push(`Accessibility: ${p.accessibility_needs.join(", ")}`);
+    }
+
+    // Adaptation profile enrichment (from teacher/SENCO/pupil voice)
+    if (profile.instruction_style && profile.instruction_style !== "standard") {
+      parts.push(`Instructions: ${profile.instruction_style}`);
+    }
+    if (profile.focus_duration_mins) {
+      parts.push(`Focus: ${profile.focus_duration_mins} min blocks`);
+    }
+    if (
+      profile.rendering_prefs &&
+      Object.keys(profile.rendering_prefs as object).length > 0
+    ) {
+      const rp = profile.rendering_prefs as Record<string, unknown>;
+      const rpParts: string[] = [];
+      if (rp.font && rp.font !== "standard") rpParts.push(`font:${rp.font}`);
+      if (rp.font_size && rp.font_size !== 12)
+        rpParts.push(`size:${rp.font_size}pt`);
+      if (rp.background && rp.background !== "#FFFFFF")
+        rpParts.push(`bg:${rp.background}`);
+      if (rpParts.length) parts.push(`Rendering: ${rpParts.join(", ")}`);
+    }
+    if (
+      Array.isArray(profile.effective_strategies) &&
+      (profile.effective_strategies as string[]).length > 0
+    ) {
+      parts.push(
+        `What works: ${(profile.effective_strategies as string[]).join("; ")}`,
+      );
+    }
+    if (
+      Array.isArray(profile.ineffective_strategies) &&
+      (profile.ineffective_strategies as string[]).length > 0
+    ) {
+      parts.push(
+        `Avoid: ${(profile.ineffective_strategies as string[]).join("; ")}`,
+      );
+    }
+    if (
+      Array.isArray(profile.preferred_contexts) &&
+      (profile.preferred_contexts as string[]).length > 0
+    ) {
+      parts.push(
+        `Interests: ${(profile.preferred_contexts as string[]).join(", ")}`,
+      );
+    }
+
+    // Topic-specific gaps from quest data
+    if (
+      profile.misconceptions &&
+      Array.isArray(profile.misconceptions) &&
+      (profile.misconceptions as unknown[]).length > 0
+    ) {
+      const mc = (profile.misconceptions as Array<Record<string, unknown>>)
+        .filter((m) => !m.resolved)
+        .map((m) => m.description)
+        .slice(0, 3);
+      if (mc.length) parts.push(`Known gaps: ${mc.join("; ")}`);
+    }
+
+    if (parts.length > 0) {
+      lines.push(`${name} (${p.pupil_ref}): ${parts.join(" | ")}`);
+    } else {
+      lines.push(`${name} (${p.pupil_ref}): No additional needs identified`);
+    }
   }
 
   return lines.join("\n");
@@ -136,13 +259,22 @@ export const POST = protectedRoute(async (auth, req: NextRequest) => {
 
   const startTime = performance.now();
 
-  // Load class, slot, pupils, scheme mapping in parallel
-  const [classRes, slotRes, pupilsRes, schemesRes] = await Promise.all([
-    supabase.from("ls_classes").select("*").eq("id", classId).single(),
-    supabase.from("ls_timetable_slots").select("*").eq("id", slotId).single(),
-    supabase.from("ls_pupils").select("*").eq("class_id", classId).order("display_name_encrypted"),
-    supabase.from("ls_scheme_mappings").select("*").eq("class_id", classId),
-  ]);
+  // Load class, slot, pupils, scheme mapping, and adaptation profiles in parallel
+  const [classRes, slotRes, pupilsRes, schemesRes, profilesRes] =
+    await Promise.all([
+      supabase.from("ls_classes").select("*").eq("id", classId).single(),
+      supabase.from("ls_timetable_slots").select("*").eq("id", slotId).single(),
+      supabase
+        .from("ls_pupils")
+        .select("*")
+        .eq("class_id", classId)
+        .order("display_name_encrypted"),
+      supabase.from("ls_scheme_mappings").select("*").eq("class_id", classId),
+      supabase
+        .from("ls_pupil_adaptation_profiles")
+        .select("*")
+        .eq("organization_id", orgId),
+    ]);
 
   if (classRes.error || !classRes.data) return apiError("Class not found", 404);
   if (slotRes.error || !slotRes.data) return apiError("Slot not found", 404);
@@ -151,6 +283,12 @@ export const POST = protectedRoute(async (auth, req: NextRequest) => {
   const slot = slotRes.data as LSTimetableSlot;
   const pupils = (pupilsRes.data ?? []) as LSPupil[];
   const schemes = (schemesRes.data ?? []) as LSSchemeMapping[];
+
+  // Index adaptation profiles by pupil_ref for fast lookup
+  const adaptationProfiles: Record<string, Record<string, unknown>> = {};
+  for (const profile of profilesRes.data ?? []) {
+    adaptationProfiles[profile.pupil_ref] = profile;
+  }
 
   const schemeMapping = schemes.find((s) => s.subject === slot.subject);
   let progression: LSSchemeProgression | null = null;
@@ -179,7 +317,7 @@ export const POST = protectedRoute(async (auth, req: NextRequest) => {
     }
   }
 
-  const classProfile = buildClassProfile(pupils);
+  const classProfile = buildClassProfile(pupils, adaptationProfiles);
 
   const prompt = buildPrompt({
     subject: slot.subject,
@@ -234,7 +372,10 @@ export const POST = protectedRoute(async (auth, req: NextRequest) => {
     plan_sections: generated.planSections ?? [],
     differentiation_groups: generated.differentiationGroups ?? [],
     send_adaptations: generated.sendAdaptations ?? [],
-    nc_objective_codes: progression?.steps?.[(schemeMapping?.scheme_config?.current_step ?? 1) - 1]?.nc_codes ?? [],
+    nc_objective_codes:
+      progression?.steps?.[
+        (schemeMapping?.scheme_config?.current_step ?? 1) - 1
+      ]?.nc_codes ?? [],
     supply_brief: (generated.supplyBrief as string) || null,
     generated_resources_json: {
       worksheetQuestions: generated.worksheetQuestions ?? {},
@@ -249,7 +390,9 @@ export const POST = protectedRoute(async (auth, req: NextRequest) => {
 
   const { data: saved, error: saveError } = await supabase
     .from("ls_lesson_plans")
-    .upsert(plan, { onConflict: "class_id,week_commencing,day_of_week,subject" })
+    .upsert(plan, {
+      onConflict: "class_id,week_commencing,day_of_week,subject",
+    })
     .select()
     .single();
 

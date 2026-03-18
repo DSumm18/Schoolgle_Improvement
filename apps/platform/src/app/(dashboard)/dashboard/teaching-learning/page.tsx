@@ -9,6 +9,7 @@ import {
   ClipboardList,
   Gamepad2,
   Sparkles,
+  Users,
 } from "lucide-react";
 import {
   ModulePageHeader,
@@ -16,6 +17,14 @@ import {
 } from "@/components/ui/module-page-header";
 
 const apps = [
+  {
+    icon: Users,
+    title: "Pupil Records",
+    description:
+      "View class profiles and individual pupil data from your MIS. Attainment, SEND, medical, and vulnerability flags — all in one place.",
+    href: "/dashboard/teaching-learning/pupils",
+    status: "Live",
+  },
   {
     icon: Sparkles,
     title: "Lesson Studio",

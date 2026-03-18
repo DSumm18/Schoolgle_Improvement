@@ -31,6 +31,7 @@ import type {
   MISTeacherClassHistory,
   MISSENRecord,
   MISHistoricalKS2,
+  MISEnergyInvoice,
   AttainmentLevel,
   AssessmentPeriod,
 } from "./types";
@@ -70,6 +71,10 @@ const DATA_TYPE_FILES: Record<
   historical_ks2: {
     folder: "dfe-data",
     filename: "historical_ks2_results.xlsx",
+  },
+  energy_invoices: {
+    folder: "energy-invoices",
+    filename: "*", // multiple files — read all XLSX in folder
   },
 };
 
@@ -139,6 +144,23 @@ function transformPupil(raw: any): MISPupil {
       | "Current"
       | "Leaver",
     eal: toBool(raw["EAL"]),
+
+    // Adaptive teaching fields
+    eal_stage: (["A", "B", "C", "D", "E"].includes(raw["EAL Stage"])
+      ? raw["EAL Stage"]
+      : undefined) as "A" | "B" | "C" | "D" | "E" | undefined,
+    medical_conditions: raw["Medical Conditions"] || undefined,
+    accessibility_needs: raw["Accessibility Needs"] || undefined,
+    ehcp_provisions: raw["EHCP Provisions"] || undefined,
+    standardised_score_reading: raw["Standardised Score Reading"]
+      ? toInt(raw["Standardised Score Reading"])
+      : undefined,
+    standardised_score_maths: raw["Standardised Score Maths"]
+      ? toInt(raw["Standardised Score Maths"])
+      : undefined,
+    reading_age: raw["Reading Age"] || undefined,
+    spelling_age: raw["Spelling Age"] || undefined,
+    communication_method: raw["Communication Method"] || undefined,
   };
 }
 
@@ -334,21 +356,26 @@ function transformSENRecord(raw: any): MISSENRecord {
     last_name: String(raw["Last Name"] || raw["Legal Last Name"] || ""),
     year_group: parseYearGroup(raw["Year Group"]),
     registration_group: String(raw["Registration Group"] || raw["Class"] || ""),
-    sen_status: (raw["SEN Status"] === "E" ? "E" : "K") as "K" | "E",
+    sen_status: (raw["SEN Status"] === "E" || raw["SEN Status"] === "EHCP"
+      ? "E"
+      : "K") as "K" | "E",
     sen_primary_need: String(
       raw["Primary Need"] || raw["SEN Primary Need"] || "",
     ),
     sen_secondary_need: raw["Secondary Need"] || raw["SEN Secondary Need"],
     date_identified: String(
-      raw["Date Identified"] || raw["Identification Date"] || "",
+      raw["Date Identified"] ||
+        raw["Identification Date"] ||
+        raw["EHCP Start Date"] ||
+        "",
     ),
     ehcp: toBool(raw["EHCP"]),
     ehcp_start_date: raw["EHCP Start Date"],
     ehcp_review_date: raw["EHCP Review Date"],
-    next_annual_review: raw["Next Annual Review"],
-    external_agencies: raw["External Agencies"],
+    next_annual_review: raw["Next Annual Review"] || raw["Annual Review Date"],
+    external_agencies: raw["External Agencies"] || raw["External Agency"],
     key_worker: raw["Key Worker"] || raw["Named TA"],
-    provision_description: raw["Provision"],
+    provision_description: raw["Provision"] || raw["Provision Map"],
     pupil_premium: toBool(raw["PP"] ?? raw["Pupil Premium"]),
     attendance_pct: raw["Attendance %"]
       ? toFloat(raw["Attendance %"])
@@ -451,6 +478,99 @@ function transformHistoricalKS2(raw: any): MISHistoricalKS2 {
   };
 }
 
+/**
+ * Transform energy invoice "Extracted Data" sheet (key-value pairs + monthly breakdown)
+ * into a structured MISEnergyInvoice record.
+ */
+function transformEnergyInvoice(rawRows: any[]): MISEnergyInvoice[] {
+  // rawRows are key-value pairs from the "Extracted Data" sheet
+  const fields: Record<string, any> = {};
+  const monthlyBreakdown: any[] = [];
+  let inMonthly = false;
+  let monthlyHeaders: string[] = [];
+
+  for (const row of rawRows) {
+    const cell0 = String(row["Field"] || row["__EMPTY"] || "").trim();
+
+    if (cell0 === "MONTHLY BREAKDOWN") {
+      inMonthly = true;
+      continue;
+    }
+
+    if (inMonthly) {
+      if (cell0 === "Month") {
+        monthlyHeaders = Object.values(row).map((c: any) =>
+          String(c || "").trim(),
+        );
+        continue;
+      }
+      if (cell0) {
+        const entry: Record<string, any> = {};
+        const values = Object.values(row);
+        for (let i = 0; i < monthlyHeaders.length; i++) {
+          entry[monthlyHeaders[i]] = values[i];
+        }
+        monthlyBreakdown.push(entry);
+      }
+      continue;
+    }
+
+    if (row["Value"] !== undefined) {
+      fields[cell0] = row["Value"];
+    }
+  }
+
+  if (!fields["Supplier"]) return [];
+
+  const invoice: MISEnergyInvoice = {
+    supplier: String(fields["Supplier"] || ""),
+    invoice_number: String(fields["Invoice Number"] || ""),
+    invoice_date: String(fields["Invoice Date"] || ""),
+    due_date: String(fields["Due Date"] || ""),
+    account_reference: String(fields["Account Reference"] || ""),
+    contract_reference: String(fields["Contract Reference"] || ""),
+    customer_name: String(fields["Customer Name"] || ""),
+    supply_address: String(fields["Supply Address"] || ""),
+    meter_reference: String(fields["MPAN"] || fields["MPRN"] || ""),
+    meter_serial: String(fields["Meter Serial"] || ""),
+    energy_type: String(fields["Energy Type"] || "").toLowerCase() as
+      | "electricity"
+      | "gas",
+    billing_period_start: String(fields["Billing Period Start"] || ""),
+    billing_period_end: String(fields["Billing Period End"] || ""),
+    supply_days: Number(fields["Supply Days"] || 0),
+    opening_reading: Number(fields["Opening Reading"] || 0),
+    closing_reading: Number(fields["Closing Reading"] || 0),
+    total_kwh: Number(fields["Total kWh"] || 0),
+    unit_rate_pence: Number(fields["Unit Rate (p/kWh)"] || 0),
+    standing_charge_pence: Number(fields["Standing Charge (p/day)"] || 0),
+    ccl_rate_pence: Number(fields["CCL Rate (p/kWh)"] || 0),
+    energy_charge: Number(fields["Energy Charge"] || 0),
+    standing_charge_total: Number(fields["Standing Charge Total"] || 0),
+    ccl_charge: Number(fields["CCL Charge"] || 0),
+    net_amount: Number(fields["Net Amount"] || 0),
+    vat_rate: parseFloat(String(fields["VAT Rate"] || "5").replace("%", "")),
+    vat_amount: Number(fields["VAT Amount"] || 0),
+    total_amount: Number(fields["Total Amount"] || 0),
+    co2_tonnes: Number(fields["CO2 Tonnes"] || 0),
+    calorific_value: fields["Calorific Value"]
+      ? Number(fields["Calorific Value"])
+      : undefined,
+    correction_factor: fields["Correction Factor"]
+      ? Number(fields["Correction Factor"])
+      : undefined,
+    monthly_breakdown: monthlyBreakdown.map((mb) => ({
+      month: String(mb["Month"] || ""),
+      days: Number(mb["Days"] || 0),
+      kwh: Number(mb["kWh"] || 0),
+      opening_reading: Number(mb["Opening Reading"] || 0),
+      closing_reading: Number(mb["Closing Reading"] || 0),
+    })),
+  };
+
+  return [invoice];
+}
+
 /** Apply appropriate transformer based on data type */
 function transformData<T>(dataType: MISDataType, rawData: any[]): T[] {
   switch (dataType) {
@@ -470,6 +590,8 @@ function transformData<T>(dataType: MISDataType, rawData: any[]): T[] {
       return transformInsightTracker(rawData) as T[];
     case "historical_ks2":
       return rawData.map(transformHistoricalKS2) as T[];
+    case "energy_invoices":
+      return transformEnergyInvoice(rawData) as T[];
     default:
       return rawData as T[];
   }
@@ -483,8 +605,24 @@ export class LocalMISDataService implements IMISDataService {
   private basePath: string;
 
   constructor(basePath?: string) {
-    this.basePath =
-      basePath || path.join(process.cwd(), "test-harness", "aurora-primary");
+    // Try both paths: cwd may be project root or apps/platform
+    if (!basePath) {
+      const fromCwd = path.join(
+        process.cwd(),
+        "test-harness",
+        "aurora-primary",
+      );
+      const fromRoot = path.join(
+        process.cwd(),
+        "apps",
+        "platform",
+        "test-harness",
+        "aurora-primary",
+      );
+      this.basePath = fs.existsSync(fromCwd) ? fromCwd : fromRoot;
+    } else {
+      this.basePath = basePath;
+    }
   }
 
   async read<T>(
@@ -492,6 +630,12 @@ export class LocalMISDataService implements IMISDataService {
     dataType: MISDataType,
   ): Promise<MISReadResult<T>> {
     const fileInfo = DATA_TYPE_FILES[dataType];
+
+    // Energy invoices: read all XLSX files in folder, each producing one record
+    if (dataType === "energy_invoices") {
+      return this.readEnergyInvoices<T>(fileInfo);
+    }
+
     const filePath = path.join(
       this.basePath,
       fileInfo.folder,
@@ -512,7 +656,10 @@ export class LocalMISDataService implements IMISDataService {
       };
     }
 
-    const workbook = XLSX.readFile(filePath);
+    // Use fs.readFileSync + XLSX.read instead of XLSX.readFile
+    // to avoid path resolution issues in webpack-compiled server context
+    const fileBuffer = fs.readFileSync(filePath);
+    const workbook = XLSX.read(fileBuffer);
     const warnings: string[] = [];
 
     // Read raw data from sheets
@@ -554,12 +701,101 @@ export class LocalMISDataService implements IMISDataService {
     };
   }
 
+  /**
+   * Read all XLSX invoice files from a folder, extracting data from
+   * the "Extracted Data" sheet in each file.
+   */
+  private async readEnergyInvoices<T>(fileInfo: {
+    folder: string;
+    filename: string;
+  }): Promise<MISReadResult<T>> {
+    const folderPath = path.join(this.basePath, fileInfo.folder);
+    const warnings: string[] = [];
+
+    if (!fs.existsSync(folderPath)) {
+      return {
+        data: [],
+        source: {
+          type: "local",
+          lastUpdated: new Date().toISOString(),
+          path: folderPath,
+          fileName: fileInfo.folder,
+        },
+        recordCount: 0,
+        warnings: [`Folder not found: ${fileInfo.folder}`],
+      };
+    }
+
+    const xlsxFiles = fs
+      .readdirSync(folderPath)
+      .filter((f: string) => f.endsWith(".xlsx"))
+      .sort();
+
+    const allInvoices: T[] = [];
+    let latestMtime = new Date(0);
+
+    for (const fileName of xlsxFiles) {
+      const filePath = path.join(folderPath, fileName);
+      const fileBuffer = fs.readFileSync(filePath);
+      const workbook = XLSX.read(fileBuffer);
+
+      // Read "Extracted Data" sheet
+      const dataSheet = workbook.Sheets["Extracted Data"];
+      if (!dataSheet) {
+        warnings.push(`No "Extracted Data" sheet in ${fileName}`);
+        continue;
+      }
+
+      const rawData = XLSX.utils.sheet_to_json(dataSheet) as Record<
+        string,
+        unknown
+      >[];
+      const invoices = transformData<T>("energy_invoices", rawData);
+      allInvoices.push(...invoices);
+
+      const stat = fs.statSync(filePath);
+      if (stat.mtime > latestMtime) latestMtime = stat.mtime;
+    }
+
+    return {
+      data: allInvoices,
+      source: {
+        type: "local",
+        lastUpdated: latestMtime.toISOString(),
+        path: folderPath,
+        fileName: `${xlsxFiles.length} invoice files`,
+      },
+      recordCount: allInvoices.length,
+      warnings,
+    };
+  }
+
   async getAvailableSources(
     _organizationId: string,
   ): Promise<Record<MISDataType, MISDataSource | null>> {
     const result = {} as Record<MISDataType, MISDataSource | null>;
 
     for (const [dataType, fileInfo] of Object.entries(DATA_TYPE_FILES)) {
+      if (fileInfo.filename === "*") {
+        // Folder-based: check if folder exists and has files
+        const folderPath = path.join(this.basePath, fileInfo.folder);
+        if (
+          fs.existsSync(folderPath) &&
+          fs.readdirSync(folderPath).some((f: string) => f.endsWith(".xlsx"))
+        ) {
+          const stat = fs.statSync(folderPath);
+          result[dataType as MISDataType] = {
+            type: "local",
+            lastUpdated: stat.mtime.toISOString(),
+            path: folderPath,
+            fileName: fileInfo.folder,
+          };
+        } else {
+          result[dataType as MISDataType] = null;
+        }
+        continue;
+      }
+
       const filePath = path.join(
         this.basePath,
         fileInfo.folder,
@@ -586,6 +822,13 @@ export class LocalMISDataService implements IMISDataService {
     dataType: MISDataType,
   ): Promise<boolean> {
     const fileInfo = DATA_TYPE_FILES[dataType];
+    if (fileInfo.filename === "*") {
+      const folderPath = path.join(this.basePath, fileInfo.folder);
+      return (
+        fs.existsSync(folderPath) &&
+        fs.readdirSync(folderPath).some((f: string) => f.endsWith(".xlsx"))
+      );
+    }
     const filePath = path.join(
       this.basePath,
       fileInfo.folder,
@@ -641,7 +884,12 @@ export async function getMISDataServiceForOrg(
     return getMISDataService("local");
   }
 
-  // Check if org has a Google Drive connection
+  // In development, default to local test harness for speed
+  if (process.env.NODE_ENV === "development") {
+    return getMISDataService("local");
+  }
+
+  // Check if org has a Google Drive connection (production only)
   try {
     const { createServiceRoleClient } = await import("@/lib/supabase-server");
     const supabase = createServiceRoleClient();
@@ -651,7 +899,7 @@ export async function getMISDataServiceForOrg(
       .eq("organization_id", organizationId)
       .eq("is_active", true)
       .eq("provider", "google")
-      .single();
+      .maybeSingle();
 
     if (data) {
       return getMISDataService("google_drive");
@@ -726,4 +974,10 @@ export async function readHistoricalKS2(
   orgId: string,
 ): Promise<MISReadResult<MISHistoricalKS2>> {
   return getMISDataService().read<MISHistoricalKS2>(orgId, "historical_ks2");
+}
+
+export async function readEnergyInvoices(
+  orgId: string,
+): Promise<MISReadResult<MISEnergyInvoice>> {
+  return getMISDataService().read<MISEnergyInvoice>(orgId, "energy_invoices");
 }

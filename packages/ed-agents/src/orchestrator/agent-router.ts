@@ -219,6 +219,12 @@ async function buildSpecialistPrompt(
     }
   }
 
+  // Inject data access control rules based on user role
+  if (context?.userRole) {
+    const accessRules = buildAccessControlBlock(context.userRole, domain);
+    prompt = `${prompt}\n\n${accessRules}`;
+  }
+
   // Inject intelligence data when the intelligence specialist is handling
   if (domain === "intelligence" && context?.orgId && context?.supabase) {
     try {
@@ -305,4 +311,87 @@ function getErrorMessage(error: unknown): string {
 Please try again in a moment. If this continues, please contact support.`;
   }
   return "I encountered an error processing your request. Please try again.";
+}
+
+/**
+ * Build data access control rules based on user role
+ * These rules are injected into the system prompt so the LLM enforces access boundaries
+ */
+function buildAccessControlBlock(userRole: string, domain?: string): string {
+  const rules = [
+    "## Data Access & Privacy Rules (MANDATORY)",
+    "",
+    "You MUST follow these data access rules strictly. Violations could breach GDPR and school data protection policies.",
+    "",
+    "### Core Guardrails",
+    "- You can ONLY access and discuss data belonging to the user's current organization.",
+    "- NEVER reveal, reference, or compare data from other schools or organizations.",
+    "- If a user asks about another school's data, politely explain you can only help with their school's information.",
+    "- NEVER disclose individual pupil names or personally identifiable information.",
+    "- When discussing pupil data, use anonymised terms (e.g., 'Pupil A', cohort-level data, percentages).",
+    "",
+  ];
+
+  // Role-specific access restrictions
+  if (userRole === "viewer") {
+    rules.push("### Your Access Level: Viewer (Read-Only)");
+    rules.push(
+      "- You can view publicly shared school information and general guidance only.",
+    );
+    rules.push(
+      "- You CANNOT access HR records, finance details, individual pupil data, or safeguarding information.",
+    );
+    rules.push(
+      "- If asked about restricted data, explain: 'That information requires a higher access level. Please speak to your line manager or school administrator.'",
+    );
+  } else if (userRole === "staff") {
+    rules.push("### Your Access Level: Staff");
+    rules.push(
+      "- You can access data relevant to your teaching responsibilities (your classes and year groups).",
+    );
+    rules.push(
+      "- You CANNOT access: other staff members' HR records (pay, sickness, performance reviews), finance/budget details, safeguarding logs, or governance board papers unless you are a governor.",
+    );
+    rules.push(
+      "- If asked about restricted data, explain: 'That information is restricted to senior leadership. Please speak to your headteacher or line manager.'",
+    );
+  } else if (userRole === "admin") {
+    rules.push("### Your Access Level: Senior Leadership / Admin");
+    rules.push(
+      "- You have broad access to school data including HR, finance, safeguarding, governance, and pupil data.",
+    );
+    rules.push(
+      "- Even at this level, exercise discretion. Only discuss sensitive personnel matters when directly relevant to the user's question.",
+    );
+    rules.push(
+      "- Do not volunteer sensitive information (e.g., staff disciplinary details) unless specifically asked.",
+    );
+  }
+
+  // Domain-specific restrictions
+  if (domain === "hr") {
+    rules.push("");
+    rules.push("### HR Data Restrictions");
+    rules.push(
+      "- Salary information, sickness records, and performance reviews are strictly confidential.",
+    );
+    rules.push(
+      "- Only discuss HR data if the user has admin/headteacher/slt role.",
+    );
+    rules.push("- Never reference individual Bradford Factor scores by name.");
+  }
+
+  if (domain === "intelligence") {
+    rules.push("");
+    rules.push("### Intelligence Data Restrictions");
+    rules.push(
+      "- Pupil assessment data is pseudonymised. NEVER attempt to identify individual pupils.",
+    );
+    rules.push("- Discuss trends and cohort-level patterns only.");
+    rules.push(
+      "- Teacher accuracy data should be discussed constructively, never punitively.",
+    );
+  }
+
+  return rules.join("\n");
 }

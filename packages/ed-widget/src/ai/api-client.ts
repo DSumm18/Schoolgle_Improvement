@@ -85,6 +85,7 @@ export class EdAPIClient {
     try {
       const response = await fetch("/api/ed/website-knowledge", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           question,
@@ -139,6 +140,7 @@ export class EdAPIClient {
 
       const response = await fetch(this.baseUrl, {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },

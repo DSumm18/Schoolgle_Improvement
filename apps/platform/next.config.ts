@@ -36,7 +36,7 @@ const nextConfig: NextConfig = {
       ...config.resolve.alias,
       "@schoolgle/ed-widget": path.resolve(
         __dirname,
-        "src/lib/ed-widget-stub.ts",
+        "../../packages/ed-widget/src",
       ),
       "@schoolgle/ed-agents": path.resolve(
         __dirname,
@@ -47,7 +47,7 @@ const nextConfig: NextConfig = {
   },
   turbopack: {
     resolveAlias: {
-      "@schoolgle/ed-widget": "./src/lib/ed-widget-stub.ts",
+      "@schoolgle/ed-widget": "../../packages/ed-widget/src",
       "@schoolgle/ed-agents": "../../packages/ed-agents/src",
       "@schoolgle/ed-agents/*": "../../packages/ed-agents/src/*",
     },

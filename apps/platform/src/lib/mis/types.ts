@@ -36,6 +36,17 @@ export interface MISPupil {
   admission_date: string; // ISO date
   enrolment_status: "Current" | "Leaver";
   eal: boolean;
+
+  // Adaptive teaching fields (from enriched Arbor export or API)
+  eal_stage?: "A" | "B" | "C" | "D" | "E";
+  medical_conditions?: string;
+  accessibility_needs?: string; // comma-separated: "dyslexia_friendly_font,coloured_overlay"
+  ehcp_provisions?: string; // semicolon-separated mandated provisions
+  standardised_score_reading?: number; // PiRA/NFER mean=100, SD=15
+  standardised_score_maths?: number;
+  reading_age?: string; // "8y 4m" format
+  spelling_age?: string;
+  communication_method?: string; // "Verbal", "Makaton signs", "AAC device", etc.
 }
 
 // ─── Attendance Data ─────────────────────────────────────
@@ -284,6 +295,7 @@ export interface MISSENRecord {
   external_agencies?: string;
   key_worker?: string; // Named TA
   provision_description?: string;
+  funding?: string; // "Top-up £12,500", "Notional SEN Budget", etc.
   pupil_premium: boolean;
   attendance_pct?: number;
 }
@@ -322,6 +334,48 @@ export interface MISHistoricalKS2 {
   national_combined_rwm: number;
 }
 
+// ─── Energy Invoice (extracted from supplier XLSX/PDF) ───
+
+export interface MISEnergyInvoice {
+  supplier: string;
+  invoice_number: string;
+  invoice_date: string;
+  due_date: string;
+  account_reference: string;
+  contract_reference: string;
+  customer_name: string;
+  supply_address: string;
+  meter_reference: string; // MPAN or MPRN
+  meter_serial: string;
+  energy_type: "electricity" | "gas";
+  billing_period_start: string; // ISO date
+  billing_period_end: string;
+  supply_days: number;
+  opening_reading: number;
+  closing_reading: number;
+  total_kwh: number;
+  unit_rate_pence: number;
+  standing_charge_pence: number;
+  ccl_rate_pence: number;
+  energy_charge: number;
+  standing_charge_total: number;
+  ccl_charge: number;
+  net_amount: number;
+  vat_rate: number;
+  vat_amount: number;
+  total_amount: number;
+  co2_tonnes: number;
+  calorific_value?: number; // gas only
+  correction_factor?: number; // gas only
+  monthly_breakdown: Array<{
+    month: string;
+    days: number;
+    kwh: number;
+    opening_reading: number;
+    closing_reading: number;
+  }>;
+}
+
 // ─── MIS Data Service Interface ──────────────────────────
 
 export type MISDataType =
@@ -333,7 +387,8 @@ export type MISDataType =
   | "staff"
   | "teacher_class_history"
   | "sen_register"
-  | "historical_ks2";
+  | "historical_ks2"
+  | "energy_invoices";
 
 export interface MISDataSource {
   type: "local" | "google_drive" | "wonde" | "csv_upload";

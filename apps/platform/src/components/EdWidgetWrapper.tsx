@@ -135,7 +135,7 @@ export default function EdWidgetWrapper({
           // website mode would be set explicitly if isWebsiteEmbed is true
 
           const config: any = {
-            position: "bottom-right",
+            position: "bottom-left",
             theme: "standard",
             persona: "ed",
             mode: edMode,

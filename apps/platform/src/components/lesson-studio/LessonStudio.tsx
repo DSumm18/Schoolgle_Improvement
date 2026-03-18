@@ -2,14 +2,27 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import {
-  GraduationCap, ChevronLeft, ChevronRight, Calendar,
-  Users, BookOpen, Sparkles, BarChart3, Loader2,
+  GraduationCap,
+  ChevronLeft,
+  ChevronRight,
+  Calendar,
+  Users,
+  BookOpen,
+  Sparkles,
+  BarChart3,
+  Loader2,
 } from "lucide-react";
 import { ModulePageHeader } from "@/components/ui/module-page-header";
 import { TimetableGrid } from "./TimetableGrid";
 import { LessonPlanPanel } from "./LessonPlanPanel";
 import { TeachMode } from "./TeachMode";
-import type { LSClass, LSPupil, LSTimetableSlot, LSLessonPlan } from "@/types/lesson-studio";
+import type {
+  LSClass,
+  LSPupil,
+  LSTimetableSlot,
+  LSLessonPlan,
+} from "@/types/lesson-studio";
+import { useAuth } from "@/context/SupabaseAuthContext";
 
 function getMonday(d: Date): string {
   const date = new Date(d);
@@ -28,6 +41,10 @@ function formatWeek(dateStr: string): string {
 }
 
 export function LessonStudio() {
+  const { organizationId, session } = useAuth();
+  const authHeaders: HeadersInit = session?.access_token
+    ? { Authorization: `Bearer ${session.access_token}` }
+    : {};
   // State
   const [classes, setClasses] = useState<LSClass[]>([]);
   const [selectedClass, setSelectedClass] = useState<LSClass | null>(null);
@@ -40,12 +57,17 @@ export function LessonStudio() {
 
   // Panel state
   const [selectedPlan, setSelectedPlan] = useState<LSLessonPlan | null>(null);
-  const [selectedSlot, setSelectedSlot] = useState<LSTimetableSlot | null>(null);
+  const [selectedSlot, setSelectedSlot] = useState<LSTimetableSlot | null>(
+    null,
+  );
   const [teachMode, setTeachMode] = useState<LSLessonPlan | null>(null);
 
   // Load classes on mount
   useEffect(() => {
-    fetch("/api/lesson-studio/classes")
+    if (!organizationId) return;
+    fetch(`/api/lesson-studio/classes?organizationId=${organizationId}`, {
+      headers: authHeaders,
+    })
       .then((r) => r.json())
       .then((res) => {
         const data = res.data ?? [];
@@ -54,27 +76,36 @@ export function LessonStudio() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, []);
+  }, [organizationId]);
 
   // Load timetable + pupils when class changes
   useEffect(() => {
-    if (!selectedClass) return;
+    if (!selectedClass || !organizationId) return;
     Promise.all([
-      fetch(`/api/lesson-studio/timetable?classId=${selectedClass.id}`).then((r) => r.json()),
-      fetch(`/api/lesson-studio/pupils?classId=${selectedClass.id}`).then((r) => r.json()),
+      fetch(
+        `/api/lesson-studio/timetable?classId=${selectedClass.id}&organizationId=${organizationId}`,
+        { headers: authHeaders },
+      ).then((r) => r.json()),
+      fetch(
+        `/api/lesson-studio/pupils?classId=${selectedClass.id}&organizationId=${organizationId}`,
+        { headers: authHeaders },
+      ).then((r) => r.json()),
     ]).then(([timetableRes, pupilsRes]) => {
       setSlots(timetableRes.data ?? []);
       setPupils(pupilsRes.data ?? []);
     });
-  }, [selectedClass]);
+  }, [selectedClass, organizationId]);
 
   // Load plans when class or week changes
   useEffect(() => {
-    if (!selectedClass) return;
-    fetch(`/api/lesson-studio/plans?classId=${selectedClass.id}&week=${weekCommencing}`)
+    if (!selectedClass || !organizationId) return;
+    fetch(
+      `/api/lesson-studio/plans?classId=${selectedClass.id}&week=${weekCommencing}&organizationId=${organizationId}`,
+      { headers: authHeaders },
+    )
       .then((r) => r.json())
       .then((res) => setPlans(res.data ?? []));
-  }, [selectedClass, weekCommencing]);
+  }, [selectedClass, weekCommencing, organizationId]);
 
   // Week navigation
   const prevWeek = () => {
@@ -96,16 +127,25 @@ export function LessonStudio() {
     try {
       const res = await fetch("/api/lesson-studio/generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders },
         body: JSON.stringify({
           classId: selectedClass.id,
           slotId: slot.id,
           weekCommencing,
+          organizationId,
         }),
       });
       const result = await res.json();
       if (result.data) {
-        setPlans((prev) => [...prev.filter((p) => !(p.day_of_week === slot.day_of_week && p.subject === slot.subject)), result.data]);
+        setPlans((prev) => [
+          ...prev.filter(
+            (p) =>
+              !(
+                p.day_of_week === slot.day_of_week && p.subject === slot.subject
+              ),
+          ),
+          result.data,
+        ]);
       }
     } finally {
       setGenerating(null);
@@ -113,7 +153,10 @@ export function LessonStudio() {
   };
 
   // Slot click
-  const handleSlotClick = (slot: LSTimetableSlot, plan: LSLessonPlan | null) => {
+  const handleSlotClick = (
+    slot: LSTimetableSlot,
+    plan: LSLessonPlan | null,
+  ) => {
     setSelectedSlot(slot);
     setSelectedPlan(plan);
   };
@@ -122,17 +165,38 @@ export function LessonStudio() {
   const handleMarkTaught = async (planId: string) => {
     await fetch("/api/lesson-studio/plans", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: planId, status: "taught", taught_at: new Date().toISOString() }),
+      headers: { "Content-Type": "application/json", ...authHeaders },
+      body: JSON.stringify({
+        id: planId,
+        status: "taught",
+        taught_at: new Date().toISOString(),
+        organizationId,
+      }),
     });
-    setPlans((prev) => prev.map((p) => (p.id === planId ? { ...p, status: "taught" as const, taught_at: new Date().toISOString() } : p)));
-    setSelectedPlan((prev) => (prev?.id === planId ? { ...prev, status: "taught" as const } : prev));
+    setPlans((prev) =>
+      prev.map((p) =>
+        p.id === planId
+          ? {
+              ...p,
+              status: "taught" as const,
+              taught_at: new Date().toISOString(),
+            }
+          : p,
+      ),
+    );
+    setSelectedPlan((prev) =>
+      prev?.id === planId ? { ...prev, status: "taught" as const } : prev,
+    );
   };
 
   // Stats
-  const plannedCount = plans.filter((p) => p.status === "planned" || p.status === "taught").length;
+  const plannedCount = plans.filter(
+    (p) => p.status === "planned" || p.status === "taught",
+  ).length;
   const taughtCount = plans.filter((p) => p.status === "taught").length;
-  const sendCount = pupils.filter((p) => p.has_ehcp || p.has_send_support).length;
+  const sendCount = pupils.filter(
+    (p) => p.has_ehcp || p.has_send_support,
+  ).length;
   const ppCount = pupils.filter((p) => p.is_pupil_premium).length;
 
   if (loading) {
@@ -170,7 +234,9 @@ export function LessonStudio() {
                 }`}
               >
                 <span className="font-bold">{cls.class_name}</span>
-                <span className="text-xs ml-1 opacity-70">{cls.year_group}</span>
+                <span className="text-xs ml-1 opacity-70">
+                  {cls.year_group}
+                </span>
               </button>
             ))}
           </div>
@@ -179,17 +245,36 @@ export function LessonStudio() {
         {/* Quick stats */}
         {selectedClass && (
           <div className="flex gap-3">
-            <StatPill icon={<Users className="w-3.5 h-3.5" />} label="Pupils" value={pupils.length} />
-            <StatPill icon={<BookOpen className="w-3.5 h-3.5" />} label="Planned" value={`${plannedCount}/${slots.length}`} />
-            <StatPill icon={<Sparkles className="w-3.5 h-3.5" />} label="SEND" value={sendCount} />
-            <StatPill icon={<BarChart3 className="w-3.5 h-3.5" />} label="PP" value={ppCount} />
+            <StatPill
+              icon={<Users className="w-3.5 h-3.5" />}
+              label="Pupils"
+              value={pupils.length}
+            />
+            <StatPill
+              icon={<BookOpen className="w-3.5 h-3.5" />}
+              label="Planned"
+              value={`${plannedCount}/${slots.length}`}
+            />
+            <StatPill
+              icon={<Sparkles className="w-3.5 h-3.5" />}
+              label="SEND"
+              value={sendCount}
+            />
+            <StatPill
+              icon={<BarChart3 className="w-3.5 h-3.5" />}
+              label="PP"
+              value={ppCount}
+            />
           </div>
         )}
       </div>
 
       {/* Week navigator */}
       <div className="flex items-center gap-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-2">
-        <button onClick={prevWeek} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
+        <button
+          onClick={prevWeek}
+          className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+        >
           <ChevronLeft className="w-4 h-4 text-slate-500" />
         </button>
         <div className="flex-1 text-center">
@@ -198,10 +283,16 @@ export function LessonStudio() {
             {formatWeek(weekCommencing)}
           </div>
         </div>
-        <button onClick={thisWeek} className="px-2 py-1 text-xs text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-900/20 rounded-lg transition-colors font-medium">
+        <button
+          onClick={thisWeek}
+          className="px-2 py-1 text-xs text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-900/20 rounded-lg transition-colors font-medium"
+        >
           Today
         </button>
-        <button onClick={nextWeek} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
+        <button
+          onClick={nextWeek}
+          className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+        >
           <ChevronRight className="w-4 h-4 text-slate-500" />
         </button>
       </div>
@@ -218,8 +309,12 @@ export function LessonStudio() {
       ) : selectedClass ? (
         <div className="text-center py-12 text-slate-400">
           <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
-          <p className="text-sm">No timetable found for {selectedClass.class_name}.</p>
-          <p className="text-xs mt-1">Import your timetable from your MIS or create one manually.</p>
+          <p className="text-sm">
+            No timetable found for {selectedClass.class_name}.
+          </p>
+          <p className="text-xs mt-1">
+            Import your timetable from your MIS or create one manually.
+          </p>
         </div>
       ) : (
         <div className="text-center py-12 text-slate-400">
@@ -231,11 +326,20 @@ export function LessonStudio() {
       {/* Lesson Plan Panel (slide-over) */}
       {selectedPlan && selectedSlot && (
         <>
-          <div className="fixed inset-0 bg-black/30 z-40" onClick={() => { setSelectedPlan(null); setSelectedSlot(null); }} />
+          <div
+            className="fixed inset-0 bg-black/30 z-40"
+            onClick={() => {
+              setSelectedPlan(null);
+              setSelectedSlot(null);
+            }}
+          />
           <LessonPlanPanel
             plan={selectedPlan}
             slot={selectedSlot}
-            onClose={() => { setSelectedPlan(null); setSelectedSlot(null); }}
+            onClose={() => {
+              setSelectedPlan(null);
+              setSelectedSlot(null);
+            }}
             onTeach={(id) => {
               const plan = plans.find((p) => p.id === id);
               if (plan) setTeachMode(plan);
@@ -247,21 +351,28 @@ export function LessonStudio() {
 
       {/* Teach Mode (full screen) */}
       {teachMode && (
-        <TeachMode
-          plan={teachMode}
-          onExit={() => setTeachMode(null)}
-        />
+        <TeachMode plan={teachMode} onExit={() => setTeachMode(null)} />
       )}
     </div>
   );
 }
 
-function StatPill({ icon, label, value }: { icon: React.ReactNode; label: string; value: number | string }) {
+function StatPill({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: number | string;
+}) {
   return (
     <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
       <span className="text-teal-500">{icon}</span>
       <span className="text-xs text-slate-500">{label}</span>
-      <span className="text-sm font-bold text-slate-800 dark:text-white">{value}</span>
+      <span className="text-sm font-bold text-slate-800 dark:text-white">
+        {value}
+      </span>
     </div>
   );
 }

@@ -236,9 +236,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(response);
     }
 
-    // Get user's organization and role (user already available from auth check above)
+    // Get user's organization and role via organization_members (proper multi-tenant lookup)
     let organization: any = null;
     let userRole: "admin" | "staff" | "viewer" = "viewer";
+    let memberRole: string = "viewer";
     let subscription = {
       plan: "free" as const,
       features: [] as string[],
@@ -247,34 +248,81 @@ export async function POST(request: NextRequest) {
     };
 
     if (user) {
-      // Fetch organization details
-      const { data: orgData } = await supabase
-        .from("organizations")
-        .select("*, role")
+      // Use service role client for reliable org lookup via organization_members
+      const { createServiceRoleClient } = await import("@/lib/supabase-server");
+      const serviceClient = createServiceRoleClient();
+
+      // Get user's active organization membership
+      const { data: memberData } = await serviceClient
+        .from("organization_members")
+        .select("organization_id, role, organizations(*)")
         .eq("user_id", user.id)
+        .limit(1)
         .single();
 
-      if (orgData) {
-        organization = orgData;
+      if (memberData) {
+        const org = memberData.organizations as any;
+        organization = {
+          ...org,
+          id: memberData.organization_id,
+          role: memberData.role,
+        };
+        memberRole = memberData.role || "viewer";
 
-        // Map role to our format
+        // Map detailed role to Ed's simplified role model
         const roleMap: Record<string, "admin" | "staff" | "viewer"> = {
           admin: "admin",
+          headteacher: "admin",
           slt: "admin",
           teacher: "staff",
           governor: "staff",
+          caretaker: "staff",
           viewer: "viewer",
         };
-        userRole = roleMap[orgData.role] || "viewer";
+        userRole = roleMap[memberRole] || "viewer";
 
-        // Get subscription details (if available)
+        // Get subscription details
         subscription = {
-          plan: (orgData.subscription_plan as any) || "free",
-          features: orgData.features || [],
-          creditsRemaining: orgData.credits_remaining || 1000,
-          creditsUsed: orgData.credits_used || 0,
+          plan: (org?.subscription_plan as any) || "free",
+          features: org?.features || [],
+          creditsRemaining: org?.credits_remaining || 1000,
+          creditsUsed: org?.credits_used || 0,
         };
       }
+
+      // Check if Ed is enabled for this organization (if setting exists)
+      if (organization?.id) {
+        try {
+          const { data: edSettings } = await serviceClient
+            .from("organization_settings")
+            .select("value")
+            .eq("organization_id", organization.id)
+            .eq("key", "ed_enabled")
+            .single();
+
+          // If ed_enabled is explicitly set to false, block access
+          // Default: Ed is enabled unless explicitly disabled
+          if (edSettings && edSettings.value === false) {
+            return NextResponse.json(
+              {
+                error:
+                  "Ed is not enabled for your school. An administrator can enable Ed in Settings.",
+                code: "ED_DISABLED",
+              },
+              { status: 403 },
+            );
+          }
+        } catch {
+          // Table may not exist yet — default to Ed enabled
+        }
+      }
+    }
+
+    if (!organization?.id) {
+      return NextResponse.json(
+        { error: "No organization found for your account", code: "NO_ORG" },
+        { status: 403 },
+      );
     }
 
     // Determine active app based on context
@@ -287,6 +335,14 @@ export async function POST(request: NextRequest) {
       };
       activeApp = appMap[context.tool.id];
     }
+
+    // Resolve user's first name for personalised greeting
+    const fullName =
+      user?.user_metadata?.name ||
+      user?.user_metadata?.full_name ||
+      user?.email?.split("@")[0] ||
+      "there";
+    const firstName = fullName.split(" ")[0];
 
     // Check for greetings first - before any other processing
     if (isGreeting(question)) {
@@ -306,7 +362,8 @@ export async function POST(request: NextRequest) {
       const { greeting, alerts } = await orchestrator.handleProactiveGreeting({
         url: context?.url,
         title: context?.title,
-        userName: user?.user_metadata?.name || user?.email?.split("@")[0],
+        userName: firstName,
+        userRole: memberRole,
       });
 
       const response: ChatResponse = {
@@ -368,6 +425,17 @@ export async function POST(request: NextRequest) {
     // Add suggestions if available
     if (edResponse.warnings && edResponse.warnings.length > 0) {
       response.suggestions = edResponse.warnings;
+    }
+
+    // Log conversation topic (lightweight, no PII — just domain + summary)
+    if (organization?.id && user?.id) {
+      logConversationTopic(
+        supabase,
+        organization.id,
+        user.id,
+        edResponse.specialist || "general",
+        question,
+      ).catch(() => {}); // Fire-and-forget, don't block response
     }
 
     return NextResponse.json(response);
@@ -1089,4 +1157,67 @@ async function searchLearnedKnowledge(
   } catch {
     return null;
   }
+}
+
+/**
+ * Log a lightweight conversation topic for continuity.
+ * Stores ONLY the domain and a short topic summary — NO user content, NO PII.
+ * Used so Ed can say "last time we talked about X" without storing chat history.
+ */
+async function logConversationTopic(
+  supabase: any,
+  organizationId: string,
+  userId: string,
+  domain: string,
+  question: string,
+): Promise<void> {
+  try {
+    // Generate a short, PII-free topic summary from the question
+    const topicSummary = summariseTopicSafely(question, domain);
+
+    await supabase.from("ed_conversation_log").insert({
+      organization_id: organizationId,
+      user_id: userId,
+      domain,
+      topic_summary: topicSummary,
+    });
+  } catch {
+    // Silently fail — table may not exist yet
+  }
+}
+
+/**
+ * Create a safe, PII-free topic summary from a question.
+ * Strips names, numbers, and personal details.
+ */
+function summariseTopicSafely(question: string, domain: string): string {
+  const domainLabels: Record<string, string> = {
+    estates: "Estates & Compliance",
+    hr: "HR & People",
+    send: "SEND",
+    data: "Data & Reporting",
+    curriculum: "Teaching & Learning",
+    "it-tech": "IT & Systems",
+    procurement: "Procurement",
+    governance: "Governance",
+    communications: "Communications",
+    intelligence: "School Intelligence",
+    risk: "Risk Management",
+    general: "General query",
+  };
+
+  // Extract topic keywords (remove potential PII)
+  const cleaned = question
+    .toLowerCase()
+    .replace(/\b(mr|mrs|ms|miss|dr|prof)\b\.?\s*\w+/gi, "") // Remove name prefixes
+    .replace(/\b[A-Z][a-z]+\s+[A-Z][a-z]+\b/g, "") // Remove proper names
+    .replace(/\b\d{5,}\b/g, "") // Remove long numbers (IDs, URNs)
+    .replace(/[^\w\s]/g, " ") // Remove punctuation
+    .trim();
+
+  // Take first ~60 chars as topic
+  const topic =
+    cleaned.length > 60 ? cleaned.substring(0, 57) + "..." : cleaned;
+
+  return topic || domainLabels[domain] || domain;
 }

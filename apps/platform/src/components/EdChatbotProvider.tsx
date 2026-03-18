@@ -13,18 +13,20 @@ interface EdChatbotContextType {
   toggleMinimize: () => void;
 }
 
-const EdChatbotContext = createContext<EdChatbotContextType | undefined>(undefined);
+const EdChatbotContext = createContext<EdChatbotContextType | undefined>(
+  undefined,
+);
 
 export function useEdChatbot() {
   const context = useContext(EdChatbotContext);
   if (!context) {
-    throw new Error('useEdChatbot must be used within EdChatbotProvider');
+    throw new Error("useEdChatbot must be used within EdChatbotProvider");
   }
   return context;
 }
 
 interface EdChatbotProviderProps {
-  children: ReactNode;
+  children?: ReactNode;
 }
 
 export function EdChatbotProvider({ children }: EdChatbotProviderProps) {
@@ -84,7 +86,7 @@ export function EdChatbotProvider({ children }: EdChatbotProviderProps) {
         isMinimized={isMinimized}
         onToggleMinimize={toggleMinimize}
         organizationId={organization?.id}
-        mode={user && organization ? 'user' : 'demo'}
+        mode={user && organization ? "user" : "demo"}
       />
     </EdChatbotContext.Provider>
   );
