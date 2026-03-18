@@ -1,0 +1,28 @@
+import { chromium } from "playwright";
+import { readFileSync } from "fs";
+import { join } from "path";
+const envPath = join("/Users/david/Schoolgle_Improvement/apps/platform", ".env.local");
+const env = {};
+for (const line of readFileSync(envPath, "utf-8").split("\n")) { const idx = line.indexOf("="); if (idx > 0 && !line.startsWith("#")) env[line.slice(0,idx).trim()] = line.slice(idx+1).trim(); }
+const res = await fetch(`${env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/token?grant_type=password`, { method:"POST", headers:{"Content-Type":"application/json", apikey:env.NEXT_PUBLIC_SUPABASE_ANON_KEY}, body:JSON.stringify({email:"ui-test@schoolgle.co.uk",password:"UIReview2026x"}) });
+const s = await res.json();
+const ref = env.NEXT_PUBLIC_SUPABASE_URL.match(/https:\/\/(\w+)\./)?.[1]||"";
+const browser = await chromium.launch({headless:true});
+const ctx = await browser.newContext({viewport:{width:1440,height:900},deviceScaleFactor:2,storageState:{cookies:[],origins:[{origin:"http://localhost:3002",localStorage:[{name:`sb-${ref}-auth-token`,value:JSON.stringify({access_token:s.access_token,refresh_token:s.refresh_token,expires_at:Math.floor(Date.now()/1000)+3600,expires_in:3600,token_type:"bearer",user:s.user})}]}]}});
+const page = await ctx.newPage();
+await page.goto("http://localhost:3002/dashboard/canvas", {waitUntil:"networkidle"});
+await page.waitForTimeout(2000);
+await page.getByRole("button",{name:"Data Sources"}).click();
+await page.waitForTimeout(4000);
+await page.screenshot({path:"/tmp/ui-screenshots/connectors-01-top.png"});
+console.log("1. Connectors top");
+await page.evaluate(() => window.scrollTo(0, 500));
+await page.waitForTimeout(500);
+await page.screenshot({path:"/tmp/ui-screenshots/connectors-02-mid.png"});
+console.log("2. Connectors mid");
+await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+await page.waitForTimeout(500);
+await page.screenshot({path:"/tmp/ui-screenshots/connectors-03-bottom.png"});
+console.log("3. Connectors bottom");
+await browser.close();
+console.log("Done!");
