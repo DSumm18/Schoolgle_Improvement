@@ -29,6 +29,8 @@ import {
   Thermometer,
   FileText,
   Sparkles,
+  Car,
+  Receipt,
 } from "lucide-react";
 import {
   ModulePageHeader,
@@ -43,6 +45,9 @@ import {
   type EnergyFilters,
 } from "@/components/energy/EnergyFilterBar";
 import { EnergyReportTab } from "@/components/energy/EnergyReportTab";
+import { CarbonReportTab } from "@/components/energy/CarbonReportTab";
+import { MileageClaimsTab } from "@/components/energy/MileageClaimsTab";
+import { InvoiceDataTable } from "@/components/energy/InvoiceDataTable";
 import {
   AreaChart,
   Area,
@@ -573,7 +578,13 @@ export default function EnergyDashboardPage() {
 
   // Main tabs
   const [mainTab, setMainTab] = useState<
-    "combined" | "electricity" | "gas" | "reports"
+    | "combined"
+    | "electricity"
+    | "gas"
+    | "invoices"
+    | "reports"
+    | "carbon"
+    | "mileage"
   >("combined");
   const [filters, setFilters] = useState<EnergyFilters>(DEFAULT_FILTERS);
 
@@ -1238,32 +1249,91 @@ export default function EnergyDashboardPage() {
           <div className="flex items-center gap-1 mb-3">
             {(
               [
-                ["combined", "Combined", BarChart3],
-                ["electricity", "Electricity", Zap],
-                ["gas", "Gas", Flame],
-                ["reports", "Reports", FileText],
-              ] as const
-            ).map(([key, label, Icon]) => (
+                [
+                  "combined",
+                  "Combined",
+                  BarChart3,
+                  "text-teal-500",
+                  "bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800",
+                ],
+                [
+                  "electricity",
+                  "Electricity",
+                  Zap,
+                  "text-yellow-500",
+                  "bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800/60",
+                ],
+                [
+                  "gas",
+                  "Gas",
+                  Flame,
+                  "text-orange-500",
+                  "bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 border border-orange-200 dark:border-orange-800/60",
+                ],
+                [
+                  "invoices",
+                  "Invoices",
+                  Receipt,
+                  "text-indigo-500",
+                  "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/60",
+                ],
+                [
+                  "reports",
+                  "Reports",
+                  FileText,
+                  "text-blue-500",
+                  "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60",
+                ],
+                [
+                  "carbon",
+                  "Carbon",
+                  Leaf,
+                  "text-emerald-500",
+                  "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60",
+                ],
+                [
+                  "mileage",
+                  "Mileage",
+                  Car,
+                  "text-violet-500",
+                  "bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-800/60",
+                ],
+              ] as [string, string, any, string, string][]
+            ).map(([key, label, Icon, iconColor, activeClass]) => (
               <button
                 key={key}
                 onClick={() => setMainTab(key as typeof mainTab)}
                 className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
                   mainTab === key
-                    ? "bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800"
+                    ? activeClass
                     : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800"
                 }`}
               >
-                <Icon className="h-4 w-4" />
+                <Icon
+                  className={`h-4 w-4 ${mainTab === key ? "" : iconColor}`}
+                />
                 {label}
               </button>
             ))}
           </div>
-          {/* Filter bar (not shown on Reports tab) */}
-          {mainTab !== "reports" && (
-            <EnergyFilterBar filters={filters} onChange={setFilters} />
-          )}
+          {/* Filter bar (not shown on Reports/Carbon/Mileage/Invoices tabs) */}
+          {mainTab !== "reports" &&
+            mainTab !== "carbon" &&
+            mainTab !== "mileage" &&
+            mainTab !== "invoices" && (
+              <EnergyFilterBar filters={filters} onChange={setFilters} />
+            )}
         </div>
       </Section>
+
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      {/* INVOICES TAB                                                 */}
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      {mainTab === "invoices" && organizationId && (
+        <Section delay={0.2}>
+          <InvoiceDataTable organizationId={organizationId} />
+        </Section>
+      )}
 
       {/* ═══════════════════════════════════════════════════════════════ */}
       {/* REPORTS TAB                                                  */}
@@ -1271,6 +1341,29 @@ export default function EnergyDashboardPage() {
       {mainTab === "reports" && organizationId && (
         <Section delay={0.2}>
           <EnergyReportTab organizationId={organizationId} />
+        </Section>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      {/* CARBON TAB                                                    */}
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      {mainTab === "carbon" && (
+        <Section delay={0.2}>
+          <CarbonReportTab
+            monthly={monthly}
+            totalAnnualKwh={summary?.total_annual_kwh ?? 0}
+            floorAreaSqm={summary?.floor_area_sqm ?? 2800}
+            decKwhPerSqm={summary?.dec_kwh_per_sqm ?? 0}
+          />
+        </Section>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      {/* MILEAGE TAB                                                   */}
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      {mainTab === "mileage" && (
+        <Section delay={0.2}>
+          <MileageClaimsTab />
         </Section>
       )}
 
@@ -1457,6 +1550,8 @@ export default function EnergyDashboardPage() {
       {/* ═══════════════════════════════════════════════════════════════ */}
       {mainTab !== "reports" &&
         mainTab !== "gas" &&
+        mainTab !== "carbon" &&
+        mainTab !== "mileage" &&
         dailyChartData.length > 0 && (
           <Section delay={0.2}>
             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
@@ -1904,150 +1999,157 @@ export default function EnergyDashboardPage() {
       {/* ═══════════════════════════════════════════════════════════════ */}
       {/* DEC RATING + METERS ROW                                      */}
       {/* ═══════════════════════════════════════════════════════════════ */}
-      {mainTab !== "reports" && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* DEC Rating */}
-          {summary && decBand && (
-            <Section delay={0.3}>
-              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 h-full">
-                <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
-                  <Leaf className="h-4 w-4 text-green-600" />
-                  DEC Rating
-                </h2>
-                <div className="flex items-center gap-5">
-                  <motion.div
-                    initial={{ scale: 0.5, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ type: "spring", stiffness: 200, delay: 0.4 }}
-                    className={`w-20 h-20 rounded-xl flex items-center justify-center text-white text-3xl font-bold shadow-lg ${decBand.colour}`}
-                  >
-                    {summary.dec_rating}
-                  </motion.div>
-                  <div className="flex-1">
-                    <div className="flex gap-0.5 mb-3">
-                      {DEC_BANDS.map((band) => {
-                        const isActive = band.rating === summary.dec_rating;
-                        return (
-                          <div
-                            key={band.rating}
-                            className={`flex-1 h-7 flex items-center justify-center text-[10px] font-bold text-white rounded transition-all ${band.colour} ${
-                              isActive
-                                ? "ring-2 ring-offset-1 ring-gray-800 dark:ring-white dark:ring-offset-slate-900 scale-110 shadow-md"
-                                : "opacity-35"
-                            }`}
-                          >
-                            {band.rating}
-                          </div>
-                        );
-                      })}
+      {mainTab !== "reports" &&
+        mainTab !== "carbon" &&
+        mainTab !== "mileage" && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* DEC Rating */}
+            {summary && decBand && (
+              <Section delay={0.3}>
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 h-full">
+                  <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
+                    <Leaf className="h-4 w-4 text-green-600" />
+                    DEC Rating
+                  </h2>
+                  <div className="flex items-center gap-5">
+                    <motion.div
+                      initial={{ scale: 0.5, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 200,
+                        delay: 0.4,
+                      }}
+                      className={`w-20 h-20 rounded-xl flex items-center justify-center text-white text-3xl font-bold shadow-lg ${decBand.colour}`}
+                    >
+                      {summary.dec_rating}
+                    </motion.div>
+                    <div className="flex-1">
+                      <div className="flex gap-0.5 mb-3">
+                        {DEC_BANDS.map((band) => {
+                          const isActive = band.rating === summary.dec_rating;
+                          return (
+                            <div
+                              key={band.rating}
+                              className={`flex-1 h-7 flex items-center justify-center text-[10px] font-bold text-white rounded transition-all ${band.colour} ${
+                                isActive
+                                  ? "ring-2 ring-offset-1 ring-gray-800 dark:ring-white dark:ring-offset-slate-900 scale-110 shadow-md"
+                                  : "opacity-35"
+                              }`}
+                            >
+                              {band.rating}
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <span className="font-semibold text-gray-900 dark:text-white">
+                          {fmtNumber(Math.round(summary.dec_kwh_per_sqm))} kWh/m
+                          {"\u00b2"}
+                        </span>
+                        /yr
+                      </p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {fmtNumber(summary.floor_area_sqm)} m{"\u00b2"} floor
+                        area
+                      </p>
                     </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      <span className="font-semibold text-gray-900 dark:text-white">
-                        {fmtNumber(Math.round(summary.dec_kwh_per_sqm))} kWh/m
-                        {"\u00b2"}
-                      </span>
-                      /yr
-                    </p>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      {fmtNumber(summary.floor_area_sqm)} m{"\u00b2"} floor area
-                    </p>
                   </div>
                 </div>
-              </div>
-            </Section>
-          )}
+              </Section>
+            )}
 
-          {/* Meters */}
-          <Section delay={0.35} className="lg:col-span-2">
-            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 h-full">
-              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
-                <Activity className="h-4 w-4 text-teal-600" />
-                Registered Meters
-              </h2>
-              {meters.length === 0 ? (
-                <div className="text-center py-8">
-                  <Zap className="h-10 w-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-                  <p className="text-sm text-gray-400">
-                    No meters registered yet.
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {meters.map((meter, idx) => {
-                    const Icon = METER_ICONS[meter.meter_type] ?? Zap;
-                    const colour =
-                      METER_COLOURS[meter.meter_type] ?? "text-gray-500";
-                    const bgStyle =
-                      METER_BG[meter.meter_type] ??
-                      "bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700";
-                    return (
-                      <motion.div
-                        key={meter.id}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.4 + idx * 0.05 }}
-                        className={`relative rounded-xl border p-4 transition-all hover:shadow-md ${bgStyle}`}
-                      >
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <div
-                              className={`p-1.5 rounded-lg bg-white/80 dark:bg-slate-800/80 ${colour}`}
-                            >
-                              <Icon className="h-4 w-4" />
+            {/* Meters */}
+            <Section delay={0.35} className="lg:col-span-2">
+              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 h-full">
+                <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-teal-600" />
+                  Registered Meters
+                </h2>
+                {meters.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Zap className="h-10 w-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                    <p className="text-sm text-gray-400">
+                      No meters registered yet.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {meters.map((meter, idx) => {
+                      const Icon = METER_ICONS[meter.meter_type] ?? Zap;
+                      const colour =
+                        METER_COLOURS[meter.meter_type] ?? "text-gray-500";
+                      const bgStyle =
+                        METER_BG[meter.meter_type] ??
+                        "bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700";
+                      return (
+                        <motion.div
+                          key={meter.id}
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.4 + idx * 0.05 }}
+                          className={`relative rounded-xl border p-4 transition-all hover:shadow-md ${bgStyle}`}
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <div
+                                className={`p-1.5 rounded-lg bg-white/80 dark:bg-slate-800/80 ${colour}`}
+                              >
+                                <Icon className="h-4 w-4" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                                  {meter.label}
+                                </p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  {meter.location}
+                                </p>
+                              </div>
                             </div>
+                          </div>
+                          <div className="flex items-end justify-between">
                             <div>
-                              <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                                {meter.label}
-                              </p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400">
-                                {meter.location}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-end justify-between">
-                          <div>
-                            <p className="text-xl font-bold text-gray-900 dark:text-white">
-                              {fmtNumber(meter.latest_reading)}
-                              <span className="text-xs text-gray-400 font-normal ml-1">
-                                {meter.unit}
-                              </span>
-                            </p>
-                            <p className="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1">
-                              <Clock className="h-2.5 w-2.5" />
-                              {meter.latest_date}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            {meter.monthly_cost !== 0 && (
-                              <p className="text-xs font-semibold text-gray-700 dark:text-gray-200">
-                                {fmtGBP(Math.abs(meter.monthly_cost))}
-                                <span className="font-normal text-gray-400">
-                                  /mo
+                              <p className="text-xl font-bold text-gray-900 dark:text-white">
+                                {fmtNumber(meter.latest_reading)}
+                                <span className="text-xs text-gray-400 font-normal ml-1">
+                                  {meter.unit}
                                 </span>
                               </p>
-                            )}
-                            <button
-                              onClick={() => {
-                                setShowMeterReader(true);
-                                setSelectedMeterId(meter.id);
-                              }}
-                              className="mt-1 inline-flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-900/30 rounded-md hover:bg-teal-100 dark:hover:bg-teal-900/50 transition-colors"
-                            >
-                              <Camera className="h-2.5 w-2.5" />
-                              Reading
-                            </button>
+                              <p className="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1">
+                                <Clock className="h-2.5 w-2.5" />
+                                {meter.latest_date}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              {meter.monthly_cost !== 0 && (
+                                <p className="text-xs font-semibold text-gray-700 dark:text-gray-200">
+                                  {fmtGBP(Math.abs(meter.monthly_cost))}
+                                  <span className="font-normal text-gray-400">
+                                    /mo
+                                  </span>
+                                </p>
+                              )}
+                              <button
+                                onClick={() => {
+                                  setShowMeterReader(true);
+                                  setSelectedMeterId(meter.id);
+                                }}
+                                className="mt-1 inline-flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-900/30 rounded-md hover:bg-teal-100 dark:hover:bg-teal-900/50 transition-colors"
+                              >
+                                <Camera className="h-2.5 w-2.5" />
+                                Reading
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </Section>
-        </div>
-      )}
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </Section>
+          </div>
+        )}
 
       {/* ═══════════════════════════════════════════════════════════════ */}
       {/* SMART METER READER                                           */}
@@ -2907,6 +3009,8 @@ export default function EnergyDashboardPage() {
       {/* MONTHLY COMPARISON (fallback if no daily trend data)         */}
       {/* ═══════════════════════════════════════════════════════════════ */}
       {mainTab !== "reports" &&
+        mainTab !== "carbon" &&
+        mainTab !== "mileage" &&
         !dailyChartData.length &&
         monthlyChartData.length > 0 && (
           <Section delay={0.2}>
@@ -3012,6 +3116,8 @@ export default function EnergyDashboardPage() {
       {/* SCHOOL EVENTS CONTEXT                                        */}
       {/* ═══════════════════════════════════════════════════════════════ */}
       {mainTab !== "reports" &&
+        mainTab !== "carbon" &&
+        mainTab !== "mileage" &&
         dailyTrend?.school_events &&
         dailyTrend.school_events.length > 0 && (
           <Section delay={0.5}>

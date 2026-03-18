@@ -191,8 +191,9 @@ export const GET = protectedRoute(async (auth) => {
 
   const monthlyMap = new Map<string, Record<string, number>>();
   for (const r of hhReadings ?? []) {
-    const d = new Date(r.reading_timestamp);
-    const monthNames = [
+    const key = r.reading_timestamp.slice(0, 7); // "2025-03" from ISO timestamp
+    const parts = key.split("-");
+    const mn = [
       "Jan",
       "Feb",
       "Mar",
@@ -206,11 +207,50 @@ export const GET = protectedRoute(async (auth) => {
       "Nov",
       "Dec",
     ];
-    const key = `${monthNames[d.getUTCMonth()]} ${String(d.getUTCFullYear()).slice(2)}`;
-    if (!monthlyMap.has(key)) monthlyMap.set(key, {});
-    const bucket = monthlyMap.get(key)!;
+    const mKey = `${mn[parseInt(parts[1]) - 1]} ${parts[0].slice(2)}`;
+    if (!monthlyMap.has(mKey)) monthlyMap.set(mKey, {});
+    const bucket = monthlyMap.get(mKey)!;
     const type = meterTypeMap.get(r.meter_id) ?? "electricity";
     bucket[type] = (bucket[type] || 0) + (Number(r.kwh) || 0);
+  }
+
+  // Also get monthly gas (and any other type without HH data) from invoice readings
+  const { data: invoiceReadings } = await supabase
+    .from("energy_invoice_readings")
+    .select("meter_id, reading_date, kwh_consumed")
+    .eq("organization_id", orgId)
+    .gte("reading_date", twelveMonthsAgo.toISOString().split("T")[0])
+    .order("reading_date");
+
+  // Helper to make consistent month keys from date strings (avoids timezone issues)
+  const MN = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+  function monthKey(dateStr: string): string {
+    const parts = String(dateStr).split(/[-T]/);
+    const yr = parseInt(parts[0]);
+    const mo = parseInt(parts[1]) - 1;
+    return `${MN[mo]} ${String(yr).slice(2)}`;
+  }
+
+  for (const r of invoiceReadings ?? []) {
+    const type = meterTypeMap.get(r.meter_id) ?? "gas";
+    if (type === "electricity") continue; // HH covers electricity
+    const key = monthKey(r.reading_date);
+    if (!monthlyMap.has(key)) monthlyMap.set(key, {});
+    const bucket = monthlyMap.get(key)!;
+    bucket[type] = (bucket[type] || 0) + (Number(r.kwh_consumed) || 0);
   }
 
   let monthlyConsumption = Array.from(monthlyMap.entries()).map(
@@ -221,25 +261,27 @@ export const GET = protectedRoute(async (auth) => {
     }),
   );
 
-  // Sort chronologically
-  const monthOrder = [
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-    "Jan",
-    "Feb",
-    "Mar",
-  ];
+  // Sort chronologically by actual date
+  const mnIdx: Record<string, number> = {
+    Jan: 1,
+    Feb: 2,
+    Mar: 3,
+    Apr: 4,
+    May: 5,
+    Jun: 6,
+    Jul: 7,
+    Aug: 8,
+    Sep: 9,
+    Oct: 10,
+    Nov: 11,
+    Dec: 12,
+  };
   monthlyConsumption.sort((a, b) => {
-    const aIdx = monthOrder.findIndex((m) => a.month.startsWith(m));
-    const bIdx = monthOrder.findIndex((m) => b.month.startsWith(m));
-    return aIdx - bIdx;
+    const [aM, aY] = a.month.split(" ");
+    const [bM, bY] = b.month.split(" ");
+    const aDate = (parseInt(aY) || 0) * 100 + (mnIdx[aM] || 0);
+    const bDate = (parseInt(bY) || 0) * 100 + (mnIdx[bM] || 0);
+    return aDate - bDate;
   });
 
   // 4. Summary
@@ -254,11 +296,18 @@ export const GET = protectedRoute(async (auth) => {
     0,
   );
 
-  // Annual kWh from HH data (ground truth)
+  // Annual kWh from HH data (electricity) + invoice readings (gas)
   const annualKwhByType: Record<string, number> = {};
   for (const r of hhReadings ?? []) {
     const type = meterTypeMap.get(r.meter_id) ?? "electricity";
     annualKwhByType[type] = (annualKwhByType[type] || 0) + (Number(r.kwh) || 0);
+  }
+  // Add gas (and other non-HH types) from invoice readings
+  for (const r of invoiceReadings ?? []) {
+    const type = meterTypeMap.get(r.meter_id) ?? "gas";
+    if (type === "electricity") continue; // HH already covers electricity
+    annualKwhByType[type] =
+      (annualKwhByType[type] || 0) + (Number(r.kwh_consumed) || 0);
   }
   const totalAnnualKwh = Object.values(annualKwhByType).reduce(
     (s, v) => s + v,
