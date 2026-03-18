@@ -110,6 +110,18 @@ export const OPENROUTER_MODELS: Record<string, ModelConfig> = {
     },
   },
 
+  "google/gemini-2.0-flash-001": {
+    id: "google/gemini-2.0-flash-001",
+    provider: "openrouter",
+    model: "google/gemini-2.0-flash-001",
+    costPerMillionTokens: 0.1,
+    capabilities: {
+      vision: true,
+      streaming: true,
+      jsonMode: true,
+    },
+  },
+
   // ========== FAST CHEAP MODELS (Routing, classification) ==========
 
   "openai/gpt-4o-mini": {

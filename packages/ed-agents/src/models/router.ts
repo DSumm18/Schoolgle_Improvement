@@ -23,36 +23,42 @@ import {
  * Ordered by preference (first is optimal, last is fallback)
  */
 const TASK_MODEL_MAP: Record<TaskType, string[]> = {
-  // Fast/cheap for routing
+  // Fast/cheap for routing — Gemini Flash is reliable and cheap via OpenRouter
   "intent-classification": [
-    "openai/gpt-4o-mini",
+    "google/gemini-2.0-flash-001",
     "google/gemini-2.0-flash-exp",
     "deepseek/deepseek-chat",
   ],
-  "work-focus-check": ["openai/gpt-4o-mini", "google/gemini-2.0-flash-exp"],
+  "work-focus-check": [
+    "google/gemini-2.0-flash-001",
+    "google/gemini-2.0-flash-exp",
+  ],
 
-  // High quality for specialist responses
+  // High quality for specialist responses — Gemini first for reliability
   "specialist-response": [
-    "anthropic/claude-3.5-sonnet",
+    "google/gemini-2.0-flash-001",
     "deepseek/deepseek-chat",
-    "openai/gpt-4o",
+    "google/gemini-2.5-pro",
   ],
   "perspective-generation": [
+    "google/gemini-2.0-flash-001",
     "deepseek/deepseek-chat",
-    "openai/gpt-4o-mini",
     "google/gemini-2.0-flash-exp",
   ],
-  synthesis: ["anthropic/claude-3.5-sonnet", "deepseek/deepseek-chat"],
+  synthesis: ["google/gemini-2.0-flash-001", "deepseek/deepseek-chat"],
 
   // Vision needed
   "ui-analysis": [
-    "google/gemini-2.5-flash-preview",
-    "openai/gpt-4o",
+    "google/gemini-2.0-flash-001",
     "google/gemini-2.5-pro",
+    "openai/gpt-4o",
   ],
 
   // Fast/cheap for actions
-  "action-planning": ["openai/gpt-4o-mini", "google/gemini-2.0-flash-exp"],
+  "action-planning": [
+    "google/gemini-2.0-flash-001",
+    "google/gemini-2.0-flash-exp",
+  ],
 };
 
 /**
@@ -60,23 +66,21 @@ const TASK_MODEL_MAP: Record<TaskType, string[]> = {
  */
 const PLAN_MODEL_CONSTRAINTS: Record<string, string[]> = {
   free: [
-    "openai/gpt-4o-mini",
+    "google/gemini-2.0-flash-001",
     "google/gemini-2.0-flash-exp",
     "deepseek/deepseek-chat",
-    "google/gemini-2.5-flash-preview",
   ],
   schools: [
-    "anthropic/claude-3.5-sonnet",
+    "google/gemini-2.0-flash-001",
+    "google/gemini-2.5-pro",
     "deepseek/deepseek-chat",
-    "openai/gpt-4o",
     "google/gemini-2.0-flash-exp",
-    "google/gemini-2.5-flash-preview",
   ],
   trusts: [
+    "google/gemini-2.0-flash-001",
+    "google/gemini-2.5-pro",
+    "deepseek/deepseek-chat",
     "anthropic/claude-3.5-sonnet",
-    "deepseek/deepseek-r1",
-    "openai/gpt-4o",
-    "google/gemini-2.5-flash-preview",
   ],
 };
 

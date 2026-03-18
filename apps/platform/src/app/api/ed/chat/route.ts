@@ -130,10 +130,10 @@ export async function POST(request: NextRequest) {
   try {
     // Auth check - try cookie-based session first, then Bearer token fallback
     let user: any = null;
+    const supabase = await createServerSupabaseClient();
 
     // 1. Try cookie-based session (SSR / same-origin fetch with credentials)
     try {
-      const supabase = await createServerSupabaseClient();
       const { data, error } = await supabase.auth.getUser();
       if (!error && data.user) user = data.user;
     } catch {
@@ -145,11 +145,11 @@ export async function POST(request: NextRequest) {
       const authHeader = request.headers.get("authorization");
       if (authHeader?.startsWith("Bearer ")) {
         const token = authHeader.slice(7);
-        const supabase = createClient(
+        const tokenClient = createClient(
           process.env.NEXT_PUBLIC_SUPABASE_URL!,
           process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
         );
-        const { data, error } = await supabase.auth.getUser(token);
+        const { data, error } = await tokenClient.auth.getUser(token);
         if (!error && data.user) user = data.user;
       }
     }
@@ -495,11 +495,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generic fallback
+    // Generic fallback — include error detail in dev for debugging
+    const isDev = process.env.NODE_ENV === "development";
     const fallback: ChatResponse = {
       id: crypto.randomUUID(),
-      answer:
-        "I'm having trouble processing that right now. Could you try asking in a different way?",
+      answer: isDev
+        ? `[Dev] Ed error: ${errorMessage.substring(0, 200)}`
+        : "I'm having trouble processing that right now. Could you try asking in a different way?",
       confidence: 0,
       source: "fallback",
     };
