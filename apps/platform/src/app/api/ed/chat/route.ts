@@ -270,16 +270,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(response);
     }
 
-    // Check if this is a tool-specific quick answer first
-    const quickAnswer = findQuickAnswer(question, context?.tool?.id);
-    if (quickAnswer) {
-      const response: ChatResponse = {
-        id: crypto.randomUUID(),
-        answer: quickAnswer,
-        confidence: 0.9,
-        source: "cache",
-      };
-      return NextResponse.json(response);
+    // Check if this is a tool-specific quick answer (ONLY when user is on a
+    // specific tool page like Arbor/SIMS — don't hijack general questions)
+    if (context?.tool?.id) {
+      const quickAnswer = findQuickAnswer(question, context.tool.id);
+      if (quickAnswer) {
+        const response: ChatResponse = {
+          id: crypto.randomUUID(),
+          answer: quickAnswer,
+          confidence: 0.9,
+          source: "cache",
+        };
+        return NextResponse.json(response);
+      }
     }
 
     // Get user's organization and role via organization_members (proper multi-tenant lookup)
