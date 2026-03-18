@@ -173,6 +173,44 @@ export async function routeToSpecialist(
       };
     }
 
+    // 7b. Fallback: detect text-based function calls (some models output these as text)
+    const textToolMatch = llmResponse.content?.match(
+      /```(?:tool_code|function_call|json)?\s*\n?\s*(\w+)\s*\((.*?)\)\s*```/s,
+    );
+    if (textToolMatch) {
+      const [, funcName, argsStr] = textToolMatch;
+      try {
+        const args = argsStr.trim()
+          ? JSON.parse(
+              argsStr.trim().startsWith("{")
+                ? argsStr.trim()
+                : `{${argsStr.trim()}}`,
+            )
+          : {};
+        const skillResult = await executeSkill(funcName, args);
+        return {
+          agentId: classification.specialist,
+          content: skillResult.response,
+          sources: [
+            { name: `${agent.name} (Action: ${funcName})`, type: "AI Action" },
+          ],
+          confidence: "HIGH",
+          requiresHuman: !skillResult.success,
+          metadata: {
+            classification,
+            modelUsed: model.id,
+            toolCall: {
+              name: funcName,
+              arguments: args,
+              success: skillResult.success,
+            },
+          },
+        };
+      } catch (e) {
+        console.error("[Agent Router] Text tool call fallback error:", e);
+      }
+    }
+
     // 8. Format standard natural language response
     return {
       agentId: classification.specialist,

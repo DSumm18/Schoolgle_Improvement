@@ -34,10 +34,10 @@ const TASK_MODEL_MAP: Record<TaskType, string[]> = {
     "google/gemini-2.0-flash-exp",
   ],
 
-  // High quality for specialist responses — Gemini first for reliability
+  // High quality for specialist responses — DeepSeek for reliable function calling
   "specialist-response": [
-    "google/gemini-2.0-flash-001",
     "deepseek/deepseek-chat",
+    "google/gemini-2.0-flash-001",
     "google/gemini-2.5-pro",
   ],
   "perspective-generation": [
