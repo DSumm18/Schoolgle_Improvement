@@ -305,10 +305,15 @@ export async function POST(request: NextRequest) {
         userRole = roleMap[memberRole] || "viewer";
 
         // Get subscription details
+        // Note: subscription_plan column doesn't exist yet — default authenticated
+        // org members to "schools" plan (full access). Admins/HTs get "trusts".
+        const defaultPlan = ["admin", "headteacher", "slt"].includes(memberRole)
+          ? "trusts"
+          : "schools";
         subscription = {
-          plan: (org?.subscription_plan as any) || "free",
+          plan: (org?.subscription_plan as any) || defaultPlan,
           features: org?.features || [],
-          creditsRemaining: org?.credits_remaining || 1000,
+          creditsRemaining: org?.credits_remaining || 10000,
           creditsUsed: org?.credits_used || 0,
         };
       }
