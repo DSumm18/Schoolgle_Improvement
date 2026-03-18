@@ -2,6 +2,8 @@
 
 ## Strategy
 - [LA Schools Go-to-Market Strategy](./LA-SCHOOLS-STRATEGY.md) — Pricing, positioning, and sales process for LA maintained schools
+- [Competitive Analysis](./COMPETITIVE-ANALYSIS.md) — Schoolgle vs SIMS, Arbor, Bromcom, FMS, The Key — positioning and sales conversation starters
+- [Upsell & Add-On Strategy](./UPSELL-STRATEGY.md) — Revenue ladder from £1,995 base to £3,980+ with Ed Website Chat, Advanced Intelligence, Priority Support
 
 ## Pitch Deck
 - [School in a Box — HTML Slide Deck](./pitch-deck/school-in-a-box.html) — 12-slide browser-based presentation
