@@ -1,0 +1,193 @@
+🤖 Ed AI Domain Testing Harness
+================================
+
+✅ Dev-mode auth headers configured
+
+
+📋 ESTATES (/dashboard/estates)
+────────────────────────────────────────────────────────────
+  "What are the legal requirements for legionella mon..." ✅ ai
+  "A child has fallen from playground equipment and b..." ✅ ai
+  "When should we get our electrical installation tes..." ❌ Missing terms: 5 year, EICR, fixed wire
+  "Take me to the energy dashboard..." ✅ ai
+
+📋 HR (/dashboard/hr)
+────────────────────────────────────────────────────────────
+  "A teacher has been off sick for 15 days this term...." ❌ Missing terms: return to work
+  "What is the current teacher pay scale for a main p..." ❌ Missing terms: MPS
+  "How do I handle a grievance from a teaching assist..." ✅ ai
+
+📋 SEND (/dashboard/send)
+────────────────────────────────────────────────────────────
+  "How do I start the graduated approach for a child ..." ✅ ai
+  "What should be included in an EHCP annual review?..." ❌ Missing terms: section
+  "A parent wants to apply for an EHCP. What evidence..." ❌ Missing terms: SEN support
+
+📋 DATA (/dashboard/attendance)
+────────────────────────────────────────────────────────────
+  "Which attendance codes should I use for a child ar..." ✅ ai
+  "When is the school census return due?..." ✅ ai
+
+📋 CURRICULUM (/dashboard/teaching-learning)
+────────────────────────────────────────────────────────────
+  "How should I prepare for an Ofsted deep dive in ma..." ✅ ai
+  "What does the EEF say about effective feedback str..." ✅ ai
+
+📋 IT-TECH (/dashboard/settings)
+────────────────────────────────────────────────────────────
+  "How do I set up Google Classroom for a new class?..." ✅ ai
+  "A teacher's Chromebook won't connect to WiFi. What..." ❌ Missing terms: DNS, proxy
+
+📋 GOVERNANCE (/dashboard/governance)
+────────────────────────────────────────────────────────────
+  "What are the statutory responsibilities of a schoo..." ❌ Missing terms: accountability
+  "How should we prepare for a governing body meeting..." ❌ Missing terms: minutes, papers, quorum
+
+📋 RISK (/dashboard/risk)
+────────────────────────────────────────────────────────────
+  "How do I assess the risk of a cyber attack on our ..." ✅ ai
+  "What does the Academy Trust Handbook say about ris..." ✅ ai
+
+📋 COMMUNICATIONS (/dashboard/communications)
+────────────────────────────────────────────────────────────
+  "How should I communicate a safeguarding incident t..." ❌ Missing terms: parent, communication, sensitive
+  "Help me draft a snow day closure message..." ✅ ai
+
+📋 INTELLIGENCE (/dashboard/improvement/intelligence)
+────────────────────────────────────────────────────────────
+  "What does the EEF say about closing the disadvanta..." ❌ Missing terms: pupil premium
+  "How should I interpret our KS2 results compared to..." ❌ Missing terms: expected standard
+
+📋 FINANCE (/dashboard/finance)
+────────────────────────────────────────────────────────────
+  "What is the ICFP and how should I use it for staff..." ❌ Missing terms: pupil, ratio
+  "Navigate me to the staffing modeller..." ✅ ai
+
+📋 FORM (/dashboard)
+────────────────────────────────────────────────────────────
+  "Help me fill in a RIDDOR report for a staff injury..." ❌ Missing terms: F2508
+
+📋 CANVAS (/dashboard/canvas)
+────────────────────────────────────────────────────────────
+  "I have data from Arbor and our payroll system. How..." ✅ ai
+
+📋 GREETING (/dashboard)
+────────────────────────────────────────────────────────────
+  "hello..." ✅ ai
+  "hi ed..." ✅ ai
+
+📋 NAVIGATION (/dashboard)
+────────────────────────────────────────────────────────────
+  "Take me to the risk register..." ✅ ai
+  "Where can I manage staff?..." ✅ ai
+
+
+============================================================
+📊 RESULTS SUMMARY
+============================================================
+Total tests: 32
+✅ Passed:   19
+❌ Failed:   13
+🚫 Blocked:  0
+📎 Citations: 2 responses with verbose citations
+
+
+🔴 FAILURES:
+
+  [estates] "When should we get our electrical installation tested?"
+  Reason: Missing terms: 5 year, EICR, fixed wire
+  Answer: Here's a balanced synthesis:
+
+### Key Points
+- The 5-year testing interval represents an industry standard baseline, not a fixed rule
+- Different areas may require different testing frequencies based ...
+
+  [hr] "A teacher has been off sick for 15 days this term. What are my options?"
+  Reason: Missing terms: return to work
+  Answer: Here's my synthesized response:
+
+### Balanced Assessment
+
+**Key Considerations**
+- 15 days of absence is significant enough to warrant action, but not so severe that immediate formal procedures are ne...
+
+  [hr] "What is the current teacher pay scale for a main pay range teacher?"
+  Reason: Missing terms: MPS
+  Answer: ### HR Guidance: Teacher Pay Scale - Main Pay Range
+
+### 📅 Freshness Status
+- Last Updated: 2026-03-18
+- Source: DfE School Teachers' Pay and Conditions Document 2023 (as amended)
+- Confidence: HIGH
+...
+
+  [send] "What should be included in an EHCP annual review?"
+  Reason: Missing terms: section
+  Answer: Okay, let's break down what needs to be included in an EHCP annual review. An EHCP annual review is a meeting to check that the provision outlined in an Education, Health and Care Plan (EHCP) is still...
+
+  [send] "A parent wants to apply for an EHCP. What evidence do I need?"
+  Reason: Missing terms: SEN support
+  Answer: Okay, let's talk about the evidence needed for an EHCP (Education, Health and Care Plan) application. This is a really important step in getting the right support for a child.
+
+First, it's helpful to ...
+
+  [it-tech] "A teacher's Chromebook won't connect to WiFi. What should I check?"
+  Reason: Missing terms: DNS, proxy
+  Answer: Here's a balanced synthesis:
+
+### Chromebook WiFi Troubleshooting - Balanced Approach
+
+**Core Understanding**
+The expert guidance provides a comprehensive framework, but we can optimize it for practic...
+
+  [governance] "What are the statutory responsibilities of a school governor?"
+  Reason: Missing terms: accountability
+  Answer: OK, I can help with that. School governors have several key statutory responsibilities. These fall under three core functions (DfE, 2017):
+
+1.  **Setting the strategic direction of the school:**
+    *...
+
+  [governance] "How should we prepare for a governing body meeting?"
+  Reason: Missing terms: minutes, papers, quorum
+  Answer: **Balanced Meeting Preparation Guidance**
+
+### Core Recommendations
+Building on the expert guidance while considering multiple perspectives, here's a balanced approach to governing body meeting prepar...
+
+  [communications] "How should I communicate a safeguarding incident to parents?"
+  Reason: Missing terms: parent, communication, sensitive
+  Answer: To log a safeguarding concern in Arbor: Find the student profile, click the Safeguarding tab, click New Concern, complete all fields, and submit for DSL review....
+
+  [intelligence] "What does the EEF say about closing the disadvantaged attainment gap?"
+  Reason: Missing terms: pupil premium
+  Answer: ### Intelligence Briefing: Disadvantaged Attainment Gap Strategies
+
+### Key Finding
+The EEF recommends a tiered approach, focusing on high-impact, evidence-based strategies tailored to your school's s...
+
+  [intelligence] "How should I interpret our KS2 results compared to national averages?"
+  Reason: Missing terms: expected standard
+  Answer: **Synthesized Response: Interpreting KS2 Results**
+
+### Balanced View
+The specialist correctly emphasizes that comparing KS2 results to national averages requires careful contextual analysis. Combinin...
+
+  [finance] "What is the ICFP and how should I use it for staffing decisions?"
+  Reason: Missing terms: pupil, ratio
+  Answer: Here's a balanced synthesis:
+
+# Understanding and Implementing ICFP for Staffing
+
+## Key Insights
+The Integrated Curriculum and Financial Planning (ICFP) process offers a structured framework for alig...
+
+  [form] "Help me fill in a RIDDOR report for a staff injury"
+  Reason: Missing terms: F2508
+  Answer: Okay, I can guide you through the process of filling out a RIDDOR report. Just so you know, I can't submit the report for you - you'll need to do that yourself. I'm here to help you understand the for...
+
+
+📎 VERBOSE CITATIONS (should be cleaned up):
+  [estates] "A child has fallen from playground equipment and broken their arm. What should I do?"
+  [estates] "Take me to the energy dashboard"
+
+

@@ -154,6 +154,20 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // 3. Dev-only: service role test bypass (X-Test-User-Id header)
+    if (!user && process.env.NODE_ENV === "development") {
+      const testUserId = request.headers.get("x-test-user-id");
+      if (
+        testUserId &&
+        request.headers.get("x-service-role") ===
+          process.env.SUPABASE_SERVICE_ROLE_KEY?.substring(0, 20)
+      ) {
+        const srClient = createServiceRoleClient();
+        const { data } = await srClient.auth.admin.getUserById(testUserId);
+        if (data?.user) user = data.user;
+      }
+    }
+
     if (!user) {
       return NextResponse.json(
         { error: "Unauthorized", code: "UNAUTHORIZED" },

@@ -30,45 +30,19 @@ const supabaseKey =
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || SUPABASE_ANON_KEY;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-// ─── Get auth token ───────────────────────────────────────
-async function getAccessToken() {
-  // Use service role to generate a token for the test user
+// ─── Auth config for dev-mode test bypass ─────────────────
+const TEST_USER_ID = "f1e52c47-64b7-4b63-8b2e-3803df700191"; // admin@schoolgle.co.uk
+const SERVICE_ROLE_PREFIX = serviceKey ? serviceKey.substring(0, 20) : "";
+
+function getAuthHeaders() {
   if (!serviceKey) {
     console.error("❌ SUPABASE_SERVICE_ROLE_KEY not found in .env.local");
     process.exit(1);
   }
-
-  const supabase = createClient(supabaseUrl, serviceKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-
-  // Sign in as admin test user
-  const { data, error } = await supabase.auth.admin.generateLink({
-    type: "magiclink",
-    email: "admin@schoolgle.co.uk",
-  });
-
-  if (error) {
-    console.error("❌ Failed to generate token:", error.message);
-    // Fallback: try getting session directly
-    const anonClient = createClient(supabaseUrl, supabaseKey);
-    const { data: signIn, error: signInErr } =
-      await anonClient.auth.signInWithPassword({
-        email: "admin@schoolgle.co.uk",
-        password: process.env.TEST_USER_PASSWORD || "test123456",
-      });
-    if (signInErr) {
-      console.error("❌ Password sign-in also failed:", signInErr.message);
-      console.log(
-        "⚠️  Running without auth token — will test public responses",
-      );
-      return null;
-    }
-    return signIn.session?.access_token;
-  }
-
-  // Use the magic link token properties
-  return data?.properties?.hashed_token || null;
+  return {
+    "X-Test-User-Id": TEST_USER_ID,
+    "X-Service-Role": SERVICE_ROLE_PREFIX,
+  };
 }
 
 // ─── Test definitions ─────────────────────────────────────
@@ -317,9 +291,8 @@ const TEST_CASES = [
 ];
 
 // ─── Run tests ─────────────────────────────────────────────
-async function runTest(token, domain, url, question, expectedTerms) {
-  const headers = { "Content-Type": "application/json" };
-  if (token) headers["Authorization"] = `Bearer ${token}`;
+async function runTest(authHeaders, domain, url, question, expectedTerms) {
+  const headers = { "Content-Type": "application/json", ...authHeaders };
 
   try {
     const resp = await fetch(`${BASE_URL}/api/ed/chat`, {
@@ -403,18 +376,9 @@ async function main() {
   console.log("🤖 Ed AI Domain Testing Harness");
   console.log("================================\n");
 
-  // Get token
-  let token = null;
-  try {
-    token = await getAccessToken();
-    if (token) {
-      console.log("✅ Auth token obtained\n");
-    } else {
-      console.log("⚠️  No auth token — testing without authentication\n");
-    }
-  } catch (e) {
-    console.log(`⚠️  Auth failed: ${e.message} — testing without token\n`);
-  }
+  // Get auth headers for dev-mode test bypass
+  const authHeaders = getAuthHeaders();
+  console.log("✅ Dev-mode auth headers configured\n");
 
   let totalTests = 0;
   let passed = 0;
@@ -432,7 +396,7 @@ async function main() {
       process.stdout.write(`  "${test.q.substring(0, 50)}..." `);
 
       const result = await runTest(
-        token,
+        authHeaders,
         suite.domain,
         suite.url,
         test.q,
