@@ -30,8 +30,9 @@
 
 | Item | Cost |
 |------|------|
-| Annual cost (as website chat add-on) | £995/yr |
-| Annual cost (included in School in a Box) | Part of £1,995 |
+| **Ed In-School** (internal staff AI) | **£500/yr** |
+| **Ed Website Chat** (parent-facing) | **£500/yr add-on** |
+| Both as add-ons to School in a Box (£1,995) | +£1,000/yr total |
 | **Hourly rate (24/7/365)** | **£0.11/hr (11 pence)** |
 | Hours available | 8,760 hrs/yr (every hour, every day) |
 | Sick days | 0 |
@@ -46,7 +47,17 @@
 
 ## The Maths Breakdown
 
-### £995/year for Ed Website Chat (add-on pricing)
+### Ed In-School: £500/year
+
+| Breakdown | Amount |
+|-----------|--------|
+| Per year | £500 |
+| Per month | £41.67 |
+| Per week | £9.62 |
+| Per day | £1.37 |
+| **Per hour (24/7)** | **£0.06 (6p)** |
+
+### Ed Website Chat: £500/year (add-on)
 
 | Breakdown | Amount |
 |-----------|--------|
@@ -83,10 +94,52 @@ This is the critical differentiator. Head teachers will say "can't I just use Ch
 | Trained on education policy | Generic | Purpose-built with education law, DfE guidance, Ofsted framework |
 | Understands school context | No — treats every question the same | Yes — a faith school gets different SIAMS context |
 | GDPR compliant for school use | Questionable — data sent to OpenAI | Yes — UK servers, no pupil data, pseudonymised |
-| Costs | £20/month per person (£240/yr × 30 staff = £7,200) | £995 for unlimited staff |
+| Costs | £20/month per person (£240/yr × 30 staff = £7,200) | £500/yr for unlimited staff |
 
 ### The ChatGPT Cost Trap
-"If you gave ChatGPT Plus to just 5 staff members, that's £1,200/year. And they'd get generic answers with no school context. Ed costs £995 for your entire staff with full school context."
+"If you gave ChatGPT Plus to just 5 staff members, that's £1,200/year. And they'd get generic answers with no school context. Ed In-School costs £500 for your entire staff with full school context."
+
+---
+
+## Ed Knows YOUR Systems (The 20% Problem)
+
+Research consistently shows that schools use only about **20% of the capability** of the software they already pay for. Think about it:
+
+- Your MIS (SIMS, Arbor, Bromcom, ScholarPack) can do far more than attendance and reports
+- Google Workspace / Microsoft 365 has admin, security, sharing, and automation features nobody uses
+- Your finance system (SIMS FMS, PSF, Sage) has reporting capabilities gathering dust
+- CPOMS / MyConcern has workflows most schools haven't configured
+
+**The problem**: When staff need help with these systems, they either:
+1. Ring the helpdesk and wait 45 minutes in a queue
+2. Submit a ticket and wait 3 days for a response
+3. Ask the one person in school who "knows how it works"
+4. Give up and do it manually
+
+**Ed solves this**. Ed is trained as an expert on the systems schools actually use:
+
+| System | What Ed Can Help With |
+|--------|----------------------|
+| **SIMS / Arbor / Bromcom** | Running reports, census preparation, attendance codes, data exports, marksheet setup |
+| **Google Workspace** | Admin console, sharing permissions, Google Classroom setup, account management |
+| **Microsoft 365** | Teams setup, SharePoint permissions, OneDrive management, email configuration |
+| **SIMS FMS / PSF / Sage** | Budget queries, CFR codes, purchase orders, report generation |
+| **CPOMS / MyConcern** | Logging concerns, setting up workflows, running reports, audit trails |
+| **ParentPay / Arbor Pay** | Meal setup, trip payments, debt management queries |
+| **Chromebooks / iPads** | MDM issues, deployment, app management, troubleshooting |
+
+### The Sales Line
+
+> "You're paying thousands a year for software you only use 20% of. Ed helps you get the full value from systems you've already bought. No helpdesk queue. No waiting 3 days for a ticket response. Ed gives you the answer right now — and can even see your screen to help you do it."
+
+### IT Support Cost Comparison
+
+| Support Channel | Response Time | Cost |
+|----------------|---------------|------|
+| LA IT Helpdesk | 30-60 min hold + callback | Part of SLA (£3-5K/yr) |
+| Third-party IT support | 24-48 hours | £50-80/hr callout |
+| Staff member who "knows" | Whenever they're free | Their time + your time |
+| **Ed AI** | **Instant** | **Already included** |
 
 ---
 

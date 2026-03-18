@@ -26,9 +26,41 @@
 4. **Action-oriented** — doesn't just advise, can actually do things in the system
 5. **Reduces head teacher burden** — staff self-serve for common questions
 
+## Two Ed Products
+
+### Ed In-School (£500/year)
+- Internal AI assistant for all staff
+- 12 specialist domains — Estates, HR, SEND, Data, Curriculum, IT, Governance, and more
+- Function calling — creates actions, logs tickets, runs analyses
+- Knows your school context, data, compliance status
+- **Expert on your existing systems** — SIMS, Arbor, Google Workspace, Microsoft 365, CPOMS, finance software
+- Schools use ~20% of their existing software capability. Ed helps you get the full value.
+- No helpdesk queue. No 3-day ticket wait. Instant answers.
+- Can see screen context and help staff use systems in real time
+- Available 24/7 to unlimited staff
+
+### Ed Website Chat (£500/year add-on)
+- Parent-facing AI embedded on your school website
+- Answers FAQs instantly — school hours, uniform, admissions, wraparound, free school meals
+- 17 languages with voice input — supports non-English-speaking families
+- Available 24/7 — parents get answers at 10pm on a Sunday
+- Frees up office staff from repetitive phone calls (30+ per day)
+- Privacy-first: no data retention, GDPR compliant
+
+### Pricing
+| Option | Price |
+|--------|-------|
+| Ed In-School (add-on to School in a Box) | +£500/yr |
+| Ed Website Chat (add-on to School in a Box) | +£500/yr |
+| Both add-ons | +£1,000/yr |
+| School in a Box core platform (min 30 schools in LA) | £1,995/yr |
+| Training days & dedicated support | Charged separately at cost |
+
 ## Value to School (Annual)
-- Replaces: Significant head teacher time fielding questions + LA advice line
-- Standalone worth: **£500-1,000/year**
+- Replaces: Head teacher time fielding questions + LA advice line + IT helpdesk calls + office phone time
+- Ed In-School standalone worth: **£500/year**
+- Ed Website Chat standalone worth: **£500/year**
+- Combined worth: **£1,000/year**
 
 ## Demo Script (3 Minutes)
 1. **Hook** (30s): "How many questions does your head teacher answer in a week that aren't about teaching and learning? What if staff could get instant, accurate answers themselves?"
