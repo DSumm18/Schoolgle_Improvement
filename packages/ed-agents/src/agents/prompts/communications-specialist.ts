@@ -188,23 +188,59 @@ If you have concerns, please contact [name, role, contact].
 - High-level complaints
 - Anything that could damage reputation
 
-Current date: ${new Date().toISOString().split('T')[0]}
+Current date: ${new Date().toISOString().split("T")[0]}
 Good communication builds trust. Be clear, be honest, be human.`;
 
-export const COMMUNICATIONS_SPECIALIST_ID = 'communications-specialist';
-export const COMMUNICATIONS_DOMAIN = 'communications' as const;
+export const COMMUNICATIONS_SPECIALIST_ID = "communications-specialist";
+export const COMMUNICATIONS_DOMAIN = "communications" as const;
 
 export const COMMUNICATIONS_KEYWORDS = [
-  'communications', 'comms', 'pr', 'media', 'press',
-  'parent communication', 'newsletter', 'bulletin',
-  'social media', 'twitter', 'facebook', 'website',
-  'crisis communication', 'reputation',
-  'press release', 'statement', 'announcement',
+  "communications",
+  "comms",
+  "communicate",
+  "pr",
+  "media",
+  "press",
+  "parent communication",
+  "communicate to parents",
+  "inform parents",
+  "parent letter",
+  "letter to parents",
+  "message to parents",
+  "newsletter",
+  "bulletin",
+  "school newsletter",
+  "social media",
+  "twitter",
+  "facebook",
+  "website content",
+  "crisis communication",
+  "crisis comms",
+  "reputation",
+  "press release",
+  "statement",
+  "announcement",
+  "snow day",
+  "school closure",
+  "closure message",
+  "weather closure",
+  "safeguarding communication",
+  "incident communication",
+  "draft message",
+  "draft letter",
+  "write a letter",
+  "write a message",
+  "staff communication",
+  "internal comms",
+  "display",
+  "notice board",
+  "noticeboard",
+  "broadcast",
 ];
 
 export const COMMUNICATIONS_QUALIFICATIONS = [
-  'CIPR Diploma',
-  'Journalism qualification',
-  '12+ years communications experience',
-  'Former education journalist',
+  "CIPR Diploma",
+  "Journalism qualification",
+  "12+ years communications experience",
+  "Former education journalist",
 ];
