@@ -49,6 +49,16 @@ export class Ed {
   private isOpen = false;
   private isListening = false;
 
+  // Drag state
+  private isDragging = false;
+  private wasDragged = false;
+  private dragStartX = 0;
+  private dragStartY = 0;
+  private dragStartLeft = 0;
+  private dragStartTop = 0;
+  private launcherPosition: { x: number; y: number } | null = null;
+  private static POSITION_KEY = "ed-widget-position";
+
   // Components
   private particle3D: Particle3D | null = null;
   private launcherParticle3D: Particle3D | null = null;
@@ -299,7 +309,7 @@ export class Ed {
     launcherGroup.id = "launcher-group";
     launcherGroup.innerHTML = `
       <div class="launcher-label">Ask Ed</div>
-      <div id="launcher-btn" title="Open Assistant">
+      <div id="launcher-btn" title="Open Assistant — drag to move">
         <div id="launcher-logo-container"></div>
       </div>
     `;
@@ -307,12 +317,142 @@ export class Ed {
     const launcherBtn = launcherGroup.querySelector(
       "#launcher-btn",
     ) as HTMLElement;
-    launcherBtn.addEventListener("click", () => this.toggle());
+    launcherBtn.addEventListener("click", (e) => {
+      // Only toggle if not a drag
+      if (!this.wasDragged) {
+        this.toggle();
+      }
+      this.wasDragged = false;
+    });
 
     this.container.appendChild(launcherGroup);
 
+    // Restore saved position
+    this.restoreLauncherPosition(launcherGroup);
+
+    // Make launcher draggable
+    this.makeDraggable(launcherGroup);
+
     // Create Particle3D logo for launcher button (instead of CSS version)
     this.createParticle3DLogo();
+  }
+
+  private restoreLauncherPosition(launcher: HTMLElement): void {
+    try {
+      const saved = localStorage.getItem(Ed.POSITION_KEY);
+      if (saved) {
+        const pos = JSON.parse(saved);
+        // Validate position is still on screen
+        if (
+          pos.x >= 0 &&
+          pos.x <= window.innerWidth - 64 &&
+          pos.y >= 0 &&
+          pos.y <= window.innerHeight - 64
+        ) {
+          this.launcherPosition = pos;
+          this.applyLauncherPosition(launcher, pos);
+        }
+      }
+    } catch {
+      // Ignore parse errors
+    }
+  }
+
+  private applyLauncherPosition(
+    launcher: HTMLElement,
+    pos: { x: number; y: number },
+  ): void {
+    // Override CSS positioning — use fixed position directly on the launcher
+    launcher.style.position = "fixed";
+    launcher.style.left = `${pos.x}px`;
+    launcher.style.top = `${pos.y}px`;
+    launcher.style.bottom = "auto";
+    launcher.style.right = "auto";
+  }
+
+  private makeDraggable(launcher: HTMLElement): void {
+    const onPointerDown = (e: PointerEvent) => {
+      // Only drag with primary button
+      if (e.button !== 0) return;
+
+      this.isDragging = false;
+      this.wasDragged = false;
+
+      const rect = launcher.getBoundingClientRect();
+      this.dragStartX = e.clientX;
+      this.dragStartY = e.clientY;
+      this.dragStartLeft = rect.left;
+      this.dragStartTop = rect.top;
+
+      launcher.setPointerCapture(e.pointerId);
+      launcher.style.cursor = "grabbing";
+      launcher.style.transition = "none";
+    };
+
+    const onPointerMove = (e: PointerEvent) => {
+      if (!launcher.hasPointerCapture(e.pointerId)) return;
+
+      const dx = e.clientX - this.dragStartX;
+      const dy = e.clientY - this.dragStartY;
+
+      // Require minimum movement to start drag (prevents accidental drags on click)
+      if (!this.isDragging && Math.abs(dx) < 5 && Math.abs(dy) < 5) return;
+      this.isDragging = true;
+
+      // Calculate new position, clamped to viewport
+      const x = Math.max(
+        0,
+        Math.min(window.innerWidth - 80, this.dragStartLeft + dx),
+      );
+      const y = Math.max(
+        0,
+        Math.min(window.innerHeight - 80, this.dragStartTop + dy),
+      );
+
+      this.applyLauncherPosition(launcher, { x, y });
+      this.launcherPosition = { x, y };
+    };
+
+    const onPointerUp = (e: PointerEvent) => {
+      if (!launcher.hasPointerCapture(e.pointerId)) return;
+
+      launcher.releasePointerCapture(e.pointerId);
+      launcher.style.cursor = "";
+      launcher.style.transition = "";
+
+      if (this.isDragging) {
+        this.wasDragged = true;
+        this.isDragging = false;
+
+        // Snap to nearest edge for tidiness
+        if (this.launcherPosition) {
+          const midX = window.innerWidth / 2;
+          const snappedX =
+            this.launcherPosition.x < midX ? 20 : window.innerWidth - 84;
+          this.launcherPosition = { x: snappedX, y: this.launcherPosition.y };
+
+          launcher.style.transition = "left 0.2s ease, top 0.2s ease";
+          this.applyLauncherPosition(launcher, this.launcherPosition);
+
+          // Save position
+          try {
+            localStorage.setItem(
+              Ed.POSITION_KEY,
+              JSON.stringify(this.launcherPosition),
+            );
+          } catch {
+            /* ignore */
+          }
+        }
+      }
+    };
+
+    launcher.addEventListener("pointerdown", onPointerDown);
+    launcher.addEventListener("pointermove", onPointerMove);
+    launcher.addEventListener("pointerup", onPointerUp);
+    // Prevent text selection during drag
+    launcher.style.touchAction = "none";
+    launcher.style.userSelect = "none";
   }
 
   private createParticle3DLogo(): void {
@@ -2234,6 +2374,55 @@ URL: ${window.location.href}`;
     }
   }
 
+  /**
+   * Position the chat panel based on where the launcher button is on screen.
+   * If launcher is on the right, panel opens to the left of it (and vice versa).
+   * If launcher is near the bottom, panel grows upward. If near top, grows downward.
+   */
+  private positionChatPanel(): void {
+    if (!this.launcherPosition) return; // Use default CSS positioning
+
+    const pos = this.launcherPosition;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    // Panel dimensions
+    const panelW = Math.min(400, vw - 40); // Responsive width
+    const panelH = Math.min(600, vh - 40); // Responsive height
+
+    // Determine which side to open on
+    const onRightHalf = pos.x > vw / 2;
+    const onBottomHalf = pos.y > vh / 2;
+
+    let left: number;
+    let top: number;
+
+    if (onRightHalf) {
+      // Panel opens to the left of the launcher
+      left = Math.max(10, pos.x - panelW + 64);
+    } else {
+      // Panel opens to the right of the launcher
+      left = Math.min(vw - panelW - 10, pos.x);
+    }
+
+    if (onBottomHalf) {
+      // Panel grows upward from launcher
+      top = Math.max(10, pos.y - panelH + 64);
+    } else {
+      // Panel grows downward from launcher
+      top = Math.min(vh - panelH - 10, pos.y);
+    }
+
+    // Apply to container
+    this.container.style.position = "fixed";
+    this.container.style.left = `${left}px`;
+    this.container.style.top = `${top}px`;
+    this.container.style.bottom = "auto";
+    this.container.style.right = "auto";
+    this.container.style.width = `${panelW}px`;
+    this.container.style.height = `${panelH}px`;
+  }
+
   public toggle(): void {
     if (this.isOpen) {
       this.close();
@@ -2251,6 +2440,9 @@ URL: ${window.location.href}`;
     if (!this.widget) {
       this.renderWidget();
     }
+
+    // Position the chat panel relative to the launcher position
+    this.positionChatPanel();
 
     // Add widget-active class to body (matching original)
     document.body.classList.add("widget-active");
@@ -2277,6 +2469,13 @@ URL: ${window.location.href}`;
     if (!this.isOpen) return;
 
     this.isOpen = false;
+
+    // Reset container position so launcher stays visible at its dragged position
+    if (this.launcherPosition) {
+      this.container.style.width = "";
+      this.container.style.height = "";
+      // Keep the container out of the way — the launcher is positioned independently
+    }
 
     // Remove widget-active class from body
     document.body.classList.remove("widget-active");
