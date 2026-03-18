@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Schoolgle — School in a Box</title>
+<style>
+  :root {
+    --primary: #1a56db;
+    --primary-light: #3b82f6;
+    --accent: #f59e0b;
+    --dark: #111827;
+    --gray: #6b7280;
+    --light: #f9fafb;
+    --green: #10b981;
+    --red: #ef4444;
+    --amber: #f59e0b;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--dark);
+    color: white;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  .slide {
+    display: none;
+    width: 100vw;
+    height: 100vh;
+    padding: 60px 80px;
+    flex-direction: column;
+    justify-content: center;
+    position: absolute;
+    top: 0;
+    left: 0;
+    animation: fadeIn 0.4s ease;
+  }
+
+  .slide.active { display: flex; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  h1 { font-size: 3.5rem; font-weight: 800; line-height: 1.1; margin-bottom: 20px; }
+  h2 { font-size: 2.5rem; font-weight: 700; line-height: 1.2; margin-bottom: 16px; }
+  h3 { font-size: 1.5rem; font-weight: 600; margin-bottom: 12px; color: var(--primary-light); }
+  p { font-size: 1.3rem; line-height: 1.6; color: #d1d5db; }
+  .subtitle { font-size: 1.5rem; color: var(--primary-light); margin-bottom: 30px; font-weight: 500; }
+
+  .highlight { color: var(--accent); }
+  .green { color: var(--green); }
+  .red { color: var(--red); }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 30px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 30px; margin-top: 30px; }
+
+  .card {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 30px;
+  }
+
+  .card h3 { margin-bottom: 10px; }
+  .card p { font-size: 1.1rem; }
+
+  .price-card {
+    background: rgba(26, 86, 219, 0.15);
+    border: 2px solid var(--primary-light);
+    border-radius: 20px;
+    padding: 40px;
+    text-align: center;
+  }
+
+  .price-card.featured {
+    background: linear-gradient(135deg, rgba(26, 86, 219, 0.3), rgba(59, 130, 246, 0.15));
+    border-color: var(--accent);
+    transform: scale(1.05);
+  }
+
+  .price { font-size: 3.5rem; font-weight: 800; color: white; }
+  .price-period { font-size: 1.1rem; color: var(--gray); }
+
+  .stat-row { display: flex; gap: 60px; margin-top: 40px; }
+  .stat { text-align: center; }
+  .stat-number { font-size: 3rem; font-weight: 800; color: var(--accent); }
+  .stat-label { font-size: 1rem; color: var(--gray); margin-top: 4px; }
+
+  ul { list-style: none; margin-top: 15px; }
+  ul li { padding: 8px 0; font-size: 1.15rem; color: #d1d5db; }
+  ul li::before { content: "✓ "; color: var(--green); font-weight: bold; margin-right: 8px; }
+
+  .pain-list li::before { content: "✗ "; color: var(--red); }
+
+  .tag {
+    display: inline-block;
+    background: rgba(245, 158, 11, 0.2);
+    color: var(--accent);
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+
+  .vs-table {
+    width: 100%;
+    margin-top: 30px;
+    border-collapse: collapse;
+  }
+  .vs-table th, .vs-table td {
+    padding: 14px 20px;
+    text-align: left;
+    font-size: 1.1rem;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+  .vs-table th {
+    color: var(--primary-light);
+    font-weight: 600;
+    font-size: 0.95rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .vs-table td { color: #d1d5db; }
+  .vs-table .cost { color: var(--red); font-weight: 600; }
+  .vs-table .saving { color: var(--green); font-weight: 600; }
+
+  .module-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-top: 30px;
+  }
+
+  .module-card {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    transition: all 0.2s;
+  }
+  .module-card:hover {
+    background: rgba(26, 86, 219, 0.15);
+    border-color: var(--primary-light);
+  }
+  .module-icon { font-size: 2rem; margin-bottom: 8px; }
+  .module-name { font-size: 1rem; font-weight: 600; color: white; }
+  .module-value { font-size: 0.85rem; color: var(--green); margin-top: 4px; }
+
+  .cta-box {
+    background: linear-gradient(135deg, var(--primary), #2563eb);
+    border-radius: 20px;
+    padding: 50px;
+    text-align: center;
+    margin-top: 30px;
+  }
+
+  .nav {
+    position: fixed;
+    bottom: 30px;
+    right: 40px;
+    display: flex;
+    gap: 10px;
+    z-index: 100;
+  }
+
+  .nav button {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background 0.2s;
+  }
+  .nav button:hover { background: rgba(255,255,255,0.2); }
+
+  .slide-counter {
+    position: fixed;
+    bottom: 35px;
+    left: 40px;
+    color: var(--gray);
+    font-size: 0.9rem;
+    z-index: 100;
+  }
+
+  .logo {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: var(--primary-light);
+    position: fixed;
+    top: 25px;
+    left: 40px;
+    z-index: 100;
+    letter-spacing: -0.02em;
+  }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 50px; align-items: center; }
+
+  .timeline { margin-top: 30px; }
+  .timeline-item {
+    display: flex;
+    gap: 20px;
+    padding: 16px 0;
+    border-left: 3px solid var(--primary-light);
+    padding-left: 25px;
+    margin-left: 10px;
+  }
+  .timeline-item .phase {
+    font-weight: 700;
+    color: var(--accent);
+    min-width: 100px;
+    font-size: 1rem;
+  }
+
+  .quote {
+    font-size: 1.8rem;
+    font-style: italic;
+    color: #e5e7eb;
+    line-height: 1.5;
+    border-left: 4px solid var(--accent);
+    padding-left: 30px;
+    margin: 30px 0;
+  }
+</style>
+</head>
+<body>
+<div class="logo">SCHOOLGLE</div>
+
+<!-- SLIDE 1: Title -->
+<div class="slide active" id="slide-1">
+  <div style="max-width: 800px;">
+    <p class="subtitle">Introducing</p>
+    <h1>School in a Box</h1>
+    <p style="font-size: 1.6rem; color: #e5e7eb; margin-top: 20px;">
+      Everything your school needs.<br>
+      One platform. One price. <span class="highlight">No excuses.</span>
+    </p>
+    <div class="stat-row">
+      <div class="stat">
+        <div class="stat-number">11</div>
+        <div class="stat-label">Modules included</div>
+      </div>
+      <div class="stat">
+        <div class="stat-number">43+</div>
+        <div class="stat-label">AI capabilities</div>
+      </div>
+      <div class="stat">
+        <div class="stat-number">24/7</div>
+        <div class="stat-label">AI assistant</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 2: The Problem -->
+<div class="slide" id="slide-2">
+  <h2>Sound familiar?</h2>
+  <p class="subtitle">The reality for LA maintained schools</p>
+  <div class="grid-2">
+    <div>
+      <ul class="pain-list">
+        <li>Evidence scattered across drives, emails, and filing cabinets</li>
+        <li>Compliance tracked on spreadsheets (or not at all)</li>
+        <li>Staff training expiring without anyone noticing</li>
+        <li>Ofsted prep = last-minute panic</li>
+        <li>Head teacher answering every question</li>
+        <li>Governors asking for reports you don't have</li>
+        <li>The caretaker is the only one who knows the building</li>
+        <li>LA support stretched thin</li>
+      </ul>
+    </div>
+    <div class="card" style="display:flex; flex-direction:column; justify-content:center;">
+      <div class="quote">
+        "We know we should be doing more, but we don't know what we don't know."
+      </div>
+      <p style="font-size: 1rem; margin-top: 15px; color: var(--gray);">
+        — Every head teacher we've spoken to
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 3: The Hidden Costs -->
+<div class="slide" id="slide-3">
+  <h2>The hidden cost of <span class="red">"making do"</span></h2>
+  <p class="subtitle">What schools spend without realising</p>
+  <table class="vs-table">
+    <thead>
+      <tr>
+        <th>Activity</th>
+        <th>How it's done now</th>
+        <th>Annual cost</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Ofsted preparation</td>
+        <td>Head teacher time (3-5 days)</td>
+        <td class="cost">£900 - £1,500</td>
+      </tr>
+      <tr>
+        <td>Estates compliance</td>
+        <td>Spreadsheets + hope</td>
+        <td class="cost">£500 - £1,500</td>
+      </tr>
+      <tr>
+        <td>HR & training tracking</td>
+        <td>LA SLA (basic)</td>
+        <td class="cost">£1,000 - £3,000</td>
+      </tr>
+      <tr>
+        <td>External consultants</td>
+        <td>1-2 visits per year</td>
+        <td class="cost">£500 - £2,000</td>
+      </tr>
+      <tr>
+        <td>Staff admin time</td>
+        <td>Chasing compliance, paperwork</td>
+        <td class="cost">£500 - £1,000</td>
+      </tr>
+      <tr>
+        <td style="font-weight:700; color:white;">Total hidden spend</td>
+        <td></td>
+        <td class="cost" style="font-size:1.3rem;">£3,400 - £9,000</td>
+      </tr>
+    </tbody>
+  </table>
+  <p style="margin-top: 30px; font-size: 1.1rem;">
+    And that's <em>before</em> something goes wrong — a missed compliance check, a bad inspection, a safeguarding gap.
+  </p>
+</div>
+
+<!-- SLIDE 4: The Solution -->
+<div class="slide" id="slide-4">
+  <h2>What if you could fix <span class="highlight">all of it</span>?</h2>
+  <p class="subtitle">Schoolgle: School in a Box</p>
+  <div class="module-grid">
+    <div class="module-card">
+      <div class="module-icon">🔍</div>
+      <div class="module-name">Ofsted Readiness</div>
+      <div class="module-value">Worth £1,000-2,000</div>
+    </div>
+    <div class="module-card">
+      <div class="module-icon">🏗️</div>
+      <div class="module-name">Estates Compliance</div>
+      <div class="module-value">Worth £800-1,500</div>
+    </div>
+    <div class="module-card">
+      <div class="module-icon">👥</div>
+      <div class="module-name">HR & People</div>
+      <div class="module-value">Worth £500-1,000</div>
+    </div>
+    <div class="module-card">
+      <div class="module-icon">📊</div>
+      <div class="module-name">School Intelligence</div>
+      <div class="module-value">Worth £600-1,200</div>
+    </div>
+    <div class="module-card">
+      <div class="module-icon">🤖</div>
+      <div class="module-name">Ed In-School AI</div>
+      <div class="module-value">Worth £500/yr</div>
+    </div>
+    <div class="module-card">
+      <div class="module-icon">🌐</div>
+      <div class="module-name">Ed Website Chat</div>
+      <div class="module-value">Worth £500/yr add-on</div>
+    </div>
+    <div class="module-card">
+      <div class="module-icon">🏛️</div>
+      <div class="module-name">Governance Portal</div>
+      <div class="module-value">Worth £400-800</div>
+    </div>
+    <div class="module-card">
+      <div class="module-icon">🎯</div>
+      <div class="module-name">Actions Hub</div>
+      <div class="module-value">Worth £400-800</div>
+    </div>
+    <div class="module-card">
+      <div class="module-icon">⚠️</div>
+      <div class="module-name">Risk Register</div>
+      <div class="module-value">Worth £200-400</div>
+    </div>
+    <div class="module-card">
+      <div class="module-icon">📋</div>
+      <div class="module-name">Meeting Companion</div>
+      <div class="module-value">Worth £200-400</div>
+    </div>
+    <div class="module-card">
+      <div class="module-icon">📄</div>
+      <div class="module-name">Document Production</div>
+      <div class="module-value">Worth £300-500</div>
+    </div>
+    <div class="module-card">
+      <div class="module-icon">📣</div>
+      <div class="module-name">Survey Builder</div>
+      <div class="module-value">Worth £200-400</div>
+    </div>
+    <div class="module-card" style="border-color: var(--accent); background: rgba(245,158,11,0.1);">
+      <div class="module-icon">💰</div>
+      <div class="module-name">Total Value</div>
+      <div class="module-value" style="font-size:1.1rem; font-weight:700;">£10,000+</div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 5: Ofsted Readiness Deep Dive -->
+<div class="slide" id="slide-5">
+  <div class="tag">Core Module</div>
+  <h2>Ofsted Readiness & Evidence Scanner</h2>
+  <p class="subtitle">Know where you stand — every single day</p>
+  <div class="two-col">
+    <div>
+      <h3>What it does</h3>
+      <ul>
+        <li>Connects to your Google Drive or OneDrive</li>
+        <li>AI scans every document and maps to Ofsted framework</li>
+        <li>Visual dashboard shows coverage across all 4 key judgements</li>
+        <li>Gap analysis tells you exactly what's missing</li>
+        <li>Living SEF updates automatically as evidence is added</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>The demo moment</h3>
+      <p style="font-size: 1.15rem;">
+        "Upload any school document. In 10 seconds, the AI tells you which Ofsted areas it supports — and which areas you still have gaps in."
+      </p>
+      <p style="margin-top: 20px; color: var(--accent); font-weight: 600; font-size: 1.1rem;">
+        Like having a school improvement partner that never sleeps.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 6: Estates & HR -->
+<div class="slide" id="slide-6">
+  <div class="tag">Operations</div>
+  <h2>Estates Compliance + HR & People</h2>
+  <p class="subtitle">The things that keep heads awake at night</p>
+  <div class="grid-2">
+    <div class="card">
+      <h3>Estates Compliance</h3>
+      <ul>
+        <li>Every statutory check scheduled with reminders</li>
+        <li>Fire safety, legionella, asbestos — all tracked</li>
+        <li>Contractor management with cost tracking</li>
+        <li>Helpdesk for staff to report building issues</li>
+        <li>AI knows what's statutory vs contractor upselling</li>
+      </ul>
+      <p style="margin-top: 15px; color: var(--accent); font-weight: 500;">
+        "If HSE knocked on your door tomorrow, could you show them everything?"
+      </p>
+    </div>
+    <div class="card">
+      <h3>HR & People</h3>
+      <ul>
+        <li>Complete staff directory with role assignments</li>
+        <li>Training matrix with automatic expiry alerts</li>
+        <li>CSV import from existing spreadsheets</li>
+        <li>Statutory roles tracked (DSL, SENCO, Fire Marshal)</li>
+        <li>Census-ready data export</li>
+      </ul>
+      <p style="margin-top: 15px; color: var(--accent); font-weight: 500;">
+        "Is your safeguarding lead's training up to date? Now you'll always know."
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 7: Intelligence & Ed AI -->
+<div class="slide" id="slide-7">
+  <div class="tag">AI-Powered</div>
+  <h2>School Intelligence + Ed AI</h2>
+  <p class="subtitle">The smartest tools in the box</p>
+  <div class="grid-2">
+    <div class="card">
+      <h3>School Intelligence Engine</h3>
+      <ul>
+        <li>DfE data trends — attendance, KS2, workforce, exclusions</li>
+        <li>Pupil assessment gap analysis (GDPR-safe, zero PII)</li>
+        <li>COVID cohort impact tracking</li>
+        <li>EEF research-backed intervention matching</li>
+        <li>Cross-module pattern detection</li>
+      </ul>
+      <p style="margin-top: 15px; color: var(--accent); font-weight: 500;">
+        "See what the inspector will see — before they arrive."
+      </p>
+    </div>
+    <div class="card">
+      <h3>Ed — Your AI Assistant</h3>
+      <ul>
+        <li>12 specialist agents (Estates, HR, SEND, Data, IT...)</li>
+        <li>Knows education law, policy, and best practice</li>
+        <li>Can create actions, log tickets, analyse data</li>
+        <li>Available 24/7 to every staff member</li>
+        <li>Self-improving knowledge base</li>
+      </ul>
+      <p style="margin-top: 15px; color: var(--accent); font-weight: 500;">
+        "Like having 12 specialists on your staff — for a fraction of the cost."
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 8: Ed vs Staff Cost Comparison -->
+<div class="slide" id="slide-8">
+  <div class="tag">The Numbers</div>
+  <h2>Meet Ed. Your newest <span class="highlight">staff member</span>.</h2>
+  <p class="subtitle">Let's compare what you'd pay a person vs what Ed costs</p>
+  <div class="grid-2">
+    <div>
+      <table class="vs-table">
+        <thead>
+          <tr><th></th><th style="color: var(--red);">Office Staff Member</th><th style="color: var(--green);">Ed AI</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="color:white; font-weight:600;">Hourly rate</td>
+            <td class="cost">£12-15/hr</td>
+            <td class="saving">£0.11/hr</td>
+          </tr>
+          <tr>
+            <td style="color:white; font-weight:600;">Annual cost</td>
+            <td class="cost">£22,000-28,000</td>
+            <td class="saving">£995/yr</td>
+          </tr>
+          <tr>
+            <td style="color:white; font-weight:600;">Available hours</td>
+            <td>1,265 hrs/yr (term time)</td>
+            <td class="saving">8,760 hrs/yr (24/7/365)</td>
+          </tr>
+          <tr>
+            <td style="color:white; font-weight:600;">Sick days</td>
+            <td>7.4 days avg (school sector)</td>
+            <td class="saving">Zero. Ever.</td>
+          </tr>
+          <tr>
+            <td style="color:white; font-weight:600;">Holiday</td>
+            <td>28 days</td>
+            <td class="saving">Never takes a day off</td>
+          </tr>
+          <tr>
+            <td style="color:white; font-weight:600;">Expertise</td>
+            <td>1 person's knowledge</td>
+            <td class="saving">12 specialist domains</td>
+          </tr>
+          <tr>
+            <td style="color:white; font-weight:600;">Training needed</td>
+            <td>Ongoing CPD, induction</td>
+            <td class="saving">Already trained. Always updating.</td>
+          </tr>
+          <tr>
+            <td style="color:white; font-weight:600;">On-costs (NI, pension)</td>
+            <td class="cost">+£4,000-6,000/yr</td>
+            <td class="saving">£0</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="display:flex; flex-direction:column; gap: 24px;">
+      <div class="card" style="text-align:center; padding: 30px;">
+        <h3 style="color: var(--accent); font-size: 1.3rem;">Ed costs your school</h3>
+        <div class="price" style="font-size: 4rem;">11p</div>
+        <div class="price-period">per hour</div>
+        <p style="margin-top: 12px; font-size: 1.05rem;">
+          24 hours a day. 365 days a year.<br>
+          Estates. HR. SEND. Safeguarding. Data. Curriculum.<br>
+          <span style="color: var(--accent); font-weight: 600;">All 12 specialisms. One price.</span>
+        </p>
+      </div>
+      <div class="card" style="padding: 24px;">
+        <h3>This is NOT ChatGPT</h3>
+        <ul>
+          <li>Ed knows <em>your</em> school — type, phase, size, context</li>
+          <li>Ed sees <em>your</em> data — compliance status, evidence gaps, DfE trends</li>
+          <li>Ed can <em>act</em> — log tickets, create actions, run analyses</li>
+          <li>Ed is trained on education law, policy, and best practice</li>
+          <li>ChatGPT gives generic answers. Ed gives <em>your</em> answer.</li>
+        </ul>
+      </div>
+      <div class="card" style="padding: 24px; border-color: var(--accent);">
+        <h3 style="color: var(--accent);">Ed knows YOUR systems</h3>
+        <p style="margin-bottom: 10px;">Research shows schools use only <strong>~20%</strong> of the capability of their existing software. Ed is an expert on the systems you already pay for:</p>
+        <ul>
+          <li><strong>MIS</strong>: SIMS, Arbor, Bromcom, ScholarPack — reports, census, attendance</li>
+          <li><strong>Google Workspace / Microsoft 365</strong> — admin, sharing, security</li>
+          <li><strong>Finance</strong>: SIMS FMS, PSF, Sage — budget queries, CFR codes</li>
+          <li><strong>Safeguarding</strong>: CPOMS, MyConcern — logging, workflows</li>
+        </ul>
+        <p style="margin-top: 10px; color: var(--accent); font-weight: 500;">
+          No more helpdesks. No more ticket queues.<br>Ed gives you the answer and helps you do it — right now.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 9: Everything Else -->
+<div class="slide" id="slide-9">
+  <div class="tag">Also Included</div>
+  <h2>Plus everything else a school needs</h2>
+  <div class="grid-3" style="margin-top: 20px;">
+    <div class="card">
+      <h3>Governance Portal</h3>
+      <p>Governor directory, meeting management, training tracking, policy reviews, visit records. Everything for effective governance in one place.</p>
+    </div>
+    <div class="card">
+      <h3>Actions Hub</h3>
+      <p>Turn your SDP into tracked, research-backed actions. EEF Toolkit integration means every action is evidence-informed. Dual status: done ≠ working.</p>
+    </div>
+    <div class="card">
+      <h3>Risk Register</h3>
+      <p>Visual heatmap of school risks. Tracked mitigations. Governance evidence. The register that governors and inspectors expect to see.</p>
+    </div>
+    <div class="card">
+      <h3>Meeting Companion</h3>
+      <p>Templates for every meeting type. Agendas, live minutes, tracked actions. Nothing falls through the cracks.</p>
+    </div>
+    <div class="card">
+      <h3>Document Production</h3>
+      <p>AI-generated newsletters, policy documents, reports. Professional formatting. Direct distribution to parents and staff.</p>
+    </div>
+    <div class="card">
+      <h3>Survey Builder</h3>
+      <p>Parent voice, pupil voice, staff wellbeing. AI sentiment analysis. Results feed directly into school improvement evidence.</p>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 10: Pricing -->
+<div class="slide" id="slide-10">
+  <h2>Foundation Pricing</h2>
+  <p class="subtitle">Lock in today's price before it increases in September 2026</p>
+  <div class="grid-3" style="align-items: start;">
+    <div class="price-card">
+      <h3>1 Year</h3>
+      <div class="price" style="font-size: 2.8rem;">£1,995</div>
+      <div class="price-period">/year per school</div>
+      <ul style="text-align: left; margin-top: 15px;">
+        <li>All 11 platform modules</li>
+        <li>Unlimited users</li>
+        <li>Foundation price guaranteed for year 1</li>
+        <li>Renews at published rate</li>
+      </ul>
+      <p style="margin-top: 15px; text-align: center; color: var(--gray);">
+        £5.46/day
+      </p>
+    </div>
+    <div class="price-card">
+      <h3>2 Years <span style="color: var(--green); font-size: 0.7em;">SAVE 10%</span></h3>
+      <div class="price" style="font-size: 2.8rem;">£1,795</div>
+      <div class="price-period">/year per school (2-year contract)</div>
+      <ul style="text-align: left; margin-top: 15px;">
+        <li>All 11 platform modules</li>
+        <li>Unlimited users</li>
+        <li>Price locked for 2 full years</li>
+        <li>Save £400 over the contract</li>
+      </ul>
+      <p style="margin-top: 15px; text-align: center; color: var(--gray);">
+        £4.92/day
+      </p>
+    </div>
+    <div class="price-card featured">
+      <h3 style="color: var(--accent);">3 Years <span style="font-size: 0.7em;">BEST VALUE</span></h3>
+      <div class="price">£1,595</div>
+      <div class="price-period">/year per school (3-year contract)</div>
+      <ul style="text-align: left; margin-top: 15px;">
+        <li>All 11 platform modules</li>
+        <li>Unlimited users</li>
+        <li>Price locked for 3 full years</li>
+        <li>Save <strong>£1,200</strong> over the contract</li>
+        <li style="color: var(--accent);">Best protection against price rises</li>
+      </ul>
+      <p style="margin-top: 15px; text-align: center; font-size: 1.2rem;">
+        <span style="color: var(--accent); font-weight: 700;">£4.37/day</span>
+      </p>
+    </div>
+  </div>
+  <p style="text-align: center; margin-top: 20px; font-size: 1.05rem; color: #d1d5db;">
+    <strong style="color: var(--accent);">Ed AI add-ons:</strong> In-School AI +£500/yr &nbsp;|&nbsp; Website Chat +£500/yr &nbsp;|&nbsp; Training days at cost
+  </p>
+</div>
+
+<!-- SLIDE 11: Contract & Financial Year -->
+<div class="slide" id="slide-11">
+  <h2>Why sign up <span class="highlight">now</span>?</h2>
+  <p class="subtitle">Foundation pricing ends September 2026 — then prices increase</p>
+  <div class="grid-2">
+    <div class="card">
+      <h3>LA-Maintained Schools</h3>
+      <p style="color: #d1d5db; margin-bottom: 15px;">Financial year: April - March</p>
+      <ul>
+        <li>Sign up now at foundation pricing</li>
+        <li>Fits within current budget year (April '26 - March '27)</li>
+        <li>3-year contract locks in £1,595/yr through March 2029</li>
+        <li>Prices <em>will</em> increase from September '26 — this protects you</li>
+        <li>LA group deals available (min 30 schools) — contact us</li>
+      </ul>
+      <p style="margin-top: 15px; color: var(--accent); font-weight: 500;">
+        Under £2,000/yr — within head teacher approval threshold. No governor sign-off needed.
+      </p>
+    </div>
+    <div class="card">
+      <h3>Academies & MATs</h3>
+      <p style="color: #d1d5db; margin-bottom: 15px;">Financial year: September - August</p>
+      <ul>
+        <li>Contract aligns to your academic/financial year</li>
+        <li>Sign up before September '26 to lock in foundation pricing</li>
+        <li>3-year contract at £1,595/yr runs through August 2029</li>
+        <li>MAT-wide deals — centralised billing, per-school licensing</li>
+        <li>Guaranteed income for us = guaranteed price for you</li>
+      </ul>
+      <p style="margin-top: 15px; color: var(--accent); font-weight: 500;">
+        The earlier you commit, the more you save before prices go up.
+      </p>
+    </div>
+  </div>
+  <div style="text-align: center; margin-top: 25px; padding: 20px; background: rgba(245,158,11,0.1); border-radius: 12px; border: 1px solid rgba(245,158,11,0.3);">
+    <p style="font-size: 1.2rem; color: white;">
+      <strong style="color: var(--accent);">Foundation pricing is limited.</strong>
+      Once we reach capacity, new schools pay the full published rate.
+    </p>
+  </div>
+</div>
+
+<!-- SLIDE 12: ROI -->
+<div class="slide" id="slide-12">
+  <h2>The maths is simple</h2>
+  <div class="two-col">
+    <div>
+      <h3>What you spend now</h3>
+      <table class="vs-table">
+        <tr><td>Head teacher time on Ofsted prep</td><td class="cost">£1,200</td></tr>
+        <tr><td>LA HR/Estates SLA</td><td class="cost">£2,000</td></tr>
+        <tr><td>External consultant</td><td class="cost">£1,000</td></tr>
+        <tr><td>Staff admin time</td><td class="cost">£750</td></tr>
+        <tr><td style="font-weight:700;">Total</td><td class="cost" style="font-weight:700;">£4,950</td></tr>
+      </table>
+    </div>
+    <div>
+      <h3>What Schoolgle costs</h3>
+      <div class="card" style="text-align:center; padding: 40px;">
+        <div class="price" style="color: var(--green);">£1,995</div>
+        <p style="margin-top: 15px; font-size: 1.3rem; color: white;">
+          Save <span class="green">£2,955/year</span>
+        </p>
+        <p style="margin-top: 5px; font-size: 0.95rem; color: #9ca3af;">
+          + optional Ed add-ons from £500/yr
+        </p>
+        <p style="margin-top: 10px;">
+          Plus: better compliance, better Ofsted readiness,<br>
+          less stress, more time for teaching and learning.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 13: How We Get Started -->
+<div class="slide" id="slide-13">
+  <h2>Getting started is easy</h2>
+  <p class="subtitle">From sign-up to fully operational in days, not months</p>
+  <div class="timeline">
+    <div class="timeline-item">
+      <div class="phase">Week 1</div>
+      <div>
+        <p style="color: white; font-weight: 600; font-size: 1.15rem;">Sign up & connect</p>
+        <p>Connect your Google Drive or OneDrive. AI immediately starts scanning your documents. Import staff from a CSV. Your school profile is auto-populated from DfE data.</p>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div class="phase">Week 2</div>
+      <div>
+        <p style="color: white; font-weight: 600; font-size: 1.15rem;">See your position</p>
+        <p>Ofsted readiness dashboard shows your strengths and gaps. Estates compliance calendar is populated. Staff training status is visible. You already know more than you did.</p>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div class="phase">Week 3</div>
+      <div>
+        <p style="color: white; font-weight: 600; font-size: 1.15rem;">Start improving</p>
+        <p>Create improvement actions backed by EEF research. Set up governance portal for your next board meeting. Staff start using Ed AI for day-to-day questions.</p>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div class="phase">Week 4+</div>
+      <div>
+        <p style="color: white; font-weight: 600; font-size: 1.15rem;">Always ready</p>
+        <p>Continuous monitoring. Automatic alerts. Compliance tracked. Evidence growing. When Ofsted calls, you're ready — because you've been ready all along.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 14: CTA -->
+<div class="slide" id="slide-14">
+  <div style="text-align: center; max-width: 800px; margin: 0 auto;">
+    <h1>Ready to be a<br><span class="highlight">Founding School</span>?</h1>
+    <p style="font-size: 1.4rem; margin-top: 20px; color: #e5e7eb;">
+      11 modules. AI-powered. From £1,595/year on a 3-year term.<br>
+      Ed AI add-ons from £500/yr.<br>
+      Foundation pricing ends September 2026.<br>
+      Price locked for 2 years.
+    </p>
+    <div class="cta-box" style="margin-top: 40px;">
+      <h2 style="color: white;">Start your 30-day free trial</h2>
+      <p style="color: rgba(255,255,255,0.8); margin-top: 10px; font-size: 1.2rem;">
+        No credit card required. Full access to everything.<br>
+        See the value before you pay a penny.
+      </p>
+      <p style="margin-top: 25px; font-size: 1.5rem; font-weight: 700; color: white;">
+        schoolgle.co.uk
+      </p>
+    </div>
+    <p style="margin-top: 30px; color: var(--gray); font-size: 1rem;">
+      Limited to 50 Founding Schools — first come, first served.
+    </p>
+  </div>
+</div>
+
+<!-- Navigation -->
+<div class="slide-counter">
+  <span id="current-slide">1</span> / <span id="total-slides">14</span>
+</div>
+
+<div class="nav">
+  <button onclick="prevSlide()">← Back</button>
+  <button onclick="nextSlide()">Next →</button>
+</div>
+
+<script>
+  let current = 1;
+  const total = 14;
+
+  function showSlide(n) {
+    document.querySelectorAll('.slide').forEach(s => s.classList.remove('active'));
+    document.getElementById(`slide-${n}`).classList.add('active');
+    document.getElementById('current-slide').textContent = n;
+    current = n;
+  }
+
+  function nextSlide() {
+    if (current < total) showSlide(current + 1);
+  }
+
+  function prevSlide() {
+    if (current > 1) showSlide(current - 1);
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter') {
+      e.preventDefault();
+      nextSlide();
+    }
+    if (e.key === 'ArrowLeft' || e.key === 'Backspace') {
+      e.preventDefault();
+      prevSlide();
+    }
+    if (e.key === 'Home') showSlide(1);
+    if (e.key === 'End') showSlide(total);
+  });
+
+  // Touch support for mobile/tablet
+  let touchStartX = 0;
+  document.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; });
+  document.addEventListener('touchend', (e) => {
+    const diff = touchStartX - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) nextSlide();
+      else prevSlide();
+    }
+  });
+</script>
+</body>
+</html>
