@@ -1,0 +1,156 @@
+🤖 Ed AI Domain Testing Harness
+================================
+
+✅ Dev-mode auth headers configured
+
+
+📋 ESTATES (/dashboard/estates)
+────────────────────────────────────────────────────────────
+  "What are the legal requirements for legionella mon..." ✅ ai
+  "A child has fallen from playground equipment and b..." ✅ ai
+  "When should we get our electrical installation tes..." ✅ ai
+  "Take me to the energy dashboard..." ✅ ai
+
+📋 HR (/dashboard/hr)
+────────────────────────────────────────────────────────────
+  "A teacher has been off sick for 15 days this term...." ❌ Missing terms: return to work|occupational health|sickness
+  "What is the current teacher pay scale for a main p..." ✅ ai
+  "How do I handle a grievance from a teaching assist..." ❌ Missing terms: hearing
+
+📋 SEND (/dashboard/send)
+────────────────────────────────────────────────────────────
+  "How do I start the graduated approach for a child ..." ✅ ai
+  "What should be included in an EHCP annual review?..." ✅ ai
+  "A parent wants to apply for an EHCP. What evidence..." ✅ ai
+
+📋 DATA (/dashboard/attendance)
+────────────────────────────────────────────────────────────
+  "Which attendance codes should I use for a child ar..." ✅ ai
+  "When is the school census return due?..." ✅ ai
+
+📋 CURRICULUM (/dashboard/teaching-learning)
+────────────────────────────────────────────────────────────
+  "How should I prepare for an Ofsted deep dive in ma..." ❌ Missing terms: implementation
+  "What does the EEF say about effective feedback str..." ✅ ai
+
+📋 IT-TECH (/dashboard/settings)
+────────────────────────────────────────────────────────────
+  "How do I set up Google Classroom for a new class?..." ✅ ai
+  "A teacher's Chromebook won't connect to WiFi. What..." ✅ ai
+
+📋 GOVERNANCE (/dashboard/governance)
+────────────────────────────────────────────────────────────
+  "What are the statutory responsibilities of a schoo..." ✅ ai
+  "How should we prepare for a governing body meeting..." ❌ Missing terms: quorum|attend
+
+📋 RISK (/dashboard/risk)
+────────────────────────────────────────────────────────────
+  "How do I assess the risk of a cyber attack on our ..." ❌ Missing terms: likelihood, impact, mitigation
+  "What does the Academy Trust Handbook say about ris..." ✅ ai
+
+📋 COMMUNICATIONS (/dashboard/communications)
+────────────────────────────────────────────────────────────
+  "How should I communicate a safeguarding incident t..." ✅ ai
+  "Help me draft a snow day closure message..." ✅ ai
+
+📋 INTELLIGENCE (/dashboard/improvement/intelligence)
+────────────────────────────────────────────────────────────
+  "What does the EEF say about closing the disadvanta..." ✅ ai
+  "How should I interpret our KS2 results compared to..." ✅ ai
+
+📋 FINANCE (/dashboard/finance)
+────────────────────────────────────────────────────────────
+  "What is the ICFP and how should I use it for staff..." ✅ ai
+  "Navigate me to the staffing modeller..." ✅ ai
+
+📋 FORM (/dashboard)
+────────────────────────────────────────────────────────────
+  "Help me fill in a RIDDOR report for a staff injury..." ✅ ai
+
+📋 CANVAS (/dashboard/canvas)
+────────────────────────────────────────────────────────────
+  "I have data from Arbor and our payroll system. How..." ❌ Missing terms: field
+
+📋 GREETING (/dashboard)
+────────────────────────────────────────────────────────────
+  "hello..." ✅ ai
+  "hi ed..." ✅ ai
+
+📋 NAVIGATION (/dashboard)
+────────────────────────────────────────────────────────────
+  "Take me to the risk register..." ✅ ai
+  "Where can I manage staff?..." ✅ ai
+
+
+============================================================
+📊 RESULTS SUMMARY
+============================================================
+Total tests: 32
+✅ Passed:   26
+❌ Failed:   6
+🚫 Blocked:  0
+📎 Citations: 3 responses with verbose citations
+
+
+🔴 FAILURES:
+
+  [hr] "A teacher has been off sick for 15 days this term. What are my options?"
+  Reason: Missing terms: return to work|occupational health|sickness
+  Answer: Here's a balanced synthesis:
+
+**Balanced Assessment**
+The situation requires carefully balancing staff welfare with operational needs while following proper procedures. The expert guidance provides a ...
+
+  [hr] "How do I handle a grievance from a teaching assistant?"
+  Reason: Missing terms: hearing
+  Answer: ### HR Guidance: Handling a Teaching Assistant's Grievance
+
+### 📅 Freshness Status  
+- Last Updated: March 2026  
+- Source: ACAS Code of Practice (2024), DfE Guidance  
+- Confidence: **HIGH**  
+
+### ...
+
+  [curriculum] "How should I prepare for an Ofsted deep dive in maths?"
+  Reason: Missing terms: implementation
+  Answer: # Balanced Synthesis: Preparing for Maths Deep Dive
+
+## Key Takeaways
+The expert guidance provides a comprehensive framework, and combining all perspectives reveals these essential points:
+
+### Streng...
+
+  [governance] "How should we prepare for a governing body meeting?"
+  Reason: Missing terms: quorum|attend
+  Answer: Here's a synthesized, balanced response:
+
+# Effective Governing Body Meeting Preparation
+
+### Key Principles
+- Balance thoroughness with efficiency
+- Prioritize both compliance and strategic impact
+- ...
+
+  [risk] "How do I assess the risk of a cyber attack on our school systems?"
+  Reason: Missing terms: likelihood, impact, mitigation
+  Answer: ### Technical Support: Cybersecurity Risk Assessment for Aurora Primary
+
+### 📅 Freshness Status  
+- Last Updated: 2026-03-18  
+- Source: National Cyber Security Centre (NCSC) & SWGfL  
+- Confidence: ...
+
+  [canvas] "I have data from Arbor and our payroll system. How do I reconcile staff records?"
+  Reason: Missing terms: field
+  Answer: Let me help you reconcile Aurora Primary's staff records between Arbor and payroll. Here's the straightforward process:
+
+1. **Upload both files** (Arbor staff export and payroll report) by dragging th...
+
+
+📎 VERBOSE CITATIONS (should be cleaned up):
+  [estates] "A child has fallen from playground equipment and broken their arm. What should I do?"
+  [estates] "Take me to the energy dashboard"
+  [finance] "What is the ICFP and how should I use it for staffing decisions?"
+
+
