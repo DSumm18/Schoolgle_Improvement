@@ -101,17 +101,28 @@ export default function AccessibilityToolbar() {
   useEffect(() => {
     if (!isOpen || !buttonRef.current) return;
     const rect = buttonRef.current.getBoundingClientRect();
-    const panelWidth = 320;
-    const top = rect.bottom + 8;
+    const panelHeight = 400; // approximate panel height
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const openUpward = spaceBelow < panelHeight;
+
+    const style: React.CSSProperties = {};
+
+    if (openUpward) {
+      // Open upward from the top of the button
+      style.bottom = window.innerHeight - rect.top + 8;
+    } else {
+      style.top = rect.bottom + 8;
+    }
+
     // If button is in the left half of screen (sidebar), open to the right
     // If button is in the right half (mobile header), align right edge
     if (rect.left < window.innerWidth / 2) {
-      const left = Math.max(8, rect.left);
-      setPanelStyle({ top, left });
+      style.left = Math.max(8, rect.left);
     } else {
-      const right = Math.max(8, window.innerWidth - rect.right);
-      setPanelStyle({ top, right });
+      style.right = Math.max(8, window.innerWidth - rect.right);
     }
+
+    setPanelStyle(style);
   }, [isOpen]);
 
   // Close on click outside
@@ -178,9 +189,17 @@ export default function AccessibilityToolbar() {
             {isOpen && (
               <motion.div
                 ref={panelRef}
-                initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                initial={{
+                  opacity: 0,
+                  y: panelStyle.bottom !== undefined ? 8 : -8,
+                  scale: 0.95,
+                }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                exit={{
+                  opacity: 0,
+                  y: panelStyle.bottom !== undefined ? 8 : -8,
+                  scale: 0.95,
+                }}
                 transition={{ duration: 0.15, ease: [0.22, 1, 0.36, 1] }}
                 className="fixed w-72 sm:w-80 rounded-xl border border-border bg-card text-card-foreground shadow-2xl overflow-hidden z-[9999] max-h-[80vh] overflow-y-auto"
                 style={panelStyle}
