@@ -651,6 +651,30 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
 
 ---
 
+## Marketing & Sales Materials
+
+All marketing docs live in `docs/marketing/`:
+
+| File/Directory                      | Purpose                                                                                                                  |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `INDEX.md`                          | Master index of all marketing materials                                                                                  |
+| `AI-IN-SCHOOLS-GUIDE.md`            | Plain English AI guide for school leaders (GDPR, safety, practical advice)                                               |
+| `COMPETITIVE-ANALYSIS.md`           | Competitor landscape analysis                                                                                            |
+| `LA-SCHOOLS-STRATEGY.md`            | Local Authority targeting strategy                                                                                       |
+| `UPSELL-STRATEGY.md`                | Upsell playbook (free → paid → trust)                                                                                    |
+| `demo-scripts/LA-HEADS-BRIEFING.md` | Demo script for LA headteacher briefings                                                                                 |
+| `modules/01-11`                     | Per-module pitch sheets (Ofsted, Estates, HR, Governance, Actions, Intelligence, Ed, Risk, Meetings, Documents, Surveys) |
+| `modules/07a-ed-vs-staff-cost.md`   | Ed vs staff cost comparison — the "11p/hour" pitch                                                                       |
+| `pitch-deck/school-in-a-box.html`   | 14-slide pitch deck (open in browser, F11 for fullscreen)                                                                |
+
+### Pricing Model
+
+- **Ed AI Assistant**: Two products — Ed In-School (£500/yr) and Ed Website Chat (£500/yr)
+- **Foundation tiers**: 1/2/3 year contracts, LA vs Academy financial year alignment
+- **Key pitch**: "20% of your problems consume 80% of your time" — systems expertise angle
+
+---
+
 ## Quick Reference
 
 ### Common Development Tasks
