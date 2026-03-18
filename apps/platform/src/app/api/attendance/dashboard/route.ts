@@ -164,10 +164,10 @@ export const GET = protectedRoute(async (auth, request) => {
         const pupils = pupilResult.data as any[];
         const records = attendanceResult.data as any[];
 
-        // Group pupils by year group
-        const ygPupilMap = new Map<string, any[]>();
+        // Group pupils by year group (MIS returns numeric: 0=Reception, 1-6=Year 1-6)
+        const ygPupilMap = new Map<number, any[]>();
         for (const p of pupils) {
-          const yg = p.year_group || "Unknown";
+          const yg = typeof p.year_group === "number" ? p.year_group : 0;
           if (!ygPupilMap.has(yg)) ygPupilMap.set(yg, []);
           ygPupilMap.get(yg)!.push(p);
         }
@@ -213,18 +213,10 @@ export const GET = protectedRoute(async (auth, request) => {
             ? Math.round((totalAttended / totalPossible) * 1000) / 10
             : 0;
 
-        // Year group stats
-        const ygOrder = [
-          "Reception",
-          "Year 1",
-          "Year 2",
-          "Year 3",
-          "Year 4",
-          "Year 5",
-          "Year 6",
-        ];
-        const yearGroupStats: YearGroupStat[] = ygOrder.map((yg, idx) => {
-          const ygPupils = ygPupilMap.get(yg) || [];
+        // Year group stats (0=Reception, 1-6=Year 1-6)
+        const ygNums = [0, 1, 2, 3, 4, 5, 6];
+        const yearGroupStats: YearGroupStat[] = ygNums.map((idx) => {
+          const ygPupils = ygPupilMap.get(idx) || [];
           let ygPoss = 0,
             ygAtt = 0,
             ygPA = 0,

@@ -312,8 +312,73 @@ export const GET = protectedRoute(async (auth, request) => {
     console.error("[behaviour/incidents] DB error:", error);
   }
 
-  // If no data or error, return demo data
+  // If no data or error, try MIS resolver before falling back to demo
   if (!data || data.length === 0) {
+    try {
+      const { getMISDataServiceForOrg } =
+        await import("@/lib/mis/data-service");
+      const mis = await getMISDataServiceForOrg(organizationId);
+      const behaviourResult = await mis.read(organizationId, "behaviour");
+
+      if (behaviourResult.data.length > 0) {
+        const misIncidents = behaviourResult.data as any[];
+
+        // Map MIS behaviour records to the API format
+        let mapped = misIncidents.map((r: any) => ({
+          id: r.incident_id,
+          organization_id: organizationId,
+          pupil_name: r.student_name,
+          pupil_id: r.student_id,
+          year_group: r.year_group,
+          type: (r.type as string).toLowerCase(), // "Positive"/"Negative" → "positive"/"negative"
+          category: r.category,
+          description: r.action_taken || r.category,
+          location: r.location,
+          lesson_period: null,
+          consequence: r.action_taken || null,
+          reported_by: r.recorded_by,
+          parent_notified: r.parent_notified,
+          created_at:
+            r.date && r.time
+              ? `${r.date}T${r.time}:00.000Z`
+              : r.date
+                ? `${r.date}T00:00:00.000Z`
+                : new Date().toISOString(),
+          updated_at: r.date
+            ? `${r.date}T00:00:00.000Z`
+            : new Date().toISOString(),
+        }));
+
+        // Apply filters
+        if (type) mapped = mapped.filter((d) => d.type === type);
+        if (category) mapped = mapped.filter((d) => d.category === category);
+        if (pupil)
+          mapped = mapped.filter((d) =>
+            d.pupil_name.toLowerCase().includes(pupil.toLowerCase()),
+          );
+        if (year_group)
+          mapped = mapped.filter((d) => d.year_group === parseInt(year_group));
+
+        // Sort by date descending
+        mapped.sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+        );
+
+        return apiSuccess({
+          incidents: mapped.slice((page - 1) * pageSize, page * pageSize),
+          total: mapped.length,
+          page,
+          pageSize,
+          demo: false,
+          data_source: "mis",
+        });
+      }
+    } catch (misErr) {
+      console.warn("[behaviour/incidents] MIS read failed:", misErr);
+    }
+
+    // Last resort: demo data
     let demoData = generateDemoIncidents();
 
     if (type) demoData = demoData.filter((d) => d.type === type);

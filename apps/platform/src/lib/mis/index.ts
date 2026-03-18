@@ -11,6 +11,7 @@ export {
   readTeacherHistory,
   readSENRegister,
   readHistoricalKS2,
+  readEnergyInvoices,
 } from "./data-service";
 export {
   resolveStaffList,

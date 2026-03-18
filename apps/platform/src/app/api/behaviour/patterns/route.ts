@@ -79,6 +79,113 @@ export const GET = protectedRoute(async (auth) => {
     .limit(1);
 
   if (error || !data || data.length === 0) {
+    // Try MIS resolver before falling back to demo
+    try {
+      const { getMISDataServiceForOrg } =
+        await import("@/lib/mis/data-service");
+      const mis = await getMISDataServiceForOrg(organizationId);
+      const behaviourResult = await mis.read(organizationId, "behaviour");
+
+      if (behaviourResult.data.length > 0) {
+        const misIncidents = behaviourResult.data as any[];
+
+        // Map MIS data to the same shape used by the aggregation below
+        const incidents = misIncidents.map((r: any) => ({
+          type: (r.type as string).toLowerCase(),
+          category: r.category,
+          location: r.location,
+          lesson_period: null as string | null,
+          reported_by: r.recorded_by,
+          year_group: r.year_group,
+          created_at:
+            r.date && r.time
+              ? `${r.date}T${r.time}:00.000Z`
+              : r.date
+                ? `${r.date}T00:00:00.000Z`
+                : new Date().toISOString(),
+        }));
+
+        // Aggregate by day of week
+        const dayMap: Record<string, { positive: number; negative: number }> =
+          {};
+        const days = [
+          "Sunday",
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday",
+          "Saturday",
+        ];
+        for (const inc of incidents) {
+          const day = days[new Date(inc.created_at).getDay()];
+          if (!dayMap[day]) dayMap[day] = { positive: 0, negative: 0 };
+          dayMap[day][inc.type as "positive" | "negative"]++;
+        }
+
+        // Aggregate by staff
+        const staffMap: Record<string, { positive: number; negative: number }> =
+          {};
+        for (const inc of incidents) {
+          const s = inc.reported_by || "Unknown";
+          if (!staffMap[s]) staffMap[s] = { positive: 0, negative: 0 };
+          staffMap[s][inc.type as "positive" | "negative"]++;
+        }
+
+        // Aggregate by location (negative only for hotspots)
+        const locMap: Record<string, number> = {};
+        for (const inc of incidents.filter((i) => i.type === "negative")) {
+          const l = inc.location || "Unknown";
+          locMap[l] = (locMap[l] || 0) + 1;
+        }
+
+        // Aggregate by year group
+        const ygMap: Record<number, { positive: number; negative: number }> =
+          {};
+        for (const inc of incidents) {
+          const yg = inc.year_group || 0;
+          if (!ygMap[yg]) ygMap[yg] = { positive: 0, negative: 0 };
+          ygMap[yg][inc.type as "positive" | "negative"]++;
+        }
+
+        return apiSuccess({
+          by_day_of_week: [
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+          ].map((d) => ({
+            day: d,
+            ...(dayMap[d] || { positive: 0, negative: 0 }),
+          })),
+          by_lesson_period: [], // MIS data doesn't include lesson period
+          by_staff: Object.entries(staffMap).map(([staff, counts]) => ({
+            staff,
+            ...counts,
+          })),
+          hotspot_locations: Object.entries(locMap)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 5)
+            .map(([location, incidents]) => ({
+              location,
+              incidents,
+              severity_avg: 0,
+            })),
+          by_year_group: Object.entries(ygMap)
+            .map(([yg, counts]) => ({
+              year_group: parseInt(yg),
+              ...counts,
+            }))
+            .sort((a, b) => a.year_group - b.year_group),
+          demo: false,
+          data_source: "mis",
+        });
+      }
+    } catch (misErr) {
+      console.warn("[behaviour/patterns] MIS read failed:", misErr);
+    }
+
     return apiSuccess(generateDemoPatterns());
   }
 

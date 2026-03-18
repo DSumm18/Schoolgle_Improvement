@@ -93,8 +93,84 @@ export const GET = protectedRoute(async (auth) => {
     .select("id, sen_status, primary_need, year_group, ehcp_status")
     .eq("organization_id", organizationId);
 
-  // If no real data, return demo
+  // If no real data, try MIS fallback before demo
   if (!register || register.length === 0) {
+    try {
+      console.log("[SEND Dashboard] No Supabase data, trying MIS fallback...");
+      const { getMISDataServiceForOrg } =
+        await import("@/lib/mis/data-service");
+      const misService = await getMISDataServiceForOrg(organizationId);
+      const misResult = await misService.read(organizationId, "sen_register");
+      console.log(
+        "[SEND Dashboard] MIS returned",
+        misResult.data.length,
+        "records, warnings:",
+        misResult.warnings,
+      );
+      if (misResult.data.length > 0) {
+        const misRegister = misResult.data as any[];
+        const misSenK = misRegister.filter((r) => r.sen_status === "K");
+        const misEhcp = misRegister.filter((r) => r.sen_status === "E");
+
+        const misByNeed: Record<string, number> = {};
+        misRegister.forEach((r) => {
+          if (r.sen_primary_need)
+            misByNeed[r.sen_primary_need] =
+              (misByNeed[r.sen_primary_need] || 0) + 1;
+        });
+
+        const misByYear: Record<string, number> = {};
+        misRegister.forEach((r) => {
+          if (r.year_group !== undefined)
+            misByYear[r.year_group] = (misByYear[r.year_group] || 0) + 1;
+        });
+
+        const misEhcpFinalised = misRegister.filter((r) => r.ehcp);
+
+        return apiSuccess({
+          register: {
+            total: misRegister.length,
+            sen_k: misSenK.length,
+            ehcp: misEhcp.length,
+            monitoring: 0,
+            by_need: misByNeed,
+            by_year: misByYear,
+          },
+          ehcp: {
+            total: misEhcpFinalised.length,
+            reviews_due_this_term: misEhcpFinalised.filter(
+              (r) => r.next_annual_review,
+            ).length,
+            reviews_overdue: 0,
+            assessments_in_progress: 0,
+          },
+          provisions: {
+            total_active: 0,
+            total_weekly_cost: 0,
+            total_annual_cost: 0,
+            by_type: {},
+            by_funding: {},
+            pupils_without_provision: misRegister.length,
+          },
+          referrals: {
+            total_active: 0,
+            by_type: {},
+            overdue: 0,
+          },
+          graduated_approach: {
+            total_active_cycles: 0,
+            by_stage: {},
+            reviews_due_this_term: 0,
+            outcomes_this_year: {},
+          },
+          source: "mis",
+          demo: false,
+        });
+      }
+    } catch (e) {
+      console.error("[SEND Dashboard] MIS fallback error:", e);
+    }
+
     return apiSuccess({ ...DEMO_STATS, demo: true });
   }
 
