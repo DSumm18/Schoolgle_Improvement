@@ -363,11 +363,13 @@ export class Ed {
     pos: { x: number; y: number },
   ): void {
     // Override CSS positioning — use fixed position directly on the launcher
+    // z-index must be above ALL page content (sidebars, modals, overlays)
     launcher.style.position = "fixed";
     launcher.style.left = `${pos.x}px`;
     launcher.style.top = `${pos.y}px`;
     launcher.style.bottom = "auto";
     launcher.style.right = "auto";
+    launcher.style.zIndex = "999999";
   }
 
   private makeDraggable(launcher: HTMLElement): void {

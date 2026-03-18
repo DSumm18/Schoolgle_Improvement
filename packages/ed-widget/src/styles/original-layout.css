@@ -14,7 +14,7 @@
   right: 0;
   width: 400px;
   height: 600px;
-  z-index: 9999; /* High Z-index to sit above website */
+  z-index: 999999; /* Must sit above ALL page content */
   pointer-events: none; /* Allow clicking through the empty space */
   display: flex;
   flex-direction: column;
@@ -34,7 +34,7 @@
   position: absolute;
   bottom: 2rem;
   right: 2rem;
-  z-index: 100;
+  z-index: 999999; /* When dragged (position:fixed), must float above everything */
 }
 
 body.widget-active #launcher-group {
