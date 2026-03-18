@@ -139,9 +139,21 @@ export class EdOrchestrator {
     }
 
     try {
+      // Step 0: Detect domain from URL for context-aware routing
+      const urlDomain = (appContext as any).url
+        ? mapUrlToDomain((appContext as any).url)
+        : appContext.currentTask
+          ? mapUrlToDomain(appContext.currentTask)
+          : null;
+
+      // Prefix question with page context so classifier routes correctly
+      const contextualQuestion = urlDomain
+        ? `[User is currently in the ${urlDomain} module] ${question}`
+        : question;
+
       // Step 1: Classify intent and check if work-related
       const classification = classifyIntent(
-        question,
+        contextualQuestion,
         appContext.activeApp,
         appContext.userRole,
       );
@@ -161,12 +173,8 @@ export class EdOrchestrator {
         };
       }
 
-      // Step 2: Detect domain from URL and inject expert knowledge
-      const domain = (appContext as any).url
-        ? mapUrlToDomain((appContext as any).url)
-        : appContext.currentTask
-          ? mapUrlToDomain(appContext.currentTask)
-          : null;
+      // Step 2: Inject expert knowledge for the detected domain
+      const domain = urlDomain;
       let enrichedQuestion = question;
 
       if (domain && this.config.supabase) {
