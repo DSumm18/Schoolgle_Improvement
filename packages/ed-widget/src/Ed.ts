@@ -1956,16 +1956,9 @@ URL: ${window.location.href}`;
 
     // Navigate after a brief delay so user sees the response
     setTimeout(() => {
-      // Use Next.js router if available, otherwise window.location
       if (typeof window !== "undefined") {
-        try {
-          // Try Next.js router (pushState for SPA navigation)
-          window.history.pushState({}, "", linkPath);
-          window.dispatchEvent(new PopStateEvent("popstate"));
-          // Also try Next.js navigation event
-          window.dispatchEvent(new Event("nextjs:navigate"));
-        } catch {
-          window.location.href = linkPath;
+        // Direct navigation — reliable across all frameworks
+        window.location.href = linkPath;
         }
       }
     }, 1500);
