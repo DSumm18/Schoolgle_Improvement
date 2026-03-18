@@ -781,76 +781,33 @@ export class Ed {
 
     if (this.mode === "website") {
       const welcome = friendlyName ? `Welcome to ${friendlyName}!` : "Welcome!";
-      greeting = `Hi! ${welcome} I'm Ed, the school assistant.\n\nHow can I help you today?`;
+      greeting = `Hi! ${welcome} I'm Ed, the school assistant. How can I help you today?`;
     } else if (this.mode === "support") {
       greeting = `Hi! I'm Ed. Need help logging in or finding something?`;
     } else {
-      // Logged-in staff — get personalised greeting from API
+      // Logged-in staff — show quick greeting, then fetch personalised one
       const name = (this.config as any).userName;
       const firstName = name ? name.split(" ")[0] : "";
       const nameGreet = firstName ? `Hi ${firstName}!` : "Hi!";
       greeting = `${nameGreet} I'm Ed, your school assistant. What can I help with?`;
-
-      // Try API for richer, domain-aware greeting (async, update message when ready)
-      if (this.apiClient) {
-        this.fetchPersonalisedGreeting(firstName);
-      }
     }
 
-    // Display greeting (clean for chat, but keep original for voice)
-    const displayText = this.cleanTextForDisplay(greeting);
-
+    // Show greeting text immediately (no voice yet for logged-in users)
+    const greetingId = crypto.randomUUID();
     this.addMessage({
-      id: crypto.randomUUID(),
+      id: greetingId,
       role: "assistant",
-      content: displayText,
+      content: greeting,
       timestamp: new Date(),
       language: this.currentLanguage.code,
     });
 
-    // Morph avatar based on context
-    const hasForm = this.formFiller && this.formFiller.detectForms().length > 0;
-    if (hasForm) {
-      setTimeout(() => this.particle3D?.morphTo("pencil"), 1000);
-      setTimeout(() => this.particle3D?.morphTo("sphere"), 3000);
-    }
-
-    // Speak greeting with emotions (Fish Audio) or fallback
-    if (this.config.features.voice) {
-      // Stop any ongoing speech first (async to prevent conflicts)
-      this.stopAllSpeechAsync().then(() => {
-        if (this.fishVoice) {
-          // Use Fish Audio - REMOVE emotion tags as Fish Audio doesn't support them in text
-          // Fish Audio uses voice cloning for emotion, not text tags
-          const cleanGreeting = this.cleanTextForDisplay(greeting);
-          console.log("[Ed] Using Fish Audio for greeting");
-          this.fishVoice
-            .speakAndPlay(
-              cleanGreeting,
-              this.currentPersona,
-              this.currentLanguage.code,
-            )
-            .then(() => {
-              console.log("[Ed] Fish Audio greeting playback completed");
-            })
-            .catch((error) => {
-              console.error("[Ed] Fish Audio error:", error);
-              console.error("[Ed] Error details:", error.message);
-              // Don't fallback to browser TTS - it causes dual audio
-              // Only log the error and continue silently
-              console.warn(
-                "[Ed] Skipping browser TTS fallback to prevent dual audio",
-              );
-            });
-        } else {
-          // Only use browser TTS if Fish Audio is completely unavailable (not initialized)
-          // This is an emergency fallback only
-          if (!this.config.disableBrowserTTS) {
-            console.debug("[Ed] Using browser TTS for greeting");
-            this.speak(displayText);
-          }
-        }
-      });
+    // For logged-in users: fetch personalised greeting from API, update text AND speak it
+    // For other modes: speak the static greeting immediately
+    if (this.mode === "school" && this.apiClient) {
+      this.fetchAndSpeakGreeting(greetingId);
+    } else if (this.config.features.voice && this.fishVoice) {
+      this.speakText(greeting);
     }
   }
 
@@ -858,7 +815,11 @@ export class Ed {
    * Fetch a personalised greeting from the API that includes domain context,
    * proactive alerts, and the user's name. Updates the initial greeting message.
    */
-  private async fetchPersonalisedGreeting(firstName: string): Promise<void> {
+  /**
+   * Fetch personalised greeting from API, update the chat message, then speak it.
+   * This ensures voice and text are always in sync.
+   */
+  private async fetchAndSpeakGreeting(messageId: string): Promise<void> {
     try {
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
@@ -889,27 +850,41 @@ export class Ed {
       if (response.ok) {
         const data = await response.json();
         if (data.answer && data.source === "ai") {
-          // Update the first message with the personalised greeting
-          const messages = this.chat?.getMessages();
-          if (messages && messages.length > 0) {
-            this.chat?.updateMessage(messages[0].id, data.answer);
-          }
-          // Speak the personalised greeting if Fish Audio is ready
-          if (this.fishVoice) {
-            const clean = this.cleanTextForDisplay(data.answer);
-            this.fishVoice
-              .speakAndPlay(
-                clean,
-                this.currentPersona,
-                this.currentLanguage.code,
-              )
-              .catch(() => {});
-          }
+          // Update the displayed message to match what we'll speak
+          this.chat?.updateMessage(messageId, data.answer);
+          // Speak the same text that's shown
+          this.speakText(data.answer);
+          return;
         }
       }
     } catch {
-      // Silently use the fallback static greeting
+      // API failed — speak the fallback greeting that's already displayed
     }
+
+    // Fallback: speak whatever is currently in the chat
+    const msgs = this.chat?.getMessages();
+    const current = msgs?.find((m) => m.id === messageId);
+    if (current) {
+      this.speakText(current.content);
+    }
+  }
+
+  /**
+   * Speak text via Fish Audio, with proper cleaning.
+   * Stops any ongoing speech first. Single point of TTS output.
+   */
+  private speakText(text: string): void {
+    if (!this.fishVoice || !this.config.features.voice) return;
+
+    // Clean for TTS: strip markdown, icons, metadata
+    const clean = this.fishVoice.cleanTextForTTS(text, false);
+    if (!clean || clean.length < 2) return;
+
+    this.stopAllSpeechAsync().then(() => {
+      this.fishVoice
+        ?.speakAndPlay(clean, this.currentPersona, this.currentLanguage.code)
+        .catch((err) => console.warn("[Ed] TTS error:", err.message));
+    });
   }
 
   private getLocalizedGreeting(): string {
@@ -1753,17 +1728,7 @@ export class Ed {
    * Speak a response with Fish Audio or browser TTS
    */
   private speakResponse(response: string): void {
-    if (!this.config.features.voice) return;
-    this.stopAllSpeechAsync().then(() => {
-      if (this.fishVoice) {
-        const clean = this.cleanTextForDisplay(response);
-        this.fishVoice
-          .speakAndPlay(clean, this.currentPersona, this.currentLanguage.code)
-          .catch((err) => console.error("[Ed] TTS error:", err));
-      } else if (!this.config.disableBrowserTTS) {
-        this.speak(response);
-      }
-    });
+    this.speakText(response);
   }
 
   private async getAIResponse(text: string, image?: string): Promise<string> {

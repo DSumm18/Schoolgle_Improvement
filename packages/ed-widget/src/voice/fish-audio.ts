@@ -623,10 +623,22 @@ export class FishAudioVoice {
       .replace(/<[^>]+>/g, "")
       // Remove instructional text patterns
       .replace(/\[Translated to [^\]]+\]:\s*/gi, "")
+      // Remove markdown links but keep text: [Go to Energy](/path) → Go to Energy
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
       // Clean up symbols that TTS reads literally
       .replace(/---+/g, "") // Horizontal rules
       .replace(/\|/g, ",") // Pipe separators → comma pause
-      .replace(/[#~_]/g, ""); // Stray markdown chars;
+      .replace(/[#~_`]/g, "") // Stray markdown chars
+      // Remove common TTS-unfriendly patterns
+      .replace(/\*\*/g, "") // Leftover bold markers
+      .replace(/\*/g, "") // Leftover italic markers
+      .replace(/📅.*$/gm, "") // Freshness status lines
+      .replace(/Freshness Status/gi, "")
+      .replace(/Last Updated:.*$/gm, "")
+      .replace(/Confidence:.*$/gim, "")
+      .replace(/```[\s\S]*?```/g, "") // Code blocks
+      .replace(/\btool_code\b/gi, "") // Tool code markers
+      .replace(/\bfunction_call\b/gi, ""); // Function call markers
 
     // Remove any remaining tags (non-placeholder tags)
     // If preserving, we've already replaced Fish Audio tags with placeholders
