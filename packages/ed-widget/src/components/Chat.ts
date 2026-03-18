@@ -89,6 +89,19 @@ export class Chat {
       messageEl.style.opacity = "1";
       messageEl.style.transform = "scale(1) translateY(0)";
     });
+
+    // Add click handlers for internal navigation links
+    messageEl.querySelectorAll("a.ed-nav-link").forEach((link) => {
+      link.addEventListener("click", (e) => {
+        e.preventDefault();
+        const href = (link as HTMLAnchorElement).getAttribute("href");
+        if (href && href.startsWith("/")) {
+          // SPA navigation via history API
+          window.history.pushState({}, "", href);
+          window.dispatchEvent(new PopStateEvent("popstate"));
+        }
+      });
+    });
   }
 
   private formatMessage(content: string): string {

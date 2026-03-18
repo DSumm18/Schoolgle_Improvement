@@ -1515,6 +1515,9 @@ export class Ed {
 
     this.addMessage(assistantMessage);
 
+    // Auto-navigate if user asked to go somewhere and response contains an internal link
+    this.handleAutoNavigation(text, response);
+
     // Emoji reaction based on response
     const responseLower = response.toLowerCase();
     if (
@@ -1956,6 +1959,51 @@ URL: ${window.location.href}`;
         .replace(/\s+/g, " ")
         .trim()
     );
+  }
+
+  /**
+   * Auto-navigate when user asks Ed to take them somewhere and
+   * Ed's response contains an internal link. Navigates after a short
+   * delay so the user sees Ed's message first.
+   */
+  private handleAutoNavigation(userQuestion: string, aiResponse: string): void {
+    const lower = userQuestion.toLowerCase();
+    const navTriggers = [
+      "take me to",
+      "go to",
+      "navigate to",
+      "open",
+      "show me the",
+      "can you take",
+      "bring me to",
+      "switch to",
+      "jump to",
+    ];
+
+    const isNavRequest = navTriggers.some((t) => lower.includes(t));
+    if (!isNavRequest) return;
+
+    // Extract internal link from response: [text](/dashboard/...)
+    const linkMatch = aiResponse.match(/\[([^\]]+)\]\((\/[^)]+)\)/);
+    if (!linkMatch) return;
+
+    const [, linkText, linkPath] = linkMatch;
+
+    // Navigate after a brief delay so user sees the response
+    setTimeout(() => {
+      // Use Next.js router if available, otherwise window.location
+      if (typeof window !== "undefined") {
+        try {
+          // Try Next.js router (pushState for SPA navigation)
+          window.history.pushState({}, "", linkPath);
+          window.dispatchEvent(new PopStateEvent("popstate"));
+          // Also try Next.js navigation event
+          window.dispatchEvent(new Event("nextjs:navigate"));
+        } catch {
+          window.location.href = linkPath;
+        }
+      }
+    }, 1500);
   }
 
   private addMessage(message: Message): void {
