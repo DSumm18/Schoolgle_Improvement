@@ -3,7 +3,14 @@
 // Adaptive micro-assessment system with scaffolds and telemetry
 // ============================================================================
 
-import { QuestDef, QuestItem, QuestRun, ItemResult, ScaffoldPreset, ThemePack } from '../types';
+import {
+  QuestDef,
+  QuestItem,
+  QuestRun,
+  ItemResult,
+  ScaffoldPreset,
+  ThemePack,
+} from "../types";
 
 // ============================================================================
 // QUEST STATE
@@ -25,7 +32,7 @@ export interface QuestState {
 
 export interface QuestItemState {
   item: QuestItem;
-  state: 'pending' | 'in_progress' | 'completed' | 'skipped';
+  state: "pending" | "in_progress" | "completed" | "skipped";
   attempts: number;
   hintsUsed: number;
   timeSpent: number; // seconds
@@ -41,7 +48,7 @@ export interface QuestTelemetry {
 }
 
 export interface TelemetryEvent {
-  type: 'start' | 'hint' | 'attempt' | 'stuck' | 'complete' | 'skip';
+  type: "start" | "hint" | "attempt" | "stuck" | "complete" | "skip";
   timestamp: Date;
   itemId: string;
   data?: Record<string, any>;
@@ -53,80 +60,80 @@ export interface TelemetryEvent {
 
 export const SCAFFOLD_PRESETS: Record<ScaffoldPreset, ScaffoldConfig> = {
   standard: {
-    name: 'Standard',
-    description: 'No additional support',
+    name: "Standard",
+    description: "No additional support",
     hintsAvailable: 2,
     timeExtension: 1.0,
     attemptsAllowed: 3,
-    visualSupport: 'minimal',
-    languageSupport: 'standard',
+    visualSupport: "minimal",
+    languageSupport: "standard",
     motorSupport: false,
   },
   step_by_step: {
-    name: 'Step-by-Step',
-    description: 'One change at a time',
+    name: "Step-by-Step",
+    description: "One change at a time",
     hintsAvailable: 4,
     timeExtension: 1.5,
     attemptsAllowed: 5,
-    visualSupport: 'high',
-    languageSupport: 'simplified',
+    visualSupport: "high",
+    languageSupport: "simplified",
     motorSupport: false,
-    features: ['sequential_steps', 'prevent_mistakes', 'highlight_next'],
+    features: ["sequential_steps", "prevent_mistakes", "highlight_next"],
   },
   language_lite: {
-    name: 'Language-Lite',
-    description: 'Reduced text, more visual',
+    name: "Language-Lite",
+    description: "Reduced text, more visual",
     hintsAvailable: 3,
     timeExtension: 1.3,
     attemptsAllowed: 4,
-    visualSupport: 'high',
-    languageSupport: 'minimal',
+    visualSupport: "high",
+    languageSupport: "minimal",
     motorSupport: false,
-    features: ['icon_prompts', 'minimal_text', 'visual_instructions'],
+    features: ["icon_prompts", "minimal_text", "visual_instructions"],
   },
   visual_first: {
-    name: 'Visual-First',
-    description: 'Minimal text, icon-heavy',
+    name: "Visual-First",
+    description: "Minimal text, icon-heavy",
     hintsAvailable: 2,
     timeExtension: 1.2,
     attemptsAllowed: 3,
-    visualSupport: 'maximum',
-    languageSupport: 'minimal',
+    visualSupport: "maximum",
+    languageSupport: "minimal",
     motorSupport: false,
-    features: ['icons_only', 'picture_prompts', 'no_text_instructions'],
+    features: ["icons_only", "picture_prompts", "no_text_instructions"],
   },
   reduced_motion: {
-    name: 'Reduced Motion',
-    description: 'Lower FPS, fewer transitions',
+    name: "Reduced Motion",
+    description: "Lower FPS, fewer transitions",
     hintsAvailable: 2,
     timeExtension: 1.0,
     attemptsAllowed: 3,
-    visualSupport: 'standard',
-    languageSupport: 'standard',
+    visualSupport: "standard",
+    languageSupport: "standard",
     motorSupport: false,
-    features: ['30fps_cap', 'fade_transitions_only', 'no_particles'],
+    features: ["30fps_cap", "fade_transitions_only", "no_particles"],
   },
   motor_friendly: {
-    name: 'Motor-Friendly',
-    description: 'Larger targets, simplified UI',
+    name: "Motor-Friendly",
+    description: "Larger targets, simplified UI",
     hintsAvailable: 3,
     timeExtension: 1.5,
     attemptsAllowed: 5,
-    visualSupport: 'high',
-    languageSupport: 'standard',
+    visualSupport: "high",
+    languageSupport: "standard",
     motorSupport: true,
-    features: ['large_targets', 'simplified_click', 'alternate_input'],
+    features: ["large_targets", "simplified_click", "alternate_input"],
   },
   stretch: {
-    name: 'Stretch',
-    description: 'Additional challenge',
+    name: "Stretch",
+    description: "Additional challenge",
     hintsAvailable: 0,
     timeExtension: 0.8,
     attemptsAllowed: 2,
-    visualSupport: 'minimal',
-    languageSupport: 'standard',
+    visualSupport: "minimal",
+    languageSupport: "standard",
     motorSupport: false,
-    features: ['bonus_challenges', 'reduced_guidance', 'higher_threshold'],
+    features: ["bonus_challenges", "reduced_guidance", "higher_threshold"],
   },
 };
 
@@ -136,8 +143,8 @@ export interface ScaffoldConfig {
   hintsAvailable: number;
   timeExtension: number;
   attemptsAllowed: number;
-  visualSupport: 'minimal' | 'standard' | 'high' | 'maximum';
-  languageSupport: 'minimal' | 'simplified' | 'standard';
+  visualSupport: "minimal" | "standard" | "high" | "maximum";
+  languageSupport: "minimal" | "simplified" | "standard";
   motorSupport: boolean;
   features?: string[];
 }
@@ -150,7 +157,12 @@ export class QuestRunner {
   private state: QuestState;
   private questDef: QuestDef;
 
-  constructor(questDef: QuestDef, pupilId: string, scaffoldPreset: ScaffoldPreset, theme: ThemePack) {
+  constructor(
+    questDef: QuestDef,
+    pupilId: string,
+    scaffoldPreset: ScaffoldPreset,
+    theme: ThemePack,
+  ) {
     this.questDef = questDef;
     this.state = this.initializeQuest(questDef, pupilId, scaffoldPreset, theme);
   }
@@ -159,7 +171,7 @@ export class QuestRunner {
     questDef: QuestDef,
     pupilId: string,
     scaffoldPreset: ScaffoldPreset,
-    theme: ThemePack
+    theme: ThemePack,
   ): QuestState {
     const scaffold = SCAFFOLD_PRESETS[scaffoldPreset];
 
@@ -169,7 +181,7 @@ export class QuestRunner {
       currentItemIndex: 0,
       items: questDef.items.map((item) => ({
         item,
-        state: 'pending' as const,
+        state: "pending" as const,
         attempts: 0,
         hintsUsed: 0,
         timeSpent: 0,
@@ -200,10 +212,10 @@ export class QuestRunner {
 
   startItem(): QuestItem {
     const currentItem = this.state.items[this.state.currentItemIndex];
-    currentItem.state = 'in_progress';
+    currentItem.state = "in_progress";
 
     this.recordTelemetry({
-      type: 'start',
+      type: "start",
       timestamp: new Date(),
       itemId: currentItem.item.id,
     });
@@ -229,13 +241,16 @@ export class QuestRunner {
     const hintPenalty = currentItemState.hintsUsed * 5;
     const timeBonus = timeSpent < 30 ? 10 : 0;
 
-    let score = Math.max(0, baseScore - attemptPenalty - hintPenalty + timeBonus);
+    let score = Math.max(
+      0,
+      baseScore - attemptPenalty - hintPenalty + timeBonus,
+    );
 
     // Check for stuck behavior (multiple failed attempts)
     if (!isCorrect && currentItemState.attempts >= 3) {
       currentItemState.stuckEvents++;
       this.recordTelemetry({
-        type: 'stuck',
+        type: "stuck",
         timestamp: new Date(),
         itemId: item.id,
         data: { attempt: currentItemState.attempts },
@@ -255,16 +270,16 @@ export class QuestRunner {
       score,
       confidence,
       attempts: currentItemState.attempts,
-      hintsUsed: currentItemState.hintsUsed,
-      timeSeconds: currentItemState.timeSpent,
-      stuckEvents: currentItemState.stuckEvents,
+      hints_used: currentItemState.hintsUsed,
+      time_seconds: currentItemState.timeSpent,
+      stuck_events: currentItemState.stuckEvents,
       misconceptions,
       transfer_gap: transferGap,
     };
 
     // Record telemetry
     this.recordTelemetry({
-      type: 'attempt',
+      type: "attempt",
       timestamp: new Date(),
       itemId: item.id,
       data: {
@@ -290,16 +305,19 @@ export class QuestRunner {
     const scaffold = SCAFFOLD_PRESETS[this.state.scaffoldUsed];
 
     if (currentItemState.hintsUsed >= scaffold.hintsAvailable) {
-      return this.state.theme.copy_pack.ui_strings.hint || 'No more hints available';
+      return (
+        this.state.theme.copy_pack.ui_strings.hint || "No more hints available"
+      );
     }
 
     currentItemState.hintsUsed++;
 
     const hintIndex = currentItemState.hintsUsed - 1;
-    const hint = currentItemState.item.hints[hintIndex] || 'Read the question carefully';
+    const hint =
+      currentItemState.item.hints[hintIndex] || "Read the question carefully";
 
     this.recordTelemetry({
-      type: 'hint',
+      type: "hint",
       timestamp: new Date(),
       itemId: currentItemState.item.id,
       data: { hintIndex, hint },
@@ -310,10 +328,10 @@ export class QuestRunner {
 
   skipItem(): void {
     const currentItemState = this.state.items[this.state.currentItemIndex];
-    currentItemState.state = 'skipped';
+    currentItemState.state = "skipped";
 
     this.recordTelemetry({
-      type: 'skip',
+      type: "skip",
       timestamp: new Date(),
       itemId: currentItemState.item.id,
     });
@@ -323,14 +341,14 @@ export class QuestRunner {
 
   private completeItem(result: ItemResult): void {
     const currentItemState = this.state.items[this.state.currentItemIndex];
-    currentItemState.state = 'completed';
+    currentItemState.state = "completed";
     currentItemState.result = result;
 
     // Update total score
     this.state.totalScore += result.score;
 
     this.recordTelemetry({
-      type: 'complete',
+      type: "complete",
       timestamp: new Date(),
       itemId: currentItemState.item.id,
       data: { score: result.score },
@@ -342,7 +360,8 @@ export class QuestRunner {
   private moveToNextItem(): void {
     // Find next pending item
     const nextIndex = this.state.items.findIndex(
-      (item, index) => index > this.state.currentItemIndex && item.state === 'pending'
+      (item, index) =>
+        index > this.state.currentItemIndex && item.state === "pending",
     );
 
     if (nextIndex === -1) {
@@ -362,10 +381,14 @@ export class QuestRunner {
     const scoreMultiplier = avgScore / 100;
     const themeMultiplier = this.state.theme.reward_catalog.coins_multiplier;
 
-    this.state.coinsEarned = Math.round(baseCoins * scoreMultiplier * themeMultiplier);
+    this.state.coinsEarned = Math.round(
+      baseCoins * scoreMultiplier * themeMultiplier,
+    );
 
-    this.state.telemetry.totalTime =
-      this.state.items.reduce((sum, item) => sum + item.timeSpent, 0);
+    this.state.telemetry.totalTime = this.state.items.reduce(
+      (sum, item) => sum + item.timeSpent,
+      0,
+    );
   }
 
   // ============================================================================
@@ -375,31 +398,39 @@ export class QuestRunner {
   private validateAnswer(item: QuestItem, answer: any): boolean {
     // For MVP, simple validation
     // In production, this would be more sophisticated based on item type
-    if (typeof answer === 'boolean') return answer;
-    if (typeof answer === 'number') return answer > 0;
-    if (typeof answer === 'string') return answer.length > 0;
+    if (typeof answer === "boolean") return answer;
+    if (typeof answer === "number") return answer > 0;
+    if (typeof answer === "string") return answer.length > 0;
     if (Array.isArray(answer)) return answer.length > 0;
 
     return false;
   }
 
-  private calculateConfidence(itemState: QuestItemState, isCorrect: boolean): 'low' | 'medium' | 'high' {
-    if (isCorrect && itemState.attempts === 1 && itemState.hintsUsed === 0) return 'high';
-    if (isCorrect && itemState.attempts <= 2) return 'medium';
-    if (!isCorrect && itemState.attempts >= 3) return 'low';
-    return 'medium';
+  private calculateConfidence(
+    itemState: QuestItemState,
+    isCorrect: boolean,
+  ): "low" | "medium" | "high" {
+    if (isCorrect && itemState.attempts === 1 && itemState.hintsUsed === 0)
+      return "high";
+    if (isCorrect && itemState.attempts <= 2) return "medium";
+    if (!isCorrect && itemState.attempts >= 3) return "low";
+    return "medium";
   }
 
-  private detectMisconceptions(item: QuestItem, answer: any, isCorrect: boolean): string[] {
+  private detectMisconceptions(
+    item: QuestItem,
+    answer: any,
+    isCorrect: boolean,
+  ): string[] {
     const misconceptions: string[] = [];
 
     // Example misconception detection (would be more sophisticated in production)
     if (!isCorrect) {
-      if (item.task_prompt.toLowerCase().includes('fraction')) {
-        misconceptions.push('fraction_misconception');
+      if (item.task_prompt.toLowerCase().includes("fraction")) {
+        misconceptions.push("fraction_misconception");
       }
-      if (item.task_prompt.toLowerCase().includes('place value')) {
-        misconceptions.push('place_value_misconception');
+      if (item.task_prompt.toLowerCase().includes("place value")) {
+        misconceptions.push("place_value_misconception");
       }
     }
 
@@ -409,7 +440,7 @@ export class QuestRunner {
   private checkTransferGap(item: QuestItem, isCorrect: boolean): boolean {
     // Transfer gap: concept strong but transfer weak
     // For MVP, simple check: if it's a transfer item and they struggled
-    if (item.evidence_type === 'transfer' && !isCorrect) {
+    if (item.evidence_type === "transfer" && !isCorrect) {
       return true;
     }
     return false;
@@ -437,7 +468,9 @@ export class QuestRunner {
   }
 
   getProgress(): { completed: number; total: number; percentage: number } {
-    const completed = this.state.items.filter((item) => item.state === 'completed').length;
+    const completed = this.state.items.filter(
+      (item) => item.state === "completed",
+    ).length;
     const total = this.state.items.length;
     const percentage = Math.round((completed / total) * 100);
 
@@ -479,7 +512,7 @@ export function createQuestRunner(
   questDef: QuestDef,
   pupilId: string,
   scaffoldPreset: ScaffoldPreset,
-  theme: ThemePack
+  theme: ThemePack,
 ): QuestRunner {
   return new QuestRunner(questDef, pupilId, scaffoldPreset, theme);
 }

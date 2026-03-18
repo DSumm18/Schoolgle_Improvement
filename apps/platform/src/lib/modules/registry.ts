@@ -36,6 +36,7 @@ import {
   Scale,
   Accessibility,
   Brain,
+  Globe,
   Sparkles,
   Settings,
   Radio,
@@ -184,7 +185,13 @@ export const MODULES: ModuleDefinition[] = [
     icon: Radio,
     description:
       "School-wide comms hub — notices, video meetings, PA announcements, emergency broadcasts, and classroom displays.",
-    requiredPermissions: ["admin", "headteacher", "slt", "teacher", "caretaker"],
+    requiredPermissions: [
+      "admin",
+      "headteacher",
+      "slt",
+      "teacher",
+      "caretaker",
+    ],
   },
   {
     id: "calendar",
@@ -322,7 +329,8 @@ export const APPS: AppDefinition[] = [
     name: "Lesson Studio",
     route: "/dashboard/teaching-learning/lesson-studio",
     icon: Sparkles,
-    shortDescription: "AI-powered connected lesson planning that knows your pupils.",
+    shortDescription:
+      "AI-powered connected lesson planning that knows your pupils.",
     requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
   },
   {
@@ -489,6 +497,15 @@ export const APPS: AppDefinition[] = [
     shortDescription: "Outsourced DPO service via Vrisk.",
     requiredPermissions: ["admin", "headteacher"],
   },
+  {
+    id: "compliance-website",
+    moduleId: "compliance",
+    name: "Website Compliance",
+    route: "/dashboard/website-compliance",
+    icon: Globe,
+    shortDescription: "Scan website against 28+ statutory requirements.",
+    requiredPermissions: ["admin", "headteacher", "slt"],
+  },
 
   // HR Apps
   {
@@ -534,7 +551,8 @@ export const APPS: AppDefinition[] = [
     name: "Staff Connectors",
     route: "/dashboard/connectors",
     icon: Settings,
-    shortDescription: "Statutory roles, responsibilities, and compliance tracking.",
+    shortDescription:
+      "Statutory roles, responsibilities, and compliance tracking.",
     requiredPermissions: ["admin", "headteacher", "slt"],
   },
 
@@ -619,6 +637,33 @@ export const APPS: AppDefinition[] = [
     icon: Calendar,
     shortDescription: "Room bookings and lettings income management.",
     requiredPermissions: ["admin", "headteacher", "slt"],
+  },
+
+  {
+    id: "workflows",
+    moduleId: "estates",
+    name: "Workflows",
+    route: "/dashboard/workflows",
+    icon: ClipboardCheck,
+    shortDescription: "Ed-orchestrated multi-step processes and checklists.",
+    requiredPermissions: ["admin", "headteacher", "slt", "caretaker"],
+  },
+
+  {
+    id: "sops",
+    moduleId: "estates",
+    name: "Procedures (SOPs)",
+    route: "/dashboard/sops",
+    icon: ClipboardCheck,
+    shortDescription:
+      "Step-by-step guided checklists for H&S and compliance procedures.",
+    requiredPermissions: [
+      "admin",
+      "headteacher",
+      "slt",
+      "caretaker",
+      "teacher",
+    ],
   },
 
   // Finance Apps
@@ -732,7 +777,8 @@ export const APPS: AppDefinition[] = [
     name: "Emergency Broadcast",
     route: "/dashboard/emergency-broadcast",
     icon: Siren,
-    shortDescription: "Zone-aware emergency broadcasts, lockdown, and evacuation alerts.",
+    shortDescription:
+      "Zone-aware emergency broadcasts, lockdown, and evacuation alerts.",
     requiredPermissions: ["admin", "headteacher", "slt", "caretaker"],
   },
   {
@@ -741,7 +787,8 @@ export const APPS: AppDefinition[] = [
     name: "Drill Scheduler",
     route: "/dashboard/emergency-broadcast/drills",
     icon: Shield,
-    shortDescription: "Schedule drills, log reports, and track statutory compliance.",
+    shortDescription:
+      "Schedule drills, log reports, and track statutory compliance.",
     requiredPermissions: ["admin", "headteacher", "slt", "caretaker"],
   },
   // School Meals
@@ -834,7 +881,8 @@ export const APPS: AppDefinition[] = [
     name: "Comms Analytics",
     route: "/dashboard/comms/analytics",
     icon: BarChart3,
-    shortDescription: "Message reach, engagement, and device connectivity stats.",
+    shortDescription:
+      "Message reach, engagement, and device connectivity stats.",
     requiredPermissions: ["admin", "headteacher", "slt"],
   },
   {
@@ -852,7 +900,8 @@ export const APPS: AppDefinition[] = [
     name: "School Branding",
     route: "/dashboard/settings/branding",
     icon: Palette,
-    shortDescription: "Logo, colours, motto — used across displays and documents.",
+    shortDescription:
+      "Logo, colours, motto — used across displays and documents.",
     requiredPermissions: ["admin", "headteacher"],
   },
 
@@ -980,59 +1029,12 @@ export const NAVBAR_CONFIG = [
         ],
       },
       {
-        id: "risk",
-        name: "Risk Register",
-        route: "/dashboard/risk",
-        icon: AlertTriangle,
-        permissions: ["admin", "headteacher", "slt", "governor"],
-      },
-      {
-        id: "safeguarding",
-        name: "Safeguarding",
-        route: "/dashboard/safeguarding",
-        icon: Eye,
-        color: "red",
-        permissions: ["admin", "headteacher", "slt"],
-      },
-      {
-        id: "attendance",
-        name: "Attendance",
-        route: "/dashboard/attendance",
-        icon: UserCheck,
-        color: "indigo",
-        permissions: ["admin", "headteacher", "slt", "teacher"],
-      },
-      {
-        id: "send",
-        name: "SEND",
-        route: "/dashboard/send",
-        icon: Heart,
-        color: "emerald",
-        permissions: ["admin", "headteacher", "slt", "teacher"],
-      },
-      {
-        id: "behaviour",
-        name: "Behaviour",
-        route: "/dashboard/behaviour",
-        icon: Scale,
-        color: "orange",
-        permissions: ["admin", "headteacher", "slt", "teacher"],
-      },
-      {
         id: "calendar",
         name: "Calendar",
         route: "/dashboard/calendar",
         icon: Calendar,
         color: "violet",
         permissions: ["admin", "headteacher", "slt", "teacher", "governor"],
-      },
-      {
-        id: "communications",
-        name: "Comms Hub",
-        route: "/dashboard/comms",
-        icon: Radio,
-        color: "indigo",
-        permissions: ["admin", "headteacher", "slt", "teacher", "caretaker"],
       },
     ],
   },

@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * Document Verifier Component
@@ -7,7 +7,7 @@
  * and allows users to trigger verification on-demand.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 import {
   FileCheck,
   AlertCircle,
@@ -19,7 +19,7 @@ import {
   Info,
   ChevronDown,
   ChevronUp,
-} from 'lucide-react';
+} from "lucide-react";
 
 interface VerificationResult {
   verified: boolean;
@@ -71,7 +71,9 @@ export function DocumentVerifier({
   onVerified,
 }: DocumentVerifierProps) {
   const [verifying, setVerifying] = useState(false);
-  const [verification, setVerification] = useState<VerificationResult | null>(existingVerification || null);
+  const [verification, setVerification] = useState<VerificationResult | null>(
+    existingVerification || null,
+  );
   const [error, setError] = useState<string | null>(null);
   const [showDetails, setShowDetails] = useState(false);
 
@@ -86,18 +88,20 @@ export function DocumentVerifier({
     setError(null);
 
     try {
-      const response = await fetch('/api/estates/evidence/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/estates/evidence/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           evidence_id: evidenceId,
-          organization_id: organizationId,
+          organizationId: organizationId,
         }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.details || errorData.error || 'Verification failed');
+        throw new Error(
+          errorData.details || errorData.error || "Verification failed",
+        );
       }
 
       const data = await response.json();
@@ -107,7 +111,7 @@ export function DocumentVerifier({
         onVerified(data.data.verification);
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to verify document');
+      setError(err.message || "Failed to verify document");
     } finally {
       setVerifying(false);
     }
@@ -162,7 +166,9 @@ export function DocumentVerifier({
       {/* Verification Status Bar */}
       <div className="flex items-center justify-between p-4 rounded-lg border bg-card">
         <div className="flex items-center gap-4">
-          <FileCheck className={`w-8 h-8 ${verification?.verified ? 'text-emerald-600' : 'text-gray-400'}`} />
+          <FileCheck
+            className={`w-8 h-8 ${verification?.verified ? "text-emerald-600" : "text-gray-400"}`}
+          />
           <div>
             <h3 className="font-semibold">Document Verification</h3>
             <p className="text-sm text-muted-foreground">{fileName}</p>
@@ -176,7 +182,7 @@ export function DocumentVerifier({
               disabled={verifying}
               className="px-4 py-2 text-sm font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {verifying ? 'Verifying...' : 'Verify Document'}
+              {verifying ? "Verifying..." : "Verify Document"}
             </button>
           )}
         </div>
@@ -203,34 +209,47 @@ export function DocumentVerifier({
             <h4 className="font-semibold mb-3">Validation Checks</h4>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               <div className="flex items-center gap-2 text-sm">
-                {getValidationCheckIcon(verification.validationChecks.documentTypeValid)}
+                {getValidationCheckIcon(
+                  verification.validationChecks.documentTypeValid,
+                )}
                 <span>Document Type</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
-                {getValidationCheckIcon(verification.validationChecks.issuingBodyRecognised)}
+                {getValidationCheckIcon(
+                  verification.validationChecks.issuingBodyRecognised,
+                )}
                 <span>Issuing Body</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
-                {getValidationCheckIcon(verification.validationChecks.datesValid)}
+                {getValidationCheckIcon(
+                  verification.validationChecks.datesValid,
+                )}
                 <span>Dates Valid</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
-                {getValidationCheckIcon(verification.validationChecks.datesConsistent)}
+                {getValidationCheckIcon(
+                  verification.validationChecks.datesConsistent,
+                )}
                 <span>Dates Consistent</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
-                {getValidationCheckIcon(verification.validationChecks.certificateNumberPresent)}
+                {getValidationCheckIcon(
+                  verification.validationChecks.certificateNumberPresent,
+                )}
                 <span>Certificate Number</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
-                {getValidationCheckIcon(verification.validationChecks.noTamperingDetected)}
+                {getValidationCheckIcon(
+                  verification.validationChecks.noTamperingDetected,
+                )}
                 <span>No Tampering</span>
               </div>
             </div>
           </div>
 
           {/* Issues and Warnings */}
-          {(verification.issues.length > 0 || verification.warnings.length > 0) && (
+          {(verification.issues.length > 0 ||
+            verification.warnings.length > 0) && (
             <div className="p-4 rounded-lg border bg-card">
               <h4 className="font-semibold mb-3">Issues & Warnings</h4>
               <div className="space-y-2">
@@ -259,44 +278,62 @@ export function DocumentVerifier({
                   onClick={() => setShowDetails(!showDetails)}
                   className="text-sm text-primary hover:underline flex items-center gap-1"
                 >
-                  {showDetails ? 'Hide' : 'Show'} Details
-                  {showDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  {showDetails ? "Hide" : "Show"} Details
+                  {showDetails ? (
+                    <ChevronUp className="w-4 h-4" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4" />
+                  )}
                 </button>
               </div>
 
               <div className="grid grid-cols-2 gap-3 text-sm">
                 {verification.certificateInfo.certificateNumber && (
                   <div>
-                    <span className="text-muted-foreground">Certificate Number:</span>
-                    <p className="font-medium">{verification.certificateInfo.certificateNumber}</p>
+                    <span className="text-muted-foreground">
+                      Certificate Number:
+                    </span>
+                    <p className="font-medium">
+                      {verification.certificateInfo.certificateNumber}
+                    </p>
                   </div>
                 )}
                 <div>
                   <span className="text-muted-foreground">Issuing Body:</span>
-                  <p className="font-medium">{verification.certificateInfo.issuingBody}</p>
+                  <p className="font-medium">
+                    {verification.certificateInfo.issuingBody}
+                  </p>
                 </div>
                 {verification.certificateInfo.issuedDate && (
                   <div>
                     <span className="text-muted-foreground">Issued Date:</span>
-                    <p className="font-medium">{verification.certificateInfo.issuedDate}</p>
+                    <p className="font-medium">
+                      {verification.certificateInfo.issuedDate}
+                    </p>
                   </div>
                 )}
                 {verification.certificateInfo.expiryDate && (
                   <div>
                     <span className="text-muted-foreground">Expiry Date:</span>
-                    <p className="font-medium">{verification.certificateInfo.expiryDate}</p>
+                    <p className="font-medium">
+                      {verification.certificateInfo.expiryDate}
+                    </p>
                   </div>
                 )}
                 {verification.certificateInfo.certifyingEntity && (
                   <div>
                     <span className="text-muted-foreground">Certifier:</span>
-                    <p className="font-medium">{verification.certificateInfo.certifyingEntity}</p>
+                    <p className="font-medium">
+                      {verification.certificateInfo.certifyingEntity}
+                    </p>
                   </div>
                 )}
                 {verification.certificateInfo.recipient && (
                   <div>
                     <span className="text-muted-foreground">Recipient:</span>
-                    <p className="font-medium">{verification.certificateInfo.recipient}</p>
+                    <p className="font-medium">
+                      {verification.certificateInfo.recipient}
+                    </p>
                   </div>
                 )}
               </div>
@@ -309,38 +346,56 @@ export function DocumentVerifier({
                       <p>{verification.certificateInfo.address}</p>
                     </div>
                   )}
-                  {verification.certificateInfo.keyFindings && verification.certificateInfo.keyFindings.length > 0 && (
-                    <div>
-                      <span className="text-muted-foreground">Key Findings:</span>
-                      <ul className="list-disc list-inside mt-1 space-y-1">
-                        {verification.certificateInfo.keyFindings.map((finding, i) => (
-                          <li key={i}>{finding}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  {verification.certificateInfo.standardsMet && verification.certificateInfo.standardsMet.length > 0 && (
-                    <div>
-                      <span className="text-muted-foreground">Standards Met:</span>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {verification.certificateInfo.standardsMet.map((standard, i) => (
-                          <span key={i} className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 text-xs">
-                            {standard}
-                          </span>
-                        ))}
+                  {verification.certificateInfo.keyFindings &&
+                    verification.certificateInfo.keyFindings.length > 0 && (
+                      <div>
+                        <span className="text-muted-foreground">
+                          Key Findings:
+                        </span>
+                        <ul className="list-disc list-inside mt-1 space-y-1">
+                          {verification.certificateInfo.keyFindings.map(
+                            (finding, i) => (
+                              <li key={i}>{finding}</li>
+                            ),
+                          )}
+                        </ul>
                       </div>
-                    </div>
-                  )}
-                  {verification.certificateInfo.recommendations && verification.certificateInfo.recommendations.length > 0 && (
-                    <div>
-                      <span className="text-muted-foreground">Recommendations:</span>
-                      <ul className="list-disc list-inside mt-1 space-y-1">
-                        {verification.certificateInfo.recommendations.map((rec, i) => (
-                          <li key={i}>{rec}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+                    )}
+                  {verification.certificateInfo.standardsMet &&
+                    verification.certificateInfo.standardsMet.length > 0 && (
+                      <div>
+                        <span className="text-muted-foreground">
+                          Standards Met:
+                        </span>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {verification.certificateInfo.standardsMet.map(
+                            (standard, i) => (
+                              <span
+                                key={i}
+                                className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 text-xs"
+                              >
+                                {standard}
+                              </span>
+                            ),
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  {verification.certificateInfo.recommendations &&
+                    verification.certificateInfo.recommendations.length > 0 && (
+                      <div>
+                        <span className="text-muted-foreground">
+                          Recommendations:
+                        </span>
+                        <ul className="list-disc list-inside mt-1 space-y-1">
+                          {verification.certificateInfo.recommendations.map(
+                            (rec, i) => (
+                              <li key={i}>{rec}</li>
+                            ),
+                          )}
+                        </ul>
+                      </div>
+                    )}
                 </div>
               )}
             </div>

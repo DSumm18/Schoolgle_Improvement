@@ -151,8 +151,125 @@ export const GET = protectedRoute(async (auth, request) => {
     console.error("[Attendance Dashboard GET] Error:", error);
   }
 
-  // If no real data, return demo
+  // If no Supabase data, try MIS resolver (reads from local test harness / Google Drive)
   if (!summaries || summaries.length === 0) {
+    try {
+      const { getMISDataServiceForOrg } =
+        await import("@/lib/mis/data-service");
+      const mis = await getMISDataServiceForOrg(organizationId);
+      const attendanceResult = await mis.read(organizationId, "attendance");
+      const pupilResult = await mis.read(organizationId, "pupils");
+
+      if (attendanceResult.data.length > 0 && pupilResult.data.length > 0) {
+        const pupils = pupilResult.data as any[];
+        const records = attendanceResult.data as any[];
+
+        // Group pupils by year group (MIS returns numeric: 0=Reception, 1-6=Year 1-6)
+        const ygPupilMap = new Map<number, any[]>();
+        for (const p of pupils) {
+          const yg = typeof p.year_group === "number" ? p.year_group : 0;
+          if (!ygPupilMap.has(yg)) ygPupilMap.set(yg, []);
+          ygPupilMap.get(yg)!.push(p);
+        }
+
+        // Calculate attendance per pupil from records
+        const pupilAttendance = new Map<
+          string,
+          { possible: number; attended: number; year_group: string }
+        >();
+        for (const r of records) {
+          const id = r.student_id || r.pupil_id;
+          if (!id) continue;
+          if (!pupilAttendance.has(id)) {
+            pupilAttendance.set(id, {
+              possible: 0,
+              attended: 0,
+              year_group: r.year_group || "",
+            });
+          }
+          const pa = pupilAttendance.get(id)!;
+          pa.possible += r.possible_sessions || r.sessions_possible || 0;
+          pa.attended += r.attended_sessions || r.sessions_attended || 0;
+          if (r.year_group) pa.year_group = r.year_group;
+        }
+
+        const totalPupils = pupils.length;
+        let totalPossible = 0,
+          totalAttended = 0,
+          paCount = 0,
+          severeCount = 0;
+
+        for (const [, pa] of pupilAttendance) {
+          totalPossible += pa.possible;
+          totalAttended += pa.attended;
+          const rate =
+            pa.possible > 0 ? (pa.attended / pa.possible) * 100 : 100;
+          if (rate < 90) paCount++;
+          if (rate < 50) severeCount++;
+        }
+
+        const overallRate =
+          totalPossible > 0
+            ? Math.round((totalAttended / totalPossible) * 1000) / 10
+            : 0;
+
+        // Year group stats (0=Reception, 1-6=Year 1-6)
+        const ygNums = [0, 1, 2, 3, 4, 5, 6];
+        const yearGroupStats: YearGroupStat[] = ygNums.map((idx) => {
+          const ygPupils = ygPupilMap.get(idx) || [];
+          let ygPoss = 0,
+            ygAtt = 0,
+            ygPA = 0,
+            ygSevere = 0;
+          for (const p of ygPupils) {
+            const pa = pupilAttendance.get(p.student_id || p.pupil_id);
+            if (pa) {
+              ygPoss += pa.possible;
+              ygAtt += pa.attended;
+              const rate =
+                pa.possible > 0 ? (pa.attended / pa.possible) * 100 : 100;
+              if (rate < 90) ygPA++;
+              if (rate < 50) ygSevere++;
+            }
+          }
+          return {
+            year_group: idx,
+            pupil_count: ygPupils.length,
+            attendance_rate:
+              ygPoss > 0 ? Math.round((ygAtt / ygPoss) * 1000) / 10 : 0,
+            pa_count: ygPA,
+            severe_count: ygSevere,
+          };
+        });
+
+        return apiSuccess({
+          overview: {
+            overall_attendance: overallRate,
+            national_average: 94.2,
+            trend: overallRate >= 94.2 ? "up" : "down",
+            trend_change: overallRate - 94.2,
+            total_pupils: totalPupils,
+            pa_count: paCount,
+            pa_rate:
+              totalPupils > 0
+                ? Math.round((paCount / totalPupils) * 1000) / 10
+                : 0,
+            severe_absence_count: severeCount,
+            late_today: 0,
+            cme_count: 0,
+          },
+          year_groups: yearGroupStats,
+          weekly_trend: [],
+          day_of_week_pattern: [],
+          is_demo: false,
+          data_source: "mis",
+        });
+      }
+    } catch (misErr) {
+      console.warn("[Attendance Dashboard] MIS read failed:", misErr);
+    }
+
+    // Last resort: demo data
     return apiSuccess(generateDemoDashboard());
   }
 

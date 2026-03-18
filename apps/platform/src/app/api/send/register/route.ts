@@ -293,6 +293,47 @@ export const GET = protectedRoute(async (auth, request) => {
 
   // Return demo data if no real data
   if (!data || data.length === 0) {
+    // Try MIS data service first
+    try {
+      const { getMISDataServiceForOrg } =
+        await import("@/lib/mis/data-service");
+      const misService = await getMISDataServiceForOrg(organizationId);
+      const misResult = (await misService.read(
+        organizationId,
+        "sen_register",
+      )) as any;
+      if (misResult.data.length > 0) {
+        let mapped = misResult.data.map((r: any) => ({
+          id: r.student_id,
+          pupil_code: r.student_id,
+          first_name: r.first_name,
+          last_name: r.last_name,
+          year_group: r.year_group,
+          sen_status: r.sen_status,
+          primary_need: r.sen_primary_need,
+          secondary_need: r.sen_secondary_need || null,
+          date_identified: r.date_identified,
+          ehcp_status: r.ehcp ? "finalised" : null,
+          class_name: r.registration_group,
+          key_worker: r.key_worker || null,
+          notes: r.provision_description || null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }));
+        if (status) mapped = mapped.filter((r: any) => r.sen_status === status);
+        if (primaryNeed)
+          mapped = mapped.filter((r: any) => r.primary_need === primaryNeed);
+        if (yearGroup)
+          mapped = mapped.filter(
+            (r: any) => r.year_group === parseInt(yearGroup),
+          );
+        return apiSuccess({ data: mapped, source: "mis", demo: false });
+      }
+    } catch (e) {
+      console.error("[SEND Register] MIS fallback error:", e);
+    }
+
+    // Last resort: demo data
     let filtered = [...DEMO_REGISTER];
     if (status) filtered = filtered.filter((r) => r.sen_status === status);
     if (primaryNeed)

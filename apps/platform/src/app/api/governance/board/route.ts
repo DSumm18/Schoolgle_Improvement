@@ -3,6 +3,7 @@ import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
 import type {
   GovernanceBoard,
+  GovernanceStatistics,
   GetBoardRequest,
   GetBoardResponse,
 } from "@/lib/governance";
@@ -88,7 +89,7 @@ export const GET = protectedRoute(async (auth, req) => {
     .limit(5);
 
   // Calculate statistics
-  const statistics = {
+  const statistics: GovernanceStatistics = {
     total_governors: totalGovernors,
     active_governors: activeGovernors,
     vacant_positions: 0, // Will be calculated based on target positions
@@ -96,6 +97,15 @@ export const GET = protectedRoute(async (auth, req) => {
     upcoming_meetings: upcomingMeetings?.length || 0,
     past_meetings_this_year: recentMeetings?.length || 0,
     average_attendance_rate: 0, // Will be calculated from governor attendance
+    training_completion_rate: 0,
+    expired_training_count: 0,
+    statutory_policies: 0,
+    policies_current: 0,
+    policies_need_review: 0,
+    policies_overdue: 0,
+    visits_this_term: 0,
+    visits_completed: 0,
+    visits_scheduled: 0,
   };
 
   const response: GetBoardResponse = {

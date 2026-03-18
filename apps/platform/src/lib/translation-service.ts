@@ -14,32 +14,32 @@
  * - DeepL API: Best quality for European languages
  */
 
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from "@supabase/supabase-js";
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
 export type LanguageCode =
-  | 'en'
-  | 'pl'
-  | 'ur'
-  | 'bn'
-  | 'pa'
-  | 'gu'
-  | 'so'
-  | 'ro'
-  | 'pt'
-  | 'zh'
-  | 'ar'
-  | 'fr'
-  | 'es';
+  | "en"
+  | "pl"
+  | "ur"
+  | "bn"
+  | "pa"
+  | "gu"
+  | "so"
+  | "ro"
+  | "pt"
+  | "zh"
+  | "ar"
+  | "fr"
+  | "es";
 
 export interface Language {
   code: LanguageCode;
   name: string;
   nativeName: string;
-  direction: 'ltr' | 'rtl';
+  direction: "ltr" | "rtl";
 }
 
 export interface TranslationResult {
@@ -79,82 +79,82 @@ export interface TranslationQuality {
 
 export const SUPPORTED_LANGUAGES: Record<LanguageCode, Language> = {
   en: {
-    code: 'en',
-    name: 'English',
-    nativeName: 'English',
-    direction: 'ltr',
+    code: "en",
+    name: "English",
+    nativeName: "English",
+    direction: "ltr",
   },
   pl: {
-    code: 'pl',
-    name: 'Polish',
-    nativeName: 'Polski',
-    direction: 'ltr',
+    code: "pl",
+    name: "Polish",
+    nativeName: "Polski",
+    direction: "ltr",
   },
   ur: {
-    code: 'ur',
-    name: 'Urdu',
-    nativeName: 'اردو',
-    direction: 'rtl',
+    code: "ur",
+    name: "Urdu",
+    nativeName: "اردو",
+    direction: "rtl",
   },
   bn: {
-    code: 'bn',
-    name: 'Bengali',
-    nativeName: 'বাংলা',
-    direction: 'ltr',
+    code: "bn",
+    name: "Bengali",
+    nativeName: "বাংলা",
+    direction: "ltr",
   },
   pa: {
-    code: 'pa',
-    name: 'Punjabi',
-    nativeName: 'ਪੰਜਾਬੀ',
-    direction: 'ltr',
+    code: "pa",
+    name: "Punjabi",
+    nativeName: "ਪੰਜਾਬੀ",
+    direction: "ltr",
   },
   gu: {
-    code: 'gu',
-    name: 'Gujarati',
-    nativeName: 'ગુજરાતી',
-    direction: 'ltr',
+    code: "gu",
+    name: "Gujarati",
+    nativeName: "ગુજરાતી",
+    direction: "ltr",
   },
   so: {
-    code: 'so',
-    name: 'Somali',
-    nativeName: 'Soomaali',
-    direction: 'ltr',
+    code: "so",
+    name: "Somali",
+    nativeName: "Soomaali",
+    direction: "ltr",
   },
   ro: {
-    code: 'ro',
-    name: 'Romanian',
-    nativeName: 'Română',
-    direction: 'ltr',
+    code: "ro",
+    name: "Romanian",
+    nativeName: "Română",
+    direction: "ltr",
   },
   pt: {
-    code: 'pt',
-    name: 'Portuguese',
-    nativeName: 'Português',
-    direction: 'ltr',
+    code: "pt",
+    name: "Portuguese",
+    nativeName: "Português",
+    direction: "ltr",
   },
   zh: {
-    code: 'zh',
-    name: 'Chinese',
-    nativeName: '中文',
-    direction: 'ltr',
+    code: "zh",
+    name: "Chinese",
+    nativeName: "中文",
+    direction: "ltr",
   },
   ar: {
-    code: 'ar',
-    name: 'Arabic',
-    nativeName: 'العربية',
-    direction: 'rtl',
+    code: "ar",
+    name: "Arabic",
+    nativeName: "العربية",
+    direction: "rtl",
   },
   fr: {
-    code: 'fr',
-    name: 'French',
-    nativeName: 'Français',
-    direction: 'ltr',
+    code: "fr",
+    name: "French",
+    nativeName: "Français",
+    direction: "ltr",
   },
   es: {
-    code: 'es',
-    name: 'Spanish',
-    nativeName: 'Español',
-    direction: 'ltr',
+    code: "es",
+    name: "Spanish",
+    nativeName: "Español",
+    direction: "ltr",
   },
 };
 
@@ -162,65 +162,68 @@ export const SUPPORTED_LANGUAGES: Record<LanguageCode, Language> = {
 // FORM-SPECIFIC GLOSSARIES
 // ============================================================================
 
-const FORM_GLOSSARIES: Record<string, Record<string, string>> = {
+const FORM_GLOSSARIES: Record<
+  string,
+  Record<string, Record<string, string>>
+> = {
   pupil_premium: {
     en: {
-      income: 'income',
-      benefits: 'benefits',
-      'free_school_meals': 'free school meals',
-      'pupil_premium': 'pupil premium',
-      'household_income': 'household income',
-      'employment_status': 'employment status',
+      income: "income",
+      benefits: "benefits",
+      free_school_meals: "free school meals",
+      pupil_premium: "pupil premium",
+      household_income: "household income",
+      employment_status: "employment status",
     },
     pl: {
-      income: 'dochód',
-      benefits: 'zasiłki',
-      'free_school_meals': 'darmowe posiłki',
-      'pupil_premium': 'premia dla ucznia',
-      'household_income': 'dochód gospodarstwa domowego',
-      'employment_status': 'status zatrudnienia',
+      income: "dochód",
+      benefits: "zasiłki",
+      free_school_meals: "darmowe posiłki",
+      pupil_premium: "premia dla ucznia",
+      household_income: "dochód gospodarstwa domowego",
+      employment_status: "status zatrudnienia",
     },
     ur: {
-      income: 'آمدنی',
-      benefits: 'فوائد',
-      'free_school_meals': 'مفت اسکول کے کھانے',
-      'pupil_premium': 'طالب علم پریمیم',
-      'household_income': 'گھریلی آمدنی',
-      'employment_status': 'ملازمت کی حیثیت',
+      income: "آمدنی",
+      benefits: "فوائد",
+      free_school_meals: "مفت اسکول کے کھانے",
+      pupil_premium: "طالب علم پریمیم",
+      household_income: "گھریلی آمدنی",
+      employment_status: "ملازمت کی حیثیت",
     },
     bn: {
-      income: 'আয',
-      benefits: 'সুবিধা',
-      'free_school_meals': 'বিনামূল্যে স্কুলের খাবার',
-      'pupil_premium': 'ছাত্র প্রিমিয়াম',
-      'household_income': 'পরিবারের আয়',
-      'employment_status': 'কর্মসংস্থান অবস্থা',
+      income: "আয",
+      benefits: "সুবিধা",
+      free_school_meals: "বিনামূল্যে স্কুলের খাবার",
+      pupil_premium: "ছাত্র প্রিমিয়াম",
+      household_income: "পরিবারের আয়",
+      employment_status: "কর্মসংস্থান অবস্থা",
     },
   },
   riddor: {
     en: {
-      injury: 'injury',
-      witness: 'witness',
-      'first_aid': 'first aid',
-      'incident_report': 'incident report',
-      'dangerous_occurrence': 'dangerous occurrence',
-      'work_related': 'work related',
+      injury: "injury",
+      witness: "witness",
+      first_aid: "first aid",
+      incident_report: "incident report",
+      dangerous_occurrence: "dangerous occurrence",
+      work_related: "work related",
     },
     pl: {
-      injury: 'uraz',
-      witness: 'świadek',
-      'first_aid': 'pierwsza pomoc',
-      'incident_report': 'zgłoszenie incydentu',
-      'dangerous_occurrence': 'niebezpieczne zdarzenie',
-      'work_related': 'związane z pracą',
+      injury: "uraz",
+      witness: "świadek",
+      first_aid: "pierwsza pomoc",
+      incident_report: "zgłoszenie incydentu",
+      dangerous_occurrence: "niebezpieczne zdarzenie",
+      work_related: "związane z pracą",
     },
     ur: {
-      injury: 'چوٹ',
-      witness: 'گواہ',
-      'first_aid': 'پہلی امداد',
-      'incident_report': 'حادثے کی رپورٹ',
-      'dangerous_occurrence': 'خطرناک واقعہ',
-      'work_related': 'کام سے متعلق',
+      injury: "چوٹ",
+      witness: "گواہ",
+      first_aid: "پہلی امداد",
+      incident_report: "حادثے کی رپورٹ",
+      dangerous_occurrence: "خطرناک واقعہ",
+      work_related: "کام سے متعلق",
     },
   },
 };
@@ -235,91 +238,74 @@ const LANGUAGE_PATTERNS: Array<{
   sampleWords: string[];
 }> = [
   {
-    languages: ['pl'],
-    patterns: [
-      /[ąćęłńóśźż]/i,
-      /\b(a|w|z|ze|do|na|od|przez|pod|za|o|do)\b/i,
-    ],
-    sampleWords: ['jest', 'nie', 'się', 'z', 'w', 'to', 'na'],
+    languages: ["pl"],
+    patterns: [/[ąćęłńóśźż]/i, /\b(a|w|z|ze|do|na|od|przez|pod|za|o|do)\b/i],
+    sampleWords: ["jest", "nie", "się", "z", "w", "to", "na"],
   },
   {
-    languages: ['ur'],
+    languages: ["ur"],
     patterns: [
       /[\u0600-\u06FF]/, // Arabic script range (includes Urdu)
     ],
-    sampleWords: ['ہے', 'کے', 'میں', 'کی', 'کا', 'ہوں'],
+    sampleWords: ["ہے", "کے", "میں", "کی", "کا", "ہوں"],
   },
   {
-    languages: ['ar'],
-    patterns: [
-      /[\u0600-\u06FF]/,
-      /\b(في|من|على|إلى|عن|مع|هذا|هذه|ذلك)\b/i,
-    ],
-    sampleWords: ['في', 'هذا', 'هذه', 'ذلك', 'ال'],
+    languages: ["ar"],
+    patterns: [/[\u0600-\u06FF]/, /\b(في|من|على|إلى|عن|مع|هذا|هذه|ذلك)\b/i],
+    sampleWords: ["في", "هذا", "هذه", "ذلك", "ال"],
   },
   {
-    languages: ['bn'],
+    languages: ["bn"],
     patterns: [
       /[\u0980-\u09FF]/, // Bengali script
     ],
-    sampleWords: ['হয়', 'এবং', 'যে', 'এই', 'সঙ্গে', 'আমি'],
+    sampleWords: ["হয়", "এবং", "যে", "এই", "সঙ্গে", "আমি"],
   },
   {
-    languages: ['pa'],
+    languages: ["pa"],
     patterns: [
       /[\u0A00-\u0A7F]/, // Gurmukhi script
     ],
-    sampleWords: ['ਹੈ', 'ਅਤੇ', 'ਜੋ', 'ਇਹ', 'ਨਾਲ', 'ਮੈਂ'],
+    sampleWords: ["ਹੈ", "ਅਤੇ", "ਜੋ", "ਇਹ", "ਨਾਲ", "ਮੈਂ"],
   },
   {
-    languages: ['gu'],
+    languages: ["gu"],
     patterns: [
       /[\u0A80-\u0AFF]/, // Gujarati script
     ],
-    sampleWords: ['છે', 'અને', 'કે', 'આ', 'સાથે', 'હું'],
+    sampleWords: ["છે", "અને", "કે", "આ", "સાથે", "હું"],
   },
   {
-    languages: ['so'],
-    patterns: [
-      /\b(ayaa|waa|ayu|waxa|ku|la|u|ka)\b/i,
-    ],
-    sampleWords: ['ayaa', 'waa', 'ayu', 'waxa', 'ku', 'la'],
+    languages: ["so"],
+    patterns: [/\b(ayaa|waa|ayu|waxa|ku|la|u|ka)\b/i],
+    sampleWords: ["ayaa", "waa", "ayu", "waxa", "ku", "la"],
   },
   {
-    languages: ['ro'],
-    patterns: [
-      /[ăâîșț]/i,
-      /\b(sunt|este|am|un|o|cu|de|la|pentru|care)\b/i,
-    ],
-    sampleWords: ['sunt', 'este', 'am', 'un', 'o', 'cu', 'de'],
+    languages: ["ro"],
+    patterns: [/[ăâîșț]/i, /\b(sunt|este|am|un|o|cu|de|la|pentru|care)\b/i],
+    sampleWords: ["sunt", "este", "am", "un", "o", "cu", "de"],
   },
   {
-    languages: ['pt'],
-    patterns: [
-      /\b(o|a|os|as|um|uma|de|em|para|por|com|não|sim)\b/i,
-    ],
-    sampleWords: ['o', 'a', 'é', 'de', 'em', 'para', 'com'],
+    languages: ["pt"],
+    patterns: [/\b(o|a|os|as|um|uma|de|em|para|por|com|não|sim)\b/i],
+    sampleWords: ["o", "a", "é", "de", "em", "para", "com"],
   },
   {
-    languages: ['zh'],
+    languages: ["zh"],
     patterns: [
       /[\u4E00-\u9FFF]/, // Chinese characters
     ],
-    sampleWords: ['的', '是', '我', '有', '和', '在'],
+    sampleWords: ["的", "是", "我", "有", "和", "在"],
   },
   {
-    languages: ['fr'],
-    patterns: [
-      /\b(le|la|les|un|une|de|à|pour|dans|avec|sur|et)\b/i,
-    ],
-    sampleWords: ['le', 'la', 'les', 'de', 'un', 'une', 'et'],
+    languages: ["fr"],
+    patterns: [/\b(le|la|les|un|une|de|à|pour|dans|avec|sur|et)\b/i],
+    sampleWords: ["le", "la", "les", "de", "un", "une", "et"],
   },
   {
-    languages: ['es'],
-    patterns: [
-      /\b(el|la|los|las|un|una|de|en|para|por|con|sobre|y)\b/i,
-    ],
-    sampleWords: ['el', 'la', 'de', 'en', 'por', 'para', 'con'],
+    languages: ["es"],
+    patterns: [/\b(el|la|los|las|un|una|de|en|para|por|con|sobre|y)\b/i],
+    sampleWords: ["el", "la", "de", "en", "por", "para", "con"],
   },
 ];
 
@@ -346,7 +332,7 @@ class TranslationService {
    */
   async detectLanguage(text: string): Promise<LanguageCode> {
     if (!text || text.trim().length === 0) {
-      return 'en';
+      return "en";
     }
 
     // Check each language pattern
@@ -364,7 +350,7 @@ class TranslationService {
     }
 
     // Default to English
-    return 'en';
+    return "en";
   }
 
   /**
@@ -393,7 +379,7 @@ class TranslationService {
     text: string,
     sourceLanguage: LanguageCode,
     targetLanguage: LanguageCode,
-    context?: string
+    context?: string,
   ): Promise<TranslationResult> {
     // No translation needed if same language
     if (sourceLanguage === targetLanguage) {
@@ -425,16 +411,11 @@ class TranslationService {
       text,
       sourceLanguage,
       targetLanguage,
-      context
+      context,
     );
 
     // Store in cache
-    await this.storeCache(
-      text,
-      sourceLanguage,
-      targetLanguage,
-      translatedText
-    );
+    await this.storeCache(text, sourceLanguage, targetLanguage, translatedText);
 
     return {
       text: translatedText,
@@ -451,9 +432,9 @@ class TranslationService {
   async translateToEnglish(
     text: string,
     sourceLang: LanguageCode,
-    context?: string
+    context?: string,
   ): Promise<string> {
-    const result = await this.translate(text, sourceLang, 'en', context);
+    const result = await this.translate(text, sourceLang, "en", context);
     return result.text;
   }
 
@@ -463,9 +444,9 @@ class TranslationService {
   async translateFromEnglish(
     text: string,
     targetLang: LanguageCode,
-    context?: string
+    context?: string,
   ): Promise<string> {
-    const result = await this.translate(text, 'en', targetLang, context);
+    const result = await this.translate(text, "en", targetLang, context);
     return result.text;
   }
 
@@ -475,7 +456,7 @@ class TranslationService {
   async translateFieldLabels(
     fields: FormField[],
     targetLanguage: LanguageCode,
-    formType?: string
+    formType?: string,
   ): Promise<TranslatedField[]> {
     const results: TranslatedField[] = [];
 
@@ -483,16 +464,14 @@ class TranslationService {
       // Check glossary first
       const glossary = this.getGlossaryTranslation(
         field.name,
-        'en',
+        "en",
         targetLanguage,
-        formType
+        formType,
       );
 
-      const translatedLabel = glossary || await this.translateFromEnglish(
-        field.name,
-        targetLanguage,
-        formType
-      );
+      const translatedLabel =
+        glossary ||
+        (await this.translateFromEnglish(field.name, targetLanguage, formType));
 
       const translatedField: TranslatedField = {
         field: field.ref,
@@ -503,7 +482,7 @@ class TranslationService {
       if (field.placeholder) {
         translatedField.placeholder = field.placeholder;
         translatedField.translatedPlaceholder = glossary
-          ? null // Don't translate placeholders from glossary
+          ? undefined // Don't translate placeholders from glossary
           : await this.translateFromEnglish(field.placeholder, targetLanguage);
       }
 
@@ -522,7 +501,7 @@ class TranslationService {
    */
   async validateTranslation(
     original: string,
-    translated: string
+    translated: string,
   ): Promise<TranslationQuality> {
     const issues: string[] = [];
     let score = 1;
@@ -530,13 +509,13 @@ class TranslationService {
     // Check length ratio (should be similar)
     const ratio = translated.length / original.length;
     if (ratio < 0.3 || ratio > 3) {
-      issues.push('Significant length difference');
+      issues.push("Significant length difference");
       score -= 0.2;
     }
 
     // Check for untranslated content
     if (original === translated) {
-      issues.push('No translation performed');
+      issues.push("No translation performed");
       score -= 0.5;
     }
 
@@ -548,7 +527,7 @@ class TranslationService {
         !translatedPlaceholders ||
         translatedPlaceholders.length !== placeholders.length
       ) {
-        issues.push('Placeholders not preserved');
+        issues.push("Placeholders not preserved");
         score -= 0.3;
       }
     }
@@ -572,14 +551,14 @@ class TranslationService {
     text: string,
     sourceLang: LanguageCode,
     targetLang: LanguageCode,
-    context?: string
+    context?: string,
   ): Promise<string> {
     // Check glossary first
     const glossaryTranslation = this.getGlossaryTranslation(
       text,
       sourceLang,
       targetLang,
-      context
+      context,
     );
     if (glossaryTranslation) {
       return glossaryTranslation;
@@ -614,11 +593,11 @@ class TranslationService {
     text: string,
     sourceLang: LanguageCode,
     targetLang: LanguageCode,
-    formType?: string
+    formType?: string,
   ): string | null {
     if (!formType) return null;
 
-    const key = text.toLowerCase().replace(/\s+/g, '_');
+    const key = text.toLowerCase().replace(/\s+/g, "_");
 
     // Get source language glossary
     const sourceGlossary = FORM_GLOSSARIES[formType]?.[sourceLang];
@@ -629,7 +608,7 @@ class TranslationService {
     if (!targetGlossary) return null;
 
     // Find the key in source and get target value
-    const sourceKey = Object.keys(sourceGlossary).find(k => k === key);
+    const sourceKey = Object.keys(sourceGlossary).find((k) => k === key);
     if (sourceKey) {
       return targetGlossary[sourceKey] || null;
     }
@@ -643,15 +622,15 @@ class TranslationService {
   private async checkCache(
     text: string,
     sourceLang: LanguageCode,
-    targetLang: LanguageCode
+    targetLang: LanguageCode,
   ): Promise<any | null> {
     const hash = this.generateCacheHash(text, sourceLang, targetLang);
 
     const { data, error } = await this.supabase
-      .from('translation_cache')
-      .select('*')
-      .eq('hash', hash)
-      .gt('expires_at', new Date().toISOString())
+      .from("translation_cache")
+      .select("*")
+      .eq("hash", hash)
+      .gt("expires_at", new Date().toISOString())
       .maybeSingle();
 
     return data || null;
@@ -664,11 +643,11 @@ class TranslationService {
     text: string,
     sourceLang: LanguageCode,
     targetLang: LanguageCode,
-    translatedText: string
+    translatedText: string,
   ): Promise<void> {
     const hash = this.generateCacheHash(text, sourceLang, targetLang);
 
-    await this.supabase.from('translation_cache').insert({
+    await (this.supabase.from("translation_cache") as any).insert({
       source_text: text,
       source_language: sourceLang,
       target_language: targetLang,
@@ -682,10 +661,10 @@ class TranslationService {
    * Update cache access count
    */
   private async updateCacheAccess(id: string): Promise<void> {
-    await this.supabase.rpc('increment', {
-      table_name: 'translation_cache',
+    await (this.supabase.rpc as any)("increment", {
+      table_name: "translation_cache",
       row_id: id,
-      column_name: 'access_count',
+      column_name: "access_count",
     });
   }
 
@@ -695,11 +674,11 @@ class TranslationService {
   private generateCacheHash(
     text: string,
     sourceLang: LanguageCode,
-    targetLang: LanguageCode
+    targetLang: LanguageCode,
   ): string {
-    const crypto = require('crypto');
+    const crypto = require("crypto");
     const content = `${sourceLang}|${targetLang}|${text}`;
-    return crypto.createHash('md5').update(content).digest('hex');
+    return crypto.createHash("md5").update(content).digest("hex");
   }
 }
 
@@ -715,10 +694,13 @@ export function getTranslationService(): TranslationService {
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
     if (!supabaseUrl || !supabaseKey) {
-      throw new Error('Missing Supabase environment variables');
+      throw new Error("Missing Supabase environment variables");
     }
 
-    translationServiceInstance = new TranslationService(supabaseUrl, supabaseKey);
+    translationServiceInstance = new TranslationService(
+      supabaseUrl,
+      supabaseKey,
+    );
   }
 
   return translationServiceInstance;

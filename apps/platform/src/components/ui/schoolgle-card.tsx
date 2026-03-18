@@ -2,7 +2,31 @@
 
 import React from "react";
 import { cn } from "@/lib/utils";
-import { tokens, getModuleColor, getModuleGlow } from "@/theme/tokens";
+// Inline theme tokens (no external theme package)
+const tokens = {
+  moduleColors: {
+    hr: "#ADD8E6",
+    finance: "#FFAA4C",
+    estates: "#00D4D4",
+    compliance: "#E6C3FF",
+    teaching: "#FFB6C1",
+    send: "#98FF98",
+    governance: "#FFD700",
+    improvement: "#0ea5e9",
+  } as Record<string, string>,
+  glass: {
+    dark: "bg-gray-900/60 backdrop-blur-xl border border-white/10",
+  },
+};
+
+function getModuleColor(module: string): string {
+  return tokens.moduleColors[module] || "#6B7280";
+}
+
+function getModuleGlow(module: string): string {
+  const color = getModuleColor(module);
+  return `0 0 20px ${color}40, 0 0 40px ${color}20`;
+}
 
 interface SchoolgleCardProps {
   children: React.ReactNode;
@@ -14,27 +38,31 @@ interface SchoolgleCardProps {
   onClick?: () => void;
 }
 
-export function SchoolgleCard({ 
-  children, 
-  className, 
-  variant = "primary", 
+export function SchoolgleCard({
+  children,
+  className,
+  variant = "primary",
   module,
   hover = true,
   glow = false,
-  onClick 
+  onClick,
 }: SchoolgleCardProps) {
   const baseClasses = "rounded-2xl transition-all duration-300";
-  
+
   const variantClasses = {
-    primary: "bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-soft",
-    secondary: "bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-600 shadow-soft",
-    glass: tokens.glass.dark
+    primary:
+      "bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-soft",
+    secondary:
+      "bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-600 shadow-soft",
+    glass: tokens.glass.dark,
   };
 
-  const moduleStyles = module ? {
-    borderColor: getModuleColor(module) + "40",
-    boxShadow: glow ? getModuleGlow(module) : undefined
-  } : {};
+  const moduleStyles = module
+    ? {
+        borderColor: getModuleColor(module) + "40",
+        boxShadow: glow ? getModuleGlow(module) : undefined,
+      }
+    : {};
 
   const hoverClasses = hover ? "hover:scale-[1.02] hover:shadow-medium" : "";
 
@@ -44,7 +72,7 @@ export function SchoolgleCard({
         baseClasses,
         variantClasses[variant],
         hoverClasses,
-        className
+        className,
       )}
       style={moduleStyles}
       onClick={onClick}
@@ -55,13 +83,13 @@ export function SchoolgleCard({
 }
 
 // Specialized card components
-export function ModuleCard({ 
-  title, 
-  description, 
-  module, 
-  icon, 
+export function ModuleCard({
+  title,
+  description,
+  module,
+  icon,
   className,
-  onClick 
+  onClick,
 }: {
   title: string;
   description: string;
@@ -71,17 +99,17 @@ export function ModuleCard({
   onClick?: () => void;
 }) {
   const moduleColor = getModuleColor(module);
-  
+
   return (
-    <SchoolgleCard 
-      module={module} 
-      glow={true} 
+    <SchoolgleCard
+      module={module}
+      glow={true}
       className={cn("p-6 cursor-pointer", className)}
       onClick={onClick}
     >
       <div className="flex items-start gap-4">
         {icon && (
-          <div 
+          <div
             className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl"
             style={{ backgroundColor: moduleColor + "20" }}
           >
@@ -89,7 +117,7 @@ export function ModuleCard({
           </div>
         )}
         <div className="flex-1">
-          <h3 
+          <h3
             className="text-xl font-semibold mb-2"
             style={{ color: moduleColor }}
           >
@@ -104,11 +132,11 @@ export function ModuleCard({
   );
 }
 
-export function StatsCard({ 
-  value, 
-  label, 
-  module, 
-  className 
+export function StatsCard({
+  value,
+  label,
+  module,
+  className,
 }: {
   value: string;
   label: string;
@@ -116,12 +144,12 @@ export function StatsCard({
   className?: string;
 }) {
   return (
-    <SchoolgleCard 
-      module={module} 
-      variant="glass" 
+    <SchoolgleCard
+      module={module}
+      variant="glass"
       className={cn("p-6 text-center", className)}
     >
-      <div 
+      <div
         className="text-3xl font-bold mb-2"
         style={{ color: module ? getModuleColor(module) : undefined }}
       >

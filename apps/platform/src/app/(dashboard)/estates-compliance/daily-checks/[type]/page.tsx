@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * Daily Checklist Page
@@ -12,17 +12,32 @@
  * - Notes field for issues
  */
 
-import { useState, useEffect, useCallback } from 'react';
-import { useRouter, useParams } from 'next/navigation';
-import { toast } from 'sonner';
-import { ArrowLeft, Check, X, Minus, Camera, ChevronRight, ChevronLeft, AlertTriangle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import { Badge } from '@/components/ui/badge';
-import { Textarea } from '@/components/ui/textarea';
-import { useAuth } from '@/context/SupabaseAuthContext';
-import { supabase as supabaseClient } from '@/lib/supabase';
+import { useState, useEffect, useCallback } from "react";
+import { useRouter, useParams } from "next/navigation";
+import { toast } from "sonner";
+import {
+  ArrowLeft,
+  Check,
+  X,
+  Minus,
+  Camera,
+  ChevronRight,
+  ChevronLeft,
+  AlertTriangle,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/context/SupabaseAuthContext";
+import { supabase as supabaseClient } from "@/lib/supabase";
 import {
   DAILY_CHECKLISTS,
   getDailyChecklist,
@@ -33,8 +48,8 @@ import {
   type DailyCheckCompletion,
   type DailyCheckResult,
   type DailyCheckStatus,
-} from '@/lib/estates-compliance/daily-checks';
-import confetti from 'canvas-confetti';
+} from "@/lib/estates-compliance/daily-checks";
+import confetti from "canvas-confetti";
 
 export default function DailyChecklistPage() {
   const router = useRouter();
@@ -42,15 +57,21 @@ export default function DailyChecklistPage() {
   const checkType = params.type as string;
   const { organizationId, user, session } = useAuth();
 
-  const [checklist, setChecklist] = useState<{ name: string; description: string; items: any[] }>(
-    ['opening', 'closing'].includes(checkType)
-      ? getDailyChecklist(checkType as 'opening' | 'closing')
-      : { name: 'Loading...', description: '', items: [] }
+  const [checklist, setChecklist] = useState<{
+    name: string;
+    description: string;
+    items: any[];
+  }>(
+    ["opening", "closing"].includes(checkType)
+      ? getDailyChecklist(checkType as "opening" | "closing")
+      : { name: "Loading...", description: "", items: [] },
   );
   const [currentIndex, setCurrentIndex] = useState(0);
   const [results, setResults] = useState<Record<string, DailyCheckResult>>({});
-  const [completion, setCompletion] = useState<DailyCheckCompletion | null>(null);
-  const [notes, setNotes] = useState('');
+  const [completion, setCompletion] = useState<DailyCheckCompletion | null>(
+    null,
+  );
+  const [notes, setNotes] = useState("");
   const [photos, setPhotos] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -65,16 +86,19 @@ export default function DailyChecklistPage() {
     const controller = new AbortController();
 
     const loadDynamicChecklist = async () => {
-      const isDynamic = !['opening', 'closing'].includes(checkType);
+      const isDynamic = !["opening", "closing"].includes(checkType);
       if (!isDynamic || !organizationId) return;
 
       try {
-        const response = await fetch(`/api/estates-compliance/routines?organization_id=${organizationId}`, {
-          headers: {
-            'Authorization': `Bearer ${session?.access_token}`,
+        const response = await fetch(
+          `/api/estates-compliance/routines?organizationId=${organizationId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${session?.access_token}`,
+            },
+            signal: controller.signal,
           },
-          signal: controller.signal,
-        });
+        );
         if (response.ok) {
           const data = await response.json();
           const routine = data.routines?.find((r: any) => r.id === checkType);
@@ -85,44 +109,46 @@ export default function DailyChecklistPage() {
               items: routine.items || [],
             });
           } else {
-            toast.error('Routine not found');
+            toast.error("Routine not found");
           }
         }
       } catch (error: any) {
-        if (error.name === 'AbortError') return;
-        console.error('Error loading dynamic routine:', error);
+        if (error.name === "AbortError") return;
+        console.error("Error loading dynamic routine:", error);
       }
     };
 
     loadDynamicChecklist();
-    return () => controller.abort('Component updated or unmounted');
+    return () => controller.abort("Component updated or unmounted");
   }, [checkType, organizationId, session]);
 
   // Fetch existing completion
   useEffect(() => {
     const controller = new AbortController();
     fetchCompletion(controller.signal);
-    return () => controller.abort('Component updated or unmounted');
+    return () => controller.abort("Component updated or unmounted");
   }, [organizationId, checkType, checklist]);
 
   const fetchCompletion = async (signal?: AbortSignal) => {
     try {
       if (!organizationId) return;
 
-      const { data: { session } } = await supabaseClient.auth.getSession();
+      const {
+        data: { session },
+      } = await supabaseClient.auth.getSession();
       const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       };
       if (session?.access_token) {
-        headers['Authorization'] = `Bearer ${session.access_token}`;
+        headers["Authorization"] = `Bearer ${session.access_token}`;
       }
 
-      const isDynamic = !['opening', 'closing'].includes(checkType);
-      const url = `/api/estates-compliance/daily-checks?organization_id=${organizationId}&${isDynamic ? 'routine_id=' + checkType : 'type=' + checkType}`;
+      const isDynamic = !["opening", "closing"].includes(checkType);
+      const url = `/api/estates-compliance/daily-checks?organizationId=${organizationId}&${isDynamic ? "routine_id=" + checkType : "type=" + checkType}`;
 
       const response = await fetch(url, {
         headers,
-        signal: signal
+        signal: signal,
       });
 
       if (response.ok) {
@@ -141,43 +167,52 @@ export default function DailyChecklistPage() {
           // Find next incomplete item
           if (checklist.items.length > 0) {
             const nextIndex = checklist.items.findIndex(
-              (item) => !resultsMap[item.id] || resultsMap[item.id].status === 'pending'
+              (item) =>
+                !resultsMap[item.id] ||
+                resultsMap[item.id].status === "pending",
             );
-            setCurrentIndex(nextIndex >= 0 ? nextIndex : checklist.items.length - 1);
+            setCurrentIndex(
+              nextIndex >= 0 ? nextIndex : checklist.items.length - 1,
+            );
           }
         }
       }
     } catch (error) {
-      console.error('Error fetching completion:', error);
+      console.error("Error fetching completion:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const saveProgress = async (newResults: Record<string, DailyCheckResult>, isComplete = false) => {
+  const saveProgress = async (
+    newResults: Record<string, DailyCheckResult>,
+    isComplete = false,
+  ) => {
     setSaving(true);
     try {
-      const { data: { session } } = await supabaseClient.auth.getSession();
+      const {
+        data: { session },
+      } = await supabaseClient.auth.getSession();
       const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       };
       if (session?.access_token) {
-        headers['Authorization'] = `Bearer ${session.access_token}`;
+        headers["Authorization"] = `Bearer ${session.access_token}`;
       }
 
       const resultsArray = Object.values(newResults);
 
-      const isDynamic = !['opening', 'closing'].includes(checkType);
+      const isDynamic = !["opening", "closing"].includes(checkType);
 
-      const response = await fetch('/api/estates-compliance/daily-checks', {
-        method: 'POST',
+      const response = await fetch("/api/estates-compliance/daily-checks", {
+        method: "POST",
         headers,
         body: JSON.stringify({
-          organization_id: organizationId,
+          organizationId: organizationId,
           user_id: user?.id,
           check_type: isDynamic ? undefined : checkType,
           routine_id: isDynamic ? checkType : undefined,
-          action: isComplete ? 'complete' : 'update',
+          action: isComplete ? "complete" : "update",
           results: resultsArray,
           notes: isComplete ? notes : undefined,
           photos: isComplete ? photos : undefined,
@@ -189,42 +224,51 @@ export default function DailyChecklistPage() {
         setCompletion(data.completion);
         return data.completion;
       } else {
-        toast.error('Failed to save progress');
+        toast.error("Failed to save progress");
       }
     } catch (error) {
-      console.error('Error saving progress:', error);
-      toast.error('Failed to save progress');
+      console.error("Error saving progress:", error);
+      toast.error("Failed to save progress");
     } finally {
       setSaving(false);
     }
   };
 
-  const handleItemResult = useCallback(async (status: DailyCheckStatus) => {
-    const newResults = {
-      ...results,
-      [currentItem.id]: {
-        item_id: currentItem.id,
-        status,
-        notes: status === 'failed' ? results[currentItem.id]?.notes || '' : undefined,
-        photo_url: status === 'failed' ? results[currentItem.id]?.photo_url : undefined,
-        completed_at: new Date().toISOString(),
-      },
-    };
+  const handleItemResult = useCallback(
+    async (status: DailyCheckStatus) => {
+      const newResults = {
+        ...results,
+        [currentItem.id]: {
+          item_id: currentItem.id,
+          status,
+          notes:
+            status === "failed"
+              ? results[currentItem.id]?.notes || ""
+              : undefined,
+          photo_url:
+            status === "failed"
+              ? results[currentItem.id]?.photo_url
+              : undefined,
+          completed_at: new Date().toISOString(),
+        },
+      };
 
-    setResults(newResults);
+      setResults(newResults);
 
-    // Auto-save progress
-    await saveProgress(newResults);
+      // Auto-save progress
+      await saveProgress(newResults);
 
-    // Move to next item
-    if (currentIndex < totalItems - 1) {
-      setCurrentIndex(currentIndex + 1);
-    } else {
-      // Last item - show completion
-      await saveProgress(newResults, true);
-      handleComplete();
-    }
-  }, [currentItem, currentIndex, results, totalItems]);
+      // Move to next item
+      if (currentIndex < totalItems - 1) {
+        setCurrentIndex(currentIndex + 1);
+      } else {
+        // Last item - show completion
+        await saveProgress(newResults, true);
+        handleComplete();
+      }
+    },
+    [currentItem, currentIndex, results, totalItems],
+  );
 
   const handleComplete = () => {
     // Trigger celebration
@@ -232,7 +276,8 @@ export default function DailyChecklistPage() {
     const animationEnd = Date.now() + duration;
     const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
 
-    const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
+    const randomInRange = (min: number, max: number) =>
+      Math.random() * (max - min) + min;
 
     const interval = setInterval(() => {
       const timeLeft = animationEnd - Date.now();
@@ -250,13 +295,13 @@ export default function DailyChecklistPage() {
       });
     }, 250);
 
-    toast.success('Checklist completed!', {
-      description: 'Great job staying on top of daily routines.',
+    toast.success("Checklist completed!", {
+      description: "Great job staying on top of daily routines.",
     });
 
     // Redirect back after a moment
     setTimeout(() => {
-      router.push('/estates-compliance');
+      router.push("/estates-compliance");
     }, 2000);
   };
 
@@ -277,7 +322,7 @@ export default function DailyChecklistPage() {
       ...results,
       [currentItem.id]: {
         item_id: currentItem.id,
-        status: 'not_applicable' as DailyCheckStatus,
+        status: "not_applicable" as DailyCheckStatus,
         completed_at: new Date().toISOString(),
       },
     };
@@ -298,7 +343,8 @@ export default function DailyChecklistPage() {
       [currentItem.id]: {
         ...results[currentItem.id],
         item_id: currentItem.id,
-        status: results[currentItem.id]?.status || 'failed' as DailyCheckStatus,
+        status:
+          results[currentItem.id]?.status || ("failed" as DailyCheckStatus),
         notes: value,
       },
     };
@@ -320,11 +366,7 @@ export default function DailyChecklistPage() {
       {/* Header */}
       <header className="sticky top-0 z-10 bg-background border-b">
         <div className="flex items-center gap-3 p-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => router.back()}
-          >
+          <Button variant="ghost" size="icon" onClick={() => router.back()}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex-1">
@@ -365,7 +407,7 @@ export default function DailyChecklistPage() {
             </div>
           </CardHeader>
 
-          {currentResult?.status === 'failed' && (
+          {currentResult?.status === "failed" && (
             <CardContent className="border-t bg-amber-50/50">
               <div className="flex items-center gap-2 text-amber-700 mb-2">
                 <AlertTriangle className="h-4 w-4" />
@@ -373,7 +415,7 @@ export default function DailyChecklistPage() {
               </div>
               <Textarea
                 placeholder="Add notes about the issue..."
-                value={currentResult?.notes || ''}
+                value={currentResult?.notes || ""}
                 onChange={(e) => handleNoteChange(e.target.value)}
                 className="min-h-[80px]"
               />
@@ -383,8 +425,8 @@ export default function DailyChecklistPage() {
                   size="sm"
                   className="mt-2 w-full"
                   onClick={() => {
-                    toast.info('Photo capture', {
-                      description: 'Camera integration coming soon',
+                    toast.info("Photo capture", {
+                      description: "Camera integration coming soon",
                     });
                   }}
                 >
@@ -395,7 +437,7 @@ export default function DailyChecklistPage() {
             </CardContent>
           )}
 
-          {currentResult?.status === 'not_applicable' && (
+          {currentResult?.status === "not_applicable" && (
             <CardContent className="border-t bg-gray-50/50">
               <p className="text-sm text-muted-foreground">
                 This item has been marked as not applicable.
@@ -405,10 +447,10 @@ export default function DailyChecklistPage() {
         </Card>
 
         {/* Action Buttons - Large for mobile */}
-        {!currentResult || currentResult.status === 'pending' ? (
+        {!currentResult || currentResult.status === "pending" ? (
           <div className="grid grid-cols-3 gap-3">
             <Button
-              onClick={() => handleItemResult('passed')}
+              onClick={() => handleItemResult("passed")}
               variant="default"
               className="h-24 flex flex-col gap-2 bg-green-600 hover:bg-green-700"
               disabled={saving}
@@ -417,7 +459,7 @@ export default function DailyChecklistPage() {
               <span className="text-sm font-medium">Pass</span>
             </Button>
             <Button
-              onClick={() => handleItemResult('failed')}
+              onClick={() => handleItemResult("failed")}
               variant="default"
               className="h-24 flex flex-col gap-2 bg-red-600 hover:bg-red-700"
               disabled={saving}
@@ -466,16 +508,17 @@ export default function DailyChecklistPage() {
               <button
                 key={item.id}
                 onClick={() => setCurrentIndex(index)}
-                className={`w-3 h-3 rounded-full transition-all ${index === currentIndex
-                  ? 'bg-primary scale-125'
-                  : result?.status === 'passed'
-                    ? 'bg-green-500'
-                    : result?.status === 'failed'
-                      ? 'bg-red-500'
-                      : result?.status === 'not_applicable'
-                        ? 'bg-gray-400'
-                        : 'bg-gray-200'
-                  }`}
+                className={`w-3 h-3 rounded-full transition-all ${
+                  index === currentIndex
+                    ? "bg-primary scale-125"
+                    : result?.status === "passed"
+                      ? "bg-green-500"
+                      : result?.status === "failed"
+                        ? "bg-red-500"
+                        : result?.status === "not_applicable"
+                          ? "bg-gray-400"
+                          : "bg-gray-200"
+                }`}
               />
             );
           })}
@@ -490,11 +533,28 @@ export default function DailyChecklistPage() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-semibold text-green-800">All items reviewed!</p>
+                    <p className="font-semibold text-green-800">
+                      All items reviewed!
+                    </p>
                     <p className="text-sm text-green-600">
-                      {Object.values(results).filter(r => r.status === 'passed').length} passed,
-                      {Object.values(results).filter(r => r.status === 'failed').length} failed,
-                      {Object.values(results).filter(r => r.status === 'not_applicable').length} N/A
+                      {
+                        Object.values(results).filter(
+                          (r) => r.status === "passed",
+                        ).length
+                      }{" "}
+                      passed,
+                      {
+                        Object.values(results).filter(
+                          (r) => r.status === "failed",
+                        ).length
+                      }{" "}
+                      failed,
+                      {
+                        Object.values(results).filter(
+                          (r) => r.status === "not_applicable",
+                        ).length
+                      }{" "}
+                      N/A
                     </p>
                   </div>
                   <Button

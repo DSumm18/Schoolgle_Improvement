@@ -3,8 +3,12 @@
  * Generates optimist, critic, and neutral perspectives for balanced responses
  */
 
-import type { PerspectiveType, PerspectiveResponse, AppContext } from '../types';
-import { getModelRouter } from '../models';
+import type {
+  PerspectiveType,
+  PerspectiveResponse,
+  AppContext,
+} from "../types";
+import { getModelRouter } from "../models";
 
 // ============================================================================
 // Perspective Prompts
@@ -87,7 +91,7 @@ Be concise but comprehensive. Use markdown formatting for readability.`;
 export async function generateMultiPerspectiveResponse(
   question: string,
   specialistResponse: string,
-  context: AppContext
+  context: AppContext,
 ): Promise<{
   synthesized: string;
   perspectives: {
@@ -97,23 +101,47 @@ export async function generateMultiPerspectiveResponse(
   };
 }> {
   // Use cheaper model for perspectives (they're shorter, less critical)
-  const perspectiveModelId = 'deepseek/deepseek-chat';
-  const synthesisModelId = 'anthropic/claude-3.5-sonnet';
+  const perspectiveModelId = "deepseek/deepseek-chat";
+  const synthesisModelId = "anthropic/claude-3.5-sonnet";
 
   try {
     // Generate three perspectives in parallel
     const [optimist, critic, neutral] = await Promise.all([
-      generatePerspective(question, specialistResponse, 'optimist', context, perspectiveModelId),
-      generatePerspective(question, specialistResponse, 'critic', context, perspectiveModelId),
-      generatePerspective(question, specialistResponse, 'neutral', context, perspectiveModelId),
+      generatePerspective(
+        question,
+        specialistResponse,
+        "optimist",
+        context,
+        perspectiveModelId,
+      ),
+      generatePerspective(
+        question,
+        specialistResponse,
+        "critic",
+        context,
+        perspectiveModelId,
+      ),
+      generatePerspective(
+        question,
+        specialistResponse,
+        "neutral",
+        context,
+        perspectiveModelId,
+      ),
     ]);
 
     // Synthesize into balanced response
-    const synthesized = await synthesizeResponse(question, specialistResponse, {
-      optimist,
-      critic,
-      neutral,
-    }, context, synthesisModelId);
+    const synthesized = await synthesizeResponse(
+      question,
+      specialistResponse,
+      {
+        optimist,
+        critic,
+        neutral,
+      },
+      context,
+      synthesisModelId,
+    );
 
     return {
       synthesized,
@@ -125,10 +153,14 @@ export async function generateMultiPerspectiveResponse(
     };
   } catch (error) {
     // If perspective generation fails, return specialist response with warning
-    console.error('Perspective generation failed:', error);
+    console.error("Perspective generation failed:", error);
     return {
       synthesized: `${specialistResponse}\n\n*Note: Unable to generate additional perspectives at this time.*`,
-      perspectives: undefined,
+      perspectives: {} as {
+        optimist?: string;
+        critic?: string;
+        neutral?: string;
+      },
     };
   }
 }
@@ -141,7 +173,7 @@ async function generatePerspective(
   specialistResponse: string,
   type: PerspectiveType,
   context: AppContext,
-  modelId: string
+  modelId: string,
 ): Promise<string> {
   const router = getModelRouter(context.openRouterApiKey);
   const prompt = getPerspectivePrompt(type);
@@ -154,15 +186,11 @@ async function generatePerspective(
 Provide your ${type} perspective on this guidance.`;
 
   try {
-    const response = await router.chat(
-      prompt,
-      userMessage,
-      {
-        model: modelId,
-        temperature: 0.7,
-        maxTokens: 200, // Perspectives should be brief
-      }
-    );
+    const response = await router.chat(prompt, userMessage, {
+      model: modelId,
+      temperature: 0.7,
+      maxTokens: 200, // Perspectives should be brief
+    });
 
     return response.content.trim();
   } catch (error) {
@@ -176,11 +204,11 @@ Provide your ${type} perspective on this guidance.`;
  */
 function getPerspectivePrompt(type: PerspectiveType): string {
   switch (type) {
-    case 'optimist':
+    case "optimist":
       return OPTIMIST_PROMPT;
-    case 'critic':
+    case "critic":
       return CRITIC_PROMPT;
-    case 'neutral':
+    case "neutral":
       return NEUTRAL_PROMPT;
   }
 }
@@ -197,7 +225,7 @@ async function synthesizeResponse(
     neutral: string;
   },
   context: AppContext,
-  modelId: string
+  modelId: string,
 ): Promise<string> {
   const router = getModelRouter(context.openRouterApiKey);
 
@@ -221,15 +249,11 @@ ${perspectives.neutral}
 Please synthesize this into a balanced, actionable response.`;
 
   try {
-    const response = await router.chat(
-      SYNTHESIS_PROMPT,
-      userMessage,
-      {
-        model: modelId,
-        temperature: 0.7,
-        maxTokens: 1000,
-      }
-    );
+    const response = await router.chat(SYNTHESIS_PROMPT, userMessage, {
+      model: modelId,
+      temperature: 0.7,
+      maxTokens: 1000,
+    });
 
     return response.content.trim();
   } catch (error) {
@@ -241,13 +265,16 @@ Please synthesize this into a balanced, actionable response.`;
 /**
  * Get fallback perspective when generation fails
  */
-function getFallbackPerspective(type: PerspectiveType, question: string): string {
+function getFallbackPerspective(
+  type: PerspectiveType,
+  question: string,
+): string {
   switch (type) {
-    case 'optimist':
+    case "optimist":
       return "From a positive perspective, this is a solvable challenge with clear steps forward. Following the guidance should lead to successful outcomes.";
-    case 'critic':
+    case "critic":
       return "From a cautious perspective, ensure you verify all guidance is current and follow procedures carefully. Don't cut corners on safety or compliance.";
-    case 'neutral':
+    case "neutral":
       return "From a balanced perspective, follow the established procedures and verify guidance for your specific situation.";
   }
 }
@@ -261,7 +288,7 @@ function formatFallbackSynthesis(
     optimist: string;
     critic: string;
     neutral: string;
-  }
+  },
 ): string {
   return `${specialistResponse}
 
@@ -286,10 +313,13 @@ ${perspectives.neutral}`;
 /**
  * Simple in-memory cache for perspectives (to reduce API calls)
  */
-const perspectiveCache = new Map<string, {
-  perspectives: PerspectiveResponse;
-  timestamp: number;
-}>();
+const perspectiveCache = new Map<
+  string,
+  {
+    perspectives: PerspectiveResponse;
+    timestamp: number;
+  }
+>();
 
 const CACHE_TTL = 1000 * 60 * 60; // 1 hour
 
@@ -299,7 +329,7 @@ const CACHE_TTL = 1000 * 60 * 60; // 1 hour
 export async function generatePerspectivesCached(
   question: string,
   specialistResponse: string,
-  context: AppContext
+  context: AppContext,
 ): Promise<{
   synthesized: string;
   perspectives: {
@@ -315,7 +345,11 @@ export async function generatePerspectivesCached(
     return cached.perspectives as any;
   }
 
-  const result = await generateMultiPerspectiveResponse(question, specialistResponse, context);
+  const result = await generateMultiPerspectiveResponse(
+    question,
+    specialistResponse,
+    context,
+  );
 
   perspectiveCache.set(cacheKey, {
     perspectives: result as any,

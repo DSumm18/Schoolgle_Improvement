@@ -408,10 +408,9 @@ export default function PolicyReviewList({
                       <TableCell>
                         <div className="flex items-center gap-2">
                           {policy.is_statutory && (
-                            <AlertTriangle
-                              className="w-3.5 h-3.5 text-violet-500"
-                              title="Statutory"
-                            />
+                            <span title="Statutory">
+                              <AlertTriangle className="w-3.5 h-3.5 text-violet-500" />
+                            </span>
                           )}
                           <span className="font-medium text-sm">
                             {policy.policy_name}

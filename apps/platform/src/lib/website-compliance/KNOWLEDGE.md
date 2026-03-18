@@ -567,14 +567,39 @@ Based on our scanning of school websites (including Grove House Primary and othe
 
 ### Using Schoolgle's Website Scanner
 
-Schoolgle's website compliance scanner:
+Schoolgle offers two levels of website compliance scanning:
 
-1. **Crawls** the school website (including linked PDFs and trust website pages)
-2. **Checks** against 35+ statutory requirements using both keyword matching and AI assessment
-3. **Scores** each requirement for compliance (found/partial/not found/outdated), quality (1-5), and clarity (1-5)
-4. **Maps** relevant findings to Ofsted readiness categories
-5. **Generates** a prioritised action list of gaps to fix
-6. **Auto-detects** whether the school is maintained or academy from website content
-7. **Follows** links to trust websites to find policies hosted centrally
+#### Website Compliance Checker (£50/year)
 
-The scan takes approximately 2-5 minutes depending on website size and produces a detailed report that can be shared with governors and used as evidence of compliance monitoring.
+A standalone app that any school can use immediately. It:
+
+1. **Crawls** the school website using fetch (no browser needed), following navigation links and checking ~80 pages including common paths like `/policies`, `/send`, `/governance`, `/safeguarding`
+2. **Detects** school type (maintained vs academy) and phase (primary/secondary) from website content
+3. **For academies**: auto-detects the trust website from links (e.g. "Pennine Academies Yorkshire" → paymat.org) and crawls it for trust-level requirements like gender pay gap, annual accounts, and high pay disclosures
+4. **Matches** every page and document link against 44 statutory requirements using structural scoring — keywords, document patterns, URL patterns, filename matches, and link text
+5. **Reads every matched PDF in full** — extracts all pages via pdfjs-dist to find the actual document date (e.g. "ACCESS PLAN 2017" on the first page), rather than guessing from URL upload paths
+6. **Assesses document quality** — checks the PDF content against the requirement's compliance and quality criteria, reports a percentage score, and lists exactly which criteria are met and which are missing
+7. **Flags outdated documents** for review with thresholds based on the update frequency (annually-reviewed docs flagged if >2 years old, 4-year docs if >4 years old)
+8. **Reports**: found / not_found / needs_checking per requirement, with document summaries, quality scores, and expandable criteria breakdowns
+
+The quick scan takes 30–90 seconds (longer for academies due to trust website crawling) and requires no browser, no AI, and no per-scan cost.
+
+#### Ofsted Readiness Scanner (£1,500/year)
+
+The full deep scan adds significant capability on top of the same matching engine:
+
+1. **Playwright-based crawl** — renders JavaScript, extracts content from hidden accordions, iframes, Google Drive folders, and dynamically loaded CMS widgets
+2. **Full PDF extraction** — processes all PDFs found (not just matched ones), including OCR for image-based documents via Mistral-OCR
+3. **AI quality assessment** — each requirement has a dedicated expert assessor that uses Gemini Flash to read the full document and score it against a detailed rubric (36+ rubrics covering 15–27 criteria per requirement)
+4. **PII-aware** — handles names, contact details, and sensitive data appropriately per requirement (preserve names for headteacher/DSL/SENCO, mask everything else)
+5. **Evidence pipeline** — maps findings to Ofsted EIF categories (Quality of Education, Behaviour and Attitudes, Personal Development, Leadership and Management, Safeguarding)
+6. **Ed AI integration** — crawled content feeds the Ed chatbot's knowledge base for school-specific Q&A
+7. **Legislation currency checking** — validates that policies reference current legislation (e.g. flags a safeguarding policy still citing KCSIE 2023)
+
+The deep scan takes 5–15 minutes and produces a detailed report with compliance scores, quality ratings (1–5), and prioritised actions mapped to Ofsted categories.
+
+#### How They Relate
+
+Both products share the same structural matching engine (`runStructuralMatching` in `phase2-assessor.ts`) and the same requirements database (44 requirements, 17 categories). The £50 app provides the same compliance checking as the core of the deep scan, with document date validation and quality assessment — the difference is the deep scan adds AI-powered analysis, full rendering, and Ofsted framework mapping.
+
+Schools that start with the £50 checker get immediate value and a clear upgrade path to the full Ofsted readiness product when they need deeper analysis.

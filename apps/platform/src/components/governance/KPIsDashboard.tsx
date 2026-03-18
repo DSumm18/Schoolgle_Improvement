@@ -367,11 +367,11 @@ function KPICard({
 
 function TrendCard({
   title,
-  trend,
+  trend = "stable",
   description,
 }: {
   title: string;
-  trend: "improving" | "stable" | "declining";
+  trend?: "improving" | "stable" | "declining";
   description: string;
 }) {
   const trendStyles: Record<string, string> = {

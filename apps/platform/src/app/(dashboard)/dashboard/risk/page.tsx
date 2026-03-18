@@ -35,14 +35,15 @@ import { RiskDirectionIndicator } from "@/components/risk/RiskDirectionIndicator
 // ---------------------------------------------------------------------------
 
 interface RiskRow extends Risk {
-  residual_score: number;
-  effective_score: number;
-  risk_band: RiskBand;
-  direction_of_travel: DirectionOfTravel;
+  // View-computed fields
+  effective_residual_score: number;
   above_appetite: boolean;
-  owner_name?: string;
-  mitigations_total: number;
-  mitigations_overdue: number;
+  direction_of_travel: DirectionOfTravel;
+  risk_owner_name?: string;
+  mitigation_count: number;
+  overdue_mitigation_count: number;
+  // Client-computed
+  risk_band: RiskBand;
 }
 
 interface RiskApiResponse {
@@ -127,12 +128,12 @@ const BAND_LABELS: Record<RiskBand, string> = {
   critical: "Critical",
 };
 
+// Traditional risk colours — consistent light & dark for instant recognition
 const BAND_BADGE_COLORS: Record<RiskBand, string> = {
-  low: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300",
-  medium:
-    "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300",
-  high: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300",
-  critical: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300",
+  low: "bg-[#4caf50] text-white",
+  medium: "bg-[#fbc02d] text-[#3e2723]",
+  high: "bg-[#f57c00] text-white",
+  critical: "bg-[#d32f2f] text-white",
 };
 
 const TIER_LABELS: Record<RiskTier, string> = {
@@ -243,13 +244,35 @@ export default function RiskRegisterPage() {
     { refreshInterval: 30000 },
   );
 
-  const risks = data?.risks ?? [];
-  const summary = data?.summary ?? {
-    total: 0,
-    critical: 0,
-    above_appetite: 0,
-    overdue_mitigations: 0,
-  };
+  // Enrich API rows with computed fields
+  const risks: RiskRow[] = useMemo(
+    () =>
+      (data?.risks ?? []).map((r: any) => ({
+        ...r,
+        risk_band: getRiskBand(
+          r.effective_residual_score ??
+            r.system_residual_score ??
+            r.inherent_score ??
+            0,
+        ),
+        mitigation_count: Number(r.mitigation_count ?? 0),
+        overdue_mitigation_count: Number(r.overdue_mitigation_count ?? 0),
+      })),
+    [data?.risks],
+  );
+  // Compute summary from actual risk data
+  const summary = useMemo(() => {
+    const active = risks.filter((r) => r.status !== "closed");
+    return {
+      total: active.length,
+      critical: active.filter((r) => r.risk_band === "critical").length,
+      above_appetite: active.filter((r) => r.above_appetite).length,
+      overdue_mitigations: active.reduce(
+        (sum, r) => sum + (r.overdue_mitigation_count || 0),
+        0,
+      ),
+    };
+  }, [risks]);
 
   // Heat map data from active risks
   const activeRisks = useMemo(
@@ -442,12 +465,12 @@ export default function RiskRegisterPage() {
                         <div
                           className={`h-full rounded-full transition-all ${
                             band === "critical"
-                              ? "bg-rose-500"
+                              ? "bg-[#d32f2f]"
                               : band === "high"
-                                ? "bg-orange-400"
+                                ? "bg-[#f57c00]"
                                 : band === "medium"
-                                  ? "bg-yellow-400"
-                                  : "bg-emerald-400"
+                                  ? "bg-[#fbc02d]"
+                                  : "bg-[#4caf50]"
                           }`}
                           style={{ width: `${pct}%` }}
                         />
@@ -730,22 +753,22 @@ export default function RiskRegisterPage() {
                         </td>
                         <td className="px-4 py-3">
                           <span className="text-xs text-muted-foreground">
-                            {risk.owner_name ?? "--"}
+                            {risk.risk_owner_name ?? "--"}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-center">
                           <span className="text-xs font-bold tabular-nums">
-                            {risk.mitigations_total > 0 ? (
+                            {risk.mitigation_count > 0 ? (
                               <span
                                 className={
-                                  risk.mitigations_overdue > 0
+                                  risk.overdue_mitigation_count > 0
                                     ? "text-rose-500"
                                     : "text-emerald-600 dark:text-emerald-400"
                                 }
                               >
-                                {risk.mitigations_total -
-                                  risk.mitigations_overdue}
-                                /{risk.mitigations_total}
+                                {risk.mitigation_count -
+                                  risk.overdue_mitigation_count}
+                                /{risk.mitigation_count}
                               </span>
                             ) : (
                               <span className="text-muted-foreground">--</span>
@@ -806,12 +829,12 @@ export default function RiskRegisterPage() {
                                   <p>
                                     Total mitigations:{" "}
                                     <span className="font-bold text-foreground">
-                                      {risk.mitigations_total}
+                                      {risk.mitigation_count}
                                     </span>
                                   </p>
-                                  {risk.mitigations_overdue > 0 && (
+                                  {risk.overdue_mitigation_count > 0 && (
                                     <p className="text-rose-500 font-bold">
-                                      {risk.mitigations_overdue} overdue
+                                      {risk.overdue_mitigation_count} overdue
                                     </p>
                                   )}
                                   <p>

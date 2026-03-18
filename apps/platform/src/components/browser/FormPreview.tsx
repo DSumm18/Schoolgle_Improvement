@@ -142,7 +142,7 @@ export function FormPreview({
           </div>
           <div className="text-right text-sm text-sky-600">
             <span className="font-medium">
-              {filledRequiredFields}/{requiredFields.length}
+              {filledRequiredFields.length}/{requiredFields.length}
             </span>{" "}
             required fields filled
           </div>

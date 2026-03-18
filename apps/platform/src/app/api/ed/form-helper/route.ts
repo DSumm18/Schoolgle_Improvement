@@ -5,9 +5,9 @@
  * Zero data retention - all form data is ephemeral.
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase-server';
-import { openrouter } from '@/lib/ai-openrouter';
+import { NextRequest, NextResponse } from "next/server";
+import { createServerSupabaseClient } from "@/lib/supabase-server";
+import { openrouter } from "@/lib/ai-openrouter";
 import {
   detectFormsFunction,
   startFormSessionFunction,
@@ -15,7 +15,7 @@ import {
   translateAndVerifyFunction,
   fillFormFieldFunction,
   completeFormSessionFunction,
-} from '@/lib/skills/form-helper';
+} from "@/lib/skills/form-helper";
 import {
   detectFormsOnPage,
   generateFieldQuestion,
@@ -26,8 +26,8 @@ import {
   getLanguageName,
   PRIVACY_NOTICE,
   SUPPORTED_LANGUAGES,
-} from '@/lib/skills/form-helper-handler';
-import type { FormSession, FormField } from '@/lib/skills/form-helper';
+} from "@/lib/skills/form-helper-handler";
+import type { FormSession, FormField } from "@/lib/skills/form-helper";
 
 // ============================================================================
 // POST - Main Form Helper Entry Point
@@ -39,26 +39,29 @@ export async function POST(request: NextRequest) {
     const { action, params } = body;
 
     switch (action) {
-      case 'detect':
+      case "detect":
         return await handleDetect(params);
-      case 'start_session':
+      case "start_session":
         return await handleStartSession(params);
-      case 'ask_field':
+      case "ask_field":
         return await handleAskField(params);
-      case 'verify_response':
+      case "verify_response":
         return await handleVerifyResponse(params);
-      case 'fill_field':
+      case "fill_field":
         return await handleFillField(params);
-      case 'complete':
+      case "complete":
         return await handleComplete(params);
       default:
-        return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
+        return NextResponse.json({ error: "Unknown action" }, { status: 400 });
     }
   } catch (error) {
-    console.error('[FormHelper] Error:', error);
+    console.error("[FormHelper] Error:", error);
     return NextResponse.json(
-      { error: 'An error occurred', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
+      {
+        error: "An error occurred",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
     );
   }
 }
@@ -69,20 +72,27 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const action = searchParams.get('action');
+  const action = searchParams.get("action");
 
   switch (action) {
-    case 'privacy_notice':
+    case "privacy_notice":
       return NextResponse.json(PRIVACY_NOTICE);
-    case 'languages':
+    case "languages":
       return NextResponse.json(SUPPORTED_LANGUAGES);
     default:
       return NextResponse.json({
-        name: 'Ed Form Helper',
-        description: 'AI-powered form filling with translation support',
-        version: '1.0.0',
-        privacy: 'Zero data retention - all conversations are ephemeral',
-        actions: ['detect', 'start_session', 'ask_field', 'verify_response', 'fill_field', 'complete'],
+        name: "Ed Form Helper",
+        description: "AI-powered form filling with translation support",
+        version: "1.0.0",
+        privacy: "Zero data retention - all conversations are ephemeral",
+        actions: [
+          "detect",
+          "start_session",
+          "ask_field",
+          "verify_response",
+          "fill_field",
+          "complete",
+        ],
         languages: Object.keys(SUPPORTED_LANGUAGES),
       });
   }
@@ -99,7 +109,7 @@ async function handleDetect(params: any) {
   const { pageUrl, pageContent } = params;
 
   if (!pageUrl) {
-    return NextResponse.json({ error: 'pageUrl is required' }, { status: 400 });
+    return NextResponse.json({ error: "pageUrl is required" }, { status: 400 });
   }
 
   const result = await detectFormsOnPage({
@@ -118,7 +128,10 @@ async function handleStartSession(params: any) {
   const { formId, userLanguage, organizationId, pageUrl, formData } = params;
 
   if (!formId || !organizationId) {
-    return NextResponse.json({ error: 'formId and organizationId are required' }, { status: 400 });
+    return NextResponse.json(
+      { error: "formId and organizationId are required" },
+      { status: 400 },
+    );
   }
 
   // Create session from detected form data
@@ -126,14 +139,17 @@ async function handleStartSession(params: any) {
     organizationId,
     pageUrl,
     form: formData, // Should be pre-detected
-    userLanguage: userLanguage || 'en',
+    userLanguage: userLanguage || "en",
   });
 
   // Get first field
   const firstField = session.form.fields[session.currentFieldIndex];
 
   if (!firstField) {
-    return NextResponse.json({ error: 'No fields found in form' }, { status: 400 });
+    return NextResponse.json(
+      { error: "No fields found in form" },
+      { status: 400 },
+    );
   }
 
   // Generate first question
@@ -208,7 +224,7 @@ async function handleFillField(params: any) {
   // Return instructions for client-side execution
   // This keeps the privacy boundary - we don't touch the DOM directly
   return NextResponse.json({
-    action: 'fill_field',
+    action: "fill_field",
     selector: fieldSelector,
     value,
     type: fieldType,
@@ -227,12 +243,14 @@ async function handleComplete(params: any) {
 
   return NextResponse.json({
     success: true,
-    message: fieldsFilled === totalFields
-      ? `All ${totalFields} fields are filled! Please review the form and click Submit when you're ready.`
-      : `${fieldsFilled} of ${totalFields} fields filled. You can complete the rest yourself.`,
+    message:
+      fieldsFilled === totalFields
+        ? `All ${totalFields} fields are filled! Please review the form and click Submit when you're ready.`
+        : `${fieldsFilled} of ${totalFields} fields filled. You can complete the rest yourself.`,
     fieldsFilled,
     totalFields,
-    privacyReminder: 'All conversation data has been deleted. Thank you for using Ed Form Helper!',
+    privacyReminder:
+      "All conversation data has been deleted. Thank you for using Ed Form Helper!",
   });
 }
 
@@ -245,18 +263,18 @@ async function handleComplete(params: any) {
  */
 function detectLanguage(text: string): string {
   // Urdu/Arabic script
-  if (/[\u0600-\u06FF]/.test(text)) return 'ur';
+  if (/[\u0600-\u06FF]/.test(text)) return "ur";
   // Chinese
-  if (/[\u4E00-\u9FFF]/.test(text)) return 'zh';
+  if (/[\u4E00-\u9FFF]/.test(text)) return "zh";
   // Default
-  return 'en';
+  return "en";
 }
 
 /**
  * Clean phone number
  */
 function cleanPhone(value: string): string {
-  return value.replace(/[\s\-\(\)]/g, '');
+  return value.replace(/[\s\-\(\)]/g, "");
 }
 
 /**
@@ -272,11 +290,15 @@ function extractEmail(text: string): string | null {
  */
 function inferFormType(url: string): string {
   const lower = url.toLowerCase();
-  if (lower.includes('safeguard') || lower.includes('concern')) return 'safeguarding';
-  if (lower.includes('admission') || lower.includes('enrol')) return 'admissions';
-  if (lower.includes('meal') || lower.includes('dinner')) return 'free-school-meals';
-  if (lower.includes('attend') || lower.includes('absence')) return 'attendance';
-  return 'general';
+  if (lower.includes("safeguard") || lower.includes("concern"))
+    return "safeguarding";
+  if (lower.includes("admission") || lower.includes("enrol"))
+    return "admissions";
+  if (lower.includes("meal") || lower.includes("dinner"))
+    return "free-school-meals";
+  if (lower.includes("attend") || lower.includes("absence"))
+    return "attendance";
+  return "general";
 }
 
 /**
@@ -291,11 +313,14 @@ function logMetrics(data: {
   corrections: number;
   duration: number;
 }) {
-  console.log('[FormHelper Analytics]', JSON.stringify({
-    event: 'form_helper_session',
-    sessionId: `anon_${Date.now()}`,
-    ...data,
-  }));
+  console.log(
+    "[FormHelper Analytics]",
+    JSON.stringify({
+      event: "form_helper_session",
+      sessionId: `anon_${Date.now()}`,
+      ...data,
+    }),
+  );
 }
 
 // ============================================================================
@@ -305,29 +330,30 @@ function logMetrics(data: {
 function getPrivacyNotice() {
   return {
     title: "How your data is handled",
-    content: PRIVACY_NOTICE.content,
-    buttonText: PRIVACY_NOTICE.agreeButton,
-    declineButton: PRIVACY_NOTICE.declineButton,
+    content: PRIVACY_NOTICE,
+    buttonText: "I understand",
+    declineButton: "No thanks",
     keyPoints: [
       {
-        icon: '🗑️',
-        title: 'I don\'t keep your data',
-        description: 'Everything you say is deleted immediately after the form is filled',
+        icon: "🗑️",
+        title: "I don't keep your data",
+        description:
+          "Everything you say is deleted immediately after the form is filled",
       },
       {
-        icon: '🔒',
-        title: 'The school receives your form',
-        description: 'They handle it according to their own privacy policy',
+        icon: "🔒",
+        title: "The school receives your form",
+        description: "They handle it according to their own privacy policy",
       },
       {
-        icon: '❌',
-        title: 'I don\'t train on what you say',
-        description: 'Your conversations won\'t improve my abilities',
+        icon: "❌",
+        title: "I don't train on what you say",
+        description: "Your conversations won't improve my abilities",
       },
       {
-        icon: '✅',
-        title: 'You can stop anytime',
-        description: 'Just close this window',
+        icon: "✅",
+        title: "You can stop anytime",
+        description: "Just close this window",
       },
     ],
   };

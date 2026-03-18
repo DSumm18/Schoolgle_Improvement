@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
 /**
  * Task Detail Sheet
  * Shows full task details with multiple action options
  */
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { format, addDays } from 'date-fns';
-import { toast } from 'sonner';
+import { useState } from "react";
+import Link from "next/link";
+import { format, addDays } from "date-fns";
+import { toast } from "sonner";
 import {
   Sheet,
   SheetContent,
@@ -16,7 +16,7 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from '@/components/ui/sheet';
+} from "@/components/ui/sheet";
 import {
   Dialog,
   DialogContent,
@@ -24,28 +24,35 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from '@/components/ui/popover';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Calendar } from '@/components/ui/calendar';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+} from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Calendar } from "@/components/ui/calendar";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Check, Clock, Calendar as CalendarIcon, FileText, ChevronRight, X } from 'lucide-react';
-import { useMediaQuery } from '@/hooks/use-media-query';
-import { useAuth } from '@/context/SupabaseAuthContext';
-import type { TodayTask } from '@/app/(dashboard)/estates-compliance/page';
+} from "@/components/ui/select";
+import {
+  Check,
+  Clock,
+  Calendar as CalendarIcon,
+  FileText,
+  ChevronRight,
+  X,
+} from "lucide-react";
+import { useMediaQuery } from "@/hooks/use-media-query";
+import { useAuth } from "@/context/SupabaseAuthContext";
+import type { TodayTask } from "@/app/(dashboard)/estates-compliance/page";
 
 interface TaskDetailSheetProps {
   task: TodayTask;
@@ -54,94 +61,113 @@ interface TaskDetailSheetProps {
   onMarkNA?: (checkId: string) => void;
 }
 
-type NaReasonCategory = 'not_applicable_site' | 'service_outsourced' | 'equipment_not_present' | 'other';
+type NaReasonCategory =
+  | "not_applicable_site"
+  | "service_outsourced"
+  | "equipment_not_present"
+  | "other";
 
-const NA_REASON_OPTIONS: { value: NaReasonCategory; label: string; description: string }[] = [
+const NA_REASON_OPTIONS: {
+  value: NaReasonCategory;
+  label: string;
+  description: string;
+}[] = [
   {
-    value: 'not_applicable_site',
-    label: 'Not applicable to this site',
-    description: 'This statutory check does not apply to your school location',
+    value: "not_applicable_site",
+    label: "Not applicable to this site",
+    description: "This statutory check does not apply to your school location",
   },
   {
-    value: 'service_outsourced',
-    label: 'Service outsourced',
-    description: 'This task is handled by an external contractor/provider',
+    value: "service_outsourced",
+    label: "Service outsourced",
+    description: "This task is handled by an external contractor/provider",
   },
   {
-    value: 'equipment_not_present',
-    label: 'Equipment not present',
-    description: 'The equipment or system covered by this check is not installed',
+    value: "equipment_not_present",
+    label: "Equipment not present",
+    description:
+      "The equipment or system covered by this check is not installed",
   },
   {
-    value: 'other',
-    label: 'Other (please specify)',
-    description: 'Another reason - please provide details below',
+    value: "other",
+    label: "Other (please specify)",
+    description: "Another reason - please provide details below",
   },
 ];
 
-export function TaskDetailSheet({ task, onComplete, onSnooze, onMarkNA }: TaskDetailSheetProps) {
+export function TaskDetailSheet({
+  task,
+  onComplete,
+  onSnooze,
+  onMarkNA,
+}: TaskDetailSheetProps) {
   const [open, setOpen] = useState(false);
   const [snoozeDialogOpen, setSnoozeDialogOpen] = useState(false);
   const [markNADialogOpen, setMarkNADialogOpen] = useState(false);
-  const [snoozeDate, setSnoozeDate] = useState<Date | undefined>(addDays(new Date(), 1));
-  const [snoozeReason, setSnoozeReason] = useState('');
+  const [snoozeDate, setSnoozeDate] = useState<Date | undefined>(
+    addDays(new Date(), 1),
+  );
+  const [snoozeReason, setSnoozeReason] = useState("");
   const [isSnoozing, setIsSnoozing] = useState(false);
-  const [naReasonCategory, setNaReasonCategory] = useState<NaReasonCategory | ''>('');
-  const [naReason, setNaReason] = useState('');
+  const [naReasonCategory, setNaReasonCategory] = useState<
+    NaReasonCategory | ""
+  >("");
+  const [naReason, setNaReason] = useState("");
   const [isMarkingNA, setIsMarkingNA] = useState(false);
-  const isDesktop = useMediaQuery('(min-width: 768px)');
+  const isDesktop = useMediaQuery("(min-width: 768px)");
   const { organizationId } = useAuth();
 
   const handleComplete = () => {
     onComplete(task.checkId);
     setOpen(false);
     toast.success(`${task.checkName} completed`, {
-      description: 'Task marked as complete',
+      description: "Task marked as complete",
     });
   };
 
   const handleSnooze = async () => {
     if (!snoozeDate) {
-      toast.error('Please select a date', {
-        description: 'Choose when this task should be rescheduled to',
+      toast.error("Please select a date", {
+        description: "Choose when this task should be rescheduled to",
       });
       return;
     }
 
     setIsSnoozing(true);
     try {
-      const response = await fetch('/api/estates-compliance/tasks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/estates-compliance/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: 'snooze',
-          organization_id: organizationId,
+          action: "snooze",
+          organizationId: organizationId,
           check_id: task.checkId,
-          new_due_date: snoozeDate.toISOString().split('T')[0],
+          new_due_date: snoozeDate.toISOString().split("T")[0],
           reason: snoozeReason || undefined,
         }),
       });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to snooze task');
+        throw new Error(error.error || "Failed to snooze task");
       }
 
       setSnoozeDialogOpen(false);
       setOpen(false);
-      setSnoozeReason('');
+      setSnoozeReason("");
       setSnoozeDate(addDays(new Date(), 1));
 
       toast.success(`${task.checkName} snoozed`, {
-        description: `Rescheduled to ${format(snoozeDate, 'dd MMM yyyy')}`,
+        description: `Rescheduled to ${format(snoozeDate, "dd MMM yyyy")}`,
       });
 
       // Refresh the page data
       onSnooze?.(task.checkId);
     } catch (error) {
-      console.error('Error snoozing task:', error);
-      toast.error('Failed to snooze task', {
-        description: error instanceof Error ? error.message : 'Please try again',
+      console.error("Error snoozing task:", error);
+      toast.error("Failed to snooze task", {
+        description:
+          error instanceof Error ? error.message : "Please try again",
       });
     } finally {
       setIsSnoozing(false);
@@ -150,27 +176,27 @@ export function TaskDetailSheet({ task, onComplete, onSnooze, onMarkNA }: TaskDe
 
   const handleMarkNA = async () => {
     if (!naReasonCategory) {
-      toast.error('Please select a reason', {
-        description: 'Choose why this check is not applicable',
+      toast.error("Please select a reason", {
+        description: "Choose why this check is not applicable",
       });
       return;
     }
 
-    if (naReasonCategory === 'other' && !naReason.trim()) {
-      toast.error('Please provide details', {
-        description: 'Explain why this check is not applicable',
+    if (naReasonCategory === "other" && !naReason.trim()) {
+      toast.error("Please provide details", {
+        description: "Explain why this check is not applicable",
       });
       return;
     }
 
     setIsMarkingNA(true);
     try {
-      const response = await fetch('/api/estates-compliance/tasks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/estates-compliance/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: 'mark_na',
-          organization_id: organizationId,
+          action: "mark_na",
+          organizationId: organizationId,
           check_id: task.checkId,
           reason: naReason.trim(),
           reason_category: naReasonCategory,
@@ -179,24 +205,25 @@ export function TaskDetailSheet({ task, onComplete, onSnooze, onMarkNA }: TaskDe
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to mark task as N/A');
+        throw new Error(error.error || "Failed to mark task as N/A");
       }
 
       setMarkNADialogOpen(false);
       setOpen(false);
-      setNaReasonCategory('');
-      setNaReason('');
+      setNaReasonCategory("");
+      setNaReason("");
 
       toast.success(`${task.checkName} marked as N/A`, {
-        description: 'Task will not appear in upcoming checks',
+        description: "Task will not appear in upcoming checks",
       });
 
       // Refresh the page data
       onMarkNA?.(task.checkId);
     } catch (error) {
-      console.error('Error marking task as N/A:', error);
-      toast.error('Failed to mark task as N/A', {
-        description: error instanceof Error ? error.message : 'Please try again',
+      console.error("Error marking task as N/A:", error);
+      toast.error("Failed to mark task as N/A", {
+        description:
+          error instanceof Error ? error.message : "Please try again",
       });
     } finally {
       setIsMarkingNA(false);
@@ -209,12 +236,24 @@ export function TaskDetailSheet({ task, onComplete, onSnooze, onMarkNA }: TaskDe
 
   const getStatusBadge = () => {
     switch (task.status) {
-      case 'overdue':
-        return <Badge className="bg-red-100 text-red-700 border-red-300 animate-pulse">⚠️ Overdue</Badge>;
-      case 'due_today':
-        return <Badge className="bg-orange-100 text-orange-700 border-orange-300">📅 Due Today</Badge>;
-      case 'due_soon':
-        return <Badge className="bg-blue-50 text-blue-600 border-blue-200">📆 Due Soon</Badge>;
+      case "overdue":
+        return (
+          <Badge className="bg-red-100 text-red-700 border-red-300 animate-pulse">
+            ⚠️ Overdue
+          </Badge>
+        );
+      case "due_today":
+        return (
+          <Badge className="bg-orange-100 text-orange-700 border-orange-300">
+            📅 Due Today
+          </Badge>
+        );
+      case "due_soon":
+        return (
+          <Badge className="bg-blue-50 text-blue-600 border-blue-200">
+            📆 Due Soon
+          </Badge>
+        );
     }
   };
 
@@ -226,12 +265,17 @@ export function TaskDetailSheet({ task, onComplete, onSnooze, onMarkNA }: TaskDe
     <>
       <TriggerComponent open={open} onOpenChange={setOpen}>
         <TriggerContent asChild>
-          <Button variant="ghost" size="sm" className="h-7 px-2" data-task-detail={task.checkId}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2"
+            data-task-detail={task.checkId}
+          >
             View Details
           </Button>
         </TriggerContent>
 
-        <ContentComponent className={isDesktop ? 'max-w-lg' : 'h-[80vh]'}>
+        <ContentComponent className={isDesktop ? "max-w-lg" : "h-[80vh]"}>
           <>
             <SheetHeader>
               <SheetTitle className="flex items-center gap-2">
@@ -250,7 +294,9 @@ export function TaskDetailSheet({ task, onComplete, onSnooze, onMarkNA }: TaskDe
                   {getStatusBadge()}
                   <div className="flex items-center gap-1 text-sm text-muted-foreground">
                     <CalendarIcon className="h-4 w-4" />
-                    {task.nextDue ? new Date(task.nextDue).toLocaleDateString() : 'Not set'}
+                    {task.nextDue
+                      ? new Date(task.nextDue).toLocaleDateString()
+                      : "Not set"}
                   </div>
                 </div>
                 <button
@@ -265,9 +311,13 @@ export function TaskDetailSheet({ task, onComplete, onSnooze, onMarkNA }: TaskDe
               <div className="bg-muted/50 rounded-lg p-4">
                 <h4 className="text-sm font-semibold mb-2">Task Details</h4>
                 <p className="text-sm text-muted-foreground">
-                  This is a {task.category.toLowerCase()} statutory compliance check for {task.domainName.toLowerCase()}.
-                  {task.status === 'overdue' && (
-                    <span className="text-red-600 font-medium"> This task is overdue and requires immediate attention.</span>
+                  This is a {task.category.toLowerCase()} statutory compliance
+                  check for {task.domainName.toLowerCase()}.
+                  {task.status === "overdue" && (
+                    <span className="text-red-600 font-medium">
+                      {" "}
+                      This task is overdue and requires immediate attention.
+                    </span>
                   )}
                 </p>
               </div>
@@ -276,15 +326,26 @@ export function TaskDetailSheet({ task, onComplete, onSnooze, onMarkNA }: TaskDe
               <div className="space-y-3">
                 <h4 className="text-sm font-semibold">Actions</h4>
                 <div className="grid grid-cols-2 gap-2">
-                  <Button onClick={handleComplete} className="w-full justify-start">
+                  <Button
+                    onClick={handleComplete}
+                    className="w-full justify-start"
+                  >
                     <Check className="h-4 w-4 mr-2" />
                     Complete Task
                   </Button>
-                  <Button onClick={() => setSnoozeDialogOpen(true)} variant="outline" className="w-full justify-start">
+                  <Button
+                    onClick={() => setSnoozeDialogOpen(true)}
+                    variant="outline"
+                    className="w-full justify-start"
+                  >
                     <Clock className="h-4 w-4 mr-2" />
                     Snooze
                   </Button>
-                  <Button onClick={() => setMarkNADialogOpen(true)} variant="outline" className="w-full justify-start">
+                  <Button
+                    onClick={() => setMarkNADialogOpen(true)}
+                    variant="outline"
+                    className="w-full justify-start"
+                  >
                     <span className="mr-2">⊘</span>
                     Mark N/A
                   </Button>
@@ -377,7 +438,7 @@ export function TaskDetailSheet({ task, onComplete, onSnooze, onMarkNA }: TaskDe
                     className="w-full justify-start text-left font-normal"
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {snoozeDate ? format(snoozeDate, 'PPP') : 'Pick a date'}
+                    {snoozeDate ? format(snoozeDate, "PPP") : "Pick a date"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -385,7 +446,9 @@ export function TaskDetailSheet({ task, onComplete, onSnooze, onMarkNA }: TaskDe
                     mode="single"
                     selected={snoozeDate}
                     onSelect={setSnoozeDate}
-                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                    disabled={(date) =>
+                      date < new Date(new Date().setHours(0, 0, 0, 0))
+                    }
                     initialFocus
                   />
                 </PopoverContent>
@@ -406,11 +469,14 @@ export function TaskDetailSheet({ task, onComplete, onSnooze, onMarkNA }: TaskDe
           </div>
 
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setSnoozeDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setSnoozeDialogOpen(false)}
+            >
               Cancel
             </Button>
             <Button onClick={handleSnooze} disabled={isSnoozing || !snoozeDate}>
-              {isSnoozing ? 'Snoozing...' : 'Snooze Task'}
+              {isSnoozing ? "Snoozing..." : "Snooze Task"}
             </Button>
           </div>
         </DialogContent>
@@ -425,7 +491,8 @@ export function TaskDetailSheet({ task, onComplete, onSnooze, onMarkNA }: TaskDe
               Mark as Not Applicable
             </DialogTitle>
             <DialogDescription>
-              This task will be marked as not applicable and won&apos;t appear in upcoming checks
+              This task will be marked as not applicable and won&apos;t appear
+              in upcoming checks
             </DialogDescription>
           </DialogHeader>
 
@@ -433,7 +500,12 @@ export function TaskDetailSheet({ task, onComplete, onSnooze, onMarkNA }: TaskDe
             {/* Reason Category */}
             <div className="space-y-2">
               <Label htmlFor="na-reason">Why is this not applicable?</Label>
-              <Select value={naReasonCategory} onValueChange={(value) => setNaReasonCategory(value as NaReasonCategory)}>
+              <Select
+                value={naReasonCategory}
+                onValueChange={(value) =>
+                  setNaReasonCategory(value as NaReasonCategory)
+                }
+              >
                 <SelectTrigger id="na-reason">
                   <SelectValue placeholder="Select a reason" />
                 </SelectTrigger>
@@ -442,7 +514,9 @@ export function TaskDetailSheet({ task, onComplete, onSnooze, onMarkNA }: TaskDe
                     <SelectItem key={option.value} value={option.value}>
                       <div className="flex flex-col items-start">
                         <span>{option.label}</span>
-                        <span className="text-xs text-muted-foreground">{option.description}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {option.description}
+                        </span>
                       </div>
                     </SelectItem>
                   ))}
@@ -453,38 +527,49 @@ export function TaskDetailSheet({ task, onComplete, onSnooze, onMarkNA }: TaskDe
             {/* Additional Details (required for "Other") */}
             <div className="space-y-2">
               <Label htmlFor="na-details">
-                Details {naReasonCategory === 'other' && <span className="text-red-500">*</span>}
+                Details{" "}
+                {naReasonCategory === "other" && (
+                  <span className="text-red-500">*</span>
+                )}
               </Label>
               <Textarea
                 id="na-details"
                 placeholder={
-                  naReasonCategory === 'other'
-                    ? 'Please explain why this check is not applicable...'
-                    : 'Add any additional context (optional)'
+                  naReasonCategory === "other"
+                    ? "Please explain why this check is not applicable..."
+                    : "Add any additional context (optional)"
                 }
                 value={naReason}
                 onChange={(e) => setNaReason(e.target.value)}
                 rows={3}
-                required={naReasonCategory === 'other'}
+                required={naReasonCategory === "other"}
               />
             </div>
 
             {/* Warning */}
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
-              <strong>Note:</strong> This will mark the task as not applicable. You can change this status later from the task details page.
+              <strong>Note:</strong> This will mark the task as not applicable.
+              You can change this status later from the task details page.
             </div>
           </div>
 
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setMarkNADialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setMarkNADialogOpen(false)}
+            >
               Cancel
             </Button>
             <Button
               onClick={handleMarkNA}
-              disabled={isMarkingNA || !naReasonCategory || (naReasonCategory === 'other' && !naReason.trim())}
+              disabled={
+                isMarkingNA ||
+                !naReasonCategory ||
+                (naReasonCategory === "other" && !naReason.trim())
+              }
               variant="destructive"
             >
-              {isMarkingNA ? 'Marking...' : 'Mark as N/A'}
+              {isMarkingNA ? "Marking..." : "Mark as N/A"}
             </Button>
           </div>
         </DialogContent>

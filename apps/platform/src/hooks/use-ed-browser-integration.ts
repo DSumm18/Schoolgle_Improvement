@@ -13,10 +13,10 @@
  * 3. Listen for 'ed-browser-request' events from the Ed widget
  */
 
-import { useEffect, useCallback, useState } from 'react';
-import { useBrowserControl } from '@/lib/browser-control-context';
-import { toast } from 'sonner';
-import type { BrowserControlState } from '@/components/browser/BrowserControlIndicator';
+import { useEffect, useCallback, useState } from "react";
+import { useBrowserControl } from "@/lib/browser-control-context";
+import { toast } from "sonner";
+import type { BrowserControlState } from "@/components/browser/BrowserControlIndicator";
 
 // ============================================================================
 // TYPES
@@ -25,7 +25,7 @@ import type { BrowserControlState } from '@/components/browser/BrowserControlInd
 export interface EdBrowserRequest {
   url: string;
   reason?: string;
-  action?: 'navigate' | 'fill_form' | 'screenshot' | 'extract';
+  action?: "navigate" | "fill_form" | "screenshot" | "extract";
   context?: {
     checkId?: string;
     domain?: string;
@@ -57,7 +57,9 @@ export function useEdBrowserIntegration() {
   } = useBrowserControl();
 
   const [isProcessing, setIsProcessing] = useState(false);
-  const [lastResponse, setLastResponse] = useState<EdBrowserResponse | null>(null);
+  const [lastResponse, setLastResponse] = useState<EdBrowserResponse | null>(
+    null,
+  );
 
   // Handle browser automation request from Ed
   const handleBrowserRequest = useCallback(
@@ -70,11 +72,11 @@ export function useEdBrowserIntegration() {
         const sessionUrl = currentSession?.url;
         const needsNewSession =
           !currentSession ||
-          !request.url.startsWith(extractDomain(sessionUrl)) ||
-          currentSession.status === 'completed' ||
-          currentSession.status === 'error';
+          !request.url.startsWith(extractDomain(sessionUrl || "")) ||
+          currentSession.status === "completed" ||
+          currentSession.status === "error";
 
-        let sessionId = currentSession?.sessionId;
+        let sessionId: string | null | undefined = currentSession?.sessionId;
 
         if (needsNewSession) {
           // Close existing session if needed
@@ -84,35 +86,37 @@ export function useEdBrowserIntegration() {
 
           // Start new session (will trigger domain approval if needed)
           updateBrowserState({
-            status: 'starting',
-            currentAction: 'Initializing browser session...',
+            status: "starting",
+            currentAction: "Initializing browser session...",
           });
 
           sessionId = await startSession(
             request.url,
-            request.reason || 'Ed needs to access this site to help with your request.'
+            request.reason ||
+              "Ed needs to access this site to help with your request.",
           );
 
           if (!sessionId) {
             return {
               success: false,
-              error: 'Session could not be started. Domain may have been declined.',
+              error:
+                "Session could not be started. Domain may have been declined.",
             };
           }
         }
 
         // Perform the requested action
-        if (request.action === 'screenshot') {
+        if (request.action === "screenshot") {
           updateBrowserState({
-            status: 'analyzing',
-            currentAction: 'Capturing screenshot...',
+            status: "analyzing",
+            currentAction: "Capturing screenshot...",
           });
 
-          const screenshotResponse = await fetch('/api/browser', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+          const screenshotResponse = await fetch("/api/browser", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              action: 'screenshot',
+              action: "screenshot",
               sessionId,
               options: { full: true },
             }),
@@ -120,7 +124,7 @@ export function useEdBrowserIntegration() {
 
           if (screenshotResponse.ok) {
             const { screenshotPath } = await screenshotResponse.json();
-            updateBrowserState({ status: 'completed' });
+            updateBrowserState({ status: "completed" });
 
             return {
               success: true,
@@ -131,18 +135,18 @@ export function useEdBrowserIntegration() {
         }
 
         // For navigation, the session setup already handled it
-        if (request.action === 'navigate' || !request.action) {
+        if (request.action === "navigate" || !request.action) {
           updateBrowserState({
-            status: 'analyzing',
-            currentAction: 'Analyzing page content...',
+            status: "analyzing",
+            currentAction: "Analyzing page content...",
           });
 
           // Get snapshot of page
-          const snapshotResponse = await fetch('/api/browser', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+          const snapshotResponse = await fetch("/api/browser", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              action: 'snapshot',
+              action: "snapshot",
               sessionId,
               options: { interactive: true },
             }),
@@ -150,7 +154,7 @@ export function useEdBrowserIntegration() {
 
           if (snapshotResponse.ok) {
             const { snapshot } = await snapshotResponse.json();
-            updateBrowserState({ status: 'completed' });
+            updateBrowserState({ status: "completed" });
 
             return {
               success: true,
@@ -161,27 +165,29 @@ export function useEdBrowserIntegration() {
         }
 
         // Default response for successful session
-        updateBrowserState({ status: 'completed' });
+        updateBrowserState({ status: "completed" });
         return {
           success: true,
           sessionId,
         };
       } catch (error) {
-        console.error('[EdBrowserIntegration] Error handling request:', error);
+        console.error("[EdBrowserIntegration] Error handling request:", error);
         updateBrowserState({
-          status: 'error',
-          interruptReason: error instanceof Error ? error.message : 'Unknown error',
+          status: "error",
+          interruptReason:
+            error instanceof Error ? error.message : "Unknown error",
         });
 
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error occurred',
+          error:
+            error instanceof Error ? error.message : "Unknown error occurred",
         };
       } finally {
         setIsProcessing(false);
       }
     },
-    [currentSession, startSession, stopSession, updateBrowserState]
+    [currentSession, startSession, stopSession, updateBrowserState],
   );
 
   // Send response back to Ed
@@ -189,7 +195,7 @@ export function useEdBrowserIntegration() {
     setLastResponse(response);
 
     // Dispatch event that Ed widget can listen to
-    const event = new CustomEvent('ed-browser-response', { detail: response });
+    const event = new CustomEvent("ed-browser-response", { detail: response });
     window.dispatchEvent(event);
 
     // Also try to call Ed directly if available
@@ -202,8 +208,8 @@ export function useEdBrowserIntegration() {
   // Handle manual stop
   const handleStopSession = useCallback(async () => {
     await stopSession();
-    toast.info('Browser session stopped', {
-      description: 'You can start a new session anytime.',
+    toast.info("Browser session stopped", {
+      description: "You can start a new session anytime.",
     });
   }, [stopSession]);
 
@@ -213,31 +219,40 @@ export function useEdBrowserIntegration() {
       const customEvent = event as CustomEvent<EdBrowserRequest>;
       const request = customEvent.detail;
 
-      console.log('[EdBrowserIntegration] Received browser request from Ed:', request);
+      console.log(
+        "[EdBrowserIntegration] Received browser request from Ed:",
+        request,
+      );
 
       const response = await handleBrowserRequest(request);
       sendResponseToEd(response);
 
       // Show toast notification
       if (response.success) {
-        toast.success('Ed completed the browser action', {
+        toast.success("Ed completed the browser action", {
           description: `Successfully accessed ${extractDomain(request.url)}`,
         });
-      } else if (response.error?.includes('declined')) {
-        toast.info('Browser access declined', {
-          description: 'You can approve the domain when ready.',
+      } else if (response.error?.includes("declined")) {
+        toast.info("Browser access declined", {
+          description: "You can approve the domain when ready.",
         });
       } else {
-        toast.error('Browser action failed', {
-          description: response.error || 'Unknown error occurred',
+        toast.error("Browser action failed", {
+          description: response.error || "Unknown error occurred",
         });
       }
     };
 
-    window.addEventListener('ed-browser-request', handleBrowserRequestEvent as EventListener);
+    window.addEventListener(
+      "ed-browser-request",
+      handleBrowserRequestEvent as EventListener,
+    );
 
     return () => {
-      window.removeEventListener('ed-browser-request', handleBrowserRequestEvent as EventListener);
+      window.removeEventListener(
+        "ed-browser-request",
+        handleBrowserRequestEvent as EventListener,
+      );
     };
   }, [handleBrowserRequest, sendResponseToEd]);
 
@@ -279,7 +294,7 @@ function extractDomain(url: string): string {
  * (e.g., from a button click)
  */
 export function triggerEdBrowserRequest(request: EdBrowserRequest): void {
-  const event = new CustomEvent('ed-browser-request', { detail: request });
+  const event = new CustomEvent("ed-browser-request", { detail: request });
   window.dispatchEvent(event);
 }
 
@@ -289,12 +304,12 @@ export function triggerEdBrowserRequest(request: EdBrowserRequest): void {
 export function requestEdNavigateAndExtract(
   url: string,
   reason?: string,
-  context?: EdBrowserRequest['context']
+  context?: EdBrowserRequest["context"],
 ): void {
   triggerEdBrowserRequest({
     url,
     reason,
-    action: 'navigate',
+    action: "navigate",
     context,
   });
 }
@@ -305,12 +320,12 @@ export function requestEdNavigateAndExtract(
 export function requestEdScreenshot(
   url: string,
   reason?: string,
-  context?: EdBrowserRequest['context']
+  context?: EdBrowserRequest["context"],
 ): void {
   triggerEdBrowserRequest({
     url,
     reason,
-    action: 'screenshot',
+    action: "screenshot",
     context,
   });
 }

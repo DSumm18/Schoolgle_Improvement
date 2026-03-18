@@ -171,7 +171,7 @@ export default function DomainPage() {
         }
 
         const response = await fetch(
-          `/api/estates/statutory-completions?organization_id=${organizationId}&domain=${domainSlug}`,
+          `/api/estates/statutory-completions?organizationId=${organizationId}&domain=${domainSlug}`,
           {
             headers,
             signal: controller.signal,
@@ -201,7 +201,7 @@ export default function DomainPage() {
                 checkId,
                 status: completion.status || "pending",
                 lastCompleted: completion.completed_at,
-                compleatedBy: completion.completed_by,
+                completedBy: completion.completed_by,
                 ragStatus: completion.rag_status,
                 notes: completion.notes,
               };

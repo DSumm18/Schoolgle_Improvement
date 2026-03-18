@@ -19,17 +19,14 @@ export const GET = protectedRoute(async (auth, request) => {
   const [assets, taskStats, contractorStats, helpdeskStats, ragStatus] =
     await Promise.all([
       AssetService.list(organizationId, undefined, { page: 1, pageSize: 1 })
-        .then((r) => r.total)
+        .then((r) => r.count)
         .catch(() => 0),
       TaskService.getStats(organizationId).catch(() => ({
         total: 0,
         pending: 0,
       })),
-      ContractorService.list(organizationId, undefined, {
-        page: 1,
-        pageSize: 1,
-      })
-        .then((r) => r.total)
+      ContractorService.listContractors(organizationId)
+        .then((r: any) => r.length || 0)
         .catch(() => 0),
       HelpdeskService.getStats(organizationId).catch(() => ({
         total: 0,

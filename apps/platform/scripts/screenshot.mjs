@@ -47,7 +47,7 @@ if (!SUPABASE_URL || !ANON_KEY) {
   );
   process.exit(1);
 }
-const BASE_URL = "http://localhost:3000";
+const BASE_URL = process.env.BASE_URL || "http://localhost:3002";
 
 const TEST_EMAIL = "ui-test@schoolgle.co.uk";
 const TEST_PASSWORD = "UIReview2026x";
@@ -104,8 +104,8 @@ async function capturePage(page, urlPath, outputName) {
   const outputFile = join(OUTPUT_DIR, `${outputName}.png`);
   const fullUrl = `${BASE_URL}${urlPath}`;
   console.log(`  ${fullUrl}`);
-  await page.goto(fullUrl, { waitUntil: "networkidle", timeout: 30000 });
-  await page.waitForTimeout(2500);
+  await page.goto(fullUrl, { waitUntil: "load", timeout: 60000 });
+  await page.waitForTimeout(8000);
   await page.screenshot({ path: outputFile, fullPage: true });
   console.log(`  → ${outputFile}`);
   return outputFile;

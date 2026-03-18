@@ -7,12 +7,13 @@ interface RiskHeatMapProps {
   onCellClick?: (likelihood: number, impact: number) => void;
 }
 
+// Traditional risk matrix colours — universally recognised in schools & governance
 function getCellColor(likelihood: number, impact: number): string {
   const score = likelihood * impact;
-  if (score >= 17) return "bg-rose-500 text-white hover:bg-rose-600";
-  if (score >= 10) return "bg-orange-400 text-white hover:bg-orange-500";
-  if (score >= 5) return "bg-yellow-300 text-yellow-900 hover:bg-yellow-400";
-  return "bg-emerald-300 text-emerald-900 hover:bg-emerald-400";
+  if (score >= 17) return "bg-[#d32f2f] text-white hover:bg-[#b71c1c]"; // Red — Critical
+  if (score >= 10) return "bg-[#f57c00] text-white hover:bg-[#e65100]"; // Orange — High
+  if (score >= 5) return "bg-[#fbc02d] text-[#3e2723] hover:bg-[#f9a825]"; // Amber/Yellow — Medium
+  return "bg-[#4caf50] text-white hover:bg-[#388e3c]"; // Green — Low
 }
 
 export function RiskHeatMap({ matrix, onCellClick }: RiskHeatMapProps) {
@@ -85,10 +86,10 @@ export function RiskHeatMap({ matrix, onCellClick }: RiskHeatMapProps) {
           Key:
         </span>
         {[
-          { label: "Low (1-4)", color: "bg-emerald-300" },
-          { label: "Medium (5-9)", color: "bg-yellow-300" },
-          { label: "High (10-16)", color: "bg-orange-400" },
-          { label: "Critical (17-25)", color: "bg-rose-500" },
+          { label: "Low (1-4)", color: "bg-[#4caf50]" },
+          { label: "Medium (5-9)", color: "bg-[#fbc02d]" },
+          { label: "High (10-16)", color: "bg-[#f57c00]" },
+          { label: "Critical (17-25)", color: "bg-[#d32f2f]" },
         ].map((item) => (
           <div key={item.label} className="flex items-center gap-1.5">
             <div className={`w-3 h-3 rounded ${item.color}`} />

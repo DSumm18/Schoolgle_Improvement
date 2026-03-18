@@ -114,6 +114,42 @@ export const POST = protectedRoute(async (auth, req) => {
         }
       }
 
+      // Auto-populate settings from DfE data + school info
+      const settings: Record<string, any> = {};
+      if (dfeSchool) {
+        if (dfeSchool.phone) settings.phone = dfeSchool.phone;
+        if (dfeSchool.email) settings.email = dfeSchool.email;
+        if (dfeSchool.website) settings.website = dfeSchool.website;
+        // Build address string from parts
+        const addrParts = [
+          dfeSchool.address_line1,
+          dfeSchool.address_line2,
+          dfeSchool.address_line3,
+          dfeSchool.town,
+          dfeSchool.postcode,
+        ].filter(Boolean);
+        if (addrParts.length > 0) settings.address = addrParts.join(", ");
+      } else {
+        // Fallback to provided data
+        const addrParts = [school.address, school.town, school.postcode].filter(
+          Boolean,
+        );
+        if (addrParts.length > 0) settings.address = addrParts.join(", ");
+      }
+      // Default footer to school name
+      settings.footer_text = orgData.name;
+      // Default primary colour
+      settings.primary_color = "#0ea5e9";
+
+      if (Object.keys(settings).length > 0) {
+        orgData.settings = settings;
+      }
+
+      // Store website URL at org level too
+      if (dfeSchool?.website) {
+        orgData.website_url = dfeSchool.website;
+      }
+
       const { data: newOrg, error: createError } = await supabase
         .from("organizations")
         .insert(orgData)

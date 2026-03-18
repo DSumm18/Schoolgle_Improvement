@@ -5,10 +5,9 @@
  * Schools can add their own templates, plus use public templates like RIDDOR.
  */
 
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase-client';
+import { useState, useEffect } from "react";
 
 interface FormTemplate {
   id: string;
@@ -28,7 +27,6 @@ interface TemplateGroup {
 }
 
 export default function EdFormTemplatesPage() {
-  const supabase = createClient();
   const [templates, setTemplates] = useState<TemplateGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -40,21 +38,26 @@ export default function EdFormTemplatesPage() {
 
   const loadTemplates = async () => {
     setLoading(true);
-    const { data } = await supabase
-      .get('ed/form-templates')
-      .getJSON<{ templates: { public: FormTemplate[], school: FormTemplate[] } }>();
+    try {
+      const res = await fetch("/api/ed/form-templates");
+      const data = (await res.json()) as {
+        templates?: { public: FormTemplate[]; school: FormTemplate[] };
+      };
 
-    if (data?.templates) {
-      const all = [...data.templates.public, ...data.templates.school];
-      const grouped = groupByCategory(all);
-      setTemplates(grouped);
+      if (data?.templates) {
+        const all = [...data.templates.public, ...data.templates.school];
+        const grouped = groupByCategory(all);
+        setTemplates(grouped);
+      }
+    } catch (err) {
+      console.error("Failed to load templates", err);
     }
     setLoading(false);
   };
 
   const groupByCategory = (templates: FormTemplate[]): TemplateGroup[] => {
     const groups: Record<string, FormTemplate[]> = {};
-    templates.forEach(t => {
+    templates.forEach((t) => {
       if (!groups[t.form_category]) {
         groups[t.form_category] = [];
       }
@@ -67,26 +70,28 @@ export default function EdFormTemplatesPage() {
   };
 
   const categoryIcons: Record<string, string> = {
-    hse: '⚠️',
-    safeguarding: '🛡️',
-    admissions: '📚',
-    compliance: '✅',
-    other: '📋',
+    hse: "⚠️",
+    safeguarding: "🛡️",
+    admissions: "📚",
+    compliance: "✅",
+    other: "📋",
   };
 
   const categoryNames: Record<string, string> = {
-    hse: 'Health & Safety Executive (HSE)',
-    safeguarding: 'Safeguarding',
-    admissions: 'Admissions',
-    compliance: 'Compliance',
-    other: 'Other Forms',
+    hse: "Health & Safety Executive (HSE)",
+    safeguarding: "Safeguarding",
+    admissions: "Admissions",
+    compliance: "Compliance",
+    other: "Other Forms",
   };
 
   return (
     <div className="max-w-6xl mx-auto p-6">
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Ed Form Templates</h1>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Ed Form Templates
+          </h1>
           <p className="text-gray-600 mt-1">
             Pre-configured forms that Ed knows how to fill
           </p>
@@ -107,19 +112,28 @@ export default function EdFormTemplatesPage() {
       ) : (
         <div className="space-y-8">
           {templates.map((group) => (
-            <div key={group.category} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div
+              key={group.category}
+              className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+            >
               <div className="px-6 py-4 bg-gray-50 border-b border-gray-200 flex items-center gap-3">
-                <span className="text-2xl">{categoryIcons[group.category] || '📋'}</span>
+                <span className="text-2xl">
+                  {categoryIcons[group.category] || "📋"}
+                </span>
                 <h2 className="text-xl font-semibold text-gray-900">
                   {categoryNames[group.category] || group.category}
                 </h2>
                 <span className="ml-auto text-sm text-gray-500">
-                  {group.templates.length} template{group.templates.length !== 1 ? 's' : ''}
+                  {group.templates.length} template
+                  {group.templates.length !== 1 ? "s" : ""}
                 </span>
               </div>
               <div className="divide-y divide-gray-100">
                 {group.templates.map((template) => (
-                  <div key={template.id} className="p-6 hover:bg-gray-50 transition">
+                  <div
+                    key={template.id}
+                    className="p-6 hover:bg-gray-50 transition"
+                  >
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <div className="flex items-center gap-3">
@@ -132,14 +146,20 @@ export default function EdFormTemplatesPage() {
                             </span>
                           )}
                         </div>
-                        <p className="text-gray-600 mt-1">{template.description}</p>
+                        <p className="text-gray-600 mt-1">
+                          {template.description}
+                        </p>
                         {template.help_text && (
-                          <p className="text-sm text-gray-500 mt-2">{template.help_text}</p>
+                          <p className="text-sm text-gray-500 mt-2">
+                            {template.help_text}
+                          </p>
                         )}
                         <div className="mt-3 flex items-center gap-4 text-sm text-gray-500">
                           <span>🔗 {template.url_pattern}</span>
                           {template.estimated_time_minutes && (
-                            <span>⏱️ ~{template.estimated_time_minutes} minutes</span>
+                            <span>
+                              ⏱️ ~{template.estimated_time_minutes} minutes
+                            </span>
                           )}
                         </div>
                       </div>
@@ -170,19 +190,25 @@ export default function EdFormTemplatesPage() {
   );
 }
 
-function AddTemplateModal({ onClose, onSave }: { onClose: () => void, onSave: () => void }) {
-  const [formKey, setFormKey] = useState('');
-  const [formName, setFormName] = useState('');
-  const [category, setCategory] = useState('other');
-  const [urlPattern, setUrlPattern] = useState('');
-  const [description, setDescription] = useState('');
+function AddTemplateModal({
+  onClose,
+  onSave,
+}: {
+  onClose: () => void;
+  onSave: () => void;
+}) {
+  const [formKey, setFormKey] = useState("");
+  const [formName, setFormName] = useState("");
+  const [category, setCategory] = useState("other");
+  const [urlPattern, setUrlPattern] = useState("");
+  const [description, setDescription] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     // Save template...
-    await fetch('/api/ed/form-templates', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    await fetch("/api/ed/form-templates", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         form_key: formKey,
         form_name: formName,

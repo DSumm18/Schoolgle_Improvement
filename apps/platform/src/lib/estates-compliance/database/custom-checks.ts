@@ -5,9 +5,9 @@
  * Custom checks are user-created compliance checks specific to a school's needs.
  */
 
-import { createClient } from '@/lib/supabase/server';
-import type { CheckVisibility, RecurrencePattern } from '../check-templates';
-import type { ComplianceDomain } from '../statutory-checks';
+import { createClient } from "@/lib/supabase/server";
+import type { CheckVisibility, RecurrencePattern } from "../check-templates";
+import type { ComplianceDomain } from "../statutory-checks";
 
 /**
  * Custom Check interface matching the database schema
@@ -61,7 +61,9 @@ export interface CreateCustomCheckInput {
 /**
  * Input for updating a custom check
  */
-export type UpdateCustomCheckInput = Partial<Omit<CreateCustomCheckInput, 'organization_id' | 'created_by'>> & {
+export type UpdateCustomCheckInput = Partial<
+  Omit<CreateCustomCheckInput, "organization_id" | "created_by">
+> & {
   archived?: boolean;
 };
 
@@ -103,40 +105,42 @@ export interface PaginatedResponse<T> {
 export async function getCustomChecks(
   organizationId: string,
   filters?: CustomCheckFilters,
-  pagination?: PaginationOptions
+  pagination?: PaginationOptions,
 ): Promise<PaginatedResponse<CustomCheck>> {
   const supabase = await createClient();
 
   let query = supabase
-    .from('custom_checks')
-    .select('*', { count: 'exact' })
-    .eq('organization_id', organizationId);
+    .from("custom_checks")
+    .select("*", { count: "exact" })
+    .eq("organization_id", organizationId);
 
   // Don't include archived by default
   if (!filters?.include_archived) {
-    query = query.is('archived_at', null);
+    query = query.is("archived_at", null);
   }
 
-  query = query.order('created_at', { ascending: false });
+  query = query.order("created_at", { ascending: false });
 
   // Apply filters
   if (filters?.domain) {
-    query = query.eq('compliance_domain', filters.domain);
+    query = query.eq("compliance_domain", filters.domain);
   }
   if (filters?.frequency) {
-    query = query.eq('frequency', filters.frequency);
+    query = query.eq("frequency", filters.frequency);
   }
   if (filters?.visibility) {
-    query = query.eq('visibility', filters.visibility);
+    query = query.eq("visibility", filters.visibility);
   }
   if (filters?.is_template !== undefined) {
-    query = query.eq('is_template', filters.is_template);
+    query = query.eq("is_template", filters.is_template);
   }
   if (filters?.search) {
-    query = query.or(`name.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
+    query = query.or(
+      `name.ilike.%${filters.search}%,description.ilike.%${filters.search}%`,
+    );
   }
   if (filters?.tags && filters.tags.length > 0) {
-    query = query.contains('tags', filters.tags);
+    query = query.contains("tags", filters.tags);
   }
 
   // Apply pagination
@@ -149,17 +153,19 @@ export async function getCustomChecks(
   const { data, error, count } = await query;
 
   if (error) {
-    console.error('Error fetching custom checks:', error);
-    throw new Error('Failed to fetch custom checks');
+    console.error("Error fetching custom checks:", error);
+    throw new Error("Failed to fetch custom checks");
   }
 
-  const totalPages = pagination ? Math.ceil((count || 0) / pagination.pageSize) : 1;
+  const totalPages = pagination
+    ? Math.ceil((count || 0) / pagination.pageSize)
+    : 1;
 
   return {
     data: data || [],
     total: count || 0,
     page: pagination?.page || 1,
-    pageSize: pagination?.pageSize || (data?.length || 0),
+    pageSize: pagination?.pageSize || data?.length || 0,
     totalPages,
   };
 }
@@ -167,17 +173,19 @@ export async function getCustomChecks(
 /**
  * Get a single custom check by ID
  */
-export async function getCustomCheckById(checkId: string): Promise<CustomCheck | null> {
+export async function getCustomCheckById(
+  checkId: string,
+): Promise<CustomCheck | null> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
-    .from('custom_checks')
-    .select('*')
-    .eq('id', checkId)
+    .from("custom_checks")
+    .select("*")
+    .eq("id", checkId)
     .single();
 
   if (error) {
-    console.error('Error fetching custom check:', error);
+    console.error("Error fetching custom check:", error);
     return null;
   }
 
@@ -187,11 +195,13 @@ export async function getCustomCheckById(checkId: string): Promise<CustomCheck |
 /**
  * Create a new custom check
  */
-export async function createCustomCheck(input: CreateCustomCheckInput): Promise<CustomCheck> {
+export async function createCustomCheck(
+  input: CreateCustomCheckInput,
+): Promise<CustomCheck> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
-    .from('custom_checks')
+    .from("custom_checks")
     .insert({
       ...input,
       tags: input.tags || [],
@@ -204,8 +214,8 @@ export async function createCustomCheck(input: CreateCustomCheckInput): Promise<
     .single();
 
   if (error) {
-    console.error('Error creating custom check:', error);
-    throw new Error('Failed to create custom check');
+    console.error("Error creating custom check:", error);
+    throw new Error("Failed to create custom check");
   }
 
   return data;
@@ -216,7 +226,7 @@ export async function createCustomCheck(input: CreateCustomCheckInput): Promise<
  */
 export async function updateCustomCheck(
   checkId: string,
-  updates: UpdateCustomCheckInput
+  updates: UpdateCustomCheckInput,
 ): Promise<CustomCheck> {
   const supabase = await createClient();
 
@@ -231,15 +241,15 @@ export async function updateCustomCheck(
   }
 
   const { data, error } = await supabase
-    .from('custom_checks')
+    .from("custom_checks")
     .update(updateData)
-    .eq('id', checkId)
+    .eq("id", checkId)
     .select()
     .single();
 
   if (error) {
-    console.error('Error updating custom check:', error);
-    throw new Error('Failed to update custom check');
+    console.error("Error updating custom check:", error);
+    throw new Error("Failed to update custom check");
   }
 
   return data;
@@ -252,13 +262,13 @@ export async function archiveCustomCheck(checkId: string): Promise<void> {
   const supabase = await createClient();
 
   const { error } = await supabase
-    .from('custom_checks')
+    .from("custom_checks")
     .update({ archived_at: new Date().toISOString() })
-    .eq('id', checkId);
+    .eq("id", checkId);
 
   if (error) {
-    console.error('Error archiving custom check:', error);
-    throw new Error('Failed to archive custom check');
+    console.error("Error archiving custom check:", error);
+    throw new Error("Failed to archive custom check");
   }
 }
 
@@ -269,13 +279,13 @@ export async function deleteCustomCheck(checkId: string): Promise<void> {
   const supabase = await createClient();
 
   const { error } = await supabase
-    .from('custom_checks')
+    .from("custom_checks")
     .delete()
-    .eq('id', checkId);
+    .eq("id", checkId);
 
   if (error) {
-    console.error('Error deleting custom check:', error);
-    throw new Error('Failed to delete custom check');
+    console.error("Error deleting custom check:", error);
+    throw new Error("Failed to delete custom check");
   }
 }
 
@@ -286,25 +296,29 @@ export async function cloneCustomCheck(
   originalCheckId: string,
   newOrganizationId: string,
   createdBy: string,
-  overrides?: Partial<CreateCustomCheckInput>
+  overrides?: Partial<CreateCustomCheckInput>,
 ): Promise<CustomCheck> {
   const original = await getCustomCheckById(originalCheckId);
   if (!original) {
-    throw new Error('Original check not found');
+    throw new Error("Original check not found");
   }
 
   return createCustomCheck({
     organization_id: newOrganizationId,
     name: overrides?.name || `${original.name} (Copy)`,
     description: overrides?.description || original.description,
-    compliance_domain: overrides?.compliance_domain || original.compliance_domain,
+    compliance_domain:
+      overrides?.compliance_domain || original.compliance_domain,
     frequency: overrides?.frequency || original.frequency,
-    estimated_duration: overrides?.estimated_duration ?? original.estimated_duration,
-    requires_qualification: overrides?.requires_qualification || original.requires_qualification,
-    evidence_required: overrides?.evidence_required || original.evidence_required,
+    estimated_duration:
+      overrides?.estimated_duration ?? original.estimated_duration,
+    requires_qualification:
+      overrides?.requires_qualification || original.requires_qualification,
+    evidence_required:
+      overrides?.evidence_required || original.evidence_required,
     checklist_items: overrides?.checklist_items || original.checklist_items,
     notes: overrides?.notes || original.notes,
-    visibility: overrides?.visibility || 'private',
+    visibility: overrides?.visibility || "private",
     tags: overrides?.tags || original.tags,
     is_template: false,
     cloned_from: originalCheckId,
@@ -315,21 +329,23 @@ export async function cloneCustomCheck(
 /**
  * Increment usage count for a template
  */
-export async function incrementTemplateUsage(templateId: string): Promise<void> {
+export async function incrementTemplateUsage(
+  templateId: string,
+): Promise<void> {
   const supabase = await createClient();
 
-  const { error } = await supabase
-    .from('custom_checks')
-    .rpc('increment_usage_count', { check_id: templateId });
+  const { error } = await supabase.rpc("increment_usage_count", {
+    check_id: templateId,
+  });
 
   if (error) {
     // If RPC doesn't exist, fall back to manual update
     const check = await getCustomCheckById(templateId);
     if (check) {
       await supabase
-        .from('custom_checks')
+        .from("custom_checks")
         .update({ usage_count: (check.usage_count || 0) + 1 })
-        .eq('id', templateId);
+        .eq("id", templateId);
     }
   }
 }
@@ -339,29 +355,31 @@ export async function incrementTemplateUsage(templateId: string): Promise<void> 
  */
 export async function getPublicTemplates(
   filters?: CustomCheckFilters,
-  pagination?: PaginationOptions
+  pagination?: PaginationOptions,
 ): Promise<PaginatedResponse<CustomCheck>> {
   const supabase = await createClient();
 
   let query = supabase
-    .from('custom_checks')
-    .select('*', { count: 'exact' })
-    .or('visibility.eq.public,is_template.eq.true')
-    .is('archived_at', null)
-    .order('usage_count', { ascending: false });
+    .from("custom_checks")
+    .select("*", { count: "exact" })
+    .or("visibility.eq.public,is_template.eq.true")
+    .is("archived_at", null)
+    .order("usage_count", { ascending: false });
 
   // Apply filters
   if (filters?.domain) {
-    query = query.eq('compliance_domain', filters.domain);
+    query = query.eq("compliance_domain", filters.domain);
   }
   if (filters?.frequency) {
-    query = query.eq('frequency', filters.frequency);
+    query = query.eq("frequency", filters.frequency);
   }
   if (filters?.search) {
-    query = query.or(`name.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
+    query = query.or(
+      `name.ilike.%${filters.search}%,description.ilike.%${filters.search}%`,
+    );
   }
   if (filters?.tags && filters.tags.length > 0) {
-    query = query.contains('tags', filters.tags);
+    query = query.contains("tags", filters.tags);
   }
 
   // Apply pagination
@@ -374,17 +392,19 @@ export async function getPublicTemplates(
   const { data, error, count } = await query;
 
   if (error) {
-    console.error('Error fetching public templates:', error);
-    throw new Error('Failed to fetch public templates');
+    console.error("Error fetching public templates:", error);
+    throw new Error("Failed to fetch public templates");
   }
 
-  const totalPages = pagination ? Math.ceil((count || 0) / pagination.pageSize) : 1;
+  const totalPages = pagination
+    ? Math.ceil((count || 0) / pagination.pageSize)
+    : 1;
 
   return {
     data: data || [],
     total: count || 0,
     page: pagination?.page || 1,
-    pageSize: pagination?.pageSize || (data?.length || 0),
+    pageSize: pagination?.pageSize || data?.length || 0,
     totalPages,
   };
 }

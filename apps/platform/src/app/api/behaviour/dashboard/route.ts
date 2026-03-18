@@ -154,6 +154,168 @@ export const GET = protectedRoute(async (auth) => {
     .gte("created_at", todayStart);
 
   if (error || !todayIncidents || todayIncidents.length === 0) {
+    // Try MIS resolver before falling back to demo
+    try {
+      const { getMISDataServiceForOrg } =
+        await import("@/lib/mis/data-service");
+      const mis = await getMISDataServiceForOrg(organizationId);
+      const behaviourResult = await mis.read(organizationId, "behaviour");
+
+      if (behaviourResult.data.length > 0) {
+        const misIncidents = behaviourResult.data as any[];
+        const todayStr = now.toISOString().split("T")[0];
+
+        // Compute today's stats
+        const todayMIS = misIncidents.filter((r) => r.date === todayStr);
+        const todayPos = todayMIS.filter((r) => r.type === "Positive").length;
+        const todayNeg = todayMIS.filter((r) => r.type === "Negative").length;
+
+        // Compute this week's stats
+        const weekMIS = misIncidents.filter(
+          (r) => r.date >= weekStartStr.split("T")[0],
+        );
+        const weekPos = weekMIS.filter((r) => r.type === "Positive").length;
+        const weekNeg = weekMIS.filter((r) => r.type === "Negative").length;
+
+        // Compute this term stats (last 6 weeks)
+        const termStart = new Date(now);
+        termStart.setDate(termStart.getDate() - 42);
+        const termStartStr = termStart.toISOString().split("T")[0];
+        const termMIS = misIncidents.filter((r) => r.date >= termStartStr);
+        const termPos = termMIS.filter((r) => r.type === "Positive").length;
+        const termNeg = termMIS.filter((r) => r.type === "Negative").length;
+
+        // Category breakdown
+        const posCats: Record<string, number> = {};
+        const negCats: Record<string, number> = {};
+        for (const r of termMIS) {
+          const cat = r.category || "other";
+          if (r.type === "Positive") {
+            posCats[cat] = (posCats[cat] || 0) + 1;
+          } else {
+            negCats[cat] = (negCats[cat] || 0) + 1;
+          }
+        }
+
+        // Exclusion summary
+        const exclusions = misIncidents.filter((r) => r.is_exclusion);
+        const fteCount = exclusions.filter(
+          (r) => r.exclusion_type === "FTE",
+        ).length;
+        const pexCount = exclusions.filter(
+          (r) => r.exclusion_type === "PEX",
+        ).length;
+        const totalDaysLost = exclusions.reduce(
+          (sum, r) => sum + (r.exclusion_days || 0),
+          0,
+        );
+        const excludedPupils = new Set(exclusions.map((r) => r.student_id))
+          .size;
+
+        // Repeat offenders (negative incidents)
+        const pupilNegMap: Record<
+          string,
+          {
+            name: string;
+            year_group: number;
+            count: number;
+            lastDate: string;
+            categories: Set<string>;
+          }
+        > = {};
+        for (const r of termMIS) {
+          if (r.type !== "Negative") continue;
+          if (!pupilNegMap[r.student_id]) {
+            pupilNegMap[r.student_id] = {
+              name: r.student_name,
+              year_group: r.year_group,
+              count: 0,
+              lastDate: r.date,
+              categories: new Set(),
+            };
+          }
+          const entry = pupilNegMap[r.student_id];
+          entry.count++;
+          if (r.date > entry.lastDate) entry.lastDate = r.date;
+          entry.categories.add(r.category);
+        }
+
+        const repeatOffenders = Object.values(pupilNegMap)
+          .filter((p) => p.count >= 2)
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 5)
+          .map((p) => ({
+            pupil_name: p.name,
+            year_group: p.year_group,
+            incident_count: p.count,
+            last_incident: p.lastDate,
+            categories: Array.from(p.categories),
+          }));
+
+        // Active exclusions (those with end date >= today)
+        const activeExcl = exclusions.filter((r) => r.date >= todayStr).length;
+
+        // SLT referrals today
+        const sltToday = todayMIS.filter(
+          (r) => r.action_taken && r.action_taken.toLowerCase().includes("slt"),
+        ).length;
+
+        return apiSuccess({
+          today: {
+            total: todayMIS.length,
+            positive: todayPos,
+            negative: todayNeg,
+            ratio:
+              todayNeg > 0
+                ? Math.round((todayPos / todayNeg) * 100) / 100
+                : todayPos,
+          },
+          this_week: {
+            total: weekMIS.length,
+            positive: weekPos,
+            negative: weekNeg,
+            ratio:
+              weekNeg > 0
+                ? Math.round((weekPos / weekNeg) * 100) / 100
+                : weekPos,
+          },
+          this_term: {
+            total: termMIS.length,
+            positive: termPos,
+            negative: termNeg,
+            ratio:
+              termNeg > 0
+                ? Math.round((termPos / termNeg) * 100) / 100
+                : termPos,
+          },
+          detentions_scheduled: 0,
+          active_exclusions: activeExcl,
+          slt_referrals_today: sltToday,
+          category_breakdown: {
+            positive: Object.entries(posCats)
+              .sort((a, b) => b[1] - a[1])
+              .map(([category, count]) => ({ category, count })),
+            negative: Object.entries(negCats)
+              .sort((a, b) => b[1] - a[1])
+              .map(([category, count]) => ({ category, count })),
+          },
+          exclusion_summary: {
+            fixed_term_this_term: fteCount,
+            permanent_this_term: pexCount,
+            lunchtime_this_term: 0,
+            managed_moves: 0,
+            total_days_lost: totalDaysLost,
+            pupils_excluded: excludedPupils,
+          },
+          repeat_offenders: repeatOffenders,
+          demo: false,
+          data_source: "mis",
+        });
+      }
+    } catch (misErr) {
+      console.warn("[behaviour/dashboard] MIS read failed:", misErr);
+    }
+
     return apiSuccess(generateDemoStats());
   }
 

@@ -264,6 +264,7 @@ export default function ComplianceDashboard({
             organizationId={organizationId}
             stats={stats}
             onCreatePolicy={handleCreatePolicy}
+            onTabChange={setActiveTab}
           />
         </TabsContent>
 
@@ -304,10 +305,12 @@ function OverviewTab({
   organizationId,
   stats,
   onCreatePolicy,
+  onTabChange,
 }: {
   organizationId: string;
   stats: ComplianceDashboardStats | null;
   onCreatePolicy: () => void;
+  onTabChange: (tab: string) => void;
 }) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -369,7 +372,7 @@ function OverviewTab({
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => setActiveTab("policies")}
+                onClick={() => onTabChange("policies")}
               >
                 Review
               </Button>
@@ -389,7 +392,7 @@ function OverviewTab({
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => setActiveTab("policies")}
+                onClick={() => onTabChange("policies")}
               >
                 Review
               </Button>
@@ -409,7 +412,7 @@ function OverviewTab({
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => setActiveTab("training")}
+                onClick={() => onTabChange("training")}
               >
                 Review
               </Button>
@@ -429,7 +432,7 @@ function OverviewTab({
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => setActiveTab("gdpr")}
+                onClick={() => onTabChange("gdpr")}
               >
                 View
               </Button>

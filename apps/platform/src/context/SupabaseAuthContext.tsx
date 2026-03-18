@@ -34,10 +34,12 @@ interface AuthContextType {
   loading: boolean;
   organization: Organization | null;
   organizationId: string | null;
+  displayName: string | null;
   signInWithGoogle: () => Promise<void>;
   signInWithMicrosoft: () => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  switchOrganization: (orgId: string) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(
@@ -50,6 +52,7 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [organizationId, setOrganizationId] = useState<string | null>(null);
+  const [displayName, setDisplayName] = useState<string | null>(null);
   const router = useRouter();
 
   // Prevent race conditions: track if fetchOrganization is in progress
@@ -99,6 +102,10 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (response.ok) {
         const data = await response.json();
+        // Store the display name from the database (may differ from OAuth name)
+        if (data.user?.displayName) {
+          setDisplayName(data.user.displayName);
+        }
         if (data.organization) {
           console.log(
             "[AuthContext] Organization loaded via profile API:",
@@ -379,6 +386,55 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const switchOrganization = async (orgId: string) => {
+    if (!user?.id) return;
+
+    try {
+      // Fetch the new org's details + user's role in it
+      const { data: membership, error: memError } = await supabase
+        .from("organization_members")
+        .select("role, organizations(id, name, organization_type)")
+        .eq("user_id", user.id)
+        .eq("organization_id", orgId)
+        .maybeSingle();
+
+      if (memError || !membership) {
+        console.error(
+          "[AuthContext] switchOrganization failed:",
+          memError?.message,
+        );
+        return;
+      }
+
+      const org = Array.isArray(membership.organizations)
+        ? membership.organizations[0]
+        : membership.organizations;
+
+      if (org) {
+        setOrganizationId(org.id);
+        setOrganization({
+          id: org.id,
+          name: org.name,
+          role: (membership.role || "viewer") as Organization["role"],
+          organization_type: org.organization_type,
+        });
+
+        // Persist preferred org in user metadata
+        try {
+          await supabase.auth.updateUser({
+            data: { organization_id: orgId },
+          });
+        } catch {
+          // Non-fatal
+        }
+
+        console.log("[AuthContext] Switched to org:", org.name);
+      }
+    } catch (error) {
+      console.error("[AuthContext] switchOrganization error:", error);
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -387,10 +443,12 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
         loading,
         organization,
         organizationId,
+        displayName,
         signInWithGoogle,
         signInWithMicrosoft,
         signOut,
         refreshProfile,
+        switchOrganization,
       }}
     >
       {children}

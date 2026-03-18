@@ -293,7 +293,7 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
   }
 
   // Combine and format tasks
-  const unifiedTasks: UnifiedTask[] = [
+  const unifiedTasks: any[] = [
     ...(actions || []).map((a: any) => ({
       id: a.id,
       organization_id: a.organization_id,
@@ -735,9 +735,9 @@ async function calculateTaskSummary(
 
   return {
     total_tasks: actions.length,
-    by_status,
-    by_priority,
-    by_type,
+    by_status: byStatus,
+    by_priority: byPriority,
+    by_type: byType,
     overdue_count: overdueCount,
     due_this_week: dueThisWeek,
     completion_rate:

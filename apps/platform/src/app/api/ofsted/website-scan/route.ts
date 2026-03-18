@@ -426,10 +426,7 @@ export const POST = protectedRoute(async (auth, request) => {
           // Merge trust pages into main crawl results
           // Tag them so the assessor can see they're from the trust
           for (const page of trustCrawl.pages) {
-            page.metadata = {
-              ...page.metadata,
-              source: "trust",
-            };
+            (page.metadata as any).source = "trust";
             crawlResult.pages.push(page);
           }
 

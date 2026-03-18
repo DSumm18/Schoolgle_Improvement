@@ -48,38 +48,35 @@ export const GET = protectedRoute(async (auth, request) => {
   });
 });
 
-export const POST = protectedRoute(
-  async (auth, request) => {
-    const { organizationId, userId } = auth;
+export const POST = protectedRoute(async (auth, request) => {
+  const { organizationId, userId } = auth;
 
-    const body = await request.json();
+  const body = await request.json();
 
-    const ticket = await HelpdeskService.create(organizationId, {
-      ...body,
-      reported_by: userId,
+  const ticket = await HelpdeskService.create(organizationId, {
+    ...body,
+    reported_by: userId,
+  });
+
+  // Send notification for new ticket
+  try {
+    const supabase = createServiceRoleClient();
+    await supabase.from("notifications").insert({
+      organization_id: organizationId,
+      user_id: userId,
+      type: "helpdesk_created",
+      title: `New helpdesk ticket: ${body.title}`,
+      message: body.description || "A new helpdesk ticket has been created.",
+      link: "/estates-compliance/helpdesk",
+      metadata: {
+        ticketId: ticket.id,
+        priority: body.priority,
+        category: body.category,
+      },
     });
+  } catch (notifError) {
+    console.error("[Helpdesk] Failed to send notification:", notifError);
+  }
 
-    // Send notification for new ticket
-    try {
-      const supabase = createServiceRoleClient();
-      await supabase.from("notifications").insert({
-        organization_id: organizationId,
-        user_id: userId,
-        type: "helpdesk_created",
-        title: `New helpdesk ticket: ${body.title}`,
-        message: body.description || "A new helpdesk ticket has been created.",
-        link: "/estates-compliance/helpdesk",
-        metadata: {
-          ticketId: ticket.id,
-          priority: body.priority,
-          category: body.category,
-        },
-      });
-    } catch (notifError) {
-      console.error("[Helpdesk] Failed to send notification:", notifError);
-    }
-
-    return apiSuccess(ticket, 201);
-  },
-  { requiredRole: "caretaker" },
-);
+  return apiSuccess(ticket, 201);
+});

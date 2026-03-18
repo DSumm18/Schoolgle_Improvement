@@ -4,14 +4,14 @@
  * Functions for interacting with estates_compliance_tasks table.
  */
 
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from "@/lib/supabase/server";
 import type {
   ComplianceTask,
   TaskPriority,
   TaskStatus,
   RecurrencePattern,
   ComplianceDomain,
-} from '@/types/estates-compliance';
+} from "@/types/estates-compliance";
 
 /**
  * Filters for task queries
@@ -52,40 +52,44 @@ export interface PaginatedResponse<T> {
 export async function getComplianceTasks(
   organizationId: string,
   filters?: TaskFilters,
-  pagination?: PaginationOptions
+  pagination?: PaginationOptions,
 ): Promise<PaginatedResponse<ComplianceTask>> {
   const supabase = await createClient();
 
   let query = supabase
-    .from('estates_compliance_tasks')
-    .select('*', { count: 'exact' })
-    .eq('organization_id', organizationId)
-    .order('due_date', { ascending: true });
+    .from("estates_compliance_tasks")
+    .select("*", { count: "exact" })
+    .eq("organization_id", organizationId)
+    .order("due_date", { ascending: true });
 
   // Apply filters
   if (filters?.status) {
-    query = query.eq('status', filters.status);
+    query = query.eq("status", filters.status);
   }
   if (filters?.priority) {
-    query = query.eq('priority', filters.priority);
+    query = query.eq("priority", filters.priority);
   }
   if (filters?.domain) {
-    query = query.eq('compliance_domain', filters.domain);
+    query = query.eq("compliance_domain", filters.domain);
   }
   if (filters?.assigned_to) {
-    query = query.eq('assigned_to', filters.assigned_to);
+    query = query.eq("assigned_to", filters.assigned_to);
   }
   if (filters?.due_before) {
-    query = query.lte('due_date', filters.due_before.toISOString());
+    query = query.lte("due_date", filters.due_before.toISOString());
   }
   if (filters?.due_after) {
-    query = query.gte('due_date', filters.due_after.toISOString());
+    query = query.gte("due_date", filters.due_after.toISOString());
   }
   if (filters?.overdue_only) {
-    query = query.lt('due_date', new Date().toISOString()).eq('status', 'pending');
+    query = query
+      .lt("due_date", new Date().toISOString())
+      .eq("status", "pending");
   }
   if (filters?.search) {
-    query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
+    query = query.or(
+      `title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`,
+    );
   }
 
   // Apply pagination
@@ -98,17 +102,19 @@ export async function getComplianceTasks(
   const { data, error, count } = await query;
 
   if (error) {
-    console.error('Error fetching compliance tasks:', error);
-    throw new Error('Failed to fetch compliance tasks');
+    console.error("Error fetching compliance tasks:", error);
+    throw new Error("Failed to fetch compliance tasks");
   }
 
-  const totalPages = pagination ? Math.ceil((count || 0) / pagination.pageSize) : 1;
+  const totalPages = pagination
+    ? Math.ceil((count || 0) / pagination.pageSize)
+    : 1;
 
   return {
     data: data || [],
     total: count || 0,
     page: pagination?.page || 1,
-    pageSize: pagination?.pageSize || (data?.length || 0),
+    pageSize: pagination?.pageSize || data?.length || 0,
     totalPages,
   };
 }
@@ -116,17 +122,19 @@ export async function getComplianceTasks(
 /**
  * Get a single compliance task by ID
  */
-export async function getComplianceTaskById(taskId: string): Promise<ComplianceTask | null> {
+export async function getComplianceTaskById(
+  taskId: string,
+): Promise<ComplianceTask | null> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
-    .from('estates_compliance_tasks')
-    .select('*')
-    .eq('id', taskId)
+    .from("estates_compliance_tasks")
+    .select("*")
+    .eq("id", taskId)
     .single();
 
   if (error) {
-    console.error('Error fetching compliance task:', error);
+    console.error("Error fetching compliance task:", error);
     return null;
   }
 
@@ -140,7 +148,13 @@ export interface CreateTaskInput {
   organization_id: string;
   title: string;
   description?: string;
-  task_type: 'inspection' | 'maintenance' | 'testing' | 'review' | 'certification' | 'monitoring';
+  task_type:
+    | "inspection"
+    | "maintenance"
+    | "testing"
+    | "review"
+    | "certification"
+    | "monitoring";
   compliance_domain: ComplianceDomain;
   priority: TaskPriority;
   status?: TaskStatus;
@@ -157,21 +171,23 @@ export interface CreateTaskInput {
 /**
  * Create a new compliance task
  */
-export async function createComplianceTask(input: CreateTaskInput): Promise<ComplianceTask> {
+export async function createComplianceTask(
+  input: CreateTaskInput,
+): Promise<ComplianceTask> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
-    .from('estates_compliance_tasks')
+    .from("estates_compliance_tasks")
     .insert({
       ...input,
-      status: input.status || 'pending',
+      status: input.status || "pending",
     })
     .select()
     .single();
 
   if (error) {
-    console.error('Error creating compliance task:', error);
-    throw new Error('Failed to create compliance task');
+    console.error("Error creating compliance task:", error);
+    throw new Error("Failed to create compliance task");
   }
 
   return data;
@@ -180,11 +196,16 @@ export async function createComplianceTask(input: CreateTaskInput): Promise<Comp
 /**
  * Input for updating a task
  */
-export type UpdateTaskInput = Partial<Omit<CreateTaskInput, 'organization_id'>> & {
+export type UpdateTaskInput = Partial<
+  Omit<CreateTaskInput, "organization_id">
+> & {
   status?: TaskStatus;
   completion_notes?: string;
   completed_at?: string;
   completed_by?: string;
+  findings?: any[];
+  photo_urls?: string[];
+  metadata?: Record<string, any>;
 };
 
 /**
@@ -192,23 +213,23 @@ export type UpdateTaskInput = Partial<Omit<CreateTaskInput, 'organization_id'>> 
  */
 export async function updateComplianceTask(
   taskId: string,
-  updates: UpdateTaskInput
+  updates: UpdateTaskInput,
 ): Promise<ComplianceTask> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
-    .from('estates_compliance_tasks')
+    .from("estates_compliance_tasks")
     .update({
       ...updates,
       updated_at: new Date().toISOString(),
     })
-    .eq('id', taskId)
+    .eq("id", taskId)
     .select()
     .single();
 
   if (error) {
-    console.error('Error updating compliance task:', error);
-    throw new Error('Failed to update compliance task');
+    console.error("Error updating compliance task:", error);
+    throw new Error("Failed to update compliance task");
   }
 
   return data;
@@ -221,13 +242,13 @@ export async function deleteComplianceTask(taskId: string): Promise<void> {
   const supabase = await createClient();
 
   const { error } = await supabase
-    .from('estates_compliance_tasks')
+    .from("estates_compliance_tasks")
     .delete()
-    .eq('id', taskId);
+    .eq("id", taskId);
 
   if (error) {
-    console.error('Error deleting compliance task:', error);
-    throw new Error('Failed to delete compliance task');
+    console.error("Error deleting compliance task:", error);
+    throw new Error("Failed to delete compliance task");
   }
 }
 
@@ -236,13 +257,9 @@ export async function deleteComplianceTask(taskId: string): Promise<void> {
  */
 export async function getOverdueTasks(
   organizationId: string,
-  pagination?: PaginationOptions
+  pagination?: PaginationOptions,
 ): Promise<PaginatedResponse<ComplianceTask>> {
-  return getComplianceTasks(
-    organizationId,
-    { overdue_only: true },
-    pagination
-  );
+  return getComplianceTasks(organizationId, { overdue_only: true }, pagination);
 }
 
 /**
@@ -251,7 +268,7 @@ export async function getOverdueTasks(
 export async function getUpcomingTasks(
   organizationId: string,
   daysAhead: number = 7,
-  pagination?: PaginationOptions
+  pagination?: PaginationOptions,
 ): Promise<PaginatedResponse<ComplianceTask>> {
   const now = new Date();
   const future = new Date();
@@ -262,8 +279,8 @@ export async function getUpcomingTasks(
     {
       due_after: now,
       due_before: future,
-      status: 'pending',
+      status: "pending",
     },
-    pagination
+    pagination,
   );
 }

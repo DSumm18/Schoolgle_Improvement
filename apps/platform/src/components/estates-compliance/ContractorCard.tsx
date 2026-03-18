@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * ContractorCard Component
@@ -6,18 +6,21 @@
  * Displays a single contractor with key information and quick actions.
  */
 
-import Link from 'next/link';
-import { Contractor, ContractorStatus } from '@/types/estates-compliance';
+import Link from "next/link";
+import { Contractor } from "@/types/estates-compliance";
 
 interface ContractorCardProps {
   contractor: Contractor;
 }
 
-const statusConfig: Record<ContractorStatus, { label: string; className: string }> = {
-  active: { label: 'Active', className: 'bg-green-100 text-green-800' },
-  inactive: { label: 'Inactive', className: 'bg-gray-100 text-gray-800' },
-  restricted: { label: 'Restricted', className: 'bg-red-100 text-red-800' },
-  under_review: { label: 'Under Review', className: 'bg-yellow-100 text-yellow-800' },
+const statusConfig: Record<string, { label: string; className: string }> = {
+  active: { label: "Active", className: "bg-green-100 text-green-800" },
+  inactive: { label: "Inactive", className: "bg-gray-100 text-gray-800" },
+  restricted: { label: "Restricted", className: "bg-red-100 text-red-800" },
+  under_review: {
+    label: "Under Review",
+    className: "bg-yellow-100 text-yellow-800",
+  },
 };
 
 export function ContractorCard({ contractor }: ContractorCardProps) {
@@ -28,14 +31,18 @@ export function ContractorCard({ contractor }: ContractorCardProps) {
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
-            <h3 className="font-semibold text-base">{contractor.company_name}</h3>
-            {contractor.is_preferred && (
+            <h3 className="font-semibold text-base">
+              {contractor.company_name}
+            </h3>
+            {contractor.preferred && (
               <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
                 Preferred
               </span>
             )}
           </div>
-          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${status.className}`}>
+          <span
+            className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${status.className}`}
+          >
             {status.label}
           </span>
         </div>
@@ -44,17 +51,18 @@ export function ContractorCard({ contractor }: ContractorCardProps) {
       <div className="space-y-1 text-sm text-muted-foreground mb-3">
         {contractor.contact_name && (
           <p>
-            <span className="font-medium">Contact:</span> {contractor.contact_name}
+            <span className="font-medium">Contact:</span>{" "}
+            {contractor.contact_name}
           </p>
         )}
-        {contractor.contact_email && (
+        {contractor.email && (
           <p>
-            <span className="font-medium">Email:</span> {contractor.contact_email}
+            <span className="font-medium">Email:</span> {contractor.email}
           </p>
         )}
-        {contractor.contact_phone && (
+        {contractor.phone && (
           <p>
-            <span className="font-medium">Phone:</span> {contractor.contact_phone}
+            <span className="font-medium">Phone:</span> {contractor.phone}
           </p>
         )}
       </div>
@@ -66,7 +74,7 @@ export function ContractorCard({ contractor }: ContractorCardProps) {
               key={service.service_type}
               className="inline-flex items-center rounded bg-muted px-2 py-0.5 text-xs"
             >
-              {service.service_type.replace('_', ' ')}
+              {service.service_type.replace("_", " ")}
             </span>
           ))}
         </div>
@@ -74,14 +82,16 @@ export function ContractorCard({ contractor }: ContractorCardProps) {
 
       {contractor.accreditations && contractor.accreditations.length > 0 && (
         <div className="mb-3">
-          <p className="text-xs font-medium text-muted-foreground mb-1">Accreditations:</p>
+          <p className="text-xs font-medium text-muted-foreground mb-1">
+            Accreditations:
+          </p>
           <div className="flex flex-wrap gap-1">
             {contractor.accreditations.map((acc, idx) => (
               <span
                 key={idx}
                 className="inline-flex items-center rounded bg-green-50 px-2 py-0.5 text-xs text-green-700"
               >
-                {acc.certificate_type}
+                {acc.type}
               </span>
             ))}
           </div>

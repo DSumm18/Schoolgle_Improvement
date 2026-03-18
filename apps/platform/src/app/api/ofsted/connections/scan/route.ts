@@ -639,7 +639,7 @@ export const POST = protectedRoute(async (auth, req) => {
     },
   });
 
-  return new Response(stream, {
+  return new NextResponse(stream, {
     headers: {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",

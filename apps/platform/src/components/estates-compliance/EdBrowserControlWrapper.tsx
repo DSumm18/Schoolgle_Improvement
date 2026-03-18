@@ -16,11 +16,14 @@
  * ```
  */
 
-import { ReactNode } from 'react';
-import { useAuth } from '@/context/SupabaseAuthContext';
-import { BrowserControlProvider, useBrowserControl } from '@/lib/browser-control-context';
-import { EdDomainApproval } from './EdDomainApproval';
-import { BrowserControlIndicator } from '@/components/browser/BrowserControlIndicator';
+import { ReactNode } from "react";
+import { useAuth } from "@/context/SupabaseAuthContext";
+import {
+  BrowserControlProvider,
+  useBrowserControl,
+} from "@/lib/browser-control-context";
+import { EdDomainApproval } from "./EdDomainApproval";
+import { BrowserControlIndicator } from "@/components/browser/BrowserControlIndicator";
 
 // ============================================================================
 // INTERNAL COMPONENTS
@@ -75,11 +78,13 @@ interface EdBrowserControlWrapperProps {
   children: ReactNode;
 }
 
-export function EdBrowserControlWrapper({ children }: EdBrowserControlWrapperProps) {
+export function EdBrowserControlWrapper({
+  children,
+}: EdBrowserControlWrapperProps) {
   const { organizationId } = useAuth();
 
   return (
-    <BrowserControlProvider organizationId={organizationId}>
+    <BrowserControlProvider organizationId={organizationId ?? undefined}>
       <BrowserControlUI>{children}</BrowserControlUI>
     </BrowserControlProvider>
   );

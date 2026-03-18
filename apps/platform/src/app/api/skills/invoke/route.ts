@@ -350,7 +350,6 @@ export async function POST(request: NextRequest) {
           parameters.urn,
           parameters.organization_id,
           parameters.current_year_group,
-          parameters.years_back,
         );
         result = { success: true, data: journey };
         break;
@@ -751,6 +750,557 @@ export async function POST(request: NextRequest) {
         break;
       }
 
+      // =====================================================
+      // WORKFLOW FUNCTIONS
+      // =====================================================
+
+      case "create_workflow": {
+        const { createFromTemplate } = await import("@/lib/workflow-engine");
+        result = await createFromTemplate(
+          supabase,
+          parameters.organization_id || orgId,
+          parameters.template_slug,
+          {
+            title: parameters.title,
+            description: parameters.description,
+            createdBy: user?.id || "ai-assistant",
+          },
+        );
+        break;
+      }
+
+      case "get_workflow_status": {
+        const { getWorkflowWithDetails } =
+          await import("@/lib/workflow-engine");
+        result = await getWorkflowWithDetails(supabase, parameters.workflow_id);
+        break;
+      }
+
+      case "update_workflow_step": {
+        const { updateStepStatus, advanceWorkflow: advanceAfterStep } =
+          await import("@/lib/workflow-engine");
+        const stepResult = await updateStepStatus(
+          supabase,
+          parameters.step_id,
+          parameters.status,
+          user?.id || "ai-assistant",
+          parameters.completion_notes,
+        );
+        result = stepResult as any;
+        // Auto-advance after step update
+        const advanceResult = await advanceAfterStep(
+          supabase,
+          parameters.workflow_id,
+        );
+        if (advanceResult?.phaseAdvanced) {
+          result = {
+            ...result,
+            phaseAdvanced: true,
+            nextPhase: advanceResult.nextPhase,
+          };
+        }
+        if (advanceResult?.progress !== undefined) {
+          result = {
+            ...result,
+            progress: advanceResult.progress,
+          };
+        }
+        break;
+      }
+
+      case "get_my_workflow_tasks": {
+        const { getMyTasks } = await import("@/lib/workflow-engine");
+        const taskOrgId = parameters.organization_id || orgId;
+        const userRole = user ? await getUserRole(taskOrgId, user.id) : null;
+        result = await getMyTasks(
+          supabase,
+          taskOrgId,
+          userRole || "viewer",
+          user?.id,
+        );
+        break;
+      }
+
+      case "advance_workflow": {
+        const { advanceWorkflow: doAdvance } =
+          await import("@/lib/workflow-engine");
+        result = await doAdvance(supabase, parameters.workflow_id);
+        break;
+      }
+
+      case "create_procurement_request": {
+        const { createProcurementRequest } =
+          await import("@/lib/workflow-engine");
+        result = await createProcurementRequest(supabase, {
+          organizationId: parameters.organization_id || orgId,
+          workflowId: parameters.workflow_id,
+          workflowStepId: parameters.workflow_step_id,
+          title: parameters.title,
+          description: parameters.description,
+          estimatedValue: parameters.estimated_amount,
+          requestedBy: user?.id || "ai-assistant",
+        });
+        break;
+      }
+
+      // ===== INCIDENT REPORTING SKILLS =====
+
+      case "report_incident": {
+        const incidentData: Record<string, any> = {
+          organization_id: parameters.organization_id || orgId,
+          incident_type: parameters.incident_type,
+          severity: parameters.severity,
+          incident_date: parameters.incident_date,
+          incident_time: parameters.incident_time || null,
+          location: parameters.location,
+          location_detail: parameters.location_detail || null,
+          injured_person_name: parameters.injured_person_name || null,
+          injured_person_type: parameters.injured_person_type || null,
+          title: parameters.title,
+          description: parameters.description,
+          immediate_actions: parameters.immediate_actions || null,
+          first_aid_given: parameters.first_aid_given || false,
+          hospital_attendance: parameters.hospital_attendance || false,
+          is_riddor_reportable: parameters.is_riddor_reportable || false,
+          riddor_category: parameters.riddor_category || null,
+          investigation_required: parameters.investigation_required || false,
+          status: parameters.is_riddor_reportable ? "awaiting_riddor" : "open",
+          reported_by_id: user?.id || "ai-assistant",
+          reported_by_name: parameters.reported_by_name || "Ed AI Assistant",
+        };
+        if (parameters.is_riddor_reportable) {
+          const d = new Date(parameters.incident_date);
+          let wd = 0;
+          while (wd < 10) {
+            d.setDate(d.getDate() + 1);
+            if (d.getDay() !== 0 && d.getDay() !== 6) wd++;
+          }
+          incidentData.riddor_deadline = d.toISOString().split("T")[0];
+        }
+        const { data: newInc, error: incErr } = await supabase
+          .from("incident_reports")
+          .insert(incidentData)
+          .select()
+          .single();
+        if (incErr) {
+          result = { success: false, error: incErr.message };
+        } else {
+          let riskId = null;
+          if (
+            parameters.severity === "major" ||
+            parameters.severity === "critical"
+          ) {
+            try {
+              const { createRiskFromIncident } =
+                await import("@/lib/risk-integration");
+              const rr = await createRiskFromIncident({
+                organization_id: parameters.organization_id || orgId,
+                title: `Incident: ${parameters.title}`,
+                description: parameters.description,
+                severity: parameters.severity,
+                source_module: "incidents",
+                source_record_id: newInc.id,
+                reported_by_id: user?.id,
+                reported_by_name: parameters.reported_by_name,
+                has_safeguarding_impact:
+                  parameters.injured_person_type === "pupil",
+              });
+              riskId = rr?.risk_id;
+              if (riskId)
+                await supabase
+                  .from("incident_reports")
+                  .update({ linked_risk_id: riskId })
+                  .eq("id", newInc.id);
+            } catch {
+              /* risk failure doesn't block */
+            }
+          }
+          result = {
+            success: true,
+            incident: newInc,
+            risk_created: riskId,
+          };
+        }
+        break;
+      }
+
+      case "get_incidents": {
+        let incQuery = supabase
+          .from("incident_reports")
+          .select("*")
+          .eq("organization_id", parameters.organization_id || orgId)
+          .order("incident_date", { ascending: false })
+          .limit(20);
+        if (parameters.status)
+          incQuery = incQuery.eq("status", parameters.status);
+        if (parameters.incident_type)
+          incQuery = incQuery.eq("incident_type", parameters.incident_type);
+        if (parameters.severity)
+          incQuery = incQuery.eq("severity", parameters.severity);
+        if (parameters.riddor_only)
+          incQuery = incQuery.eq("is_riddor_reportable", true);
+        const { data: incList, error: incListErr } = await incQuery;
+        if (incListErr) {
+          result = { success: false, error: incListErr.message };
+        } else {
+          const all = incList || [];
+          result = {
+            success: true,
+            incidents: all,
+            stats: {
+              total: all.length,
+              open: all.filter(
+                (i: any) => i.status === "open" || i.status === "investigating",
+              ).length,
+              riddor_reportable: all.filter((i: any) => i.is_riddor_reportable)
+                .length,
+            },
+          };
+        }
+        break;
+      }
+
+      case "update_incident": {
+        const incUpdate: Record<string, any> = {
+          updated_at: new Date().toISOString(),
+        };
+        const incFields = [
+          "status",
+          "investigation_notes",
+          "root_cause",
+          "riddor_reference",
+          "riddor_reported_date",
+          "closure_notes",
+          "corrective_actions",
+        ];
+        for (const f of incFields) {
+          if (parameters[f] !== undefined) incUpdate[f] = parameters[f];
+        }
+        if (
+          parameters.status === "closed" ||
+          parameters.status === "closed_no_action"
+        ) {
+          incUpdate.closed_by_id = user?.id || "ai-assistant";
+          incUpdate.closed_by_name = "Ed AI Assistant";
+          incUpdate.closed_at = new Date().toISOString();
+        }
+        const { data: updInc, error: updIncErr } = await supabase
+          .from("incident_reports")
+          .update(incUpdate)
+          .eq("id", parameters.incident_id)
+          .select()
+          .single();
+        result = updIncErr
+          ? { success: false, error: updIncErr.message }
+          : { success: true, incident: updInc };
+        break;
+      }
+
+      // ===== SOP SKILLS =====
+      case "start_sop": {
+        const { data: sopTemplate } = await supabase
+          .from("sop_templates")
+          .select("*")
+          .eq("template_id", parameters.template_id)
+          .single();
+
+        if (!sopTemplate) {
+          result = {
+            success: false,
+            error: `SOP template '${parameters.template_id}' not found`,
+          };
+          break;
+        }
+
+        // Initialize steps_data from template
+        const stepsData = (sopTemplate.steps as any[]).map((step: any) => ({
+          ...step,
+          status: "pending",
+          completed_at: null,
+          completed_by: null,
+          notes: null,
+          evidence: [],
+        }));
+
+        const { data: sopRun, error: sopErr } = await supabase
+          .from("sop_runs")
+          .insert({
+            organization_id: orgId,
+            template_id: parameters.template_id,
+            context: parameters.context || null,
+            status: "in_progress",
+            steps_data: stepsData,
+            started_by: user?.id || "ai-assistant",
+            started_at: new Date().toISOString(),
+            linked_incident_id: parameters.linked_incident_id || null,
+            linked_module: parameters.linked_module || null,
+            linked_entity_id: parameters.linked_entity_id || null,
+          })
+          .select()
+          .single();
+
+        result = sopErr
+          ? { success: false, error: sopErr.message }
+          : {
+              success: true,
+              run: sopRun,
+              template: {
+                name: sopTemplate.name,
+                description: sopTemplate.description,
+              },
+              message: `Started "${sopTemplate.name}" — ${stepsData.length} steps to complete.`,
+              next_step: stepsData[0]
+                ? {
+                    step_id: stepsData[0].step_id,
+                    title: stepsData[0].title,
+                    instruction: stepsData[0].instruction,
+                  }
+                : null,
+            };
+        break;
+      }
+
+      case "get_sop_status": {
+        const { data: sopRunDetail, error: sopDetailErr } = await supabase
+          .from("sop_runs")
+          .select("*")
+          .eq("id", parameters.run_id)
+          .single();
+
+        if (sopDetailErr || !sopRunDetail) {
+          result = { success: false, error: "SOP run not found" };
+          break;
+        }
+
+        const sopSteps = (sopRunDetail.steps_data as any[]) || [];
+        const sopCompleted = sopSteps.filter(
+          (s: any) => s.status === "done",
+        ).length;
+        const sopTotal = sopSteps.length;
+        const nextSopStep = sopSteps.find((s: any) => s.status === "pending");
+
+        result = {
+          success: true,
+          run: sopRunDetail,
+          progress: {
+            completed: sopCompleted,
+            total: sopTotal,
+            percentage:
+              sopTotal > 0 ? Math.round((sopCompleted / sopTotal) * 100) : 0,
+          },
+          next_step: nextSopStep
+            ? {
+                step_id: nextSopStep.step_id,
+                title: nextSopStep.title,
+                instruction: nextSopStep.instruction,
+              }
+            : null,
+          status: sopRunDetail.status,
+        };
+        break;
+      }
+
+      case "update_sop_step": {
+        const { data: runToUpdate, error: runFetchErr } = await supabase
+          .from("sop_runs")
+          .select("*")
+          .eq("id", parameters.run_id)
+          .single();
+
+        if (runFetchErr || !runToUpdate) {
+          result = { success: false, error: "SOP run not found" };
+          break;
+        }
+
+        const updatedSteps = ((runToUpdate.steps_data as any[]) || []).map(
+          (s: any) => {
+            if (s.step_id === parameters.step_id) {
+              return {
+                ...s,
+                status: parameters.status,
+                completed_at:
+                  parameters.status === "done"
+                    ? new Date().toISOString()
+                    : null,
+                completed_by: user?.id || "ai-assistant",
+                notes: parameters.notes || s.notes,
+              };
+            }
+            return s;
+          },
+        );
+
+        const { error: stepUpErr } = await supabase
+          .from("sop_runs")
+          .update({ steps_data: updatedSteps })
+          .eq("id", parameters.run_id);
+
+        const nextPending = updatedSteps.find(
+          (s: any) => s.status === "pending",
+        );
+        const doneCount = updatedSteps.filter(
+          (s: any) => s.status === "done",
+        ).length;
+
+        result = stepUpErr
+          ? { success: false, error: stepUpErr.message }
+          : {
+              success: true,
+              message: `Step "${parameters.step_id}" marked as ${parameters.status}.`,
+              progress: {
+                completed: doneCount,
+                total: updatedSteps.length,
+                percentage: Math.round((doneCount / updatedSteps.length) * 100),
+              },
+              next_step: nextPending
+                ? {
+                    step_id: nextPending.step_id,
+                    title: nextPending.title,
+                    instruction: nextPending.instruction,
+                  }
+                : null,
+              all_done: !nextPending,
+            };
+        break;
+      }
+
+      case "get_sop_templates": {
+        let sopTplQuery = supabase
+          .from("sop_templates")
+          .select("*")
+          .eq("is_active", true);
+        if (parameters.category)
+          sopTplQuery = sopTplQuery.eq("category", parameters.category);
+        const { data: sopTpls, error: sopTplErr } = await sopTplQuery
+          .order("category")
+          .order("name");
+
+        result = sopTplErr
+          ? { success: false, error: sopTplErr.message }
+          : {
+              success: true,
+              templates: (sopTpls || []).map((t: any) => ({
+                template_id: t.template_id,
+                name: t.name,
+                description: t.description,
+                category: t.category,
+                frequency: t.frequency,
+                step_count: (t.steps as any[])?.length || 0,
+                estimated_minutes: t.estimated_time_minutes,
+                owner_role: t.owner_role,
+              })),
+            };
+        break;
+      }
+
+      case "get_my_sop_runs": {
+        let sopRunsQuery = supabase
+          .from("sop_runs")
+          .select("*")
+          .eq("organization_id", orgId)
+          .order("started_at", { ascending: false })
+          .limit(20);
+
+        if (parameters.status)
+          sopRunsQuery = sopRunsQuery.eq("status", parameters.status);
+        if (parameters.linked_module)
+          sopRunsQuery = sopRunsQuery.eq(
+            "linked_module",
+            parameters.linked_module,
+          );
+
+        const { data: myRuns, error: myRunsErr } = await sopRunsQuery;
+
+        result = myRunsErr
+          ? { success: false, error: myRunsErr.message }
+          : {
+              success: true,
+              runs: (myRuns || []).map((r: any) => {
+                const steps = (r.steps_data as any[]) || [];
+                const done = steps.filter(
+                  (s: any) => s.status === "done",
+                ).length;
+                return {
+                  id: r.id,
+                  template_id: r.template_id,
+                  context: r.context,
+                  status: r.status,
+                  progress: {
+                    completed: done,
+                    total: steps.length,
+                    percentage:
+                      steps.length > 0
+                        ? Math.round((done / steps.length) * 100)
+                        : 0,
+                  },
+                  started_at: r.started_at,
+                  linked_module: r.linked_module,
+                };
+              }),
+            };
+        break;
+      }
+
+      case "suggest_sops_for_incident": {
+        const suggestedIds: string[] = [];
+        const reasons: Record<string, string> = {};
+
+        if (parameters.incident_type === "near_miss") {
+          suggestedIds.push("near_miss_recording");
+          reasons["near_miss_recording"] =
+            "Near-miss incident — quick capture and escalation check";
+        } else {
+          suggestedIds.push("incident_response");
+          reasons["incident_response"] = "Standard incident response checklist";
+        }
+
+        if (parameters.is_riddor_reportable) {
+          suggestedIds.push("riddor_assessment");
+          reasons["riddor_assessment"] =
+            "RIDDOR reportable — must file with HSE within deadline";
+        }
+
+        if (
+          parameters.investigation_required ||
+          parameters.severity === "major" ||
+          parameters.severity === "critical"
+        ) {
+          suggestedIds.push("incident_investigation");
+          reasons["incident_investigation"] =
+            "Severity requires formal root cause investigation";
+        }
+
+        if (parameters.incident_type === "violence") {
+          suggestedIds.push("violence_response");
+          reasons["violence_response"] =
+            "Violence incident — safeguarding and staff wellbeing protocol";
+        }
+
+        if (parameters.incident_type === "dangerous_occurrence") {
+          suggestedIds.push("dangerous_occurrence");
+          reasons["dangerous_occurrence"] =
+            "Dangerous occurrence — ALWAYS RIDDOR reportable, evacuation may be needed";
+        }
+
+        // Fetch template details
+        const { data: suggestedTpls } = await supabase
+          .from("sop_templates")
+          .select("template_id, name, description, estimated_time_minutes")
+          .in("template_id", suggestedIds);
+
+        result = {
+          success: true,
+          suggestions: (suggestedTpls || []).map((t: any) => ({
+            template_id: t.template_id,
+            name: t.name,
+            description: t.description,
+            estimated_minutes: t.estimated_time_minutes,
+            reason: reasons[t.template_id],
+          })),
+        };
+        break;
+      }
+
       default:
         result = {
           success: false,
@@ -769,15 +1319,24 @@ export async function POST(request: NextRequest) {
       functionName !== "list_generated_documents" &&
       functionName !== "get_document" &&
       functionName !== "get_risk_register" &&
-      functionName !== "get_risk_heatmap"
+      functionName !== "get_risk_heatmap" &&
+      functionName !== "get_workflow_status" &&
+      functionName !== "get_my_workflow_tasks" &&
+      functionName !== "get_sop_status" &&
+      functionName !== "get_sop_templates" &&
+      functionName !== "get_my_sop_runs" &&
+      functionName !== "suggest_sops_for_incident"
     ) {
       logEdAction(supabase, {
         organizationId: orgId,
         userId: user.id,
         skillName: functionName,
         actionSummary: `Executed ${functionName}`,
-        success: result?.success !== false,
-        recordId: result?.data?.id || result?.data?.staff_id || undefined,
+        success: (result as any)?.success !== false,
+        recordId:
+          (result as any)?.data?.id ||
+          (result as any)?.data?.staff_id ||
+          undefined,
       });
     }
 
@@ -807,6 +1366,7 @@ export async function GET() {
     INTELLIGENCE_FUNCTION_SCHEMAS,
     RISK_FUNCTION_SCHEMAS,
     DOCUMENT_FUNCTION_SCHEMAS,
+    WORKFLOW_FUNCTION_SCHEMAS,
   } = await import("@/lib/skills/school-skills-registry");
 
   return NextResponse.json({
@@ -819,6 +1379,7 @@ export async function GET() {
         ...INTELLIGENCE_FUNCTION_SCHEMAS,
         ...RISK_FUNCTION_SCHEMAS,
         ...DOCUMENT_FUNCTION_SCHEMAS,
+        ...WORKFLOW_FUNCTION_SCHEMAS,
       ],
       categories: {
         staff: {
@@ -853,6 +1414,12 @@ export async function GET() {
           description:
             "Generate, manage, and send letters, notices, reports, and certificates from templates",
           functions: DOCUMENT_FUNCTION_SCHEMAS.map((f: any) => f.name),
+        },
+        workflow: {
+          name: "Workflow Engine",
+          description:
+            "Create and manage multi-phase workflows with step tracking, evidence collection, and procurement",
+          functions: WORKFLOW_FUNCTION_SCHEMAS.map((f: any) => f.name),
         },
       },
     },

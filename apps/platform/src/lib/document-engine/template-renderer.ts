@@ -7,6 +7,9 @@ export interface OrgBranding {
   phone?: string;
   email?: string;
   primary_color?: string;
+  secondary_color?: string;
+  accent_color?: string;
+  font_family?: string;
   footer_text?: string;
 }
 
@@ -129,9 +132,17 @@ function wrapWithBranding(html: string, branding: OrgBranding): string {
 
   const footerText = branding.footer_text || branding.school_name;
 
+  // Font: use school's chosen Google Font or fall back to system stack
+  const fontStack = branding.font_family
+    ? `'${escapeHtml(branding.font_family)}', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`
+    : `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`;
+  const fontImport = branding.font_family
+    ? `<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=${encodeURIComponent(branding.font_family)}:wght@400;500;600;700&display=swap" />`
+    : "";
+
   return `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f8fafc;">
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">${fontImport}</head>
+<body style="margin:0;padding:0;font-family:${fontStack};background:#f8fafc;">
 <div style="max-width:680px;margin:0 auto;padding:24px;">
   <div style="background:white;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
     <div style="padding:24px 32px;border-bottom:3px solid ${escapeHtml(color)};text-align:left;">

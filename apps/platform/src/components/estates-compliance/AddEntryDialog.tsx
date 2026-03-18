@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * AddEntryDialog Component
@@ -13,7 +13,7 @@
  * - Visibility settings
  */
 
-import { useState, useRef } from 'react';
+import { useState, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -21,20 +21,20 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Card } from '@/components/ui/card';
+} from "@/components/ui/select";
+import { Card } from "@/components/ui/card";
 import {
   Plus,
   Image as ImageIcon,
@@ -48,10 +48,10 @@ import {
   Users,
   Globe,
   Loader2,
-} from 'lucide-react';
-import { toast } from 'sonner';
-import { useAuth } from '@/context/SupabaseAuthContext';
-import { useMediaQuery } from '@/hooks/use-media-query';
+} from "lucide-react";
+import { toast } from "sonner";
+import { useAuth } from "@/context/SupabaseAuthContext";
+import { useMediaQuery } from "@/hooks/use-media-query";
 
 interface AddEntryDialogProps {
   onEntryAdded?: () => void;
@@ -60,50 +60,84 @@ interface AddEntryDialogProps {
   onOpenChange?: (open: boolean) => void;
 }
 
-type MoodType = 'positive' | 'neutral' | 'negative' | null;
-type VisibilityType = 'private' | 'team' | 'organization';
+type MoodType = "positive" | "neutral" | "negative" | null;
+type VisibilityType = "private" | "team" | "organization";
 
 const COMMON_TAGS = [
-  'heating', 'security', 'vandalism', 'contractor', 'maintenance',
-  'inspection', 'asbestos', 'fire', 'legionella', 'electrical',
-  'plumbing', 'roofing', 'flooring', 'cleaning', 'waste',
-  'parking', 'playground', 'equipment', 'vehicle', 'safety',
-  'accident', 'near-miss', 'weather', 'visitor', 'delivery',
-  'alarm-test', 'emergency-drill',
+  "heating",
+  "security",
+  "vandalism",
+  "contractor",
+  "maintenance",
+  "inspection",
+  "asbestos",
+  "fire",
+  "legionella",
+  "electrical",
+  "plumbing",
+  "roofing",
+  "flooring",
+  "cleaning",
+  "waste",
+  "parking",
+  "playground",
+  "equipment",
+  "vehicle",
+  "safety",
+  "accident",
+  "near-miss",
+  "weather",
+  "visitor",
+  "delivery",
+  "alarm-test",
+  "emergency-drill",
 ];
 
 const TAG_COLORS: Record<string, string> = {
-  heating: 'bg-orange-100 text-orange-700 border-orange-300 hover:bg-orange-200',
-  security: 'bg-red-100 text-red-700 border-red-300 hover:bg-red-200',
-  vandalism: 'bg-purple-100 text-purple-700 border-purple-300 hover:bg-purple-200',
-  contractor: 'bg-blue-100 text-blue-700 border-blue-300 hover:bg-blue-200',
-  maintenance: 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200',
-  inspection: 'bg-green-100 text-green-700 border-green-300 hover:bg-green-200',
-  asbestos: 'bg-yellow-100 text-yellow-700 border-yellow-300 hover:bg-yellow-200',
-  fire: 'bg-red-100 text-red-700 border-red-300 hover:bg-red-200',
-  legionella: 'bg-cyan-100 text-cyan-700 border-cyan-300 hover:bg-cyan-200',
-  electrical: 'bg-amber-100 text-amber-700 border-amber-300 hover:bg-amber-200',
-  plumbing: 'bg-blue-100 text-blue-700 border-blue-300 hover:bg-blue-200',
-  roofing: 'bg-stone-100 text-stone-700 border-stone-300 hover:bg-stone-200',
-  flooring: 'bg-yellow-100 text-yellow-700 border-yellow-300 hover:bg-yellow-200',
-  cleaning: 'bg-teal-100 text-teal-700 border-teal-300 hover:bg-teal-200',
-  waste: 'bg-lime-100 text-lime-700 border-lime-300 hover:bg-lime-200',
-  parking: 'bg-indigo-100 text-indigo-700 border-indigo-300 hover:bg-indigo-200',
-  playground: 'bg-pink-100 text-pink-700 border-pink-300 hover:bg-pink-200',
-  equipment: 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200',
-  vehicle: 'bg-violet-100 text-violet-700 border-violet-300 hover:bg-violet-200',
-  safety: 'bg-rose-100 text-rose-700 border-rose-300 hover:bg-rose-200',
-  accident: 'bg-red-100 text-red-700 border-red-300 hover:bg-red-200',
-  'near-miss': 'bg-orange-100 text-orange-700 border-orange-300 hover:bg-orange-200',
-  weather: 'bg-sky-100 text-sky-700 border-sky-300 hover:bg-sky-200',
-  visitor: 'bg-emerald-100 text-emerald-700 border-emerald-300 hover:bg-emerald-200',
-  delivery: 'bg-fuchsia-100 text-fuchsia-700 border-fuchsia-300 hover:bg-fuchsia-200',
-  'alarm-test': 'bg-amber-100 text-amber-700 border-amber-300 hover:bg-amber-200',
-  'emergency-drill': 'bg-red-100 text-red-700 border-red-300 hover:bg-red-200',
+  heating:
+    "bg-orange-100 text-orange-700 border-orange-300 hover:bg-orange-200",
+  security: "bg-red-100 text-red-700 border-red-300 hover:bg-red-200",
+  vandalism:
+    "bg-purple-100 text-purple-700 border-purple-300 hover:bg-purple-200",
+  contractor: "bg-blue-100 text-blue-700 border-blue-300 hover:bg-blue-200",
+  maintenance: "bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200",
+  inspection: "bg-green-100 text-green-700 border-green-300 hover:bg-green-200",
+  asbestos:
+    "bg-yellow-100 text-yellow-700 border-yellow-300 hover:bg-yellow-200",
+  fire: "bg-red-100 text-red-700 border-red-300 hover:bg-red-200",
+  legionella: "bg-cyan-100 text-cyan-700 border-cyan-300 hover:bg-cyan-200",
+  electrical: "bg-amber-100 text-amber-700 border-amber-300 hover:bg-amber-200",
+  plumbing: "bg-blue-100 text-blue-700 border-blue-300 hover:bg-blue-200",
+  roofing: "bg-stone-100 text-stone-700 border-stone-300 hover:bg-stone-200",
+  flooring:
+    "bg-yellow-100 text-yellow-700 border-yellow-300 hover:bg-yellow-200",
+  cleaning: "bg-teal-100 text-teal-700 border-teal-300 hover:bg-teal-200",
+  waste: "bg-lime-100 text-lime-700 border-lime-300 hover:bg-lime-200",
+  parking:
+    "bg-indigo-100 text-indigo-700 border-indigo-300 hover:bg-indigo-200",
+  playground: "bg-pink-100 text-pink-700 border-pink-300 hover:bg-pink-200",
+  equipment: "bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200",
+  vehicle:
+    "bg-violet-100 text-violet-700 border-violet-300 hover:bg-violet-200",
+  safety: "bg-rose-100 text-rose-700 border-rose-300 hover:bg-rose-200",
+  accident: "bg-red-100 text-red-700 border-red-300 hover:bg-red-200",
+  "near-miss":
+    "bg-orange-100 text-orange-700 border-orange-300 hover:bg-orange-200",
+  weather: "bg-sky-100 text-sky-700 border-sky-300 hover:bg-sky-200",
+  visitor:
+    "bg-emerald-100 text-emerald-700 border-emerald-300 hover:bg-emerald-200",
+  delivery:
+    "bg-fuchsia-100 text-fuchsia-700 border-fuchsia-300 hover:bg-fuchsia-200",
+  "alarm-test":
+    "bg-amber-100 text-amber-700 border-amber-300 hover:bg-amber-200",
+  "emergency-drill": "bg-red-100 text-red-700 border-red-300 hover:bg-red-200",
 };
 
 const getTagColor = (tag: string) => {
-  return TAG_COLORS[tag] || 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200';
+  return (
+    TAG_COLORS[tag] ||
+    "bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200"
+  );
 };
 
 export function AddEntryDialog({
@@ -113,17 +147,17 @@ export function AddEntryDialog({
   onOpenChange: controlledOnOpenChange,
 }: AddEntryDialogProps) {
   const { organizationId, user } = useAuth();
-  const isDesktop = useMediaQuery('(min-width: 768px)');
+  const isDesktop = useMediaQuery("(min-width: 768px)");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [open, setOpen] = useState(false);
-  const [entry, setEntry] = useState('');
+  const [entry, setEntry] = useState("");
   const [tags, setTags] = useState<string[]>([]);
-  const [tagSearch, setTagSearch] = useState('');
-  const [location, setLocation] = useState('');
+  const [tagSearch, setTagSearch] = useState("");
+  const [location, setLocation] = useState("");
   const [mood, setMood] = useState<MoodType>(null);
-  const [visibility, setVisibility] = useState<VisibilityType>('private');
-  const [weather, setWeather] = useState({ conditions: '', temperature: '' });
+  const [visibility, setVisibility] = useState<VisibilityType>("private");
+  const [weather, setWeather] = useState({ conditions: "", temperature: "" });
   const [photos, setPhotos] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showTagSuggestions, setShowTagSuggestions] = useState(false);
@@ -140,13 +174,13 @@ export function AddEntryDialog({
   };
 
   const resetForm = () => {
-    setEntry('');
+    setEntry("");
     setTags([]);
-    setTagSearch('');
-    setLocation('');
+    setTagSearch("");
+    setLocation("");
     setMood(null);
-    setVisibility('private');
-    setWeather({ conditions: '', temperature: '' });
+    setVisibility("private");
+    setWeather({ conditions: "", temperature: "" });
     setPhotos([]);
   };
 
@@ -159,11 +193,11 @@ export function AddEntryDialog({
     if (!tags.includes(tag)) {
       setTags([...tags, tag]);
     }
-    setTagSearch('');
+    setTagSearch("");
   };
 
   const handleRemoveTag = (tag: string) => {
-    setTags(tags.filter(t => t !== tag));
+    setTags(tags.filter((t) => t !== tag));
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -173,7 +207,7 @@ export function AddEntryDialog({
     const newPhotos: string[] = [];
 
     for (const file of Array.from(files)) {
-      if (!file.type.startsWith('image/')) continue;
+      if (!file.type.startsWith("image/")) continue;
 
       // Convert to base64 for now (in production, upload to storage)
       const reader = new FileReader();
@@ -195,12 +229,12 @@ export function AddEntryDialog({
 
   const handleSubmit = async () => {
     if (!entry.trim()) {
-      toast.error('Please enter an entry');
+      toast.error("Please enter an entry");
       return;
     }
 
     if (!organizationId || !user?.id) {
-      toast.error('Authentication required');
+      toast.error("Authentication required");
       return;
     }
 
@@ -211,15 +245,17 @@ export function AddEntryDialog({
         weather.conditions || weather.temperature
           ? {
               ...(weather.conditions && { conditions: weather.conditions }),
-              ...(weather.temperature && { temperature: parseInt(weather.temperature) }),
+              ...(weather.temperature && {
+                temperature: parseInt(weather.temperature),
+              }),
             }
           : undefined;
 
-      const response = await fetch('/api/estates-compliance/diary', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/estates-compliance/diary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          organization_id: organizationId,
+          organizationId: organizationId,
           user_id: user.id,
           entry: entry.trim(),
           photos,
@@ -233,23 +269,27 @@ export function AddEntryDialog({
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || 'Failed to create entry');
+        throw new Error(data.error || "Failed to create entry");
       }
 
-      toast.success('Diary entry added');
+      toast.success("Diary entry added");
       resetForm();
       setIsOpen(false);
       onEntryAdded?.();
     } catch (error) {
-      console.error('Error creating entry:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to create entry');
+      console.error("Error creating entry:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to create entry",
+      );
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const filteredTags = COMMON_TAGS.filter(
-    tag => !tags.includes(tag) && tag.toLowerCase().includes(tagSearch.toLowerCase())
+    (tag) =>
+      !tags.includes(tag) &&
+      tag.toLowerCase().includes(tagSearch.toLowerCase()),
   );
 
   const defaultTrigger = (
@@ -263,7 +303,11 @@ export function AddEntryDialog({
 
   return (
     <TriggerComponent
-      className={isDesktop ? undefined : 'border-2 border-dashed p-6 cursor-pointer hover:border-primary transition-colors'}
+      className={
+        isDesktop
+          ? undefined
+          : "border-2 border-dashed p-6 cursor-pointer hover:border-primary transition-colors"
+      }
       onClick={isDesktop ? undefined : () => setIsOpen(true)}
     >
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -306,8 +350,15 @@ export function AddEntryDialog({
               <Label>Photos (optional)</Label>
               <div className="grid grid-cols-4 gap-2">
                 {photos.map((photo, index) => (
-                  <div key={index} className="relative aspect-square rounded-lg overflow-hidden border">
-                    <img src={photo} alt={`Photo ${index + 1}`} className="w-full h-full object-cover" />
+                  <div
+                    key={index}
+                    className="relative aspect-square rounded-lg overflow-hidden border"
+                  >
+                    <img
+                      src={photo}
+                      alt={`Photo ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
                     <Button
                       variant="destructive"
                       size="sm"
@@ -342,7 +393,7 @@ export function AddEntryDialog({
             <div className="space-y-2">
               <Label>Tags (optional)</Label>
               <div className="flex flex-wrap gap-2">
-                {tags.map(tag => (
+                {tags.map((tag) => (
                   <Badge
                     key={tag}
                     variant="outline"
@@ -363,11 +414,13 @@ export function AddEntryDialog({
                     setShowTagSuggestions(true);
                   }}
                   onFocus={() => setShowTagSuggestions(true)}
-                  onBlur={() => setTimeout(() => setShowTagSuggestions(false), 200)}
+                  onBlur={() =>
+                    setTimeout(() => setShowTagSuggestions(false), 200)
+                  }
                 />
                 {showTagSuggestions && filteredTags.length > 0 && (
                   <div className="absolute z-10 w-full mt-1 bg-background border rounded-md shadow-lg max-h-48 overflow-y-auto">
-                    {filteredTags.map(tag => (
+                    {filteredTags.map((tag) => (
                       <button
                         key={tag}
                         type="button"
@@ -405,7 +458,9 @@ export function AddEntryDialog({
               <div className="grid grid-cols-2 gap-2">
                 <Select
                   value={weather.conditions}
-                  onValueChange={(value) => setWeather({ ...weather, conditions: value })}
+                  onValueChange={(value) =>
+                    setWeather({ ...weather, conditions: value })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Conditions" />
@@ -424,7 +479,9 @@ export function AddEntryDialog({
                   type="number"
                   placeholder="Temp (°C)"
                   value={weather.temperature}
-                  onChange={(e) => setWeather({ ...weather, temperature: e.target.value })}
+                  onChange={(e) =>
+                    setWeather({ ...weather, temperature: e.target.value })
+                  }
                 />
               </div>
             </div>
@@ -438,9 +495,11 @@ export function AddEntryDialog({
                 <div className="flex gap-2">
                   <Button
                     type="button"
-                    variant={mood === 'positive' ? 'default' : 'outline'}
+                    variant={mood === "positive" ? "default" : "outline"}
                     size="sm"
-                    onClick={() => setMood(mood === 'positive' ? null : 'positive')}
+                    onClick={() =>
+                      setMood(mood === "positive" ? null : "positive")
+                    }
                     className="flex-1"
                   >
                     <Smile className="w-4 h-4 mr-1" />
@@ -448,9 +507,11 @@ export function AddEntryDialog({
                   </Button>
                   <Button
                     type="button"
-                    variant={mood === 'neutral' ? 'default' : 'outline'}
+                    variant={mood === "neutral" ? "default" : "outline"}
                     size="sm"
-                    onClick={() => setMood(mood === 'neutral' ? null : 'neutral')}
+                    onClick={() =>
+                      setMood(mood === "neutral" ? null : "neutral")
+                    }
                     className="flex-1"
                   >
                     <Meh className="w-4 h-4 mr-1" />
@@ -458,9 +519,11 @@ export function AddEntryDialog({
                   </Button>
                   <Button
                     type="button"
-                    variant={mood === 'negative' ? 'default' : 'outline'}
+                    variant={mood === "negative" ? "default" : "outline"}
                     size="sm"
-                    onClick={() => setMood(mood === 'negative' ? null : 'negative')}
+                    onClick={() =>
+                      setMood(mood === "negative" ? null : "negative")
+                    }
                     className="flex-1"
                   >
                     <Frown className="w-4 h-4 mr-1" />
@@ -474,9 +537,9 @@ export function AddEntryDialog({
                 <div className="flex gap-2">
                   <Button
                     type="button"
-                    variant={visibility === 'private' ? 'default' : 'outline'}
+                    variant={visibility === "private" ? "default" : "outline"}
                     size="sm"
-                    onClick={() => setVisibility('private')}
+                    onClick={() => setVisibility("private")}
                     className="flex-1"
                     title="Only you"
                   >
@@ -485,9 +548,9 @@ export function AddEntryDialog({
                   </Button>
                   <Button
                     type="button"
-                    variant={visibility === 'team' ? 'default' : 'outline'}
+                    variant={visibility === "team" ? "default" : "outline"}
                     size="sm"
-                    onClick={() => setVisibility('team')}
+                    onClick={() => setVisibility("team")}
                     className="flex-1"
                     title="Your team"
                   >
@@ -496,9 +559,11 @@ export function AddEntryDialog({
                   </Button>
                   <Button
                     type="button"
-                    variant={visibility === 'organization' ? 'default' : 'outline'}
+                    variant={
+                      visibility === "organization" ? "default" : "outline"
+                    }
                     size="sm"
-                    onClick={() => setVisibility('organization')}
+                    onClick={() => setVisibility("organization")}
                     className="flex-1"
                     title="Everyone in organization"
                   >
@@ -511,10 +576,17 @@ export function AddEntryDialog({
           </div>
 
           <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={handleClose} disabled={isSubmitting}>
+            <Button
+              variant="outline"
+              onClick={handleClose}
+              disabled={isSubmitting}
+            >
               Cancel
             </Button>
-            <Button onClick={handleSubmit} disabled={isSubmitting || !entry.trim()}>
+            <Button
+              onClick={handleSubmit}
+              disabled={isSubmitting || !entry.trim()}
+            >
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />

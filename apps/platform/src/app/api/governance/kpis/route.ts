@@ -6,7 +6,7 @@ import type {
   GetGovernanceKpiRequest,
   GetGovernanceKpiResponse,
   SkillsCoverage,
-  GovernorKpiSnapshot,
+  GovernanceKpiSnapshot,
   GovernorStatus,
   GovernorType,
 } from "@/lib/governance";
@@ -227,8 +227,8 @@ export const GET = protectedRoute(async (auth, req) => {
   };
 
   if (snapshots.length >= 2) {
-    const latest = snapshots[0] as GovernorKpiSnapshot;
-    const previous = snapshots[1] as GovernorKpiSnapshot;
+    const latest = snapshots[0] as GovernanceKpiSnapshot;
+    const previous = snapshots[1] as GovernanceKpiSnapshot;
 
     if (latest.attendance_percentage > previous.attendance_percentage) {
       trends.attendance_trend = "improving";

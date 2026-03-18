@@ -362,6 +362,10 @@ export async function generateProactiveContext(
     alerts.push(...riskAlerts);
   }
 
+  // 8. Active workflows proactive context
+  const workflowAlerts = await generateWorkflowContext(orgId, supabase);
+  alerts.push(...workflowAlerts);
+
   return alerts;
 }
 
@@ -725,6 +729,81 @@ export async function generateRiskContext(
   } catch (error) {
     // Don't fail the greeting if risk context fails
     console.error("[Context Loader] Risk context error:", error);
+  }
+
+  return alerts;
+}
+
+/**
+ * Generate workflow-specific proactive context
+ * Pulls active workflows, current phases, and step counts (todo/blocked)
+ */
+export async function generateWorkflowContext(
+  orgId: string,
+  supabase: any,
+  userRole?: string,
+): Promise<string[]> {
+  const alerts: string[] = [];
+
+  try {
+    // Get active workflows for the organization
+    const { data: workflows } = await supabase
+      .from("workflows")
+      .select("id, title, status, current_phase")
+      .eq("organization_id", orgId)
+      .eq("status", "active");
+
+    if (!workflows || workflows.length === 0) {
+      return alerts;
+    }
+
+    for (const workflow of workflows) {
+      // Get phases for this workflow
+      const { data: phases } = await supabase
+        .from("workflow_phases")
+        .select("id, title, phase_order")
+        .eq("workflow_id", workflow.id)
+        .eq("phase_order", workflow.current_phase)
+        .limit(1)
+        .single();
+
+      const phaseTitle = phases?.title || `Phase ${workflow.current_phase}`;
+
+      // Get step counts for the current phase
+      const { data: steps } = await supabase
+        .from("workflow_steps")
+        .select("id, status, assigned_role")
+        .eq("workflow_id", workflow.id)
+        .eq("phase_order", workflow.current_phase);
+
+      const todoCount =
+        steps?.filter((s: any) => s.status === "todo").length || 0;
+      const blockedCount =
+        steps?.filter((s: any) => s.status === "blocked").length || 0;
+      const totalRemaining = todoCount + blockedCount;
+
+      let alert = `ACTIVE WORKFLOW: '${workflow.title}' — Phase ${workflow.current_phase}: ${phaseTitle} — ${totalRemaining} step(s) remaining`;
+      if (blockedCount > 0) {
+        alert += `, ${blockedCount} blocked`;
+      }
+
+      // Check if any steps are assigned to the current user's role
+      if (userRole && steps) {
+        const mySteps = steps.filter(
+          (s: any) =>
+            s.assigned_role === userRole &&
+            (s.status === "todo" || s.status === "blocked"),
+        );
+        if (mySteps.length > 0) {
+          alert += ` (${mySteps.length} assigned to your role)`;
+        }
+      }
+
+      alerts.push(alert);
+    }
+  } catch (error) {
+    // Don't fail the greeting if workflow context fails
+    console.error("[Context Loader] Workflow context error:", error);
   }
 
   return alerts;

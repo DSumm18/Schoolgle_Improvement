@@ -12,10 +12,10 @@ import { PolicyModal } from "@/components/governance";
 import { VisitModal } from "@/components/governance";
 import type {
   Governor,
-  Meeting,
-  TrainingRecord,
-  PolicyReview,
-  MonitoringVisit,
+  GovernorMeeting,
+  GovernorTraining,
+  GovernancePolicyReviewWithOwner,
+  GovernorVisitWithGovernor,
 } from "@/lib/governance";
 
 export default function GovernancePage() {
@@ -23,15 +23,14 @@ export default function GovernancePage() {
   const [selectedGovernor, setSelectedGovernor] = useState<Governor | null>(
     null,
   );
-  const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
+  const [selectedMeeting, setSelectedMeeting] =
+    useState<GovernorMeeting | null>(null);
   const [selectedTraining, setSelectedTraining] =
-    useState<TrainingRecord | null>(null);
-  const [selectedPolicy, setSelectedPolicy] = useState<PolicyReview | null>(
-    null,
-  );
-  const [selectedVisit, setSelectedVisit] = useState<MonitoringVisit | null>(
-    null,
-  );
+    useState<GovernorTraining | null>(null);
+  const [selectedPolicy, setSelectedPolicy] =
+    useState<GovernancePolicyReviewWithOwner | null>(null);
+  const [selectedVisit, setSelectedVisit] =
+    useState<GovernorVisitWithGovernor | null>(null);
 
   const [isGovernorModalOpen, setIsGovernorModalOpen] = useState(false);
   const [isMeetingModalOpen, setIsMeetingModalOpen] = useState(false);
@@ -59,26 +58,28 @@ export default function GovernancePage() {
       <GovernanceDashboard
         organizationId={organizationId}
         refreshKey={refreshKey}
-        onAddGovernor={() => {
-          setSelectedGovernor(null);
-          setIsGovernorModalOpen(true);
-        }}
-        onAddMeeting={() => {
-          setSelectedMeeting(null);
-          setIsMeetingModalOpen(true);
-        }}
-        onAddTraining={() => {
-          setSelectedTraining(null);
-          setIsTrainingModalOpen(true);
-        }}
-        onAddPolicy={() => {
-          setSelectedPolicy(null);
-          setIsPolicyModalOpen(true);
-        }}
-        onAddVisit={() => {
-          setSelectedVisit(null);
-          setIsVisitModalOpen(true);
-        }}
+        {...({
+          onAddGovernor: () => {
+            setSelectedGovernor(null);
+            setIsGovernorModalOpen(true);
+          },
+          onAddMeeting: () => {
+            setSelectedMeeting(null);
+            setIsMeetingModalOpen(true);
+          },
+          onAddTraining: () => {
+            setSelectedTraining(null);
+            setIsTrainingModalOpen(true);
+          },
+          onAddPolicy: () => {
+            setSelectedPolicy(null);
+            setIsPolicyModalOpen(true);
+          },
+          onAddVisit: () => {
+            setSelectedVisit(null);
+            setIsVisitModalOpen(true);
+          },
+        } as any)}
       />
 
       {/* Modals */}

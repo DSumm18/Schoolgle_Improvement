@@ -53,10 +53,10 @@ export const POST = protectedRoute(
     // Prepare verification input
     const verificationInput: VerificationInput = {
       evidenceId: evidence.id,
-      fileUrl: evidence.file_url,
-      fileName: evidence.file_name,
-      fileType: evidence.file_type,
-      evidenceType: evidence.evidence_type,
+      fileUrl: evidence.file_url || "",
+      fileName: evidence.file_name || "",
+      fileType: evidence.file_type || "",
+      evidenceType: evidence.evidence_type as any,
       complianceDomain: evidence.compliance_domain || undefined,
       expectedDetails: {
         issuingBody: evidence.issuing_body || undefined,
@@ -73,14 +73,9 @@ export const POST = protectedRoute(
     await updateEvidence(evidence_id, {
       ai_verified: result.verified,
       ai_confidence_score: result.confidence,
-      ai_insights: {
-        ...result,
-        verified_at: new Date().toISOString(),
-      },
       // Auto-fill extracted data if available
-      certificate_number:
-        result.certificateInfo?.certificateNumber ||
-        evidence.certificate_number,
+      document_number:
+        result.certificateInfo?.certificateNumber || evidence.document_number,
       issuing_body:
         result.certificateInfo?.issuingBody || evidence.issuing_body,
       issued_date: result.certificateInfo?.issuedDate || evidence.issued_date,
@@ -91,7 +86,7 @@ export const POST = protectedRoute(
         result.issues.length > 0
           ? `Issues: ${result.issues.join("; ")}`
           : result.warnings.join("; ") || undefined,
-    });
+    } as any);
 
     return apiSuccess({
       success: true,
@@ -134,7 +129,7 @@ export const GET = protectedRoute(async (auth, request) => {
       evidence_id: evidence.id,
       ai_verified: evidence.ai_verified,
       ai_confidence_score: evidence.ai_confidence_score,
-      ai_insights: evidence.ai_insights,
+      ai_insights: (evidence as any).ai_insights,
       verified_by: evidence.verified_by,
       verified_at: evidence.verified_at,
       verification_notes: evidence.verification_notes,

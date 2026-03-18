@@ -115,7 +115,7 @@ export const POST = protectedRoute(async (auth, req) => {
     last_siams_date,
     last_siams_rating,
     next_siams_date,
-  } = body as SchoolChurchStatusRequest & { organizationId: string };
+  } = body as SchoolChurchStatusForm & { organizationId: string };
 
   const orgId = organizationId || auth.organizationId;
 

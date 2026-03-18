@@ -46,7 +46,7 @@ export async function sendEmail(
       subject: options.subject,
       html: options.html,
       text: options.text,
-      reply_to: options.replyTo,
+      replyTo: options.replyTo,
       tags: options.tags,
     });
 

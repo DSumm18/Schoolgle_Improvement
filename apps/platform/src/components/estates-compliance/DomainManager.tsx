@@ -7,10 +7,16 @@
  * Allows admins to add, edit, and remove approved domains.
  */
 
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -18,19 +24,19 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { toast } from 'sonner';
-import { Globe, Plus, Trash2, Edit, Shield, CheckCircle2 } from 'lucide';
-import { useAuth } from '@/context/SupabaseAuthContext';
+} from "@/components/ui/select";
+import { toast } from "sonner";
+import { Globe, Plus, Trash2, Edit, Shield, CheckCircle2 } from "lucide-react";
+import { useAuth } from "@/context/SupabaseAuthContext";
 
 // ============================================================================
 // TYPES
@@ -40,7 +46,7 @@ interface ApprovedDomain {
   id: string;
   domain: string;
   description?: string;
-  category: 'government' | 'internal' | 'vendor' | 'other';
+  category: "government" | "internal" | "vendor" | "other";
   requires_auth: boolean;
   auth_method?: string;
   allowed_paths: string[];
@@ -51,10 +57,19 @@ interface ApprovedDomain {
 }
 
 const CATEGORY_CONFIGS = {
-  government: { label: 'Government', color: 'bg-blue-100 text-blue-700 border-blue-300' },
-  internal: { label: 'Internal', color: 'bg-green-100 text-green-700 border-green-300' },
-  vendor: { label: 'Vendor', color: 'bg-purple-100 text-purple-700 border-purple-300' },
-  other: { label: 'Other', color: 'bg-gray-100 text-gray-700 border-gray-300' },
+  government: {
+    label: "Government",
+    color: "bg-blue-100 text-blue-700 border-blue-300",
+  },
+  internal: {
+    label: "Internal",
+    color: "bg-green-100 text-green-700 border-green-300",
+  },
+  vendor: {
+    label: "Vendor",
+    color: "bg-purple-100 text-purple-700 border-purple-300",
+  },
+  other: { label: "Other", color: "bg-gray-100 text-gray-700 border-gray-300" },
 };
 
 // ============================================================================
@@ -66,14 +81,18 @@ interface DomainManagerProps {
   onOpenChange?: (open: boolean) => void;
 }
 
-export function DomainManager({ open: controlledOpen, onOpenChange }: DomainManagerProps) {
+export function DomainManager({
+  open: controlledOpen,
+  onOpenChange,
+}: DomainManagerProps) {
   const { organizationId } = useAuth();
   const [domains, setDomains] = useState<ApprovedDomain[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [newDomain, setNewDomain] = useState('');
-  const [newCategory, setNewCategory] = useState<ApprovedDomain['category']>('other');
-  const [newDescription, setNewDescription] = useState('');
+  const [newDomain, setNewDomain] = useState("");
+  const [newCategory, setNewCategory] =
+    useState<ApprovedDomain["category"]>("other");
+  const [newDescription, setNewDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Fetch approved domains
@@ -85,13 +104,13 @@ export function DomainManager({ open: controlledOpen, onOpenChange }: DomainMana
 
   const fetchDomains = async () => {
     try {
-      const response = await fetch('/api/browser/domains');
+      const response = await fetch("/api/browser/domains");
       if (response.ok) {
         const { domains: fetchedDomains } = await response.json();
         setDomains(fetchedDomains || []);
       }
     } catch (error) {
-      console.error('[DomainManager] Failed to fetch domains:', error);
+      console.error("[DomainManager] Failed to fetch domains:", error);
     } finally {
       setLoading(false);
     }
@@ -99,16 +118,16 @@ export function DomainManager({ open: controlledOpen, onOpenChange }: DomainMana
 
   const addDomain = async () => {
     if (!newDomain.trim()) {
-      toast.error('Domain is required');
+      toast.error("Domain is required");
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('/api/browser/domains', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/browser/domains", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           domain: newDomain.toLowerCase().trim(),
           description: newDescription || undefined,
@@ -120,20 +139,20 @@ export function DomainManager({ open: controlledOpen, onOpenChange }: DomainMana
       if (response.ok) {
         const { domain: addedDomain } = await response.json();
         setDomains((prev) => [addedDomain, ...prev]);
-        setNewDomain('');
-        setNewDescription('');
-        setNewCategory('other');
+        setNewDomain("");
+        setNewDescription("");
+        setNewCategory("other");
         setIsAddDialogOpen(false);
-        toast.success('Domain approved successfully');
+        toast.success("Domain approved successfully");
       } else if (response.status === 409) {
-        toast.error('This domain is already approved');
+        toast.error("This domain is already approved");
       } else {
         const error = await response.json();
-        toast.error(error.message || 'Failed to approve domain');
+        toast.error(error.message || "Failed to approve domain");
       }
     } catch (error) {
-      console.error('[DomainManager] Failed to add domain:', error);
-      toast.error('Failed to approve domain');
+      console.error("[DomainManager] Failed to add domain:", error);
+      toast.error("Failed to approve domain");
     } finally {
       setIsSubmitting(false);
     }
@@ -145,21 +164,21 @@ export function DomainManager({ open: controlledOpen, onOpenChange }: DomainMana
     }
 
     try {
-      const response = await fetch('/api/browser/domains', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/browser/domains", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ domainId }),
       });
 
       if (response.ok) {
         setDomains((prev) => prev.filter((d) => d.id !== domainId));
-        toast.success('Domain removed');
+        toast.success("Domain removed");
       } else {
-        toast.error('Failed to remove domain');
+        toast.error("Failed to remove domain");
       }
     } catch (error) {
-      console.error('[DomainManager] Failed to remove domain:', error);
-      toast.error('Failed to remove domain');
+      console.error("[DomainManager] Failed to remove domain:", error);
+      toast.error("Failed to remove domain");
     }
   };
 
@@ -211,7 +230,9 @@ export function DomainManager({ open: controlledOpen, onOpenChange }: DomainMana
                     <div>
                       <p className="font-medium">{domain.domain}</p>
                       {domain.description && (
-                        <p className="text-xs text-muted-foreground">{domain.description}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {domain.description}
+                        </p>
                       )}
                     </div>
                     <Badge className={CATEGORY_CONFIGS[domain.category].color}>
@@ -241,8 +262,8 @@ export function DomainManager({ open: controlledOpen, onOpenChange }: DomainMana
           <DialogHeader>
             <DialogTitle>Approve New Domain</DialogTitle>
             <DialogDescription>
-              Add a domain to Ed&apos;s approved list. Ed will be able to browse this website
-              to help with your tasks.
+              Add a domain to Ed&apos;s approved list. Ed will be able to browse
+              this website to help with your tasks.
             </DialogDescription>
           </DialogHeader>
 
@@ -254,7 +275,7 @@ export function DomainManager({ open: controlledOpen, onOpenChange }: DomainMana
                 placeholder="e.g., hse.gov.uk"
                 value={newDomain}
                 onChange={(e) => setNewDomain(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && addDomain()}
+                onKeyDown={(e) => e.key === "Enter" && addDomain()}
               />
               <p className="text-xs text-muted-foreground">
                 Enter just the domain name (e.g., hse.gov.uk), not the full URL
@@ -263,14 +284,23 @@ export function DomainManager({ open: controlledOpen, onOpenChange }: DomainMana
 
             <div className="space-y-2">
               <Label htmlFor="category">Category</Label>
-              <Select value={newCategory} onValueChange={(v) => setNewCategory(v as any)}>
+              <Select
+                value={newCategory}
+                onValueChange={(v) => setNewCategory(v as any)}
+              >
                 <SelectTrigger id="category">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="government">Government (GOV.UK, NHS)</SelectItem>
-                  <SelectItem value="internal">Internal (School Systems)</SelectItem>
-                  <SelectItem value="vendor">Vendor / Service Provider</SelectItem>
+                  <SelectItem value="government">
+                    Government (GOV.UK, NHS)
+                  </SelectItem>
+                  <SelectItem value="internal">
+                    Internal (School Systems)
+                  </SelectItem>
+                  <SelectItem value="vendor">
+                    Vendor / Service Provider
+                  </SelectItem>
                   <SelectItem value="other">Other</SelectItem>
                 </SelectContent>
               </Select>
@@ -291,7 +321,8 @@ export function DomainManager({ open: controlledOpen, onOpenChange }: DomainMana
               <div className="text-sm text-blue-800">
                 <p className="font-medium">Protected by guardrails</p>
                 <p className="text-blue-700 mt-1">
-                  Ed will never enter passwords, payment details, or sensitive personal information.
+                  Ed will never enter passwords, payment details, or sensitive
+                  personal information.
                 </p>
               </div>
             </div>
@@ -301,8 +332,11 @@ export function DomainManager({ open: controlledOpen, onOpenChange }: DomainMana
             <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={addDomain} disabled={isSubmitting || !newDomain.trim()}>
-              {isSubmitting ? 'Adding...' : 'Approve Domain'}
+            <Button
+              onClick={addDomain}
+              disabled={isSubmitting || !newDomain.trim()}
+            >
+              {isSubmitting ? "Adding..." : "Approve Domain"}
             </Button>
           </DialogFooter>
         </DialogContent>

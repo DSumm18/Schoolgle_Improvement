@@ -10,18 +10,25 @@
 // ============================================================================
 
 export type AssetType =
-  | 'building'
-  | 'room'
-  | 'outlet'
-  | 'equipment'
-  | 'fire_extinguisher'
-  | 'emergency_light'
-  | 'lift'
-  | 'playground_equipment'
-  | 'accessibility_equipment'
-  | 'vehicle';
+  | "building"
+  | "room"
+  | "outlet"
+  | "equipment"
+  | "fire_extinguisher"
+  | "emergency_light"
+  | "lift"
+  | "playground_equipment"
+  | "accessibility_equipment"
+  | "vehicle";
 
-export type AssetStatus = 'active' | 'inactive' | 'disposed' | 'under_repair' | 'retired';
+export type AssetStatus =
+  | "active"
+  | "inactive"
+  | "disposed"
+  | "under_repair"
+  | "under_maintenance"
+  | "requires_inspection"
+  | "retired";
 
 export interface Asset {
   id: string;
@@ -36,6 +43,7 @@ export interface Asset {
   building?: string;
   floor?: string;
   room?: string;
+  location?: string;
   location_details?: Record<string, unknown>;
   parent_asset_id?: string;
   installation_date?: string; // ISO date string
@@ -57,6 +65,7 @@ export interface AssetInput {
   category?: string;
   subcategory?: string;
   code?: string;
+  qr_code?: string;
   building?: string;
   floor?: string;
   room?: string;
@@ -90,7 +99,7 @@ export interface Contractor {
   insurance_certificates: InsuranceCertificate[];
   safeguarding_docs: SafeguardingDocument[];
   notes?: string;
-  status: 'active' | 'inactive' | 'restricted';
+  status: "active" | "inactive" | "restricted";
   preferred: boolean;
   created_at: string;
   updated_at: string;
@@ -117,10 +126,15 @@ export interface InsuranceCertificate {
 }
 
 export interface SafeguardingDocument {
-  type: 'dbs_check' | 'safeguarding_policy' | 'insurance' | 'other';
+  type: "dbs_check" | "safeguarding_policy" | "insurance" | "other";
   expiry_date?: string;
   document_url?: string;
 }
+
+export type ContractorInput = Omit<
+  Contractor,
+  "id" | "organization_id" | "created_at" | "updated_at"
+>;
 
 // ============================================================================
 // CONTRACTS
@@ -132,7 +146,12 @@ export interface Contract {
   contractor_id: string;
   title: string;
   description?: string;
-  contract_type: 'maintenance' | 'service' | 'inspection' | 'consultancy' | 'installation';
+  contract_type:
+    | "maintenance"
+    | "service"
+    | "inspection"
+    | "consultancy"
+    | "installation";
   start_date: string; // ISO date
   end_date?: string;
   renewal_date?: string;
@@ -143,15 +162,20 @@ export interface Contract {
     required_certifications?: string[];
   };
   annual_cost?: number;
-  billing_frequency?: 'monthly' | 'quarterly' | 'annually' | 'one_off';
+  billing_frequency?: "monthly" | "quarterly" | "annually" | "one_off";
   asset_ids: string[];
   compliance_domains: string[];
   contract_document_url?: string;
   notes?: string;
-  status: 'active' | 'expiring' | 'expired' | 'terminated' | 'pending_renewal';
+  status: "active" | "expiring" | "expired" | "terminated" | "pending_renewal";
   created_at: string;
   updated_at: string;
 }
+
+export type ContractInput = Omit<
+  Contract,
+  "id" | "organization_id" | "created_at" | "updated_at"
+>;
 
 // ============================================================================
 // USER QUALIFICATIONS
@@ -172,7 +196,7 @@ export interface UserQualification {
   verified_at?: string;
   evidence_id?: string;
   scope?: Record<string, unknown>;
-  status: 'active' | 'expired' | 'revoked' | 'pending_verification';
+  status: "active" | "expired" | "revoked" | "pending_verification";
   notes?: string;
   created_at: string;
   updated_at: string;
@@ -192,7 +216,7 @@ export interface Delegation {
   valid_from: string; // ISO date
   valid_until?: string;
   conditions?: string;
-  status: 'active' | 'expired' | 'revoked';
+  status: "active" | "expired" | "revoked";
   notes?: string;
   created_at: string;
 }
@@ -201,18 +225,61 @@ export interface Delegation {
 // COMPLIANCE TASKS
 // ============================================================================
 
-export type TaskSource = 'internal' | 'external';
+export type TaskSource = "internal" | "external";
+export type TaskPriority = "critical" | "high" | "medium" | "low";
 export type TaskStatus =
-  | 'pending'
-  | 'in_progress'
-  | 'awaiting_contractor'
-  | 'contractor_scheduled'
-  | 'completed'
-  | 'overdue'
-  | 'skipped'
-  | 'cancelled';
-export type TaskFrequency = 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'termly' | 'annual' | 'ad_hoc';
-export type ComplianceStatus = 'compliant' | 'non_compliant' | 'action_required' | 'not_assessed';
+  | "pending"
+  | "in_progress"
+  | "awaiting_contractor"
+  | "contractor_scheduled"
+  | "completed"
+  | "overdue"
+  | "skipped"
+  | "cancelled";
+export type TaskFrequency =
+  | "daily"
+  | "weekly"
+  | "monthly"
+  | "quarterly"
+  | "termly"
+  | "annual"
+  | "ad_hoc";
+export type RecurrencePattern =
+  | "daily"
+  | "weekly"
+  | "monthly"
+  | "quarterly"
+  | "annually";
+export type ComplianceStatus =
+  | "compliant"
+  | "non_compliant"
+  | "action_required"
+  | "not_assessed";
+export type ComplianceDomain =
+  | "legionella"
+  | "fire"
+  | "asbestos"
+  | "electrical"
+  | "gas"
+  | "water"
+  | "mechanical"
+  | "lifts"
+  | "playground"
+  | "accessibility"
+  | "security"
+  | "manual_handling"
+  | "working_at_height"
+  | "safeguarding"
+  | "coshh"
+  | "food_safety"
+  | "transport"
+  | "seasonal";
+export type ContractorStatus =
+  | "active"
+  | "inactive"
+  | "restricted"
+  | "under_review";
+export type TicketCategory = string;
 
 export interface ComplianceTask {
   id: string;
@@ -220,9 +287,12 @@ export interface ComplianceTask {
   task_type: string;
   compliance_domain: string;
   task_name: string;
+  title?: string; // Alias for task_name, used by some UI components
   description?: string;
+  priority?: TaskPriority;
   scheduled_for: string; // ISO date
   due_by: string; // ISO date
+  due_date?: string; // Alias for due_by, used by some UI components
   frequency: TaskFrequency;
   is_recurring: boolean;
   recurrence_pattern?: Record<string, unknown>;
@@ -266,10 +336,10 @@ export interface ComplianceTask {
 }
 
 export interface Finding {
-  severity: 'critical' | 'high' | 'medium' | 'low';
+  severity: "critical" | "high" | "medium" | "low";
   description: string;
   action_required: string;
-  classification?: 'statutory' | 'good_practice' | 'contractor_suggestion';
+  classification?: "statutory" | "good_practice" | "contractor_suggestion";
   source?: string;
   source_url?: string;
   estimated_cost?: number;
@@ -281,24 +351,24 @@ export interface Finding {
 // ============================================================================
 
 export type TicketModule =
-  | 'estates'
-  | 'hr'
-  | 'finance'
-  | 'teaching_learning'
-  | 'safeguarding'
-  | 'compliance'
-  | 'it';
-export type TicketPriority = 'critical' | 'high' | 'medium' | 'low';
+  | "estates"
+  | "hr"
+  | "finance"
+  | "teaching_learning"
+  | "safeguarding"
+  | "compliance"
+  | "it";
+export type TicketPriority = "critical" | "high" | "medium" | "low";
 export type TicketStatus =
-  | 'open'
-  | 'assigned'
-  | 'in_progress'
-  | 'awaiting_parts'
-  | 'awaiting_contractor'
-  | 'resolved'
-  | 'closed'
-  | 'reopened'
-  | 'on_hold';
+  | "open"
+  | "assigned"
+  | "in_progress"
+  | "awaiting_parts"
+  | "awaiting_contractor"
+  | "resolved"
+  | "closed"
+  | "reopened"
+  | "on_hold";
 
 export interface HelpdeskTicket {
   id: string;
@@ -357,7 +427,16 @@ export interface HelpdeskComment {
 export interface HelpdeskActivity {
   id: string;
   ticket_id: string;
-  activity_type: 'created' | 'assigned' | 'status_changed' | 'priority_changed' | 'comment_added' | 'resolved' | 'closed' | 'reopened' | 'sla_breached';
+  activity_type:
+    | "created"
+    | "assigned"
+    | "status_changed"
+    | "priority_changed"
+    | "comment_added"
+    | "resolved"
+    | "closed"
+    | "reopened"
+    | "sla_breached";
   from_value?: string;
   to_value?: string;
   description?: string;
@@ -372,28 +451,28 @@ export interface HelpdeskActivity {
 // ============================================================================
 
 export type BudgetItemCategory =
-  | 'replacement'
-  | 'upgrade'
-  | 'new_installation'
-  | 'repair'
-  | 'inspection'
-  | 'testing'
-  | 'maintenance';
+  | "replacement"
+  | "upgrade"
+  | "new_installation"
+  | "repair"
+  | "inspection"
+  | "testing"
+  | "maintenance";
 export type BudgetItemClassification =
-  | 'statutory'
-  | 'good_practice'
-  | 'contractor_suggestion'
-  | 'planned_maintenance'
-  | 'emergency';
+  | "statutory"
+  | "good_practice"
+  | "contractor_suggestion"
+  | "planned_maintenance"
+  | "emergency";
 export type BudgetItemStatus =
-  | 'planned'
-  | 'proposed'
-  | 'approved'
-  | 'in_progress'
-  | 'completed'
-  | 'deferred'
-  | 'cancelled'
-  | 'on_hold';
+  | "planned"
+  | "proposed"
+  | "approved"
+  | "in_progress"
+  | "completed"
+  | "deferred"
+  | "cancelled"
+  | "on_hold";
 
 export interface BudgetItem {
   id: string;
@@ -403,7 +482,12 @@ export interface BudgetItem {
   category: BudgetItemCategory;
   classification: BudgetItemClassification;
   source_finding_id?: string;
-  source_type?: 'contractor_report' | 'inspection' | 'monitoring' | 'condition_survey' | 'manual_entry';
+  source_type?:
+    | "contractor_report"
+    | "inspection"
+    | "monitoring"
+    | "condition_survey"
+    | "manual_entry";
   source?: string;
   source_url?: string;
   asset_id?: string;
@@ -412,10 +496,10 @@ export interface BudgetItem {
   actual_cost?: number;
   cost_estimates: Array<{ source: string; amount: number; date: string }>;
   target_fiscal_year: string; // '2026/27'
-  target_quarter?: 'Q1' | 'Q2' | 'Q3' | 'Q4';
+  target_quarter?: "Q1" | "Q2" | "Q3" | "Q4";
   target_month?: number;
   actual_completion_date?: string;
-  priority: 'critical' | 'high' | 'medium' | 'low';
+  priority: "critical" | "high" | "medium" | "low";
   status: BudgetItemStatus;
   deferred_from?: string;
   deferment_reason?: string;
@@ -437,7 +521,7 @@ export interface BudgetItem {
 // RAG STATUS
 // ============================================================================
 
-export type RagStatus = 'red' | 'amber' | 'green';
+export type RagStatus = "red" | "amber" | "green";
 
 export interface ComplianceRagStatus {
   organization_id: string;
@@ -493,9 +577,26 @@ export interface BudgetItemFilters {
 // EVIDENCE
 // ============================================================================
 
-export type EvidenceType = 'certificate' | 'report' | 'photo' | 'log' | 'document' | 'video' | 'other';
-export type EvidenceStatus = 'pending' | 'verified' | 'rejected' | 'expired' | 'archived';
-export type EvidenceSource = 'upload' | 'google_drive' | 'onedrive' | 'link' | 'existing';
+export type EvidenceType =
+  | "certificate"
+  | "report"
+  | "photo"
+  | "log"
+  | "document"
+  | "video"
+  | "other";
+export type EvidenceStatus =
+  | "pending"
+  | "verified"
+  | "rejected"
+  | "expired"
+  | "archived";
+export type EvidenceSource =
+  | "upload"
+  | "google_drive"
+  | "onedrive"
+  | "link"
+  | "existing";
 
 export interface EstatesEvidence {
   id: string;
@@ -508,7 +609,7 @@ export interface EstatesEvidence {
   file_name?: string;
   file_type?: string;
   file_size_bytes?: number;
-  cloud_provider?: 'google' | 'onedrive' | null;
+  cloud_provider?: "google" | "onedrive" | null;
   cloud_file_id?: string;
   source_type: EvidenceSource;
   // Links to other entities
@@ -546,7 +647,7 @@ export interface EstatesEvidenceInput {
   file_name?: string;
   file_type?: string;
   file_size_bytes?: number;
-  cloud_provider?: 'google' | 'onedrive' | null;
+  cloud_provider?: "google" | "onedrive" | null;
   cloud_file_id?: string;
   source_type: EvidenceSource;
   existing_evidence_id?: string;
@@ -600,8 +701,8 @@ export interface ApiResponse<T> {
 // DAILY DIARY
 // ============================================================================
 
-export type DiaryMood = 'positive' | 'neutral' | 'negative';
-export type DiaryVisibility = 'private' | 'team' | 'organization';
+export type DiaryMood = "positive" | "neutral" | "negative";
+export type DiaryVisibility = "private" | "team" | "organization";
 
 export interface DiaryWeather {
   temperature?: number;

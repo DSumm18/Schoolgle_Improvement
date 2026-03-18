@@ -19,6 +19,8 @@ import {
   ArrowRight,
   Sparkles,
   Hash,
+  TrendingUp,
+  RefreshCw,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 

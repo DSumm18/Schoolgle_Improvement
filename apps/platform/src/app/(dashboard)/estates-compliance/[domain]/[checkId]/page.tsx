@@ -339,7 +339,7 @@ export default function CheckDetailPage() {
         method: "POST",
         headers,
         body: JSON.stringify({
-          organization_id: organizationId,
+          organizationId: organizationId,
           action: "complete",
           check_id: checkId,
           check_data: {

@@ -6,6 +6,10 @@
  */
 
 import type { AppContext, SpecialistId } from "../types";
+import {
+  getFormSkillFunctions,
+  FORM_SKILLS,
+} from "../skills/handlers/form-skills";
 
 // Try to import platform schemas, but provide fallback for builds
 let SCHOOL_FUNCTION_SCHEMAS: any[] = [];
@@ -369,6 +373,116 @@ function formatSkillSuccessResponse(
     return {
       success: true,
       response: `📰 **Newsletter Generated!**\n\n**Title:** ${nl?.subject || nl?.title || "Newsletter"}\n**Week ending:** ${nl?.week_ending || "This week"}\n**Sections:** ${nl?.section_count || "?"}\n**Status:** Draft\n\nYou can preview and edit it at [${nl?.view_url || "/dashboard/documents"}](${nl?.view_url || "/dashboard/documents"}). Once you're happy, finalise and send it to parents.`,
+      data: result.data,
+    };
+  }
+
+  // Workflow Engine
+  if (functionName === "create_workflow") {
+    const wf = result.data;
+    const phaseCount = wf?.phases?.length || wf?.phase_count || "?";
+    const stepCount = wf?.total_steps || wf?.step_count || "?";
+    return {
+      success: true,
+      response: `✅ **Workflow Created!**\n\n**Title:** ${wf?.title || "New workflow"}\n**Template:** ${wf?.template_slug || "custom"}\n**Phases:** ${phaseCount} | **Steps:** ${stepCount}\n\nPhase 1 is now active. Use "get workflow status" to see the full breakdown.`,
+      data: result.data,
+    };
+  }
+
+  if (functionName === "get_workflow_status") {
+    const wf = result.data;
+    const progress = wf?.progress ?? 0;
+    const currentPhase =
+      wf?.current_phase?.title || wf?.current_phase_title || "N/A";
+    const nextSteps = wf?.next_actions || wf?.actionable_steps || [];
+    return {
+      success: true,
+      response: `📋 **Workflow: ${wf?.title || "Workflow"}**\n\n**Status:** ${wf?.status || "active"}\n**Progress:** ${progress}%\n**Current Phase:** ${currentPhase}\n\n${
+        nextSteps.length > 0
+          ? "**Next Steps:**\n" +
+            nextSteps
+              .slice(0, 5)
+              .map(
+                (s: any) =>
+                  `• ${s.title || s.name} (${s.assigned_role || "unassigned"})`,
+              )
+              .join("\n")
+          : "No actionable steps right now."
+      }`,
+      data: result.data,
+    };
+  }
+
+  if (functionName === "update_workflow_step") {
+    const d = result.data;
+    const phaseMsg = d?.phaseAdvanced
+      ? `\n\n🎉 Phase advanced to: **${d.newPhase?.title || d.newPhase || "next phase"}**`
+      : "";
+    return {
+      success: true,
+      response: `✅ **Step Updated!**\n\nMarked as **${d?.status || "updated"}**.${d?.progress !== undefined ? ` Progress: **${d.progress}%**` : ""}${phaseMsg}`,
+      data: result.data,
+    };
+  }
+
+  if (functionName === "get_my_workflow_tasks") {
+    const tasks = result.data?.tasks || result.data || [];
+    if (!Array.isArray(tasks) || tasks.length === 0) {
+      return {
+        success: true,
+        response: `📋 **My Workflow Tasks**\n\nNo workflow tasks assigned to you right now.`,
+        data: result.data,
+      };
+    }
+    // Group by workflow
+    const byWorkflow: Record<string, any[]> = {};
+    tasks.forEach((t: any) => {
+      const wfTitle = t.workflow_title || t.workflow_id || "Workflow";
+      if (!byWorkflow[wfTitle]) byWorkflow[wfTitle] = [];
+      byWorkflow[wfTitle].push(t);
+    });
+    const lines = Object.entries(byWorkflow)
+      .map(
+        ([wf, items]) =>
+          `**${wf}:**\n${items
+            .map(
+              (t: any) =>
+                `• ${t.title || t.step_title} (${t.phase_title || "Phase ?"})${t.urgency ? ` — ${t.urgency}` : ""}`,
+            )
+            .join("\n")}`,
+      )
+      .join("\n\n");
+    return {
+      success: true,
+      response: `📋 **My Workflow Tasks** (${tasks.length})\n\n${lines}`,
+      data: result.data,
+    };
+  }
+
+  if (functionName === "advance_workflow") {
+    const d = result.data;
+    if (d?.workflowComplete || d?.status === "completed") {
+      return {
+        success: true,
+        response: `🎉 **Workflow Complete!**\n\nAll phases have been completed.`,
+        data: result.data,
+      };
+    }
+    return {
+      success: true,
+      response: `✅ **Phase Advanced!**\n\n${d?.previousPhase ? `Phase "${d.previousPhase.title || d.previousPhase}" completed.` : "Previous phase completed."} ${d?.currentPhase ? `**Now active:** ${d.currentPhase.title || d.currentPhase}` : ""}`,
+      data: result.data,
+    };
+  }
+
+  if (functionName === "create_procurement_request") {
+    const pr = result.data;
+    const amount = pr?.estimated_amount
+      ? `£${Number(pr.estimated_amount).toLocaleString("en-GB")}`
+      : "TBC";
+    return {
+      success: true,
+      response: `✅ **Procurement Request Created!**\n\n**Title:** ${pr?.title || "Procurement"}\n**Estimated:** ${amount}\n**Quotes Required:** ${pr?.quotes_required || 3}\n${pr?.budget_line_cfr ? `**Budget Line:** ${pr.budget_line_cfr}` : ""}\n\nThe request is now tracked and awaiting quotes.`,
       data: result.data,
     };
   }

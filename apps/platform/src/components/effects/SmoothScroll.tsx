@@ -23,7 +23,6 @@ const SmoothScroll = ({ children }: { children: React.ReactNode }) => {
       gestureOrientation: "vertical",
       smoothWheel: true,
       wheelMultiplier: 0.8,
-      smoothTouch: false,
       touchMultiplier: 1.5,
       infinite: false,
     });

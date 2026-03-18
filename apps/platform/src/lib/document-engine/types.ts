@@ -184,6 +184,7 @@ export const MODULE_CONFIG: Record<
       { value: "fire_safety", label: "Fire Safety" },
       { value: "health_safety", label: "Health & Safety" },
       { value: "incident", label: "Incident" },
+      { value: "energy_report", label: "Energy Report" },
     ],
   },
   teaching_learning: {

@@ -15,6 +15,7 @@ interface EdWidgetWrapperProps {
    * - 'user': For logged-in users - full functionality with access to user data
    */
   mode?: "demo" | "user";
+  context?: any;
 }
 
 export default function EdWidgetWrapper({
@@ -134,7 +135,7 @@ export default function EdWidgetWrapper({
           // website mode would be set explicitly if isWebsiteEmbed is true
 
           const config: any = {
-            position: "bottom-right",
+            position: "bottom-left",
             theme: "standard",
             persona: "ed",
             mode: edMode,

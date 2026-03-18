@@ -5,7 +5,34 @@ import { staffCreateSchema, staffUpdateSchema } from "@/lib/validation";
 import { createServiceRoleClient } from "@/lib/supabase-server";
 
 // GET /api/staff - List all staff for an organization
-export const GET = protectedRoute(async (auth) => {
+// Primary: reads from MIS (Drive/Wonde) — never stored. Fallback: Supabase for manual entries.
+export const GET = protectedRoute(async (auth, request: NextRequest) => {
+  const { searchParams } = request.nextUrl;
+  const source = searchParams.get("source"); // "mis" | "db" | null (auto)
+
+  // Try MIS resolver first (unless explicitly requesting DB)
+  if (source !== "db") {
+    try {
+      const { resolveStaffList } = await import("@/lib/mis/staff-resolver");
+      const result = await resolveStaffList(auth.organizationId);
+      if (result.staff.length > 0) {
+        return apiSuccess({
+          staff: result.staff,
+          source: result.source,
+          count: result.staff.length,
+          warnings: result.warnings,
+          data_tier: "mis_read_only",
+        });
+      }
+    } catch (e: any) {
+      console.warn(
+        "[Staff API] MIS resolver failed, falling back to DB:",
+        e.message,
+      );
+    }
+  }
+
+  // Fallback: read from Supabase (manually-created staff or synced legacy data)
   const supabase = createServiceRoleClient();
 
   const { data: staff, error } = await supabase
@@ -50,7 +77,12 @@ export const GET = protectedRoute(async (auth) => {
       staff_module_access: undefined,
     })) || [];
 
-  return apiSuccess(transformedStaff);
+  return apiSuccess({
+    staff: transformedStaff,
+    source: "database",
+    count: transformedStaff.length,
+    data_tier: "supabase_stored",
+  });
 });
 
 // POST /api/staff - Create a new staff member

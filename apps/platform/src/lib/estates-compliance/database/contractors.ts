@@ -4,14 +4,12 @@
  * Helper functions for querying estates_contractors and estates_contracts tables
  */
 
-import { supabase } from '@/lib/supabase';
+import { supabase } from "@/lib/supabase";
 import type {
   Contractor,
   Contract,
-  ContractorInput,
-  ContractInput,
   PaginatedResponse,
-} from '@/types/estates-compliance';
+} from "@/types/estates-compliance";
 
 // ============================================================================
 // CONTRACTORS
@@ -22,26 +20,31 @@ import type {
  */
 export async function getContractors(
   organizationId: string,
-  filters?: { status?: 'active' | 'inactive' | 'restricted'; preferred?: boolean }
+  filters?: {
+    status?: "active" | "inactive" | "restricted";
+    preferred?: boolean;
+  },
 ): Promise<Contractor[]> {
   let query = supabase
-    .from('estates_contractors')
-    .select('*')
-    .eq('organization_id', organizationId);
+    .from("estates_contractors")
+    .select("*")
+    .eq("organization_id", organizationId);
 
   if (filters?.status) {
-    query = query.eq('status', filters.status);
+    query = query.eq("status", filters.status);
   }
   if (filters?.preferred !== undefined) {
-    query = query.eq('preferred', filters.preferred);
+    query = query.eq("preferred", filters.preferred);
   }
 
-  query = query.order('preferred', { ascending: false }).order('company_name', { ascending: true });
+  query = query
+    .order("preferred", { ascending: false })
+    .order("company_name", { ascending: true });
 
   const { data, error } = await query;
 
   if (error) {
-    console.error('Error fetching contractors:', error);
+    console.error("Error fetching contractors:", error);
     throw error;
   }
 
@@ -51,15 +54,17 @@ export async function getContractors(
 /**
  * Get a single contractor by ID
  */
-export async function getContractorById(contractorId: string): Promise<Contractor | null> {
+export async function getContractorById(
+  contractorId: string,
+): Promise<Contractor | null> {
   const { data, error } = await supabase
-    .from('estates_contractors')
-    .select('*')
-    .eq('id', contractorId)
+    .from("estates_contractors")
+    .select("*")
+    .eq("id", contractorId)
     .single();
 
   if (error) {
-    console.error('Error fetching contractor:', error);
+    console.error("Error fetching contractor:", error);
     throw error;
   }
 
@@ -71,10 +76,10 @@ export async function getContractorById(contractorId: string): Promise<Contracto
  */
 export async function createContractor(
   organizationId: string,
-  contractor: ContractorInput
+  contractor: ContractorInput,
 ): Promise<Contractor> {
   const { data, error } = await supabase
-    .from('estates_contractors')
+    .from("estates_contractors")
     .insert({
       organization_id: organizationId,
       ...contractor,
@@ -82,14 +87,14 @@ export async function createContractor(
       accreditations: contractor.accreditations || [],
       insurance_certificates: contractor.insurance_certificates || [],
       safeguarding_docs: contractor.safeguarding_docs || [],
-      status: contractor.status || 'active',
+      status: contractor.status || "active",
       preferred: contractor.preferred || false,
     })
     .select()
     .single();
 
   if (error) {
-    console.error('Error creating contractor:', error);
+    console.error("Error creating contractor:", error);
     throw error;
   }
 
@@ -101,20 +106,20 @@ export async function createContractor(
  */
 export async function updateContractor(
   contractorId: string,
-  updates: Partial<ContractorInput>
+  updates: Partial<ContractorInput>,
 ): Promise<Contractor> {
   const { data, error } = await supabase
-    .from('estates_contractors')
+    .from("estates_contractors")
     .update({
       ...updates,
       updated_at: new Date().toISOString(),
     })
-    .eq('id', contractorId)
+    .eq("id", contractorId)
     .select()
     .single();
 
   if (error) {
-    console.error('Error updating contractor:', error);
+    console.error("Error updating contractor:", error);
     throw error;
   }
 
@@ -126,12 +131,12 @@ export async function updateContractor(
  */
 export async function deleteContractor(contractorId: string): Promise<void> {
   const { error } = await supabase
-    .from('estates_contractors')
+    .from("estates_contractors")
     .delete()
-    .eq('id', contractorId);
+    .eq("id", contractorId);
 
   if (error) {
-    console.error('Error deleting contractor:', error);
+    console.error("Error deleting contractor:", error);
     throw error;
   }
 }
@@ -142,17 +147,17 @@ export async function deleteContractor(contractorId: string): Promise<void> {
 export async function searchContractors(
   organizationId: string,
   searchTerm: string,
-  limit = 20
+  limit = 20,
 ): Promise<Contractor[]> {
   const { data, error } = await supabase
-    .from('estates_contractors')
-    .select('*')
-    .eq('organization_id', organizationId)
+    .from("estates_contractors")
+    .select("*")
+    .eq("organization_id", organizationId)
     .or(`company_name.ilike.%${searchTerm}%,contact_name.ilike.%${searchTerm}%`)
     .limit(limit);
 
   if (error) {
-    console.error('Error searching contractors:', error);
+    console.error("Error searching contractors:", error);
     throw error;
   }
 
@@ -164,19 +169,19 @@ export async function searchContractors(
  */
 export async function getContractorsByService(
   organizationId: string,
-  serviceType: string
+  serviceType: string,
 ): Promise<Contractor[]> {
   const { data, error } = await supabase
-    .from('estates_contractors')
-    .select('*')
-    .eq('organization_id', organizationId)
-    .contains('services', [{ service_type: serviceType }])
-    .eq('status', 'active')
-    .order('preferred', { ascending: false })
-    .order('company_name', { ascending: true });
+    .from("estates_contractors")
+    .select("*")
+    .eq("organization_id", organizationId)
+    .contains("services", [{ service_type: serviceType }])
+    .eq("status", "active")
+    .order("preferred", { ascending: false })
+    .order("company_name", { ascending: true });
 
   if (error) {
-    console.error('Error fetching contractors by service:', error);
+    console.error("Error fetching contractors by service:", error);
     throw error;
   }
 
@@ -188,24 +193,25 @@ export async function getContractorsByService(
  */
 export async function getContractorsWithExpiringDocuments(
   organizationId: string,
-  daysUntilExpiry = 30
+  daysUntilExpiry = 30,
 ): Promise<Array<{ contractor: Contractor; expiring_items: string[] }>> {
   const expiryDate = new Date();
   expiryDate.setDate(expiryDate.getDate() + daysUntilExpiry);
-  const expiryDateStr = expiryDate.toISOString().split('T')[0];
+  const expiryDateStr = expiryDate.toISOString().split("T")[0];
 
   const { data: contractors, error } = await supabase
-    .from('estates_contractors')
-    .select('*')
-    .eq('organization_id', organizationId)
-    .eq('status', 'active');
+    .from("estates_contractors")
+    .select("*")
+    .eq("organization_id", organizationId)
+    .eq("status", "active");
 
   if (error) {
-    console.error('Error fetching contractors:', error);
+    console.error("Error fetching contractors:", error);
     throw error;
   }
 
-  const results: Array<{ contractor: Contractor; expiring_items: string[] }> = [];
+  const results: Array<{ contractor: Contractor; expiring_items: string[] }> =
+    [];
 
   for (const contractor of contractors || []) {
     const expiringItems: string[] = [];
@@ -248,26 +254,26 @@ export async function getContractorsWithExpiringDocuments(
  */
 export async function getContracts(
   organizationId: string,
-  filters?: { status?: string; contractor_id?: string }
+  filters?: { status?: string; contractor_id?: string },
 ): Promise<Contract[]> {
   let query = supabase
-    .from('estates_contracts')
-    .select('*, contractor:estates_contractors(*)')
-    .eq('organization_id', organizationId);
+    .from("estates_contracts")
+    .select("*, contractor:estates_contractors(*)")
+    .eq("organization_id", organizationId);
 
   if (filters?.status) {
-    query = query.eq('status', filters.status);
+    query = query.eq("status", filters.status);
   }
   if (filters?.contractor_id) {
-    query = query.eq('contractor_id', filters.contractor_id);
+    query = query.eq("contractor_id", filters.contractor_id);
   }
 
-  query = query.order('end_date', { ascending: true });
+  query = query.order("end_date", { ascending: true });
 
   const { data, error } = await query;
 
   if (error) {
-    console.error('Error fetching contracts:', error);
+    console.error("Error fetching contracts:", error);
     throw error;
   }
 
@@ -277,15 +283,17 @@ export async function getContracts(
 /**
  * Get a single contract by ID
  */
-export async function getContractById(contractId: string): Promise<Contract | null> {
+export async function getContractById(
+  contractId: string,
+): Promise<Contract | null> {
   const { data, error } = await supabase
-    .from('estates_contracts')
-    .select('*, contractor:estates_contractors(*)')
-    .eq('id', contractId)
+    .from("estates_contracts")
+    .select("*, contractor:estates_contractors(*)")
+    .eq("id", contractId)
     .single();
 
   if (error) {
-    console.error('Error fetching contract:', error);
+    console.error("Error fetching contract:", error);
     throw error;
   }
 
@@ -297,23 +305,23 @@ export async function getContractById(contractId: string): Promise<Contract | nu
  */
 export async function createContract(
   organizationId: string,
-  contract: ContractInput
+  contract: ContractInput,
 ): Promise<Contract> {
   const { data, error } = await supabase
-    .from('estates_contracts')
+    .from("estates_contracts")
     .insert({
       organization_id: organizationId,
       ...contract,
       asset_ids: contract.asset_ids || [],
       compliance_domains: contract.compliance_domains || [],
       notice_period_days: contract.notice_period_days || 30,
-      status: 'active',
+      status: "active",
     })
     .select()
     .single();
 
   if (error) {
-    console.error('Error creating contract:', error);
+    console.error("Error creating contract:", error);
     throw error;
   }
 
@@ -325,20 +333,20 @@ export async function createContract(
  */
 export async function updateContract(
   contractId: string,
-  updates: Partial<ContractInput>
+  updates: Partial<ContractInput>,
 ): Promise<Contract> {
   const { data, error } = await supabase
-    .from('estates_contracts')
+    .from("estates_contracts")
     .update({
       ...updates,
       updated_at: new Date().toISOString(),
     })
-    .eq('id', contractId)
+    .eq("id", contractId)
     .select()
     .single();
 
   if (error) {
-    console.error('Error updating contract:', error);
+    console.error("Error updating contract:", error);
     throw error;
   }
 
@@ -350,12 +358,12 @@ export async function updateContract(
  */
 export async function deleteContract(contractId: string): Promise<void> {
   const { error } = await supabase
-    .from('estates_contracts')
+    .from("estates_contracts")
     .delete()
-    .eq('id', contractId);
+    .eq("id", contractId);
 
   if (error) {
-    console.error('Error deleting contract:', error);
+    console.error("Error deleting contract:", error);
     throw error;
   }
 }
@@ -365,22 +373,22 @@ export async function deleteContract(contractId: string): Promise<void> {
  */
 export async function getExpiringContracts(
   organizationId: string,
-  daysUntilExpiry = 90
+  daysUntilExpiry = 90,
 ): Promise<Contract[]> {
   const expiryDate = new Date();
   expiryDate.setDate(expiryDate.getDate() + daysUntilExpiry);
-  const expiryDateStr = expiryDate.toISOString().split('T')[0];
+  const expiryDateStr = expiryDate.toISOString().split("T")[0];
 
   const { data, error } = await supabase
-    .from('estates_contracts')
-    .select('*, contractor:estates_contractors(*)')
-    .eq('organization_id', organizationId)
-    .lte('end_date', expiryDateStr)
-    .gt('end_date', new Date().toISOString().split('T')[0])
-    .order('end_date', { ascending: true });
+    .from("estates_contracts")
+    .select("*, contractor:estates_contractors(*)")
+    .eq("organization_id", organizationId)
+    .lte("end_date", expiryDateStr)
+    .gt("end_date", new Date().toISOString().split("T")[0])
+    .order("end_date", { ascending: true });
 
   if (error) {
-    console.error('Error fetching expiring contracts:', error);
+    console.error("Error fetching expiring contracts:", error);
     throw error;
   }
 
@@ -392,14 +400,14 @@ export async function getExpiringContracts(
  */
 export async function getAssetContracts(assetId: string): Promise<Contract[]> {
   const { data, error } = await supabase
-    .from('estates_contracts')
-    .select('*, contractor:estates_contractors(*)')
-    .contains('asset_ids', [assetId])
-    .eq('status', 'active')
-    .order('end_date', { ascending: true });
+    .from("estates_contracts")
+    .select("*, contractor:estates_contractors(*)")
+    .contains("asset_ids", [assetId])
+    .eq("status", "active")
+    .order("end_date", { ascending: true });
 
   if (error) {
-    console.error('Error fetching asset contracts:', error);
+    console.error("Error fetching asset contracts:", error);
     throw error;
   }
 
@@ -431,12 +439,12 @@ export interface ContractorInput {
     document_url?: string;
   }>;
   safeguarding_docs?: Array<{
-    type: 'dbs_check' | 'safeguarding_policy' | 'insurance' | 'other';
+    type: "dbs_check" | "safeguarding_policy" | "insurance" | "other";
     expiry_date?: string;
     document_url?: string;
   }>;
   notes?: string;
-  status?: 'active' | 'inactive' | 'restricted';
+  status?: "active" | "inactive" | "restricted";
   preferred?: boolean;
 }
 
@@ -444,7 +452,12 @@ export interface ContractInput {
   contractor_id: string;
   title: string;
   description?: string;
-  contract_type: 'maintenance' | 'service' | 'inspection' | 'consultancy' | 'installation';
+  contract_type:
+    | "maintenance"
+    | "service"
+    | "inspection"
+    | "consultancy"
+    | "installation";
   start_date: string;
   end_date?: string;
   renewal_date?: string;
@@ -455,7 +468,7 @@ export interface ContractInput {
     required_certifications?: string[];
   };
   annual_cost?: number;
-  billing_frequency?: 'monthly' | 'quarterly' | 'annually' | 'one_off';
+  billing_frequency?: "monthly" | "quarterly" | "annually" | "one_off";
   asset_ids?: string[];
   compliance_domains?: string[];
   contract_document_url?: string;

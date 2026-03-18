@@ -129,7 +129,7 @@ const DEMO_ASSETS: Asset[] = [
 ];
 
 export default function AssetTagsPage() {
-  const { profile } = useAuth();
+  const { organization } = useAuth();
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDemo, setIsDemo] = useState(false);
@@ -137,7 +137,7 @@ export default function AssetTagsPage() {
   useEffect(() => {
     async function fetchAssets() {
       try {
-        const orgId = profile?.organization_id;
+        const orgId = organization?.id;
         if (!orgId) {
           setAssets(DEMO_ASSETS);
           setIsDemo(true);
@@ -172,7 +172,7 @@ export default function AssetTagsPage() {
       setLoading(false);
     }
     fetchAssets();
-  }, [profile?.organization_id]);
+  }, [organization?.id]);
 
   return (
     <div className="p-6 md:p-8 space-y-6 min-h-screen max-w-[1600px] mx-auto">

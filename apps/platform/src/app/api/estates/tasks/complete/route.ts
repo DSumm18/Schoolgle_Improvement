@@ -56,7 +56,9 @@ export const POST = protectedRoute(
       completed_at: new Date().toISOString(),
       completed_by: userId,
       completion_notes: body.completion_notes,
-      checklist_items: body.checklist_items,
+      checklist_items: Object.entries(body.checklist_items)
+        .filter(([, v]) => v)
+        .map(([k]) => k),
       findings: body.findings,
       photo_urls: body.photos,
       // Add readings to metadata
@@ -72,9 +74,9 @@ export const POST = protectedRoute(
     for (const followUp of body.follow_up_tasks) {
       const newTask = await TaskService.create(organizationId, {
         title: followUp.title,
-        description: `Follow-up task from completed check: ${task.title}`,
+        description: `Follow-up task from completed check: ${task.title || task.task_name}`,
         task_type: "inspection",
-        compliance_domain: task.compliance_domain,
+        compliance_domain: task.compliance_domain as any,
         priority: followUp.priority as any,
         due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days from now
         recurring: false,
@@ -106,7 +108,7 @@ export const POST = protectedRoute(
     // Recalculate RAG status for the domain
     const domainStatus = await RAGStatusService.calculateDomainStatus(
       organizationId,
-      task.compliance_domain,
+      task.compliance_domain as any,
     );
 
     // If there are critical findings, create helpdesk tickets
@@ -166,8 +168,12 @@ export const GET = protectedRoute(async (auth, request) => {
       ] || [];
     const matchingCheck = domainChecks.find(
       (check: any) =>
-        task.title.toLowerCase().includes(check.name.toLowerCase()) ||
-        check.name.toLowerCase().includes(task.title.toLowerCase()),
+        (task.title || task.task_name)
+          .toLowerCase()
+          .includes(check.name.toLowerCase()) ||
+        check.name
+          .toLowerCase()
+          .includes((task.title || task.task_name).toLowerCase()),
     );
     if (matchingCheck) {
       requiredEvidence = matchingCheck.evidenceRequired || [];
@@ -179,7 +185,7 @@ export const GET = protectedRoute(async (auth, request) => {
   // Get domain-specific RAG status
   const domainStatus = await RAGStatusService.calculateDomainStatus(
     organizationId,
-    task.compliance_domain,
+    task.compliance_domain as any,
   );
 
   return apiSuccess({

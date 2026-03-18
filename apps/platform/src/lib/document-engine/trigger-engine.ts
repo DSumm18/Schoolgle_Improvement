@@ -285,6 +285,9 @@ async function getOrgBranding(
     phone: settings.phone,
     email: settings.email,
     primary_color: settings.primary_color,
+    secondary_color: settings.secondary_color,
+    accent_color: settings.accent_color,
+    font_family: settings.font_family,
     footer_text: settings.footer_text,
   };
 }

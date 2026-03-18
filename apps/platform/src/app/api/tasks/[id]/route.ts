@@ -17,7 +17,7 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
   const supabase = createServiceRoleClient();
 
   // Try to find in actions first
-  const { data: task, error } = await supabase
+  const { data: taskRaw, error } = await supabase
     .from("actions")
     .select(
       `
@@ -37,6 +37,8 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
     .eq("id", id)
     .eq("organization_id", organizationId)
     .maybeSingle();
+
+  const task = taskRaw as any;
 
   if (task) {
     // Enrich with subtasks if parent
@@ -69,7 +71,7 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
   }
 
   // Try estates compliance tasks
-  const { data: estatesTask } = await supabase
+  const { data: estatesTaskRaw } = await supabase
     .from("estates_compliance_tasks")
     .select(
       `
@@ -84,6 +86,8 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
     .eq("id", id)
     .eq("organization_id", organizationId)
     .maybeSingle();
+
+  const estatesTask = estatesTaskRaw as any;
 
   if (estatesTask) {
     return apiSuccess({

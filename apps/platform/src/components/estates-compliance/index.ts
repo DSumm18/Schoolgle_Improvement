@@ -5,24 +5,24 @@
  */
 
 // Task Completion & Workflow
-export { TaskScheduler } from './TaskScheduler';
-export { FindingsAutoSuggest } from './FindingsAutoSuggest';
-export { SignaturePad } from './SignaturePad';
-export { PhotoCapture } from './PhotoCapture';
+export { TaskScheduler } from "./TaskScheduler";
+export { FindingsAutoSuggest } from "./FindingsAutoSuggest";
+export { SignaturePad } from "./SignaturePad";
+export { PhotoCapture } from "./PhotoCapture";
 
 // Evidence & Verification
-export { EvidenceManager } from './EvidenceManager';
-export { DocumentVerifier } from './DocumentVerifier';
+export { EvidenceManager } from "./EvidenceManager";
+export { DocumentVerifier } from "./DocumentVerifier";
 
 // Reporting
-export { ReportGenerator } from './ReportGenerator';
+export { default as ReportGenerator } from "./ReportGenerator";
 
 // Findings & Analysis
-export { FindingsList } from './FindingsList';
-export { ContractorReportAnalyzer } from './ContractorReportAnalyzer';
+export { FindingsList } from "./FindingsList";
+export { ContractorReportAnalyzer } from "./ContractorReportAnalyzer";
 
 // Asset & Contractor Management
-export { AssetCard } from './AssetCard';
-export { AssetTable } from './AssetTable';
-export { ContractorCard } from './ContractorCard';
-export { ContractorTable } from './ContractorTable';
+export { AssetCard } from "./AssetCard";
+export { AssetTable } from "./AssetTable";
+export { ContractorCard } from "./ContractorCard";
+export { ContractorTable } from "./ContractorTable";

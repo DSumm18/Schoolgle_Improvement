@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * Site Manager's Daily Diary Page
@@ -10,34 +10,37 @@
  * - Mobile-friendly responsive design
  */
 
-import { useState, useEffect, useCallback, Suspense } from 'react';
-import Link from 'next/link';
-import { format, startOfDay, endOfDay, subDays, subMonths } from 'date-fns';
-import { useAuth } from '@/context/SupabaseAuthContext';
-import { BookOpen, Search, Filter, Calendar, Plus, Menu } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
+import { useState, useEffect, useCallback, Suspense } from "react";
+import Link from "next/link";
+import { format, startOfDay, endOfDay, subDays, subMonths } from "date-fns";
+import { useAuth } from "@/context/SupabaseAuthContext";
+import { BookOpen, Search, Filter, Calendar, Plus, Menu } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from '@/components/ui/sheet';
-import { DiaryEntry, DiaryEntryData } from '@/components/estates-compliance/DiaryEntry';
-import { AddEntryDialog } from '@/components/estates-compliance/AddEntryDialog';
-import { toast } from 'sonner';
+} from "@/components/ui/sheet";
+import {
+  DiaryEntry,
+  DiaryEntryData,
+} from "@/components/estates-compliance/DiaryEntry";
+import { AddEntryDialog } from "@/components/estates-compliance/AddEntryDialog";
+import { toast } from "sonner";
 
-type DateRangeType = 'today' | 'week' | 'month' | 'all' | 'custom';
+type DateRangeType = "today" | "week" | "month" | "all" | "custom";
 
 interface FilterState {
   search: string;
@@ -53,94 +56,108 @@ function SiteDiaryPageContent() {
   const [filteredEntries, setFilteredEntries] = useState<DiaryEntryData[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<FilterState>({
-    search: '',
+    search: "",
     tags: [],
-    dateRange: 'month',
+    dateRange: "month",
   });
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
 
   // Fetch entries
-  const fetchEntries = useCallback(async (signal?: AbortSignal) => {
-    // Use a local controller to manage the fetch timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort('Diary fetch timed out'), 30000);
+  const fetchEntries = useCallback(
+    async (signal?: AbortSignal) => {
+      // Use a local controller to manage the fetch timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(
+        () => controller.abort("Diary fetch timed out"),
+        30000,
+      );
 
-    // Link the passed signal to our local controller
-    const onAbort = () => controller.abort(signal?.reason);
-    if (signal) {
-      if (signal.aborted) onAbort();
-      else signal.addEventListener('abort', onAbort, { once: true });
-    }
-
-    try {
-      setLoading(true);
-
-      const params = new URLSearchParams({
-        organization_id: organizationId || '',
-        limit: '100',
-      });
-
-      if (filters.search) {
-        params.append('search', filters.search);
+      // Link the passed signal to our local controller
+      const onAbort = () => controller.abort(signal?.reason);
+      if (signal) {
+        if (signal.aborted) onAbort();
+        else signal.addEventListener("abort", onAbort, { once: true });
       }
 
-      if (filters.tags.length > 0) {
-        params.append('tags', filters.tags.join(','));
-      }
+      try {
+        setLoading(true);
 
-      if (filters.dateRange === 'today') {
-        const today = new Date();
-        params.append('date_from', startOfDay(today).toISOString());
-        params.append('date_to', endOfDay(today).toISOString());
-      } else if (filters.dateRange === 'week') {
-        const weekAgo = subDays(new Date(), 7);
-        params.append('date_from', startOfDay(weekAgo).toISOString());
-      } else if (filters.dateRange === 'month') {
-        const monthAgo = subMonths(new Date(), 1);
-        params.append('date_from', startOfDay(monthAgo).toISOString());
-      } else if (filters.dateRange === 'custom' && filters.dateFrom) {
-        params.append('date_from', filters.dateFrom);
-        if (filters.dateTo) {
-          params.append('date_to', filters.dateTo);
+        const params = new URLSearchParams({
+          organizationId: organizationId || "",
+          limit: "100",
+        });
+
+        if (filters.search) {
+          params.append("search", filters.search);
         }
+
+        if (filters.tags.length > 0) {
+          params.append("tags", filters.tags.join(","));
+        }
+
+        if (filters.dateRange === "today") {
+          const today = new Date();
+          params.append("date_from", startOfDay(today).toISOString());
+          params.append("date_to", endOfDay(today).toISOString());
+        } else if (filters.dateRange === "week") {
+          const weekAgo = subDays(new Date(), 7);
+          params.append("date_from", startOfDay(weekAgo).toISOString());
+        } else if (filters.dateRange === "month") {
+          const monthAgo = subMonths(new Date(), 1);
+          params.append("date_from", startOfDay(monthAgo).toISOString());
+        } else if (filters.dateRange === "custom" && filters.dateFrom) {
+          params.append("date_from", filters.dateFrom);
+          if (filters.dateTo) {
+            params.append("date_to", filters.dateTo);
+          }
+        }
+
+        const response = await fetch(
+          `/api/estates-compliance/diary?${params.toString()}`,
+          {
+            headers: {
+              Authorization: `Bearer ${session?.access_token}`,
+            },
+            signal: controller.signal,
+          },
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch entries");
+        }
+
+        const data = await response.json();
+        setEntries(data.entries || []);
+        setFilteredEntries(data.entries || []);
+      } catch (error: any) {
+        const errorString =
+          typeof error === "string" ? error : error?.message || "";
+        const isAbort =
+          error.name === "AbortError" ||
+          errorString.toLowerCase().includes("abort") ||
+          errorString.toLowerCase().includes("unmounted") ||
+          errorString.toLowerCase().includes("refreshed");
+
+        if (isAbort) {
+          console.info("[SiteDiary] Fetch aborted:", errorString);
+        } else {
+          console.error("Error fetching diary entries:", error);
+          toast.error("Failed to load diary entries");
+        }
+      } finally {
+        clearTimeout(timeoutId);
+        if (signal) signal.removeEventListener("abort", onAbort);
+        setLoading(false);
       }
-
-      const response = await fetch(`/api/estates-compliance/diary?${params.toString()}`, {
-        headers: {
-          'Authorization': `Bearer ${session?.access_token}`,
-        },
-        signal: controller.signal,
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch entries');
-      }
-
-      const data = await response.json();
-      setEntries(data.entries || []);
-      setFilteredEntries(data.entries || []);
-    } catch (error: any) {
-      const errorString = typeof error === 'string' ? error : error?.message || '';
-      const isAbort = error.name === 'AbortError' || errorString.toLowerCase().includes('abort') || errorString.toLowerCase().includes('unmounted') || errorString.toLowerCase().includes('refreshed');
-
-      if (isAbort) {
-        console.info('[SiteDiary] Fetch aborted:', errorString);
-      } else {
-        console.error('Error fetching diary entries:', error);
-        toast.error('Failed to load diary entries');
-      }
-    } finally {
-      clearTimeout(timeoutId);
-      if (signal) signal.removeEventListener('abort', onAbort);
-      setLoading(false);
-    }
-  }, [organizationId, filters, session]);
+    },
+    [organizationId, filters, session],
+  );
 
   useEffect(() => {
     const controller = new AbortController();
     fetchEntries(controller.signal);
-    return () => controller.abort('Component updated or unmounted');
+    return () => controller.abort("Component updated or unmounted");
   }, [fetchEntries]);
 
   // Handle entry added
@@ -150,21 +167,23 @@ function SiteDiaryPageContent() {
 
   // Handle entry updated
   const handleEntryUpdated = (id: string, updates: Partial<DiaryEntryData>) => {
-    setEntries(entries.map(e => (e.id === id ? { ...e, ...updates } : e)));
-    setFilteredEntries(filteredEntries.map(e => (e.id === id ? { ...e, ...updates } : e)));
+    setEntries(entries.map((e) => (e.id === id ? { ...e, ...updates } : e)));
+    setFilteredEntries(
+      filteredEntries.map((e) => (e.id === id ? { ...e, ...updates } : e)),
+    );
   };
 
   // Handle entry deleted
   const handleEntryDeleted = (id: string) => {
-    setEntries(entries.filter(e => e.id !== id));
-    setFilteredEntries(filteredEntries.filter(e => e.id !== id));
-    toast.success('Entry deleted');
+    setEntries(entries.filter((e) => e.id !== id));
+    setFilteredEntries(filteredEntries.filter((e) => e.id !== id));
+    toast.success("Entry deleted");
   };
 
   // Toggle tag filter
   const toggleTagFilter = (tag: string) => {
     const newTags = filters.tags.includes(tag)
-      ? filters.tags.filter(t => t !== tag)
+      ? filters.tags.filter((t) => t !== tag)
       : [...filters.tags, tag];
     setFilters({ ...filters, tags: newTags });
   };
@@ -172,36 +191,41 @@ function SiteDiaryPageContent() {
   // Clear all filters
   const clearFilters = () => {
     setFilters({
-      search: '',
+      search: "",
       tags: [],
-      dateRange: 'month',
+      dateRange: "month",
       dateFrom: undefined,
       dateTo: undefined,
     });
   };
 
   // Get all unique tags from entries
-  const allTags = Array.from(new Set(entries.flatMap(e => e.tags))).sort();
+  const allTags = Array.from(new Set(entries.flatMap((e) => e.tags))).sort();
 
   // Group entries by date
-  const groupedEntries = filteredEntries.reduce((groups, entry) => {
-    const dateKey = format(new Date(entry.created_at), 'yyyy-MM-dd');
-    if (!groups[dateKey]) {
-      groups[dateKey] = [];
-    }
-    groups[dateKey].push(entry);
-    return groups;
-  }, {} as Record<string, DiaryEntryData[]>);
+  const groupedEntries = filteredEntries.reduce(
+    (groups, entry) => {
+      const dateKey = format(new Date(entry.created_at), "yyyy-MM-dd");
+      if (!groups[dateKey]) {
+        groups[dateKey] = [];
+      }
+      groups[dateKey].push(entry);
+      return groups;
+    },
+    {} as Record<string, DiaryEntryData[]>,
+  );
 
-  const sortedDates = Object.keys(groupedEntries).sort((a, b) => b.localeCompare(a));
+  const sortedDates = Object.keys(groupedEntries).sort((a, b) =>
+    b.localeCompare(a),
+  );
 
   // Stats
   const totalEntries = entries.length;
   const thisWeekEntries = entries.filter(
-    e => new Date(e.created_at) > subDays(new Date(), 7)
+    (e) => new Date(e.created_at) > subDays(new Date(), 7),
   ).length;
   const uniqueLocations = Array.from(
-    new Set(entries.map(e => e.location).filter(Boolean))
+    new Set(entries.map((e) => e.location).filter(Boolean)),
   ).length;
 
   return (
@@ -221,7 +245,9 @@ function SiteDiaryPageContent() {
               <BookOpen className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Site Manager&apos;s Diary</h1>
+              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+                Site Manager&apos;s Diary
+              </h1>
               <p className="text-muted-foreground text-sm md:text-base">
                 Daily log of observations, notes, and compliance activities
               </p>
@@ -242,7 +268,10 @@ function SiteDiaryPageContent() {
               Filters
               {(filters.search || filters.tags.length > 0) && (
                 <Badge variant="secondary" className="ml-2 h-5">
-                  {[filters.search ? 1 : 0, filters.tags.length].reduce((a, b) => a + b, 0)}
+                  {[filters.search ? 1 : 0, filters.tags.length].reduce(
+                    (a, b) => a + b,
+                    0,
+                  )}
                 </Badge>
               )}
             </Button>
@@ -268,19 +297,25 @@ function SiteDiaryPageContent() {
         <Card>
           <CardContent className="p-4">
             <p className="text-2xl md:text-3xl font-bold">{totalEntries}</p>
-            <p className="text-xs md:text-sm text-muted-foreground">Total Entries</p>
+            <p className="text-xs md:text-sm text-muted-foreground">
+              Total Entries
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <p className="text-2xl md:text-3xl font-bold">{thisWeekEntries}</p>
-            <p className="text-xs md:text-sm text-muted-foreground">This Week</p>
+            <p className="text-xs md:text-sm text-muted-foreground">
+              This Week
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <p className="text-2xl md:text-3xl font-bold">{uniqueLocations}</p>
-            <p className="text-xs md:text-sm text-muted-foreground">Locations</p>
+            <p className="text-xs md:text-sm text-muted-foreground">
+              Locations
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -298,7 +333,9 @@ function SiteDiaryPageContent() {
         </div>
         <Select
           value={filters.dateRange}
-          onValueChange={(value) => setFilters({ ...filters, dateRange: value as DateRangeType })}
+          onValueChange={(value) =>
+            setFilters({ ...filters, dateRange: value as DateRangeType })
+          }
         >
           <SelectTrigger className="w-full md:w-[160px]">
             <SelectValue placeholder="Date range" />
@@ -321,7 +358,7 @@ function SiteDiaryPageContent() {
       {filters.tags.length > 0 && (
         <div className="flex flex-wrap gap-2">
           <span className="text-sm text-muted-foreground">Active tags:</span>
-          {filters.tags.map(tag => (
+          {filters.tags.map((tag) => (
             <Badge
               key={tag}
               variant="secondary"
@@ -367,11 +404,13 @@ function SiteDiaryPageContent() {
             <Card>
               <CardContent className="p-12 text-center">
                 <BookOpen className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-semibold mb-2">No diary entries yet</h3>
+                <h3 className="text-lg font-semibold mb-2">
+                  No diary entries yet
+                </h3>
                 <p className="text-muted-foreground mb-6">
                   {filters.search || filters.tags.length > 0
-                    ? 'No entries match your filters. Try adjusting them.'
-                    : 'Start recording your daily observations and activities.'}
+                    ? "No entries match your filters. Try adjusting them."
+                    : "Start recording your daily observations and activities."}
                 </p>
                 <AddEntryDialog
                   onEntryAdded={handleEntryAdded}
@@ -385,24 +424,27 @@ function SiteDiaryPageContent() {
               </CardContent>
             </Card>
           ) : (
-            sortedDates.map(dateKey => (
+            sortedDates.map((dateKey) => (
               <div key={dateKey} className="space-y-4">
                 <div className="flex items-center gap-3">
                   <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 text-primary font-semibold text-sm">
-                    {format(new Date(dateKey), 'dd')}
+                    {format(new Date(dateKey), "dd")}
                   </div>
                   <div>
                     <h3 className="font-semibold">
-                      {format(new Date(dateKey), 'EEEE, MMMM d, yyyy')}
+                      {format(new Date(dateKey), "EEEE, MMMM d, yyyy")}
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      {groupedEntries[dateKey].length} {groupedEntries[dateKey].length === 1 ? 'entry' : 'entries'}
+                      {groupedEntries[dateKey].length}{" "}
+                      {groupedEntries[dateKey].length === 1
+                        ? "entry"
+                        : "entries"}
                     </p>
                   </div>
                   <div className="flex-1 h-px bg-border ml-4" />
                 </div>
                 <div className="space-y-4 pl-13">
-                  {groupedEntries[dateKey].map(entry => (
+                  {groupedEntries[dateKey].map((entry) => (
                     <DiaryEntry
                       key={entry.id}
                       entry={entry}
@@ -428,11 +470,13 @@ function SiteDiaryPageContent() {
           <Card>
             <CardContent className="p-12 text-center">
               <BookOpen className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-lg font-semibold mb-2">No diary entries yet</h3>
+              <h3 className="text-lg font-semibold mb-2">
+                No diary entries yet
+              </h3>
               <p className="text-muted-foreground mb-6">
                 {filters.search || filters.tags.length > 0
-                  ? 'No entries match your filters. Try adjusting them.'
-                  : 'Start recording your daily observations and activities.'}
+                  ? "No entries match your filters. Try adjusting them."
+                  : "Start recording your daily observations and activities."}
               </p>
               <AddEntryDialog
                 onEntryAdded={handleEntryAdded}
@@ -446,24 +490,25 @@ function SiteDiaryPageContent() {
             </CardContent>
           </Card>
         ) : (
-          sortedDates.map(dateKey => (
+          sortedDates.map((dateKey) => (
             <div key={dateKey} className="space-y-4">
               <div className="flex items-center gap-3">
                 <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 text-primary font-semibold text-sm">
-                  {format(new Date(dateKey), 'dd')}
+                  {format(new Date(dateKey), "dd")}
                 </div>
                 <div>
                   <h3 className="font-semibold">
-                    {format(new Date(dateKey), 'EEE, MMM d')}
+                    {format(new Date(dateKey), "EEE, MMM d")}
                   </h3>
                   <p className="text-sm text-muted-foreground">
-                    {groupedEntries[dateKey].length} {groupedEntries[dateKey].length === 1 ? 'entry' : 'entries'}
+                    {groupedEntries[dateKey].length}{" "}
+                    {groupedEntries[dateKey].length === 1 ? "entry" : "entries"}
                   </p>
                 </div>
                 <div className="flex-1 h-px bg-border ml-4" />
               </div>
               <div className="space-y-4 pl-13">
-                {groupedEntries[dateKey].map(entry => (
+                {groupedEntries[dateKey].map((entry) => (
                   <DiaryEntry
                     key={entry.id}
                     entry={entry}
@@ -515,16 +560,16 @@ function FilterContent({
   onClose,
 }: FilterContentProps) {
   const TAG_COLORS: Record<string, string> = {
-    heating: 'bg-orange-100 text-orange-700 border-orange-300',
-    security: 'bg-red-100 text-red-700 border-red-300',
-    vandalism: 'bg-purple-100 text-purple-700 border-purple-300',
-    contractor: 'bg-blue-100 text-blue-700 border-blue-300',
-    maintenance: 'bg-gray-100 text-gray-700 border-gray-300',
-    inspection: 'bg-green-100 text-green-700 border-green-300',
+    heating: "bg-orange-100 text-orange-700 border-orange-300",
+    security: "bg-red-100 text-red-700 border-red-300",
+    vandalism: "bg-purple-100 text-purple-700 border-purple-300",
+    contractor: "bg-blue-100 text-blue-700 border-blue-300",
+    maintenance: "bg-gray-100 text-gray-700 border-gray-300",
+    inspection: "bg-green-100 text-green-700 border-green-300",
   };
 
   const getTagColor = (tag: string) => {
-    return TAG_COLORS[tag] || 'bg-gray-100 text-gray-700 border-gray-300';
+    return TAG_COLORS[tag] || "bg-gray-100 text-gray-700 border-gray-300";
   };
 
   return (
@@ -534,7 +579,9 @@ function FilterContent({
         <label className="text-sm font-medium">Date Range</label>
         <Select
           value={filters.dateRange}
-          onValueChange={(value) => setFilters({ ...filters, dateRange: value as DateRangeType })}
+          onValueChange={(value) =>
+            setFilters({ ...filters, dateRange: value as DateRangeType })
+          }
         >
           <SelectTrigger>
             <SelectValue />
@@ -553,12 +600,13 @@ function FilterContent({
         <div className="space-y-2">
           <label className="text-sm font-medium">Filter by Tags</label>
           <div className="flex flex-wrap gap-2">
-            {allTags.slice(0, 15).map(tag => (
+            {allTags.slice(0, 15).map((tag) => (
               <Badge
                 key={tag}
-                variant={filters.tags.includes(tag) ? 'default' : 'outline'}
-                className={`cursor-pointer ${filters.tags.includes(tag) ? '' : getTagColor(tag)
-                  }`}
+                variant={filters.tags.includes(tag) ? "default" : "outline"}
+                className={`cursor-pointer ${
+                  filters.tags.includes(tag) ? "" : getTagColor(tag)
+                }`}
                 onClick={() => toggleTagFilter(tag)}
               >
                 {tag}
@@ -577,12 +625,13 @@ function FilterContent({
       <div className="space-y-2">
         <label className="text-sm font-medium">Quick Filter</label>
         <div className="flex flex-wrap gap-2">
-          {['heating', 'security', 'maintenance', 'inspection'].map(tag => (
+          {["heating", "security", "maintenance", "inspection"].map((tag) => (
             <Badge
               key={tag}
-              variant={filters.tags.includes(tag) ? 'default' : 'outline'}
-              className={`cursor-pointer ${filters.tags.includes(tag) ? '' : getTagColor(tag)
-                }`}
+              variant={filters.tags.includes(tag) ? "default" : "outline"}
+              className={`cursor-pointer ${
+                filters.tags.includes(tag) ? "" : getTagColor(tag)
+              }`}
               onClick={() => toggleTagFilter(tag)}
             >
               {tag}
@@ -593,7 +642,12 @@ function FilterContent({
 
       {/* Actions */}
       <div className="flex gap-2 pt-4 border-t">
-        <Button variant="outline" size="sm" className="flex-1" onClick={clearFilters}>
+        <Button
+          variant="outline"
+          size="sm"
+          className="flex-1"
+          onClick={clearFilters}
+        >
           Clear All
         </Button>
         {onClose && (
@@ -609,11 +663,13 @@ function FilterContent({
 // Wrapper with Suspense boundary
 export default function SiteDiaryPage() {
   return (
-    <Suspense fallback={
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="w-10 h-10 border-4 border-muted border-t-primary rounded-full animate-spin" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="w-10 h-10 border-4 border-muted border-t-primary rounded-full animate-spin" />
+        </div>
+      }
+    >
       <SiteDiaryPageContent />
     </Suspense>
   );

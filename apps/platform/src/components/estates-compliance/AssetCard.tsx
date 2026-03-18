@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * AssetCard Component
@@ -6,20 +6,32 @@
  * Displays a single asset with key information and quick actions.
  */
 
-import Link from 'next/link';
-import { Asset, AssetStatus } from '@/types/estates-compliance';
+import Link from "next/link";
+import { Asset, AssetStatus } from "@/types/estates-compliance";
 
 interface AssetCardProps {
   asset: Asset;
 }
 
-const statusConfig: Record<AssetStatus, { label: string; className: string }> = {
-  active: { label: 'Active', className: 'bg-green-100 text-green-800' },
-  inactive: { label: 'Inactive', className: 'bg-gray-100 text-gray-800' },
-  under_maintenance: { label: 'Under Maintenance', className: 'bg-yellow-100 text-yellow-800' },
-  retired: { label: 'Retired', className: 'bg-red-100 text-red-800' },
-  requires_inspection: { label: 'Requires Inspection', className: 'bg-orange-100 text-orange-800' },
-};
+const statusConfig: Record<AssetStatus, { label: string; className: string }> =
+  {
+    active: { label: "Active", className: "bg-green-100 text-green-800" },
+    inactive: { label: "Inactive", className: "bg-gray-100 text-gray-800" },
+    disposed: { label: "Disposed", className: "bg-gray-100 text-gray-800" },
+    under_repair: {
+      label: "Under Repair",
+      className: "bg-yellow-100 text-yellow-800",
+    },
+    under_maintenance: {
+      label: "Under Maintenance",
+      className: "bg-yellow-100 text-yellow-800",
+    },
+    requires_inspection: {
+      label: "Requires Inspection",
+      className: "bg-orange-100 text-orange-800",
+    },
+    retired: { label: "Retired", className: "bg-red-100 text-red-800" },
+  };
 
 export function AssetCard({ asset }: AssetCardProps) {
   const status = statusConfig[asset.status] || statusConfig.active;
@@ -29,17 +41,27 @@ export function AssetCard({ asset }: AssetCardProps) {
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-mono text-muted-foreground">{asset.code || 'No code'}</span>
-            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${status.className}`}>
+            <span className="text-xs font-mono text-muted-foreground">
+              {asset.code || "No code"}
+            </span>
+            <span
+              className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${status.className}`}
+            >
               {status.label}
             </span>
           </div>
           <h3 className="font-semibold text-base">{asset.name}</h3>
-          <p className="text-sm text-muted-foreground">{asset.asset_type.replace('_', ' ')}</p>
+          <p className="text-sm text-muted-foreground">
+            {asset.asset_type.replace("_", " ")}
+          </p>
         </div>
         {asset.qr_code && (
           <div className="ml-4 flex-shrink-0">
-            <img src={asset.qr_code} alt="QR Code" className="w-16 h-16 rounded border" />
+            <img
+              src={asset.qr_code}
+              alt="QR Code"
+              className="w-16 h-16 rounded border"
+            />
           </div>
         )}
       </div>
@@ -52,7 +74,8 @@ export function AssetCard({ asset }: AssetCardProps) {
         )}
         {asset.manufacturer && (
           <p>
-            <span className="font-medium">Manufacturer:</span> {asset.manufacturer}
+            <span className="font-medium">Manufacturer:</span>{" "}
+            {asset.manufacturer}
             {asset.model && ` (${asset.model})`}
           </p>
         )}

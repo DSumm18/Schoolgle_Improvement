@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { motion } from "framer-motion";
+import { motion, Variants } from "framer-motion";
 import {
   CheckCircle,
   AlertTriangle,
@@ -113,7 +113,7 @@ function ratingBadgeColor(rating?: string | null): {
 // Animation variants
 // ---------------------------------------------------------------------------
 
-const fadeUp = {
+const fadeUp: Variants = {
   hidden: { opacity: 0, y: 16 },
   visible: (i: number) => ({
     opacity: 1,
@@ -122,7 +122,7 @@ const fadeUp = {
   }),
 };
 
-const staggerContainer = {
+const staggerContainer: Variants = {
   hidden: {},
   visible: { transition: { staggerChildren: 0.1 } },
 };

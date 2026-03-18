@@ -1070,6 +1070,376 @@ export const INTELLIGENCE_FUNCTION_SCHEMAS = [
 ];
 
 // =====================================================
+// MIS INTELLIGENCE & DATA ANALYSIS SKILLS
+// =====================================================
+
+export const MIS_INTELLIGENCE_FUNCTION_SCHEMAS = [
+  {
+    name: "detect_teacher_performance_patterns",
+    description:
+      "Analyze teacher performance across year groups and academic years to identify consistent over or underperformance patterns",
+    parameters: {
+      type: "object",
+      properties: {
+        organization_id: {
+          type: "string",
+          description: "Organization ID (required)",
+        },
+        academic_year: {
+          type: "number",
+          description: "Academic year start (e.g. 2025 for 2025/26)",
+        },
+        subject: {
+          type: "string",
+          description: "Filter by subject (e.g. maths, reading, writing)",
+        },
+        staff_id: {
+          type: "string",
+          description: "Filter to a specific staff member",
+        },
+      },
+      required: ["organization_id"],
+    },
+  },
+  {
+    name: "detect_teacher_assessment_inflation",
+    description:
+      "Compare teacher assessment grades against standardised test scores to identify potential inflation or deflation",
+    parameters: {
+      type: "object",
+      properties: {
+        organization_id: {
+          type: "string",
+          description: "Organization ID (required)",
+        },
+        academic_year: {
+          type: "number",
+          description: "Academic year start (e.g. 2025 for 2025/26)",
+        },
+        year_group: {
+          type: "number",
+          description: "Filter by year group (e.g. 6 for Year 6)",
+        },
+        subject: {
+          type: "string",
+          description: "Filter by subject (e.g. maths, reading, writing)",
+        },
+      },
+      required: ["organization_id"],
+    },
+  },
+  {
+    name: "detect_declining_pupils",
+    description:
+      "Identify pupils whose attainment is gradually declining, especially those not on any intervention list",
+    parameters: {
+      type: "object",
+      properties: {
+        organization_id: {
+          type: "string",
+          description: "Organization ID (required)",
+        },
+        year_group: {
+          type: "number",
+          description: "Filter by year group",
+        },
+        subject: {
+          type: "string",
+          description: "Filter by subject",
+        },
+        minimum_decline_points: {
+          type: "number",
+          description:
+            "Minimum number of data points showing decline before flagging (default: 2)",
+        },
+      },
+      required: ["organization_id"],
+    },
+  },
+  {
+    name: "detect_pupil_strength_change",
+    description:
+      "Find SEN/EHCP/PP pupils making exceptional progress as evidence for reports",
+    parameters: {
+      type: "object",
+      properties: {
+        organization_id: {
+          type: "string",
+          description: "Organization ID (required)",
+        },
+        year_group: {
+          type: "number",
+          description: "Filter by year group",
+        },
+        pupil_group: {
+          type: "string",
+          enum: ["sen", "ehcp", "pp", "fsm", "eal", "lac", "all"],
+          description: "Pupil group to analyse (default: all)",
+        },
+      },
+      required: ["organization_id"],
+    },
+  },
+  {
+    name: "detect_cohort_anomaly",
+    description:
+      "Find year groups performing below school norm and cross-reference with supply cover and absence data",
+    parameters: {
+      type: "object",
+      properties: {
+        organization_id: {
+          type: "string",
+          description: "Organization ID (required)",
+        },
+        academic_year: {
+          type: "number",
+          description: "Academic year start (e.g. 2025 for 2025/26)",
+        },
+        subject: {
+          type: "string",
+          description: "Filter by subject",
+        },
+      },
+      required: ["organization_id"],
+    },
+  },
+  {
+    name: "detect_pp_gap_trend",
+    description:
+      "Track Pupil Premium attainment gap trends across subjects and year groups",
+    parameters: {
+      type: "object",
+      properties: {
+        organization_id: {
+          type: "string",
+          description: "Organization ID (required)",
+        },
+        year_group: {
+          type: "number",
+          description: "Filter by year group",
+        },
+        subject: {
+          type: "string",
+          description: "Filter by subject",
+        },
+        years_back: {
+          type: "number",
+          description: "How many years of trend data to include (default: 3)",
+        },
+      },
+      required: ["organization_id"],
+    },
+  },
+  {
+    name: "detect_gender_gap",
+    description:
+      "Identify significant gender attainment gaps by subject and year group",
+    parameters: {
+      type: "object",
+      properties: {
+        organization_id: {
+          type: "string",
+          description: "Organization ID (required)",
+        },
+        year_group: {
+          type: "number",
+          description: "Filter by year group",
+        },
+        subject: {
+          type: "string",
+          description: "Filter by subject",
+        },
+      },
+      required: ["organization_id"],
+    },
+  },
+  {
+    name: "detect_sen_progress",
+    description:
+      "Track whether SEN pupils are making expected progress from their own baselines",
+    parameters: {
+      type: "object",
+      properties: {
+        organization_id: {
+          type: "string",
+          description: "Organization ID (required)",
+        },
+        year_group: {
+          type: "number",
+          description: "Filter by year group",
+        },
+        sen_type: {
+          type: "string",
+          enum: ["sen_support", "ehcp", "all"],
+          description: "Type of SEN provision to filter (default: all)",
+        },
+        subject: {
+          type: "string",
+          description: "Filter by subject",
+        },
+      },
+      required: ["organization_id"],
+    },
+  },
+  {
+    name: "correlate_attendance_attainment",
+    description:
+      "Show the relationship between attendance bands and academic outcomes",
+    parameters: {
+      type: "object",
+      properties: {
+        organization_id: {
+          type: "string",
+          description: "Organization ID (required)",
+        },
+        year_group: {
+          type: "number",
+          description: "Filter by year group",
+        },
+        subject: {
+          type: "string",
+          description: "Filter by subject",
+        },
+        attendance_bands: {
+          type: "array",
+          items: { type: "string" },
+          description:
+            "Custom attendance bands (default: ['95-100', '90-95', '85-90', '80-85', 'below-80'])",
+        },
+      },
+      required: ["organization_id"],
+    },
+  },
+  {
+    name: "detect_bradford_factor_alerts",
+    description:
+      "Calculate Bradford Factor for all staff and flag those exceeding thresholds",
+    parameters: {
+      type: "object",
+      properties: {
+        organization_id: {
+          type: "string",
+          description: "Organization ID (required)",
+        },
+        threshold: {
+          type: "number",
+          description: "Bradford Factor threshold to flag (default: 200)",
+        },
+        staff_id: {
+          type: "string",
+          description: "Filter to a specific staff member",
+        },
+        period_months: {
+          type: "number",
+          description:
+            "Rolling period in months to calculate over (default: 12)",
+        },
+      },
+      required: ["organization_id"],
+    },
+  },
+  {
+    name: "detect_staff_absence_impact",
+    description:
+      "Correlate staff absence periods with pupil outcome dips and behaviour spikes",
+    parameters: {
+      type: "object",
+      properties: {
+        organization_id: {
+          type: "string",
+          description: "Organization ID (required)",
+        },
+        staff_id: {
+          type: "string",
+          description: "Filter to a specific staff member",
+        },
+        year_group: {
+          type: "number",
+          description: "Filter by year group",
+        },
+        academic_year: {
+          type: "number",
+          description: "Academic year start (e.g. 2025 for 2025/26)",
+        },
+      },
+      required: ["organization_id"],
+    },
+  },
+  {
+    name: "run_ofsted_readiness_scan",
+    description:
+      "Run a comprehensive Ofsted-lens analysis across all data with RAG ratings",
+    parameters: {
+      type: "object",
+      properties: {
+        organization_id: {
+          type: "string",
+          description: "Organization ID (required)",
+        },
+        focus_areas: {
+          type: "array",
+          items: {
+            type: "string",
+            enum: [
+              "quality_of_education",
+              "behaviour_and_attitudes",
+              "personal_development",
+              "leadership_and_management",
+              "safeguarding",
+            ],
+          },
+          description: "Ofsted key judgement areas to focus on (default: all)",
+        },
+      },
+      required: ["organization_id"],
+    },
+  },
+  {
+    name: "generate_governor_report_data",
+    description:
+      "Generate data for a termly governor report pack from all sources",
+    parameters: {
+      type: "object",
+      properties: {
+        organization_id: {
+          type: "string",
+          description: "Organization ID (required)",
+        },
+        term: {
+          type: "string",
+          enum: ["autumn", "spring", "summer"],
+          description: "Which term the report covers",
+        },
+        academic_year: {
+          type: "number",
+          description: "Academic year start (e.g. 2025 for 2025/26)",
+        },
+        sections: {
+          type: "array",
+          items: {
+            type: "string",
+            enum: [
+              "attendance",
+              "attainment",
+              "progress",
+              "behaviour",
+              "safeguarding",
+              "staffing",
+              "finance",
+              "estates",
+              "send",
+              "pupil_premium",
+            ],
+          },
+          description: "Report sections to include (default: all)",
+        },
+      },
+      required: ["organization_id"],
+    },
+  },
+];
+
+// =====================================================
 // RISK MANAGEMENT SKILLS
 // =====================================================
 
@@ -1571,8 +1941,608 @@ export const DOCUMENT_FUNCTION_SCHEMAS = [
 ];
 
 // =====================================================
+// WORKFLOW SKILLS
+// =====================================================
+
+export const WORKFLOW_FUNCTION_SCHEMAS = [
+  {
+    name: "create_workflow",
+    description:
+      "Create a workflow from a template (e.g. equipment-inspection-failure, incident-response) or freeform. Workflows have phases containing ordered steps with role assignments, deadlines, and evidence requirements.",
+    parameters: {
+      type: "object",
+      properties: {
+        organization_id: {
+          type: "string",
+          description: "Organization ID (required)",
+        },
+        template_slug: {
+          type: "string",
+          description:
+            "Template to create from, e.g. 'equipment-inspection-failure', 'incident-response', 'new-starter-onboarding' (required)",
+        },
+        title: {
+          type: "string",
+          description: "Custom title for this workflow instance",
+        },
+        description: {
+          type: "string",
+          description: "Additional context or notes about this workflow",
+        },
+        trigger_type: {
+          type: "string",
+          enum: ["manual", "inspection_failure", "incident", "maintenance"],
+          description: "What triggered this workflow",
+        },
+        trigger_source_id: {
+          type: "string",
+          description:
+            "ID of the source record that triggered this workflow (e.g. inspection finding ID, helpdesk ticket ID)",
+        },
+        owner_name: {
+          type: "string",
+          description:
+            "Name of the person responsible for overseeing this workflow",
+        },
+        owner_role: {
+          type: "string",
+          description:
+            "Role of the workflow owner (e.g. site_manager, headteacher)",
+        },
+      },
+      required: ["organization_id", "template_slug"],
+    },
+  },
+  {
+    name: "get_workflow_status",
+    description:
+      "Get full workflow detail including all phases, steps, completion progress, blockers, and next actionable steps. Use this to brief the user on where a workflow stands.",
+    parameters: {
+      type: "object",
+      properties: {
+        workflow_id: {
+          type: "string",
+          description: "Workflow ID (required)",
+        },
+      },
+      required: ["workflow_id"],
+    },
+  },
+  {
+    name: "update_workflow_step",
+    description:
+      "Mark a workflow step as done, in_progress, blocked, or skipped. Optionally attach completion notes and evidence (photos, documents, external references).",
+    parameters: {
+      type: "object",
+      properties: {
+        workflow_id: {
+          type: "string",
+          description: "Workflow ID (required)",
+        },
+        step_id: {
+          type: "string",
+          description: "Step ID to update (required)",
+        },
+        status: {
+          type: "string",
+          enum: [
+            "todo",
+            "in_progress",
+            "done",
+            "blocked",
+            "skipped",
+            "waiting_external",
+          ],
+          description: "New status for this step (required)",
+        },
+        completion_notes: {
+          type: "string",
+          description:
+            "Notes about what was done or why it was blocked/skipped",
+        },
+        completion_evidence: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              type: {
+                type: "string",
+                description: "Evidence type (e.g. photo, document, link)",
+              },
+              url: {
+                type: "string",
+                description: "URL or file path of the evidence",
+              },
+              id: {
+                type: "string",
+                description: "ID of the evidence record if stored internally",
+              },
+            },
+          },
+          description: "Evidence attached to this step completion",
+        },
+        external_reference: {
+          type: "string",
+          description:
+            "External reference number (e.g. contractor invoice, purchase order)",
+        },
+      },
+      required: ["workflow_id", "step_id", "status"],
+    },
+  },
+  {
+    name: "get_my_workflow_tasks",
+    description:
+      "Get all workflow steps assigned to the current user's role that are ready to action. Returns tasks across all active workflows, sorted by urgency.",
+    parameters: {
+      type: "object",
+      properties: {
+        organization_id: {
+          type: "string",
+          description: "Organization ID (required)",
+        },
+      },
+      required: ["organization_id"],
+    },
+  },
+  {
+    name: "advance_workflow",
+    description:
+      "Check if the current phase is complete and advance to the next phase. Also recalculates overall workflow progress percentage.",
+    parameters: {
+      type: "object",
+      properties: {
+        workflow_id: {
+          type: "string",
+          description: "Workflow ID (required)",
+        },
+      },
+      required: ["workflow_id"],
+    },
+  },
+  {
+    name: "create_procurement_request",
+    description:
+      "Create a procurement/quote tracking request, optionally linked to a workflow step. Tracks estimated cost, budget line, required quotes, and approval status.",
+    parameters: {
+      type: "object",
+      properties: {
+        organization_id: {
+          type: "string",
+          description: "Organization ID (required)",
+        },
+        workflow_id: {
+          type: "string",
+          description: "Workflow ID this procurement is linked to",
+        },
+        workflow_step_id: {
+          type: "string",
+          description: "Workflow step ID this procurement fulfils",
+        },
+        title: {
+          type: "string",
+          description: "Title of the procurement request (required)",
+        },
+        description: {
+          type: "string",
+          description: "Detailed description of what is being procured",
+        },
+        category: {
+          type: "string",
+          enum: ["equipment", "maintenance", "supplies", "service"],
+          description: "Procurement category",
+        },
+        estimated_amount: {
+          type: "number",
+          description: "Estimated cost in GBP",
+        },
+        budget_line_cfr: {
+          type: "string",
+          description: "CFR budget line code this spend falls under",
+        },
+        quotes_required: {
+          type: "number",
+          description: "Number of quotes required (default: 3)",
+        },
+      },
+      required: ["organization_id", "title"],
+    },
+  },
+];
+
+// =====================================================
+// INCIDENT REPORTING SKILLS
+// =====================================================
+
+export const INCIDENT_FUNCTION_SCHEMAS = [
+  {
+    name: "report_incident",
+    description:
+      "Report a health & safety incident, near miss, or dangerous occurrence. RIDDOR-compliant. Auto-creates a risk register entry for major/critical incidents. Required: incident_type, severity, incident_date, location, title, description.",
+    parameters: {
+      type: "object",
+      properties: {
+        organization_id: {
+          type: "string",
+          description: "Organization ID (required)",
+        },
+        incident_type: {
+          type: "string",
+          enum: [
+            "accident",
+            "near_miss",
+            "dangerous_occurrence",
+            "violence",
+            "ill_health",
+            "fire",
+            "security",
+            "environmental",
+            "other",
+          ],
+          description: "Type of incident (required)",
+        },
+        severity: {
+          type: "string",
+          enum: ["minor", "moderate", "major", "critical"],
+          description:
+            "Severity level. Major/critical auto-creates risk register entry (required)",
+        },
+        incident_date: {
+          type: "string",
+          description: "Date of incident in YYYY-MM-DD format (required)",
+        },
+        incident_time: {
+          type: "string",
+          description: "Time of incident in HH:MM format",
+        },
+        location: {
+          type: "string",
+          description: "Where the incident occurred (required)",
+        },
+        location_detail: {
+          type: "string",
+          description: "Specific location detail",
+        },
+        injured_person_name: {
+          type: "string",
+          description: "Name of injured person (if any)",
+        },
+        injured_person_type: {
+          type: "string",
+          enum: ["pupil", "staff", "visitor", "contractor", "other"],
+          description: "Type of person injured",
+        },
+        title: {
+          type: "string",
+          description: "Brief summary title (required)",
+        },
+        description: {
+          type: "string",
+          description: "Full description of what happened (required)",
+        },
+        immediate_actions: {
+          type: "string",
+          description: "What was done immediately after the incident",
+        },
+        first_aid_given: {
+          type: "boolean",
+          description: "Was first aid administered?",
+        },
+        hospital_attendance: {
+          type: "boolean",
+          description: "Did the person attend hospital?",
+        },
+        is_riddor_reportable: {
+          type: "boolean",
+          description:
+            "Is this RIDDOR reportable? (deaths, specified injuries, >7 day incapacitation, dangerous occurrences)",
+        },
+        riddor_category: {
+          type: "string",
+          enum: [
+            "death",
+            "specified_injury",
+            "over_7_day",
+            "non_fatal_non_worker",
+            "dangerous_occurrence",
+            "occupational_disease",
+          ],
+          description: "RIDDOR reporting category (if reportable)",
+        },
+        investigation_required: {
+          type: "boolean",
+          description: "Does this incident require formal investigation?",
+        },
+        reported_by_name: {
+          type: "string",
+          description: "Name of the person reporting",
+        },
+      },
+      required: [
+        "organization_id",
+        "incident_type",
+        "severity",
+        "incident_date",
+        "location",
+        "title",
+        "description",
+      ],
+    },
+  },
+  {
+    name: "get_incidents",
+    description:
+      "List incidents and near-misses for the school. Returns summary statistics (by severity, type, RIDDOR status) plus incident list. Can filter by status, type, severity, or RIDDOR reportable.",
+    parameters: {
+      type: "object",
+      properties: {
+        organization_id: {
+          type: "string",
+          description: "Organization ID (required)",
+        },
+        status: {
+          type: "string",
+          enum: [
+            "open",
+            "investigating",
+            "awaiting_riddor",
+            "closed",
+            "closed_no_action",
+          ],
+          description: "Filter by status",
+        },
+        incident_type: {
+          type: "string",
+          description: "Filter by incident type",
+        },
+        severity: {
+          type: "string",
+          enum: ["minor", "moderate", "major", "critical"],
+          description: "Filter by severity",
+        },
+        riddor_only: {
+          type: "boolean",
+          description: "Only show RIDDOR reportable incidents",
+        },
+      },
+      required: ["organization_id"],
+    },
+  },
+  {
+    name: "update_incident",
+    description:
+      "Update an existing incident — change status, add investigation notes, record RIDDOR reference, add corrective actions, or close the incident.",
+    parameters: {
+      type: "object",
+      properties: {
+        incident_id: {
+          type: "string",
+          description: "Incident ID to update (required)",
+        },
+        status: {
+          type: "string",
+          enum: [
+            "open",
+            "investigating",
+            "awaiting_riddor",
+            "closed",
+            "closed_no_action",
+          ],
+          description: "New status",
+        },
+        investigation_notes: {
+          type: "string",
+          description: "Investigation findings or notes",
+        },
+        root_cause: {
+          type: "string",
+          description: "Identified root cause",
+        },
+        riddor_reference: {
+          type: "string",
+          description: "HSE reference number once RIDDOR report filed",
+        },
+        riddor_reported_date: {
+          type: "string",
+          description: "Date RIDDOR was reported (YYYY-MM-DD)",
+        },
+        closure_notes: {
+          type: "string",
+          description: "Notes for closing the incident",
+        },
+        corrective_actions: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              title: { type: "string" },
+              description: { type: "string" },
+              assigned_to: { type: "string" },
+              due_date: { type: "string" },
+              status: {
+                type: "string",
+                enum: ["pending", "in_progress", "completed"],
+              },
+            },
+          },
+          description: "Corrective actions to add/replace",
+        },
+      },
+      required: ["incident_id"],
+    },
+  },
+];
+
+// =====================================================
 // COMBINED REGISTRY
 // =====================================================
+
+// =====================================================
+// SOP (STANDARD OPERATING PROCEDURE) SKILLS
+// =====================================================
+
+export const SOP_FUNCTION_SCHEMAS = [
+  {
+    name: "start_sop",
+    description:
+      "Start a Standard Operating Procedure (SOP) run from a template. Returns the created run with step-by-step checklist. Use when user reports an incident, needs to follow a procedure, or asks about H&S checklists.",
+    parameters: {
+      type: "object",
+      properties: {
+        template_id: {
+          type: "string",
+          description:
+            "SOP template ID. Available: incident_response, riddor_assessment, incident_investigation, near_miss_recording, violence_response, dangerous_occurrence, active_incident_check, fire_door_check, premises_monthly, website_compliance, governor_pack_prep",
+        },
+        context: {
+          type: "string",
+          description:
+            "Context for this run, e.g. 'Playground fall incident 2026-03-12' or 'Monthly premises check March 2026'",
+        },
+        linked_incident_id: {
+          type: "string",
+          description:
+            "UUID of linked incident report (if triggered by incident)",
+        },
+        linked_module: {
+          type: "string",
+          description:
+            "Module that triggered this SOP: incidents, estates, compliance, safeguarding",
+        },
+        linked_entity_id: {
+          type: "string",
+          description: "UUID of the linked entity in the triggering module",
+        },
+      },
+      required: ["template_id"],
+    },
+  },
+  {
+    name: "get_sop_status",
+    description:
+      "Get the current status and progress of an active SOP run. Shows completed steps, next step, and overall progress percentage.",
+    parameters: {
+      type: "object",
+      properties: {
+        run_id: {
+          type: "string",
+          description: "UUID of the SOP run to check",
+        },
+      },
+      required: ["run_id"],
+    },
+  },
+  {
+    name: "update_sop_step",
+    description:
+      "Mark a step in an active SOP run as done, skipped, or blocked. Can include notes and evidence references.",
+    parameters: {
+      type: "object",
+      properties: {
+        run_id: {
+          type: "string",
+          description: "UUID of the SOP run",
+        },
+        step_id: {
+          type: "string",
+          description:
+            "ID of the step to update (e.g. 'review_detection', 'verify_cordon')",
+        },
+        status: {
+          type: "string",
+          enum: ["done", "skipped", "blocked"],
+          description: "New status for the step",
+        },
+        notes: {
+          type: "string",
+          description: "Notes or observations for this step",
+        },
+      },
+      required: ["run_id", "step_id", "status"],
+    },
+  },
+  {
+    name: "get_sop_templates",
+    description:
+      "List available SOP templates, optionally filtered by category. Categories: h_and_s, estates, safeguarding, compliance, governance, finance, hr.",
+    parameters: {
+      type: "object",
+      properties: {
+        category: {
+          type: "string",
+          enum: [
+            "h_and_s",
+            "estates",
+            "safeguarding",
+            "compliance",
+            "governance",
+            "finance",
+            "hr",
+          ],
+          description: "Filter templates by category",
+        },
+      },
+    },
+  },
+  {
+    name: "get_my_sop_runs",
+    description:
+      "Get all active SOP runs for the current organization. Shows in-progress procedures with progress percentage.",
+    parameters: {
+      type: "object",
+      properties: {
+        status: {
+          type: "string",
+          enum: ["in_progress", "completed", "abandoned"],
+          description: "Filter by run status. Default: in_progress",
+        },
+        linked_module: {
+          type: "string",
+          description: "Filter by linked module (e.g. 'incidents')",
+        },
+      },
+    },
+  },
+  {
+    name: "suggest_sops_for_incident",
+    description:
+      "Given incident details, suggest which SOP templates should be triggered. Returns recommended templates with reasons.",
+    parameters: {
+      type: "object",
+      properties: {
+        incident_type: {
+          type: "string",
+          enum: [
+            "accident",
+            "near_miss",
+            "dangerous_occurrence",
+            "violence",
+            "ill_health",
+            "fire",
+            "security",
+            "environmental",
+            "other",
+          ],
+          description: "Type of incident",
+        },
+        severity: {
+          type: "string",
+          enum: ["minor", "moderate", "major", "critical"],
+          description: "Incident severity",
+        },
+        is_riddor_reportable: {
+          type: "boolean",
+          description: "Whether the incident is RIDDOR reportable",
+        },
+        investigation_required: {
+          type: "boolean",
+          description: "Whether investigation is required",
+        },
+      },
+      required: ["incident_type", "severity"],
+    },
+  },
+];
 
 export const SCHOOL_FUNCTION_SCHEMAS = [
   ...STAFF_FUNCTION_SCHEMAS,
@@ -1580,8 +2550,12 @@ export const SCHOOL_FUNCTION_SCHEMAS = [
   ...ESTATES_FUNCTION_SCHEMAS,
   ...ESTATES_SPATIAL_FUNCTION_SCHEMAS,
   ...INTELLIGENCE_FUNCTION_SCHEMAS,
+  ...MIS_INTELLIGENCE_FUNCTION_SCHEMAS,
   ...RISK_FUNCTION_SCHEMAS,
   ...DOCUMENT_FUNCTION_SCHEMAS,
+  ...WORKFLOW_FUNCTION_SCHEMAS,
+  ...INCIDENT_FUNCTION_SCHEMAS,
+  ...SOP_FUNCTION_SCHEMAS,
 ];
 
 // Helper to get all function names
@@ -1609,8 +2583,24 @@ export function getRiskFunctionNames(): string[] {
   return RISK_FUNCTION_SCHEMAS.map((f) => f.name);
 }
 
+export function getMisIntelligenceFunctionNames(): string[] {
+  return MIS_INTELLIGENCE_FUNCTION_SCHEMAS.map((f) => f.name);
+}
+
 export function getDocumentFunctionNames(): string[] {
   return DOCUMENT_FUNCTION_SCHEMAS.map((f) => f.name);
+}
+
+export function getWorkflowFunctionNames(): string[] {
+  return WORKFLOW_FUNCTION_SCHEMAS.map((f) => f.name);
+}
+
+export function getIncidentFunctionNames(): string[] {
+  return INCIDENT_FUNCTION_SCHEMAS.map((f) => f.name);
+}
+
+export function getSopFunctionNames(): string[] {
+  return SOP_FUNCTION_SCHEMAS.map((f) => f.name);
 }
 
 export function getAllSchoolFunctionNames(): string[] {
@@ -1630,8 +2620,14 @@ export const ESTATES_SPATIAL_FUNCTIONS = new Set(
   getEstatesSpatialFunctionNames(),
 );
 export const INTELLIGENCE_FUNCTIONS = new Set(getIntelligenceFunctionNames());
+export const MIS_INTELLIGENCE_FUNCTIONS = new Set(
+  getMisIntelligenceFunctionNames(),
+);
 export const RISK_FUNCTIONS = new Set(getRiskFunctionNames());
 export const DOCUMENT_FUNCTIONS = new Set(getDocumentFunctionNames());
+export const WORKFLOW_FUNCTIONS = new Set(getWorkflowFunctionNames());
+export const INCIDENT_FUNCTIONS = new Set(getIncidentFunctionNames());
+export const SOP_FUNCTIONS = new Set(getSopFunctionNames());
 
 export function getSkillForFunction(
   functionName: string,
@@ -1640,15 +2636,23 @@ export function getSkillForFunction(
   | "actions"
   | "estates"
   | "intelligence"
+  | "mis-intelligence"
   | "risk"
   | "documents"
+  | "workflow"
+  | "incidents"
+  | "sops"
   | null {
   if (STAFF_FUNCTIONS.has(functionName)) return "staff";
   if (ACTIONS_FUNCTIONS.has(functionName)) return "actions";
   if (ESTATES_FUNCTIONS.has(functionName)) return "estates";
   if (ESTATES_SPATIAL_FUNCTIONS.has(functionName)) return "estates";
   if (INTELLIGENCE_FUNCTIONS.has(functionName)) return "intelligence";
+  if (MIS_INTELLIGENCE_FUNCTIONS.has(functionName)) return "mis-intelligence";
   if (RISK_FUNCTIONS.has(functionName)) return "risk";
   if (DOCUMENT_FUNCTIONS.has(functionName)) return "documents";
+  if (WORKFLOW_FUNCTIONS.has(functionName)) return "workflow";
+  if (INCIDENT_FUNCTIONS.has(functionName)) return "incidents";
+  if (SOP_FUNCTIONS.has(functionName)) return "sops";
   return null;
 }

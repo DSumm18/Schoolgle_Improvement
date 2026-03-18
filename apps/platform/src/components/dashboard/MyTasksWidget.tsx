@@ -28,7 +28,7 @@ interface MyTasksWidgetProps {
 }
 
 // Role to modules mapping
-const ROLE_MODULES: Record<Role, string[]> = {
+const ROLE_MODULES: Record<string, string[]> = {
   admin: [
     "governance",
     "improvement",
@@ -71,7 +71,7 @@ const ROLE_MODULES: Record<Role, string[]> = {
 // Module icons
 const MODULE_ICONS: Record<
   string,
-  React.ComponentType<{ className?: string }>
+  React.ComponentType<{ className?: string; size?: number }>
 > = {
   governance: Shield,
   improvement: BookOpen,
@@ -337,7 +337,7 @@ export function MyTasksWidget({ limit = 5 }: MyTasksWidgetProps) {
 
   if (isLoading) {
     return (
-      <div className="glass-card rounded-2xl p-8 border border-slate-200/50 dark:border-slate-800/50">
+      <div className="bg-card rounded-2xl p-8 border border-border">
         <div className="animate-pulse space-y-6">
           <div className="h-8 bg-slate-200 dark:bg-slate-800 rounded-lg w-1/3"></div>
           <div className="space-y-4">
@@ -356,13 +356,13 @@ export function MyTasksWidget({ limit = 5 }: MyTasksWidgetProps) {
   // Handle error state gracefully
   if (error) {
     return (
-      <div className="glass-card rounded-2xl p-8 border border-slate-200/50 dark:border-slate-800/50">
+      <div className="bg-card rounded-2xl p-8 border border-border">
         <div className="text-center py-8">
           <AlertCircle className="w-12 h-12 text-amber-500 mx-auto mb-3" />
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
+          <h3 className="text-lg font-bold text-foreground mb-2">
             Unable to load tasks
           </h3>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-muted-foreground">
             Please try refreshing the page
           </p>
         </div>
@@ -371,19 +371,19 @@ export function MyTasksWidget({ limit = 5 }: MyTasksWidgetProps) {
   }
 
   return (
-    <div className="glass-card rounded-2xl overflow-hidden shadow-lg">
+    <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-lg">
       {/* Header */}
-      <div className="px-8 py-6 bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800/50">
+      <div className="px-8 py-6 bg-muted/50 border-b border-border">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-600">
               <CheckCircle2 size={20} />
             </div>
             <div>
-              <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
+              <h2 className="text-xl font-bold tracking-tight text-foreground">
                 My Tasks
               </h2>
-              <p className="text-xs text-slate-500 font-medium tracking-wide uppercase">
+              <p className="text-xs text-muted-foreground font-medium tracking-wide uppercase">
                 {allowedModules.length > 1
                   ? "Across all modules"
                   : getModuleInfo(allowedModules[0]).name}
@@ -431,7 +431,7 @@ export function MyTasksWidget({ limit = 5 }: MyTasksWidgetProps) {
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
                   statusFilter === filter
                     ? "bg-blue-600 text-white shadow-lg shadow-blue-500/30"
-                    : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
+                    : "bg-muted text-muted-foreground hover:bg-accent"
                 }`}
               >
                 {filter === "all" ? "All" : filter.replace("_", " ")}
@@ -456,12 +456,12 @@ export function MyTasksWidget({ limit = 5 }: MyTasksWidgetProps) {
               <div className="inline-flex p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-full text-emerald-500 mb-4">
                 <CheckCircle2 size={40} />
               </div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+              <h3 className="text-lg font-bold text-foreground">
                 {statusFilter === "all"
                   ? "No pending tasks"
                   : `No ${statusFilter.replace("_", " ")} tasks`}
               </h3>
-              <p className="text-sm text-slate-500 max-w-xs mx-auto mt-1">
+              <p className="text-sm text-muted-foreground max-w-xs mx-auto mt-1">
                 You're all caught up! Great work staying on top of things.
               </p>
             </motion.div>
@@ -486,7 +486,7 @@ export function MyTasksWidget({ limit = 5 }: MyTasksWidgetProps) {
                     className={`w-full text-left p-4 rounded-xl border transition-all relative overflow-hidden ${
                       overdue
                         ? "bg-rose-50/50 dark:bg-rose-900/10 border-rose-200 dark:border-rose-800"
-                        : "bg-white dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/80"
+                        : "bg-card border-border hover:bg-muted/50"
                     }`}
                   >
                     <div className="flex items-start gap-3">
@@ -501,7 +501,7 @@ export function MyTasksWidget({ limit = 5 }: MyTasksWidgetProps) {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2 mb-1">
                           <h3
-                            className={`font-semibold text-sm truncate ${overdue ? "text-rose-700 dark:text-rose-300" : "text-slate-900 dark:text-white"}`}
+                            className={`font-semibold text-sm truncate ${overdue ? "text-rose-700 dark:text-rose-300" : "text-foreground"}`}
                           >
                             {task.title}
                           </h3>
@@ -521,7 +521,7 @@ export function MyTasksWidget({ limit = 5 }: MyTasksWidgetProps) {
                         </div>
 
                         {task.description && (
-                          <p className="text-xs text-slate-500 line-clamp-1 mb-2">
+                          <p className="text-xs text-muted-foreground line-clamp-1 mb-2">
                             {task.description}
                           </p>
                         )}
@@ -546,7 +546,7 @@ export function MyTasksWidget({ limit = 5 }: MyTasksWidgetProps) {
                     </div>
 
                     {/* Progress bar if progress > 0 */}
-                    {task.progress > 0 && task.progress < 100 && (
+                    {(task.progress ?? 0) > 0 && (task.progress ?? 0) < 100 && (
                       <div className="mt-3 h-1 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                         <motion.div
                           initial={{ width: 0 }}
@@ -565,7 +565,7 @@ export function MyTasksWidget({ limit = 5 }: MyTasksWidgetProps) {
 
       {/* Footer */}
       {filteredTasks.length > 0 && (
-        <div className="px-8 py-4 bg-slate-50/50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800/50">
+        <div className="px-8 py-4 bg-muted/50 border-t border-border">
           <a
             href="/dashboard/tasks"
             className="block w-full text-center py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-colors"

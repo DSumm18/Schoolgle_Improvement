@@ -1126,7 +1126,7 @@ export default function AdmissionsPage() {
   // Fetch dashboard data
   const { data: dashData, isLoading } = useSWR<DashboardData>(
     organizationId
-      ? `/api/admissions/dashboard?organization_id=${organizationId}`
+      ? `/api/admissions/dashboard?organizationId=${organizationId}`
       : null,
     fetcher,
     { revalidateOnFocus: false },
@@ -1262,7 +1262,7 @@ export default function AdmissionsPage() {
     }
   };
 
-  const tabs = [
+  const tabs: { key: string; label: string; icon: any; count?: number }[] = [
     { key: "overview", label: "Overview", icon: BarChart3 },
     {
       key: "applications",
@@ -1283,7 +1283,7 @@ export default function AdmissionsPage() {
       icon: Gavel,
       count: stats.appeals_pending,
     },
-  ] as const;
+  ];
 
   // ─── Render ─────────────────────────────────────────────────────────
 
@@ -1404,7 +1404,7 @@ export default function AdmissionsPage() {
         {tabs.map((tab) => (
           <button
             key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
+            onClick={() => setActiveTab(tab.key as typeof activeTab)}
             className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${
               activeTab === tab.key
                 ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"

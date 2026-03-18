@@ -324,6 +324,24 @@
       "summary": "Paste a product URL, instantly find cheaper alternatives across school suppliers. Every comparison is logged as procurement compliance evidence.",
       "notes": "Featured in Signal Week 13. Builds your procurement audit trail automatically. Amazon Associates + supplier commissions fund the free service.",
       "signalWeek": 13
+    },
+    {
+      "id": "website-compliance",
+      "name": "Website Compliance Checker",
+      "url": "/toolbox/website-compliance",
+      "category": "Compliance",
+      "tags": [
+        "website",
+        "statutory",
+        "ofsted",
+        "compliance",
+        "audit",
+        "regulations"
+      ],
+      "pricing": "Free scan / £50/yr monitoring",
+      "tier": "premium",
+      "summary": "Scan your school website against 28+ statutory requirements. Checks PDFs, trust sites, and flags outdated policies — with a clear action plan.",
+      "notes": "Based on School Information Regulations 2025, Academy Trust Handbook 2025, and KCSIE 2025. Auto-detects academy/maintained, primary/secondary, and church school status."
     }
   ]
 }

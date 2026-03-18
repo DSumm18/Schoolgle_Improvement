@@ -62,7 +62,7 @@ const PII_PATTERNS: PatternDef[] = [
   {
     category: "DOB",
     pattern:
-      /(?:DOB|D\.O\.B|date of birth|born)[:\s]+(?<pii>\d{1,2}[\s/.-]\d{1,2}[\s/.-]\d{2,4})/gi,
+      /(?:DOB|D\.O\.B|date of birth|born)[:\s]+(\d{1,2}[\s/.-]\d{1,2}[\s/.-]\d{2,4})/gi,
     captureGroup: true,
   },
 
@@ -78,7 +78,7 @@ const PII_PATTERNS: PatternDef[] = [
   {
     category: "PERSON",
     pattern:
-      /(?:Headteacher|Head\s*Teacher|Principal|Deputy|Deputy\s*Head|Chair of Governors|SENCO|DSL|Bursar|Mr|Mrs|Ms|Miss|Dr|Prof)[:\s]+(?<pii>[A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})/g,
+      /(?:Headteacher|Head\s*Teacher|Principal|Deputy|Deputy\s*Head|Chair of Governors|SENCO|DSL|Bursar|Mr|Mrs|Ms|Miss|Dr|Prof)[:\s]+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})/g,
     captureGroup: true,
   },
 
@@ -121,8 +121,7 @@ export function maskPII(text: string, options?: MaskOptions): MaskResult {
     let match: RegExpExecArray | null;
 
     while ((match = pattern.exec(maskedText)) !== null) {
-      const pii =
-        captureGroup && match.groups?.pii ? match.groups.pii : match[0];
+      const pii = captureGroup && match[1] ? match[1] : match[0];
       matches.push({ full: match[0], pii, index: match.index });
     }
 

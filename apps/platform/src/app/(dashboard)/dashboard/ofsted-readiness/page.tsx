@@ -10,6 +10,7 @@ import {
   BarChart3,
   ShieldCheck,
   TrendingUp,
+  Globe,
 } from "lucide-react";
 import { useAuth } from "@/context/SupabaseAuthContext";
 import { supabase } from "@/lib/supabase";
@@ -18,6 +19,7 @@ import { OfstedFrameworkView } from "@/components/ofsted";
 import { OfstedEvidenceMatcher } from "@/components/ofsted";
 import { OfstedTrackView } from "@/components/ofsted";
 import SafeguardingPanel from "@/components/ofsted/SafeguardingPanel";
+import WebsiteComplianceTab from "@/components/ofsted/WebsiteComplianceTab";
 import DocumentPresenceChecker from "@/components/ofsted/DocumentPresenceChecker";
 import DriveConnectionPanel from "@/components/ofsted/DriveConnectionPanel";
 import EvidenceChecklist from "@/components/ofsted/EvidenceChecklist";
@@ -25,7 +27,13 @@ import { FrameworkAssessment } from "@/components/framework/types";
 import { ModulePageHeader } from "@/components/ui/module-page-header";
 import { useGoogleDriveAccess } from "@/hooks/useGoogleDriveAccess";
 
-type Tab = "overview" | "framework" | "track" | "evidence" | "safeguarding";
+type Tab =
+  | "overview"
+  | "framework"
+  | "track"
+  | "evidence"
+  | "website"
+  | "safeguarding";
 
 export default function OfstedReadinessPage() {
   const { organization } = useAuth();
@@ -117,6 +125,7 @@ export default function OfstedReadinessPage() {
     { id: "framework" as Tab, label: "Evaluate", icon: BookOpen },
     { id: "track" as Tab, label: "Track", icon: TrendingUp },
     { id: "evidence" as Tab, label: "Evidence", icon: FileSearch },
+    { id: "website" as Tab, label: "Website", icon: Globe },
     { id: "safeguarding" as Tab, label: "Safeguarding", icon: ShieldCheck },
   ];
 
@@ -247,6 +256,9 @@ export default function OfstedReadinessPage() {
                 />
                 <OfstedEvidenceMatcher organizationId={organizationId} />
               </div>
+            )}
+            {activeTab === "website" && (
+              <WebsiteComplianceTab organizationId={organizationId} />
             )}
             {activeTab === "safeguarding" && (
               <SafeguardingPanel organizationId={organizationId} />

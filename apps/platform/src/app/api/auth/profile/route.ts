@@ -24,19 +24,41 @@ export async function POST(req: NextRequest) {
     }
 
     // 1. Sync User to Supabase (skip if no email — just fetching org)
+    let storedDisplayName: string | null = null;
     if (email) {
+      // Check if user already has a display_name set (e.g. linked to staff record)
+      const { data: existingUser } = await supabase
+        .from("users")
+        .select("display_name")
+        .eq("id", userId)
+        .maybeSingle();
+
+      storedDisplayName = existingUser?.display_name || null;
+
       const { error: userError } = await supabase.from("users").upsert(
         {
           id: userId,
           auth_id: userId,
           email: email,
-          display_name: displayName,
+          // Only set display_name if user doesn't already have one
+          display_name: storedDisplayName || displayName,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "id" },
       );
 
-      if (userError) throw userError;
+      if (!storedDisplayName) {
+        storedDisplayName = displayName;
+      }
+
+      if (userError) {
+        // Log but don't throw — user record sync is non-critical for login
+        // The organization lookup below is what matters
+        console.warn(
+          "[Auth Profile] User upsert failed (non-fatal):",
+          userError.message,
+        );
+      }
     }
 
     // 2. Fetch Organization (use .limit(1) instead of .maybeSingle() to handle multi-org users)
@@ -96,7 +118,11 @@ export async function POST(req: NextRequest) {
       : null;
 
     return apiSuccess({
-      user: { id: userId, email, displayName },
+      user: {
+        id: userId,
+        email,
+        displayName: storedDisplayName || displayName,
+      },
       organization,
     });
   }, "Auth Profile API");

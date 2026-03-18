@@ -9,8 +9,8 @@
  * @see https://playwright.dev
  */
 
-import { createClient } from '@supabase/supabase-js';
-import { getPlaywrightClient } from './playwright/playwright-client';
+import { createClient } from "@supabase/supabase-js";
+import { getPlaywrightClient } from "./playwright/playwright-client";
 
 // ============================================================================
 // TYPES
@@ -57,7 +57,7 @@ export interface FormResult {
 
 export interface ScreenshotOptions {
   full?: boolean;
-  format?: 'png' | 'jpeg';
+  format?: "png" | "jpeg";
   quality?: number;
 }
 
@@ -66,33 +66,36 @@ export interface ScreenshotOptions {
 // ============================================================================
 
 export class DomainNotAllowedError extends Error {
-  constructor(public url: string, public organizationId: string) {
+  constructor(
+    public url: string,
+    public organizationId: string,
+  ) {
     super(`Domain not allowed for organization: ${url}`);
-    this.name = 'DomainNotAllowedError';
+    this.name = "DomainNotAllowedError";
   }
 }
 
 export class SessionNotFoundError extends Error {
   constructor(public sessionId: string) {
     super(`Browser session not found: ${sessionId}`);
-    this.name = 'SessionNotFoundError';
+    this.name = "SessionNotFoundError";
   }
 }
 
 export class SessionExpiredError extends Error {
   constructor(public sessionId: string) {
     super(`Browser session has expired: ${sessionId}`);
-    this.name = 'SessionExpiredError';
+    this.name = "SessionExpiredError";
   }
 }
 
 export class BrowserCommandError extends Error {
   constructor(
     public command: string,
-    public originalError: Error
+    public originalError: Error,
   ) {
     super(`Browser command failed: ${command} - ${originalError.message}`);
-    this.name = 'BrowserCommandError';
+    this.name = "BrowserCommandError";
     this.cause = originalError;
   }
 }
@@ -126,7 +129,7 @@ class BrowserService {
     userId: string,
     organizationId: string,
     url: string,
-    durationSeconds: number = 1800
+    durationSeconds: number = 1800,
   ): Promise<SessionId> {
     // Verify domain is approved before creating session
     const isApproved = await this.isDomainApproved(url, organizationId);
@@ -135,12 +138,15 @@ class BrowserService {
     }
 
     // Call the database function to create the session
-    const { data, error } = await this.supabase.rpc('create_browser_session', {
-      user_uuid: userId,
-      org_id: organizationId,
-      target_url: url,
-      duration_seconds: durationSeconds,
-    });
+    const { data, error } = await (this.supabase.rpc as any)(
+      "create_browser_session",
+      {
+        user_uuid: userId,
+        org_id: organizationId,
+        target_url: url,
+        duration_seconds: durationSeconds,
+      },
+    );
 
     if (error) {
       throw new Error(`Failed to create browser session: ${error.message}`);
@@ -159,8 +165,8 @@ class BrowserService {
     });
 
     // Log session creation
-    await this.logAction(sessionId, 'navigate', null, url, {
-      action: 'session_created',
+    await this.logAction(sessionId, "navigate", null, url, {
+      action: "session_created",
       url,
     });
 
@@ -172,34 +178,42 @@ class BrowserService {
    */
   async getSession(sessionId: string): Promise<any> {
     const { data, error } = await this.supabase
-      .from('browser_sessions')
-      .select('*')
-      .eq('id', sessionId)
+      .from("browser_sessions")
+      .select("*")
+      .eq("id", sessionId)
       .single();
 
     if (error || !data) {
       throw new SessionNotFoundError(sessionId);
     }
 
+    const row = data as any;
+
     // Check if session is expired
-    if (data.status === 'expired' || new Date(data.expires_at) < new Date()) {
+    if (row.status === "expired" || new Date(row.expires_at) < new Date()) {
       throw new SessionExpiredError(sessionId);
     }
 
-    return data;
+    return row;
   }
 
   /**
    * Check if a URL's domain is approved for the organization
    */
-  async isDomainApproved(url: string, organizationId: string): Promise<boolean> {
-    const { data, error } = await this.supabase.rpc('is_url_approved', {
-      target_url: url,
-      org_id: organizationId,
-    });
+  async isDomainApproved(
+    url: string,
+    organizationId: string,
+  ): Promise<boolean> {
+    const { data, error } = await (this.supabase.rpc as any)(
+      "is_url_approved",
+      {
+        target_url: url,
+        org_id: organizationId,
+      },
+    );
 
     if (error) {
-      console.error('Error checking domain approval:', error);
+      console.error("Error checking domain approval:", error);
       return false;
     }
 
@@ -222,7 +236,10 @@ class BrowserService {
     const session = await this.getSession(sessionId);
 
     // Verify the new URL is also approved
-    const isApproved = await this.isDomainApproved(url, session.organization_id);
+    const isApproved = await this.isDomainApproved(
+      url,
+      session.organization_id,
+    );
     if (!isApproved) {
       throw new DomainNotAllowedError(url, session.organization_id);
     }
@@ -235,21 +252,20 @@ class BrowserService {
       await playwrightClient.navigate(url, sessionId);
 
       // Update session state
-      await this.supabase
-        .from('browser_sessions')
+      await (this.supabase.from("browser_sessions") as any)
         .update({
           current_url: url,
           last_activity: new Date().toISOString(),
         })
-        .eq('id', sessionId);
+        .eq("id", sessionId);
 
       // Log the navigation
-      await this.logAction(sessionId, 'navigate', null, url, { url });
+      await this.logAction(sessionId, "navigate", null, url, { url });
 
       // Get page snapshot
       return await this.getPageSnapshot(sessionId, url);
     } catch (error) {
-      console.error('[BrowserService] Navigate error:', error);
+      console.error("[BrowserService] Navigate error:", error);
       // Fallback to mock snapshot on error
       return this.getMockSnapshot(url);
     }
@@ -258,7 +274,10 @@ class BrowserService {
   /**
    * Get page snapshot from current page
    */
-  private async getPageSnapshot(sessionId: string, url: string): Promise<Snapshot> {
+  private async getPageSnapshot(
+    sessionId: string,
+    url: string,
+  ): Promise<Snapshot> {
     try {
       const playwrightClient = getPlaywrightClient();
       const page = await playwrightClient.getPage(sessionId);
@@ -267,12 +286,12 @@ class BrowserService {
       const title = await page.title();
 
       // Get accessible snapshot of the page
-      const snapshot = await page.accessibility.snapshot();
+      const snapshot = await (page as any).accessibility.snapshot();
 
       // Convert to our Snapshot format
       return this.convertAccessibilitySnapshot(snapshot, url, title);
     } catch (error) {
-      console.error('[BrowserService] Page snapshot error:', error);
+      console.error("[BrowserService] Page snapshot error:", error);
       return this.getMockSnapshot(url);
     }
   }
@@ -283,22 +302,25 @@ class BrowserService {
   private convertAccessibilitySnapshot(
     accessibilityTree: any,
     url: string,
-    title: string
+    title: string,
   ): Snapshot {
     const refs: Record<string, SnapshotElement> = {};
     const elements: SnapshotElement[] = [];
 
     let refCount = 0;
 
-    const convertNode = (node: any, parentRef?: string): SnapshotElement | null => {
-      if (!node || node.role === 'Ignored') {
+    const convertNode = (
+      node: any,
+      parentRef?: string,
+    ): SnapshotElement | null => {
+      if (!node || node.role === "Ignored") {
         return null;
       }
 
       const ref = `e${refCount++}`;
       const element: SnapshotElement = {
-        role: node.role || 'unknown',
-        name: node.name || '',
+        role: node.role || "unknown",
+        name: node.name || "",
         ref,
       };
 
@@ -351,23 +373,38 @@ class BrowserService {
    */
   async getSnapshot(
     sessionId: string,
-    options: SnapshotOptions = {}
+    options: SnapshotOptions = {},
   ): Promise<Snapshot> {
     // Verify session is valid
     const session = await this.getSession(sessionId);
 
     try {
       // Use Playwright to get fresh snapshot
-      const snapshot = await this.getPageSnapshot(sessionId, session.current_url);
+      const snapshot = await this.getPageSnapshot(
+        sessionId,
+        session.current_url,
+      );
 
       // Log the snapshot action
-      await this.logAction(sessionId, 'snapshot', null, session.current_url, options);
+      await this.logAction(
+        sessionId,
+        "snapshot",
+        null,
+        session.current_url,
+        options,
+      );
 
       return snapshot;
     } catch (error) {
-      console.error('[BrowserService] Get snapshot error:', error);
+      console.error("[BrowserService] Get snapshot error:", error);
       // Log the snapshot action
-      await this.logAction(sessionId, 'snapshot', null, session.current_url, options);
+      await this.logAction(
+        sessionId,
+        "snapshot",
+        null,
+        session.current_url,
+        options,
+      );
       // Return mock snapshot on error
       return this.getMockSnapshot(session.current_url);
     }
@@ -388,8 +425,8 @@ class BrowserService {
     // await this.execBrowserCommand(sessionId, 'fill', [ref, value]);
 
     // Log the fill action (PII will be masked by database policy)
-    await this.logAction(sessionId, 'fill', ref, value, {
-      fieldType: 'input',
+    await this.logAction(sessionId, "fill", ref, value, {
+      fieldType: "input",
     });
   }
 
@@ -407,7 +444,7 @@ class BrowserService {
     // await this.execBrowserCommand(sessionId, 'click', [ref]);
 
     // Log the click action
-    await this.logAction(sessionId, 'click', ref, null);
+    await this.logAction(sessionId, "click", ref, null);
   }
 
   /**
@@ -430,33 +467,32 @@ class BrowserService {
       const screenshotPath = await this.screenshot(sessionId, { full: false });
 
       // Log the submission
-      await this.logAction(sessionId, 'submit', formRef, null, {
+      await this.logAction(sessionId, "submit", formRef, null, {
         screenshot_path: screenshotPath,
       });
 
       // Update session status
-      await this.supabase
-        .from('browser_sessions')
+      await (this.supabase.from("browser_sessions") as any)
         .update({
-          status: 'completed',
+          status: "completed",
           completed_at: new Date().toISOString(),
         })
-        .eq('id', sessionId);
+        .eq("id", sessionId);
 
       return {
         success: true,
-        message: 'Form submitted successfully',
+        message: "Form submitted successfully",
         screenshotUrl: screenshotPath,
       };
     } catch (error) {
-      await this.logAction(sessionId, 'submit', formRef, null, {
-        error: error instanceof Error ? error.message : 'Unknown error',
+      await this.logAction(sessionId, "submit", formRef, null, {
+        error: error instanceof Error ? error.message : "Unknown error",
       });
 
       return {
         success: false,
-        message: 'Form submission failed',
-        errors: [error instanceof Error ? error.message : 'Unknown error'],
+        message: "Form submission failed",
+        errors: [error instanceof Error ? error.message : "Unknown error"],
       };
     }
   }
@@ -470,7 +506,7 @@ class BrowserService {
    */
   async screenshot(
     sessionId: string,
-    options: ScreenshotOptions = {}
+    options: ScreenshotOptions = {},
   ): Promise<string> {
     // Verify session is valid
     const session = await this.getSession(sessionId);
@@ -480,7 +516,7 @@ class BrowserService {
       const playwrightClient = getPlaywrightClient();
       const screenshotBuffer = await playwrightClient.screenshot(
         sessionId,
-        options.full ?? true
+        options.full ?? true,
       );
 
       // In production, upload to Supabase storage
@@ -489,7 +525,7 @@ class BrowserService {
       const path = `screenshots/${sessionId}_${timestamp}.png`;
 
       // Log screenshot action
-      await this.logAction(sessionId, 'screenshot', null, null, {
+      await this.logAction(sessionId, "screenshot", null, null, {
         path,
         options,
         size: screenshotBuffer.length,
@@ -497,15 +533,15 @@ class BrowserService {
 
       return path;
     } catch (error) {
-      console.error('[BrowserService] Screenshot error:', error);
+      console.error("[BrowserService] Screenshot error:", error);
       // Return mock path on error
       const path = `screenshots/${sessionId}_${Date.now()}.png`;
 
       // Log screenshot action
-      await this.logAction(sessionId, 'screenshot', null, null, {
+      await this.logAction(sessionId, "screenshot", null, null, {
         path,
         options,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
       });
 
       return path;
@@ -522,19 +558,18 @@ class BrowserService {
     // await this.execBrowserCommand(sessionId, 'close', []);
 
     // Update session status
-    await this.supabase
-      .from('browser_sessions')
+    await (this.supabase.from("browser_sessions") as any)
       .update({
-        status: 'completed',
+        status: "completed",
         completed_at: new Date().toISOString(),
       })
-      .eq('id', sessionId);
+      .eq("id", sessionId);
 
     // Remove from active sessions
     this.activeSessions.delete(sessionId);
 
     // Log close action
-    await this.logAction(sessionId, 'close', null, null);
+    await this.logAction(sessionId, "close", null, null);
   }
 
   // ==========================================================================
@@ -549,9 +584,9 @@ class BrowserService {
     actionType: string,
     targetRef: string | null,
     inputValue: string | null,
-    metadata: Record<string, any> = {}
+    metadata: Record<string, any> = {},
   ): Promise<void> {
-    await this.supabase.rpc('log_browser_action', {
+    await (this.supabase.rpc as any)("log_browser_action", {
       session_uuid: sessionId,
       action_type_val: actionType,
       target_ref_val: targetRef,
@@ -566,10 +601,10 @@ class BrowserService {
   private buildSnapshotFlags(options: SnapshotOptions): string[] {
     const flags: string[] = [];
 
-    if (options.interactive) flags.push('-i');
-    if (options.compact) flags.push('-c');
-    if (options.depth) flags.push('-d', options.depth.toString());
-    if (options.selector) flags.push('-s', options.selector);
+    if (options.interactive) flags.push("-i");
+    if (options.compact) flags.push("-c");
+    if (options.depth) flags.push("-d", options.depth.toString());
+    if (options.selector) flags.push("-s", options.selector);
 
     return flags;
   }
@@ -596,10 +631,10 @@ class BrowserService {
   private async execBrowserCommand(
     sessionId: string,
     command: string,
-    flags: string[] = []
+    flags: string[] = [],
   ): Promise<any> {
     // Placeholder for actual agent-browser integration
-    throw new BrowserCommandError(command, new Error('Not implemented'));
+    throw new BrowserCommandError(command, new Error("Not implemented"));
   }
 
   /**
@@ -608,38 +643,38 @@ class BrowserService {
   private getMockSnapshot(url: string): Snapshot {
     return {
       url,
-      title: 'Mock Page Title',
+      title: "Mock Page Title",
       timestamp: new Date(),
       elements: [
         {
-          role: 'heading',
-          name: 'Form Title',
-          ref: 'e1',
+          role: "heading",
+          name: "Form Title",
+          ref: "e1",
         },
         {
-          role: 'textbox',
-          name: 'Full Name',
-          ref: 'e2',
-          attributes: { type: 'text', required: 'true' },
+          role: "textbox",
+          name: "Full Name",
+          ref: "e2",
+          attributes: { type: "text", required: "true" },
         },
         {
-          role: 'textbox',
-          name: 'Email',
-          ref: 'e3',
-          attributes: { type: 'email', required: 'true' },
+          role: "textbox",
+          name: "Email",
+          ref: "e3",
+          attributes: { type: "email", required: "true" },
         },
         {
-          role: 'button',
-          name: 'Submit',
-          ref: 'e4',
-          attributes: { type: 'submit' },
+          role: "button",
+          name: "Submit",
+          ref: "e4",
+          attributes: { type: "submit" },
         },
       ],
       refs: {
-        e1: { role: 'heading', name: 'Form Title', ref: 'e1' },
-        e2: { role: 'textbox', name: 'Full Name', ref: 'e2' },
-        e3: { role: 'textbox', name: 'Email', ref: 'e3' },
-        e4: { role: 'button', name: 'Submit', ref: 'e4' },
+        e1: { role: "heading", name: "Form Title", ref: "e1" },
+        e2: { role: "textbox", name: "Full Name", ref: "e2" },
+        e3: { role: "textbox", name: "Email", ref: "e3" },
+        e4: { role: "button", name: "Submit", ref: "e4" },
       },
     };
   }
@@ -657,7 +692,7 @@ export function getBrowserService(): BrowserService {
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
     if (!supabaseUrl || !supabaseKey) {
-      throw new Error('Missing Supabase environment variables');
+      throw new Error("Missing Supabase environment variables");
     }
 
     browserServiceInstance = new BrowserService(supabaseUrl, supabaseKey);

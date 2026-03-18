@@ -9,8 +9,8 @@ import type {
   SiamsQuestionId,
   GetSiamsAssessmentsRequest,
   GetSiamsAssessmentsResponse,
-  UpsertSiamsAssessmentsRequest,
-  UpsertSiamsAssessmentsResponse,
+  UpsertSiamsAssessmentRequest,
+  UpsertSiamsAssessmentResponse,
 } from "@/lib/siams";
 import { v4 as uuidv4 } from "uuid";
 import { SIAMS_STRANDS, SIAMS_QUESTIONS } from "@/lib/siams";
@@ -86,9 +86,14 @@ export const GET = protectedRoute(async (auth, req) => {
   >();
 
   // Initialize strands
-  Object.values(SIAMS_STRANDS).forEach((strand) => {
-    strandsMap.set(strand.id as SiamsStrandId, {
-      strand_id: strand.id as SiamsStrandId,
+  (
+    Object.entries(SIAMS_STRANDS) as [
+      SiamsStrandId,
+      (typeof SIAMS_STRANDS)[SiamsStrandId],
+    ][]
+  ).forEach(([strandId, strand]) => {
+    strandsMap.set(strandId, {
+      strand_id: strandId,
       strand_name: strand.name,
       strand_short_name: strand.shortName,
       strand_color: strand.color,
@@ -167,8 +172,7 @@ export const GET = protectedRoute(async (auth, req) => {
  */
 export const POST = protectedRoute(async (auth, req) => {
   const body = await req.json();
-  const { organizationId, userId, assessments } =
-    body as UpsertSiamsAssessmentsRequest;
+  const { organizationId, userId, assessments } = body as any;
 
   const orgId = organizationId || auth.organizationId;
 
@@ -211,7 +215,7 @@ export const POST = protectedRoute(async (auth, req) => {
   const updated = records.length;
   const created = 0; // Supabase upsert doesn't distinguish easily
 
-  const response: UpsertSiamsAssessmentsResponse = {
+  const response: UpsertSiamsAssessmentResponse = {
     success: true,
     updated,
     created,

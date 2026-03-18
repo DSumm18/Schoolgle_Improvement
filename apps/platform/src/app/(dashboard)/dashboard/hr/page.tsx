@@ -6,6 +6,10 @@ import {
   TrendingUp,
   ClipboardCheck,
   BookOpen,
+  Shield,
+  Thermometer,
+  UserCog,
+  GraduationCap,
 } from "lucide-react";
 import {
   ModulePageHeader,
@@ -39,11 +43,36 @@ const tools = [
     icon: ClipboardCheck,
   },
   {
+    title: "Single Central Record",
+    description:
+      "KCSIE 2025 compliant SCR — DBS, safeguarding, right to work, qualifications for all staff.",
+    status: "Live" as const,
+    href: "/dashboard/hr/scr",
+    icon: Shield,
+  },
+  {
+    title: "Sickness & Absences",
+    description:
+      "Bradford Factor tracking, trigger management, return-to-work workflows.",
+    status: "Live" as const,
+    href: "/dashboard/hr/sickness",
+    icon: Thermometer,
+  },
+  {
     title: "Performance Review",
-    description: "Manage appraisal cycles and staff development goals.",
-    status: "Coming Soon" as const,
-    href: "#",
+    description:
+      "Appraisal cycles, objectives, mid/end-year reviews, pay recommendations.",
+    status: "Live" as const,
+    href: "/dashboard/hr/performance",
     icon: TrendingUp,
+  },
+  {
+    title: "Cover Management",
+    description:
+      "Internal/supply cover arrangements, daily rates, cost tracking.",
+    status: "Live" as const,
+    href: "/dashboard/hr/cover",
+    icon: UserCog,
   },
 ];
 

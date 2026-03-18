@@ -56,7 +56,7 @@ export const GET = protectedRoute(async (auth, request) => {
   const page = parseInt(searchParams.get("page") || "1", 10);
   const pageSize = parseInt(searchParams.get("page_size") || "50", 10);
 
-  const result = await AssetService.list(auth.organizationId, filters, {
+  const result = await AssetService.list(auth.organizationId, filters as any, {
     page,
     pageSize,
   });

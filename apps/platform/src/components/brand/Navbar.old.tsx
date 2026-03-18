@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import SchoolgleAnimatedLogo from "@/components/SchoolgleAnimatedLogo";
-import { ThemeToggle } from "@/components/effects/ThemeToggle";
+import ThemeToggle from "@/components/effects/ThemeToggle";
 
 export interface NavbarProps {
   variant?: "transparent" | "glass";
@@ -34,7 +34,8 @@ export function Navbar({ variant = "glass" }: NavbarProps) {
     <nav
       className={cn(
         "sticky top-0 z-50 h-20",
-        variant === "glass" && "bg-brand-glass-bg backdrop-blur-xl border-b border-brand-border"
+        variant === "glass" &&
+          "bg-brand-glass-bg backdrop-blur-xl border-b border-brand-border",
       )}
     >
       <div className="max-w-7xl mx-auto px-6 h-full flex items-center justify-between">

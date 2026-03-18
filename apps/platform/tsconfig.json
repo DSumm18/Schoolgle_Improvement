@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "ES2017",
+    "target": "ES2018",
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
@@ -19,7 +19,9 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@schoolgle/ed-agents": ["../../packages/ed-agents/src"],
+      "@schoolgle/ed-agents/*": ["../../packages/ed-agents/src/*"]
     }
   },
   "include": [
@@ -30,5 +32,10 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "**/*.test.tsx", "**/*.test.ts", "src/context/AuthContext.tsx"]
+  "exclude": [
+    "node_modules",
+    "**/*.test.tsx",
+    "**/*.test.ts",
+    "src/context/AuthContext.tsx"
+  ]
 }

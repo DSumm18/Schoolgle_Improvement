@@ -354,7 +354,7 @@ function NewDecisionModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           risk_id: riskId,
-          organization_id: organizationId,
+          organizationId: organizationId,
           decision: decisionType,
           rationale: rationale || undefined,
           minute_reference: boardMeetingRef || undefined,

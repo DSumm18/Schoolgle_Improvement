@@ -5,10 +5,11 @@ import { createServiceRoleClient } from "@/lib/supabase-server";
  * PUT /api/pupil-premium/interventions/[id]
  * Update an intervention (costs, impact assessment, details)
  */
-export const PUT = protectedRoute(async (auth, request, context) => {
+export const PUT = protectedRoute(async (auth, request) => {
   const { organizationId } = auth;
   const supabase = createServiceRoleClient();
-  const id = (context as any).params?.id;
+  const segments = request.nextUrl.pathname.split("/");
+  const id = segments[segments.indexOf("interventions") + 1];
   const body = await request.json();
 
   if (!id) {

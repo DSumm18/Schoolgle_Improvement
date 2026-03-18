@@ -1,16 +1,215 @@
 "use client";
 
 import { useAuth } from "@/context/SupabaseAuthContext";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
-import { Settings2 } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
+import {
+  Settings2,
+  Database,
+  BookOpen,
+  Shield,
+  Zap,
+  Users,
+  Lock,
+  ChevronRight,
+  Loader2,
+  User,
+  Palette,
+  Calendar,
+} from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
-export default function SettingsPage() {
+// ─── Tab definitions with role access ───────────────────────
+
+interface SettingsTab {
+  id: string;
+  label: string;
+  icon: any;
+  description: string;
+  /** Roles that can see this tab. Empty = everyone. */
+  roles: string[];
+  /** Route to navigate to */
+  href: string;
+  /** Color accent */
+  color: string;
+  bgColor: string;
+}
+
+const SETTINGS_TABS: SettingsTab[] = [
+  {
+    id: "account",
+    label: "My Account",
+    icon: User,
+    description: "Your profile, email, and organization memberships",
+    roles: [],
+    href: "/dashboard/settings/account",
+    color: "text-slate-600",
+    bgColor: "bg-slate-50 dark:bg-slate-900",
+  },
+  {
+    id: "branding",
+    label: "School Branding",
+    icon: Palette,
+    description:
+      "Logo, colours, and contact details for documents and policies",
+    roles: ["admin", "headteacher"],
+    href: "/dashboard/settings/branding",
+    color: "text-slate-600",
+    bgColor: "bg-slate-50 dark:bg-slate-900",
+  },
+  {
+    id: "class-assignments",
+    label: "Class Assignments",
+    icon: BookOpen,
+    description:
+      "Assign staff to year groups and classes — controls what data teachers see",
+    roles: ["admin", "headteacher", "slt"],
+    href: "/dashboard/settings/class-assignments",
+    color: "text-blue-600",
+    bgColor: "bg-blue-50 dark:bg-blue-950/20",
+  },
+  {
+    id: "data-connections",
+    label: "Data Connections",
+    icon: Database,
+    description:
+      "Connect Google Drive to import MIS exports, finance reports, and school documents",
+    roles: ["admin", "headteacher", "slt"],
+    href: "/dashboard/settings/data-connections",
+    color: "text-green-600",
+    bgColor: "bg-green-50 dark:bg-green-950/20",
+  },
+  {
+    id: "user-privileges",
+    label: "User Privileges",
+    icon: Shield,
+    description:
+      "Manage who can access what — role assignments, module access, and approval chains",
+    roles: ["admin", "headteacher"],
+    href: "/dashboard/settings/privileges",
+    color: "text-purple-600",
+    bgColor: "bg-purple-50 dark:bg-purple-950/20",
+  },
+  {
+    id: "skills",
+    label: "Ed Skill Library",
+    icon: Zap,
+    description:
+      "Enable and configure Ed's autonomous skills — emails, reports, compliance checks",
+    roles: ["admin", "headteacher", "slt"],
+    href: "/dashboard/settings/skills",
+    color: "text-amber-600",
+    bgColor: "bg-amber-50 dark:bg-amber-950/20",
+  },
+  {
+    id: "calendar",
+    label: "Calendar Management",
+    icon: Calendar,
+    description:
+      "INSET days, clubs, lettings, parents' evenings, and other school calendar events",
+    roles: ["admin", "headteacher", "slt"],
+    href: "/dashboard/settings/calendar",
+    color: "text-teal-600",
+    bgColor: "bg-teal-50 dark:bg-teal-950/20",
+  },
+  {
+    id: "approvals",
+    label: "Approvals & Delegation",
+    icon: Users,
+    description:
+      "Spending authority thresholds, approval chains, and delegation rules",
+    roles: ["admin", "headteacher", "slt"],
+    href: "/dashboard/settings/approvals",
+    color: "text-rose-600",
+    bgColor: "bg-rose-50 dark:bg-rose-950/20",
+  },
+];
+
+// ─── Privilege Model Summary ──────────────────────────────
+
+const ROLE_PRIVILEGES = [
+  {
+    role: "Admin",
+    badge: "bg-red-100 text-red-700",
+    privileges: [
+      "Full system access",
+      "Manage users & roles",
+      "Data connections",
+      "Class assignments",
+      "Approval rules",
+      "Ed skill configuration",
+    ],
+  },
+  {
+    role: "Headteacher",
+    badge: "bg-purple-100 text-purple-700",
+    privileges: [
+      "Full data visibility",
+      "Manage users & roles",
+      "Data connections",
+      "Class assignments",
+      "Final approval authority",
+      "All module access",
+    ],
+  },
+  {
+    role: "SLT",
+    badge: "bg-blue-100 text-blue-700",
+    privileges: [
+      "Full data visibility",
+      "Class assignments",
+      "Data connections",
+      "Intermediate approvals",
+      "All module access",
+      "Staff management",
+    ],
+  },
+  {
+    role: "Teacher",
+    badge: "bg-green-100 text-green-700",
+    privileges: [
+      "Own class data only",
+      "Attendance & behaviour for assigned classes",
+      "Assessment data for assigned year groups",
+      "Teaching & Learning module",
+      "Ed chat (class-filtered)",
+      "No admin access",
+    ],
+  },
+  {
+    role: "Governor",
+    badge: "bg-amber-100 text-amber-700",
+    privileges: [
+      "Whole-school aggregated data",
+      "Governance module",
+      "Strategic documents (SEF, SDP)",
+      "Compliance overview",
+      "No pupil-level data",
+      "No admin access",
+    ],
+  },
+  {
+    role: "Viewer",
+    badge: "bg-slate-100 text-slate-700",
+    privileges: [
+      "Read-only dashboard",
+      "No sensitive data",
+      "No admin access",
+      "No module editing",
+    ],
+  },
+];
+
+function SettingsContent() {
   const { user, organization, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [organizations, setOrganizations] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const searchParams = useSearchParams();
+  const showPrivileges = searchParams.get("view") === "privileges";
+
+  const userRole = organization?.role || "";
+  const isSLT = ["admin", "headteacher", "slt"].includes(userRole);
+  const isAdmin = ["admin", "headteacher"].includes(userRole);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -18,145 +217,133 @@ export default function SettingsPage() {
     }
   }, [user, authLoading, router]);
 
-  useEffect(() => {
-    async function fetchData() {
-      if (!user) return;
-
-      try {
-        // Fetch user's organizations
-        const { data: memberships, error } = await supabase
-          .from('organization_members')
-          .select('organization_id, role, organizations(id, name, organization_type)')
-          .eq('user_id', user.id);
-
-        if (error) {
-          console.error('Error fetching memberships:', error);
-        } else {
-          const orgs = (memberships || []).map((m: any) => ({
-            id: m.organizations.id,
-            name: m.organizations.name,
-            type: m.organizations.organization_type,
-            role: m.role,
-          }));
-          setOrganizations(orgs);
-        }
-
-        // Also fetch all available organizations (for joining)
-        const { data: allOrgs } = await supabase
-          .from('organizations')
-          .select('id, name, organization_type')
-          .limit(20);
-
-        setOrganizations((prev) => {
-          const existingIds = new Set(prev.map(o => o.id));
-          const newOrgs = (allOrgs || [])
-            .filter(org => !existingIds.has(org.id))
-            .map(org => ({ ...org, type: org.organization_type, role: null }));
-          return [...prev, ...newOrgs];
-        });
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    if (user) {
-      fetchData();
-    }
-  }, [user]);
-
-  if (authLoading || loading) {
+  if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
       </div>
     );
   }
 
+  // Filter tabs by user role
+  const visibleTabs = SETTINGS_TABS.filter(
+    (tab) => tab.roles.length === 0 || tab.roles.includes(userRole),
+  );
+
   return (
-    <div className="p-8 space-y-8">
+    <div className="max-w-5xl mx-auto p-6 space-y-8">
+      {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
-        <p className="text-gray-600 mt-2">Manage your account and organization access</p>
-      </div>
-
-      {/* Current User Info */}
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Your Account</h2>
-        <div className="space-y-2">
-          <div>
-            <span className="text-sm text-gray-500">Email:</span>
-            <span className="ml-2 font-medium text-gray-900">{user?.email}</span>
-          </div>
-          <div>
-            <span className="text-sm text-gray-500">User ID:</span>
-            <span className="ml-2 font-mono text-xs text-gray-600">{user?.id}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Communication Skills */}
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">Ed Skill Library</h2>
-        <p className="text-sm text-gray-500 mb-4">
-          Enable and configure autonomous communication skills for Estates, HR, and Compliance.
+        <h1 className="text-2xl font-bold flex items-center gap-2">
+          <Settings2 className="w-6 h-6" />
+          Settings
+        </h1>
+        <p className="text-muted-foreground mt-1 text-sm">
+          Manage your school&apos;s configuration, data sources, and user access
         </p>
-        <button
-          onClick={() => router.push('/dashboard/settings/skills')}
-          className="px-4 py-2 bg-primary text-primary-foreground font-bold rounded-lg hover:opacity-90 transition-all flex items-center gap-2"
-        >
-          <Settings2 className="w-4 h-4" />
-          Manage Skill Library
-        </button>
       </div>
 
-      {/* Current Organizations */}
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Your Organizations</h2>
-        {organizations.length === 0 ? (
-          <p className="text-gray-500">You're not a member of any organizations yet.</p>
-        ) : (
-          <div className="space-y-3">
-            {organizations.map((org) => (
-              <div
-                key={org.id}
-                className={`p-4 border rounded-lg ${organization?.id === org.id
-                  ? 'border-blue-500 bg-blue-50'
-                  : 'border-gray-200'
-                  }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-medium text-gray-900">{org.name}</div>
-                    <div className="text-sm text-gray-500 capitalize">
-                      {org.type?.replace('_', ' ')} {org.role && `• ${org.role}`}
-                    </div>
-                  </div>
-                  {organization?.id === org.id && (
-                    <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">
-                      Current
-                    </span>
-                  )}
-                </div>
+      {/* Role badge */}
+      <div className="flex items-center gap-3">
+        <span className="text-sm text-muted-foreground">Signed in as</span>
+        <Badge variant="outline" className="font-medium capitalize">
+          {userRole || "unknown"}
+        </Badge>
+        <span className="text-sm text-muted-foreground">at</span>
+        <span className="text-sm font-medium">
+          {organization?.name || "No organization"}
+        </span>
+      </div>
+
+      {/* Settings cards */}
+      <div className="grid gap-3">
+        {visibleTabs.map((tab) => {
+          const Icon = tab.icon;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => router.push(tab.href)}
+              className={`${tab.bgColor} border rounded-xl p-4 text-left hover:shadow-md hover:scale-[1.005] transition-all group flex items-center gap-4 w-full`}
+            >
+              <div className="p-3 bg-white/60 dark:bg-black/20 rounded-xl">
+                <Icon className={`w-5 h-5 ${tab.color}`} />
               </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-sm">{tab.label}</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {tab.description}
+                </p>
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors" />
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Privilege model — visible to admins */}
+      {isAdmin && (
+        <div>
+          <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+            <Shield className="w-5 h-5" />
+            Role Privilege Matrix
+          </h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            What each role can see and do across the platform.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {ROLE_PRIVILEGES.map((rp) => (
+              <Card key={rp.role} className="overflow-hidden">
+                <div className="px-4 py-3 border-b">
+                  <Badge className={`${rp.badge} text-xs font-bold`}>
+                    {rp.role}
+                  </Badge>
+                </div>
+                <CardContent className="p-4">
+                  <ul className="space-y-1.5">
+                    {rp.privileges.map((p) => (
+                      <li
+                        key={p}
+                        className="text-xs text-muted-foreground flex items-start gap-1.5"
+                      >
+                        <span className="text-green-500 mt-0.5">•</span>
+                        {p}
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Instructions */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-        <h3 className="font-semibold text-blue-900 mb-2">Need to join an organization?</h3>
-        <p className="text-sm text-blue-800 mb-4">
-          If you need to join Aurora Primary or another organization, you can:
-        </p>
-        <ol className="list-decimal list-inside text-sm text-blue-800 space-y-1">
-          <li>Run the SQL script <code className="bg-blue-100 px-1 rounded">ADD_USER_TO_AURORA.sql</code> in Supabase SQL Editor</li>
-          <li>Or contact your administrator to add you to an organization</li>
-        </ol>
-      </div>
+      {/* Non-admin view */}
+      {!isSLT && (
+        <Card>
+          <CardContent className="py-8 text-center">
+            <Lock className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+            <p className="text-sm text-muted-foreground">
+              Additional settings are managed by your school&apos;s leadership
+              team. You&apos;ll see data relevant to your assigned classes in
+              the dashboard.
+            </p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
 
+export default function SettingsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+        </div>
+      }
+    >
+      <SettingsContent />
+    </Suspense>
+  );
+}

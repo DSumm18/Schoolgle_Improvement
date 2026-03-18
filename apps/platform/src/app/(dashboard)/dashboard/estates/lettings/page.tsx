@@ -674,10 +674,12 @@ export default function LettingsPage() {
                       tickFormatter={(v) => `£${v}`}
                     />
                     <Tooltip
-                      formatter={(value: number) => [
-                        formatCurrency(value),
-                        "Income",
-                      ]}
+                      formatter={
+                        ((value: number) => [
+                          formatCurrency(value),
+                          "Income",
+                        ]) as any
+                      }
                     />
                     <Bar dataKey="total" radius={[4, 4, 0, 0]}>
                       {incomeChartData.map((_, i) => (

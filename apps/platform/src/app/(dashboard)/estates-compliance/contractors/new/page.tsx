@@ -1,22 +1,24 @@
-'use client';
+"use client";
 
 /**
  * New Contractor Page
  */
 
-import { useRouter } from 'next/navigation';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
+} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 
 export default function NewContractorPage() {
   const router = useRouter();
@@ -28,36 +30,38 @@ export default function NewContractorPage() {
 
     const formData = new FormData(e.currentTarget);
     const services = Array.from(formData.entries())
-      .filter(([key]) => key.startsWith('service-'))
-      .map(([key]) => key.replace('service-', ''));
+      .filter(([key]) => key.startsWith("service-"))
+      .map(([key]) => key.replace("service-", ""));
 
     const data = {
-      company_name: formData.get('company_name'),
-      contact_name: formData.get('contact_name'),
-      contact_email: formData.get('contact_email'),
-      contact_phone: formData.get('contact_phone'),
-      address: formData.get('address'),
-      is_preferred: formData.get('is_preferred') === 'on',
+      company_name: formData.get("company_name"),
+      contact_name: formData.get("contact_name"),
+      contact_email: formData.get("contact_email"),
+      contact_phone: formData.get("contact_phone"),
+      address: formData.get("address"),
+      is_preferred: formData.get("is_preferred") === "on",
       services,
-      status: formData.get('status') || 'active',
+      status: formData.get("status") || "active",
     };
 
     try {
-      const response = await fetch('/api/estates/contractors', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/estates/contractors", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to create contractor');
+        throw new Error(error.error || "Failed to create contractor");
       }
 
-      router.push('/estates-compliance/contractors');
+      router.push("/estates-compliance/contractors");
     } catch (error) {
-      console.error('Error creating contractor:', error);
-      alert(error instanceof Error ? error.message : 'Failed to create contractor');
+      console.error("Error creating contractor:", error);
+      alert(
+        error instanceof Error ? error.message : "Failed to create contractor",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -76,14 +80,19 @@ export default function NewContractorPage() {
       </div>
 
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Add New Contractor</h1>
+        <h1 className="text-3xl font-bold tracking-tight">
+          Add New Contractor
+        </h1>
         <p className="text-muted-foreground mt-1">
           Register a new contractor in the compliance system
         </p>
       </div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit} className="space-y-6 rounded-lg border bg-card p-6 shadow-sm">
+      <form
+        onSubmit={handleSubmit}
+        className="space-y-6 rounded-lg border bg-card p-6 shadow-sm"
+      >
         {/* Company Name */}
         <div className="space-y-2">
           <Label htmlFor="company_name">
@@ -128,9 +137,7 @@ export default function NewContractorPage() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="contact_phone">
-              Phone Number
-            </Label>
+            <Label htmlFor="contact_phone">Phone Number</Label>
             <Input
               id="contact_phone"
               name="contact_phone"
@@ -156,14 +163,14 @@ export default function NewContractorPage() {
           <Label>Services Provided</Label>
           <div className="grid gap-4 sm:grid-cols-2 pt-2">
             {[
-              { value: 'legionella', label: 'Legionella Control' },
-              { value: 'fire', label: 'Fire Safety' },
-              { value: 'electrical', label: 'Electrical Testing' },
-              { value: 'gas', label: 'Gas Safety' },
-              { value: 'asbestos', label: 'Asbestos Management' },
-              { value: 'lift', label: 'Lift Maintenance' },
-              { value: 'playground', label: 'Playground Inspection' },
-              { value: 'water', label: 'Water Quality Testing' },
+              { value: "legionella", label: "Legionella Control" },
+              { value: "fire", label: "Fire Safety" },
+              { value: "electrical", label: "Electrical Testing" },
+              { value: "gas", label: "Gas Safety" },
+              { value: "asbestos", label: "Asbestos Management" },
+              { value: "lift", label: "Lift Maintenance" },
+              { value: "playground", label: "Playground Inspection" },
+              { value: "water", label: "Water Quality Testing" },
             ].map((service) => (
               <div key={service.value} className="flex items-center space-x-2">
                 <Checkbox
@@ -212,7 +219,7 @@ export default function NewContractorPage() {
             </Button>
           </Link>
           <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Creating...' : 'Create Contractor'}
+            {isSubmitting ? "Creating..." : "Create Contractor"}
           </Button>
         </div>
       </form>
