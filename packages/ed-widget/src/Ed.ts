@@ -202,6 +202,7 @@ export class Ed {
         apiBaseUrl,
         (this.config as any).organizationId,
         (this.config as any).userId,
+        (this.config as any).accessToken,
       );
       console.log("[Ed] ✅ API client initialized for", apiBaseUrl);
     }

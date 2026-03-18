@@ -51,6 +51,7 @@ export class EdAPIClient {
   private baseUrl: string;
   private organizationId?: string;
   private userId?: string;
+  private accessToken?: string;
   private mode: "website" | "support" | "school" = "school";
   private screenStream: MediaStream | null = null; // Live screen share stream
   private screenVideo: HTMLVideoElement | null = null;
@@ -59,10 +60,12 @@ export class EdAPIClient {
     baseUrl: string = "/api/ed/chat",
     organizationId?: string,
     userId?: string,
+    accessToken?: string,
   ) {
     this.baseUrl = baseUrl;
     this.organizationId = organizationId;
     this.userId = userId;
+    this.accessToken = accessToken;
   }
 
   /**
@@ -138,12 +141,17 @@ export class EdAPIClient {
         userId: this.userId,
       };
 
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (this.accessToken) {
+        headers["Authorization"] = `Bearer ${this.accessToken}`;
+      }
+
       const response = await fetch(this.baseUrl, {
         method: "POST",
         credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers,
         body: JSON.stringify(requestBody),
       });
 

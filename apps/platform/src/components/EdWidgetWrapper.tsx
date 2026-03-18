@@ -134,6 +134,16 @@ export default function EdWidgetWrapper({
           }
           // website mode would be set explicitly if isWebsiteEmbed is true
 
+          // Get Supabase access token for API auth
+          let accessToken: string | undefined;
+          try {
+            const { supabase } = await import("@/lib/supabase");
+            const { data } = await supabase.auth.getSession();
+            accessToken = data.session?.access_token || undefined;
+          } catch {
+            /* ok */
+          }
+
           const config: any = {
             position: "bottom-left",
             theme: "standard",
@@ -141,6 +151,7 @@ export default function EdWidgetWrapper({
             mode: edMode,
             provider: "api", // Use /api/ed/chat endpoint (preferred)
             apiBaseUrl: "/api/ed/chat",
+            accessToken, // Supabase JWT for API auth
             organizationId: organizationId || undefined, // Pass org ID if logged in
             features: {
               admissions: false, // Not for school support version

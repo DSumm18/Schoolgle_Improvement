@@ -1,7 +1,11 @@
 // Ed Chat API - Handles AI questions from browser extension
 
 import { NextRequest, NextResponse } from "next/server";
-import { createServerSupabaseClient } from "@/lib/supabase-server";
+import { createClient } from "@supabase/supabase-js";
+import {
+  createServerSupabaseClient,
+  createServiceRoleClient,
+} from "@/lib/supabase-server";
 import { checkRateLimit, getRateLimitKey, RATE_LIMITS } from "@/lib/rate-limit";
 
 // Import Ed Orchestrator via webpack alias (see next.config.ts)
@@ -124,14 +128,33 @@ const QUICK_ANSWERS: Record<string, Record<string, string>> = {
  */
 export async function POST(request: NextRequest) {
   try {
-    // Auth check - require valid session for AI endpoint
-    const supabase = await createServerSupabaseClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    // Auth check - try cookie-based session first, then Bearer token fallback
+    let user: any = null;
 
-    if (authError || !user) {
+    // 1. Try cookie-based session (SSR / same-origin fetch with credentials)
+    try {
+      const supabase = await createServerSupabaseClient();
+      const { data, error } = await supabase.auth.getUser();
+      if (!error && data.user) user = data.user;
+    } catch {
+      // Cookie auth failed
+    }
+
+    // 2. Fall back to Authorization: Bearer <token> header
+    if (!user) {
+      const authHeader = request.headers.get("authorization");
+      if (authHeader?.startsWith("Bearer ")) {
+        const token = authHeader.slice(7);
+        const supabase = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        );
+        const { data, error } = await supabase.auth.getUser(token);
+        if (!error && data.user) user = data.user;
+      }
+    }
+
+    if (!user) {
       return NextResponse.json(
         { error: "Unauthorized", code: "UNAUTHORIZED" },
         { status: 401 },
