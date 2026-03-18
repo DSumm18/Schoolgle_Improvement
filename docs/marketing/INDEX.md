@@ -24,6 +24,7 @@ Each module has: one-line value prop, problem statement, feature list, benefits,
 | 05 | Actions Hub | [View](./modules/05-actions-hub.md) | £400-800/yr |
 | 06 | School Intelligence Engine | [View](./modules/06-school-intelligence.md) | £600-1,200/yr |
 | 07 | Ed AI Assistant | [View](./modules/07-ed-ai-assistant.md) | £500-1,000/yr |
+| 07a | **Ed vs Staff Cost — The 11p/hr Pitch** | [View](./modules/07a-ed-vs-staff-cost.md) | Key selling tool |
 | 08 | Risk Register | [View](./modules/08-risk-register.md) | £200-400/yr |
 | 09 | Meeting Companion | [View](./modules/09-meetings-companion.md) | £200-400/yr |
 | 10 | Document Production | [View](./modules/10-document-production.md) | £300-500/yr |
