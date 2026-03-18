@@ -234,24 +234,97 @@ export async function injectExpertKnowledge(
 export function mapUrlToDomain(url: string): string | null {
   const path = url.toLowerCase();
 
+  // Estates & Compliance
   if (path.includes("legionella") || path.includes("water"))
     return "legionella";
   if (path.includes("fire")) return "fire";
   if (path.includes("asbestos")) return "asbestos";
   if (path.includes("electrical")) return "electrical";
-  if (path.includes("staff") || path.includes("hr")) return "hr";
-  if (path.includes("send")) return "send";
-  if (path.includes("floor-plan") || path.includes("floorplan"))
+  if (
+    path.includes("estates") ||
+    path.includes("floor-plan") ||
+    path.includes("floorplan")
+  )
     return "estates";
   if (path.includes("energy")) return "estates";
   if (path.includes("data-validation")) return "estates";
+  if (path.includes("compliance")) return "estates";
+
+  // HR & People
+  if (
+    path.includes("/hr") ||
+    path.includes("staff") ||
+    path.includes("people") ||
+    path.includes("sickness") ||
+    path.includes("cover")
+  )
+    return "hr";
+  if (path.includes("performance") || path.includes("appraisal")) return "hr";
+
+  // SEND
+  if (path.includes("send")) return "send";
+
+  // Finance
+  if (
+    path.includes("finance") ||
+    path.includes("budget") ||
+    path.includes("staffing-modeller") ||
+    path.includes("icfp")
+  )
+    return "data";
+
+  // Intelligence & Data
   if (
     path.includes("intelligence") ||
     path.includes("pupil-assessment") ||
     path.includes("cohort")
   )
     return "intelligence";
+  if (path.includes("attendance")) return "data";
+  if (path.includes("behaviour")) return "data";
+
+  // Governance
+  if (path.includes("governance") || path.includes("governor"))
+    return "governance";
+
+  // Risk
   if (path.includes("risk")) return "risk";
+
+  // Safeguarding
+  if (path.includes("safeguard")) return "data";
+
+  // Teaching & Learning
+  if (
+    path.includes("teaching") ||
+    path.includes("curriculum") ||
+    path.includes("lesson")
+  )
+    return "curriculum";
+
+  // Inspection / Improvement
+  if (
+    path.includes("improvement") ||
+    path.includes("ofsted") ||
+    path.includes("siams") ||
+    path.includes("sef")
+  )
+    return "curriculum";
+
+  // Communications
+  if (path.includes("communication") || path.includes("newsletter"))
+    return "communications";
+
+  // Calendar
+  if (path.includes("calendar")) return "data";
+
+  // Surveys
+  if (path.includes("survey")) return "data";
+
+  // Website
+  if (path.includes("website")) return "it-tech";
+
+  // Settings
+  if (path.includes("settings")) return "general";
 
   return null;
 }

@@ -103,6 +103,7 @@ export class EdOrchestrator {
     context: {
       app?: string;
       page?: string;
+      url?: string;
       screenshot?: string;
     } = {},
   ): Promise<EdResponse> {
@@ -116,6 +117,7 @@ export class EdOrchestrator {
       subscription: this.config.subscription,
       activeApp: (context.app as any) || this.config.activeApp,
       currentTask: context.page,
+      url: context.url,
       schoolData: this.schoolContext ?? undefined,
       sessionId: this.generateSessionId(),
       openRouterApiKey: this.config.openRouterApiKey,
@@ -158,10 +160,12 @@ export class EdOrchestrator {
         };
       }
 
-      // Step 2: Detect domain and inject expert knowledge
-      const domain = appContext.currentTask
-        ? mapUrlToDomain(appContext.currentTask)
-        : null;
+      // Step 2: Detect domain from URL and inject expert knowledge
+      const domain = (appContext as any).url
+        ? mapUrlToDomain((appContext as any).url)
+        : appContext.currentTask
+          ? mapUrlToDomain(appContext.currentTask)
+          : null;
       let enrichedQuestion = question;
 
       if (domain && this.config.supabase) {

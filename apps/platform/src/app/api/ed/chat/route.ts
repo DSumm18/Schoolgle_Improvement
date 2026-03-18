@@ -425,10 +425,11 @@ export async function POST(request: NextRequest) {
     // Get screenshot from either direct image upload or pageState
     const screenshot = image || pageState?.screenshot;
 
-    // Process through agent framework
+    // Process through agent framework — pass URL so Ed knows which page user is on
     const edResponse = await orchestrator.processQuestion(question, {
       app: activeApp,
       page: context?.title,
+      url: context?.url,
       screenshot,
     });
 

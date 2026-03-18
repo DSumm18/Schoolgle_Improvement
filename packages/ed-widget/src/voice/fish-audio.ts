@@ -594,22 +594,39 @@ export class FishAudioVoice {
       }
     }
 
-    // Remove emojis (keep text only)
+    // Remove emojis and unicode symbols (keep text only)
     cleaned = cleaned
       .replace(/[\u{1F300}-\u{1F9FF}]/gu, "")
       .replace(/[\u{2600}-\u{26FF}]/gu, "")
       .replace(/[\u{2700}-\u{27BF}]/gu, "")
+      .replace(/[\u{FE00}-\u{FE0F}]/gu, "") // Variation selectors
+      .replace(/[\u{200D}]/gu, "") // Zero-width joiner
       // Remove language codes like "Polski PL 🇵🇱" or "Română RO"
       .replace(/\b[A-Z]{2}\s*🇵🇱|🇷🇴|🇬🇧|🇺🇸|🇵🇱|🇷🇴\b/gi, "")
       .replace(/Polski\s+PL|Română\s+RO|English\s+EN/gi, "")
+      // Remove AI response metadata/footers (Source, Confidence, Notes)
+      .replace(/---[\s\S]*$/gm, "") // Everything after --- divider
+      .replace(/\*Source:.*$/gm, "")
+      .replace(/Source:.*$/gm, "")
+      .replace(/\| Confidence:.*$/gm, "")
+      .replace(/⚠️.*$/gm, "")
+      .replace(/Note:.*low confidence.*$/gim, "")
+      .replace(/Please verify for critical matters\.?/gi, "")
       // Remove markdown-style formatting
       .replace(/\*\*([^*]+)\*\*/g, "$1") // Bold
       .replace(/\*([^*]+)\*/g, "$1") // Italic
       .replace(/`([^`]+)`/g, "$1") // Code
+      .replace(/^#{1,6}\s+/gm, "") // Headings
+      .replace(/^[-*]\s+/gm, "") // Bullet points — just read the text
+      .replace(/^\d+\.\s+/gm, "") // Numbered lists
       // Remove HTML-like tags
       .replace(/<[^>]+>/g, "")
       // Remove instructional text patterns
-      .replace(/\[Translated to [^\]]+\]:\s*/gi, "");
+      .replace(/\[Translated to [^\]]+\]:\s*/gi, "")
+      // Clean up symbols that TTS reads literally
+      .replace(/---+/g, "") // Horizontal rules
+      .replace(/\|/g, ",") // Pipe separators → comma pause
+      .replace(/[#~_]/g, ""); // Stray markdown chars;
 
     // Remove any remaining tags (non-placeholder tags)
     // If preserving, we've already replaced Fish Audio tags with placeholders
