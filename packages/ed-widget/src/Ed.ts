@@ -325,16 +325,39 @@ export class Ed {
       this.wasDragged = false;
     });
 
-    this.container.appendChild(launcherGroup);
+    // Check for sidebar slot — if present, dock Ed there instead of floating
+    const sidebarSlot = document.getElementById("ed-sidebar-slot");
+    if (sidebarSlot && !this.hasSavedPosition()) {
+      // Dock in sidebar: render inline, not fixed
+      launcherGroup.style.position = "relative";
+      launcherGroup.style.bottom = "auto";
+      launcherGroup.style.right = "auto";
+      sidebarSlot.appendChild(launcherGroup);
+    } else {
+      // Floating mode: append to widget container
+      this.container.appendChild(launcherGroup);
+      // Restore saved position if any
+      this.restoreLauncherPosition(launcherGroup);
+    }
 
-    // Restore saved position
-    this.restoreLauncherPosition(launcherGroup);
-
-    // Make launcher draggable
+    // Make launcher draggable (works in both modes — dragging out of sidebar goes to fixed position)
     this.makeDraggable(launcherGroup);
 
     // Create Particle3D logo for launcher button (instead of CSS version)
     this.createParticle3DLogo();
+  }
+
+  private hasSavedPosition(): boolean {
+    try {
+      const saved = localStorage.getItem(Ed.POSITION_KEY);
+      if (saved) {
+        const pos = JSON.parse(saved);
+        return pos.x >= 0 && pos.y >= 0;
+      }
+    } catch {
+      /* ignore */
+    }
+    return false;
   }
 
   private restoreLauncherPosition(launcher: HTMLElement): void {

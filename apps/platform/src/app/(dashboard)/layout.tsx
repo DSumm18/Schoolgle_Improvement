@@ -654,8 +654,9 @@ export default function DashboardLayout({
           </nav>
 
           <div className="p-4 border-t border-border bg-accent/30">
+            {/* User info row */}
             <div
-              className={`flex items-center gap-3 mb-4 ${!isSidebarExpanded ? "justify-center" : ""}`}
+              className={`flex items-center gap-3 ${!isSidebarExpanded ? "justify-center" : ""}`}
             >
               <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-xs shrink-0">
                 {(displayName ||
@@ -674,21 +675,33 @@ export default function DashboardLayout({
                   </div>
                 </div>
               )}
+            </div>
+
+            {/* Actions row: Sign Out, Accessibility, Notifications */}
+            <div
+              className={`flex items-center gap-1 mt-3 ${!isSidebarExpanded ? "justify-center" : ""}`}
+            >
+              <button
+                onClick={signOut}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold text-muted-foreground hover:bg-background hover:text-destructive border border-transparent hover:border-destructive/20 transition-all cursor-pointer"
+                title="Sign Out"
+              >
+                <LogOut size={16} />
+                {isSidebarExpanded && <span>Sign Out</span>}
+              </button>
               {isSidebarExpanded && (
-                <>
+                <div className="flex items-center gap-1 ml-auto">
                   <AccessibilityToolbar />
                   <NotificationBell />
-                </>
+                </div>
               )}
             </div>
-            <button
-              onClick={signOut}
-              className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold text-muted-foreground hover:bg-background hover:text-destructive border border-transparent hover:border-destructive/20 transition-all shadow-sm cursor-pointer ${!isSidebarExpanded ? "justify-center" : "justify-center"}`}
-              title={!isSidebarExpanded ? "Sign Out" : undefined}
-            >
-              <LogOut size={16} />
-              {isSidebarExpanded && <span>Sign Out</span>}
-            </button>
+
+            {/* Ed AI button slot — right-aligned */}
+            <div
+              id="ed-sidebar-slot"
+              className={`mt-3 flex ${isSidebarExpanded ? "justify-end" : "justify-center"}`}
+            />
           </div>
         </aside>
 
