@@ -14,6 +14,7 @@ export const GET = protectedRoute(async (auth, request: NextRequest) => {
   const sp = request.nextUrl.searchParams;
 
   const cfrCode = sp.get("cfr_code");
+  const costCentre = sp.get("cost_centre");
   const group = sp.get("group"); // Staffing, Premises, Energy, Supplies, Other, Income
   const search = sp.get("search");
   const page = Math.max(1, parseInt(sp.get("page") || "1", 10));
@@ -35,6 +36,10 @@ export const GET = protectedRoute(async (auth, request: NextRequest) => {
 
   if (cfrCode) {
     query = query.eq("cfr_code", cfrCode);
+  }
+
+  if (costCentre) {
+    query = query.eq("cost_centre", costCentre);
   }
 
   if (financialYear) {

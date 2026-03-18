@@ -428,7 +428,46 @@ async function main() {
     }
   }
 
-  // Step 5: Final verification
+  // Step 5: Store source CFR snapshot in data_imports for reconciliation
+  console.log("Creating data_imports audit record...");
+  const crypto = await import("crypto");
+  const rawChecksum = crypto
+    .createHash("sha256")
+    .update(readFileSync(FMS_FILE))
+    .digest("hex");
+
+  const sourceCfrSnapshot = Object.entries(budgetSummary).map(
+    ([cc, summary]) => {
+      const mapping = CFR_MAP[cc];
+      return {
+        cfr_code: mapping ? mapping.cfr : "???",
+        description: summary.name,
+        cost_centre: cc,
+        budget: Math.abs(summary.allocated),
+        actual: Math.abs(summary.actual),
+        committed: Math.abs(summary.committed),
+        txn_count: transactions.filter((t) => t.cost_centre === cc).length,
+      };
+    },
+  );
+
+  await supabase.from("data_imports").insert({
+    organization_id: ORG_ID,
+    import_type: "transactions",
+    file_name: "fms_detailed_cost_centre_2025-26.xlsx",
+    file_type: "xlsx",
+    financial_year: FY,
+    status: "imported",
+    total_rows: transactions.length,
+    rows_imported: inserted,
+    rows_errored: errors,
+    raw_checksum: rawChecksum,
+    source_cfr_snapshot: sourceCfrSnapshot,
+    imported_by: "import-test-harness-script",
+  });
+  console.log("  Audit record created with source CFR snapshot");
+
+  // Step 6: Final verification
   console.log("\n─── Verification ───");
   const { count: txnCount } = await supabase
     .from("finance_transactions")
@@ -446,6 +485,41 @@ async function main() {
   console.log(`  Transactions: ${txnCount}`);
   console.log(`  Budget lines: ${blCount}`);
   console.log(`  Suppliers: ${supCount}`);
+
+  // Step 7: Cross-verify budget lines vs spreadsheet totals
+  console.log("\n─── Source Reconciliation ───");
+  let mismatches = 0;
+  for (const [cc, summary] of Object.entries(budgetSummary)) {
+    const mapping = CFR_MAP[cc];
+    if (!mapping) continue;
+
+    const { data: dbLine } = await supabase
+      .from("finance_budget_lines")
+      .select("actual_amount, budget_amount, committed_amount")
+      .eq("organization_id", ORG_ID)
+      .eq("cost_centre", cc)
+      .single();
+
+    if (dbLine) {
+      const dbActual = parseFloat(dbLine.actual_amount || "0");
+      const srcActual = Math.abs(summary.actual);
+      const drift = Math.abs(dbActual - srcActual);
+
+      if (drift > 0.01) {
+        mismatches++;
+        console.log(
+          `  MISMATCH ${cc} (${mapping.cfr}): DB £${dbActual} vs Source £${srcActual} (drift: £${drift.toFixed(2)})`,
+        );
+      }
+    }
+  }
+
+  if (mismatches === 0) {
+    console.log("  ✓ All budget lines match source spreadsheet exactly");
+  } else {
+    console.log(`  ⚠ ${mismatches} mismatches found`);
+  }
+
   console.log("\nDone.");
 }
 

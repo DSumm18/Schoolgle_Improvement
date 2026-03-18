@@ -249,7 +249,20 @@ export const POST = protectedRoute(
       if (!supErr) suppliersUpserted++;
     }
 
-    // Step 7: Update import record with results
+    // Step 7: Build source CFR snapshot for future reconciliation
+    const sourceCfrSnapshot = parsed.cost_centres
+      .filter((cc) => cc.cfr_code)
+      .map((cc) => ({
+        cfr_code: cc.cfr_code,
+        description: cc.name,
+        cost_centre: cc.code,
+        budget: Math.abs(cc.allocated),
+        actual: Math.abs(cc.actual),
+        committed: Math.abs(cc.committed),
+        txn_count: cc.transactions.length,
+      }));
+
+    // Step 8: Update import record with results + source snapshot
     await supabase
       .from("data_imports")
       .update({
@@ -257,8 +270,28 @@ export const POST = protectedRoute(
         rows_imported: txnInserted,
         rows_errored: txnErrors,
         error_details: errorDetails.length > 0 ? errorDetails : null,
+        source_cfr_snapshot: sourceCfrSnapshot,
       })
       .eq("id", importId);
+
+    // Step 9: Auto-run reconciliation after import to establish baseline
+    try {
+      const { reconcile } = await import("@/lib/budget-engine/reconciliation");
+      await reconcile(
+        supabase,
+        auth.organizationId,
+        fy,
+        rawData,
+        "import",
+        auth.userId,
+      );
+    } catch (reconErr) {
+      console.warn(
+        "[Finance Import] Post-import reconciliation failed:",
+        reconErr,
+      );
+      // Non-fatal — import succeeded even if reconciliation logging fails
+    }
 
     return apiSuccess({
       import_id: importId,
@@ -274,6 +307,7 @@ export const POST = protectedRoute(
         reversals_matched: validation.reversals.filter((r) => r.original)
           .length,
       },
+      reconciliation: "auto_reconciliation_triggered",
       error_details: errorDetails.length > 0 ? errorDetails : undefined,
     });
   },

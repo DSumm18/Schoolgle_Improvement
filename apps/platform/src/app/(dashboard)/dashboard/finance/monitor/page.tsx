@@ -71,6 +71,25 @@ interface CFRLine {
   variance_percent: number;
   rag: "red" | "amber" | "green";
   monthly_profile: MonthlyPoint[];
+  cost_centre?: string;
+}
+
+interface DataProvenance {
+  source: string;
+  last_import: {
+    id: string;
+    file_name: string;
+    imported_at: string;
+    rows_imported: number;
+    checksum: string;
+  } | null;
+  reconciliation: {
+    status: "matched" | "minor_exceptions" | "major_exceptions" | "failed";
+    exception_count: number;
+    max_drift_pct: number;
+    last_checked: string;
+    triggered_by: string;
+  } | null;
 }
 
 interface MonitorData {
@@ -93,14 +112,27 @@ interface MonitorData {
   staffing_percent_of_income: number;
   staffing_target: number;
   lines: CFRLine[];
+  data_source?: "demo" | "supabase";
+  data_provenance?: DataProvenance;
+  available_years?: string[];
 }
 
 interface Transaction {
-  date: string;
-  reference: string;
+  id: string;
+  transaction_date: string;
+  transaction_ref: string;
+  transaction_type: string;
+  cost_centre: string;
+  cfr_code: string;
+  cfr_description: string;
+  gross_amount: number;
+  vat_amount: number;
+  is_income: boolean;
+  supplier_name: string | null;
   description: string;
-  amount: number;
-  running_total: number;
+  financial_year: string;
+  period_number: number;
+  source_system: string;
 }
 
 interface ExpectedIncomeItem {
@@ -850,8 +882,8 @@ function MiniSparkline({
   }));
 
   return (
-    <div className="w-[60px] h-[20px]">
-      <ResponsiveContainer width="100%" height="100%">
+    <div className="w-[60px] h-[20px] min-w-[60px] min-h-[20px]">
+      <ResponsiveContainer width={60} height={20} minWidth={1} minHeight={1}>
         <LineChart data={chartData}>
           <Line
             type="monotone"
@@ -877,19 +909,73 @@ function MiniSparkline({
 function ExpandedRow({
   line,
   organizationId,
+  financialYear,
 }: {
   line: CFRLine;
   organizationId: string;
+  financialYear?: string;
 }) {
-  const { data: txData } = useSWR<{ data: Transaction[] }>(
+  // Filter by cost_centre if available (critical for shared CFR codes like E03, E14, E16)
+  const ccParam = line.cost_centre ? `&cost_centre=${line.cost_centre}` : "";
+  const fyParam = financialYear ? `&financial_year=${financialYear}` : "";
+  const { data: txResponse } = useSWR<{
+    data: {
+      transactions: Transaction[];
+      summary: { total_gross: number; transaction_count: number };
+      pagination: { total: number };
+    };
+  }>(
     organizationId
-      ? `/api/finance/transactions?organizationId=${organizationId}&cfr_code=${line.cfr_code}`
+      ? `/api/finance/transactions?organizationId=${organizationId}&cfr_code=${line.cfr_code}${ccParam}${fyParam}&limit=200`
       : null,
     fetcher,
     { revalidateOnFocus: false },
   );
 
-  const transactions = txData?.data ?? [];
+  const transactions = txResponse?.data?.transactions ?? [];
+  const totalCount = txResponse?.data?.pagination?.total ?? 0;
+
+  // Compute running total (chronological order)
+  const sorted = [...transactions].sort(
+    (a, b) =>
+      new Date(a.transaction_date).getTime() -
+      new Date(b.transaction_date).getTime(),
+  );
+  let running = 0;
+  const withRunning = sorted.map((tx) => {
+    running += Math.abs(tx.gross_amount);
+    return { ...tx, running_total: running };
+  });
+
+  // Type badge
+  const typeBadge = (type: string) => {
+    const styles: Record<string, string> = {
+      journal:
+        "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
+      invoice:
+        "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
+      purchase_order:
+        "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
+      receipt:
+        "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300",
+      credit_note:
+        "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
+    };
+    const labels: Record<string, string> = {
+      journal: "JNL",
+      invoice: "INV",
+      purchase_order: "PO",
+      receipt: "REC",
+      credit_note: "CR",
+    };
+    return (
+      <span
+        className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium ${styles[type] || "bg-gray-100 text-gray-600"}`}
+      >
+        {labels[type] || type}
+      </span>
+    );
+  };
 
   return (
     <tr>
@@ -901,14 +987,19 @@ function ExpandedRow({
           transition={{ duration: 0.2 }}
           className="overflow-hidden"
         >
-          <div className="py-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Monthly Breakdown */}
+          <div className="py-4 space-y-4">
+            {/* Monthly Profile Chart */}
             <div className="rounded-lg border border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 p-3">
               <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                Monthly Profile
+                Monthly Profile &mdash; {line.description} ({line.cfr_code})
               </p>
-              <div className="h-[120px]">
-                <ResponsiveContainer width="100%" height="100%">
+              <div className="h-[120px] min-h-[120px]">
+                <ResponsiveContainer
+                  width="100%"
+                  height="100%"
+                  minWidth={1}
+                  minHeight={1}
+                >
                   <BarChart data={line.monthly_profile} barGap={1}>
                     <CartesianGrid
                       strokeDasharray="3 3"
@@ -945,56 +1036,125 @@ function ExpandedRow({
               </div>
             </div>
 
-            {/* Recent Transactions */}
+            {/* Transaction Ledger */}
             <div className="rounded-lg border border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 p-3">
-              <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                Recent Transactions
-              </p>
-              {transactions.length === 0 ? (
-                <div className="flex items-center justify-center h-[100px] text-xs text-gray-400">
-                  <p>No transactions loaded yet</p>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                  Transaction Ledger
+                </p>
+                <span className="text-[10px] text-gray-400 dark:text-gray-500">
+                  {totalCount} transaction{totalCount !== 1 ? "s" : ""}
+                  {line.cost_centre && (
+                    <span className="ml-1 font-mono">
+                      CC: {line.cost_centre}
+                    </span>
+                  )}
+                </span>
+              </div>
+              {withRunning.length === 0 ? (
+                <div className="flex items-center justify-center h-[60px] text-xs text-gray-400">
+                  <p>Loading transactions...</p>
                 </div>
               ) : (
-                <div className="max-h-[120px] overflow-y-auto">
+                <div className="max-h-[320px] overflow-y-auto">
                   <table className="w-full text-xs">
-                    <thead>
-                      <tr className="text-gray-500 dark:text-gray-400">
-                        <th className="text-left py-1 font-medium">Date</th>
-                        <th className="text-left py-1 font-medium">Ref</th>
-                        <th className="text-left py-1 font-medium">
-                          Description
+                    <thead className="sticky top-0 bg-gray-50 dark:bg-gray-800 z-10">
+                      <tr className="text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-600">
+                        <th className="text-left py-1.5 px-1 font-medium w-[70px]">
+                          Date
                         </th>
-                        <th className="text-right py-1 font-medium">Amount</th>
-                        <th className="text-right py-1 font-medium">Running</th>
+                        <th className="text-left py-1.5 px-1 font-medium w-[40px]">
+                          Type
+                        </th>
+                        <th className="text-left py-1.5 px-1 font-medium w-[60px]">
+                          Period
+                        </th>
+                        <th className="text-left py-1.5 px-1 font-medium">
+                          Supplier / Description
+                        </th>
+                        <th className="text-right py-1.5 px-1 font-medium w-[90px]">
+                          Amount
+                        </th>
+                        <th className="text-right py-1.5 px-1 font-medium w-[90px]">
+                          Running
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
-                      {transactions.map((tx, i) => (
-                        <tr
-                          key={i}
-                          className="border-t border-gray-100 dark:border-gray-700"
-                        >
-                          <td className="py-1 text-gray-600 dark:text-gray-400 tabular-nums">
-                            {new Date(tx.date).toLocaleDateString("en-GB", {
-                              day: "2-digit",
-                              month: "short",
-                            })}
-                          </td>
-                          <td className="py-1 text-gray-500 dark:text-gray-400 font-mono">
-                            {tx.reference}
-                          </td>
-                          <td className="py-1 text-gray-700 dark:text-gray-300 truncate max-w-[120px]">
-                            {tx.description}
-                          </td>
-                          <td className="py-1 text-right font-medium text-gray-900 dark:text-white tabular-nums">
-                            {fmt(tx.amount)}
-                          </td>
-                          <td className="py-1 text-right text-gray-500 dark:text-gray-400 tabular-nums">
-                            {fmt(tx.running_total)}
-                          </td>
-                        </tr>
-                      ))}
+                      {withRunning.map((tx, i) => {
+                        const isCredit = tx.gross_amount < 0;
+                        return (
+                          <tr
+                            key={tx.id || i}
+                            className="border-t border-gray-100 dark:border-gray-700 hover:bg-white/50 dark:hover:bg-gray-700/30"
+                          >
+                            <td className="py-1.5 px-1 text-gray-600 dark:text-gray-400 tabular-nums whitespace-nowrap">
+                              {tx.transaction_date
+                                ? new Date(
+                                    tx.transaction_date,
+                                  ).toLocaleDateString("en-GB", {
+                                    day: "2-digit",
+                                    month: "short",
+                                    year: "2-digit",
+                                  })
+                                : "—"}
+                            </td>
+                            <td className="py-1.5 px-1">
+                              {typeBadge(tx.transaction_type)}
+                            </td>
+                            <td className="py-1.5 px-1 text-gray-500 dark:text-gray-400 tabular-nums">
+                              P{tx.period_number}
+                            </td>
+                            <td className="py-1.5 px-1 text-gray-700 dark:text-gray-300 max-w-[250px]">
+                              <div className="truncate">
+                                {tx.supplier_name && (
+                                  <span className="font-medium">
+                                    {tx.supplier_name}
+                                  </span>
+                                )}
+                                {tx.supplier_name && tx.description && " — "}
+                                <span className="text-gray-500 dark:text-gray-400">
+                                  {tx.description || tx.transaction_ref}
+                                </span>
+                              </div>
+                            </td>
+                            <td
+                              className={`py-1.5 px-1 text-right font-medium tabular-nums whitespace-nowrap ${
+                                isCredit
+                                  ? "text-red-600 dark:text-red-400"
+                                  : "text-gray-900 dark:text-white"
+                              }`}
+                            >
+                              {isCredit ? "(" : ""}
+                              {fmt(Math.abs(tx.gross_amount))}
+                              {isCredit ? ")" : ""}
+                            </td>
+                            <td className="py-1.5 px-1 text-right text-gray-400 dark:text-gray-500 tabular-nums whitespace-nowrap">
+                              {fmt(tx.running_total)}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
+                    <tfoot>
+                      <tr className="border-t-2 border-gray-300 dark:border-gray-600 font-semibold">
+                        <td
+                          colSpan={4}
+                          className="py-2 px-1 text-gray-700 dark:text-gray-300 text-right"
+                        >
+                          Total ({withRunning.length} transactions)
+                        </td>
+                        <td className="py-2 px-1 text-right text-gray-900 dark:text-white tabular-nums">
+                          {fmt(
+                            withRunning.reduce(
+                              (s, tx) => s + tx.gross_amount,
+                              0,
+                            ),
+                          )}
+                        </td>
+                        <td></td>
+                      </tr>
+                    </tfoot>
                   </table>
                 </div>
               )}
@@ -1011,11 +1171,13 @@ function BudgetTable({
   filter,
   searchQuery,
   organizationId,
+  financialYear,
 }: {
   lines: CFRLine[];
   filter: "all" | "expenditure" | "income";
   searchQuery: string;
   organizationId: string;
+  financialYear?: string;
 }) {
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
@@ -1153,7 +1315,8 @@ function BudgetTable({
                     {!isCollapsed &&
                       groupLines.map((line) => {
                         const rc = ragStyles(line.rag);
-                        const isExpanded = expandedRow === line.cfr_code;
+                        const lineKey = `${line.cfr_code}:${line.cost_centre || line.description}`;
+                        const isExpanded = expandedRow === lineKey;
                         const sparklineColor =
                           line.rag === "red"
                             ? "#ef4444"
@@ -1162,7 +1325,7 @@ function BudgetTable({
                               : "#22c55e";
 
                         return (
-                          <React.Fragment key={line.cfr_code}>
+                          <React.Fragment key={lineKey}>
                             <tr
                               className={`border-b border-gray-50 dark:border-gray-800 cursor-pointer transition-colors ${
                                 isExpanded
@@ -1170,9 +1333,7 @@ function BudgetTable({
                                   : "hover:bg-gray-50/50 dark:hover:bg-gray-800/30"
                               }`}
                               onClick={() =>
-                                setExpandedRow(
-                                  isExpanded ? null : line.cfr_code,
-                                )
+                                setExpandedRow(isExpanded ? null : lineKey)
                               }
                             >
                               <td className="px-2 py-2.5">
@@ -1229,6 +1390,7 @@ function BudgetTable({
                               <ExpandedRow
                                 line={line}
                                 organizationId={organizationId}
+                                financialYear={financialYear}
                               />
                             )}
                           </React.Fragment>
@@ -1301,7 +1463,7 @@ function TopVariances({ lines }: { lines: CFRLine[] }) {
 
           return (
             <div
-              key={line.cfr_code}
+              key={`${line.cfr_code}:${line.cost_centre || line.description}`}
               className={`rounded-lg border p-4 ${rc.border} ${rc.bg} transition-colors`}
             >
               <div className="flex items-start justify-between mb-2">
@@ -1800,6 +1962,169 @@ function FooterLinks() {
 }
 
 // =====================================================
+// DATA PROVENANCE BANNER
+// =====================================================
+
+function DataProvenanceBanner({ data }: { data: MonitorData }) {
+  const isDemo = data.data_source === "demo" || !data.data_provenance;
+  const prov = data.data_provenance;
+
+  if (isDemo) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.2 }}
+        className="flex items-center gap-2 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-4 py-2.5"
+      >
+        <AlertTriangle className="h-4 w-4 flex-shrink-0 text-amber-600 dark:text-amber-400" />
+        <p className="text-xs text-amber-700 dark:text-amber-300">
+          <span className="font-semibold">Demo Mode</span> &mdash; Showing
+          sample data with seasonal budget profiling. Import your FMS/Xero/Sage
+          export to see real figures.
+        </p>
+      </motion.div>
+    );
+  }
+
+  const recon = prov?.reconciliation;
+  const lastImport = prov?.last_import;
+
+  const reconStatus = recon?.status || "none";
+  const reconConfig: Record<
+    string,
+    {
+      bg: string;
+      border: string;
+      text: string;
+      icon: React.ElementType;
+      label: string;
+    }
+  > = {
+    matched: {
+      bg: "bg-green-50 dark:bg-green-950/30",
+      border: "border-green-200 dark:border-green-800",
+      text: "text-green-700 dark:text-green-300",
+      icon: ShieldCheck,
+      label: "Data Verified",
+    },
+    minor_exceptions: {
+      bg: "bg-amber-50 dark:bg-amber-950/30",
+      border: "border-amber-200 dark:border-amber-800",
+      text: "text-amber-700 dark:text-amber-300",
+      icon: AlertTriangle,
+      label: "Minor Exceptions",
+    },
+    major_exceptions: {
+      bg: "bg-red-50 dark:bg-red-950/30",
+      border: "border-red-200 dark:border-red-800",
+      text: "text-red-700 dark:text-red-300",
+      icon: AlertTriangle,
+      label: "Data Mismatch",
+    },
+    failed: {
+      bg: "bg-red-50 dark:bg-red-950/30",
+      border: "border-red-200 dark:border-red-800",
+      text: "text-red-700 dark:text-red-300",
+      icon: AlertTriangle,
+      label: "Reconciliation Failed",
+    },
+    none: {
+      bg: "bg-blue-50 dark:bg-blue-950/30",
+      border: "border-blue-200 dark:border-blue-800",
+      text: "text-blue-700 dark:text-blue-300",
+      icon: Info,
+      label: "Not Yet Verified",
+    },
+  };
+
+  const config = reconConfig[reconStatus] || reconConfig.none;
+  const Icon = config.icon;
+
+  const importDate = lastImport?.imported_at
+    ? new Date(lastImport.imported_at).toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : null;
+
+  const reconDate = recon?.last_checked
+    ? new Date(recon.last_checked).toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ delay: 0.2 }}
+      className={`flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 rounded-lg border ${config.border} ${config.bg} px-4 py-2.5`}
+    >
+      <div className="flex items-center gap-2 flex-1">
+        <Icon className={`h-4 w-4 flex-shrink-0 ${config.text}`} />
+        <div className={`text-xs ${config.text}`}>
+          <span className="font-semibold">{config.label}</span>
+          {reconStatus === "matched" && (
+            <span>
+              {" "}
+              &mdash; All figures match source spreadsheet
+              {lastImport?.file_name && (
+                <span className="opacity-75"> ({lastImport.file_name})</span>
+              )}
+            </span>
+          )}
+          {reconStatus === "minor_exceptions" && recon && (
+            <span>
+              {" "}
+              &mdash; {recon.exception_count} minor difference
+              {recon.exception_count !== 1 ? "s" : ""} detected (max drift:{" "}
+              {recon.max_drift_pct.toFixed(1)}%)
+            </span>
+          )}
+          {reconStatus === "major_exceptions" && recon && (
+            <span>
+              {" "}
+              &mdash; {recon.exception_count} exception
+              {recon.exception_count !== 1 ? "s" : ""} found between source
+              spreadsheet and database. Review recommended.
+            </span>
+          )}
+          {reconStatus === "none" && lastImport && (
+            <span>
+              {" "}
+              &mdash; Data imported from {lastImport.file_name} but not yet
+              reconciled.
+            </span>
+          )}
+        </div>
+      </div>
+      <div className="flex items-center gap-3 text-[10px] text-gray-400 dark:text-gray-500 shrink-0">
+        {importDate && (
+          <span className="flex items-center gap-1">
+            <Upload className="h-3 w-3" />
+            Imported {importDate}
+          </span>
+        )}
+        {reconDate && (
+          <span className="flex items-center gap-1">
+            <ShieldCheck className="h-3 w-3" />
+            Checked {reconDate}
+          </span>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
+// =====================================================
 // MAIN PAGE
 // =====================================================
 
@@ -1808,13 +2133,15 @@ type TableFilter = "all" | "expenditure" | "income";
 export default function BudgetMonitorPage() {
   const { organization } = useAuth();
   const orgId = organization?.id;
+  const [selectedYear, setSelectedYear] = useState<string | null>(null);
 
+  const fyParam = selectedYear ? `&financial_year=${selectedYear}` : "";
   const {
     data: apiResponse,
     error,
     isLoading,
   } = useSWR<{ data: MonitorData }>(
-    orgId ? `/api/finance/monitor?organizationId=${orgId}` : null,
+    orgId ? `/api/finance/monitor?organizationId=${orgId}${fyParam}` : null,
     fetcher,
     { revalidateOnFocus: false, dedupingInterval: 30_000 },
   );
@@ -1897,6 +2224,27 @@ export default function BudgetMonitorPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {/* Financial Year Selector */}
+          {data.available_years && data.available_years.length > 1 && (
+            <div className="flex items-center rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden">
+              {data.available_years.map((fy) => {
+                const isActive = fy === data.financial_year;
+                return (
+                  <button
+                    key={fy}
+                    onClick={() => setSelectedYear(fy)}
+                    className={`px-3 py-2 text-xs font-medium transition-colors ${
+                      isActive
+                        ? "bg-[#FFAA4C] text-white"
+                        : "text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
+                    }`}
+                  >
+                    {fy}
+                  </button>
+                );
+              })}
+            </div>
+          )}
           <div className="flex items-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-xs">
             <Clock className="h-3.5 w-3.5 text-gray-400" />
             <span className="text-gray-600 dark:text-gray-300 font-medium">
@@ -1916,20 +2264,8 @@ export default function BudgetMonitorPage() {
         </div>
       </motion.div>
 
-      {/* ── DEMO BANNER ── */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.2 }}
-        className="flex items-center gap-2 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-4 py-2.5"
-      >
-        <AlertTriangle className="h-4 w-4 flex-shrink-0 text-amber-600 dark:text-amber-400" />
-        <p className="text-xs text-amber-700 dark:text-amber-300">
-          <span className="font-semibold">Demo Mode</span> &mdash; Showing
-          sample data with seasonal budget profiling. Import your FMS/Xero/Sage
-          export to see real figures.
-        </p>
-      </motion.div>
+      {/* ── DATA PROVENANCE BANNER ── */}
+      <DataProvenanceBanner data={data} />
 
       {/* ── 1. HERO SUMMARY CARDS ── */}
       <HeroSummaryCards data={data} />
@@ -2009,6 +2345,7 @@ export default function BudgetMonitorPage() {
           filter={tableFilter}
           searchQuery={searchQuery}
           organizationId={orgId ?? ""}
+          financialYear={data.financial_year}
         />
         <p className="mt-2 text-[10px] text-gray-400 dark:text-gray-500">
           RAG: <span className="text-emerald-500">Green</span> = within 5% of

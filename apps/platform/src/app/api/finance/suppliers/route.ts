@@ -67,7 +67,7 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
   // Fetch summary stats in parallel
   // Compute stats from the fetched supplier list
   const allSuppliers = suppliers ?? [];
-  const summary = {
+  let summary: Record<string, number> = {
     total_suppliers: count || 0,
     total_spend_ytd: 0,
     avg_spend_per_supplier: 0,

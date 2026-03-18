@@ -18,6 +18,7 @@ export interface MonitorCFRLine {
   variance_percent: number;
   rag: "red" | "amber" | "green";
   profile_name: string;
+  cost_centre?: string;
   monthly_profile: {
     month: string;
     planned_cumulative: number;
@@ -112,6 +113,7 @@ function makeLine(
   committed: number,
   monthsElapsed: number,
   costCentreName?: string,
+  costCentreCode?: string,
 ): MonitorCFRLine {
   const isIncome = budget < 0;
 
@@ -141,6 +143,7 @@ function makeLine(
     variance_percent,
     rag,
     profile_name: profile.name,
+    cost_centre: costCentreCode,
     monthly_profile: makeSeasonalProfile(
       budget,
       actual,
@@ -557,11 +560,38 @@ export const GET = protectedRoute(async (auth, request) => {
   const { createServiceRoleClient } = await import("@/lib/supabase-server");
   const supabase = createServiceRoleClient();
 
-  const { data: budgetLines, error } = await supabase
+  // Determine which financial year to show (default: latest available)
+  const sp = (request as any).nextUrl?.searchParams;
+  const requestedFY = sp?.get("financial_year");
+
+  // Get all available financial years for the year picker
+  const { data: allYears } = await supabase
+    .from("finance_budget_lines")
+    .select("financial_year")
+    .eq("organization_id", auth.organizationId)
+    .order("financial_year", { ascending: false });
+
+  const availableYears = [
+    ...new Set((allYears || []).map((r: any) => r.financial_year)),
+  ];
+
+  // If no specific year requested, use the latest one
+  let targetFY = requestedFY;
+  if (!targetFY) {
+    targetFY = availableYears[0];
+  }
+
+  let query = supabase
     .from("finance_budget_lines")
     .select("*")
     .eq("organization_id", auth.organizationId)
     .order("cfr_code");
+
+  if (targetFY) {
+    query = query.eq("financial_year", targetFY);
+  }
+
+  const { data: budgetLines, error } = await query;
 
   if (error || !budgetLines || budgetLines.length === 0) {
     // Fall back to demo data if no imported finance data
@@ -642,6 +672,7 @@ export const GET = protectedRoute(async (auth, request) => {
       actual,
       committed,
       monthsElapsed,
+      bl.cfr_description || undefined,
       bl.cost_centre || undefined,
     );
   });
@@ -713,6 +744,22 @@ export const GET = protectedRoute(async (auth, request) => {
     .eq("id", auth.organizationId)
     .single();
 
+  // Get data provenance info: last import and reconciliation status
+  const { data: lastImport } = await supabase
+    .from("data_imports")
+    .select("id, file_name, created_at, rows_imported, raw_checksum, status")
+    .eq("organization_id", auth.organizationId)
+    .eq("import_type", "transactions")
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  const { data: lastRecon } = await supabase
+    .from("finance_reconciliation_log")
+    .select("status, exception_count, max_drift_pct, created_at, triggered_by")
+    .eq("organization_id", auth.organizationId)
+    .order("created_at", { ascending: false })
+    .limit(1);
+
   return apiSuccess({
     financial_year: fy,
     school_name: org?.name || "School",
@@ -739,5 +786,36 @@ export const GET = protectedRoute(async (auth, request) => {
 
     lines,
     data_source: "supabase",
-  } as MonitorData & { data_source: string });
+    available_years: availableYears,
+
+    // Data provenance — tells the UI where this data came from and its integrity status
+    data_provenance: {
+      source: "fms_import",
+      last_import: lastImport?.[0]
+        ? {
+            id: lastImport[0].id,
+            file_name: lastImport[0].file_name,
+            imported_at: lastImport[0].created_at,
+            rows_imported: lastImport[0].rows_imported,
+            checksum: lastImport[0].raw_checksum,
+          }
+        : null,
+      reconciliation: lastRecon?.[0]
+        ? {
+            status: lastRecon[0].status,
+            exception_count: lastRecon[0].exception_count,
+            max_drift_pct: lastRecon[0].max_drift_pct,
+            last_checked: lastRecon[0].created_at,
+            triggered_by: lastRecon[0].triggered_by,
+          }
+        : null,
+    },
+  } as MonitorData & {
+    data_source: string;
+    data_provenance: {
+      source: string;
+      last_import: any;
+      reconciliation: any;
+    };
+  });
 });
