@@ -5,8 +5,11 @@
 - [Competitive Analysis](./COMPETITIVE-ANALYSIS.md) — Schoolgle vs SIMS, Arbor, Bromcom, FMS, The Key — positioning and sales conversation starters
 - [Upsell & Add-On Strategy](./UPSELL-STRATEGY.md) — Revenue ladder from £1,995 base to £3,980+ with Ed Website Chat, Advanced Intelligence, Priority Support
 
+## Guides
+- [AI in Schools — Plain English Guide](./AI-IN-SCHOOLS-GUIDE.md) — What AI is, GDPR risks of ChatGPT/DeepSeek, how Ed protects pupil data, governor briefing material
+
 ## Pitch Deck
-- [School in a Box — HTML Slide Deck](./pitch-deck/school-in-a-box.html) — 12-slide browser-based presentation
+- [School in a Box — HTML Slide Deck](./pitch-deck/school-in-a-box.html) — 14-slide browser-based presentation
   - Open in browser, press F11 for full screen
   - Navigate with arrow keys, spacebar, or on-screen buttons
   - Touch/swipe support for tablets
@@ -23,7 +26,7 @@ Each module has: one-line value prop, problem statement, feature list, benefits,
 | 04 | Governance Portal | [View](./modules/04-governance.md) | £400-800/yr |
 | 05 | Actions Hub | [View](./modules/05-actions-hub.md) | £400-800/yr |
 | 06 | School Intelligence Engine | [View](./modules/06-school-intelligence.md) | £600-1,200/yr |
-| 07 | Ed AI Assistant | [View](./modules/07-ed-ai-assistant.md) | £500-1,000/yr |
+| 07 | Ed AI Assistant (In-School + Website Chat) | [View](./modules/07-ed-ai-assistant.md) | £500 + £500/yr |
 | 07a | **Ed vs Staff Cost — The 11p/hr Pitch** | [View](./modules/07a-ed-vs-staff-cost.md) | Key selling tool |
 | 08 | Risk Register | [View](./modules/08-risk-register.md) | £200-400/yr |
 | 09 | Meeting Companion | [View](./modules/09-meetings-companion.md) | £200-400/yr |
