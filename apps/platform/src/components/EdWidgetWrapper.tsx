@@ -9,6 +9,8 @@ interface EdWidgetWrapperProps {
   isMinimized: boolean;
   onToggleMinimize: () => void;
   organizationId?: string;
+  userName?: string;
+  schoolName?: string;
   /**
    * Mode for Ed widget:
    * - 'demo': For logged-out users on home page - explains system, shows off features
@@ -24,6 +26,8 @@ export default function EdWidgetWrapper({
   isMinimized,
   onToggleMinimize,
   organizationId,
+  userName,
+  schoolName,
   mode = "user", // Default to user mode
 }: EdWidgetWrapperProps) {
   const edInstanceRef = useRef<any>(null);
@@ -153,6 +157,8 @@ export default function EdWidgetWrapper({
             apiBaseUrl: "/api/ed/chat",
             accessToken, // Supabase JWT for API auth
             organizationId: organizationId || undefined, // Pass org ID if logged in
+            userName: userName || undefined, // User's display name for personalised greetings
+            schoolName: schoolName || undefined, // School name for context
             features: {
               admissions: false, // Not for school support version
               policies: mode === "user",

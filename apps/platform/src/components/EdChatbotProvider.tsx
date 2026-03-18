@@ -86,6 +86,12 @@ export function EdChatbotProvider({ children }: EdChatbotProviderProps) {
         isMinimized={isMinimized}
         onToggleMinimize={toggleMinimize}
         organizationId={organization?.id}
+        userName={
+          user?.user_metadata?.full_name ||
+          user?.user_metadata?.name ||
+          user?.email?.split("@")[0]
+        }
+        schoolName={organization?.name}
         mode={user && organization ? "user" : "demo"}
       />
     </EdChatbotContext.Provider>

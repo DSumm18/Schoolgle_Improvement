@@ -780,17 +780,21 @@ export class Ed {
         : "");
 
     if (this.mode === "website") {
-      // Website visitor — parent, prospective family, community member
       const welcome = friendlyName ? `Welcome to ${friendlyName}!` : "Welcome!";
       greeting = `Hi! ${welcome} I'm Ed, the school assistant.\n\nHow can I help you today?`;
     } else if (this.mode === "support") {
-      // Pre-login — needs help accessing Schoolgle
       greeting = `Hi! I'm Ed. Need help logging in or finding something?`;
     } else {
-      // Logged-in staff member
+      // Logged-in staff — get personalised greeting from API
       const name = (this.config as any).userName;
-      const nameGreet = name ? `Hi ${name}!` : "Hi!";
+      const firstName = name ? name.split(" ")[0] : "";
+      const nameGreet = firstName ? `Hi ${firstName}!` : "Hi!";
       greeting = `${nameGreet} I'm Ed, your school assistant. What can I help with?`;
+
+      // Try API for richer, domain-aware greeting (async, update message when ready)
+      if (this.apiClient) {
+        this.fetchPersonalisedGreeting(firstName);
+      }
     }
 
     // Display greeting (clean for chat, but keep original for voice)
@@ -799,7 +803,7 @@ export class Ed {
     this.addMessage({
       id: crypto.randomUUID(),
       role: "assistant",
-      content: displayText, // Clean text for display
+      content: displayText,
       timestamp: new Date(),
       language: this.currentLanguage.code,
     });
@@ -847,6 +851,64 @@ export class Ed {
           }
         }
       });
+    }
+  }
+
+  /**
+   * Fetch a personalised greeting from the API that includes domain context,
+   * proactive alerts, and the user's name. Updates the initial greeting message.
+   */
+  private async fetchPersonalisedGreeting(firstName: string): Promise<void> {
+    try {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      const token = (this.config as any).accessToken;
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      const response = await fetch(
+        (this.config as any).apiBaseUrl || "/api/ed/chat",
+        {
+          method: "POST",
+          credentials: "include",
+          headers,
+          body: JSON.stringify({
+            question: "hello",
+            context: {
+              url: window.location.href,
+              hostname: window.location.hostname,
+              title: document.title,
+              visibleText: "",
+              headings: [],
+            },
+            organizationId: (this.config as any).organizationId,
+          }),
+        },
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.answer && data.source === "ai") {
+          // Update the first message with the personalised greeting
+          const messages = this.chat?.getMessages();
+          if (messages && messages.length > 0) {
+            this.chat?.updateMessage(messages[0].id, data.answer);
+          }
+          // Speak the personalised greeting if Fish Audio is ready
+          if (this.fishVoice) {
+            const clean = this.cleanTextForDisplay(data.answer);
+            this.fishVoice
+              .speakAndPlay(
+                clean,
+                this.currentPersona,
+                this.currentLanguage.code,
+              )
+              .catch(() => {});
+          }
+        }
+      }
+    } catch {
+      // Silently use the fallback static greeting
     }
   }
 
