@@ -9,9 +9,15 @@ type ChatContext = Record<string, unknown>;
 
 declare const chrome: any; // Chrome extension API (available in extension context)
 
+interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
 interface ChatRequest {
   question: string;
   image?: string; // Base64 image data (screenshot or user upload)
+  messages?: ChatMessage[]; // Recent conversation history for context
   context?: {
     url: string;
     hostname: string;
@@ -114,6 +120,10 @@ export class EdAPIClient {
     userMessage: string,
     _context?: ChatContext,
     image?: string,
+    conversationHistory?: Array<{
+      role: "user" | "assistant";
+      content: string;
+    }>,
   ): Promise<string> {
     try {
       // Build page context
@@ -136,6 +146,7 @@ export class EdAPIClient {
       const requestBody: ChatRequest = {
         question: userMessage,
         image, // Base64 screenshot or user-uploaded image
+        messages: conversationHistory?.slice(-10), // Last 10 messages for context
         context: pageContext,
         organizationId: this.organizationId,
         userId: this.userId,

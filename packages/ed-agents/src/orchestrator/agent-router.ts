@@ -27,7 +27,10 @@ import {
 export async function routeToSpecialist(
   question: string,
   context: AppContext,
-  options?: { screenshot?: string },
+  options?: {
+    screenshot?: string;
+    messages?: Array<{ role: "user" | "assistant"; content: string }>;
+  },
 ): Promise<AgentResponse> {
   // 1. Classify intent
   const classification = classifyIntent(
@@ -105,15 +108,27 @@ export async function routeToSpecialist(
     : { role: "user" as const, content: question };
 
   try {
-    const llmResponse = await modelRouter.chatMessages(
-      [{ role: "system", content: enrichedPrompt }, userMessage],
-      {
-        model: model.id,
-        temperature: 0.7,
-        maxTokens: 2048,
-        tools: tools,
-      },
-    );
+    // Build message array: system prompt + conversation history + current question
+    const llmMessages: Array<{ role: string; content: any }> = [
+      { role: "system", content: enrichedPrompt },
+    ];
+
+    // Include conversation history for multi-turn context
+    if (options?.messages && options.messages.length > 0) {
+      for (const msg of options.messages.slice(-8)) {
+        llmMessages.push({ role: msg.role, content: msg.content });
+      }
+    }
+
+    // Add current question
+    llmMessages.push(userMessage);
+
+    const llmResponse = await modelRouter.chatMessages(llmMessages as any, {
+      model: model.id,
+      temperature: 0.7,
+      maxTokens: 2048,
+      tools: tools,
+    });
 
     // 7. Check for Tool Calls
     if (llmResponse.toolCalls && llmResponse.toolCalls.length > 0) {

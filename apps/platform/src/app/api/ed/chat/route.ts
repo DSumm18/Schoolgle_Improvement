@@ -19,6 +19,7 @@ import type { OrchestratorConfig } from "@schoolgle/ed-agents/types";
 interface ChatRequest {
   question: string;
   image?: string; // Direct image upload (base64)
+  messages?: Array<{ role: "user" | "assistant"; content: string }>; // Conversation history
   context: {
     url: string;
     hostname: string;
@@ -183,7 +184,15 @@ export async function POST(request: NextRequest) {
     if (rateLimited) return rateLimited;
 
     const body: ChatRequest = await request.json();
-    const { question, image, context, pageState, formMode, language } = body;
+    const {
+      question,
+      image,
+      messages,
+      context,
+      pageState,
+      formMode,
+      language,
+    } = body;
 
     if (!question) {
       return NextResponse.json(
@@ -444,12 +453,13 @@ export async function POST(request: NextRequest) {
     // Get screenshot from either direct image upload or pageState
     const screenshot = image || pageState?.screenshot;
 
-    // Process through agent framework — pass URL so Ed knows which page user is on
+    // Process through agent framework — pass URL and conversation history
     const edResponse = await orchestrator.processQuestion(question, {
       app: activeApp,
       page: context?.title,
       url: context?.url,
       screenshot,
+      messages: messages?.slice(-8), // Last 8 messages for conversation context
     });
 
     // Map EdResponse to ChatResponse format

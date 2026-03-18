@@ -1800,7 +1800,15 @@ export class Ed {
     // Use API client if available (preferred for Schoolgle)
     if (this.apiClient) {
       try {
-        return await this.apiClient.chat(text, undefined, image);
+        // Build conversation history from recent messages for context
+        const history = this.messages
+          .filter((m) => m.role === "user" || m.role === "assistant")
+          .slice(-10)
+          .map((m) => ({
+            role: m.role as "user" | "assistant",
+            content: m.content,
+          }));
+        return await this.apiClient.chat(text, undefined, image, history);
       } catch (error) {
         console.error("[Ed] API client error:", error);
       }

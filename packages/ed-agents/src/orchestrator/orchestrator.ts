@@ -105,6 +105,7 @@ export class EdOrchestrator {
       page?: string;
       url?: string;
       screenshot?: string;
+      messages?: Array<{ role: "user" | "assistant"; content: string }>;
     } = {},
   ): Promise<EdResponse> {
     const startTime = Date.now();
@@ -184,6 +185,7 @@ export class EdOrchestrator {
         appContext,
         {
           screenshot: context.screenshot,
+          messages: context.messages,
         },
       );
 

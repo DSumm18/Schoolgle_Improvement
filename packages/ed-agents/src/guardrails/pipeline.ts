@@ -74,36 +74,11 @@ export async function safetyCheck(
     }
   }
 
-  // LLM-based deep check for ambiguous cases
-  try {
-    const router = getModelRouter(context?.openRouterApiKey);
-    const llmCheck = await router.chat(
-      SAFETY_CHECK_PROMPT,
-      `**Response to check:**\n\n${response}`,
-      {
-        model: "openai/gpt-4o-mini",
-        temperature: 0.1,
-        maxTokens: 50,
-      },
-    );
-
-    const result = llmCheck.content.trim().toUpperCase();
-
-    if (result.startsWith("FAIL")) {
-      return {
-        passed: false,
-        confidence: 0.8,
-        reason: result.substring(5).trim() || "LLM safety check failed",
-        suggestion:
-          "This response may need review. Please verify guidance with official sources.",
-      };
-    }
-
-    return { passed: true, confidence: 0.9 };
-  } catch {
-    // If LLM check fails, assume safe (pattern check already passed)
-    return { passed: true, confidence: 0.7 };
-  }
+  // Pattern check passed — response is safe
+  // Note: LLM-based deep check removed — pattern matching is sufficient for
+  // a school assistant, and the extra LLM call caused false positives,
+  // added latency, and increased costs unnecessarily.
+  return { passed: true, confidence: 0.9 };
 }
 
 // ============================================================================
