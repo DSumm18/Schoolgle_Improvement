@@ -225,6 +225,36 @@ async function buildSpecialistPrompt(
     prompt = `${prompt}\n\n${accessRules}`;
   }
 
+  // Inject app navigation context so Ed can direct users to the right page
+  const navContext = `## Navigation
+You can help users navigate the platform. When a user asks to go somewhere, include a markdown link they can click.
+The user is currently on: ${(context as any)?.url || "the dashboard"}
+
+Key routes:
+- Dashboard: /dashboard
+- Estates: /dashboard/estates — Energy: /dashboard/estates/energy — Floor Plans: /dashboard/estates/floor-plans
+- Finance: /dashboard/finance — Staffing Modeller: /dashboard/finance/staffing-modeller — Suppliers: /dashboard/finance/suppliers
+- HR & People: /dashboard/hr — Staff Directory: /dashboard/hr/people — Sickness: /dashboard/hr/sickness — Performance: /dashboard/hr/performance — Cover: /dashboard/hr/cover
+- Compliance: /dashboard/compliance — Policies: /dashboard/compliance/policies — SCR: /dashboard/hr/scr — GDPR: /dashboard/compliance/gdpr
+- Governance: /dashboard/governance — Meetings: /dashboard/governance/meetings
+- Risk Register: /dashboard/risk — Trust Dashboard: /dashboard/risk/trust
+- SEND: /dashboard/send
+- Attendance: /dashboard/attendance
+- Behaviour: /dashboard/behaviour
+- Safeguarding: /dashboard/safeguarding
+- Teaching & Learning: /dashboard/teaching-learning
+- Inspection Readiness: /dashboard/improvement — SEF: /dashboard/improvement/sef — SDP: /dashboard/improvement/sdp
+- Calendar: /dashboard/calendar
+- Surveys: /dashboard/surveys
+- Communications: /dashboard/communications
+- Documents: /dashboard/documents
+- Settings: /dashboard/settings — Data Connections: /dashboard/settings/data-connections
+
+When suggesting navigation, use format: [Go to Energy Dashboard](/dashboard/estates/energy)
+Keep responses concise and helpful. Don't add source citations or confidence ratings for general navigation help.`;
+
+  prompt = `${prompt}\n\n${navContext}`;
+
   // Inject intelligence data when the intelligence specialist is handling
   if (domain === "intelligence" && context?.orgId && context?.supabase) {
     try {

@@ -2,7 +2,7 @@
  * Chat - Message history component
  */
 
-import type { Message } from '../types';
+import type { Message } from "../types";
 
 export interface QuickReply {
   text: string;
@@ -17,14 +17,14 @@ export class Chat {
 
   constructor(container: HTMLElement, onQuickReply?: (text: string) => void) {
     this.container = container;
-    this.messagesContainer = document.createElement('div');
+    this.messagesContainer = document.createElement("div");
     this.onQuickReply = onQuickReply;
     this.render();
   }
 
   private render(): void {
-    this.container.innerHTML = '';
-    this.container.className = 'chat-scroll scrollbar-hide';
+    this.container.innerHTML = "";
+    this.container.className = "chat-scroll scrollbar-hide";
 
     this.messagesContainer = this.container;
   }
@@ -39,13 +39,13 @@ export class Chat {
   }
 
   private renderMessage(message: Message): void {
-    const messageEl = document.createElement('div');
-    messageEl.className = `msg msg-${message.role === 'user' ? 'user' : 'ai'}`;
-    messageEl.setAttribute('data-id', message.id);
+    const messageEl = document.createElement("div");
+    messageEl.className = `msg msg-${message.role === "user" ? "user" : "ai"}`;
+    messageEl.setAttribute("data-id", message.id);
 
     // Format message content
     let contentHtml = this.formatMessage(message.content);
-    
+
     // Add translation if available (dual-language display)
     if (message.translation && message.translation !== message.content) {
       contentHtml += `<div class="msg-divider"></div><span class="msg-sub">${this.escapeHtml(message.translation)}</span>`;
@@ -54,35 +54,40 @@ export class Chat {
     messageEl.innerHTML = contentHtml;
 
     // Add quick reply buttons for assistant messages
-    if (message.role === 'assistant' && message.quickReplies && message.quickReplies.length > 0) {
-      const quickRepliesContainer = document.createElement('div');
-      quickRepliesContainer.className = 'quick-replies';
-      
-      message.quickReplies.forEach(reply => {
-        const btn = document.createElement('button');
-        btn.className = 'quick-reply-btn';
+    if (
+      message.role === "assistant" &&
+      message.quickReplies &&
+      message.quickReplies.length > 0
+    ) {
+      const quickRepliesContainer = document.createElement("div");
+      quickRepliesContainer.className = "quick-replies";
+
+      message.quickReplies.forEach((reply) => {
+        const btn = document.createElement("button");
+        btn.className = "quick-reply-btn";
         btn.textContent = reply;
-        btn.addEventListener('click', () => {
+        btn.addEventListener("click", () => {
           if (this.onQuickReply) {
             this.onQuickReply(reply);
           }
         });
         quickRepliesContainer.appendChild(btn);
       });
-      
+
       messageEl.appendChild(quickRepliesContainer);
     }
 
     // Add with animation
-    messageEl.style.opacity = '0';
-    messageEl.style.transform = 'scale(0.9) translateY(10px)';
+    messageEl.style.opacity = "0";
+    messageEl.style.transform = "scale(0.9) translateY(10px)";
     this.messagesContainer.appendChild(messageEl);
 
     // Trigger animation
     requestAnimationFrame(() => {
-      messageEl.style.transition = 'all 300ms cubic-bezier(0.68, -0.55, 0.265, 1.55)';
-      messageEl.style.opacity = '1';
-      messageEl.style.transform = 'scale(1) translateY(0)';
+      messageEl.style.transition =
+        "all 300ms cubic-bezier(0.68, -0.55, 0.265, 1.55)";
+      messageEl.style.opacity = "1";
+      messageEl.style.transform = "scale(1) translateY(0)";
     });
   }
 
@@ -91,31 +96,37 @@ export class Chat {
     let html = this.escapeHtml(content);
 
     // Bold
-    html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
 
     // Italic
-    html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    html = html.replace(/\*(.*?)\*/g, "<em>$1</em>");
 
-    // Links
+    // Links — internal routes navigate same window, external open new tab
     html = html.replace(
       /\[([^\]]+)\]\(([^)]+)\)/g,
-      '<a href="$2" target="_blank" rel="noopener">$1</a>'
+      (_match: string, text: string, url: string) => {
+        const isInternal = url.startsWith("/") && !url.startsWith("//");
+        if (isInternal) {
+          return `<a href="${url}" class="ed-nav-link" style="color:#2dd4bf;text-decoration:underline;cursor:pointer;font-weight:600">${text}</a>`;
+        }
+        return `<a href="${url}" target="_blank" rel="noopener">${text}</a>`;
+      },
     );
 
     // Line breaks
-    html = html.replace(/\n/g, '<br>');
+    html = html.replace(/\n/g, "<br>");
 
     return html;
   }
 
   private escapeHtml(text: string): string {
-    const div = document.createElement('div');
+    const div = document.createElement("div");
     div.textContent = text;
     return div.innerHTML;
   }
 
   private formatTime(date: Date): string {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   }
 
   private getUserIcon(): string {
@@ -144,7 +155,7 @@ export class Chat {
    */
   public clear(): void {
     this.messages = [];
-    this.messagesContainer.innerHTML = '';
+    this.messagesContainer.innerHTML = "";
   }
 
   /**
@@ -163,7 +174,7 @@ export class Chat {
       message.content = content;
       const el = this.messagesContainer.querySelector(`[data-id="${id}"]`);
       if (el) {
-        const bubble = el.querySelector('.ed-message-bubble');
+        const bubble = el.querySelector(".ed-message-bubble");
         if (bubble) {
           bubble.innerHTML = this.formatMessage(content);
         }
@@ -175,10 +186,10 @@ export class Chat {
    * Show typing indicator
    */
   public showTyping(): string {
-    const id = 'typing-' + Date.now();
-    const typingEl = document.createElement('div');
-    typingEl.className = 'ed-message ed-message-assistant ed-message-typing';
-    typingEl.setAttribute('data-id', id);
+    const id = "typing-" + Date.now();
+    const typingEl = document.createElement("div");
+    typingEl.className = "ed-message ed-message-assistant ed-message-typing";
+    typingEl.setAttribute("data-id", id);
     typingEl.innerHTML = `
       <div class="ed-message-content">
         <div class="ed-message-avatar">${this.getEdIcon()}</div>
@@ -206,4 +217,3 @@ export class Chat {
     }
   }
 }
-

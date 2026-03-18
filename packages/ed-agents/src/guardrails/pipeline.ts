@@ -512,12 +512,28 @@ export async function applyGuardrails(
     warnings.push("Low confidence - please verify for critical matters.");
   }
 
-  // 5. Ensure source citation
-  finalResponse = ensureSourceCitation(finalResponse, domain);
+  // 5. Source citation — only for compliance/safety domains, not general chat
+  const complianceDomains = [
+    "estates",
+    "hr",
+    "send",
+    "governance",
+    "procurement",
+  ];
+  const isComplianceResponse =
+    domain &&
+    complianceDomains.includes(domain) &&
+    (compliance.confidence > 0.5 ||
+      response.toLowerCase().includes("regulation") ||
+      response.toLowerCase().includes("statutory") ||
+      response.toLowerCase().includes("must"));
+  if (isComplianceResponse) {
+    finalResponse = ensureSourceCitation(finalResponse, domain);
+  }
 
-  // 6. Add warnings if present
-  if (warnings.length > 0) {
-    finalResponse = `${finalResponse}\n\n⚠️ **Note:** ${warnings.join(" ")}`;
+  // 6. Add warnings only for genuinely low-confidence compliance answers
+  if (warnings.length > 0 && isComplianceResponse) {
+    finalResponse = `${finalResponse}\n\n⚠️ ${warnings.join(" ")}`;
   }
 
   return {
