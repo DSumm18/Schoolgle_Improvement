@@ -1,0 +1,172 @@
+🤖 Ed AI Domain Testing Harness
+================================
+
+✅ Dev-mode auth headers configured
+
+
+📋 ESTATES (/dashboard/estates)
+────────────────────────────────────────────────────────────
+  "What are the legal requirements for legionella mon..." ✅ ai
+  "A child has fallen from playground equipment and b..." ❌ Missing terms: report
+  "When should we get our electrical installation tes..." ❌ Missing terms: 5 year|five year|every 5
+  "Take me to the energy dashboard..." ✅ ai
+
+📋 HR (/dashboard/hr)
+────────────────────────────────────────────────────────────
+  "A teacher has been off sick for 15 days this term...." ✅ ai
+  "What is the current teacher pay scale for a main p..." ✅ ai
+  "How do I handle a grievance from a teaching assist..." ❌ Missing terms: hearing
+
+📋 SEND (/dashboard/send)
+────────────────────────────────────────────────────────────
+  "How do I start the graduated approach for a child ..." ✅ ai
+  "What should be included in an EHCP annual review?..." ✅ ai
+  "A parent wants to apply for an EHCP. What evidence..." ✅ ai
+
+📋 DATA (/dashboard/attendance)
+────────────────────────────────────────────────────────────
+  "Which attendance codes should I use for a child ar..." ✅ ai
+  "When is the school census return due?..." ✅ ai
+
+📋 CURRICULUM (/dashboard/teaching-learning)
+────────────────────────────────────────────────────────────
+  "How should I prepare for an Ofsted deep dive in ma..." ❌ Missing terms: intent, impact
+  "What does the EEF say about effective feedback str..." ✅ ai
+
+📋 IT-TECH (/dashboard/settings)
+────────────────────────────────────────────────────────────
+  "How do I set up Google Classroom for a new class?..." ❌ Missing terms: students
+  "A teacher's Chromebook won't connect to WiFi. What..." ✅ ai
+
+📋 GOVERNANCE (/dashboard/governance)
+────────────────────────────────────────────────────────────
+  "What are the statutory responsibilities of a schoo..." ✅ ai
+  "How should we prepare for a governing body meeting..." ✅ ai
+
+📋 RISK (/dashboard/risk)
+────────────────────────────────────────────────────────────
+  "How do I assess the risk of a cyber attack on our ..." ✅ ai
+  "What does the Academy Trust Handbook say about ris..." ✅ ai
+
+📋 COMMUNICATIONS (/dashboard/communications)
+────────────────────────────────────────────────────────────
+  "How should I communicate a safeguarding incident t..." ✅ ai
+  "Help me draft a snow day closure message..." ❌ Missing terms: parent
+
+📋 INTELLIGENCE (/dashboard/improvement/intelligence)
+────────────────────────────────────────────────────────────
+  "What does the EEF say about closing the disadvanta..." ✅ ai
+  "How should I interpret our KS2 results compared to..." ✅ ai
+
+📋 FINANCE (/dashboard/finance)
+────────────────────────────────────────────────────────────
+  "What is the ICFP and how should I use it for staff..." ✅ ai
+  "Navigate me to the staffing modeller..." ✅ ai
+
+📋 FORM (/dashboard)
+────────────────────────────────────────────────────────────
+  "Help me fill in a RIDDOR report for a staff injury..." ✅ ai
+
+📋 CANVAS (/dashboard/canvas)
+────────────────────────────────────────────────────────────
+  "I have data from Arbor and our payroll system. How..." ✅ ai
+
+📋 GREETING (/dashboard)
+────────────────────────────────────────────────────────────
+  "hello..." ✅ ai
+  "hi ed..." ✅ ai
+
+📋 NAVIGATION (/dashboard)
+────────────────────────────────────────────────────────────
+  "Take me to the risk register..." ✅ ai
+  "Where can I manage staff?..." ✅ ai
+
+📋 PLATFORM-GUIDANCE (/dashboard)
+────────────────────────────────────────────────────────────
+  "How do I log a maintenance request for a broken he..." ✅ ai
+  "How do I add a new staff member to the system?..." ✅ ai
+  "How do I check if our policies are up to date?..." ✅ ai
+  "How do I create a survey for parents?..." ✅ ai
+  "How do I record a safeguarding concern?..." ✅ ai
+  "How do I check the single central record?..." ✅ ai
+
+
+============================================================
+📊 RESULTS SUMMARY
+============================================================
+Total tests: 38
+✅ Passed:   32
+❌ Failed:   6
+🚫 Blocked:  0
+📎 Citations: 3 responses with verbose citations
+
+
+🔴 FAILURES:
+
+  [estates] "A child has fallen from playground equipment and broken their arm. What should I do?"
+  Reason: Missing terms: report
+  Answer: **Balanced Response: Playground Injury Action Plan**
+
+### Immediate Priority
+The child's well-being comes first. Following the specialist guidance, immediately:
+- Keep the child calm and still
+- Suppo...
+
+  [estates] "When should we get our electrical installation tested?"
+  Reason: Missing terms: 5 year|five year|every 5
+  Answer: Here's a balanced synthesis:
+
+### Electrical Testing Schedule - Balanced Guidance
+
+**Core Requirements**
+- EICR testing due Q3 2026 (5-year cycle)
+- PAT testing due December 2026 (annual cycle)
+- Emer...
+
+  [hr] "How do I handle a grievance from a teaching assistant?"
+  Reason: Missing terms: hearing
+  Answer: ### HR Guidance: Handling a Teaching Assistant's Grievance  
+
+### 📅 Freshness Status  
+- **Last Updated:** March 2026  
+- **Source:** [ACAS Code of Practice](https://www.acas.org.uk/dealing-with-work...
+
+  [curriculum] "How should I prepare for an Ofsted deep dive in maths?"
+  Reason: Missing terms: intent, impact
+  Answer: **Balanced Response: Preparing for a Maths Deep Dive**
+
+### Key Insights
+The expert guidance provides a comprehensive framework, and combining all perspectives reveals three critical success factors:
+...
+
+  [it-tech] "How do I set up Google Classroom for a new class?"
+  Reason: Missing terms: students
+  Answer: ### Technical Support: Setting Up Google Classroom for a New Class at Aurora Primary
+
+#### 📅 Freshness Status  
+- Last Updated: 2026-03-18  
+- Confidence: HIGH  
+
+### Step-by-Step Setup  
+
+#### **1. ...
+
+  [communications] "Help me draft a snow day closure message"
+  Reason: Missing terms: parent
+  Answer: ### Communications Guidance: Snow Day Closure Announcement
+
+### 📅 Freshness Status
+- Last Updated: 2026-03-18
+- Source: DfE Emergency Planning
+- Confidence: HIGH
+
+### Current Guidance
+For Aurora Prim...
+
+
+📎 VERBOSE CITATIONS (should be cleaned up):
+  [estates] "Take me to the energy dashboard"
+  [finance] "What is the ICFP and how should I use it for staffing decisions?"
+  [platform-guidance] "How do I check if our policies are up to date?"
+
+
