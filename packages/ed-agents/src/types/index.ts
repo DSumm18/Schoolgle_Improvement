@@ -17,6 +17,7 @@ export type Domain =
   | "governance"
   | "communications"
   | "intelligence"
+  | "canvas"
   | "risk"
   | "general";
 
@@ -32,6 +33,7 @@ export type SpecialistId =
   | "communications-specialist"
   | "form-specialist"
   | "intelligence-specialist"
+  | "canvas-specialist"
   | "risk-specialist"
   | "ed-general";
 
@@ -115,20 +117,25 @@ export interface AppContext {
 }
 
 export interface SchoolContext {
-  urn: number;
+  urn: number | string;
   name: string;
-  address: string[];
+  address?: string[];
   phone?: string;
   email?: string;
   typeName: string;
   phaseName: string;
-  laCode?: number;
+  laCode?: number | string;
   laName?: string;
   trustName?: string;
   ofstedRating?: string;
   ofstedLastInspection?: Date;
   imdDecile?: number;
   isIndependent?: boolean;
+  // Live data summaries (refreshed every 5 min via cache)
+  staffCount?: number;
+  overdueTaskCount?: number;
+  openTicketCount?: number;
+  upcomingEvents?: string[];
 }
 
 // ============================================================================

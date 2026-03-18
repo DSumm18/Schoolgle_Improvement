@@ -13,38 +13,99 @@ import type { SchoolContext } from "../types";
  * 2. Call lookupSchoolByURN from supabase-dfe.ts
  * 3. Transform the result into SchoolContext
  */
+// In-memory cache with TTL for school context (5 min per org)
+const contextCache = new Map<
+  string,
+  { data: SchoolContext; expires: number }
+>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 export async function loadSchoolContext(
   orgId: string,
   supabase: any,
 ): Promise<SchoolContext | null> {
+  // Check cache first
+  const cached = contextCache.get(orgId);
+  if (cached && cached.expires > Date.now()) {
+    return cached.data;
+  }
+
   try {
-    // Placeholder - in production would be:
-    /*
-    // Get school URN from organization
+    // Load organization details
     const { data: org } = await supabase
-      .from('organizations')
-      .select('school_urn')
-      .eq('id', orgId)
+      .from("organizations")
+      .select("*")
+      .eq("id", orgId)
       .single();
 
-    if (!org?.school_urn) {
-      return null;
-    }
+    if (!org) return null;
 
-    // Import and use the DfE lookup function
-    const { lookupSchoolByURN } = await import('@schoolgle/platform/lib/supabase-dfe');
-    const schoolData = await lookupSchoolByURN(org.school_urn);
+    // Load live school data in parallel — gracefully handle missing tables
+    const results = await Promise.allSettled([
+      supabase
+        .from("staff_directory")
+        .select("id", { count: "exact" })
+        .eq("organization_id", orgId)
+        .eq("is_active", true),
+      supabase
+        .from("unified_tasks")
+        .select("id", { count: "exact" })
+        .eq("organization_id", orgId)
+        .eq("status", "pending")
+        .lt("due_date", new Date().toISOString()),
+      supabase
+        .from("meetings")
+        .select("id, title, meeting_date")
+        .eq("organization_id", orgId)
+        .gte("meeting_date", new Date().toISOString())
+        .lte("meeting_date", new Date(Date.now() + 14 * 86400000).toISOString())
+        .order("meeting_date")
+        .limit(10),
+      supabase
+        .from("estates_helpdesk")
+        .select("id", { count: "exact" })
+        .eq("organization_id", orgId)
+        .in("status", ["open", "in_progress"]),
+    ]);
 
-    if (!schoolData) {
-      return null;
-    }
+    const staffCount =
+      results[0].status === "fulfilled" ? results[0].value.count || 0 : 0;
+    const overdueCount =
+      results[1].status === "fulfilled" ? results[1].value.count || 0 : 0;
+    const events =
+      results[2].status === "fulfilled" ? results[2].value.data || [] : [];
+    const ticketCount =
+      results[3].status === "fulfilled" ? results[3].value.count || 0 : 0;
 
-    return transformToSchoolContext(schoolData);
-    */
+    const context: SchoolContext = {
+      urn: org.urn || "",
+      name: org.name,
+      typeName: org.school_type || org.org_type || "Primary",
+      phaseName: org.school_type?.includes("econdary")
+        ? "Secondary"
+        : "Primary",
+      laCode: org.la_code || "",
+      laName: org.local_authority || "",
+      isIndependent: org.org_type === "independent",
+      // Live data summaries
+      staffCount,
+      overdueTaskCount: overdueCount,
+      openTicketCount: ticketCount,
+      upcomingEvents: events.map(
+        (e: any) =>
+          `${e.title} (${new Date(e.meeting_date).toLocaleDateString("en-GB")})`,
+      ),
+    };
 
-    return null;
+    // Cache it
+    contextCache.set(orgId, {
+      data: context,
+      expires: Date.now() + CACHE_TTL,
+    });
+
+    return context;
   } catch (error) {
-    // Don't fail entire request if context loading fails
+    console.error("[Context Loader] Failed to load school context:", error);
     return null;
   }
 }
@@ -132,8 +193,30 @@ export function buildSchoolContextBlock(schoolContext: SchoolContext): string {
     );
   }
 
+  // Add live data summaries
+  if (schoolContext.staffCount) {
+    parts.push(`- **Staff:** ${schoolContext.staffCount} active staff members`);
+  }
+  if (schoolContext.overdueTaskCount && schoolContext.overdueTaskCount > 0) {
+    parts.push(
+      `- **Overdue Tasks:** ${schoolContext.overdueTaskCount} tasks overdue`,
+    );
+  }
+  if (schoolContext.openTicketCount && schoolContext.openTicketCount > 0) {
+    parts.push(
+      `- **Open Tickets:** ${schoolContext.openTicketCount} helpdesk tickets open`,
+    );
+  }
+  if (schoolContext.upcomingEvents && schoolContext.upcomingEvents.length > 0) {
+    parts.push(
+      `- **Upcoming Events:** ${schoolContext.upcomingEvents.join(", ")}`,
+    );
+  }
+
   parts.push("");
-  parts.push("Use this context to provide relevant, tailored advice.");
+  parts.push(
+    "Use this context to provide relevant, tailored advice. Reference the school by name. If there are overdue tasks or open tickets, proactively mention them when relevant.",
+  );
   parts.push("");
 
   return parts.join("\n");
