@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Globe } from "lucide-react";
 import { useAuth } from "@/context/SupabaseAuthContext";
 import { WebsiteBuilderDashboard, SetupWizard, PageEditor } from "@/components/website-builder";
@@ -10,6 +11,7 @@ import type { HeroMaskId, PaletteOption } from "@/lib/website-builder/types";
 type View = "dashboard" | "setup" | "edit-page";
 
 export default function WebsiteBuilderPage() {
+  const router = useRouter();
   const { organization, organizationId } = useAuth();
   const [view, setView] = useState<View>("dashboard");
   const [editingPage, setEditingPage] = useState<WebsitePage | null>(null);
@@ -118,9 +120,9 @@ export default function WebsiteBuilderPage() {
             setEditingPage(page);
             setView("edit-page");
           }}
-          onEditDesign={() => {}}
-          onManageNews={() => {}}
-          onViewCompliance={() => {}}
+          onEditDesign={() => router.push("/dashboard/website/design")}
+          onManageNews={() => router.push("/dashboard/website/news")}
+          onViewCompliance={() => router.push("/dashboard/website/compliance")}
         />
       )}
 
