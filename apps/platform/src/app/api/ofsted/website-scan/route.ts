@@ -14,6 +14,10 @@ import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
 import { crawlWebsite } from "@/lib/website-crawler";
 import {
+  smartCrawlWebsite,
+  isFirecrawlAvailable,
+} from "@/lib/firecrawl-crawler";
+import {
   assessWebsiteCompliance,
   type WebsiteComplianceReport,
 } from "@/lib/website-compliance";
@@ -114,13 +118,15 @@ export const POST = protectedRoute(async (auth, request) => {
     // Phase 1: Crawl the website
     // Allow PDFs/documents from trust domains (schools often host policies on trust site)
     // We detect trust domains from links found during crawl
+    const usingFirecrawl = isFirecrawlAvailable();
     console.log(
-      `[Website Scan] Phase 1: Crawling website (max ${maxPages} pages)`,
+      `[Website Scan] Phase 1: Crawling website (max ${maxPages} pages) [backend: ${usingFirecrawl ? "Firecrawl" : "Playwright"}]`,
     );
 
     // First pass: quick crawl to detect trust/partner domains from links
-    const quickCrawl = await crawlWebsite(websiteUrl, {
-      maxPages: 10,
+    // With Firecrawl we can do a larger quick crawl since it's faster
+    const quickCrawl = await smartCrawlWebsite(websiteUrl, {
+      maxPages: usingFirecrawl ? 20 : 10,
       requestDelay: 200,
       pageTimeout: 15000,
       sameDomainOnly: true,
@@ -359,8 +365,9 @@ export const POST = protectedRoute(async (auth, request) => {
     }
 
     // Full crawl with trust domains allowed
-    // Enable screenshot OCR for pages where HTML extraction fails (dynamic CMS widgets)
-    const crawlResult = await crawlWebsite(websiteUrl, {
+    // Firecrawl handles cookie consent, JS rendering, and sitemaps automatically
+    // Playwright fallback enables screenshot OCR for dynamic CMS widgets
+    const crawlResult = await smartCrawlWebsite(websiteUrl, {
       maxPages,
       requestDelay: 500,
       pageTimeout: 30000,
@@ -375,7 +382,7 @@ export const POST = protectedRoute(async (auth, request) => {
     });
 
     console.log(
-      `[Website Scan] School crawl complete: ${crawlResult.pages.length} pages, ${crawlResult.stats.pdfsProcessed} PDFs`,
+      `[Website Scan] School crawl complete: ${crawlResult.pages.length} pages, ${crawlResult.stats.pdfsProcessed} PDFs [${crawlResult.backend}]`,
     );
 
     if (crawlResult.pages.length === 0) {
@@ -406,7 +413,7 @@ export const POST = protectedRoute(async (auth, request) => {
           );
 
           // Crawl trust site (limited pages, focused on policy/governance/finance)
-          const trustCrawl = await crawlWebsite(trustBaseUrl, {
+          const trustCrawl = await smartCrawlWebsite(trustBaseUrl, {
             maxPages: 40,
             requestDelay: 500,
             pageTimeout: 30000,
@@ -530,6 +537,7 @@ export const POST = protectedRoute(async (auth, request) => {
       report,
       schoolPhase,
       crawlStats: crawlResult.stats,
+      crawlBackend: crawlResult.backend,
       duration: totalDuration,
     });
   } catch (error) {
@@ -604,7 +612,7 @@ async function storeForEdKnowledge(
   supabase: ReturnType<typeof createServiceRoleClient>,
   organizationId: string,
   domain: string,
-  pages: Awaited<ReturnType<typeof crawlWebsite>>["pages"],
+  pages: Awaited<ReturnType<typeof smartCrawlWebsite>>["pages"],
 ): Promise<void> {
   try {
     for (const page of pages) {
@@ -906,7 +914,7 @@ async function storeExpertKnowledgeForEd(
 
 function findPrimaryTrustDomain(
   trustDomains: string[],
-  quickCrawlPages: Awaited<ReturnType<typeof crawlWebsite>>["pages"],
+  quickCrawlPages: Awaited<ReturnType<typeof smartCrawlWebsite>>["pages"],
 ): string | null {
   if (trustDomains.length === 0) return null;
 
