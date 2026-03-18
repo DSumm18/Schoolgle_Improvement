@@ -315,7 +315,39 @@ const TEST_CASES = [
       },
       {
         q: "Where can I manage staff?",
-        expect: ["/dashboard/hr", "staff", "HR"],
+        expect: ["/dashboard/hr", "staff"],
+      },
+    ],
+  },
+
+  // PLATFORM GUIDANCE TESTS — Ed knows how to use the software
+  {
+    domain: "platform-guidance",
+    url: "/dashboard",
+    tests: [
+      {
+        q: "How do I log a maintenance request for a broken heater?",
+        expect: ["maintenance|helpdesk|ticket", "/dashboard/estates"],
+      },
+      {
+        q: "How do I add a new staff member to the system?",
+        expect: ["staff|directory|people", "/dashboard/hr/people|add"],
+      },
+      {
+        q: "How do I check if our policies are up to date?",
+        expect: ["polic", "/dashboard/compliance/policies|review"],
+      },
+      {
+        q: "How do I create a survey for parents?",
+        expect: ["survey", "/dashboard/surveys|template"],
+      },
+      {
+        q: "How do I record a safeguarding concern?",
+        expect: ["concern|safeguard", "/dashboard/safeguarding|log"],
+      },
+      {
+        q: "How do I check the single central record?",
+        expect: ["SCR|single central|record", "/dashboard/compliance/scr|DBS"],
       },
     ],
   },
