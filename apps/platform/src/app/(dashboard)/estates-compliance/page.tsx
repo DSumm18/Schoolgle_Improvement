@@ -1254,6 +1254,111 @@ export default function EstatesComplianceDashboard() {
           </CardContent>
         </Card>
 
+        {/* Compliance Reviews Section */}
+        {recentReviews.length > 0 && (
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-md bg-purple-100 dark:bg-purple-900/20">
+                    <FileText className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <CardTitle className="text-base">
+                    Compliance Reviews
+                  </CardTitle>
+                </div>
+                <Link href="/dashboard/show-me/site">
+                  <Button variant="ghost" size="sm" className="text-xs gap-1">
+                    View in Show Me <ArrowRight className="w-3 h-3" />
+                  </Button>
+                </Link>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {recentReviews.slice(0, 5).map((review: any) => (
+                  <div
+                    key={review.id}
+                    className="flex items-center justify-between py-2 border-b border-zinc-100 dark:border-zinc-800 last:border-0"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`w-2 h-2 rounded-full shrink-0 ${
+                          review.sign_off_status === "signed_off"
+                            ? "bg-emerald-500"
+                            : review.overall_status === "in_progress"
+                              ? "bg-blue-500 animate-pulse"
+                              : review.sign_off_status === "rejected"
+                                ? "bg-red-500"
+                                : review.overall_status === "concerns"
+                                  ? "bg-amber-500"
+                                  : "bg-zinc-300"
+                        }`}
+                      />
+                      <div>
+                        <p className="text-sm font-medium">
+                          {review.compliance_domain?.toUpperCase()} —{" "}
+                          {review.location_name || "All locations"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {review.review_date
+                            ? new Date(review.review_date).toLocaleDateString(
+                                "en-GB",
+                                {
+                                  day: "numeric",
+                                  month: "short",
+                                  year: "numeric",
+                                },
+                              )
+                            : ""}
+                          {review.reviewed_by_name &&
+                            ` · ${review.reviewed_by_name}`}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        variant="outline"
+                        className={`text-[10px] ${
+                          review.overall_status === "compliant"
+                            ? "text-emerald-600 border-emerald-200"
+                            : review.overall_status === "concerns"
+                              ? "text-amber-600 border-amber-200"
+                              : review.overall_status === "non_compliant"
+                                ? "text-red-600 border-red-200"
+                                : review.overall_status === "in_progress"
+                                  ? "text-blue-600 border-blue-200"
+                                  : "text-zinc-400 border-zinc-200"
+                        }`}
+                      >
+                        {review.overall_status || "pending"}
+                      </Badge>
+                      {review.sign_off_status === "signed_off" && (
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] text-emerald-600 border-emerald-200"
+                        >
+                          <Check className="w-3 h-3 mr-0.5" />
+                          Signed off
+                        </Badge>
+                      )}
+                      {review.sign_off_status === "pending" &&
+                        review.overall_status !== "in_progress" && (
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] text-amber-600 border-amber-200"
+                          >
+                            Awaiting sign-off
+                          </Badge>
+                        )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Loading State */}
         {loading ? (
           <div className="flex flex-col items-center justify-center py-16 gap-4">
