@@ -361,6 +361,29 @@ export default function EstatesComplianceDashboard() {
     }
   };
 
+  // Fetch compliance reviews
+  useEffect(() => {
+    if (!organizationId) return;
+    (async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabaseClient.auth.getSession();
+        const h: Record<string, string> = {};
+        if (session?.access_token)
+          h["Authorization"] = `Bearer ${session.access_token}`;
+        const res = await fetch(
+          `/api/compliance/reviews?organizationId=${organizationId}&limit=10`,
+          { headers: h },
+        );
+        const data = await res.json();
+        setRecentReviews(data?.reviews || []);
+      } catch {
+        setRecentReviews([]);
+      }
+    })();
+  }, [organizationId, refreshKey]);
+
   const initializeDomains = async (signal?: AbortSignal) => {
     // CRITICAL: Always set loading=false at the end, no matter what
     let loadingCleared = false;
