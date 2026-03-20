@@ -1,20 +1,23 @@
-'use client';
+"use client";
 
-// Force dynamic rendering to avoid build errors
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 /**
  * Evidence Upload Page
  *
- * Dedicated page for uploading new evidence
+ * Uses the EvidenceManager component that was built but not previously wired.
+ * Supports upload, cloud links, and AI verification.
  */
 
-import Link from 'next/link';
+import Link from "next/link";
+import { useAuth } from "@/context/SupabaseAuthContext";
+import { supabase } from "@/lib/supabase";
+import { EvidenceManager } from "@/components/estates-compliance/EvidenceManager";
 
 export default function EvidenceUploadPage() {
-  // TODO: Get actual user ID and organization ID from session
-  const organizationId = 'org-123';
-  const userId = 'user-123';
+  const { user, organization } = useAuth();
+  const organizationId = organization?.id || "";
+  const userId = user?.id || "";
 
   return (
     <div className="space-y-6">
@@ -25,7 +28,10 @@ export default function EvidenceUploadPage() {
             Estates Compliance
           </Link>
           <span>/</span>
-          <Link href="/estates-compliance/evidence" className="hover:text-foreground">
+          <Link
+            href="/estates-compliance/evidence"
+            className="hover:text-foreground"
+          >
             Evidence Library
           </Link>
           <span>/</span>
@@ -33,16 +39,18 @@ export default function EvidenceUploadPage() {
         </nav>
         <h1 className="text-3xl font-bold tracking-tight">Upload Evidence</h1>
         <p className="text-muted-foreground mt-1">
-          Add new evidence to your estates compliance library
+          Add certificates, reports, photos, or compliance documents
         </p>
       </div>
 
-      {/* Upload Form */}
-      <div className="rounded-lg border bg-card p-6">
-        <p className="text-sm text-muted-foreground">
-          TODO: Integrate EvidenceManager component here
-        </p>
-      </div>
+      {/* Evidence Manager — previously built, now wired */}
+      {organizationId ? (
+        <EvidenceManager organizationId={organizationId} userId={userId} />
+      ) : (
+        <div className="rounded-lg border bg-card p-6 text-center text-muted-foreground">
+          Loading organisation...
+        </div>
+      )}
     </div>
   );
 }

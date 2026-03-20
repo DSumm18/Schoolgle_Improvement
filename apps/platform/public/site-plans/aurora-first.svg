@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 470" width="640" height="470" font-family="system-ui, -apple-system, sans-serif">
+  <style>
+    .room-label { font-size: 9px; font-weight: 600; text-anchor: middle; fill: #333; }
+    .room-sublabel { font-size: 7px; text-anchor: middle; fill: #666; }
+    .floor-title { font-size: 14px; font-weight: 700; fill: #1a1a1a; }
+    .exit-label { font-size: 8px; font-weight: 600; fill: #D32F2F; }
+    .corridor { fill: #EEEEEE; stroke: #BDBDBD; stroke-width: 0.5; }
+  </style>
+  <rect width="640" height="470" fill="white" rx="8"/>
+  <text x="20" y="22" class="floor-title">First Floor — Aurora Primary School</text>
+  <rect x="20" y="350" width="275" height="50" class="corridor" rx="2"/>
+  <rect x="345" y="400" width="275" height="50" class="corridor" rx="2"/>
+  <rect x="20" y="50" width="150" height="150" fill="#E8F5E9" stroke="#4CAF50" stroke-width="1.5" rx="4" data-room-id="rm-ash"/>
+  <text x="95" y="119" class="room-label">Ash</text>
+  <text x="95" y="131" class="room-sublabel">(Year 2)</text>
+  <rect x="170" y="50" width="150" height="150" fill="#E8F5E9" stroke="#4CAF50" stroke-width="1.5" rx="4" data-room-id="rm-willow"/>
+  <text x="245" y="119" class="room-label">Willow</text>
+  <text x="245" y="131" class="room-sublabel">(Year 2)</text>
+  <rect x="20" y="200" width="150" height="150" fill="#E8F5E9" stroke="#4CAF50" stroke-width="1.5" rx="4" data-room-id="rm-holly"/>
+  <text x="95" y="269" class="room-label">Holly</text>
+  <text x="95" y="281" class="room-sublabel">(Year 3)</text>
+  <rect x="170" y="200" width="150" height="150" fill="#E8F5E9" stroke="#4CAF50" stroke-width="1.5" rx="4" data-room-id="rm-rowan"/>
+  <text x="245" y="269" class="room-label">Rowan</text>
+  <text x="245" y="281" class="room-sublabel">(Year 3)</text>
+  <rect x="295" y="50" width="50" height="150" fill="#ECEFF1" stroke="#607D8B" stroke-width="1.5" rx="4" data-room-id="rm-toilet-ff"/>
+  <text x="320" y="125" class="room-label">Toilets</text>
+  <rect x="295" y="200" width="50" height="100" fill="#ECEFF1" stroke="#607D8B" stroke-width="1.5" rx="4" data-room-id="rm-staff-toilet-ff"/>
+  <text x="320" y="244" class="room-label">Staff</text>
+  <text x="320" y="256" class="room-sublabel">WC</text>
+  <rect x="345" y="50" width="137.5" height="150" fill="#E8F5E9" stroke="#4CAF50" stroke-width="1.5" rx="4" data-room-id="rm-cedar"/>
+  <text x="413.75" y="119" class="room-label">Cedar</text>
+  <text x="413.75" y="131" class="room-sublabel">(Year 4)</text>
+  <rect x="482.5" y="50" width="137.5" height="150" fill="#E8F5E9" stroke="#4CAF50" stroke-width="1.5" rx="4" data-room-id="rm-pine"/>
+  <text x="551.25" y="119" class="room-label">Pine</text>
+  <text x="551.25" y="131" class="room-sublabel">(Year 4)</text>
+  <rect x="345" y="200" width="137.5" height="100" fill="#E0F7FA" stroke="#00BCD4" stroke-width="1.5" rx="4" data-room-id="rm-library"/>
+  <text x="413.75" y="250" class="room-label">Library</text>
+  <rect x="482.5" y="200" width="137.5" height="100" fill="#E0F7FA" stroke="#00BCD4" stroke-width="1.5" rx="4" data-room-id="rm-ict"/>
+  <text x="551.25" y="250" class="room-label">ICT Suite</text>
+  <rect x="345" y="300" width="137.5" height="100" fill="#F3E5F5" stroke="#9C27B0" stroke-width="1.5" rx="4" data-room-id="rm-staffroom"/>
+  <text x="413.75" y="350" class="room-label">Staff Room</text>
+  <rect x="482.5" y="300" width="137.5" height="100" fill="#FFF9C4" stroke="#FBC02D" stroke-width="1.5" rx="4" data-room-id="rm-send-2"/>
+  <text x="551.25" y="344" class="room-label">Intervention</text>
+  <text x="551.25" y="356" class="room-sublabel">Room 2</text>
+  <text x="-5" y="200" class="exit-label">🚪 ← West Stairs</text>
+  <text x="645" y="200" class="exit-label">🚪 East Stairs →</text>
+</svg>

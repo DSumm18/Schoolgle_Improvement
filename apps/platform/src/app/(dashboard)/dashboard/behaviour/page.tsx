@@ -488,6 +488,24 @@ export default function BehaviourPage() {
 
   return (
     <div className="p-6 md:p-8 space-y-6 min-h-screen max-w-[1600px] mx-auto">
+      {/* Demo Data Banner */}
+      {isDemo && (
+        <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/20 border border-amber-200 dark:border-amber-800 rounded-xl">
+          <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center shrink-0">
+            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+              No Data Source Connected
+            </p>
+            <p className="text-xs text-amber-700 dark:text-amber-400">
+              Showing sample data. Connect your school&apos;s behaviour records
+              to see real incidents, or start logging them directly.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* ─── Header ──────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>

@@ -13,12 +13,16 @@ export interface ResolverContext {
 export async function resolveFromStaff(
   staffId: string,
   supabase: SupabaseClient,
+  organizationId?: string,
 ): Promise<Record<string, string>> {
-  const { data } = await supabase
-    .from("staff_directory")
-    .select("*")
-    .eq("id", staffId)
-    .single();
+  let query = supabase.from("staff_directory").select("*").eq("id", staffId);
+
+  // Enforce org scoping when organizationId is available
+  if (organizationId) {
+    query = query.eq("organization_id", organizationId);
+  }
+
+  const { data } = await query.single();
 
   if (!data) return {};
 
@@ -189,12 +193,18 @@ export async function resolveFromAbsence(
 export async function resolveFromContractor(
   contractorId: string,
   supabase: SupabaseClient,
+  organizationId?: string,
 ): Promise<Record<string, string>> {
-  const { data } = await supabase
+  let query = supabase
     .from("estates_contractors")
     .select("*")
-    .eq("id", contractorId)
-    .single();
+    .eq("id", contractorId);
+
+  if (organizationId) {
+    query = query.eq("organization_id", organizationId);
+  }
+
+  const { data } = await query.single();
 
   if (!data) return {};
 
@@ -214,7 +224,9 @@ const DATA_SOURCE_RESOLVERS: Record<
   ) => Promise<Record<string, string>>
 > = {
   staff: (ctx, sb) =>
-    ctx.staffId ? resolveFromStaff(ctx.staffId, sb) : Promise.resolve({}),
+    ctx.staffId
+      ? resolveFromStaff(ctx.staffId, sb, ctx.organizationId)
+      : Promise.resolve({}),
   organization: (ctx, sb) => resolveFromOrganization(ctx.organizationId, sb),
   meeting: (ctx, sb) =>
     ctx.meetingId ? resolveFromMeeting(ctx.meetingId, sb) : Promise.resolve({}),
@@ -226,7 +238,7 @@ const DATA_SOURCE_RESOLVERS: Record<
       : Promise.resolve({}),
   contractor: (ctx, sb) =>
     ctx.contractorId
-      ? resolveFromContractor(ctx.contractorId, sb)
+      ? resolveFromContractor(ctx.contractorId, sb, ctx.organizationId)
       : Promise.resolve({}),
 };
 

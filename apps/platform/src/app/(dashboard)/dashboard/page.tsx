@@ -560,6 +560,19 @@ export default function DashboardPage() {
 
   const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
   const [showEventModal, setShowEventModal] = useState(false);
+  const [setupComplete, setSetupComplete] = useState<boolean | null>(null);
+
+  // Check if basic setup is done (staff connected)
+  // If not, show a prominent Show Me card
+  const { data: staffCheck } = useSWR(
+    organizationId ? `/api/staff?organizationId=${organizationId}` : null,
+    fetcher,
+  );
+  const staffCount =
+    (staffCheck as any)?.staff?.length ||
+    (staffCheck as any)?.data?.length ||
+    0;
+  const isSetupIncomplete = staffCount === 0;
 
   const displayName =
     user?.user_metadata?.full_name || user?.email?.split("@")[0] || "there";
@@ -660,6 +673,38 @@ export default function DashboardPage() {
           </p>
         </div>
       </motion.div>
+
+      {/* Show Me: Setup Card — shown when setup is incomplete */}
+      {isSetupIncomplete && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.03 }}
+        >
+          <Link href="/dashboard/show-me">
+            <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-50 dark:from-sky-950/30 dark:via-blue-950/20 dark:to-indigo-950/10 border border-sky-200 dark:border-sky-800 p-6 hover:shadow-lg hover:border-sky-300 dark:hover:border-sky-700 transition-all cursor-pointer">
+              <div className="absolute top-3 right-3">
+                <Sparkles className="w-5 h-5 text-sky-400 opacity-50" />
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-xl bg-sky-100 dark:bg-sky-900/30">
+                  <Sparkles className="w-6 h-6 text-sky-600 dark:text-sky-400" />
+                </div>
+                <div className="flex-1">
+                  <h2 className="text-lg font-bold text-sky-900 dark:text-sky-100">
+                    Show Me: Get your school set up
+                  </h2>
+                  <p className="text-sm text-sky-700 dark:text-sky-300 mt-0.5">
+                    See what data is connected, what modules are active, and
+                    what to do next.
+                  </p>
+                </div>
+                <ChevronRight className="w-5 h-5 text-sky-400 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </div>
+          </Link>
+        </motion.div>
+      )}
 
       {/* My Tasks Widget */}
       <motion.div

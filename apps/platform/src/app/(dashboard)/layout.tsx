@@ -232,7 +232,8 @@ export default function DashboardLayout({
       type: "modules" as const,
       items: MODULES.filter(
         (module) =>
-          !hasRole || canUserAccess(module.requiredPermissions, userRole),
+          !module.pilotHidden &&
+          (!hasRole || canUserAccess(module.requiredPermissions, userRole)),
       ).map((module) => ({
         id: module.id,
         name: module.name,
@@ -472,6 +473,7 @@ export default function DashboardLayout({
                         ? APPS.filter(
                             (a) =>
                               a.moduleId === item.id &&
+                              !a.pilotHidden &&
                               (!hasRole ||
                                 canUserAccess(a.requiredPermissions, userRole)),
                           )

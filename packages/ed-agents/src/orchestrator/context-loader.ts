@@ -13,12 +13,21 @@ import type { SchoolContext } from "../types";
  * 2. Call lookupSchoolByURN from supabase-dfe.ts
  * 3. Transform the result into SchoolContext
  */
-// In-memory cache with TTL for school context (5 min per org)
+// In-memory cache with TTL for school context (2 min per org)
+// Reduced from 5 min to 2 min to limit staleness after skill execution
 const contextCache = new Map<
   string,
   { data: SchoolContext; expires: number }
 >();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const CACHE_TTL = 2 * 60 * 1000; // 2 minutes
+
+/**
+ * Invalidate cached context for an organization.
+ * Call after skill execution to ensure next message gets fresh data.
+ */
+export function invalidateContextCache(orgId: string): void {
+  contextCache.delete(orgId);
+}
 
 export async function loadSchoolContext(
   orgId: string,

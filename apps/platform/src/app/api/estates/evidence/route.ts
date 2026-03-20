@@ -135,6 +135,40 @@ export const POST = protectedRoute(
       if (!file) {
         return apiError("file is required for upload", 400);
       }
+
+      // File type validation — only allow safe document/image types
+      const ALLOWED_TYPES = [
+        "application/pdf",
+        "image/jpeg",
+        "image/png",
+        "image/gif",
+        "image/webp",
+        "image/heic",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.ms-powerpoint",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "text/plain",
+        "text/csv",
+      ];
+      const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+
+      if (!ALLOWED_TYPES.includes(file.type)) {
+        return apiError(
+          `File type "${file.type}" is not allowed. Accepted types: PDF, images (JPEG/PNG/GIF/WebP/HEIC), Office documents (Word/Excel/PowerPoint), CSV, and plain text.`,
+          400,
+        );
+      }
+
+      if (file.size > MAX_FILE_SIZE) {
+        return apiError(
+          `File size (${Math.round(file.size / 1024 / 1024)}MB) exceeds the 50MB limit.`,
+          400,
+        );
+      }
+
       if (!title) {
         return apiError("title is required", 400);
       }

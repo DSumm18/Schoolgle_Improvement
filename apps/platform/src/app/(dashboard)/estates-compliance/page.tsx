@@ -277,6 +277,7 @@ export default function EstatesComplianceDashboard() {
   );
   const [refreshKey, setRefreshKey] = useState(0);
   const confettiTriggeredRef = useRef(new Set<string>());
+  const [recentReviews, setRecentReviews] = useState<any[]>([]);
 
   // Ed widget state
   const [edOpen, setEdOpen] = useState(false);

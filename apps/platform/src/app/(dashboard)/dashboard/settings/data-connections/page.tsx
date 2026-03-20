@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   FolderOpen,
   Cloud,
@@ -37,6 +37,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/context/SupabaseAuthContext";
 import { supabase } from "@/lib/supabase";
+import { DataFreshnessBadge } from "@/components/ui/DataSourceBadge";
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
   const {
@@ -562,31 +563,47 @@ function FileBrowserPanel({
             </p>
           </div>
         ) : (
-          <div className="divide-y">
-            {files.map((file) => (
-              <button
-                key={file.id}
-                onClick={() => onPreviewFile(file)}
-                className="w-full flex items-center gap-3 px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors text-left group"
-              >
-                <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg group-hover:bg-slate-200 dark:group-hover:bg-slate-700 transition-colors">
-                  <FileTypeIcon mimeType={file.mimeType} className="w-4 h-4" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{file.name}</p>
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                    {file.modifiedTime && (
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {formatDate(file.modifiedTime)}
-                      </span>
-                    )}
-                    {file.size && <span>{formatFileSize(file.size)}</span>}
+          <div>
+            {CATEGORY_CONNECT_ACTIONS[category] && (
+              <div className="px-5 py-2.5 bg-blue-50/50 dark:bg-blue-950/10 border-b text-xs text-blue-700 dark:text-blue-400">
+                Click a file to preview it, then connect it to{" "}
+                <strong>
+                  {CATEGORY_CONNECT_ACTIONS[category].moduleLabel}
+                </strong>
+              </div>
+            )}
+            <div className="divide-y">
+              {files.map((file) => (
+                <button
+                  key={file.id}
+                  onClick={() => onPreviewFile(file)}
+                  className="w-full flex items-center gap-3 px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors text-left group"
+                >
+                  <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg group-hover:bg-slate-200 dark:group-hover:bg-slate-700 transition-colors">
+                    <FileTypeIcon
+                      mimeType={file.mimeType}
+                      className="w-4 h-4"
+                    />
                   </div>
-                </div>
-                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors" />
-              </button>
-            ))}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{file.name}</p>
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                      {file.modifiedTime && (
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {formatDate(file.modifiedTime)}
+                        </span>
+                      )}
+                      {file.size && <span>{formatFileSize(file.size)}</span>}
+                    </div>
+                  </div>
+                  <span className="text-xs text-blue-600 dark:text-blue-400 font-medium opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                    Preview &amp; connect
+                  </span>
+                  <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors" />
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </CardContent>
@@ -618,15 +635,65 @@ function isTextMime(mime: string): boolean {
   ].includes(mime);
 }
 
+const CATEGORY_CONNECT_ACTIONS: Record<
+  string,
+  { label: string; moduleLabel: string; href: string; apiAction?: string }
+> = {
+  staff: {
+    label: "Connect to Staff Directory",
+    moduleLabel: "Staff Directory",
+    href: "/dashboard/hr/people",
+    apiAction: "staff",
+  },
+  pupils: {
+    label: "Connect to Pupil Data",
+    moduleLabel: "Pupils",
+    href: "/dashboard/pupils",
+    apiAction: "pupils",
+  },
+  fms: {
+    label: "Connect to Finance",
+    moduleLabel: "Finance",
+    href: "/dashboard/finance",
+    apiAction: "finance",
+  },
+  attendance: {
+    label: "Connect to Attendance",
+    moduleLabel: "Attendance",
+    href: "/dashboard/attendance",
+    apiAction: "attendance",
+  },
+  behaviour: {
+    label: "Connect to Behaviour",
+    moduleLabel: "Behaviour",
+    href: "/dashboard/behaviour",
+    apiAction: "behaviour",
+  },
+  assessments: {
+    label: "Connect to Intelligence",
+    moduleLabel: "Intelligence",
+    href: "/dashboard/intelligence",
+  },
+  documents: {
+    label: "Connect to Compliance",
+    moduleLabel: "Compliance",
+    href: "/dashboard/compliance",
+  },
+};
+
 function DataPreviewPanel({
   file,
   orgId,
+  category,
   onClose,
+  onConnect,
   schoolName,
 }: {
   file: DriveFile;
   orgId: string;
+  category?: string;
   onClose: () => void;
+  onConnect?: (category: string, fileContent: string) => void;
   schoolName: string;
 }) {
   const [data, setData] = useState<Record<string, unknown>[] | null>(null);
@@ -740,6 +807,73 @@ function DataPreviewPanel({
         </div>
       </div>
 
+      {/* Connect Action Bar */}
+      {category &&
+        CATEGORY_CONNECT_ACTIONS[category] &&
+        !loading &&
+        !error &&
+        (data || textContent) && (
+          <div className="px-6 py-3 bg-emerald-50 dark:bg-emerald-950/20 border-b border-emerald-200 dark:border-emerald-800 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 text-emerald-600" />
+              <p className="text-sm text-emerald-800 dark:text-emerald-200">
+                <span className="font-semibold">{file.name}</span> can be
+                connected to{" "}
+                <span className="font-semibold">
+                  {CATEGORY_CONNECT_ACTIONS[category].moduleLabel}
+                </span>
+              </p>
+            </div>
+            {CATEGORY_CONNECT_ACTIONS[category].apiAction &&
+            onConnect &&
+            ["staff", "pupils", "fms", "attendance", "behaviour"].includes(
+              category,
+            ) ? (
+              <button
+                onClick={() => {
+                  if (data) {
+                    // Convert table data to CSV for the import API
+                    const csvHeader = columns.join(",");
+                    const csvRows = (data as Record<string, unknown>[]).map(
+                      (row) =>
+                        columns
+                          .map((col) => {
+                            const val = String(row[col] ?? "");
+                            return val.includes(",") || val.includes('"')
+                              ? `"${val.replace(/"/g, '""')}"`
+                              : val;
+                          })
+                          .join(","),
+                    );
+                    onConnect(category, [csvHeader, ...csvRows].join("\n"));
+                  } else if (textContent) {
+                    onConnect(category, textContent);
+                  }
+                }}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition-colors shadow-sm"
+              >
+                <Cloud className="w-3.5 h-3.5" />
+                {CATEGORY_CONNECT_ACTIONS[category].label}
+              </button>
+            ) : (
+              <div className="flex items-center gap-3">
+                <p className="text-xs text-emerald-700 dark:text-emerald-300 max-w-[220px]">
+                  {category === "attendance" || category === "behaviour"
+                    ? "Enter data directly in the module, or connect via MIS."
+                    : "Open the module to use this data."}
+                </p>
+                <a
+                  href={CATEGORY_CONNECT_ACTIONS[category].href}
+                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 transition-colors shadow-sm shrink-0"
+                >
+                  Open {CATEGORY_CONNECT_ACTIONS[category].moduleLabel}
+                  <ChevronRight className="w-3 h-3" />
+                </a>
+              </div>
+            )}
+          </div>
+        )}
+
       {/* Data table */}
       <CardContent className="p-0">
         {loading ? (
@@ -827,10 +961,19 @@ export default function DataConnectionsPage() {
   const [copied, setCopied] = useState(false);
   const [showMISInstructions, setShowMISInstructions] = useState(false);
   const [showFinanceInstructions, setShowFinanceInstructions] = useState(false);
+  const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
+  const [lastDisconnectedFolder, setLastDisconnectedFolder] = useState<
+    string | null
+  >(null);
 
   // Folder browsing state
   const [openCategory, setOpenCategory] = useState<string | null>(null);
   const [previewFile, setPreviewFile] = useState<DriveFile | null>(null);
+  const [connectingModule, setConnectingModule] = useState<string | null>(null);
+  const [connectResult, setConnectResult] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
 
   const orgId = organization?.id;
 
@@ -922,6 +1065,8 @@ export default function DataConnectionsPage() {
 
   const handleDisconnect = async () => {
     if (!connection) return;
+    // Save folder info for reconnect shortcut
+    const folderName = connection.folder_name;
     try {
       const authHeaders = await getAuthHeaders();
       const res = await fetch(
@@ -929,13 +1074,214 @@ export default function DataConnectionsPage() {
         { method: "DELETE", headers: authHeaders },
       );
       if (res.ok) {
+        setLastDisconnectedFolder(folderName);
         setConnection(null);
         setError(null);
         setOpenCategory(null);
         setPreviewFile(null);
+        setConnectResult(null);
       }
     } catch {
       setError("Failed to disconnect");
+    }
+  };
+
+  const handleConnectFileToModule = async (
+    category: string,
+    csvContent: string,
+  ) => {
+    if (!orgId) return;
+    setConnectingModule(category);
+    setConnectResult(null);
+
+    try {
+      const authHeaders = await getAuthHeaders();
+      let endpoint = "";
+      let body: any = {};
+
+      if (category === "staff") {
+        endpoint = "/api/staff/import";
+        body = { organizationId: orgId, csvData: csvContent };
+      } else if (category === "pupils") {
+        endpoint = "/api/pupils";
+        body = { csv: csvContent, organizationId: orgId };
+      } else if (category === "fms") {
+        endpoint = "/api/finance/import";
+        body = { csv: csvContent, organizationId: orgId, dry_run: false };
+      } else if (category === "attendance") {
+        // Parse CSV into attendance marks format and POST
+        endpoint = "/api/attendance/registers";
+        // Parse the CSV rows into marks grouped by date+session
+        const lines = csvContent.split("\n").filter((l) => l.trim());
+        if (lines.length < 2) {
+          setConnectResult({
+            success: false,
+            message: "No data rows found in attendance file",
+          });
+          setConnectingModule(null);
+          return;
+        }
+        const headers = lines[0]
+          .split(",")
+          .map((h) => h.trim().toLowerCase().replace(/[\s-]/g, "_"));
+        const pupilIdCol = headers.findIndex(
+          (h) => h.includes("pupil") || h.includes("student") || h === "id",
+        );
+        const codeCol = headers.findIndex(
+          (h) =>
+            h.includes("mark") ||
+            h.includes("code") ||
+            h.includes("attendance"),
+        );
+        const dateCol = headers.findIndex((h) => h.includes("date"));
+        const sessionCol = headers.findIndex(
+          (h) => h.includes("session") || h.includes("am") || h.includes("pm"),
+        );
+
+        if (pupilIdCol < 0 || codeCol < 0) {
+          setConnectResult({
+            success: false,
+            message:
+              "Could not detect pupil ID and attendance code columns. Expected columns containing 'pupil'/'student' and 'mark'/'code'.",
+          });
+          setConnectingModule(null);
+          return;
+        }
+
+        const marks = [];
+        for (let i = 1; i < lines.length; i++) {
+          const vals = lines[i].split(",").map((v) => v.trim());
+          if (vals[pupilIdCol]) {
+            marks.push({
+              pupil_id: vals[pupilIdCol],
+              code: vals[codeCol] || "/",
+              minutes_late: null,
+              notes: null,
+            });
+          }
+        }
+
+        const today = new Date().toISOString().split("T")[0];
+        body = {
+          organizationId: orgId,
+          date:
+            dateCol >= 0
+              ? lines[1].split(",")[dateCol]?.trim() || today
+              : today,
+          session:
+            sessionCol >= 0
+              ? lines[1].split(",")[sessionCol]?.trim() || "AM"
+              : "AM",
+          marks,
+        };
+      } else if (category === "behaviour") {
+        // Parse CSV into behaviour incidents and POST one by one
+        const lines = csvContent.split("\n").filter((l) => l.trim());
+        if (lines.length < 2) {
+          setConnectResult({
+            success: false,
+            message: "No data rows found in behaviour file",
+          });
+          setConnectingModule(null);
+          return;
+        }
+        const headers = lines[0]
+          .split(",")
+          .map((h) => h.trim().toLowerCase().replace(/[\s-]/g, "_"));
+
+        let importedCount = 0;
+        let errorCount = 0;
+        const authHeaders = await getAuthHeaders();
+
+        for (let i = 1; i < Math.min(lines.length, 201); i++) {
+          const vals = lines[i].split(",").map((v) => v.trim());
+          const row: Record<string, string> = {};
+          headers.forEach((h, idx) => {
+            row[h] = vals[idx] || "";
+          });
+
+          const incidentBody = {
+            organizationId: orgId,
+            pupil_name:
+              row.pupil_name ||
+              row.student_name ||
+              row.name ||
+              `${row.first_name || ""} ${row.last_name || ""}`.trim(),
+            pupil_id: row.pupil_id || row.student_id || undefined,
+            year_group:
+              parseInt(row.year_group || row.year || "0") || undefined,
+            type: (row.type || "negative").toLowerCase().includes("pos")
+              ? "positive"
+              : "negative",
+            category: row.category || row.behaviour_category || "other",
+            description: row.description || row.notes || row.details || "",
+            location: row.location || undefined,
+            reported_by:
+              row.reported_by || row.recorded_by || row.teacher || undefined,
+          };
+
+          if (!incidentBody.pupil_name) continue;
+
+          try {
+            const incRes = await fetch("/api/behaviour/incidents", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", ...authHeaders },
+              body: JSON.stringify(incidentBody),
+            });
+            if (incRes.ok) importedCount++;
+            else errorCount++;
+          } catch {
+            errorCount++;
+          }
+        }
+
+        setConnectResult({
+          success: importedCount > 0,
+          message: `Connected ${importedCount} behaviour record${importedCount !== 1 ? "s" : ""}${errorCount > 0 ? ` (${errorCount} could not be connected)` : ""}.`,
+        });
+        setConnectingModule(null);
+        return;
+      } else {
+        setConnectResult({
+          success: true,
+          message: `Navigate to ${CATEGORY_CONNECT_ACTIONS[category]?.moduleLabel || category} to connect this data.`,
+        });
+        setConnectingModule(null);
+        return;
+      }
+
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders },
+        body: JSON.stringify(body),
+      });
+
+      const result = await res.json();
+
+      if (!res.ok) {
+        setConnectResult({
+          success: false,
+          message: result.error || "Connection failed",
+        });
+      } else {
+        const count =
+          result.imported ||
+          result.total_processed ||
+          result.transactions_imported ||
+          0;
+        const errors = result.errors?.length || 0;
+        setConnectResult({
+          success: true,
+          message: `Connected ${count} record${count !== 1 ? "s" : ""} to ${CATEGORY_CONNECT_ACTIONS[category]?.moduleLabel || category}${errors > 0 ? ` (${errors} error${errors !== 1 ? "s" : ""})` : ""}.`,
+        });
+      }
+    } catch (err: any) {
+      setConnectResult({
+        success: false,
+        message: err.message || "Connection failed",
+      });
+    } finally {
+      setConnectingModule(null);
     }
   };
 
@@ -956,6 +1302,73 @@ export default function DataConnectionsPage() {
         {} as Record<string, number>,
       )
     : {};
+
+  // Track journey step for progress stepper
+  type JourneyStep = "connect" | "browse" | "preview" | "connecting" | "done";
+  const journeyStep: JourneyStep = connectResult
+    ? "done"
+    : connectingModule
+      ? "connecting"
+      : previewFile
+        ? "preview"
+        : openCategory
+          ? "browse"
+          : "connect";
+
+  // Progress stepper component
+  const JOURNEY_STEPS = [
+    { key: "connect" as const, label: "Connect" },
+    { key: "browse" as const, label: "Browse" },
+    { key: "preview" as const, label: "Preview" },
+    { key: "connecting" as const, label: "Connecting" },
+    { key: "done" as const, label: "Done" },
+  ];
+  const stepIndex = JOURNEY_STEPS.findIndex((s) => s.key === journeyStep);
+
+  const JourneyStepper = () => {
+    if (!connection) return null; // Only show after first connection
+    return (
+      <div className="flex items-center gap-1 mb-6">
+        {JOURNEY_STEPS.map((step, i) => {
+          const isActive = i === stepIndex;
+          const isPast = i < stepIndex;
+          return (
+            <React.Fragment key={step.key}>
+              <div
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors ${
+                  isActive
+                    ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+                    : isPast
+                      ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300"
+                      : "bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500"
+                }`}
+              >
+                {isPast ? (
+                  <CheckCircle className="w-3 h-3" />
+                ) : (
+                  <span
+                    className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black ${
+                      isActive
+                        ? "bg-blue-600 text-white"
+                        : "bg-zinc-300 dark:bg-zinc-600 text-white"
+                    }`}
+                  >
+                    {i + 1}
+                  </span>
+                )}
+                {step.label}
+              </div>
+              {i < JOURNEY_STEPS.length - 1 && (
+                <div
+                  className={`w-4 h-0.5 rounded ${isPast ? "bg-emerald-300 dark:bg-emerald-700" : "bg-zinc-200 dark:bg-zinc-700"}`}
+                />
+              )}
+            </React.Fragment>
+          );
+        })}
+      </div>
+    );
+  };
 
   // Role guard — SLT+ only
   const userRole = organization?.role;
@@ -996,12 +1409,84 @@ export default function DataConnectionsPage() {
   if (previewFile && orgId) {
     return (
       <div className="max-w-7xl mx-auto p-6 space-y-4">
+        <JourneyStepper />
         <DataPreviewPanel
           file={previewFile}
           orgId={orgId}
+          category={openCategory || undefined}
           onClose={() => setPreviewFile(null)}
+          onConnect={handleConnectFileToModule}
           schoolName={organization?.name || "School"}
         />
+        {/* Connection Result */}
+        {connectResult && (
+          <div
+            className={`rounded-xl border p-4 ${
+              connectResult.success
+                ? "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800"
+                : "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800"
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              {connectResult.success ? (
+                <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
+              ) : (
+                <AlertTriangle className="w-5 h-5 text-red-600 shrink-0" />
+              )}
+              <p
+                className={`text-sm font-semibold ${connectResult.success ? "text-emerald-800 dark:text-emerald-200" : "text-red-800 dark:text-red-200"}`}
+              >
+                {connectResult.success
+                  ? "Data source connected"
+                  : "Connection issue"}
+              </p>
+              <button
+                onClick={() => setConnectResult(null)}
+                className="ml-auto text-xs text-muted-foreground hover:text-foreground"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+            <p
+              className={`text-sm mt-1 ml-8 ${connectResult.success ? "text-emerald-700 dark:text-emerald-300" : "text-red-700 dark:text-red-300"}`}
+            >
+              {connectResult.message}
+            </p>
+            {connectResult.success &&
+              openCategory &&
+              CATEGORY_CONNECT_ACTIONS[openCategory] && (
+                <div className="mt-3 ml-8 flex items-center gap-3">
+                  <a
+                    href={CATEGORY_CONNECT_ACTIONS[openCategory].href}
+                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 transition-colors"
+                  >
+                    View in {CATEGORY_CONNECT_ACTIONS[openCategory].moduleLabel}
+                    <ChevronRight className="w-3 h-3" />
+                  </a>
+                  <button
+                    onClick={() => {
+                      setConnectResult(null);
+                      setPreviewFile(null);
+                    }}
+                    className="text-xs text-emerald-700 dark:text-emerald-300 hover:underline"
+                  >
+                    Connect another file
+                  </button>
+                </div>
+              )}
+          </div>
+        )}
+        {connectingModule && (
+          <div className="flex items-center gap-2 px-4 py-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-xl">
+            <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+            <p className="text-sm text-blue-800 dark:text-blue-200">
+              Connecting data to{" "}
+              {CATEGORY_CONNECT_ACTIONS[connectingModule]?.moduleLabel ||
+                connectingModule}
+              ...
+            </p>
+          </div>
+        )}
       </div>
     );
   }
@@ -1010,6 +1495,7 @@ export default function DataConnectionsPage() {
   if (openCategory && connection && orgId) {
     return (
       <div className="max-w-5xl mx-auto p-6 space-y-4">
+        <JourneyStepper />
         <FileBrowserPanel
           category={openCategory}
           connection={connection}
@@ -1026,25 +1512,68 @@ export default function DataConnectionsPage() {
     <div className="max-w-5xl mx-auto p-6 space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold">Connect Your School Data</h1>
+        <h1 className="text-2xl font-bold">Connected Data Sources</h1>
         <p className="text-muted-foreground mt-1">
-          Connect your school&apos;s cloud storage and Schoolgle will
-          automatically read your MIS exports, finance reports, and school
-          documents. We never store your data — it&apos;s processed in memory
-          and stays under your control.
+          Link your school&apos;s data sources so Schoolgle can power your
+          modules. You stay in control — connect, refresh, or disconnect at any
+          time.
         </p>
       </div>
+
+      <JourneyStepper />
+
+      {/* How It Works — visual steps (shown only when no connection) */}
+      {!connection && (
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-2xl border border-blue-200 dark:border-blue-800 p-6">
+          <h2 className="text-sm font-bold text-blue-900 dark:text-blue-200 mb-4">
+            How connecting works
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {[
+              {
+                step: "1",
+                title: "Share your folder",
+                desc: "Share your school data folder in Google Drive with a view-only link",
+              },
+              {
+                step: "2",
+                title: "Schoolgle reads it",
+                desc: "We detect your files by type — staff, pupils, finance, attendance — and show you what we found",
+              },
+              {
+                step: "3",
+                title: "Connect to modules",
+                desc: "Preview any file and connect it to the right module with one click. Refresh anytime.",
+              },
+            ].map((s) => (
+              <div key={s.step} className="flex items-start gap-3">
+                <div className="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-black shrink-0">
+                  {s.step}
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-blue-900 dark:text-blue-200">
+                    {s.title}
+                  </p>
+                  <p className="text-xs text-blue-700 dark:text-blue-400 mt-0.5">
+                    {s.desc}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Security badges */}
       <div className="flex flex-wrap gap-3">
         <div className="flex items-center gap-1.5 text-xs text-slate-600 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-full">
-          <Eye className="w-3.5 h-3.5" /> Read-only access
+          <Eye className="w-3.5 h-3.5" /> Read-only — we never change your files
         </div>
         <div className="flex items-center gap-1.5 text-xs text-slate-600 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-full">
-          <Lock className="w-3.5 h-3.5" /> No documents stored
+          <Lock className="w-3.5 h-3.5" /> Your data stays in your Drive
         </div>
         <div className="flex items-center gap-1.5 text-xs text-slate-600 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-full">
-          <Shield className="w-3.5 h-3.5" /> GDPR compliant — revoke anytime
+          <Shield className="w-3.5 h-3.5" /> Disconnect anytime — your choice
         </div>
       </div>
 
@@ -1058,14 +1587,34 @@ export default function DataConnectionsPage() {
         </CardHeader>
         <CardContent>
           {!connection ? (
-            <>
-              <p className="text-sm text-muted-foreground mb-4">
-                Right-click your school data folder in Google Drive &rarr;{" "}
-                <strong>Share</strong> &rarr; Change to{" "}
-                <strong>&quot;Anyone with the link&quot;</strong> (Viewer)
-                &rarr;
-                <strong> Copy link</strong> and paste below.
-              </p>
+            <div className="space-y-4">
+              <div className="bg-slate-50 dark:bg-slate-900 rounded-xl p-4 space-y-3">
+                <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                  To connect your Google Drive:
+                </p>
+                <ol className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
+                  <li className="flex items-start gap-2">
+                    <span className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
+                      1
+                    </span>
+                    Open Google Drive and find your school data folder
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
+                      2
+                    </span>
+                    Right-click the folder → <strong>Share</strong> → set to{" "}
+                    <strong>&quot;Anyone with the link&quot;</strong> (Viewer)
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
+                      3
+                    </span>
+                    Copy the link and paste it below
+                  </li>
+                </ol>
+              </div>
+
               <div className="flex gap-2 max-w-xl">
                 <div className="relative flex-1">
                   <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -1076,8 +1625,8 @@ export default function DataConnectionsPage() {
                       setFolderLink(e.target.value);
                       setError(null);
                     }}
-                    placeholder="Paste Google Drive folder link here..."
-                    className="w-full pl-10 pr-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    placeholder="Paste your Google Drive folder link here..."
+                    className="w-full pl-10 pr-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                     onKeyDown={(e) => e.key === "Enter" && handleConnect()}
                   />
                 </div>
@@ -1091,15 +1640,39 @@ export default function DataConnectionsPage() {
                   ) : (
                     <GoogleDriveLogo className="w-4 h-4 mr-1.5" />
                   )}
-                  {connecting ? "Connecting..." : "Connect"}
+                  {connecting ? "Checking..." : "Connect"}
                 </Button>
               </div>
               {error && (
-                <p className="text-sm text-red-600 mt-2 flex items-start gap-1.5">
+                <p className="text-sm text-red-600 flex items-start gap-1.5">
                   <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" /> {error}
                 </p>
               )}
-            </>
+              <p className="text-xs text-muted-foreground">
+                Schoolgle will read the folder structure to detect your school
+                data files. We only look — we never modify, move, or delete
+                anything in your Drive.
+              </p>
+
+              {/* Reconnect shortcut */}
+              {lastDisconnectedFolder && (
+                <div className="flex items-center gap-3 mt-3 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <RefreshCw className="w-4 h-4 text-blue-500 shrink-0" />
+                  <p className="text-xs text-blue-700 dark:text-blue-300">
+                    Previously connected to{" "}
+                    <strong>{lastDisconnectedFolder}</strong>.
+                  </p>
+                  <button
+                    onClick={() => {
+                      setLastDisconnectedFolder(null);
+                    }}
+                    className="text-[10px] text-blue-500 hover:text-blue-700 ml-auto shrink-0"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              )}
+            </div>
           ) : (
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -1125,12 +1698,15 @@ export default function DataConnectionsPage() {
                       READ-ONLY
                     </Badge>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    {connection.total_files || 0} files in{" "}
-                    {connection.total_folders || 0} folders
-                    {connection.last_scan_at &&
-                      ` · Last scanned ${formatDate(connection.last_scan_at)}`}
-                  </p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-xs text-muted-foreground">
+                      {connection.total_files || 0} files in{" "}
+                      {connection.total_folders || 0} folders
+                      {connection.last_scan_at &&
+                        ` · Last scanned ${formatDate(connection.last_scan_at)}`}
+                    </p>
+                    <DataFreshnessBadge lastUpdated={connection.last_scan_at} />
+                  </div>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -1148,10 +1724,11 @@ export default function DataConnectionsPage() {
                   {scanning ? "Scanning..." : "Rescan"}
                 </Button>
                 <Button
-                  onClick={handleDisconnect}
+                  onClick={() => setShowDisconnectConfirm(true)}
                   variant="ghost"
                   size="sm"
                   className="text-slate-400 hover:text-red-500"
+                  title="Disconnect data source"
                 >
                   <X className="w-4 h-4" />
                 </Button>
@@ -1163,6 +1740,41 @@ export default function DataConnectionsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Stale Data Warning */}
+      {connection &&
+        connection.last_scan_at &&
+        (() => {
+          const daysSince = Math.floor(
+            (Date.now() - new Date(connection.last_scan_at).getTime()) /
+              (1000 * 60 * 60 * 24),
+          );
+          if (daysSince <= 7) return null;
+          return (
+            <div className="flex items-start gap-3 px-4 py-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl">
+              <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+                  Connected data may be out of date
+                </p>
+                <p className="text-xs text-amber-700 dark:text-amber-400">
+                  Your data source was last scanned {daysSince} days ago. Rescan
+                  to check for updated files from your school systems.
+                </p>
+                <Button
+                  onClick={handleRescan}
+                  disabled={scanning}
+                  size="sm"
+                  variant="outline"
+                  className="mt-2 text-xs"
+                >
+                  <RefreshCw className="w-3 h-3 mr-1.5" />
+                  {scanning ? "Scanning..." : "Rescan Now"}
+                </Button>
+              </div>
+            </div>
+          );
+        })()}
 
       {/* OneDrive / SharePoint Connection */}
       <Card className="border-dashed">
@@ -1200,9 +1812,11 @@ export default function DataConnectionsPage() {
       {/* Data Source Cards — clickable when connected */}
       {connection && Object.keys(detectedCategories).length > 0 && (
         <div>
-          <h2 className="text-lg font-bold mb-4">Your School Data</h2>
+          <h2 className="text-lg font-bold mb-1">Your Connected Data</h2>
           <p className="text-sm text-muted-foreground mb-4">
-            Click a category to browse files and preview data.
+            These data sources were detected in your Drive. Click any category
+            to browse files, preview contents, and connect them to Schoolgle
+            modules.
           </p>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             {Object.entries(detectedCategories).map(([category, count]) => {
@@ -1227,6 +1841,11 @@ export default function DataConnectionsPage() {
                   <p className="text-xs text-muted-foreground">
                     {count} file{count !== 1 ? "s" : ""} detected
                   </p>
+                  {CATEGORY_CONNECT_ACTIONS[category] && (
+                    <p className="text-[10px] text-blue-600 dark:text-blue-400 font-medium mt-1">
+                      → {CATEGORY_CONNECT_ACTIONS[category].moduleLabel}
+                    </p>
+                  )}
                 </button>
               );
             })}
@@ -1435,6 +2054,71 @@ export default function DataConnectionsPage() {
           </div>
         </CardContent>
       </Card>
+      {/* Disconnect Confirmation Modal */}
+      {showDisconnectConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-6 max-w-md mx-4 shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
+              </div>
+              <div>
+                <h3 className="font-bold text-zinc-900 dark:text-zinc-100">
+                  Disconnect data source?
+                </h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  {connection?.folder_name || "Google Drive"}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3 mb-6">
+              <p className="text-sm text-zinc-700 dark:text-zinc-300">
+                If you disconnect this source:
+              </p>
+              <ul className="space-y-2 text-sm text-zinc-600 dark:text-zinc-400">
+                <li className="flex items-start gap-2">
+                  <span className="text-red-500 mt-0.5">&#8226;</span>
+                  Schoolgle will stop reading new files from this folder
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-zinc-400 mt-0.5">&#8226;</span>
+                  Data already connected to modules will remain
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-zinc-400 mt-0.5">&#8226;</span>
+                  You can reconnect a source at any time
+                </li>
+              </ul>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-800 rounded-lg p-3">
+                <strong>Modules affected:</strong> Staff Directory, Attendance,
+                SEND, Behaviour, Finance, and Intelligence may no longer receive
+                updated data from this source.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3 justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowDisconnectConfirm(false)}
+              >
+                Keep Connected
+              </Button>
+              <Button
+                size="sm"
+                className="bg-red-600 hover:bg-red-700 text-white"
+                onClick={async () => {
+                  await handleDisconnect();
+                  setShowDisconnectConfirm(false);
+                }}
+              >
+                Disconnect Source
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

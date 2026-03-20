@@ -7,10 +7,13 @@ import EdWidgetWrapper from "@/components/EdWidgetWrapper";
 interface EdChatbotContextType {
   isOpen: boolean;
   isMinimized: boolean;
+  initialMessage: string | null;
   openChat: () => void;
+  openChatWith: (message: string) => void;
   closeChat: () => void;
   toggleChat: () => void;
   toggleMinimize: () => void;
+  clearInitialMessage: () => void;
 }
 
 const EdChatbotContext = createContext<EdChatbotContextType | undefined>(
@@ -33,10 +36,21 @@ export function EdChatbotProvider({ children }: EdChatbotProviderProps) {
   const { user, organization } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [initialMessage, setInitialMessage] = useState<string | null>(null);
 
   const openChat = () => {
     setIsOpen(true);
     setIsMinimized(false);
+  };
+
+  const openChatWith = (message: string) => {
+    setInitialMessage(message);
+    setIsOpen(true);
+    setIsMinimized(false);
+  };
+
+  const clearInitialMessage = () => {
+    setInitialMessage(null);
   };
 
   const closeChat = () => {
@@ -72,10 +86,13 @@ export function EdChatbotProvider({ children }: EdChatbotProviderProps) {
       value={{
         isOpen,
         isMinimized,
+        initialMessage,
         openChat,
+        openChatWith,
         closeChat,
         toggleChat,
         toggleMinimize,
+        clearInitialMessage,
       }}
     >
       {children}

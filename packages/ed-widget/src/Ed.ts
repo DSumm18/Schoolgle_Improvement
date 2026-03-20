@@ -16,6 +16,7 @@ import { languages, getLanguage } from "./utils/flags";
 import { FormFiller } from "./features/formFill";
 import { ProactiveService } from "./features/proactive";
 import { FishAudioVoice } from "./voice/fish-audio";
+import { GeminiLiveVoice } from "./voice/gemini-live";
 import { getIntroForPersona, processAIResponse } from "./voice/intro-scripts";
 import { pageScanner } from "./features/pageScan";
 import type {
@@ -70,6 +71,7 @@ export class Ed {
   private formFiller: FormFiller | null = null;
   private proactive: ProactiveService | null = null;
   private fishVoice: FishAudioVoice | null = null;
+  private geminiLive: GeminiLiveVoice | null = null;
   private statusPill: StatusPill | null = null;
   private emojiTester: EmojiTester | null = null;
 
@@ -259,37 +261,70 @@ export class Ed {
       console.log("[Ed] AI disabled in configuration");
     }
 
-    // Fish Audio Voice - only initialize if TTS is enabled and provider is fish
-    if (enableTTS && ttsProvider === "fish") {
-      if (
-        this.config.fishAudioApiKey &&
-        this.config.fishAudioApiKey.trim() !== ""
-      ) {
-        try {
-          this.fishVoice = new FishAudioVoice(
-            this.config.fishAudioApiKey,
-            this.config.fishAudioVoiceIds,
-          );
-          console.log("[Ed] ✅ Fish Audio voice initialized", {
-            hasApiKey: !!this.config.fishAudioApiKey,
-            voiceIds: this.config.fishAudioVoiceIds,
-          });
-        } catch (error) {
-          console.error("[Ed] ❌ Fish Audio initialization failed:", error);
-        }
-      } else {
-        console.debug(
-          "[Ed] Fish Audio provider selected but API key not set. Falling back to browser TTS.",
-        );
-      }
-    } else if (enableTTS && ttsProvider === "browser") {
-      console.log("[Ed] Using browser TTS");
-    } else {
-      console.log("[Ed] TTS disabled in configuration");
-    }
+    // Fish Audio Voice — DISABLED while testing Gemini Live
+    // TODO: Re-enable Fish Audio as fallback once Gemini Live is stable
+    // if (enableTTS && ttsProvider === "fish") { ... }
+    console.log("[Ed] Fish Audio SKIPPED — using Gemini Live for voice");
 
-    // Voice input
+    // Gemini Live Voice — replaces Fish Audio cascade + Web Speech API
+    // Single WebSocket: mic → Gemini → audio response (300-800ms latency)
     if (this.config.features.voice) {
+      this.geminiLive = new GeminiLiveVoice("/api/voice/config");
+      this.geminiLive.on({
+        onStateChange: (state) => {
+          console.log("[Ed] Gemini Live state:", state);
+          if (state === "listening") {
+            this.isListening = true;
+            this.dock?.setListening(true);
+            this.statusPill?.setState("listening");
+            this.particle3D?.morphTo("lightbulb");
+          } else if (state === "speaking") {
+            this.isListening = false;
+            this.dock?.setListening(false);
+            this.statusPill?.setState("ready");
+            this.particle3D?.morphTo("speech");
+          } else if (state === "idle" || state === "error") {
+            this.isListening = false;
+            this.dock?.setListening(false);
+            this.statusPill?.setState("ready");
+            this.particle3D?.morphTo("sphere");
+          }
+        },
+        onTranscript: (text) => {
+          // Show Ed's spoken response as a chat message
+          // Accumulate into the latest assistant message
+          const lastMsg = this.messages[this.messages.length - 1];
+          if (
+            lastMsg &&
+            lastMsg.role === "assistant" &&
+            lastMsg.id.startsWith("gemini-")
+          ) {
+            lastMsg.content += text;
+            this.chat?.updateLastMessage(lastMsg.content);
+          } else {
+            const msg: Message = {
+              id: `gemini-${crypto.randomUUID()}`,
+              role: "assistant",
+              content: text,
+              timestamp: new Date(),
+            };
+            this.messages.push(msg);
+            this.chat?.addMessage(msg);
+          }
+        },
+        onError: (err) => {
+          console.error("[Ed] Gemini Live error:", err);
+          this.addMessage({
+            id: crypto.randomUUID(),
+            role: "system",
+            content: `🎤 ${err}`,
+            timestamp: new Date(),
+          });
+        },
+      });
+      console.log("[Ed] ✅ Gemini Live voice initialized");
+
+      // Keep Web Speech API as fallback for text-only voice input
       this.voice = new VoiceInput(this.currentLanguage.voiceLang);
       this.voice.onResult((text) => this.handleUserInput(text));
       this.voice.onListeningChange((listening) => {
@@ -874,6 +909,8 @@ export class Ed {
    * Stops any ongoing speech first. Single point of TTS output.
    */
   private speakText(text: string): void {
+    // Skip Fish Audio TTS when Gemini Live is handling voice
+    if (this.geminiLive?.isActive()) return;
     if (!this.fishVoice || !this.config.features.voice) return;
 
     // Clean for TTS: strip markdown, icons, metadata
@@ -1514,7 +1551,8 @@ export class Ed {
     }
 
     // Speak response with emotions (if Fish Audio available)
-    if (this.config.features.voice) {
+    // Skip when Gemini Live is active — it handles its own audio
+    if (this.config.features.voice && !this.geminiLive?.isActive()) {
       // Stop any ongoing speech first (async to prevent conflicts)
       this.stopAllSpeechAsync().then(() => {
         if (this.fishVoice) {
@@ -1959,7 +1997,6 @@ URL: ${window.location.href}`;
       if (typeof window !== "undefined") {
         // Direct navigation — reliable across all frameworks
         window.location.href = linkPath;
-        }
       }
     }, 1500);
   }
@@ -1979,6 +2016,8 @@ URL: ${window.location.href}`;
    */
   private speak(text: string): void {
     if (!this.config.features.voice) return;
+    // Skip when Gemini Live is handling voice
+    if (this.geminiLive?.isActive()) return;
 
     // If browser TTS is disabled, don't use it
     if (this.config.disableBrowserTTS) {
@@ -2087,8 +2126,34 @@ URL: ${window.location.href}`;
   }
 
   private toggleListening(): void {
+    // Gemini Live — full duplex voice (mic + audio response in one WebSocket)
+    if (this.geminiLive) {
+      if (this.geminiLive.isActive()) {
+        // Stop the live session
+        this.geminiLive.stop();
+        return; // State updates handled by onStateChange callback
+      }
+
+      // Show chat if hidden, so user can see transcript
+      const chatContainer = this.widget?.querySelector(
+        ".chat-container",
+      ) as HTMLElement;
+      const wasHidden = chatContainer?.classList.contains("chat-hidden");
+      if (wasHidden) {
+        chatContainer?.classList.remove("chat-hidden");
+        this.showKeyboard = false;
+      }
+
+      // Stop any Fish Audio / browser TTS before starting Gemini Live
+      this.stopAllSpeech();
+
+      // Start Gemini Live session
+      this.geminiLive.start();
+      return; // State updates handled by onStateChange callback
+    }
+
+    // Fallback: original Web Speech API path (only if Gemini Live unavailable)
     if (!this.voice) {
-      // Show message even if chat is hidden
       const chatContainer = this.widget?.querySelector(
         ".chat-container",
       ) as HTMLElement;
@@ -2113,20 +2178,17 @@ URL: ${window.location.href}`;
       this.isListening = false;
       this.dock?.setListening(false);
       this.statusPill?.setState("ready");
-      // Morph back to sphere
       this.particle3D?.morphTo("sphere");
     } else {
-      // Show chat temporarily if hidden, so user can see responses
       const chatContainer = this.widget?.querySelector(
         ".chat-container",
       ) as HTMLElement;
       const wasHidden = chatContainer?.classList.contains("chat-hidden");
       if (wasHidden) {
         chatContainer?.classList.remove("chat-hidden");
-        this.showKeyboard = false; // Reset toggle state
+        this.showKeyboard = false;
       }
 
-      // Check for microphone permission
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         navigator.mediaDevices
           .getUserMedia({ audio: true })
@@ -2135,7 +2197,6 @@ URL: ${window.location.href}`;
             this.isListening = true;
             this.dock?.setListening(true);
             this.statusPill?.setState("listening");
-            // Morph to indicate listening
             this.particle3D?.morphTo("lightbulb");
           })
           .catch((error) => {
@@ -2603,6 +2664,8 @@ URL: ${window.location.href}`;
     if (this.isListening) {
       this.voice?.stop();
     }
+    // Stop Gemini Live session if active
+    this.geminiLive?.stop();
 
     // Return particles to solar system formation
     if (this.particle3D) {
@@ -2615,6 +2678,7 @@ URL: ${window.location.href}`;
 
   public destroy(): void {
     this.close();
+    this.geminiLive?.stop();
     this.particle3D?.destroy();
     this.launcherParticle3D?.destroy();
     this.voice?.destroy();

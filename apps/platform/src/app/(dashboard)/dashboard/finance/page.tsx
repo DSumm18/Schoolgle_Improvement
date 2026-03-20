@@ -580,8 +580,37 @@ function BudgetDashboard({
     },
   ];
 
+  const isDemoData = !parseResult && plan.school_id === "demo-school";
+
   return (
     <div className="p-6 lg:p-8 space-y-8 min-h-screen max-w-[1600px] mx-auto">
+      {/* Demo Data Warning Banner */}
+      {isDemoData && (
+        <div className="rounded-2xl border-2 border-amber-400 dark:border-amber-600 bg-amber-50 dark:bg-amber-950/40 p-5 flex items-start gap-4">
+          <AlertTriangle
+            size={24}
+            className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5"
+          />
+          <div>
+            <p className="font-bold text-amber-800 dark:text-amber-200 text-base">
+              No Budget Data Connected
+            </p>
+            <p className="text-sm text-amber-700 dark:text-amber-400 mt-1">
+              You are viewing sample data. None of these figures reflect your
+              school&apos;s actual finances. Connect your FMS budget report to
+              see real analysis.
+            </p>
+            <button
+              onClick={onReset}
+              className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-amber-600 text-white hover:bg-amber-700 transition-colors"
+            >
+              <Upload size={14} />
+              Connect Budget Data
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}

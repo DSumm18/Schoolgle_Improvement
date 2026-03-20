@@ -1301,6 +1301,329 @@ export async function POST(request: NextRequest) {
         break;
       }
 
+      // ===== RISK MANAGEMENT SKILLS =====
+
+      case "get_risk_register": {
+        const status = parameters.status;
+        const category = parameters.category;
+        const band = parameters.band;
+
+        let riskQuery = supabase
+          .from("risk_register_with_mitigations")
+          .select("*")
+          .eq("organization_id", orgId)
+          .order("updated_at", { ascending: false })
+          .limit(50);
+
+        if (status) riskQuery = riskQuery.eq("status", status);
+        if (category)
+          riskQuery = riskQuery.contains("risk_categories", [category]);
+
+        const { data: riskData, error: riskErr } = await riskQuery;
+
+        if (riskErr) {
+          result = { success: false, error: riskErr.message };
+          break;
+        }
+
+        let risks = riskData || [];
+        if (band) {
+          risks = risks.filter((r: any) => {
+            const score =
+              r.effective_residual_score ??
+              r.inherent_likelihood * r.inherent_impact ??
+              0;
+            if (band === "critical") return score >= 17;
+            if (band === "high") return score >= 10 && score < 17;
+            if (band === "medium") return score >= 5 && score < 10;
+            if (band === "low") return score < 5;
+            return true;
+          });
+        }
+
+        result = { success: true, data: risks };
+        break;
+      }
+
+      case "get_risk_heatmap": {
+        const { data: hmRisks, error: hmErr } = await supabase
+          .from("risk_register")
+          .select(
+            "id, title, risk_ref, status, inherent_likelihood, inherent_impact, system_residual_likelihood, system_residual_impact, effective_residual_score, risk_categories, above_appetite, direction_of_travel",
+          )
+          .eq("organization_id", orgId)
+          .neq("status", "closed");
+
+        if (hmErr) {
+          result = { success: false, error: hmErr.message };
+          break;
+        }
+
+        // Build 5x5 matrix
+        const matrix: Record<string, any[]> = {};
+        for (let l = 1; l <= 5; l++) {
+          for (let i = 1; i <= 5; i++) {
+            matrix[`${l}_${i}`] = [];
+          }
+        }
+        for (const r of hmRisks || []) {
+          const l = r.system_residual_likelihood ?? r.inherent_likelihood ?? 1;
+          const i = r.system_residual_impact ?? r.inherent_impact ?? 1;
+          const key = `${l}_${i}`;
+          if (matrix[key])
+            matrix[key].push({ id: r.id, title: r.title, ref: r.risk_ref });
+        }
+
+        result = {
+          success: true,
+          data: { matrix, total_risks: (hmRisks || []).length },
+        };
+        break;
+      }
+
+      case "recalculate_risk_scores": {
+        // Fetch all open risks and their mitigations, recalculate residual scores
+        const { data: openRisks, error: openErr } = await supabase
+          .from("risk_register")
+          .select("id, inherent_likelihood, inherent_impact")
+          .eq("organization_id", orgId)
+          .neq("status", "closed");
+
+        if (openErr) {
+          result = { success: false, error: openErr.message };
+          break;
+        }
+
+        let updated = 0;
+        for (const risk of openRisks || []) {
+          const { data: mits } = await supabase
+            .from("risk_mitigations")
+            .select("likelihood_reduction, impact_reduction, is_operating")
+            .eq("risk_id", risk.id)
+            .eq("is_operating", true);
+
+          let lReduction = 0,
+            iReduction = 0;
+          for (const m of mits || []) {
+            lReduction += m.likelihood_reduction || 0;
+            iReduction += m.impact_reduction || 0;
+          }
+
+          const resL = Math.max(
+            1,
+            (risk.inherent_likelihood || 1) - lReduction,
+          );
+          const resI = Math.max(1, (risk.inherent_impact || 1) - iReduction);
+
+          await supabase
+            .from("risk_register")
+            .update({
+              system_residual_likelihood: resL,
+              system_residual_impact: resI,
+              effective_residual_score: resL * resI,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", risk.id);
+
+          updated++;
+        }
+
+        result = { success: true, data: { risks_recalculated: updated } };
+        break;
+      }
+
+      case "create_risk": {
+        const { generateRiskRef } = await import("@/lib/risk-engine");
+
+        const riskTitle = parameters.title;
+        const riskDesc = parameters.description;
+        const categories = parameters.categories || [];
+        const inhLikelihood = parameters.inherent_likelihood;
+        const inhImpact = parameters.inherent_impact;
+
+        if (!riskTitle || !inhLikelihood || !inhImpact) {
+          result = {
+            success: false,
+            error:
+              "title, inherent_likelihood, and inherent_impact are required",
+          };
+          break;
+        }
+
+        const primaryCat = categories[0] || "operational";
+        const { count: riskCount } = await supabase
+          .from("risk_register")
+          .select("id", { count: "exact", head: true })
+          .eq("organization_id", orgId)
+          .contains("risk_categories", [primaryCat]);
+
+        const { data: orgData } = await supabase
+          .from("organizations")
+          .select("name")
+          .eq("id", orgId)
+          .single();
+        const schoolCode = orgData?.name
+          ? orgData.name
+              .substring(0, 3)
+              .toUpperCase()
+              .replace(/[^A-Z]/g, "X")
+          : "SCH";
+        const riskRef = generateRiskRef(
+          primaryCat,
+          schoolCode,
+          (riskCount ?? 0) + 1,
+        );
+
+        const { data: newRisk, error: createErr } = await supabase
+          .from("risk_register")
+          .insert({
+            organization_id: orgId,
+            risk_ref: riskRef,
+            title: riskTitle,
+            description: riskDesc,
+            tier: "school",
+            status: "identified",
+            risk_categories: categories,
+            inherent_likelihood: inhLikelihood,
+            inherent_impact: inhImpact,
+            system_residual_likelihood: inhLikelihood,
+            system_residual_impact: inhImpact,
+            effective_residual_score: inhLikelihood * inhImpact,
+          })
+          .select()
+          .single();
+
+        if (createErr) {
+          result = { success: false, error: createErr.message };
+          break;
+        }
+
+        result = { success: true, data: newRisk };
+        break;
+      }
+
+      case "add_mitigation": {
+        const riskId = parameters.risk_id;
+        const mitTitle = parameters.title;
+        const mitType = parameters.mitigation_type || "treat";
+
+        if (!riskId || !mitTitle) {
+          result = { success: false, error: "risk_id and title are required" };
+          break;
+        }
+
+        // Verify risk belongs to org
+        const { data: targetRisk } = await supabase
+          .from("risk_register")
+          .select("id, organization_id")
+          .eq("id", riskId)
+          .eq("organization_id", orgId)
+          .single();
+
+        if (!targetRisk) {
+          result = {
+            success: false,
+            error: "Risk not found in your organization",
+          };
+          break;
+        }
+
+        const { data: newMit, error: mitErr } = await supabase
+          .from("risk_mitigations")
+          .insert({
+            risk_id: riskId,
+            organization_id: orgId,
+            title: mitTitle,
+            description: parameters.description || "",
+            mitigation_type: mitType,
+            source_module: parameters.source_module || "manual",
+            owner_id: parameters.owner_id,
+            due_date: parameters.due_date,
+            is_operating: false,
+            likelihood_reduction: 0,
+            impact_reduction: 0,
+          })
+          .select()
+          .single();
+
+        if (mitErr) {
+          result = { success: false, error: mitErr.message };
+          break;
+        }
+
+        result = { success: true, data: newMit };
+        break;
+      }
+
+      case "record_risk_decision": {
+        const decRiskId = parameters.risk_id;
+        const decision = parameters.decision;
+        const rationale = parameters.rationale;
+
+        if (!decRiskId || !decision || !rationale) {
+          result = {
+            success: false,
+            error: "risk_id, decision, and rationale are required",
+          };
+          break;
+        }
+
+        // Verify risk belongs to org
+        const { data: decRisk } = await supabase
+          .from("risk_register")
+          .select("id, organization_id")
+          .eq("id", decRiskId)
+          .eq("organization_id", orgId)
+          .single();
+
+        if (!decRisk) {
+          result = {
+            success: false,
+            error: "Risk not found in your organization",
+          };
+          break;
+        }
+
+        const { data: newDec, error: decErr } = await supabase
+          .from("risk_decisions")
+          .insert({
+            risk_id: decRiskId,
+            organization_id: orgId,
+            decision,
+            rationale,
+            decided_by: parameters.decided_by || user?.id,
+            review_date: parameters.review_date,
+            decision_date: new Date().toISOString(),
+          })
+          .select()
+          .single();
+
+        if (decErr) {
+          result = { success: false, error: decErr.message };
+          break;
+        }
+
+        // Update risk status based on decision
+        const statusMap: Record<string, string> = {
+          treat: "treating",
+          tolerate: "tolerated",
+          transfer: "treating",
+          terminate: "closed",
+        };
+        if (statusMap[decision]) {
+          await supabase
+            .from("risk_register")
+            .update({
+              status: statusMap[decision],
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", decRiskId);
+        }
+
+        result = { success: true, data: newDec };
+        break;
+      }
+
       default:
         result = {
           success: false,

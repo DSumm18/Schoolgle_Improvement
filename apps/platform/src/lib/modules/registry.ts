@@ -48,6 +48,7 @@ import {
   PenTool,
   FileImage,
   Newspaper,
+  Database,
 } from "lucide-react";
 
 export type Role =
@@ -59,6 +60,19 @@ export type Role =
   | "caretaker"
   | "viewer";
 
+export interface ModuleDefinition {
+  id: string;
+  name: string;
+  color: string;
+  icon: any;
+  description: string;
+  requiredPermissions: Role[];
+  /** When true, module is hidden from pilot navigation. Still accessible for admins via direct URL. */
+  pilotHidden?: boolean;
+  /** Shown in UI when module is restricted from pilot scope */
+  pilotNote?: string;
+}
+
 export interface AppDefinition {
   id: string;
   moduleId: string;
@@ -67,15 +81,8 @@ export interface AppDefinition {
   icon: any;
   shortDescription: string;
   requiredPermissions: Role[];
-}
-
-export interface ModuleDefinition {
-  id: string;
-  name: string;
-  color: string;
-  icon: any;
-  description: string;
-  requiredPermissions: Role[];
+  /** When true, app is hidden from pilot navigation */
+  pilotHidden?: boolean;
 }
 
 export const MODULES: ModuleDefinition[] = [
@@ -111,6 +118,9 @@ export const MODULES: ModuleDefinition[] = [
     icon: GraduationCap,
     description: "Classroom tools and pedagogy support.",
     requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
+    pilotHidden: true,
+    pilotNote:
+      "Teaching & Learning tools are in development and not yet available in the pilot.",
   },
   {
     id: "estates",
@@ -136,6 +146,9 @@ export const MODULES: ModuleDefinition[] = [
     icon: PoundSterling,
     description: "Budget monitoring and procurement.",
     requiredPermissions: ["admin", "headteacher", "slt"],
+    pilotHidden: true,
+    pilotNote:
+      "Finance module is in development. Budget import and analysis coming soon.",
   },
   {
     id: "hr",
@@ -220,6 +233,20 @@ export const MODULES: ModuleDefinition[] = [
     description:
       "Design, build, and publish your school website with AI-powered compliance checking.",
     requiredPermissions: ["admin", "headteacher", "slt"],
+    pilotHidden: true,
+    pilotNote:
+      "Website builder is in development and not yet available in the pilot.",
+  },
+  {
+    id: "canvas",
+    name: "Canvas",
+    color: "emerald",
+    icon: Database,
+    description:
+      "Data intelligence platform — connect, understand, reconcile, and visualise your school data.",
+    requiredPermissions: ["admin", "headteacher", "slt"],
+    pilotHidden: true,
+    pilotNote: "Canvas data intelligence is in early development.",
   },
 ];
 
@@ -566,6 +593,7 @@ export const APPS: AppDefinition[] = [
     shortDescription:
       "Statutory roles, responsibilities, and compliance tracking.",
     requiredPermissions: ["admin", "headteacher", "slt"],
+    pilotHidden: true,
   },
 
   // Estates Apps
@@ -740,6 +768,7 @@ export const APPS: AppDefinition[] = [
     icon: Target,
     shortDescription: "Appraisals, objectives, and pay recommendations.",
     requiredPermissions: ["admin", "headteacher", "slt"],
+    pilotHidden: true,
   },
   // Cover Management
   {
@@ -750,6 +779,7 @@ export const APPS: AppDefinition[] = [
     icon: UserCheck,
     shortDescription: "Staff absence recording and cover arrangements.",
     requiredPermissions: ["admin", "headteacher", "slt"],
+    pilotHidden: true,
   },
 
   // Pupil Premium
@@ -1059,6 +1089,17 @@ export const APPS: AppDefinition[] = [
     shortDescription: "Trust-wide risk aggregation and board reporting.",
     requiredPermissions: ["admin", "headteacher", "governor"],
   },
+
+  // Canvas Apps
+  {
+    id: "canvas-home",
+    moduleId: "canvas",
+    name: "Canvas",
+    route: "/dashboard/canvas",
+    icon: Database,
+    shortDescription: "Data intelligence — ingest, reconcile, visualise.",
+    requiredPermissions: ["admin", "headteacher", "slt"],
+  },
 ];
 
 export const NAVBAR_CONFIG = [
@@ -1103,6 +1144,14 @@ export const NAVBAR_CONFIG = [
         icon: Calendar,
         color: "violet",
         permissions: ["admin", "headteacher", "slt", "teacher", "governor"],
+      },
+      {
+        id: "show-me",
+        name: "Show Me",
+        route: "/dashboard/show-me",
+        icon: Sparkles,
+        color: "sky",
+        permissions: ["admin", "headteacher", "slt"],
       },
     ],
   },
@@ -1169,6 +1218,8 @@ export function getModuleByPath(path: string): ModuleDefinition | undefined {
     return MODULES.find((m) => m.id === "calendar");
   if (path.startsWith("/dashboard/website"))
     return MODULES.find((m) => m.id === "website");
+  if (path.startsWith("/dashboard/canvas"))
+    return MODULES.find((m) => m.id === "canvas");
 
   return undefined;
 }

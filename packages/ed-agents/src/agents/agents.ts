@@ -102,6 +102,14 @@ import {
   RISK_QUALIFICATIONS,
 } from "./prompts/risk-specialist";
 
+import {
+  CANVAS_SPECIALIST_PROMPT,
+  CANVAS_SPECIALIST_ID,
+  CANVAS_DOMAIN,
+  CANVAS_KEYWORDS,
+  CANVAS_QUALIFICATIONS,
+} from "./prompts/canvas-specialist";
+
 /**
  * Ed's base prompt when no specialist is needed
  */
@@ -377,6 +385,25 @@ export const AGENTS: Record<SpecialistId, AgentDefinition> = {
     ],
     systemPrompt: RISK_SPECIALIST_PROMPT,
   },
+
+  "canvas-specialist": {
+    id: CANVAS_SPECIALIST_ID,
+    name: "Canvas Data Intelligence Specialist",
+    domain: CANVAS_DOMAIN,
+    qualifications: CANVAS_QUALIFICATIONS,
+    capabilities: [
+      "Smart data ingestion from any school system",
+      "Source system auto-detection (Arbor, Bromcom, SIMS, Every HR, Payroll, Sage)",
+      "Semantic field matching using data patterns",
+      "Cross-system GDPR reconciliation with audit trail",
+      "Source of truth hierarchy management",
+      "MIS migration readiness reports",
+      "Data visualization and chart generation",
+      "Composable report packs with tone control",
+      "Proactive data quality health checks",
+    ],
+    systemPrompt: CANVAS_SPECIALIST_PROMPT,
+  },
 };
 
 /**
@@ -393,6 +420,7 @@ export const DOMAIN_KEYWORDS: Record<Domain, string[]> = {
   governance: GOVERNANCE_KEYWORDS,
   communications: COMMUNICATIONS_KEYWORDS,
   intelligence: INTELLIGENCE_KEYWORDS,
+  canvas: CANVAS_KEYWORDS,
   risk: RISK_KEYWORDS,
   general: [],
   // Form keywords are handled separately via detectFormRequest()

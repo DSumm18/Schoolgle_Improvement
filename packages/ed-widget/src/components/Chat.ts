@@ -38,6 +38,17 @@ export class Chat {
     this.scrollToBottom();
   }
 
+  /**
+   * Update the content of the last message in the chat (for streaming transcripts)
+   */
+  public updateLastMessage(content: string): void {
+    const lastEl = this.messagesContainer.lastElementChild as HTMLElement;
+    if (lastEl) {
+      lastEl.innerHTML = this.formatMessage(content);
+      this.scrollToBottom();
+    }
+  }
+
   private renderMessage(message: Message): void {
     const messageEl = document.createElement("div");
     messageEl.className = `msg msg-${message.role === "user" ? "user" : "ai"}`;

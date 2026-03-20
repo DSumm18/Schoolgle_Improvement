@@ -11,6 +11,7 @@ import type {
 } from "../types";
 import { AGENTS, getAgent } from "../agents";
 import { getSkillTools, executeSkill } from "../agents/skills-agent";
+import { invalidateContextCache } from "./context-loader";
 import { classifyIntent } from "./intent-classifier";
 import { queryKnowledgeBase } from "../knowledge-base/query";
 import { getModelRouter } from "../models";
@@ -144,6 +145,12 @@ export async function routeToSpecialist(
 
       // Execute the skill
       const skillResult = await executeSkill(functionName, args);
+
+      // Invalidate context cache after successful write operations
+      // so the next user message gets fresh data
+      if (skillResult.success && args?.organization_id) {
+        invalidateContextCache(args.organization_id);
+      }
 
       return {
         agentId: classification.specialist,
