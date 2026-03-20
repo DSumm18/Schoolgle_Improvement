@@ -15,6 +15,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter, notFound } from "next/navigation";
 import Link from "next/link";
+import { FindingsAutoSuggest } from "@/components/estates-compliance/FindingsAutoSuggest";
 import {
   ArrowLeft,
   Check,
@@ -596,6 +597,18 @@ export default function CheckCompletionPage() {
           </p>
         </div>
         <div className="p-6 space-y-4">
+          {/* AI-Suggested Findings — previously built, now wired */}
+          {domainSlug && (
+            <FindingsAutoSuggest
+              domain={domainSlug as any}
+              taskTitle={check?.name}
+              existingFindings={findings}
+              onAddFinding={(finding) =>
+                setFindings((prev) => [...prev, finding])
+              }
+            />
+          )}
+
           {findings.map((finding) => (
             <div
               key={finding.id}
