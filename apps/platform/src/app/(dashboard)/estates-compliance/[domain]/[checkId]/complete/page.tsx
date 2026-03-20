@@ -602,9 +602,19 @@ export default function CheckCompletionPage() {
             <FindingsAutoSuggest
               domain={domainSlug as any}
               taskTitle={check?.name}
-              existingFindings={findings}
-              onAddFinding={(finding) =>
-                setFindings((prev) => [...prev, finding])
+              existingFindings={findings as any}
+              onAddFinding={(finding: any) =>
+                setFindings((prev) => [
+                  ...prev,
+                  {
+                    id: finding.id || `ai-${Date.now()}`,
+                    severity: finding.severity,
+                    description: finding.description || finding.title,
+                    actionRequired:
+                      finding.action_required || finding.actionRequired || "",
+                    classification: finding.classification,
+                  },
+                ])
               }
             />
           )}
