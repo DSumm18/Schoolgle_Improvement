@@ -37,6 +37,7 @@ import { fetcher } from "@/lib/fetchers";
 import { EdChatbotProvider } from "@/components/EdChatbotProvider";
 import { getContrastColor } from "@/lib/color-extractor";
 import AccessibilityToolbar from "@/components/AccessibilityToolbar";
+import { ImpersonationBanner } from "@/components/ImpersonationBanner";
 
 export default function DashboardLayout({
   children,
@@ -312,6 +313,9 @@ export default function DashboardLayout({
 
   return (
     <>
+      {/* Impersonation Banner - shows when viewing as another organization */}
+      <ImpersonationBanner />
+
       {/* Load school's Google Font if set */}
       {schoolFont && (
         // eslint-disable-next-line @next/next/no-page-custom-font
@@ -321,7 +325,7 @@ export default function DashboardLayout({
         />
       )}
       <div
-        className="min-h-screen bg-background text-foreground flex overflow-hidden"
+        className="min-h-screen bg-background text-foreground flex overflow-hidden pt-14"
         style={themeStyle}
       >
         {/* Mobile header bar */}
