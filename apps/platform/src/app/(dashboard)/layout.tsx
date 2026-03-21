@@ -184,11 +184,22 @@ export default function DashboardLayout({
       if (!user?.id || !session) return;
 
       try {
-        const { data } = await supabase
+        // Try by user_id first
+        let { data } = await supabase
           .from("super_admins")
           .select("user_id")
           .eq("user_id", user.id)
           .maybeSingle();
+
+        // Fallback to email check
+        if (!data) {
+          const { data: dataByEmail } = await supabase
+            .from("super_admins")
+            .select("user_id")
+            .eq("email", user.email)
+            .maybeSingle();
+          data = dataByEmail;
+        }
 
         setIsSuperAdmin(!!data);
       } catch (error) {
