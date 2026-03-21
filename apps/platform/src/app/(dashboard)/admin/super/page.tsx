@@ -107,17 +107,28 @@ export default function SuperAdminPage() {
     async function checkSuperAdmin() {
       if (!user?.id) return;
 
-      // user.id is UUID but super_admins.user_id is TEXT - need to cast
-      const { data, error } = await supabase
+      // Try by user_id first, then fallback to email
+      let { data, error } = await supabase
         .from("super_admins")
         .select("access_level")
-        .eq("user_id", user.id.toLowerCase()) // Store as lowercase text
+        .eq("user_id", user.id)
         .maybeSingle();
 
+      // Fallback to email check
       if (error || !data) {
-        setIsSuperAdmin(false);
-        router.push("/dashboard");
-        return;
+        const { data: dataByEmail, error: errorByEmail } = await supabase
+          .from("super_admins")
+          .select("access_level")
+          .eq("email", user.email)
+          .maybeSingle();
+
+        if (errorByEmail || !dataByEmail) {
+          console.error("Not a super admin:", error, errorByEmail);
+          setIsSuperAdmin(false);
+          router.push("/dashboard");
+          return;
+        }
+        data = dataByEmail;
       }
 
       setIsSuperAdmin(true);
