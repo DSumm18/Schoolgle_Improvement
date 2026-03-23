@@ -776,3 +776,36 @@ Grep with pattern="<search term>" path="C:\Git\Schoolgle_Improvement/" glob="*.j
 ```
 
 ---
+
+## NotebookLM Integration
+
+- `notebooklm-py` is installed for CLI access to Google NotebookLM
+- Claude Code skill is installed for natural language NotebookLM operations (`/notebooklm` or ask Claude to "create a podcast about X")
+- **Use for**: training podcasts, newsletter content, research, product documentation
+- **NOT for production Schoolgle features** — internal tooling only
+- If auth fails, run: `notebooklm login`
+- Always add 2s delays between batch operations
+- Uses undocumented Google APIs — use a dedicated Google account, not primary
+
+### Common Workflows
+
+```bash
+# Create a training podcast
+notebooklm create "Topic Name"
+notebooklm use <notebook_id>
+notebooklm source add "./document.pdf"
+notebooklm generate audio "Focus prompt here" --wait
+notebooklm download audio ./output.mp3
+
+# Research from web sources
+notebooklm source add "https://example.com/article"
+notebooklm source add-research "search query"
+notebooklm ask "Your question here"
+
+# Generate visual content
+notebooklm generate infographic --wait
+notebooklm generate mind-map --wait
+notebooklm download infographic ./output.png
+```
+
+---
