@@ -82,6 +82,9 @@ const modules = [
   },
 ];
 
+// Feature flag: hide these in production
+const isDev = process.env.NODE_ENV !== "production";
+
 const insightsLinks = [
   {
     name: "Research",
@@ -90,13 +93,21 @@ const insightsLinks = [
     icon: FlaskConical,
     color: "#0ea5e9",
   },
-  {
-    name: "The Schoolgle Signal",
-    desc: "Weekly intelligence — what the research means for your school",
-    href: "/insights/newsletter",
-    icon: Mail,
-    color: "#FFAA4C",
-  },
+];
+
+const insightsLinksWithDev = [
+  ...insightsLinks,
+  ...(isDev
+    ? [
+        {
+          name: "The Schoolgle Signal",
+          desc: "Weekly intelligence — what the research means for your school",
+          href: "/insights/newsletter",
+          icon: Mail,
+          color: "#FFAA4C",
+        },
+      ]
+    : []),
 ];
 
 // A reusable dropdown component
@@ -325,7 +336,7 @@ const Navbar = () => {
           {/* Insights dropdown */}
           <NavDropdown
             label="Insights"
-            items={insightsLinks}
+            items={insightsLinksWithDev}
             width="w-[360px]"
           />
 
@@ -336,18 +347,22 @@ const Navbar = () => {
           >
             Meet Ed
           </Link>
-          <Link
-            href="/toolbox"
-            className="px-4 py-2 text-sm font-semibold text-muted-foreground hover:text-foreground transition-all rounded-lg hover:bg-muted/50"
-          >
-            Toolbox
-          </Link>
-          <Link
-            href="/demo"
-            className="px-4 py-2 text-sm font-semibold text-muted-foreground hover:text-foreground transition-all rounded-lg hover:bg-muted/50"
-          >
-            Demo
-          </Link>
+          {isDev && (
+            <>
+              <Link
+                href="/toolbox"
+                className="px-4 py-2 text-sm font-semibold text-muted-foreground hover:text-foreground transition-all rounded-lg hover:bg-muted/50"
+              >
+                Toolbox
+              </Link>
+              <Link
+                href="/demo"
+                className="px-4 py-2 text-sm font-semibold text-muted-foreground hover:text-foreground transition-all rounded-lg hover:bg-muted/50"
+              >
+                Demo
+              </Link>
+            </>
+          )}
         </div>
 
         {/* Right-side Actions (Desktop) */}
@@ -401,7 +416,7 @@ const Navbar = () => {
               {/* Mobile Insights accordion */}
               <MobileAccordion
                 label="Insights"
-                items={insightsLinks}
+                items={insightsLinksWithDev}
                 onClose={() => setIsMobileMenuOpen(false)}
               />
 
@@ -413,20 +428,24 @@ const Navbar = () => {
               >
                 Meet Ed
               </Link>
-              <Link
-                href="/toolbox"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="block text-base font-bold text-muted-foreground hover:text-foreground transition-colors py-2"
-              >
-                Toolbox
-              </Link>
-              <Link
-                href="/demo"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="block text-base font-bold text-muted-foreground hover:text-foreground transition-colors py-2"
-              >
-                Demo
-              </Link>
+              {isDev && (
+                <>
+                  <Link
+                    href="/toolbox"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="block text-base font-bold text-muted-foreground hover:text-foreground transition-colors py-2"
+                  >
+                    Toolbox
+                  </Link>
+                  <Link
+                    href="/demo"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="block text-base font-bold text-muted-foreground hover:text-foreground transition-colors py-2"
+                  >
+                    Demo
+                  </Link>
+                </>
+              )}
 
               <div className="pt-4 border-t border-border space-y-3">
                 <Link
