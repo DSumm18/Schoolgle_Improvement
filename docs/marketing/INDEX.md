@@ -43,6 +43,11 @@ Each module has: one-line value prop, problem statement, feature list, benefits,
 ## Demo Scripts
 - [LA Heads' Briefing — Full Demo Script](./demo-scripts/LA-HEADS-BRIEFING.md) — 15-20 minute presentation with live demo, objection handling, and follow-up checklist
 
+## Ideas Board
+- [Marketing Ideas Pipeline](./ideas/INDEX.md) — Dump ideas, assess later, build campaigns
+  - Includes idea template, scoring system, and school calendar campaign planner
+  - Drop new ideas as numbered files in `docs/marketing/ideas/`
+
 ## Existing Materials
 - [Marketing Overview](../MARKETING.md) — Elevator pitch and solution overview
 - [Marketing Content](../MARKETING_CONTENT.md) — Additional marketing content
