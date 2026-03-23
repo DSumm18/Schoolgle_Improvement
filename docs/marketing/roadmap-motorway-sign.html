@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Schoolgle — The Smarter Route for Schools</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #0f172a;
+      font-family: 'Inter', -apple-system, sans-serif;
+      color: white;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 900;
+      margin-bottom: 12px;
+      text-align: center;
+      letter-spacing: -0.5px;
+    }
+
+    .subtitle {
+      font-size: 1.1rem;
+      color: #94a3b8;
+      margin-bottom: 48px;
+      text-align: center;
+      max-width: 600px;
+    }
+
+    /* === MOTORWAY SIGN === */
+    .motorway-sign {
+      position: relative;
+      width: 900px;
+      max-width: 95vw;
+      background: linear-gradient(180deg, #1a4d8c 0%, #1e3a6e 100%);
+      border: 6px solid #e2e8f0;
+      border-radius: 24px;
+      padding: 48px 40px 56px;
+      box-shadow:
+        0 0 0 3px #334155,
+        0 20px 60px rgba(0,0,0,0.5),
+        inset 0 1px 0 rgba(255,255,255,0.1);
+      /* Retroreflective effect */
+      background-image:
+        radial-gradient(ellipse at 50% 0%, rgba(255,255,255,0.08) 0%, transparent 60%);
+    }
+
+    .motorway-sign::before {
+      content: '';
+      position: absolute;
+      top: -20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 200px;
+      height: 8px;
+      background: #475569;
+      border-radius: 4px;
+    }
+
+    /* Support poles */
+    .motorway-sign::after {
+      content: '';
+      position: absolute;
+      bottom: -40px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 4px;
+      height: 40px;
+      background: linear-gradient(180deg, #475569, #1e293b);
+    }
+
+    .pole-left, .pole-right {
+      position: absolute;
+      bottom: -40px;
+      width: 4px;
+      height: 40px;
+      background: linear-gradient(180deg, #475569, #1e293b);
+    }
+    .pole-left { left: 120px; }
+    .pole-right { right: 120px; }
+
+    /* Sign header */
+    .sign-header {
+      text-align: center;
+      margin-bottom: 36px;
+      padding-bottom: 20px;
+      border-bottom: 3px solid rgba(255,255,255,0.2);
+    }
+
+    .sign-header h2 {
+      font-size: 1.8rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.4);
+    }
+
+    .sign-header .distance {
+      font-size: 0.9rem;
+      color: rgba(255,255,255,0.7);
+      margin-top: 4px;
+      font-weight: 600;
+    }
+
+    /* Route layout */
+    .routes {
+      display: flex;
+      gap: 0;
+      position: relative;
+    }
+
+    /* The dividing road markings */
+    .routes::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 4px;
+      background: repeating-linear-gradient(
+        to bottom,
+        rgba(255,255,255,0.5) 0px,
+        rgba(255,255,255,0.5) 12px,
+        transparent 12px,
+        transparent 24px
+      );
+    }
+
+    .route {
+      flex: 1;
+      padding: 20px;
+      position: relative;
+    }
+
+    /* LEFT EXIT — competitors (the old road) */
+    .route-left {
+      text-align: right;
+      padding-right: 40px;
+    }
+
+    .route-right {
+      text-align: left;
+      padding-left: 40px;
+    }
+
+    /* Direction arrows */
+    .arrow-exit {
+      display: inline-block;
+      font-size: 2.5rem;
+      margin-bottom: 12px;
+      opacity: 0.7;
+      color: #fbbf24;
+    }
+
+    .arrow-ahead {
+      display: inline-block;
+      font-size: 3rem;
+      margin-bottom: 12px;
+      color: #4ade80;
+      text-shadow: 0 0 20px rgba(74, 222, 128, 0.4);
+      animation: pulse-glow 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-glow {
+      0%, 100% { text-shadow: 0 0 10px rgba(74, 222, 128, 0.3); }
+      50% { text-shadow: 0 0 25px rgba(74, 222, 128, 0.6); }
+    }
+
+    .route-name {
+      font-size: 1.6rem;
+      font-weight: 900;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .route-left .route-name {
+      color: #fbbf24;
+    }
+
+    .route-right .route-name {
+      color: #4ade80;
+    }
+
+    .route-tagline {
+      font-size: 0.85rem;
+      color: rgba(255,255,255,0.6);
+      margin-bottom: 20px;
+      font-style: italic;
+    }
+
+    /* Destination list items */
+    .destinations {
+      list-style: none;
+      padding: 0;
+    }
+
+    .destinations li {
+      padding: 8px 0;
+      font-size: 0.95rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      line-height: 1.3;
+    }
+
+    .route-left .destinations li {
+      justify-content: flex-end;
+      color: rgba(255,255,255,0.75);
+    }
+
+    .route-right .destinations li {
+      justify-content: flex-start;
+      color: rgba(255,255,255,0.95);
+    }
+
+    .dest-icon {
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+
+    .route-left .dest-icon {
+      order: 1;
+      color: #f59e0b;
+    }
+
+    .route-right .dest-icon {
+      color: #4ade80;
+    }
+
+    /* Green panel for Schoolgle (mimicking the green motorway destination panels) */
+    .green-panel {
+      background: linear-gradient(135deg, #166534 0%, #15803d 100%);
+      border: 3px solid rgba(255,255,255,0.4);
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-top: 20px;
+      text-align: center;
+    }
+
+    .green-panel .panel-price {
+      font-size: 1.4rem;
+      font-weight: 900;
+      color: #4ade80;
+    }
+
+    .green-panel .panel-note {
+      font-size: 0.8rem;
+      color: rgba(255,255,255,0.7);
+      margin-top: 4px;
+    }
+
+    /* Amber panel for competitors */
+    .amber-panel {
+      background: linear-gradient(135deg, #92400e 0%, #b45309 100%);
+      border: 3px solid rgba(255,255,255,0.3);
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-top: 20px;
+      text-align: center;
+    }
+
+    .amber-panel .panel-price {
+      font-size: 1.4rem;
+      font-weight: 900;
+      color: #fbbf24;
+    }
+
+    .amber-panel .panel-note {
+      font-size: 0.8rem;
+      color: rgba(255,255,255,0.7);
+      margin-top: 4px;
+    }
+
+    /* Road surface at bottom */
+    .road-surface {
+      width: 900px;
+      max-width: 95vw;
+      height: 60px;
+      background: #1e293b;
+      border-radius: 0 0 8px 8px;
+      position: relative;
+      margin-top: -4px;
+    }
+
+    .road-surface::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 80%;
+      height: 4px;
+      background: repeating-linear-gradient(
+        to right,
+        #fbbf24 0px,
+        #fbbf24 30px,
+        transparent 30px,
+        transparent 50px
+      );
+    }
+
+    /* Bottom CTA */
+    .cta {
+      margin-top: 60px;
+      text-align: center;
+    }
+
+    .cta-text {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #4ade80;
+      margin-bottom: 8px;
+    }
+
+    .cta-sub {
+      font-size: 0.95rem;
+      color: #94a3b8;
+    }
+
+    /* Responsive */
+    @media (max-width: 700px) {
+      .routes { flex-direction: column; gap: 24px; }
+      .routes::before { display: none; }
+      .route-left, .route-right { text-align: center; padding: 16px; }
+      .route-left .destinations li { justify-content: center; }
+      .route-right .destinations li { justify-content: center; }
+      .route-left .dest-icon { order: 0; }
+      .motorway-sign { padding: 32px 20px 40px; }
+      h1 { font-size: 1.6rem; }
+      .sign-header h2 { font-size: 1.3rem; }
+    }
+
+    /* Print-friendly */
+    @media print {
+      body { background: white; color: black; }
+      .motorway-sign { box-shadow: none; border-color: #333; }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Which route is your school on?</h1>
+  <p class="subtitle">Every school reaches this junction. One road keeps you patching gaps with separate tools. The other takes you somewhere smarter.</p>
+
+  <div class="motorway-sign">
+    <div class="pole-left"></div>
+    <div class="pole-right"></div>
+
+    <div class="sign-header">
+      <h2>School Improvement</h2>
+      <div class="distance">Choose your route — September 2026</div>
+    </div>
+
+    <div class="routes">
+
+      <!-- LEFT: The Old Road (Competitors) -->
+      <div class="route route-left">
+        <div class="arrow-exit">↰</div>
+        <div class="route-name">The Old Road</div>
+        <div class="route-tagline">SIMS · Bromcom · Arbor · The Key · spreadsheets</div>
+
+        <ul class="destinations">
+          <li><span>5+ separate logins</span> <span class="dest-icon">🔑</span></li>
+          <li><span>Data stuck in silos</span> <span class="dest-icon">📊</span></li>
+          <li><span>Manual Ofsted prep</span> <span class="dest-icon">📋</span></li>
+          <li><span>No AI support</span> <span class="dest-icon">🤖</span></li>
+          <li><span>Compliance on Post-it notes</span> <span class="dest-icon">📌</span></li>
+          <li><span>Reactive, always catching up</span> <span class="dest-icon">🏃</span></li>
+        </ul>
+
+        <div class="amber-panel">
+          <div class="panel-price">£5,000 – £10,000 / year</div>
+          <div class="panel-note">Multiple contracts · No integration · No AI</div>
+        </div>
+      </div>
+
+      <!-- RIGHT: The Smart Route (Schoolgle) -->
+      <div class="route route-right">
+        <div class="arrow-ahead">⬆</div>
+        <div class="route-name">Schoolgle</div>
+        <div class="route-tagline">One platform. AI-powered. Built for schools.</div>
+
+        <ul class="destinations">
+          <li><span class="dest-icon">✅</span> <span>One login, everything connected</span></li>
+          <li><span class="dest-icon">✅</span> <span>AI scans your evidence automatically</span></li>
+          <li><span class="dest-icon">✅</span> <span>Ofsted-ready at all times</span></li>
+          <li><span class="dest-icon">✅</span> <span>Ed AI — 12 specialist assistants</span></li>
+          <li><span class="dest-icon">✅</span> <span>Estates, HR, Governance built in</span></li>
+          <li><span class="dest-icon">✅</span> <span>Proactive, always ahead</span></li>
+        </ul>
+
+        <div class="green-panel">
+          <div class="panel-price">From £1,995 / year</div>
+          <div class="panel-note">All 11 modules · AI included · One contract</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="road-surface"></div>
+
+  <div class="cta">
+    <div class="cta-text">Stay on the old road, or take the smarter route?</div>
+    <div class="cta-sub">schoolgle.co.uk — Book a demo today</div>
+  </div>
+
+</body>
+</html>

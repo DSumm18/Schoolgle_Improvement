@@ -15,6 +15,12 @@
   - Touch/swipe support for tablets
   - Works offline once loaded
 
+## Visual Diagrams
+- [Motorway Route Sign — Schoolgle vs The Old Road](./roadmap-motorway-sign.html) — UK motorway gantry sign comparing Schoolgle's integrated route vs fragmented competitor tools
+  - Open in browser for full visual effect
+  - Great for presentations, social media screenshots, and LA briefings
+  - Responsive — works on mobile and desktop
+
 ## Module Value Sheets
 Each module has: one-line value prop, problem statement, feature list, benefits, standalone value estimate, demo script, and pitch slide key points.
 
