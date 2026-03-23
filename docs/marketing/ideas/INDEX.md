@@ -17,6 +17,7 @@ Dump ideas here. Assess later. Build campaigns from the best ones.
 |---|------|--------|--------|--------|------|
 | 001 | Motorway Route Sign — "The Old Road vs Schoolgle" | ✅ Built | ⭐⭐⭐⭐⭐ | Any | [View](./001-motorway-route-sign.md) |
 | 002 | School Calendar Campaign Themes | 💡 Idea | — | All Year | [View](./002-school-calendar-campaigns.md) |
+| 003 | ScholarPack Rescue — Data Lifeline for Displaced Schools | 🤔 Considering | ⭐⭐⭐⭐⭐ | NOW (Feb-Sep 2026) | [View](./003-scholarpack-rescue.md) |
 
 ### Status Key
 
