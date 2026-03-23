@@ -30,11 +30,25 @@
 
 ## Effort to Build
 
-- Data import adapters for ScholarPack CSV format: **2-3 days** (we already have staff CSV import + pupil assessment import)
+- Data import adapters for ScholarPack CSV format: **2-4 HOURS** (we already detect ScholarPack in pupil-pseudonymiser.ts, fuzzy column matching handles their format, staff CSV import exists, MIS sync pipeline maps ScholarPack columns to canonical types)
 - Landing page / campaign page: **Half day**
 - LinkedIn content series: **Quick sketch** (3-4 posts)
 - Email outreach template: **Quick sketch**
 - Ed chatbot "migration helper" context: **Half day**
+
+## Technical Readiness (verified 2026-03-23)
+
+**Already built:**
+- `pupil-pseudonymiser.ts` — detects `scholarpack` in CSV headers, maps columns automatically
+- `apps/platform/src/app/api/staff/import/route.ts` — staff CSV import with fuzzy role matching
+- `apps/platform/src/lib/mis/data-transforms.ts` — ScholarPack column mapping to canonical types
+- `apps/platform/src/lib/mis/data-service.ts` — full MIS sync orchestrator
+- `apps/platform/src/components/intelligence/PupilAssessmentUploader.tsx` — drag-and-drop CSV upload with auto-pseudonymisation
+
+**What's needed:**
+- Add any missing ScholarPack-specific column name variants to `COLUMN_MAPPINGS` dict (~10 mins per field type)
+- Test with real ScholarPack export files
+- Create a "ScholarPack Rescue" landing page or wizard that guides schools through the import
 
 ## Campaign Execution
 
