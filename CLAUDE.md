@@ -548,6 +548,51 @@ The API is organized by domain under `apps/platform/src/app/api/`:
 
 ---
 
+## NotebookLM Integration (tools/notebooklm/)
+
+Google NotebookLM automation for research and content generation.
+
+**Setup:**
+```bash
+# Install CLI
+python -m pip install notebooklm-py[browser] yt-dlp
+
+# Authenticate (one-time)
+python -m notebooklm login
+```
+
+**Scripts:**
+| Script | Purpose |
+|--------|---------|
+| `youtube_fetcher.py` | Auto-fetch latest videos from AI YouTubers |
+| `scheduler.py` | Run scheduled tasks (fetch, status, list) |
+
+**Notebooks:**
+| Notebook | ID | Purpose |
+|----------|-----|---------|
+| AI News - YouTube Sources | `9be1115e` | 61 videos from AI/tech channels |
+| Education Research | `f3db1de5` | EEF early years evidence |
+
+**Usage from Claude Code:**
+```
+/schedule "0 9 * * *" python tools/notebooklm/scheduler.py fetch-youtube
+```
+(Runs daily at 9am to fetch new videos)
+
+**Key Commands:**
+```bash
+# Check notebook status
+python tools/notebooklm/scheduler.py status
+
+# List all notebooks
+python tools/notebooklm/scheduler.py list-notebooks
+
+# Manual YouTube fetch
+python tools/notebooklm/youtube_fetcher.py
+```
+
+---
+
 ## Troubleshooting
 
 ### Build Issues

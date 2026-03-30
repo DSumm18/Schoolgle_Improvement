@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" width="device-width, initial-scale=1.0">
+  <title>Partition 125 - Mini-Game</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .game-card {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      max-width: 600px;
+      width: 100%;
+      overflow: hidden;
+    }
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+    .header h1 {
+      margin: 0 0 10px 0;
+      font-size: 24px;
+      font-weight: 600;
+    }
+    .header p {
+      margin: 0;
+      opacity: 0.9;
+      font-size: 14px;
+    }
+    .content {
+      padding: 30px;
+    }
+    .question {
+      font-size: 20px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .options {
+      display: grid;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    .option-card {
+      border: 3px solid #e0e0e0;
+      border-radius: 12px;
+      padding: 20px;
+      cursor: pointer;
+      transition: all 0.3s;
+      background: #f8f9fa;
+    }
+    .option-card:hover {
+      border-color: #667eea;
+      background: #f0f4f8;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+    }
+    .option-card.selected {
+      border-color: #667eea;
+      background: #e0e7ff;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+    .option-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 10px;
+    }
+    .option-visual {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 10px;
+      font-size: 32px;
+    }
+    .option-explanation {
+      font-size: 14px;
+      color: #666;
+      line-height: 1.4;
+    }
+    .confidence-slider {
+      margin-bottom: 20px;
+    }
+    .confidence-label {
+      font-size: 14px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 5px;
+    }
+    .confidence-scale {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .confidence-btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.2s;
+      background: #f0f4f8;
+    }
+    .confidence-btn.low { background: #fee2e2; color: #991b1b; }
+    .confidence-btn.medium { background: #ffd166; color: #fff; }
+    .confidence-btn.high { background: #22c55e; color: #fff; }
+
+    .submit-btn {
+      width: 100%;
+      padding: 15px 30px;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-top: 20px;
+    }
+    .submit-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(102, 126, 234, 0.4);
+    }
+    .submit-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    .feedback {
+      margin-top: 20px;
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+      font-size: 16px;
+      font-weight: 600;
+      display: none;
+    }
+    .feedback.correct { background: #d4edda; color: #065f46; }
+    .feedback.incorrect { background: #fee2e2; color: #dc2626; }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25%, 75% { transform: translateX(-5px); }
+    }
+    .shake {
+      animation: shake 0.5s ease-in-out;
+    }
+  </style>
+</head>
+<body>
+  <div class="game-card">
+    <div class="header">
+      <h1>🔢 Place Value Mini-Game</h1>
+      <p>Which of these shows 125 correctly?</p>
+    </div>
+
+    <div class="content">
+      <div class="question">Show how you can make 125:</div>
+
+      <div class="options">
+        <!-- Option 1: Correct (100 + 20 + 5) -->
+        <div class="option-card" onclick="selectOption(1)" id="option1">
+          <div class="option-title">100 + 20 + 5</div>
+          <div class="option-visual">💯 🔢💯 + 5️⃣</div>
+          <div class="option-explanation">Standard partitioning</div>
+        </div>
+
+        <!-- Option 2: Distractor (100 + 10 + 15) -->
+        <div class="option-card" onclick="selectOption(2)" id="option2">
+          <div class="option-title">100 + 10 + 15</div>
+          <div class="option-visual">💯 🔢💯💯💯</div>
+          <div class="option-explanation">Looks like 125 but missing value</div>
+        </div>
+
+        <!-- Option 3: Common Mistake (50 + 50 + 25) -->
+        <div class="option-card" onclick="selectOption(3)" id="option3">
+          <div class="option-title">50 + 50 + 25</div>
+          <div class="option-visual">💯💯 + 💯💯💯💯💯</div>
+          <div class="option-explanation">Assumes place value is positional</div>
+        </div>
+
+        <!-- Option 4: Another Mistake (10 + 10 + 10) -->
+        <div class="option-card" onclick="selectOption(4)" id="option4">
+          <div class="option-title">10 + 10 + 10</div>
+          <div class="option-visual">💯💯 + 💯💯 + 💯💯</div>
+          <div class="option-explanation">Digits treated as ones</div>
+        </div>
+      </div>
+
+      <div class="confidence-slider">
+        <div class="confidence-label">How confident are you in this answer?</div>
+        <div class="confidence-scale">
+          <button class="confidence-btn low" onclick="setConfidence('low')">Low</button>
+          <button class="confidence-btn medium" onclick="setConfidence('medium')">Medium</button>
+          <button class="confidence-btn high" onclick="setConfidence('high')">High</button>
+        </div>
+      </div>
+
+      <button class="submit-btn" id="submitBtn" onclick="submitAnswer()" disabled>
+        Submit Answer
+      </button>
+    </div>
+
+    <div class="feedback" id="feedback"></div>
+  </div>
+
+  <script>
+    let selectedOption = null;
+    let confidence = null;
+    let startTime = null;
+
+    function selectOption(option) {
+      selectedOption = option;
+      confidence = null;
+
+      // Remove all selected states
+      document.querySelectorAll('.option-card').forEach(card => {
+        card.classList.remove('selected');
+      });
+
+      // Add selected state to clicked card
+      document.getElementById(`option${option}`).classList.add('selected');
+    }
+
+    function setConfidence(level) {
+      confidence = level;
+
+      // Update button styles
+      document.querySelectorAll('.confidence-btn').forEach(btn => {
+        btn.classList.remove('low', 'medium', 'high');
+        btn.classList.add(level);
+      });
+    }
+
+    function submitAnswer() {
+      if (!selectedOption || !confidence) {
+        alert('Please select an option and confidence level');
+        return;
+      }
+
+      const endTime = Date.now();
+      const timeTaken = (endTime - startTime) / 1000; // seconds
+
+      // Calculate result
+      const correctAnswer = 1; // Option 1 is correct
+      const isCorrect = selectedOption === correctAnswer;
+
+      // Show feedback
+      const feedbackEl = document.getElementById('feedback');
+      feedbackEl.style.display = 'block';
+
+      if (isCorrect) {
+        feedbackEl.className = 'feedback correct';
+        feedbackEl.innerHTML = `
+          <strong>✅ Correct!</strong><br>
+          <p>Great job! You understand partitioning well.</p>
+          <p><strong>Time taken:</strong> ${timeTaken.toFixed(1)}s</p>
+          <p><strong>Your confidence:</strong> ${confidence}</p>
+        `;
+      } else {
+        feedbackEl.className = 'feedback incorrect shake';
+        feedbackEl.innerHTML = `
+          <strong>❌ Not quite right</strong><br>
+          <p>The answer was 100 + 20 + 5 = 125</p>
+          <p><strong>You chose:</strong> ${getExplanation(selectedOption)}</p>
+          <p><strong>Time taken:</strong> ${timeTaken.toFixed(1)}s</p>
+        `;
+      }
+
+      // Log data (in real app, this would go to database)
+      const result = {
+        pupilId: 'test-pupil-001',
+        question: 'Partition 125',
+        selectedOption: selectedOption,
+        correctAnswer: correctAnswer,
+        isCorrect: isCorrect,
+        confidence: confidence,
+        timeTaken: timeTaken,
+        timestamp: new Date().toISOString()
+      };
+
+      console.log('📊 Result:', result);
+
+      // After showing feedback, provide option to try again
+      setTimeout(() => {
+        if (!isCorrect) {
+          feedbackEl.style.display = 'none';
+          // Reset for retry
+          selectedOption = null;
+          confidence = null;
+          document.querySelectorAll('.option-card').forEach(card => {
+            card.classList.remove('selected');
+          });
+          document.querySelectorAll('.confidence-btn').forEach(btn => {
+            btn.classList.remove('low', 'medium', 'high');
+          });
+        }
+      }, 4000); // Show for 4 seconds then offer retry
+    }
+
+    function getExplanation(option) {
+      const explanations = {
+        1: 'Standard partitioning - correct!',
+        2: 'This equals 135, not 125',
+        3: 'This equals 100, not 125',
+        4: 'This equals 20, not 125'
+      };
+      return explanations[option] || 'Unknown';
+    }
+
+    // Start timer on page load
+    startTime = Date.now();
+
+    // Show page instructions
+    console.log('🎮 Mini-Game loaded: Partition 125');
+    console.log('📋 Instructions:');
+    console.log('1. Click an option');
+    console.log('2. Select your confidence');
+    console.log('3. Click "Submit Answer"');
+    console.log('');
+    console.log('💡 In a real app, this would log to your database for teacher dashboard.');
+  </script>
+</body>
+</html>

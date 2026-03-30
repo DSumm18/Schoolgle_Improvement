@@ -45,38 +45,80 @@ export default function SimPlayer({
     keyboardOnly: false,
     screenReader: false,
   });
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [initError, setInitError] = useState<string | null>(null);
 
-  // Initialize blueprint
+  // Initialize blueprint once canvas is available
   useEffect(() => {
-    if (!canvasRef.current) return;
-
     const canvas = canvasRef.current;
-    const blueprint = createPlaceValueBlueprint(800, 600);
-    const initialState = blueprint.reset();
-    initialState.mode = currentMode;
-    initialState.accessibility = accessibility;
+    if (!canvas) return;
 
-    const controller = new AnimationController(
-      canvas,
-      blueprint,
-      initialState,
-      {
-        width: 800,
-        height: 600,
-        pixelRatio: window.devicePixelRatio || 1,
-        backgroundColor: accessibility.highContrast ? '#ffffff' : '#f8fafc',
-        textColor: accessibility.highContrast ? '#000000' : '#1e293b',
-        accentColor: '#3b82f6',
-      }
-    );
+    console.log('Canvas found, initializing...');
 
-    controllerRef.current = controller;
-    setupInputHandlers(canvas, controller);
+    // Force canvas dimensions
+    const displayWidth = 800;
+    const displayHeight = 600;
+    canvas.style.width = `${displayWidth}px`;
+    canvas.style.height = `${displayHeight}px`;
+    canvas.width = displayWidth * (window.devicePixelRatio || 1);
+    canvas.height = displayHeight * (window.devicePixelRatio || 1);
+
+    // Initialize simulation
+    initSimulation();
 
     return () => {
-      controller.stop();
+      if (controllerRef.current) {
+        controllerRef.current.stop();
+      }
     };
   }, []);
+
+  // Separate function to initialize simulation
+  const initSimulation = () => {
+    try {
+      const canvas = canvasRef.current;
+      if (!canvas) {
+        setInitError('Canvas not available');
+        return;
+      }
+
+      console.log('Initializing simulation...');
+
+      const blueprint = createPlaceValueBlueprint(800, 600);
+      const initialState = blueprint.reset();
+      initialState.mode = currentMode;
+      initialState.accessibility = accessibility;
+
+      const controller = new AnimationController(
+        canvas,
+        blueprint,
+        initialState,
+        {
+          width: 800,
+          height: 600,
+          pixelRatio: window.devicePixelRatio || 1,
+          backgroundColor: accessibility.highContrast ? '#ffffff' : '#f8fafc',
+          textColor: accessibility.highContrast ? '#000000' : '#1e293b',
+          accentColor: '#3b82f6',
+        }
+      );
+
+      controllerRef.current = controller;
+      setupInputHandlers(canvas, controller);
+
+      // Auto-start the simulation
+      controller.start();
+
+      setIsPlaying(true);
+      setIsInitialized(true);
+      setInitError(null);
+
+      console.log('✅ Simulation initialized successfully!');
+    } catch (error) {
+      console.error('❌ Failed to initialize simulation:', error);
+      setInitError(error instanceof Error ? error.message : 'Unknown error');
+    }
+  };
 
   // Handle mode changes
   useEffect(() => {
@@ -148,13 +190,40 @@ export default function SimPlayer({
 
   return (
     <div className="relative w-full h-full bg-slate-900 rounded-lg overflow-hidden">
+      {/* Loading/Error Messages */}
+      {!isInitialized && (
+        <div className="absolute inset-0 flex items-center justify-center bg-slate-900 z-10">
+          <div className="text-center">
+            {initError ? (
+              <p className="text-red-400">Error: {initError}</p>
+            ) : (
+              <div className="space-y-4">
+                <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto"></div>
+                <p className="text-white">Loading simulation...</p>
+                <p className="text-sm text-slate-400">Canvas size: {canvasRef.current ? `${canvasRef.current.width}x${canvasRef.current.height}` : 'waiting...'}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Canvas */}
       <canvas
         ref={canvasRef}
         className="w-full h-full"
+        style={{ display: isInitialized ? 'block' : 'none' }}
         aria-label="Place value simulation interactive canvas"
         role="application"
       />
+
+      {/* Debug overlay when initialized */}
+      {isInitialized && (
+        <div className="absolute top-4 left-4 bg-black/50 backdrop-blur-sm px-3 py-2 rounded-lg text-xs text-white z-20">
+          <div>Mode: {currentMode}</div>
+          <div>Status: {isPlaying ? 'Running' : 'Paused'}</div>
+          <div className="text-green-400">● Simulation Active</div>
+        </div>
+      )}
 
       {/* Top Controls Bar */}
       <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/50 to-transparent p-4">

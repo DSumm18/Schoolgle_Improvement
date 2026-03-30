@@ -96,6 +96,19 @@ export class PlaceValueBlueprint implements BlueprintRenderer {
       colors.text,
       'center'
     );
+
+    // Add instruction prompt
+    if (state.value === 0) {
+      drawText(
+        ctx,
+        '👆 Click the blocks below to add them to your workspace!',
+        this.canvasWidth / 2,
+        this.canvasHeight / 2,
+        16,
+        colors.highlight,
+        'center'
+      );
+    }
   }
 
   private renderPupilMode(ctx: CanvasRenderingContext2D, state: SimState, colors: any) {
@@ -135,11 +148,21 @@ export class PlaceValueBlueprint implements BlueprintRenderer {
     if (state.value === 0) {
       drawText(
         ctx,
-        'Drag blocks to make a number!',
+        '👆 Click the colored blocks below to add them!',
         this.canvasWidth / 2,
-        this.canvasHeight - 60,
+        this.canvasHeight / 2,
         16,
         colors.highlight,
+        'center'
+      );
+    } else {
+      drawText(
+        ctx,
+        `Current: ${state.value} | Click Reset to try a new number`,
+        this.canvasWidth / 2,
+        this.canvasHeight - 60,
+        14,
+        colors.text,
         'center'
       );
     }
@@ -450,17 +473,22 @@ export class PlaceValueBlueprint implements BlueprintRenderer {
     if (event.y > trayY && event.y < trayY + 100) {
       // Check which type of block
       if (event.y > trayY + 20 && event.y < trayY + 60) {
-        // Hundreds or tens
-        if (event.x > 100 && event.x < 100 + 3 * (BLOCK_SIZE.hundreds + 20)) {
+        // Hundreds or tens row
+        const hundredsAreaEnd = 100 + 3 * (BLOCK_SIZE.hundreds + 20);
+        const tensAreaEnd = 100 + 3 * (BLOCK_SIZE.hundreds + 20) + 5 * (BLOCK_SIZE.tens + 15);
+
+        if (event.x > 100 && event.x < hundredsAreaEnd) {
           state.hundreds = Math.min(state.hundreds + 1, 5);
           announceToScreenReader(`Added hundreds block. Total: ${state.value}`);
-        } else if (event.x > 100 && event.x < 100 + 5 * (BLOCK_SIZE.tens + 15)) {
+        } else if (event.x > hundredsAreaEnd && event.x < tensAreaEnd) {
           state.tens = Math.min(state.tens + 1, 10);
           announceToScreenReader(`Added tens block. Total: ${state.value}`);
         }
       } else if (event.y > trayY + 70) {
-        // Ones
-        if (event.x > 100 && event.x < 100 + 10 * (BLOCK_SIZE.ones + 10)) {
+        // Ones row
+        const onesAreaEnd = 100 + 10 * (BLOCK_SIZE.ones + 10);
+
+        if (event.x > 100 && event.x < onesAreaEnd) {
           state.ones = Math.min(state.ones + 1, 20);
           announceToScreenReader(`Added ones block. Total: ${state.value}`);
         }
@@ -526,9 +554,9 @@ export class PlaceValueBlueprint implements BlueprintRenderer {
         keyboardOnly: false,
         screenReader: false,
       },
-      hundreds: 0,
-      tens: 0,
-      ones: 0,
+      hundreds: 1,
+      tens: 2,
+      ones: 5,
       isDragging: false,
       lastFrameTime: 0,
       frameCount: 0,
