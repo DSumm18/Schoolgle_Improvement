@@ -256,6 +256,28 @@ Models configured in `apps/platform/src/lib/ai-evidence-matcher.ts`:
 - **Documentation**: `docs/STAFF_CONNECTORS.md` — Full specification with data model, UI designs, implementation phases
 - **Status**: Fully specced, awaiting implementation
 
+### School Website Builder (`/dashboard/website`)
+
+- **Purpose**: Design, build, and publish school websites with AI-powered compliance checking
+- **Features**: Logo-driven colour extraction, 10 style presets, 20 hero masks, 10 Google font pairings, 28 content block types, static HTML generation, Firecrawl-powered compliance scanning
+- **6-Layer Design System**: Layout, Shape Language, Colour, Typography, Motion, Imagery — each independently customisable
+- **Dashboard Pages**:
+  - `/dashboard/website` — Main dashboard with publish/preview/stats
+  - `/dashboard/website/pages` — Page management with inline editor
+  - `/dashboard/website/design` — Design Studio with setup wizard
+  - `/dashboard/website/news` — News & blog post management
+  - `/dashboard/website/media` — Media library (images, documents)
+  - `/dashboard/website/compliance` — DfE statutory website compliance checker (Firecrawl + AI)
+- **API**: `/api/website/*` — CRUD for websites, pages, posts, navigation, publish, serve
+- **Libraries**:
+  - `website-builder/` — types, colour-extractor, palette-generator, hero-masks, font-pairings, presets, static-generator, content-types
+  - `website-compliance/` — requirements (35+ DfE), assessor (2-phase), 15 expert assessors
+  - `firecrawl-crawler.ts` — Firecrawl API wrapper with Playwright fallback (`smartCrawlWebsite`)
+  - `website-crawler.ts` — Playwright-based crawler (fallback)
+- **Database**: `school_websites`, `website_pages`, `website_posts`, `website_navigation`, `website_published_versions`, `website_media`, `website_domains`, `website_compliance_scans`
+- **Marketing Page**: `/school-websites` — standalone landing page with pricing
+- **Components**: `components/website-builder/` — WebsiteBuilderDashboard, PageEditor, SetupWizard
+
 ### School Intelligence Engine (built March 2026)
 
 - **Purpose**: Cross-references ALL data sources (DfE warehouse, contextual factors, cross-module signals from HR/Estates/Compliance/Governance) with EEF research to produce cohort-aware, research-backed analysis
