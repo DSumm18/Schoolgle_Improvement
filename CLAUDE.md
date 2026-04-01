@@ -792,6 +792,37 @@ All marketing docs live in `docs/marketing/`:
 
 ---
 
+## Marketing Idea Auto-Capture
+
+**IMPORTANT**: During any conversation, if the user mentions something that is clearly a marketing idea, campaign concept, competitive insight, sales angle, content idea, or positioning thought — even if they're talking about something else — Claude MUST:
+
+1. **Recognise it** — marketing ideas often come up naturally during technical or strategic conversations
+2. **Capture it** — create a new file in `docs/marketing/ideas/NNN-idea-name.md` using the template from `docs/marketing/ideas/INDEX.md`
+3. **Update the index** — add it to the pipeline table in `docs/marketing/ideas/INDEX.md`
+4. **Acknowledge briefly** — mention "Captured that as idea #NNN" so the user knows it's been filed
+5. **Continue the conversation** — don't derail the current task
+
+**Examples of things to capture:**
+- "We should position this as..." → capture as positioning idea
+- "That's like how [competitor] does..." → capture as competitive insight
+- "Schools would love it if we showed..." → capture as content/visual idea
+- "What if we did a LinkedIn post about..." → capture as content idea
+- "The motorway sign thing could also work for..." → capture as campaign extension
+- Anything mentioning: LinkedIn, pitch, demo, campaign, messaging, branding, website copy, sales, pricing angle
+
+**What NOT to capture:**
+- Technical implementation decisions (those belong in code/docs)
+- Bug reports or feature requests (those are development tasks)
+- Questions the user asks (only capture if they suggest an answer worth keeping)
+
+**Competitor scraping**: When asked to "update competitor intel" or "scrape competitors", use Chrome DevTools MCP or Playwright to visit competitor sites, take screenshots, extract features/pricing/claims, and save to `docs/marketing/competitor-intel/breakdowns/`.
+
+**NotebookLM source**: When asked to "compile NotebookLM pack", concatenate all marketing materials into a single `docs/marketing/automation/notebooklm-source.md` file for upload to Google NotebookLM.
+
+See `docs/marketing/automation/MARKETING-AUTOMATION.md` for the full system documentation.
+
+---
+
 ## Memory System
 
 This repository has an auto memory system that persists information across conversations at `.claude/projects/C--Git-Schoolgle-Improvement/memory/`.

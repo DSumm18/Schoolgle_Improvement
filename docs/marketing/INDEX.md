@@ -15,6 +15,12 @@
   - Touch/swipe support for tablets
   - Works offline once loaded
 
+## Visual Diagrams
+- [Motorway Route Sign — Schoolgle vs The Old Road](./roadmap-motorway-sign.html) — UK motorway gantry sign comparing Schoolgle's integrated route vs fragmented competitor tools
+  - Open in browser for full visual effect
+  - Great for presentations, social media screenshots, and LA briefings
+  - Responsive — works on mobile and desktop
+
 ## Module Value Sheets
 Each module has: one-line value prop, problem statement, feature list, benefits, standalone value estimate, demo script, and pitch slide key points.
 
@@ -36,6 +42,11 @@ Each module has: one-line value prop, problem statement, feature list, benefits,
 
 ## Demo Scripts
 - [LA Heads' Briefing — Full Demo Script](./demo-scripts/LA-HEADS-BRIEFING.md) — 15-20 minute presentation with live demo, objection handling, and follow-up checklist
+
+## Ideas Board
+- [Marketing Ideas Pipeline](./ideas/INDEX.md) — Dump ideas, assess later, build campaigns
+  - Includes idea template, scoring system, and school calendar campaign planner
+  - Drop new ideas as numbered files in `docs/marketing/ideas/`
 
 ## Existing Materials
 - [Marketing Overview](../MARKETING.md) — Elevator pitch and solution overview
