@@ -25,6 +25,12 @@ import {
   PanelLeftOpen,
   Zap,
   Menu,
+  TrendingUp,
+  Building2,
+  Shield,
+  Radio,
+  Brain,
+  GraduationCap,
 } from "lucide-react";
 import NotificationBell from "@/components/NotificationBell";
 import OrgSwitcher from "@/components/OrgSwitcher";
@@ -38,6 +44,27 @@ import { EdChatbotProvider } from "@/components/EdChatbotProvider";
 import { getContrastColor } from "@/lib/color-extractor";
 import AccessibilityToolbar from "@/components/AccessibilityToolbar";
 import { ImpersonationBanner } from "@/components/ImpersonationBanner";
+
+// 7-Planet module structure — defines how modules are grouped in the sidebar
+const PLANET_GROUPS = [
+  { id: "mercury", name: "School Improvement", color: "#6B7280", icon: TrendingUp, moduleIds: ["improvement"] },
+  { id: "venus", name: "Governance", color: "#F59E0B", icon: ShieldCheck, moduleIds: ["governance"] },
+  { id: "earth", name: "Business Operations", color: "#3B82F6", icon: Building2, moduleIds: ["finance", "hr", "estates"] },
+  { id: "mars", name: "Compliance & Safeguarding", color: "#9F1239", icon: Shield, moduleIds: ["compliance", "safeguarding", "risk"] },
+  { id: "jupiter", name: "Communications", color: "#F97316", icon: Radio, moduleIds: ["communications", "calendar", "surveys"] },
+  { id: "saturn", name: "Intelligence", color: "#A78BFA", icon: Brain, moduleIds: ["attendance", "send", "behaviour", "canvas"] },
+  { id: "uranus", name: "Teaching & Learning", color: "#06B6D4", icon: GraduationCap, moduleIds: ["teaching-learning"] },
+];
+
+// Map a pathname to its parent planet for auto-expand
+function getPlanetByPath(path: string): (typeof PLANET_GROUPS)[number] | undefined {
+  const module = getModuleByPath(path);
+  if (!module) return undefined;
+  return PLANET_GROUPS.find((p) => p.moduleIds.includes(module.id));
+}
+
+// Module IDs that are hidden from pilot
+const HIDDEN_MODULE_IDS = new Set(MODULES.filter((m) => m.pilotHidden).map((m) => m.id));
 
 export default function DashboardLayout({
   children,
@@ -121,12 +148,12 @@ export default function DashboardLayout({
     });
   }, []);
 
-  // Auto-expand module based on path and scroll to it
+  // Auto-expand planet group based on path and scroll to it
   useEffect(() => {
-    const module = getModuleByPath(pathname);
-    if (module) {
-      setExpandedModuleId(module.id);
-      scrollToModule(module.id);
+    const planet = getPlanetByPath(pathname);
+    if (planet) {
+      setExpandedModuleId(planet.id);
+      scrollToModule(planet.id);
     }
     // Close mobile menu on navigation
     setIsMobileMenuOpen(false);
@@ -242,17 +269,26 @@ export default function DashboardLayout({
     {
       section: "MY MODULES",
       type: "modules" as const,
-      items: MODULES.filter(
-        (module) =>
-          !module.pilotHidden &&
-          (!hasRole || canUserAccess(module.requiredPermissions, userRole)),
-      ).map((module) => ({
-        id: module.id,
-        name: module.name,
-        href: `/dashboard/${module.id}`,
-        icon: module.icon,
-        color: module.color,
-      })),
+      items: PLANET_GROUPS
+        .map((planet) => {
+          // Only show planet if it has at least one visible (non-pilotHidden) module
+          const visibleModuleIds = planet.moduleIds.filter((mid) => !HIDDEN_MODULE_IDS.has(mid));
+          if (visibleModuleIds.length === 0) return null;
+          // Check user has access to at least one module in this planet
+          const accessibleModules = MODULES.filter(
+            (m) => visibleModuleIds.includes(m.id) && (!hasRole || canUserAccess(m.requiredPermissions, userRole)),
+          );
+          if (accessibleModules.length === 0) return null;
+          return {
+            id: planet.id,
+            name: planet.name,
+            href: `/dashboard/${accessibleModules[0].id}`,
+            icon: planet.icon,
+            color: planet.color,
+            moduleIds: planet.moduleIds,
+          };
+        })
+        .filter((item): item is NonNullable<typeof item> => item !== null),
     },
     {
       section: "SETTINGS",
@@ -479,15 +515,22 @@ export default function DashboardLayout({
                 )}
                 <div className="space-y-0.5">
                   {section.items.map((item, itemIdx) => {
-                    const isModuleActive =
-                      pathname === item.href ||
-                      (item.id && pathname.startsWith(item.href));
+                    const itemModuleIds = (item as any).moduleIds as string[] | undefined;
+                    const isModuleActive = itemModuleIds
+                      ? itemModuleIds.some(
+                          (mid) =>
+                            pathname === `/dashboard/${mid}` ||
+                            pathname.startsWith(`/dashboard/${mid}/`),
+                        )
+                      : pathname === item.href ||
+                        (item.id && pathname.startsWith(item.href));
                     const isExpanded = expandedModuleId === item.id;
                     const subApps =
-                      section.type === "modules"
+                      section.type === "modules" && itemModuleIds
                         ? APPS.filter(
                             (a) =>
-                              a.moduleId === item.id &&
+                              itemModuleIds.includes(a.moduleId) &&
+                              !HIDDEN_MODULE_IDS.has(a.moduleId) &&
                               !a.pilotHidden &&
                               (!hasRole ||
                                 canUserAccess(a.requiredPermissions, userRole)),
