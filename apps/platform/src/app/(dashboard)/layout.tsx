@@ -722,8 +722,8 @@ export default function DashboardLayout({
           </div>
         </aside>
 
-        {/* Ed AI Assistant — full widget with voice, languages, personas */}
-        <EdChatbotProvider />
+        {/* Ed AI Assistant — provides context + renders widget */}
+        <EdChatbotProvider>
 
         {/* Offset Ed widget to clear the sidebar */}
         <style>{`
@@ -763,6 +763,7 @@ export default function DashboardLayout({
         />
 
         <Toaster />
+        </EdChatbotProvider>
       </div>
     </>
   );

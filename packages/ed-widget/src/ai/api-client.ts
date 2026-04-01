@@ -321,6 +321,13 @@ export class EdAPIClient {
   }
 
   /**
+   * Update the access token (called when session refreshes or auth becomes available)
+   */
+  setAccessToken(token: string | undefined): void {
+    this.accessToken = token;
+  }
+
+  /**
    * Update user context (called when user logs in)
    */
   setContext(organizationId: string, userId: string): void {

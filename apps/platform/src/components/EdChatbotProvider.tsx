@@ -33,7 +33,7 @@ interface EdChatbotProviderProps {
 }
 
 export function EdChatbotProvider({ children }: EdChatbotProviderProps) {
-  const { user, organization } = useAuth();
+  const { user, session, organization } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [initialMessage, setInitialMessage] = useState<string | null>(null);
@@ -110,6 +110,7 @@ export function EdChatbotProvider({ children }: EdChatbotProviderProps) {
         }
         schoolName={organization?.name}
         mode={user && organization ? "user" : "demo"}
+        accessToken={session?.access_token}
       />
     </EdChatbotContext.Provider>
   );

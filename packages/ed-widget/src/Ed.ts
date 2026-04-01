@@ -2432,6 +2432,27 @@ URL: ${window.location.href}`;
   }
 
   /**
+   * Update auth credentials after login or token refresh.
+   * Called by EdWidgetWrapper when the Supabase session changes.
+   */
+  public updateAuth(
+    accessToken?: string,
+    organizationId?: string,
+    userId?: string,
+  ): void {
+    if (this.apiClient) {
+      if (accessToken !== undefined) this.apiClient.setAccessToken(accessToken);
+      if (organizationId || userId) {
+        this.apiClient.setContext(organizationId || "", userId || "");
+      }
+    }
+    // Update mode if we now have org context
+    if (organizationId && this.mode !== "school") {
+      this.mode = "school";
+    }
+  }
+
+  /**
    * Set tool context for Toolbox Workspace integration
    * When a user selects a tool, Ed becomes aware of it and can provide contextual help
    */

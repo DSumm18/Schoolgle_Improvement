@@ -17,6 +17,8 @@ interface EdWidgetWrapperProps {
    * - 'user': For logged-in users - full functionality with access to user data
    */
   mode?: "demo" | "user";
+  /** Supabase session access token — updated reactively when auth state changes */
+  accessToken?: string;
   context?: any;
 }
 
@@ -29,6 +31,7 @@ export default function EdWidgetWrapper({
   userName,
   schoolName,
   mode = "user", // Default to user mode
+  accessToken: accessTokenProp,
 }: EdWidgetWrapperProps) {
   const edInstanceRef = useRef<any>(null);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -211,6 +214,16 @@ export default function EdWidgetWrapper({
       initEdWidget();
     }
   }, [isInitialized, mode]);
+
+  // Update access token when auth state changes (e.g. session refresh, initial login)
+  useEffect(() => {
+    if (!isInitialized || !accessTokenProp) return;
+    const ed = edInstanceRef.current || (window as any).__ED_INSTANCE__;
+    if (ed && ed.updateAuth) {
+      ed.updateAuth(accessTokenProp, organizationId, undefined);
+      console.log("[EdWidgetWrapper] 🔑 Access token updated");
+    }
+  }, [accessTokenProp, isInitialized, organizationId]);
 
   // Cleanup on unmount
   useEffect(() => {

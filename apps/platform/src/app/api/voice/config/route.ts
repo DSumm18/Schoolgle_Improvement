@@ -11,8 +11,11 @@ export async function GET() {
 
   if (!apiKey) {
     return NextResponse.json(
-      { error: "GEMINI_API_KEY not configured" },
-      { status: 500 },
+      {
+        error: "GEMINI_API_KEY not configured",
+        hint: "Add GEMINI_API_KEY to apps/platform/.env.local — get one at https://aistudio.google.com/apikey",
+      },
+      { status: 503 },
     );
   }
 
