@@ -14,6 +14,8 @@
 import { useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { useAuth } from "@/context/SupabaseAuthContext";
+import { DocumentVerifier } from "@/components/estates-compliance/DocumentVerifier";
 import {
   ArrowLeft,
   Upload,
@@ -57,6 +59,8 @@ interface ExternalLink {
 export default function EvidenceUploadPage() {
   const params = useParams();
   const router = useRouter();
+  const { organization } = useAuth();
+  const organizationId = organization?.id || "";
   const domainSlug = params.domain as ComplianceDomain;
   const checkId = params.checkId as string;
 
@@ -469,6 +473,20 @@ export default function EvidenceUploadPage() {
                             </button>
                           ))}
                         </div>
+
+                        {/* AI Document Verification — previously built, now wired */}
+                        {(file.category === "certificate" ||
+                          file.category === "report") &&
+                          organizationId && (
+                            <div className="mt-3">
+                              <DocumentVerifier
+                                evidenceId={file.id}
+                                organizationId={organizationId}
+                                fileName={file.file.name}
+                                fileType={file.file.type}
+                              />
+                            </div>
+                          )}
                       </div>
                     )}
                   </div>
