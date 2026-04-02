@@ -19,6 +19,7 @@ import { FishAudioVoice } from "./voice/fish-audio";
 import { GeminiLiveVoice } from "./voice/gemini-live";
 import { getIntroForPersona, processAIResponse } from "./voice/intro-scripts";
 import { pageScanner } from "./features/pageScan";
+import { matchNavigation, hasPermission } from "./nav/nav-matcher";
 import type {
   EdConfig,
   Message,
@@ -290,27 +291,15 @@ export class Ed {
             this.particle3D?.morphTo("sphere");
           }
         },
-        onTranscript: (text) => {
-          // Show Ed's spoken response as a chat message
-          // Accumulate into the latest assistant message
-          const lastMsg = this.messages[this.messages.length - 1];
-          if (
-            lastMsg &&
-            lastMsg.role === "assistant" &&
-            lastMsg.id.startsWith("gemini-")
-          ) {
-            lastMsg.content += text;
-            this.chat?.updateLastMessage(lastMsg.content);
-          } else {
-            const msg: Message = {
-              id: `gemini-${crypto.randomUUID()}`,
-              role: "assistant",
-              content: text,
-              timestamp: new Date(),
-            };
-            this.messages.push(msg);
-            this.chat?.addMessage(msg);
-          }
+        onTurnComplete: () => {
+          // Ed finished speaking via voice — add a simple chat record
+          // Don't show thinking text; the audio IS the response
+          this.addMessage({
+            id: `gemini-${crypto.randomUUID()}`,
+            role: "assistant",
+            content: "Ed responded via voice",
+            timestamp: new Date(),
+          });
         },
         onError: (err) => {
           console.error("[Ed] Gemini Live error:", err);
@@ -644,21 +633,27 @@ export class Ed {
     const chatMessages = this.widget.querySelector(
       "#chat-messages",
     ) as HTMLElement;
-    this.chat = new Chat(chatMessages, (text: string) => {
-      // Handle quick reply click - check if it's a language switch
-      if (text.includes("🇬🇧") || text.includes("English")) {
-        this.setLanguage("en-GB");
-      } else if (text.includes("🇵🇱") || text.includes("Polski")) {
-        this.setLanguage("pl");
-      } else if (text.includes("🇷🇴") || text.includes("Română")) {
-        this.setLanguage("ro");
-      } else if (text.includes("🇪🇸") || text.includes("Español")) {
-        this.setLanguage("es");
-      } else {
-        // Regular message
-        this.handleUserInput(text);
-      }
-    });
+    this.chat = new Chat(
+      chatMessages,
+      (text: string) => {
+        // Handle quick reply click - check if it's a language switch
+        if (text.includes("🇬🇧") || text.includes("English")) {
+          this.setLanguage("en-GB");
+        } else if (text.includes("🇵🇱") || text.includes("Polski")) {
+          this.setLanguage("pl");
+        } else if (text.includes("🇷🇴") || text.includes("Română")) {
+          this.setLanguage("ro");
+        } else if (text.includes("🇪🇸") || text.includes("Español")) {
+          this.setLanguage("es");
+        } else {
+          // Regular message
+          this.handleUserInput(text);
+        }
+      },
+      (confirmationId: string, choice: 'confirmed' | 'declined') => {
+        this.handleConfirmation(confirmationId, choice);
+      },
+    );
 
     // Initialize status pill
     const statusPillEl = this.widget.querySelector(
@@ -933,6 +928,31 @@ export class Ed {
   }
 
   private async handleUserInput(text: string): Promise<void> {
+    // Check for voice yes/no response to active confirmation
+    const lowerInput = text.toLowerCase().trim();
+    if (lowerInput === "yes" || lowerInput === "no" || lowerInput === "no thanks" || lowerInput === "yeah" || lowerInput === "nah") {
+      const pendingConfirmation = this.messages
+        .filter((m) => m.confirmation && !m.confirmation.resolved)
+        .pop();
+
+      if (pendingConfirmation?.confirmation) {
+        const choice = (lowerInput === "yes" || lowerInput === "yeah") ? "confirmed" as const : "declined" as const;
+        // Add user message showing their spoken choice
+        this.addMessage({
+          id: crypto.randomUUID(),
+          role: "user",
+          content: text,
+          timestamp: new Date(),
+          language: this.currentLanguage.code,
+        });
+        // Resolve the confirmation
+        pendingConfirmation.confirmation.resolved = true;
+        pendingConfirmation.confirmation.choice = choice;
+        this.handleConfirmation(pendingConfirmation.confirmation.id, choice);
+        return;
+      }
+    }
+
     // Auto-detect language from user input (switch silently — no system message)
     const detectedLang = this.detectLanguage(text);
     if (detectedLang && detectedLang.code !== this.currentLanguage.code) {
@@ -1528,7 +1548,7 @@ export class Ed {
     this.addMessage(assistantMessage);
 
     // Auto-navigate if user asked to go somewhere and response contains an internal link
-    this.handleAutoNavigation(text, response);
+    this.handleSmartNavigation(text);
 
     // Emoji reaction based on response
     const responseLower = response.toLowerCase();
@@ -1969,36 +1989,77 @@ URL: ${window.location.href}`;
    * Ed's response contains an internal link. Navigates after a short
    * delay so the user sees Ed's message first.
    */
-  private handleAutoNavigation(userQuestion: string, aiResponse: string): void {
-    const lower = userQuestion.toLowerCase();
-    const navTriggers = [
-      "take me to",
-      "go to",
-      "navigate to",
-      "open",
-      "show me the",
-      "can you take",
-      "bring me to",
-      "switch to",
-      "jump to",
-    ];
+  /**
+   * Smart navigation — check if user's question relates to a platform area,
+   * then show a confirmation card instead of auto-navigating.
+   */
+  private handleSmartNavigation(userQuestion: string): void {
+    const match = matchNavigation(userQuestion);
+    if (!match) return;
 
-    const isNavRequest = navTriggers.some((t) => lower.includes(t));
-    if (!isNavRequest) return;
+    const { target } = match;
 
-    // Extract internal link from response: [text](/dashboard/...)
-    const linkMatch = aiResponse.match(/\[([^\]]+)\]\((\/[^)]+)\)/);
-    if (!linkMatch) return;
+    // Check user role permissions
+    const userRole = (this.config as any).userRole;
+    if (!hasPermission(target, userRole)) {
+      this.addMessage({
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content: `I can see the **${target.name}** might be relevant, but you don't currently have access to that area. You may want to speak to your headteacher or admin about permissions.`,
+        timestamp: new Date(),
+      });
+      return;
+    }
 
-    const [, linkText, linkPath] = linkMatch;
+    // Show confirmation card
+    this.addMessage({
+      id: crypto.randomUUID(),
+      role: "assistant",
+      content: `I can see information about that. Would you like me to take you to the **${target.name}**? ${target.description}.`,
+      timestamp: new Date(),
+      confirmation: {
+        id: `nav-${crypto.randomUUID()}`,
+        description: `Navigate to ${target.name}`,
+        confirmLabel: "Yes, take me there",
+        declineLabel: "No thanks",
+        action: `navigate:${target.route}`,
+      },
+    });
+  }
 
-    // Navigate after a brief delay so user sees the response
-    setTimeout(() => {
-      if (typeof window !== "undefined") {
-        // Direct navigation — reliable across all frameworks
-        window.location.href = linkPath;
-      }
-    }, 1500);
+  /**
+   * Handle user's response to a confirmation card.
+   */
+  private handleConfirmation(confirmationId: string, choice: 'confirmed' | 'declined'): void {
+    // Log the decision in chat
+    this.addMessage({
+      id: crypto.randomUUID(),
+      role: "system",
+      content: choice === "confirmed"
+        ? "\u2705 Action confirmed"
+        : "\u274C Action declined",
+      timestamp: new Date(),
+    });
+
+    if (choice !== "confirmed") return;
+
+    // Find the confirmation in message history
+    const msg = this.messages.find(
+      (m) => m.confirmation?.id === confirmationId,
+    );
+    if (!msg?.confirmation) return;
+
+    const action = msg.confirmation.action;
+
+    // Handle action types
+    if (action.startsWith("navigate:")) {
+      const route = action.replace("navigate:", "");
+      // Navigate after brief delay so user sees the confirmation
+      setTimeout(() => {
+        window.location.href = route;
+      }, 500);
+    }
+    // Future: handle "create:", "update:", "delete:" action types here
   }
 
   private addMessage(message: Message): void {

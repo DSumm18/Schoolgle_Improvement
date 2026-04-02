@@ -45,6 +45,16 @@ export interface Persona {
   icon: string;
 }
 
+export interface ConfirmationAction {
+  id: string;
+  description: string;          // "I can take you to the Energy Dashboard"
+  confirmLabel?: string;        // "Yes, take me there" (default: "Yes")
+  declineLabel?: string;        // "No thanks" (default: "No thanks")
+  action: string;               // serialized action type: "navigate:/dashboard/estates/energy"
+  resolved?: boolean;           // true once user responds
+  choice?: 'confirmed' | 'declined';
+}
+
 export interface Message {
   id: string;
   role: 'user' | 'assistant' | 'system';
@@ -53,6 +63,7 @@ export interface Message {
   language?: string;
   translation?: string; // For dual-language display
   quickReplies?: string[]; // Quick reply button options
+  confirmation?: ConfirmationAction; // Confirmation card with Yes/No buttons
 }
 
 export interface Language {

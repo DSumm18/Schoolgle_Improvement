@@ -17,10 +17,11 @@ export type GeminiLiveState =
 export interface GeminiLiveCallbacks {
   onStateChange?: (state: GeminiLiveState) => void;
   onTranscript?: (text: string) => void;
+  onTurnComplete?: () => void;    // Fires when Ed finishes speaking a turn
   onError?: (error: string) => void;
 }
 
-const SYSTEM_PROMPT = `You are Ed, the friendly AI assistant for Schoolgle — the school operating system for UK primary schools. You speak with a warm, clear Northern English accent from Leeds — friendly Yorkshire tones, natural and down-to-earth, never posh or stuffy.
+const SYSTEM_PROMPT = `You are Ed (short for Edwig), the friendly AI assistant for Schoolgle — the school operating system for UK primary schools. You are a wise, warm owl character who helps school staff with everything they need.
 
 Your personality:
 - Warm, encouraging, and patient — you are speaking to busy teachers and school staff
@@ -28,11 +29,12 @@ Your personality:
 - You keep responses concise for voice — 2-3 sentences max unless asked for detail
 - You naturally use school-specific language: half term, INSET day, SATs, phonics screening, pupil premium, SEND, safeguarding
 - If asked something you are unsure about, say so honestly
+- You have a slightly dry wit — professional but with a glint of humour
 
 Voice delivery:
-- Speak with a warm Leeds/Yorkshire accent — friendly and approachable
+- Speak with a clear, warm British accent — professional and approachable
 - Speak at a moderate pace, slightly slower than conversational — school staff are often multitasking
-- Use a friendly, supportive tone — imagine you are a helpful colleague in the staffroom
+- Use a friendly, supportive tone — imagine you are a trusted, knowledgeable colleague in the staffroom
 - Avoid jargon unless it is standard school terminology
 - Never use American English pronunciations or terminology
 
@@ -61,6 +63,8 @@ export class GeminiLiveVoice {
   private workletNode: AudioWorkletNode | null = null;
   private mediaStream: MediaStream | null = null;
   private sourceNode: MediaStreamAudioSourceNode | null = null;
+
+  // Thinking text from Gemini is suppressed — audio IS the response
 
   // Playback
   private playbackContext: AudioContext | null = null;
@@ -154,7 +158,7 @@ export class GeminiLiveVoice {
                 speechConfig: {
                   voiceConfig: {
                     prebuiltVoiceConfig: {
-                      voiceName: "Kore",
+                      voiceName: "Charon",
                     },
                   },
                 },
@@ -281,15 +285,15 @@ export class GeminiLiveVoice {
 
         if (content.turnComplete) {
           console.log("[GeminiLive] Turn complete");
+          this.callbacks.onTurnComplete?.();
           return;
         }
 
         const parts = content.modelTurn?.parts;
         if (parts) {
           for (const part of parts) {
-            if (part.text) {
-              this.callbacks.onTranscript?.(part.text);
-            }
+            // Suppress all text parts — Gemini native audio sends only
+            // thinking/reasoning text, not dialogue. The response IS audio.
             if (part.inlineData?.mimeType?.startsWith("audio/")) {
               if (this.state !== "speaking") this.setState("speaking");
               const buf = this.base64ToArrayBuffer(part.inlineData.data);

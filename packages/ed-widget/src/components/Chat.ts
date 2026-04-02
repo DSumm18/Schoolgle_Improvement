@@ -14,11 +14,17 @@ export class Chat {
   private messagesContainer: HTMLElement;
   private messages: Message[] = [];
   private onQuickReply?: (text: string) => void;
+  private onConfirmation?: (confirmationId: string, choice: 'confirmed' | 'declined') => void;
 
-  constructor(container: HTMLElement, onQuickReply?: (text: string) => void) {
+  constructor(
+    container: HTMLElement,
+    onQuickReply?: (text: string) => void,
+    onConfirmation?: (confirmationId: string, choice: 'confirmed' | 'declined') => void,
+  ) {
     this.container = container;
     this.messagesContainer = document.createElement("div");
     this.onQuickReply = onQuickReply;
+    this.onConfirmation = onConfirmation;
     this.render();
   }
 
@@ -86,6 +92,40 @@ export class Chat {
       });
 
       messageEl.appendChild(quickRepliesContainer);
+    }
+
+    // Render confirmation card
+    if (message.confirmation && !message.confirmation.resolved) {
+      const card = document.createElement("div");
+      card.className = "ed-confirmation-card";
+      card.innerHTML = `
+        <div class="ed-confirmation-buttons">
+          <button class="ed-confirm-btn ed-confirm-yes">${message.confirmation.confirmLabel || "Yes"}</button>
+          <button class="ed-confirm-btn ed-confirm-no">${message.confirmation.declineLabel || "No thanks"}</button>
+        </div>
+      `;
+
+      const yesBtn = card.querySelector(".ed-confirm-yes") as HTMLButtonElement;
+      const noBtn = card.querySelector(".ed-confirm-no") as HTMLButtonElement;
+
+      yesBtn.addEventListener("click", () => {
+        this.resolveConfirmation(message, "confirmed", card);
+      });
+      noBtn.addEventListener("click", () => {
+        this.resolveConfirmation(message, "declined", card);
+      });
+
+      messageEl.appendChild(card);
+    }
+
+    // Show resolved confirmation state
+    if (message.confirmation?.resolved) {
+      const resolved = document.createElement("div");
+      resolved.className = "ed-confirmation-resolved";
+      resolved.textContent = message.confirmation.choice === "confirmed"
+        ? "\u2705 Confirmed"
+        : "\u274C Declined";
+      messageEl.appendChild(resolved);
     }
 
     // Add with animation
@@ -164,6 +204,24 @@ export class Chat {
       <path d="M4 20c0-4 4-6 8-6s8 2 8 6"/>
       <path d="M9 12l-2 8M15 12l2 8" stroke-linecap="round"/>
     </svg>`;
+  }
+
+  private resolveConfirmation(
+    message: Message,
+    choice: 'confirmed' | 'declined',
+    card: HTMLElement,
+  ): void {
+    if (message.confirmation) {
+      message.confirmation.resolved = true;
+      message.confirmation.choice = choice;
+    }
+
+    // Replace buttons with resolution text
+    card.innerHTML = `<div class="ed-confirmation-resolved">${
+      choice === "confirmed" ? "\u2705 Confirmed" : "\u274C Declined"
+    }</div>`;
+
+    this.onConfirmation?.(message.confirmation?.id || "", choice);
   }
 
   private scrollToBottom(): void {
