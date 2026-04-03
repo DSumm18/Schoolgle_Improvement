@@ -12,7 +12,8 @@ import Link from "next/link";
 import { useAuth } from "@/context/SupabaseAuthContext";
 import { SetupWizard } from "@/components/website-builder";
 import type { HeroMaskId, PaletteOption } from "@/lib/website-builder/types";
-import { STYLE_PRESETS } from "@/lib/website-builder/presets";
+import { getAllPresets } from "@/lib/website-builder/presets";
+const STYLE_PRESETS = getAllPresets();
 import { FONT_PAIRINGS } from "@/lib/website-builder/font-pairings";
 
 export default function WebsiteDesignPage() {

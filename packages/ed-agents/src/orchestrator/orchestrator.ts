@@ -235,9 +235,19 @@ export class EdOrchestrator {
       // Estimate guardrails tokens
       this.totalTokensUsed += 200; // Rough estimate for guardrails checks
 
-      // Step 5: Format final response
+      // Step 5: Strip any thinking/reasoning text from the response
+      // Some models (DeepSeek, etc.) include chain-of-thought in their output
+      let cleanedResponse = guardedResponse.response || finalContent;
+      // Remove <think>...</think> blocks
+      cleanedResponse = cleanedResponse.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+      // Remove lines that start with thinking patterns (e.g. "Initiating Pleasantries", "Clarifying this")
+      cleanedResponse = cleanedResponse.replace(/^(Initiating|Clarifying|Considering|Analyzing|Thinking about|Processing|Evaluating|Reflecting on|Assessing|Determining|Formulating|Synthesiz|Prioritiz|Recogniz|Acknowledg|Contemplat|Deliberat|Ponder|Weigh|Strategiz|Orchestrat|Architect|Investigat|Examin|Evaluat|Interpret|Decipher|Navigat|Calibrat|Reconcil|Brainstorm)[^\n]*\n*/gim, '').trim();
+      // Remove any remaining empty lines at the start
+      cleanedResponse = cleanedResponse.replace(/^\s*\n+/, '').trim();
+
+      // Step 6: Format final response
       const response: EdResponse = {
-        response: guardedResponse.response || finalContent,
+        response: cleanedResponse,
         specialist: agentResponse.agentId,
         confidence: agentResponse.confidence,
         sources: agentResponse.sources || [],

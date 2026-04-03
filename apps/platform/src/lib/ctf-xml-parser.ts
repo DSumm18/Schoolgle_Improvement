@@ -52,15 +52,26 @@ export interface ParseResult {
 const SUBJECT_MAP: Record<string, string> = {
   // DfE CTF subject codes (lowercased)
   ma: "maths",
+  mat: "maths",
   en: "reading",
+  eng: "reading",
   re: "reading",
   wr: "writing",
   sc: "science",
+  sci: "science",
   sp: "spelling",
   gp: "grammar",
   ps: "punctuation",
   mt: "maths",
   el: "reading",
+  pho: "phonics",
+  // EYFS areas (CTF v20+ subject codes)
+  com: "communication_and_language",
+  phy: "physical_development",
+  pse: "personal_social_emotional",
+  lit: "literacy",
+  utw: "understanding_the_world",
+  ead: "expressive_arts_and_design",
   // Assessment Manager free-text
   reading: "reading",
   writing: "writing",
@@ -198,11 +209,22 @@ function parseCTF(
     };
   }
 
+  // Header — handle both flat (SourceSchoolURN) and nested (SourceSchool.URN) formats
   const header = ctfRoot["Header"] as Record<string, unknown> | undefined;
-  const source_school_urn = header?.["SourceSchoolURN"]?.toString() ?? null;
-  const source_school_name = header?.["SourceSchoolName"]?.toString() ?? null;
+  const sourceSchool = header?.["SourceSchool"] as
+    | Record<string, unknown>
+    | undefined;
+  const source_school_urn =
+    sourceSchool?.["URN"]?.toString() ??
+    header?.["SourceSchoolURN"]?.toString() ??
+    null;
+  const source_school_name =
+    sourceSchool?.["SchoolName"]?.toString() ??
+    header?.["SourceSchoolName"]?.toString() ??
+    null;
 
-  const pupilsWrapper = ctfRoot["Pupils"] as
+  // Pupils — handle both <Pupils> and <CTFpupilData> wrappers
+  const pupilsWrapper = (ctfRoot["CTFpupilData"] ?? ctfRoot["Pupils"]) as
     | Record<string, unknown>
     | undefined;
   const rawPupils = pupilsWrapper?.["Pupil"];
@@ -222,11 +244,121 @@ function parseCTF(
     }
     pupilCount++;
     const pupil_hash = hashUPN(upn, organizationId);
-    const yearGroup = pupil["NCyearActual"]
-      ? parseInt(String(pupil["NCyearActual"]))
+
+    // Year group — may be directly on Pupil or inside BasicDetails
+    const basicDetails = pupil["BasicDetails"] as
+      | Record<string, unknown>
+      | undefined;
+    const ncYearRaw =
+      pupil["NCyearActual"] ?? basicDetails?.["NCyearActual"];
+    const yearGroup = ncYearRaw
+      ? ncYearRaw.toString().toUpperCase() === "R"
+        ? 0
+        : parseInt(String(ncYearRaw))
       : null;
 
-    // KS1 / KS2 / KS3 statutory results
+    // ─── CTF v20+ format: <StageAssessments><KeyStage><StageAssessment> ──
+    const stageAssessments = pupil["StageAssessments"] as
+      | Record<string, unknown>
+      | undefined;
+    if (stageAssessments) {
+      const rawKeyStages = stageAssessments["KeyStage"];
+      const keyStages = Array.isArray(rawKeyStages)
+        ? rawKeyStages
+        : rawKeyStages
+          ? [rawKeyStages]
+          : [];
+
+      for (const ks of keyStages as Record<string, unknown>[]) {
+        const stageCode = ks["Stage"]?.toString()?.toUpperCase() ?? "";
+        const keyStage = stageCode.startsWith("EY")
+          ? "EYFS"
+          : stageCode === "KS1"
+            ? "KS1"
+            : stageCode === "KS2"
+              ? "KS2"
+              : stageCode === "KS3"
+                ? "KS3"
+                : detectKeyStage(yearGroup, stageCode);
+
+        const rawAssessments = ks["StageAssessment"];
+        const assessments = Array.isArray(rawAssessments)
+          ? rawAssessments
+          : rawAssessments
+            ? [rawAssessments]
+            : [];
+
+        for (const sa of assessments as Record<string, unknown>[]) {
+          const subjectCode = sa["Subject"]?.toString() ?? "";
+          const method = sa["Method"]?.toString()?.toUpperCase() ?? "TA";
+          const component = sa["Component"]?.toString() ?? "";
+          const resultRaw = sa["Result"];
+          const yr = sa["Year"] ? parseInt(String(sa["Year"])) : null;
+          const resultQualifier =
+            sa["ResultQualifier"]?.toString()?.toUpperCase() ?? "";
+
+          // Determine subject from Subject + Component
+          let subject = normaliseSubject(subjectCode);
+          // For ENG subject, use component to disambiguate reading vs writing
+          if (
+            subjectCode.toUpperCase() === "ENG" &&
+            component.toUpperCase() === "WRI"
+          ) {
+            subject = "writing";
+          } else if (
+            subjectCode.toUpperCase() === "ENG" &&
+            (component.toUpperCase() === "REA" ||
+              component.toUpperCase() === "RED")
+          ) {
+            subject = "reading";
+          }
+
+          // Determine assessment_type
+          const assessmentType: "TA" | "SS" | "RA" | "unknown" =
+            method === "TT" || method === "TA"
+              ? "TA"
+              : method === "SS"
+                ? "SS"
+                : method === "RA"
+                  ? "RA"
+                  : method === "FA"
+                    ? "TA"
+                    : "unknown";
+
+          // Result could be attainment level (EXS, WTS, GDS) or numeric score
+          const resultStr = resultRaw?.toString() ?? "";
+          const isNumeric = /^\d+$/.test(resultStr);
+
+          // For phonics, NM qualifier means the result is the numeric mark
+          const scaledScore =
+            isNumeric && resultQualifier === "NM"
+              ? parseInt(resultStr)
+              : null;
+          const attainment = isNumeric
+            ? resultQualifier === "NM"
+              ? null
+              : normaliseAttainment(resultStr)
+            : normaliseAttainment(resultStr);
+
+          records.push({
+            upn,
+            pupil_hash,
+            year_group: yearGroup,
+            subject,
+            assessment_type: assessmentType,
+            key_stage: keyStage,
+            attainment_level: attainment,
+            scaled_score: scaledScore,
+            raw_score: isNumeric && resultQualifier !== "NM" ? null : null,
+            assessment_year: yr,
+            assessment_period: "summer",
+            source_subject_code: `${subjectCode}/${component}`,
+          });
+        }
+      }
+    }
+
+    // ─── Legacy CTF format: <KS1>, <KS2>, <KS3> blocks directly on Pupil ──
     for (const stage of ["KS1", "KS2", "KS3"] as const) {
       const stageData = pupil[stage] as Record<string, unknown> | undefined;
       if (!stageData) continue;
@@ -263,13 +395,13 @@ function parseCTF(
             : null,
           raw_score: null,
           assessment_year: stageYear,
-          assessment_period: "summer", // Statutory results are always end-of-key-stage (summer)
+          assessment_period: "summer",
           source_subject_code: subjectCode,
         });
       }
     }
 
-    // EYFS profile
+    // ─── Legacy EYFS profile ──
     const eyfsData = pupil["EYFS"] as Record<string, unknown> | undefined;
     if (eyfsData) {
       const eyfsYear = eyfsData["Year"]
@@ -304,7 +436,7 @@ function parseCTF(
       }
     }
 
-    // Termly assessments block (non-statutory teacher assessments)
+    // ─── Legacy termly assessments ──
     const assessmentsWrapper = pupil["Assessments"] as
       | Record<string, unknown>
       | undefined;
@@ -540,12 +672,18 @@ export function parseAssessmentXML(
     // Force array for elements that should always be arrays
     isArray: (_name, jpath) => {
       const arrayPaths = [
+        // CTF v20+ (Arbor) format
+        "CTFpupilData.Pupil",
+        "StageAssessments.KeyStage",
+        "KeyStage.StageAssessment",
+        // Legacy CTF format
         "Pupils.Pupil",
         "Pupil.KS1.Results.Result",
         "Pupil.KS2.Results.Result",
         "Pupil.KS3.Results.Result",
         "Pupil.EYFS.Areas.Area",
         "Pupil.Assessments.Assessment",
+        // Assessment Manager format
         "Students.Student",
         "Student.Assessments.Assessment",
       ];

@@ -56,7 +56,17 @@
       "mcp__chrome-devtools__new_page",
       "mcp__chrome-devtools__list_console_messages",
       "mcp__chrome-devtools__wait_for",
-      "mcp__chrome-devtools__list_network_requests"
+      "mcp__chrome-devtools__list_network_requests",
+      "mcp__claude_ai_Supabase__execute_sql",
+      "mcp__claude_ai_Supabase__apply_migration",
+      "mcp__claude_ai_Supabase__list_tables",
+      "mcp__claude_ai_Supabase__get_project",
+      "mcp__claude_ai_Supabase__list_projects",
+      "mcp__claude_ai_Supabase__get_logs",
+      "mcp__claude_ai_Notion__notion-search",
+      "mcp__claude_ai_Notion__notion-update-page",
+      "mcp__claude_ai_Notion__notion-create-database",
+      "WebFetch"
     ],
     "deny": [],
     "ask": []

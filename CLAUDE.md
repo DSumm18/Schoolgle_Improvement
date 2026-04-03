@@ -56,7 +56,53 @@ npm run test:formfill:headed  # Run tests with browser UI
 npm run test:formfill:ci      # Run tests with CI reporter
 ```
 
-**Important**: Node.js 20.x is required (see `package.json` `engines`). Use `nvm use 20` or `nodeenv -n 20` to ensure correct version.
+**Important**: Use nvm: `export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && nvm use 22`
+
+---
+
+## MANDATORY Quality Rules (NON-NEGOTIABLE)
+
+Every task — whether done by Jarvis, a worker session, or any Claude Code instance — MUST follow these rules. No exceptions.
+
+### Before Claiming ANY Work is Done:
+
+1. **BUILD CHECK** — Run `npm run build` from `apps/platform/`. If it fails, FIX IT before committing. A broken build is never acceptable.
+
+2. **TEST YOUR CHANGES** — If you created an API route, `curl` it and verify the response. If you created a UI component, take a screenshot with Playwright and verify it renders. If you changed auth, test both authenticated and unauthenticated paths. Evidence, not assumption.
+
+3. **CHECK THE BROWSER CONSOLE** — If the dev server is running (port 3001), check for console errors. Fix any errors your changes introduced. Pre-existing errors should be noted but not ignored.
+
+4. **VERIFY API RESPONSES** — Every API endpoint you create or modify must be tested with `curl` showing a successful response. Paste the test command and output in your report.
+
+5. **NO GUESSING MODEL NAMES** — Before using any AI model (Gemini, Claude, etc.), list available models via the API first. Never guess a model ID. Run: `curl "https://generativelanguage.googleapis.com/v1beta/models?key=$GEMINI_API_KEY"` or equivalent.
+
+6. **NO GUESSING EXPORT NAMES** — Before importing from a module, check what it actually exports. Run `grep "export" <file>` first. Never assume an export exists.
+
+7. **USE SUPERPOWERS SKILLS** — Every significant task must invoke at least one:
+   - `systematic-debugging` for bug fixes
+   - `verification-before-completion` before claiming done
+   - `write-plan` before building anything with 3+ files
+   - `test-driven-development` for new features
+
+8. **REPORT WHAT WAS TESTED** — In your chat.md output, include a "Verification" section showing:
+   - Commands run and their output
+   - Screenshots taken (with Playwright if available)
+   - Endpoints tested with curl
+   - Build status
+
+### What "Done" Means:
+- Code compiles (npm run build passes OR only pre-existing errors remain)
+- Feature works when tested (not just "I wrote the code")
+- No new console errors introduced
+- Committed with a descriptive message
+- Progress written to the session chat.md with evidence
+
+### What Is NOT Acceptable:
+- Claiming something works without testing it
+- Guessing at model names, export names, or API endpoints
+- Leaving 500/401 errors untested
+- Committing code that introduces new build failures
+- Using a wrong model name when the API is available to list them
 
 ---
 

@@ -157,6 +157,9 @@ export class EdAPIClient {
       };
       if (this.accessToken) {
         headers["Authorization"] = `Bearer ${this.accessToken}`;
+        console.log("[EdAPIClient] Sending with Bearer token (length:", this.accessToken.length + ")");
+      } else {
+        console.warn("[EdAPIClient] NO ACCESS TOKEN — request will likely 401");
       }
 
       const response = await fetch(this.baseUrl, {
