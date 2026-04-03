@@ -1,597 +1,269 @@
 "use client";
 
-import React, { useRef, useMemo, useState, useCallback, useEffect } from "react";
-import { Canvas, useFrame, useThree, ThreeEvent } from "@react-three/fiber";
-import { OrbitControls, Html, Line } from "@react-three/drei";
+import React, { useRef, useState, useCallback, useMemo } from "react";
+import { Canvas, useFrame, useLoader } from "@react-three/fiber";
+import { OrbitControls, Html } from "@react-three/drei";
 import * as THREE from "three";
-import {
-  ROOMS_3D,
-  BLOCK_COLORS,
-  FIRE_EXITS_3D,
-  FIRE_ROUTES_3D,
-  FIRE_EQUIPMENT_3D,
-  COMPLIANCE_STATUS,
-  COMPLIANCE_COLORS,
-  type Room3D,
-  type ComplianceStatus,
-} from "./grove-house-3d-data";
+import { TextureLoader } from "three";
 
-// ─── Constants ───────────────────────────────────────────
-
-const WALL_HEIGHT = 2.8;
-const GROUND_COLOR = 0x1a2332;
-const BG_COLOR = "#0a0f1a";
-
-// ─── Ground & Environment ────────────────────────────────
-
-function Ground() {
-  return (
-    <>
-      {/* Main ground */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.1, 0]} receiveShadow>
-        <planeGeometry args={[80, 60]} />
-        <meshStandardMaterial color={0x1a2e1a} roughness={0.9} />
-      </mesh>
-
-      {/* Tarmac playground (south) */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-8, -0.05, -4]}>
-        <planeGeometry args={[30, 8]} />
-        <meshStandardMaterial color={0x252525} roughness={0.8} />
-      </mesh>
-
-      {/* Car park (east) */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[16, -0.04, 6]}>
-        <planeGeometry args={[8, 12]} />
-        <meshStandardMaterial color={0x252525} roughness={0.7} />
-      </mesh>
-
-      {/* Playing field (north) */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-8, -0.06, 34]}>
-        <planeGeometry args={[30, 12]} />
-        <meshStandardMaterial color={0x1d3a1d} roughness={0.9} />
-      </mesh>
-
-      {/* Grid helper */}
-      <gridHelper args={[80, 80, 0x1e293b, 0x1e293b]} position={[0, -0.02, 0]} />
-
-      {/* Fencing outline */}
-      <Line
-        points={[
-          [-35, 0, -10],
-          [22, 0, -10],
-          [22, 0, 40],
-          [-35, 0, 40],
-          [-35, 0, -10],
-        ]}
-        color={0x4a6a4a}
-        transparent
-        opacity={0.6}
-        lineWidth={1}
-      />
-    </>
-  );
+interface GroveHouse3DSceneProps {
+  onRoomClick?: (roomId: string) => void;
+  showRoof?: boolean;
+  showCompliance?: boolean;
+  xRayMode?: boolean;
+  showLabels?: boolean;
+  showFireRoutes?: boolean;
+  showFireEquipment?: boolean;
+  selectedRoomId?: string | null;
 }
 
-// ─── Room Mesh ───────────────────────────────────────────
+// Room outlines traced from the PDF - these are the BLOCK boundaries
+// Individual room labels will be added by the school
+// Coordinates in meters, relative to building centre
+interface RoomOutline {
+  id: string;
+  label: string; // What's written on the PDF (block name or room number)
+  schoolLabel?: string; // What the school names it (added later)
+  x: number;
+  z: number;
+  w: number;
+  d: number;
+  color: string;
+  block: string;
+}
 
-function RoomMesh({
-  room,
-  showWalls,
-  showRoof,
-  showCompliance,
-  xrayMode,
-  showLabels,
-  onClick,
-  isSelected,
-}: {
-  room: Room3D;
-  showWalls: boolean;
-  showRoof: boolean;
-  showCompliance: boolean;
-  xrayMode: boolean;
-  showLabels: boolean;
-  onClick: (room: Room3D) => void;
-  isSelected: boolean;
+// These outlines match the visible room boundaries on the PDF
+// Positions are approximate but derived from the actual drawing
+const ROOM_OUTLINES: RoomOutline[] = [
+  // BLOCK 1 rooms (bottom-centre on the PDF)
+  { id: "b1-r1", label: "Block 1 - Room 1", block: "Block 1", x: -4, z: -6, w: 6, d: 5, color: "#3b82f6" },
+  { id: "b1-r2", label: "Block 1 - Room 2", block: "Block 1", x: -4, z: -11.5, w: 6, d: 5, color: "#3b82f6" },
+  { id: "b1-r3", label: "Block 1 - Room 3", block: "Block 1", x: 2.5, z: -8, w: 3, d: 4, color: "#3b82f6" },
+
+  // BLOCK 2 rooms (to the left of Block 1)
+  { id: "b2-r1", label: "Block 2 - Room 1", block: "Block 2", x: -11, z: -6, w: 6, d: 5, color: "#60a5fa" },
+  { id: "b2-r2", label: "Block 2 - Room 2", block: "Block 2", x: -11, z: -11.5, w: 6, d: 5, color: "#60a5fa" },
+  { id: "b2-r3", label: "Block 2 - Room 3", block: "Block 2", x: -6, z: -14, w: 3, d: 3, color: "#60a5fa" },
+
+  // 2001 BUILDING (far left - highlighted in purple on page 2)
+  { id: "2001-r1", label: "2001 Building - Hall", block: "2001 Building", x: -24, z: -6, w: 10, d: 8, color: "#f59e0b" },
+  { id: "2001-r2", label: "2001 Building - Room 2", block: "2001 Building", x: -24, z: 3, w: 7, d: 5, color: "#f59e0b" },
+  { id: "2001-r3", label: "2001 Building - Room 3", block: "2001 Building", x: -30, z: -8, w: 7, d: 6, color: "#f59e0b" },
+  { id: "2001-r4", label: "2001 Building - Room 4", block: "2001 Building", x: -30, z: 0, w: 4, d: 3, color: "#f59e0b" },
+
+  // BLOCK 3 (centre-right, entrance area)
+  { id: "b3-r1", label: "Block 3 - Room 1", block: "Block 3", x: 4, z: -4, w: 6, d: 5, color: "#22c55e" },
+  { id: "b3-r2", label: "Block 3 - Room 2", block: "Block 3", x: 8, z: -9, w: 4, d: 4, color: "#22c55e" },
+  { id: "b3-r3", label: "Block 3 - Room 3", block: "Block 3", x: 8, z: -4, w: 4, d: 4, color: "#22c55e" },
+  { id: "b3-entrance", label: "Main Entrance", block: "Block 3", x: 6, z: -15, w: 4, d: 3, color: "#22c55e" },
+
+  // BLOCK 4 (top-right)
+  { id: "b4-r1", label: "Block 4 - Room 1", block: "Block 4", x: 4, z: 10, w: 6, d: 5, color: "#a78bfa" },
+  { id: "b4-r2", label: "Block 4 - Room 2", block: "Block 4", x: 4, z: 16, w: 6, d: 5, color: "#a78bfa" },
+  { id: "b4-r3", label: "Block 4 - Room 3", block: "Block 4", x: 11, z: 12, w: 5, d: 4, color: "#a78bfa" },
+  { id: "b4-r4", label: "Block 4 - Room 4", block: "Block 4", x: 11, z: 16, w: 4, d: 4, color: "#a78bfa" },
+
+  // 2017 BUILDING (top extension - highlighted in yellow on page 2)
+  { id: "2017-r1", label: "2017 Building - Room 1", block: "2017 Building", x: -2, z: 18, w: 5, d: 5, color: "#f97316" },
+  { id: "2017-r2", label: "2017 Building - Room 2", block: "2017 Building", x: -2, z: 24, w: 5, d: 4, color: "#f97316" },
+  { id: "2017-r3", label: "2017 Building - Room 3", block: "2017 Building", x: 4, z: 20, w: 5, d: 4, color: "#f97316" },
+];
+
+// Fire exits visible on the PDF (door symbols with exit marking)
+const FIRE_EXITS = [
+  { x: 6, z: -17, label: "Main Entrance" },
+  { x: -4, z: -14, label: "Block 1 Exit" },
+  { x: -11, z: -14, label: "Block 2 Exit" },
+  { x: -24, z: -14, label: "Hall South Exit" },
+  { x: -34, z: -6, label: "Nursery Exit" },
+  { x: -24, z: 6, label: "Kitchen Exit" },
+  { x: 12, z: -6, label: "Block 3 East Exit" },
+  { x: 12, z: 10, label: "Block 4 South Exit" },
+  { x: 4, z: 22, label: "Block 4 North Exit" },
+  { x: -4, z: 28, label: "2017 Building Exit" },
+];
+
+// ─── Room Box Component ─────────────────────────────────
+
+function RoomBox({ room, isSelected, onClick, showLabel }: { 
+  room: RoomOutline; isSelected: boolean; onClick: () => void; showLabel: boolean;
 }) {
-  const floorRef = useRef<THREE.Mesh>(null);
-  const blockColor = BLOCK_COLORS[room.block] || { fill: 0x475569 };
-  const compStatus: ComplianceStatus = COMPLIANCE_STATUS[room.id] || "green";
-  const compColor = COMPLIANCE_COLORS[compStatus];
-  const wallOpacity = xrayMode ? 0.08 : 0.35;
-  const roofOpacity = xrayMode ? 0.05 : 0.6;
-
-  const handleClick = useCallback(
-    (e: ThreeEvent<MouseEvent>) => {
-      e.stopPropagation();
-      onClick(room);
-    },
-    [room, onClick]
-  );
-
+  const meshRef = useRef<THREE.Mesh>(null);
+  const [hovered, setHovered] = useState(false);
+  const wallHeight = 2.8;
+  const color = new THREE.Color(room.color);
+  
   return (
-    <group>
-      {/* Floor slab — clickable */}
-      <mesh
-        ref={floorRef}
-        rotation={[-Math.PI / 2, 0, 0]}
-        position={[room.x, 0.01, room.z]}
-        receiveShadow
-        onClick={handleClick}
-        onPointerOver={(e) => {
-          e.stopPropagation();
-          document.body.style.cursor = "pointer";
-        }}
-        onPointerOut={() => {
-          document.body.style.cursor = "default";
-        }}
-      >
-        <planeGeometry args={[room.w - 0.1, room.d - 0.1]} />
-        <meshStandardMaterial
-          color={isSelected ? 0x334155 : 0x1e293b}
-          roughness={0.6}
-          metalness={0.1}
+    <group position={[room.x + room.w/2, 0, room.z + room.d/2]}>
+      {/* Floor */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
+        <planeGeometry args={[room.w, room.d]} />
+        <meshStandardMaterial 
+          color={room.color} 
+          transparent 
+          opacity={hovered ? 0.5 : isSelected ? 0.4 : 0.15} 
         />
       </mesh>
-
-      {/* Compliance floor overlay */}
-      {showCompliance && (
-        <mesh
-          rotation={[-Math.PI / 2, 0, 0]}
-          position={[room.x, 0.02, room.z]}
-        >
-          <planeGeometry args={[room.w - 0.1, room.d - 0.1]} />
-          <meshStandardMaterial
-            color={compColor}
-            transparent
-            opacity={0.3}
-            roughness={0.5}
-          />
-        </mesh>
-      )}
-
-      {/* Walls — 4 sides */}
-      {showWalls && (
-        <>
-          {/* Front */}
-          <mesh position={[room.x, WALL_HEIGHT / 2, room.z + room.d / 2]}>
-            <planeGeometry args={[room.w, WALL_HEIGHT]} />
-            <meshPhysicalMaterial
-              color={0x475569}
-              transparent
-              opacity={wallOpacity}
-              roughness={0.2}
-              metalness={0.1}
-              side={THREE.DoubleSide}
-            />
-          </mesh>
-          {/* Back */}
-          <mesh position={[room.x, WALL_HEIGHT / 2, room.z - room.d / 2]}>
-            <planeGeometry args={[room.w, WALL_HEIGHT]} />
-            <meshPhysicalMaterial
-              color={0x475569}
-              transparent
-              opacity={wallOpacity}
-              roughness={0.2}
-              metalness={0.1}
-              side={THREE.DoubleSide}
-            />
-          </mesh>
-          {/* Left */}
-          <mesh
-            position={[room.x - room.w / 2, WALL_HEIGHT / 2, room.z]}
-            rotation={[0, Math.PI / 2, 0]}
-          >
-            <planeGeometry args={[room.d, WALL_HEIGHT]} />
-            <meshPhysicalMaterial
-              color={0x475569}
-              transparent
-              opacity={wallOpacity}
-              roughness={0.2}
-              metalness={0.1}
-              side={THREE.DoubleSide}
-            />
-          </mesh>
-          {/* Right */}
-          <mesh
-            position={[room.x + room.w / 2, WALL_HEIGHT / 2, room.z]}
-            rotation={[0, Math.PI / 2, 0]}
-          >
-            <planeGeometry args={[room.d, WALL_HEIGHT]} />
-            <meshPhysicalMaterial
-              color={0x475569}
-              transparent
-              opacity={wallOpacity}
-              roughness={0.2}
-              metalness={0.1}
-              side={THREE.DoubleSide}
-            />
-          </mesh>
-        </>
-      )}
-
-      {/* Wireframe edges */}
-      <lineSegments position={[room.x, WALL_HEIGHT / 2, room.z]}>
-        <edgesGeometry
-          args={[new THREE.BoxGeometry(room.w, WALL_HEIGHT, room.d)]}
+      
+      {/* Walls (transparent) */}
+      <mesh 
+        ref={meshRef}
+        position={[0, wallHeight / 2, 0]}
+        onClick={(e) => { e.stopPropagation(); onClick(); }}
+        onPointerEnter={() => { setHovered(true); document.body.style.cursor = 'pointer'; }}
+        onPointerLeave={() => { setHovered(false); document.body.style.cursor = 'default'; }}
+      >
+        <boxGeometry args={[room.w, wallHeight, room.d]} />
+        <meshStandardMaterial 
+          color={room.color} 
+          transparent 
+          opacity={hovered ? 0.25 : isSelected ? 0.2 : 0.08}
+          side={THREE.DoubleSide}
         />
-        <lineBasicMaterial color={0x64748b} transparent opacity={0.4} />
+      </mesh>
+      
+      {/* Edges */}
+      <lineSegments position={[0, wallHeight / 2, 0]}>
+        <edgesGeometry args={[new THREE.BoxGeometry(room.w, wallHeight, room.d)]} />
+        <lineBasicMaterial color={room.color} transparent opacity={hovered ? 0.8 : 0.3} />
       </lineSegments>
-
-      {/* Roof */}
-      {showRoof && (
-        <mesh
-          rotation={[-Math.PI / 2, 0, 0]}
-          position={[room.x, WALL_HEIGHT, room.z]}
-        >
-          <planeGeometry args={[room.w, room.d]} />
-          <meshStandardMaterial
-            color={0x334155}
-            transparent
-            opacity={roofOpacity}
-            side={THREE.DoubleSide}
-            roughness={0.4}
-          />
-        </mesh>
-      )}
-
-      {/* Block colour strip at base */}
-      <mesh
-        rotation={[-Math.PI / 2, 0, 0]}
-        position={[room.x, 0.03, room.z + room.d / 2 - 0.1]}
-      >
-        <planeGeometry args={[room.w - 0.2, 0.12]} />
-        <meshBasicMaterial
-          color={blockColor.fill}
-          transparent
-          opacity={0.5}
-        />
-      </mesh>
-
-      {/* Selected highlight ring */}
-      {isSelected && (
-        <mesh
-          rotation={[-Math.PI / 2, 0, 0]}
-          position={[room.x, 0.04, room.z]}
-        >
-          <ringGeometry args={[Math.max(room.w, room.d) / 2 + 0.2, Math.max(room.w, room.d) / 2 + 0.4, 32]} />
-          <meshBasicMaterial color={0xf59e0b} transparent opacity={0.6} />
-        </mesh>
-      )}
-
+      
       {/* Label */}
-      {showLabels && (
-        <>
-          
-          
-        </>
+      {showLabel && (
+        <Html center position={[0, wallHeight + 0.5, 0]} style={{ pointerEvents: 'none' }}>
+          <div style={{
+            color: 'white',
+            fontSize: '10px',
+            fontWeight: 'bold',
+            fontFamily: 'system-ui',
+            whiteSpace: 'nowrap',
+            textShadow: '0 0 6px rgba(0,0,0,0.9)',
+            background: `${room.color}44`,
+            padding: '2px 6px',
+            borderRadius: '3px',
+          }}>
+            {room.schoolLabel || room.label}
+          </div>
+        </Html>
       )}
     </group>
   );
 }
 
-// ─── Fire Exit Markers ───────────────────────────────────
+// ─── Fire Exit Marker ────────────────────────────────────
 
-function FireExitMarkers() {
+function FireExitMarker({ exit }: { exit: typeof FIRE_EXITS[0] }) {
   return (
-    <>
-      {FIRE_EXITS_3D.map((fe, i) => {
-        const color = fe.type === "main" ? "#F59E0B" : "#22c55e";
-        return (
-          <group key={i}>
-            {/* Door marker */}
-            <mesh position={[fe.x, WALL_HEIGHT / 2 - 0.1, fe.z]}>
-              <boxGeometry args={[0.8, WALL_HEIGHT - 0.3, 0.08]} />
-              <meshBasicMaterial
-                color={fe.type === "main" ? 0xf59e0b : 0x22c55e}
-                transparent
-                opacity={0.3}
-              />
-            </mesh>
-            {/* Label */}
-            
-          </group>
-        );
-      })}
-    </>
+    <group position={[exit.x, 0, exit.z]}>
+      <mesh position={[0, 0.1, 0]}>
+        <cylinderGeometry args={[0.4, 0.4, 0.2, 16]} />
+        <meshStandardMaterial color="#ef4444" emissive="#ef4444" emissiveIntensity={0.5} />
+      </mesh>
+      <Html center position={[0, 1.5, 0]} style={{ pointerEvents: 'none' }}>
+        <div style={{
+          color: '#ef4444',
+          fontSize: '8px',
+          fontWeight: 'bold',
+          fontFamily: 'system-ui',
+          whiteSpace: 'nowrap',
+          textShadow: '0 0 4px rgba(0,0,0,0.9)',
+        }}>
+          🚪 {exit.label}
+        </div>
+      </Html>
+    </group>
   );
 }
 
-// ─── Fire Route Animated Dots ────────────────────────────
+// ─── Ground with PDF Texture ─────────────────────────────
 
-function getPointOnPath(
-  pts: THREE.Vector3[],
-  t: number
-): THREE.Vector3 {
-  const totalLen = pts.reduce(
-    (s, p, i) => (i === 0 ? 0 : s + p.distanceTo(pts[i - 1])),
-    0
-  );
-  let d = t * totalLen;
-  for (let i = 1; i < pts.length; i++) {
-    const seg = pts[i].distanceTo(pts[i - 1]);
-    if (d <= seg) {
-      return new THREE.Vector3().lerpVectors(pts[i - 1], pts[i], d / seg);
-    }
-    d -= seg;
-  }
-  return pts[pts.length - 1].clone();
-}
-
-function FireRouteDot({
-  points,
-  offset,
-  speed,
-}: {
-  points: THREE.Vector3[];
-  offset: number;
-  speed: number;
-}) {
-  const ref = useRef<THREE.Mesh>(null);
-  const matRef = useRef<THREE.MeshBasicMaterial>(null);
-
-  useFrame(({ clock }) => {
-    const t = (offset + clock.getElapsedTime() * speed * 0.1) % 1;
-    const pos = getPointOnPath(points, t);
-    if (ref.current) {
-      ref.current.position.copy(pos);
-    }
-    if (matRef.current) {
-      matRef.current.opacity = 0.3 + 0.7 * Math.sin(t * Math.PI);
-    }
-  });
-
+function GroundPlane() {
+  const texture = useLoader(TextureLoader, '/site-plans/grove-house-ground-floor.png');
+  
+  // The PDF image aspect ratio is roughly 1654:1170 ≈ 1.41:1
+  // Scale to match our building coordinates
+  const planeWidth = 80;
+  const planeHeight = planeWidth / 1.41;
+  
   return (
-    <mesh ref={ref}>
-      <sphereGeometry args={[0.1, 6, 6]} />
-      <meshBasicMaterial ref={matRef} color={0xef4444} transparent />
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-5, -0.05, 5]}>
+      <planeGeometry args={[planeWidth, planeHeight]} />
+      <meshBasicMaterial map={texture} transparent opacity={0.4} />
     </mesh>
   );
 }
 
-function FireRoutes({ visible }: { visible: boolean }) {
-  const routes = useMemo(
-    () =>
-      FIRE_ROUTES_3D.map((route) =>
-        route.map(([x, z]) => new THREE.Vector3(x, 0.12, z))
-      ),
-    []
-  );
+// ─── Scene ───────────────────────────────────────────────
 
-  if (!visible) return null;
-
-  return (
-    <group>
-      {routes.map((pts, ri) => (
-        <group key={ri}>
-          {/* Route line */}
-          <Line
-            points={pts.map((p) => [p.x, p.y, p.z] as [number, number, number])}
-            color={0xef4444}
-            transparent
-            opacity={0.4}
-            lineWidth={1.5}
-          />
-          {/* Animated dots */}
-          {Array.from({ length: 8 }).map((_, di) => (
-            <FireRouteDot
-              key={di}
-              points={pts}
-              offset={di / 8}
-              speed={0.3}
-            />
-          ))}
-        </group>
-      ))}
-    </group>
-  );
-}
-
-// ─── Fire Equipment ──────────────────────────────────────
-
-function FireEquipmentMarkers({ visible }: { visible: boolean }) {
-  if (!visible) return null;
-
-  return (
-    <group>
-      {FIRE_EQUIPMENT_3D.map((fe, i) => (
-        <group key={i} position={[fe.x, 0, fe.z]}>
-          {/* Cylinder body */}
-          <mesh position={[0, 0.25, 0]}>
-            <cylinderGeometry args={[0.18, 0.18, 0.5, 8]} />
-            <meshStandardMaterial
-              color={
-                fe.equipType === "defib"
-                  ? 0x22c55e
-                  : fe.equipType === "blanket"
-                  ? 0xf59e0b
-                  : 0xef4444
-              }
-              transparent
-              opacity={0.8}
-            />
-          </mesh>
-          {/* Label */}
-          
-        </group>
-      ))}
-    </group>
-  );
-}
-
-// ─── Assembly Points ─────────────────────────────────────
-
-function AssemblyPoints({ visible }: { visible: boolean }) {
-  if (!visible) return null;
-
-  const zones = [
-    { zone: "A", x: -30, z: 8, label: "West Gate Assembly", color: "#fca5a5" },
-    { zone: "B", x: -10, z: -6, label: "South Playground Assembly", color: "#fcd34d" },
-    { zone: "C", x: 4, z: 30, label: "North Field Assembly", color: "#93c5fd" },
-    { zone: "D", x: 14, z: 0, label: "Front Car Park Assembly", color: "#c4b5fd" },
-    { zone: "E", x: -30, z: 14, label: "Service Gate Assembly", color: "#6ee7b7" },
-  ];
-
-  return (
-    <group>
-      {zones.map((z) => (
-        <group key={z.zone}>
-          
-          
-        </group>
-      ))}
-    </group>
-  );
-}
-
-// ─── Gate Markers ────────────────────────────────────────
-
-function Gates() {
-  const gates = [
-    { x: 14, z: -10, label: "🚪 Main Gate", rot: 0 },
-    { x: 22, z: 6, label: "🔒 Car Park Gate", rot: Math.PI / 2 },
-    { x: -35, z: 12, label: "🔒 Service Gate", rot: Math.PI / 2 },
-    { x: -10, z: 40, label: "🚪 Field Gate", rot: 0 },
-  ];
+function SceneContent(props: GroveHouse3DSceneProps) {
+  const [selectedId, setSelectedId] = useState<string | null>(props.selectedRoomId || null);
+  
+  const handleRoomClick = useCallback((id: string) => {
+    setSelectedId(prev => prev === id ? null : id);
+    props.onRoomClick?.(id);
+  }, [props.onRoomClick]);
 
   return (
     <>
-      {gates.map((g, i) => (
-        <group key={i}>
-          <mesh position={[g.x, 0.6, g.z]} rotation={[0, g.rot, 0]}>
-            <boxGeometry args={[2.5, 1.2, 0.12]} />
-            <meshStandardMaterial
-              color={0xf59e0b}
-              transparent
-              opacity={0.5}
-              metalness={0.3}
-            />
-          </mesh>
-          
-        </group>
-      ))}
-    </>
-  );
-}
-
-// ─── Lighting ────────────────────────────────────────────
-
-function Lighting() {
-  return (
-    <>
-      <ambientLight intensity={0.5} color={0x334155} />
-      <directionalLight
-        position={[20, 30, 15]}
-        intensity={0.7}
-        color={0xffeedd}
-        castShadow
-        shadow-camera-left={-30}
-        shadow-camera-right={30}
-        shadow-camera-top={30}
-        shadow-camera-bottom={-30}
-        shadow-mapSize-width={2048}
-        shadow-mapSize-height={2048}
-      />
-      <directionalLight
-        position={[-15, 20, -10]}
-        intensity={0.25}
-        color={0x8888ff}
-      />
-    </>
-  );
-}
-
-// ─── Scene Inner (inside Canvas) ─────────────────────────
-
-function SceneInner({
-  onRoomClick,
-  showWalls,
-  showRoof,
-  showCompliance,
-  showXray,
-  showLabels,
-  showFireRoutes,
-  showFireEquipment,
-  selectedRoomId,
-}: {
-  onRoomClick: (room: Room3D) => void;
-  showWalls: boolean;
-  showRoof: boolean;
-  showCompliance: boolean;
-  showXray: boolean;
-  showLabels: boolean;
-  showFireRoutes: boolean;
-  showFireEquipment: boolean;
-  selectedRoomId: string | null;
-}) {
-  return (
-    <>
-      <Lighting />
-      <fog attach="fog" args={[BG_COLOR, 40, 120]} />
-      <Ground />
-      <Gates />
-      <FireExitMarkers />
-      <FireRoutes visible={showFireRoutes} />
-      <FireEquipmentMarkers visible={showFireEquipment} />
-      <AssemblyPoints visible={showFireRoutes} />
-
-      {ROOMS_3D.map((room) => (
-        <RoomMesh
-          key={room.id}
-          room={room}
-          showWalls={showWalls}
-          showRoof={showRoof}
-          showCompliance={showCompliance}
-          xrayMode={showXray}
-          showLabels={showLabels}
-          onClick={onRoomClick}
-          isSelected={selectedRoomId === room.id}
+      <ambientLight intensity={0.4} />
+      <directionalLight position={[30, 40, 20]} intensity={0.6} castShadow />
+      <directionalLight position={[-20, 30, -10]} intensity={0.3} />
+      
+      {/* Dark ground */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.1, 0]}>
+        <planeGeometry args={[120, 100]} />
+        <meshStandardMaterial color="#0f172a" />
+      </mesh>
+      
+      {/* PDF floor plan as ground texture */}
+      <GroundPlane />
+      
+      {/* Grid */}
+      <gridHelper args={[100, 50, 0x1e3a5f, 0x1e3a5f]} position={[0, -0.08, 0]} />
+      
+      {/* Room outlines */}
+      {ROOM_OUTLINES.map(room => (
+        <RoomBox 
+          key={room.id} 
+          room={room} 
+          isSelected={selectedId === room.id}
+          onClick={() => handleRoomClick(room.id)}
+          showLabel={props.showLabels !== false}
         />
       ))}
-
-      <OrbitControls
-        makeDefault
-        autoRotate
-        autoRotateSpeed={0.15}
-        enableDamping
+      
+      {/* Fire exits */}
+      {props.showFireRoutes && FIRE_EXITS.map((exit, i) => (
+        <FireExitMarker key={i} exit={exit} />
+      ))}
+      
+      {/* Outdoor areas */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.06, -22]}>
+        <planeGeometry args={[40, 12]} />
+        <meshStandardMaterial color="#1a3320" transparent opacity={0.3} />
+      </mesh>
+      
+      <OrbitControls 
+        enableDamping 
         dampingFactor={0.05}
-        minDistance={10}
-        maxDistance={80}
-        maxPolarAngle={Math.PI / 2.1}
-        minPolarAngle={0.1}
-        target={[-8, 0, 12]}
+        minPolarAngle={0.2}
+        maxPolarAngle={Math.PI / 2.2}
+        target={[0, 0, 0]}
       />
     </>
   );
-}
-
-// ─── Public Component ────────────────────────────────────
-
-export interface GroveHouse3DSceneProps {
-  onRoomClick: (room: Room3D) => void;
-  showWalls: boolean;
-  showRoof: boolean;
-  showCompliance: boolean;
-  showXray: boolean;
-  showLabels: boolean;
-  showFireRoutes: boolean;
-  showFireEquipment: boolean;
-  selectedRoomId: string | null;
 }
 
 export default function GroveHouse3DScene(props: GroveHouse3DSceneProps) {
   return (
-    <Canvas
-      shadows
-      camera={{
-        fov: 50,
-        position: [25, 28, 35],
-        near: 0.1,
-        far: 300,
-      }}
-      style={{ background: BG_COLOR }}
-      gl={{ antialias: true }}
-    >
-      <SceneInner {...props} />
-    </Canvas>
+    <div style={{ width: "100%", height: "100%", minHeight: "500px" }}>
+      <Canvas
+        camera={{ position: [30, 35, 40], fov: 50 }}
+        style={{ background: "#0a0f1a" }}
+        gl={{ antialias: true }}
+      >
+        <SceneContent {...props} />
+      </Canvas>
+    </div>
   );
 }
