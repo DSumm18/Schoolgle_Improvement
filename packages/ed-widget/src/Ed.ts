@@ -262,14 +262,18 @@ export class Ed {
       console.log("[Ed] AI disabled in configuration");
     }
 
-    // Fish Audio Voice — DISABLED while testing Gemini Live
-    // TODO: Re-enable Fish Audio as fallback once Gemini Live is stable
-    // if (enableTTS && ttsProvider === "fish") { ... }
-    console.log("[Ed] Fish Audio SKIPPED — using Gemini Live for voice");
+    // Fish Audio Voice — text chat response → Fish Audio TTS → audio playback
+    if (this.config.features.voice && this.config.fishAudioApiKey) {
+      this.fishVoice = new FishAudioVoice(
+        this.config.fishAudioApiKey,
+        (this.config as any).fishAudioVoiceIds || {},
+      );
+      console.log("[Ed] ✅ Fish Audio voice initialized");
+    }
 
-    // Gemini Live Voice — replaces Fish Audio cascade + Web Speech API
-    // Single WebSocket: mic → Gemini → audio response (300-800ms latency)
-    if (this.config.features.voice) {
+    // Gemini Live Voice — kept as optional for real-time voice conversation
+    // Only activate if explicitly enabled AND Fish Audio is not available
+    if (this.config.features.voice && !this.fishVoice) {
       this.geminiLive = new GeminiLiveVoice("/api/voice/config");
       this.geminiLive.on({
         onStateChange: (state) => {
@@ -2443,7 +2447,7 @@ URL: ${window.location.href}`;
   private cyclePersona(): void {
     // Cycle through main chatbot voices first, then character voices
     const mainVoices: PersonaType[] = ["ed", "edwina"];
-    const characterVoices: PersonaType[] = ["santa", "elf", "headteacher"];
+    const characterVoices: PersonaType[] = ["headteacher"];
     const allPersonas: PersonaType[] = [...mainVoices, ...characterVoices];
 
     const currentIndex = allPersonas.indexOf(this.currentPersona);

@@ -31,7 +31,7 @@ interface EdSidebarChatProps {
 }
 
 export default function EdSidebarChat({ collapsed }: EdSidebarChatProps) {
-  const { user, organization, organizationId } = useAuth();
+  const { user, session, organization, organizationId } = useAuth();
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -88,11 +88,16 @@ export default function EdSidebarChat({ collapsed }: EdSidebarChatProps) {
     setHasGreeted(true);
 
     try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (session?.access_token) headers["Authorization"] = `Bearer ${session.access_token}`;
+
       const res = await fetch("/api/ed/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        headers,
         body: JSON.stringify({
           question: "hello",
+          organizationId,
           context: {
             url: pathname,
             hostname: window.location.hostname,
@@ -171,12 +176,17 @@ export default function EdSidebarChat({ collapsed }: EdSidebarChatProps) {
     }
 
     try {
+      const msgHeaders: Record<string, string> = { "Content-Type": "application/json" };
+      if (session?.access_token) msgHeaders["Authorization"] = `Bearer ${session.access_token}`;
+
       const res = await fetch("/api/ed/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        headers: msgHeaders,
         body: JSON.stringify({
           question: messageText,
           image: imageToSend || undefined,
+          organizationId,
           context: {
             url: pathname,
             hostname: window.location.hostname,
