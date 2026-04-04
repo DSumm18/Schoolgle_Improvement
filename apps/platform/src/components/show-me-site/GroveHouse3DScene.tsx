@@ -1,10 +1,9 @@
 "use client";
 
-import React, { useRef, useState, useCallback, useMemo } from "react";
+import React, { Suspense, useRef, useState, useCallback, useMemo } from "react";
 import { Canvas, useFrame, useLoader } from "@react-three/fiber";
-import { OrbitControls, Html } from "@react-three/drei";
+import { OrbitControls, Html, useTexture } from "@react-three/drei";
 import * as THREE from "three";
-import { TextureLoader } from "three";
 import { ROOM_OUTLINES, type RoomOutline } from "./grove-house-3d-data";
 
 interface GroveHouse3DSceneProps {
@@ -128,7 +127,7 @@ function FireExitMarker({ exit }: { exit: typeof FIRE_EXITS[0] }) {
 // ─── Ground with PDF Texture ─────────────────────────────
 
 function GroundPlane() {
-  const texture = useLoader(TextureLoader, '/site-plans/grove-house-ground-floor.png');
+  const texture = useTexture('/site-plans/grove-house-ground-floor.png');
 
   // PDF image: 3309×2339 px, aspect ratio 1.4146:1
   // Must match coordinate mapping: x=-45..35 (80 units), z=-23.35..33.35 (56.7 units)
@@ -140,6 +139,19 @@ function GroundPlane() {
       <planeGeometry args={[planeWidth, planeHeight]} />
       <meshBasicMaterial map={texture} transparent opacity={0.85} />
     </mesh>
+  );
+}
+
+function GroundPlaneWrapper() {
+  return (
+    <Suspense fallback={
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-5, -0.05, 5]}>
+        <planeGeometry args={[80, 56.7]} />
+        <meshBasicMaterial color="#1a2332" />
+      </mesh>
+    }>
+      <GroundPlane />
+    </Suspense>
   );
 }
 
@@ -166,7 +178,7 @@ function SceneContent(props: GroveHouse3DSceneProps) {
       </mesh>
       
       {/* PDF floor plan as ground texture */}
-      <GroundPlane />
+      <GroundPlaneWrapper />
       
       {/* Grid */}
       <gridHelper args={[100, 50, 0x1e3a5f, 0x1e3a5f]} position={[0, -0.08, 0]} />
@@ -205,16 +217,41 @@ function SceneContent(props: GroveHouse3DSceneProps) {
   );
 }
 
+class SceneErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { error: Error | null }
+> {
+  state = { error: null as Error | null };
+  static getDerivedStateFromError(error: Error) { return { error }; }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "#0a0f1a", color: "#ef4444", fontFamily: "monospace", padding: 20 }}>
+          <div>
+            <h3>3D Scene Error</h3>
+            <pre style={{ fontSize: 12, color: "#94a3b8", maxWidth: 500, whiteSpace: "pre-wrap" }}>
+              {this.state.error.message}
+            </pre>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function GroveHouse3DScene(props: GroveHouse3DSceneProps) {
   return (
-    <div style={{ width: "100%", height: "100%", minHeight: "500px" }}>
-      <Canvas
-        camera={{ position: [-15, 45, -30], fov: 50 }}
-        style={{ background: "#0a0f1a" }}
-        gl={{ antialias: true }}
-      >
-        <SceneContent {...props} />
-      </Canvas>
-    </div>
+    <SceneErrorBoundary>
+      <div style={{ width: "100%", height: "100%", minHeight: "500px" }}>
+        <Canvas
+          camera={{ position: [-15, 45, -30], fov: 50 }}
+          style={{ background: "#0a0f1a" }}
+          gl={{ antialias: true }}
+        >
+          <SceneContent {...props} />
+        </Canvas>
+      </div>
+    </SceneErrorBoundary>
   );
 }

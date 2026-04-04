@@ -27,9 +27,14 @@ import {
 } from "@/components/show-me-site/grove-house-3d-data";
 import { RoomLabellingTable } from "@/components/show-me-site/RoomLabellingTable";
 
-// Dynamic import — Three.js doesn't SSR
+// Dynamic imports — Three.js doesn't SSR
 const GroveHouse3DScene = dynamic(
   () => import("@/components/show-me-site/GroveHouse3DScene"),
+  { ssr: false, loading: () => <SceneLoader /> }
+);
+
+const GroveHouse2DPlan = dynamic(
+  () => import("@/components/show-me-site/GroveHouse2DPlan"),
   { ssr: false, loading: () => <SceneLoader /> }
 );
 
@@ -314,6 +319,7 @@ export default function SitePlanPage() {
   const [showFireEquipment, setShowFireEquipment] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<Room3D | null>(null);
   const [showLabelTable, setShowLabelTable] = useState(false);
+  const [use2DView, setUse2DView] = useState(true);
   const [roomLabels, setRoomLabels] = useState<Record<string, string>>(loadRoomLabels);
 
   const handleLabelChange = useCallback((systemId: string, label: string) => {
@@ -392,6 +398,12 @@ export default function SitePlanPage() {
             icon={<TableProperties size={12} />}
           />
           <ToolBtn
+            label="2D / 3D"
+            active={use2DView}
+            onClick={() => setUse2DView((v) => !v)}
+            icon={<Layers size={12} />}
+          />
+          <ToolBtn
             label="Equipment"
             active={showFireEquipment}
             onClick={() => setShowFireEquipment((v) => !v)}
@@ -410,18 +422,30 @@ export default function SitePlanPage() {
       <div className="flex-1 flex min-h-0">
         {/* 3D Scene */}
         <div className="flex-1 relative min-h-0">
-          <GroveHouse3DScene
-            onRoomClick={handleRoomClick}
-            showWalls={showWalls}
-            showRoof={showRoof}
-            showCompliance={showCompliance}
-            showXray={showXray}
-            showLabels={showLabels}
-            showFireRoutes={showFireRoutes}
-            showFireEquipment={showFireEquipment}
-            selectedRoomId={selectedRoom?.id || null}
-            roomLabels={roomLabels}
-          />
+          {use2DView ? (
+            <GroveHouse2DPlan
+              onRoomClick={(id) => {
+                const room = ROOMS_3D.find((r) => r.id === id);
+                if (room) setSelectedRoom(room);
+              }}
+              showLabels={showLabels}
+              selectedRoomId={selectedRoom?.id || null}
+              roomLabels={roomLabels}
+            />
+          ) : (
+            <GroveHouse3DScene
+              onRoomClick={handleRoomClick}
+              showWalls={showWalls}
+              showRoof={showRoof}
+              showCompliance={showCompliance}
+              showXray={showXray}
+              showLabels={showLabels}
+              showFireRoutes={showFireRoutes}
+              showFireEquipment={showFireEquipment}
+              selectedRoomId={selectedRoom?.id || null}
+              roomLabels={roomLabels}
+            />
+          )}
 
           {/* Room Detail Panel */}
           <AnimatePresence>
