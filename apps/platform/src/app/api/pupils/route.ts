@@ -51,9 +51,10 @@ export const GET = protectedRoute(
     const senStatus = searchParams.get("sen_status");
     const activeOnly = searchParams.get("active_only") !== "false";
 
+    // NEVER select * — explicitly list only non-PII columns
     let query = supabase
       .from("pupils")
-      .select("*")
+      .select("id,organization_id,pupil_id,year_group,class_name,gender,pupil_ref,is_pupil_premium,is_eal,is_looked_after,has_send_support,sen_status,primary_need,fsm_eligible,is_active,import_source,imported_at,updated_at")
       .eq("organization_id", organizationId)
       .order("year_group")
       .order("pupil_id");
@@ -321,12 +322,7 @@ export const POST = protectedRoute(
       );
     }
 
-    const withoutDob = pupils.filter((p) => !p.date_of_birth).length;
-    if (withoutDob > 0) {
-      results.warnings.push(
-        `${withoutDob} pupils without date_of_birth — this is optional but useful for age-based analysis`,
-      );
-    }
+    // date_of_birth intentionally NOT tracked — PII not stored server-side
 
     return apiSuccess({
       success: true,
