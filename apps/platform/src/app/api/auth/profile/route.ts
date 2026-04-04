@@ -1,5 +1,7 @@
 import { NextRequest } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
+import { cookies } from "next/headers";
 import { withErrorHandling, apiError, apiSuccess } from "@/lib/api-utils";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -16,12 +18,33 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    // --- AUTHENTICATION CHECK ---
+    // Verify the caller is authenticated and matches the userId being updated
+    const authHeader = req.headers.get("authorization");
+    const supabaseAuth = createClient(
+      supabaseUrl,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { global: { headers: authHeader ? { Authorization: authHeader } : {} } },
+    );
+    const { data: { user: authUser }, error: authError } = await supabaseAuth.auth.getUser();
+
+    if (authError || !authUser) {
+      return apiError("Authentication required", 401, "UNAUTHENTICATED");
+    }
+
     const { userId, email, displayName } = await req.json();
 
     if (!userId) {
       return apiError("Missing required fields", 400);
     }
+
+    // Ensure the authenticated user can only update their OWN profile
+    if (authUser.id !== userId) {
+      return apiError("You can only update your own profile", 403, "FORBIDDEN");
+    }
+
+    // Use service-role client only for the verified user's own data
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // 1. Sync User to Supabase (skip if no email — just fetching org)
     let storedDisplayName: string | null = null;
@@ -52,8 +75,6 @@ export async function POST(req: NextRequest) {
       }
 
       if (userError) {
-        // Log but don't throw — user record sync is non-critical for login
-        // The organization lookup below is what matters
         console.warn(
           "[Auth Profile] User upsert failed (non-fatal):",
           userError.message,
