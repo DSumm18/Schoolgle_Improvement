@@ -738,7 +738,7 @@ export const APPS: AppDefinition[] = [
     id: "deal-finder",
     moduleId: "finance",
     name: "Deal Finder",
-    route: "/toolbox/deal-finder",
+    route: "/dashboard/deal-finder",
     icon: Briefcase,
     shortDescription: "Find best prices and raise requisitions.",
     requiredPermissions: [

@@ -1,10 +1,45 @@
 import { NextRequest, NextResponse } from "next/server";
+import { runScrapePipeline } from "@/lib/deal-finder/services/scrape-pipeline";
 
 /**
- * Fetches product metadata from a URL by extracting Open Graph tags,
- * JSON-LD structured data, and HTML meta tags.
- *
+ * POST /api/tools/deal-finder/scrape
+ * Full scrape-compare-match pipeline (from the merged DealFind app).
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const url = body.url;
+
+    if (!url || typeof url !== "string") {
+      return NextResponse.json(
+        { error: "Missing url in request body" },
+        { status: 400 },
+      );
+    }
+
+    try {
+      new URL(url);
+    } catch {
+      return NextResponse.json({ error: "Invalid URL" }, { status: 400 });
+    }
+
+    const result = await runScrapePipeline(url);
+
+    return NextResponse.json(result, {
+      status: result.status === "failed" ? 500 : 200,
+    });
+  } catch (error) {
+    console.error("Scrape pipeline error:", error);
+    return NextResponse.json(
+      { error: "Scrape pipeline failed" },
+      { status: 500 },
+    );
+  }
+}
+
+/**
  * GET /api/tools/deal-finder/scrape?url=https://...
+ * Legacy: fetches product metadata via Open Graph / JSON-LD / meta tags.
  */
 export async function GET(request: NextRequest) {
   const url = request.nextUrl.searchParams.get("url");
