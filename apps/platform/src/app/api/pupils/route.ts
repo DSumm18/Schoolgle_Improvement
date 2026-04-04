@@ -262,8 +262,11 @@ export const POST = protectedRoute(
       }
 
       // --- PSEUDONYMISE: Hash the pupil_id, NEVER store names/DOB/ethnicity ---
-      const orgSalt = process.env.PUPIL_HASH_SALT || organizationId;
-      const pupilHash = createHmac("sha256", orgSalt)
+      const hashSalt = process.env.PUPIL_HASH_SALT;
+      if (!hashSalt) {
+        return apiError("Server configuration error: PUPIL_HASH_SALT is required", 500, "ENV_MISSING");
+      }
+      const pupilHash = createHmac("sha256", hashSalt)
         .update(`${pupilId}`.toLowerCase().trim())
         .digest("hex");
 
