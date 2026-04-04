@@ -11,12 +11,13 @@ import { ROOM_OUTLINES } from "../grove-house-3d-data";
  *   pixel_x = ((world_x + 45) / 80) * 3309
  *   pixel_y = ((33.35 - world_z) / 56.7) * 2339
  *
- * Building wall boundaries (from dark-pixel scan of PDF):
- *   Overall: world x ~ -41 to 33, z ~ -21 to 31
- *   Block 1/2: x ~ -25.4 to 0.7, z ~ -6.6 to 0.6
- *   Block 3:   x ~ -10.7 to 8.4, z ~ 11.5 to 18.8
- *   Block 4:   x ~ -7.0 to 4.6,  z ~ 19.4 to 27.4
- *   2001 Bldg: x ~ -40.9 to -30.5, z ~ 4.2 to 21.2
+ * Building wall boundaries (traced from zoomed PDF crops, 2026-04-04):
+ *   Block 1:   x ~ -13.6 to -8.0,  z ~ -7.4 to 2.1
+ *   Block 2:   x ~ -22.8 to -13.6, z ~ -7.4 to 2.1
+ *   Block 3:   x ~ -9.9 to 7.0,    z ~ 9.1 to 14.0
+ *   Block 4:   x ~ -11.6 to 5.3,   z ~ 16.4 to 19.5
+ *   2001 Bldg: x ~ -42.8 to -29.3, z ~ -2.0 to 10.6
+ *   2017 Bldg: x ~ -21.1 to -12.0, z ~ 14.0 to 19.4
  */
 
 // Convert world coords to pixel coords
@@ -140,9 +141,9 @@ describe("Room alignment with PDF", () => {
   test("Block 4 rooms are in the upper area", () => {
     const b4 = ROOM_OUTLINES.filter((r) => r.block === "Block 4");
     b4.forEach((room) => {
-      expect(room.x, `${room.systemId} x`).toBeGreaterThan(-10);
+      expect(room.x, `${room.systemId} x`).toBeGreaterThan(-14);
       expect(room.x + room.w, `${room.systemId} x+w`).toBeLessThan(10);
-      expect(room.z, `${room.systemId} z`).toBeGreaterThan(16);
+      expect(room.z, `${room.systemId} z`).toBeGreaterThan(14);
     });
   });
 
@@ -150,14 +151,15 @@ describe("Room alignment with PDF", () => {
     const b2001 = ROOM_OUTLINES.filter((r) => r.block === "2001 Building");
     b2001.forEach((room) => {
       expect(room.x, `${room.systemId} x`).toBeLessThan(-28);
-      expect(room.z, `${room.systemId} z`).toBeGreaterThan(0);
+      expect(room.z, `${room.systemId} z`).toBeGreaterThan(-4);
     });
   });
 
-  test("2017 Building rooms are at the top", () => {
+  test("2017 Building rooms are left of Block 4", () => {
     const b2017 = ROOM_OUTLINES.filter((r) => r.block === "2017 Building");
     b2017.forEach((room) => {
-      expect(room.z, `${room.systemId} z`).toBeGreaterThan(24);
+      expect(room.z, `${room.systemId} z`).toBeGreaterThan(12);
+      expect(room.x, `${room.systemId} x`).toBeLessThan(-12);
     });
   });
 });

@@ -64,45 +64,47 @@ export interface RoomOutline {
  *
  * PDF image: 3309×2339 px
  *
- * Wall positions derived from dark-pixel scanning of the PDF:
- *   Block 1/2: pixel x ~810–1890, y ~1350–1650  → world x ~-25.4 to 0.7, z ~0.6 to -6.6
- *   Block 3:   pixel x ~1420–2210, y ~600–900    → world x ~-10.7 to 8.4, z ~11.5 to 18.8
- *   Block 4:   pixel x ~1570–2050, y ~200–575    → world x ~-7.0 to 4.6, z ~19.4 to 27.4
- *   2001 Bldg: pixel x ~170–600,   y ~500–1200   → world x ~-40.9 to -30.5, z ~4.2 to 21.2
+ * Wall positions traced from zoomed PDF crops (2026-04-04):
+ *   Block 1:   pixel x ~1300–1530, y ~1290–1680  → world x ~-13.6 to -8.0, z ~-7.4 to 2.1
+ *   Block 2:   pixel x ~920–1290,  y ~1290–1680  → world x ~-22.8 to -13.6, z ~-7.4 to 2.1
+ *   Block 3:   pixel x ~1450–2150, y ~800–1000   → world x ~-9.9 to 7.0, z ~9.1 to 14.0
+ *   Block 4:   pixel x ~1380–2080, y ~570–700    → world x ~-11.6 to 5.3, z ~16.4 to 19.5
+ *   2001 Bldg: pixel x ~90–650,   y ~940–1460    → world x ~-42.8 to -29.3, z ~-2.0 to 10.6
+ *   2017 Bldg: pixel x ~990–1370, y ~575–800     → world x ~-21.1 to -12.0, z ~14.0 to 19.4
  */
 export const ROOM_OUTLINES: RoomOutline[] = [
-  // BLOCK 1 (lower-centre on PDF, east of Block 2)
-  { systemId: "B1-01", pdfNumber: "", schoolLabel: "", label: "Block 1 - Room 1", block: "Block 1", x: -15.9, z: -2.4, w: 6.4, d: 4.3, color: "#3b82f6" },
-  { systemId: "B1-02", pdfNumber: "", schoolLabel: "", label: "Block 1 - Room 2", block: "Block 1", x: -15.9, z: -6.9, w: 6.4, d: 4.3, color: "#3b82f6" },
+  // BLOCK 1 (lower-centre, east of Block 2. "BLOCK 1" label at px ~1500,1700)
+  { systemId: "B1-01", pdfNumber: "", schoolLabel: "", label: "Block 1 - Room 1", block: "Block 1", x: -13.6, z: -2.5, w: 5.6, d: 4.6, color: "#3b82f6" },
+  { systemId: "B1-02", pdfNumber: "", schoolLabel: "", label: "Block 1 - Room 2", block: "Block 1", x: -13.6, z: -7.4, w: 5.6, d: 4.4, color: "#3b82f6" },
 
-  // BLOCK 2 (lower-centre on PDF, west of Block 1)
-  { systemId: "B2-01", pdfNumber: "", schoolLabel: "", label: "Block 2 - Room 1", block: "Block 2", x: -25.4, z: -2.4, w: 9.3, d: 4.3, color: "#60a5fa" },
-  { systemId: "B2-02", pdfNumber: "", schoolLabel: "", label: "Block 2 - Room 2", block: "Block 2", x: -25.4, z: -6.9, w: 9.3, d: 4.3, color: "#60a5fa" },
+  // BLOCK 2 (lower-centre, west of Block 1. "BLOCK 2" label at px ~1280,1700)
+  { systemId: "B2-01", pdfNumber: "", schoolLabel: "", label: "Block 2 - Room 1", block: "Block 2", x: -22.8, z: -2.5, w: 9.0, d: 4.6, color: "#60a5fa" },
+  { systemId: "B2-02", pdfNumber: "", schoolLabel: "", label: "Block 2 - Room 2", block: "Block 2", x: -22.8, z: -7.4, w: 9.0, d: 4.4, color: "#60a5fa" },
 
-  // 2001 BUILDING (far-left wing)
-  { systemId: "2001-01", pdfNumber: "", schoolLabel: "", label: "2001 Building - Hall", block: "2001 Building", x: -40.9, z: 8.1, w: 10.4, d: 7.8, color: "#f59e0b" },
-  { systemId: "2001-02", pdfNumber: "", schoolLabel: "", label: "2001 Building - Room 2", block: "2001 Building", x: -40.9, z: 16.1, w: 6.5, d: 5.1, color: "#f59e0b" },
-  { systemId: "2001-03", pdfNumber: "", schoolLabel: "", label: "2001 Building - Room 3", block: "2001 Building", x: -34.3, z: 4.2, w: 3.8, d: 3.7, color: "#f59e0b" },
-  { systemId: "2001-04", pdfNumber: "", schoolLabel: "", label: "2001 Building - Room 4", block: "2001 Building", x: -40.9, z: 4.2, w: 6.4, d: 3.7, color: "#f59e0b" },
+  // 2001 BUILDING (far-left wing. Rooms 59, 57, 60, 67 on PDF)
+  { systemId: "2001-01", pdfNumber: "59", schoolLabel: "", label: "2001 Building - Hall", block: "2001 Building", x: -42.8, z: 4.3, w: 5.3, d: 6.3, color: "#f59e0b" },
+  { systemId: "2001-02", pdfNumber: "57", schoolLabel: "", label: "2001 Building - Room 2", block: "2001 Building", x: -34.6, z: 4.7, w: 5.3, d: 5.9, color: "#f59e0b" },
+  { systemId: "2001-03", pdfNumber: "60", schoolLabel: "", label: "2001 Building - Room 3", block: "2001 Building", x: -42.8, z: -2.0, w: 6.0, d: 6.3, color: "#f59e0b" },
+  { systemId: "2001-04", pdfNumber: "67", schoolLabel: "", label: "2001 Building - Room 4", block: "2001 Building", x: -35.1, z: 0.6, w: 4.6, d: 3.7, color: "#f59e0b" },
 
-  // BLOCK 3 (centre-right of building)
-  { systemId: "B3-01", pdfNumber: "", schoolLabel: "", label: "Block 3 - Room 1", block: "Block 3", x: -10.7, z: 14.7, w: 4.8, d: 4.1, color: "#22c55e" },
-  { systemId: "B3-02", pdfNumber: "", schoolLabel: "", label: "Block 3 - Room 2", block: "Block 3", x: -5.7, z: 14.7, w: 4.8, d: 4.1, color: "#22c55e" },
-  { systemId: "B3-03", pdfNumber: "", schoolLabel: "", label: "Block 3 - Room 3", block: "Block 3", x: -10.7, z: 11.5, w: 9.8, d: 3.0, color: "#22c55e" },
+  // BLOCK 3 (middle section. "BLOCK 3" label at px ~2050,830)
+  { systemId: "B3-01", pdfNumber: "", schoolLabel: "", label: "Block 3 - Room 1", block: "Block 3", x: -9.9, z: 9.1, w: 6.0, d: 4.9, color: "#22c55e" },
+  { systemId: "B3-02", pdfNumber: "", schoolLabel: "", label: "Block 3 - Room 2", block: "Block 3", x: -3.9, z: 9.1, w: 6.0, d: 4.9, color: "#22c55e" },
+  { systemId: "B3-03", pdfNumber: "", schoolLabel: "", label: "Block 3 - Room 3", block: "Block 3", x: 2.1, z: 9.1, w: 4.9, d: 4.9, color: "#22c55e" },
 
-  // MAIN ENTRANCE (south of Block 3)
-  { systemId: "ENT-01", pdfNumber: "", schoolLabel: "", label: "Main Entrance", block: "Main", x: -5.0, z: -6.0, w: 3.5, d: 3.0, color: "#ef4444" },
+  // MAIN ENTRANCE (south, "MAIN ENTRANCE" label at px ~1860,1710)
+  { systemId: "ENT-01", pdfNumber: "", schoolLabel: "", label: "Main Entrance", block: "Main", x: -1.2, z: -8.6, w: 3.3, d: 2.2, color: "#ef4444" },
 
-  // BLOCK 4 (upper-centre)
-  { systemId: "B4-01", pdfNumber: "", schoolLabel: "", label: "Block 4 - Room 1", block: "Block 4", x: -7.0, z: 23.2, w: 5.3, d: 4.2, color: "#a78bfa" },
-  { systemId: "B4-02", pdfNumber: "", schoolLabel: "", label: "Block 4 - Room 2", block: "Block 4", x: -1.5, z: 23.2, w: 5.3, d: 4.2, color: "#a78bfa" },
-  { systemId: "B4-03", pdfNumber: "", schoolLabel: "", label: "Block 4 - Room 3", block: "Block 4", x: -7.0, z: 19.4, w: 5.3, d: 3.6, color: "#a78bfa" },
-  { systemId: "B4-04", pdfNumber: "", schoolLabel: "", label: "Block 4 - Room 4", block: "Block 4", x: -1.5, z: 19.4, w: 5.3, d: 3.6, color: "#a78bfa" },
+  // BLOCK 4 (top row. "BLOCK 4" label at px ~1650,510. Rooms 77,32,33,34 on PDF)
+  { systemId: "B4-01", pdfNumber: "77", schoolLabel: "", label: "Block 4 - Room 1", block: "Block 4", x: -11.6, z: 16.4, w: 3.6, d: 3.1, color: "#a78bfa" },
+  { systemId: "B4-02", pdfNumber: "", schoolLabel: "", label: "Block 4 - Room 2", block: "Block 4", x: -7.3, z: 16.4, w: 4.4, d: 3.1, color: "#a78bfa" },
+  { systemId: "B4-03", pdfNumber: "32", schoolLabel: "", label: "Block 4 - Room 3", block: "Block 4", x: -0.8, z: 16.4, w: 3.2, d: 2.9, color: "#a78bfa" },
+  { systemId: "B4-04", pdfNumber: "33", schoolLabel: "", label: "Block 4 - Room 4", block: "Block 4", x: 2.5, z: 16.4, w: 2.9, d: 3.1, color: "#a78bfa" },
 
-  // 2017 BUILDING (top extension)
-  { systemId: "2017-01", pdfNumber: "", schoolLabel: "", label: "2017 Building - Room 1", block: "2017 Building", x: -10.0, z: 27.4, w: 4.8, d: 3.5, color: "#f97316" },
-  { systemId: "2017-02", pdfNumber: "", schoolLabel: "", label: "2017 Building - Room 2", block: "2017 Building", x: -5.0, z: 27.4, w: 4.8, d: 3.5, color: "#f97316" },
-  { systemId: "2017-03", pdfNumber: "", schoolLabel: "", label: "2017 Building - Room 3", block: "2017 Building", x: 0.0, z: 27.4, w: 4.8, d: 3.5, color: "#f97316" },
+  // 2017 BUILDING (extension LEFT of Block 4. Rooms 101, 102, 103 on PDF)
+  { systemId: "2017-01", pdfNumber: "102", schoolLabel: "", label: "2017 Building - Room 1", block: "2017 Building", x: -19.4, z: 16.4, w: 7.5, d: 3.0, color: "#f97316" },
+  { systemId: "2017-02", pdfNumber: "101", schoolLabel: "", label: "2017 Building - Room 2", block: "2017 Building", x: -21.1, z: 14.0, w: 4.1, d: 2.4, color: "#f97316" },
+  { systemId: "2017-03", pdfNumber: "103", schoolLabel: "", label: "2017 Building - Room 3", block: "2017 Building", x: -16.0, z: 14.0, w: 4.1, d: 2.4, color: "#f97316" },
 ];
 
 // ─── Block Colours (Schoolgle brand) ─────────────────────
