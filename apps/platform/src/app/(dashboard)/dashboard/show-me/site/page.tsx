@@ -14,6 +14,7 @@ import {
   Box,
   Layers,
   Zap,
+  TableProperties,
 } from "lucide-react";
 import {
   ROOMS_3D,
@@ -24,6 +25,7 @@ import {
   type Room3D,
   type ComplianceStatus,
 } from "@/components/show-me-site/grove-house-3d-data";
+import { RoomLabellingTable } from "@/components/show-me-site/RoomLabellingTable";
 
 // Dynamic import — Three.js doesn't SSR
 const GroveHouse3DScene = dynamic(
@@ -290,6 +292,18 @@ function Hint() {
 
 // ─── Main Page ───────────────────────────────────────────
 
+const ROOM_LABELS_KEY = "schoolgle-room-labels";
+
+function loadRoomLabels(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  try {
+    const stored = localStorage.getItem(ROOM_LABELS_KEY);
+    return stored ? JSON.parse(stored) : {};
+  } catch {
+    return {};
+  }
+}
+
 export default function SitePlanPage() {
   const [showWalls, setShowWalls] = useState(true);
   const [showRoof, setShowRoof] = useState(true);
@@ -299,6 +313,16 @@ export default function SitePlanPage() {
   const [showFireRoutes, setShowFireRoutes] = useState(false);
   const [showFireEquipment, setShowFireEquipment] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<Room3D | null>(null);
+  const [showLabelTable, setShowLabelTable] = useState(false);
+  const [roomLabels, setRoomLabels] = useState<Record<string, string>>(loadRoomLabels);
+
+  const handleLabelChange = useCallback((systemId: string, label: string) => {
+    setRoomLabels((prev) => {
+      const next = { ...prev, [systemId]: label };
+      localStorage.setItem(ROOM_LABELS_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
 
   const handleRoomClick = useCallback((room: Room3D) => {
     setSelectedRoom(room);
@@ -362,7 +386,13 @@ export default function SitePlanPage() {
             icon={<Tag size={12} />}
           />
           <ToolBtn
-            label="🧯 Equipment"
+            label="Label Rooms"
+            active={showLabelTable}
+            onClick={() => setShowLabelTable((v) => !v)}
+            icon={<TableProperties size={12} />}
+          />
+          <ToolBtn
+            label="Equipment"
             active={showFireEquipment}
             onClick={() => setShowFireEquipment((v) => !v)}
           />
@@ -376,32 +406,58 @@ export default function SitePlanPage() {
         </div>
       </div>
 
-      {/* 3D Scene */}
-      <div className="flex-1 relative min-h-0">
-        <GroveHouse3DScene
-          onRoomClick={handleRoomClick}
-          showWalls={showWalls}
-          showRoof={showRoof}
-          showCompliance={showCompliance}
-          showXray={showXray}
-          showLabels={showLabels}
-          showFireRoutes={showFireRoutes}
-          showFireEquipment={showFireEquipment}
-          selectedRoomId={selectedRoom?.id || null}
-        />
+      {/* 3D Scene + Label Table */}
+      <div className="flex-1 flex min-h-0">
+        {/* 3D Scene */}
+        <div className="flex-1 relative min-h-0">
+          <GroveHouse3DScene
+            onRoomClick={handleRoomClick}
+            showWalls={showWalls}
+            showRoof={showRoof}
+            showCompliance={showCompliance}
+            showXray={showXray}
+            showLabels={showLabels}
+            showFireRoutes={showFireRoutes}
+            showFireEquipment={showFireEquipment}
+            selectedRoomId={selectedRoom?.id || null}
+            roomLabels={roomLabels}
+          />
 
-        {/* Room Detail Panel */}
-        <AnimatePresence>
-          {selectedRoom && (
-            <RoomPanel room={selectedRoom} onClose={closePanel} />
-          )}
-        </AnimatePresence>
+          {/* Room Detail Panel */}
+          <AnimatePresence>
+            {selectedRoom && (
+              <RoomPanel room={selectedRoom} onClose={closePanel} />
+            )}
+          </AnimatePresence>
 
-        {/* Info Badge */}
-        <InfoBadge fireMode={showFireRoutes} />
+          {/* Info Badge */}
+          <InfoBadge fireMode={showFireRoutes} />
 
-        {/* Hint */}
-        <Hint />
+          {/* Hint */}
+          <Hint />
+        </div>
+
+        {/* Room Labelling Table */}
+        {showLabelTable && (
+          <div className="w-[380px] bg-slate-900 border-l border-slate-700 flex flex-col flex-shrink-0">
+            <div className="px-4 py-2 border-b border-slate-700 flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-bold text-slate-200">Room Labels</h2>
+                <p className="text-[10px] text-slate-500">Name your rooms — saved automatically</p>
+              </div>
+              <button
+                onClick={() => setShowLabelTable(false)}
+                className="w-6 h-6 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center"
+              >
+                <X size={12} />
+              </button>
+            </div>
+            <RoomLabellingTable
+              roomLabels={roomLabels}
+              onLabelChange={handleLabelChange}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

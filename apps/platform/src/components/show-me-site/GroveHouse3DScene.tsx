@@ -5,6 +5,7 @@ import { Canvas, useFrame, useLoader } from "@react-three/fiber";
 import { OrbitControls, Html } from "@react-three/drei";
 import * as THREE from "three";
 import { TextureLoader } from "three";
+import { ROOM_OUTLINES, type RoomOutline } from "./grove-house-3d-data";
 
 interface GroveHouse3DSceneProps {
   onRoomClick?: (roomId: string) => void;
@@ -15,78 +16,27 @@ interface GroveHouse3DSceneProps {
   showFireRoutes?: boolean;
   showFireEquipment?: boolean;
   selectedRoomId?: string | null;
+  roomLabels?: Record<string, string>;
 }
-
-// Room outlines traced from the PDF - these are the BLOCK boundaries
-// Individual room labels will be added by the school
-// Coordinates in meters, relative to building centre
-interface RoomOutline {
-  id: string;
-  label: string; // What's written on the PDF (block name or room number)
-  schoolLabel?: string; // What the school names it (added later)
-  x: number;
-  z: number;
-  w: number;
-  d: number;
-  color: string;
-  block: string;
-}
-
-// These outlines match the visible room boundaries on the PDF
-// Positions are approximate but derived from the actual drawing
-const ROOM_OUTLINES: RoomOutline[] = [
-  // BLOCK 1 rooms (bottom-centre on the PDF)
-  { id: "b1-r1", label: "Block 1 - Room 1", block: "Block 1", x: -4, z: -6, w: 6, d: 5, color: "#3b82f6" },
-  { id: "b1-r2", label: "Block 1 - Room 2", block: "Block 1", x: -4, z: -11.5, w: 6, d: 5, color: "#3b82f6" },
-  { id: "b1-r3", label: "Block 1 - Room 3", block: "Block 1", x: 2.5, z: -8, w: 3, d: 4, color: "#3b82f6" },
-
-  // BLOCK 2 rooms (to the left of Block 1)
-  { id: "b2-r1", label: "Block 2 - Room 1", block: "Block 2", x: -11, z: -6, w: 6, d: 5, color: "#60a5fa" },
-  { id: "b2-r2", label: "Block 2 - Room 2", block: "Block 2", x: -11, z: -11.5, w: 6, d: 5, color: "#60a5fa" },
-  { id: "b2-r3", label: "Block 2 - Room 3", block: "Block 2", x: -6, z: -14, w: 3, d: 3, color: "#60a5fa" },
-
-  // 2001 BUILDING (far left - highlighted in purple on page 2)
-  { id: "2001-r1", label: "2001 Building - Hall", block: "2001 Building", x: -24, z: -6, w: 10, d: 8, color: "#f59e0b" },
-  { id: "2001-r2", label: "2001 Building - Room 2", block: "2001 Building", x: -24, z: 3, w: 7, d: 5, color: "#f59e0b" },
-  { id: "2001-r3", label: "2001 Building - Room 3", block: "2001 Building", x: -30, z: -8, w: 7, d: 6, color: "#f59e0b" },
-  { id: "2001-r4", label: "2001 Building - Room 4", block: "2001 Building", x: -30, z: 0, w: 4, d: 3, color: "#f59e0b" },
-
-  // BLOCK 3 (centre-right, entrance area)
-  { id: "b3-r1", label: "Block 3 - Room 1", block: "Block 3", x: 4, z: -4, w: 6, d: 5, color: "#22c55e" },
-  { id: "b3-r2", label: "Block 3 - Room 2", block: "Block 3", x: 8, z: -9, w: 4, d: 4, color: "#22c55e" },
-  { id: "b3-r3", label: "Block 3 - Room 3", block: "Block 3", x: 8, z: -4, w: 4, d: 4, color: "#22c55e" },
-  { id: "b3-entrance", label: "Main Entrance", block: "Block 3", x: 6, z: -15, w: 4, d: 3, color: "#22c55e" },
-
-  // BLOCK 4 (top-right)
-  { id: "b4-r1", label: "Block 4 - Room 1", block: "Block 4", x: 4, z: 10, w: 6, d: 5, color: "#a78bfa" },
-  { id: "b4-r2", label: "Block 4 - Room 2", block: "Block 4", x: 4, z: 16, w: 6, d: 5, color: "#a78bfa" },
-  { id: "b4-r3", label: "Block 4 - Room 3", block: "Block 4", x: 11, z: 12, w: 5, d: 4, color: "#a78bfa" },
-  { id: "b4-r4", label: "Block 4 - Room 4", block: "Block 4", x: 11, z: 16, w: 4, d: 4, color: "#a78bfa" },
-
-  // 2017 BUILDING (top extension - highlighted in yellow on page 2)
-  { id: "2017-r1", label: "2017 Building - Room 1", block: "2017 Building", x: -2, z: 18, w: 5, d: 5, color: "#f97316" },
-  { id: "2017-r2", label: "2017 Building - Room 2", block: "2017 Building", x: -2, z: 24, w: 5, d: 4, color: "#f97316" },
-  { id: "2017-r3", label: "2017 Building - Room 3", block: "2017 Building", x: 4, z: 20, w: 5, d: 4, color: "#f97316" },
-];
 
 // Fire exits visible on the PDF (door symbols with exit marking)
 const FIRE_EXITS = [
-  { x: 6, z: -17, label: "Main Entrance" },
-  { x: -4, z: -14, label: "Block 1 Exit" },
-  { x: -11, z: -14, label: "Block 2 Exit" },
-  { x: -24, z: -14, label: "Hall South Exit" },
-  { x: -34, z: -6, label: "Nursery Exit" },
-  { x: -24, z: 6, label: "Kitchen Exit" },
-  { x: 12, z: -6, label: "Block 3 East Exit" },
-  { x: 12, z: 10, label: "Block 4 South Exit" },
-  { x: 4, z: 22, label: "Block 4 North Exit" },
-  { x: -4, z: 28, label: "2017 Building Exit" },
+  { x: -5.0, z: -6.0, label: "Main Entrance" },
+  { x: -10.0, z: -7.0, label: "Block 1 Exit" },
+  { x: -20.0, z: -7.0, label: "Block 2 Exit" },
+  { x: -38.0, z: 8.0, label: "Hall South Exit" },
+  { x: -40.9, z: 21.0, label: "2001 Building Exit" },
+  { x: -30.5, z: 16.0, label: "Kitchen Exit" },
+  { x: 0.0, z: 14.5, label: "Block 3 East Exit" },
+  { x: -7.0, z: 19.4, label: "Block 4 South Exit" },
+  { x: 4.0, z: 27.4, label: "Block 4 North Exit" },
+  { x: -10.0, z: 30.9, label: "2017 Building Exit" },
 ];
 
 // ─── Room Box Component ─────────────────────────────────
 
-function RoomBox({ room, isSelected, onClick, showLabel }: { 
-  room: RoomOutline; isSelected: boolean; onClick: () => void; showLabel: boolean;
+function RoomBox({ room, isSelected, onClick, showLabel, displayLabel }: {
+  room: RoomOutline; isSelected: boolean; onClick: () => void; showLabel: boolean; displayLabel?: string;
 }) {
   const meshRef = useRef<THREE.Mesh>(null);
   const [hovered, setHovered] = useState(false);
@@ -142,7 +92,7 @@ function RoomBox({ room, isSelected, onClick, showLabel }: {
             padding: '2px 6px',
             borderRadius: '3px',
           }}>
-            {room.schoolLabel || room.label}
+            {displayLabel || room.schoolLabel || room.label}
           </div>
         </Html>
       )}
@@ -223,12 +173,13 @@ function SceneContent(props: GroveHouse3DSceneProps) {
       
       {/* Room outlines */}
       {ROOM_OUTLINES.map(room => (
-        <RoomBox 
-          key={room.id} 
-          room={room} 
-          isSelected={selectedId === room.id}
-          onClick={() => handleRoomClick(room.id)}
+        <RoomBox
+          key={room.systemId}
+          room={room}
+          isSelected={selectedId === room.systemId}
+          onClick={() => handleRoomClick(room.systemId)}
           showLabel={props.showLabels !== false}
+          displayLabel={props.roomLabels?.[room.systemId] || undefined}
         />
       ))}
       
@@ -237,18 +188,18 @@ function SceneContent(props: GroveHouse3DSceneProps) {
         <FireExitMarker key={i} exit={exit} />
       ))}
       
-      {/* Outdoor areas */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.06, -22]}>
-        <planeGeometry args={[40, 12]} />
+      {/* Outdoor areas (south of building) */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-25, -0.06, -18]}>
+        <planeGeometry args={[30, 10]} />
         <meshStandardMaterial color="#1a3320" transparent opacity={0.3} />
       </mesh>
-      
-      <OrbitControls 
-        enableDamping 
+
+      <OrbitControls
+        enableDamping
         dampingFactor={0.05}
         minPolarAngle={0.2}
         maxPolarAngle={Math.PI / 2.2}
-        target={[0, 0, 0]}
+        target={[-15, 0, 10]}
       />
     </>
   );
@@ -258,7 +209,7 @@ export default function GroveHouse3DScene(props: GroveHouse3DSceneProps) {
   return (
     <div style={{ width: "100%", height: "100%", minHeight: "500px" }}>
       <Canvas
-        camera={{ position: [30, 35, 40], fov: 50 }}
+        camera={{ position: [-15, 50, 50], fov: 50 }}
         style={{ background: "#0a0f1a" }}
         gl={{ antialias: true }}
       >

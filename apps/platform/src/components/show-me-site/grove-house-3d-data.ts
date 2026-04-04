@@ -40,6 +40,71 @@ export interface FireEquipment3D {
   name: string;
 }
 
+// ─── Room Outline (PDF-aligned overlay rectangles) ──────
+
+export interface RoomOutline {
+  systemId: string;      // Our fixed ID: "B1-01" format
+  pdfNumber: string;     // Number visible on the PDF (or "" if none)
+  schoolLabel: string;   // School fills in later (e.g., "Year 2 Classroom")
+  label: string;         // Default display label
+  block: string;
+  x: number;
+  z: number;
+  w: number;
+  d: number;
+  color: string;
+}
+
+/**
+ * Room outlines positioned to align with the PDF ground texture.
+ *
+ * Coordinate mapping (ground plane at [-5, -0.05, 5], size 80×56.7):
+ *   pixel_x = ((world_x + 45) / 80) * 3309
+ *   pixel_y = ((33.35 - world_z) / 56.7) * 2339
+ *
+ * PDF image: 3309×2339 px
+ *
+ * Wall positions derived from dark-pixel scanning of the PDF:
+ *   Block 1/2: pixel x ~810–1890, y ~1350–1650  → world x ~-25.4 to 0.7, z ~0.6 to -6.6
+ *   Block 3:   pixel x ~1420–2210, y ~600–900    → world x ~-10.7 to 8.4, z ~11.5 to 18.8
+ *   Block 4:   pixel x ~1570–2050, y ~200–575    → world x ~-7.0 to 4.6, z ~19.4 to 27.4
+ *   2001 Bldg: pixel x ~170–600,   y ~500–1200   → world x ~-40.9 to -30.5, z ~4.2 to 21.2
+ */
+export const ROOM_OUTLINES: RoomOutline[] = [
+  // BLOCK 1 (lower-centre on PDF, east of Block 2)
+  { systemId: "B1-01", pdfNumber: "", schoolLabel: "", label: "Block 1 - Room 1", block: "Block 1", x: -15.9, z: -2.4, w: 6.4, d: 4.3, color: "#3b82f6" },
+  { systemId: "B1-02", pdfNumber: "", schoolLabel: "", label: "Block 1 - Room 2", block: "Block 1", x: -15.9, z: -6.9, w: 6.4, d: 4.3, color: "#3b82f6" },
+
+  // BLOCK 2 (lower-centre on PDF, west of Block 1)
+  { systemId: "B2-01", pdfNumber: "", schoolLabel: "", label: "Block 2 - Room 1", block: "Block 2", x: -25.4, z: -2.4, w: 9.3, d: 4.3, color: "#60a5fa" },
+  { systemId: "B2-02", pdfNumber: "", schoolLabel: "", label: "Block 2 - Room 2", block: "Block 2", x: -25.4, z: -6.9, w: 9.3, d: 4.3, color: "#60a5fa" },
+
+  // 2001 BUILDING (far-left wing)
+  { systemId: "2001-01", pdfNumber: "", schoolLabel: "", label: "2001 Building - Hall", block: "2001 Building", x: -40.9, z: 8.1, w: 10.4, d: 7.8, color: "#f59e0b" },
+  { systemId: "2001-02", pdfNumber: "", schoolLabel: "", label: "2001 Building - Room 2", block: "2001 Building", x: -40.9, z: 16.1, w: 6.5, d: 5.1, color: "#f59e0b" },
+  { systemId: "2001-03", pdfNumber: "", schoolLabel: "", label: "2001 Building - Room 3", block: "2001 Building", x: -34.3, z: 4.2, w: 3.8, d: 3.7, color: "#f59e0b" },
+  { systemId: "2001-04", pdfNumber: "", schoolLabel: "", label: "2001 Building - Room 4", block: "2001 Building", x: -40.9, z: 4.2, w: 6.4, d: 3.7, color: "#f59e0b" },
+
+  // BLOCK 3 (centre-right of building)
+  { systemId: "B3-01", pdfNumber: "", schoolLabel: "", label: "Block 3 - Room 1", block: "Block 3", x: -10.7, z: 14.7, w: 4.8, d: 4.1, color: "#22c55e" },
+  { systemId: "B3-02", pdfNumber: "", schoolLabel: "", label: "Block 3 - Room 2", block: "Block 3", x: -5.7, z: 14.7, w: 4.8, d: 4.1, color: "#22c55e" },
+  { systemId: "B3-03", pdfNumber: "", schoolLabel: "", label: "Block 3 - Room 3", block: "Block 3", x: -10.7, z: 11.5, w: 9.8, d: 3.0, color: "#22c55e" },
+
+  // MAIN ENTRANCE (south of Block 3)
+  { systemId: "ENT-01", pdfNumber: "", schoolLabel: "", label: "Main Entrance", block: "Main", x: -5.0, z: -6.0, w: 3.5, d: 3.0, color: "#ef4444" },
+
+  // BLOCK 4 (upper-centre)
+  { systemId: "B4-01", pdfNumber: "", schoolLabel: "", label: "Block 4 - Room 1", block: "Block 4", x: -7.0, z: 23.2, w: 5.3, d: 4.2, color: "#a78bfa" },
+  { systemId: "B4-02", pdfNumber: "", schoolLabel: "", label: "Block 4 - Room 2", block: "Block 4", x: -1.5, z: 23.2, w: 5.3, d: 4.2, color: "#a78bfa" },
+  { systemId: "B4-03", pdfNumber: "", schoolLabel: "", label: "Block 4 - Room 3", block: "Block 4", x: -7.0, z: 19.4, w: 5.3, d: 3.6, color: "#a78bfa" },
+  { systemId: "B4-04", pdfNumber: "", schoolLabel: "", label: "Block 4 - Room 4", block: "Block 4", x: -1.5, z: 19.4, w: 5.3, d: 3.6, color: "#a78bfa" },
+
+  // 2017 BUILDING (top extension)
+  { systemId: "2017-01", pdfNumber: "", schoolLabel: "", label: "2017 Building - Room 1", block: "2017 Building", x: -10.0, z: 27.4, w: 4.8, d: 3.5, color: "#f97316" },
+  { systemId: "2017-02", pdfNumber: "", schoolLabel: "", label: "2017 Building - Room 2", block: "2017 Building", x: -5.0, z: 27.4, w: 4.8, d: 3.5, color: "#f97316" },
+  { systemId: "2017-03", pdfNumber: "", schoolLabel: "", label: "2017 Building - Room 3", block: "2017 Building", x: 0.0, z: 27.4, w: 4.8, d: 3.5, color: "#f97316" },
+];
+
 // ─── Block Colours (Schoolgle brand) ─────────────────────
 
 export const BLOCK_COLORS: Record<string, { fill: number; hex: string }> = {
