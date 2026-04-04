@@ -48,15 +48,15 @@ function RoomBox({ room, isSelected, onClick, showLabel, displayLabel }: {
       {/* Floor */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
         <planeGeometry args={[room.w, room.d]} />
-        <meshStandardMaterial 
-          color={room.color} 
-          transparent 
-          opacity={hovered ? 0.5 : isSelected ? 0.4 : 0.15} 
+        <meshStandardMaterial
+          color={room.color}
+          transparent
+          opacity={hovered ? 0.6 : isSelected ? 0.5 : 0.3}
         />
       </mesh>
-      
-      {/* Walls (transparent) */}
-      <mesh 
+
+      {/* Walls (semi-transparent) */}
+      <mesh
         ref={meshRef}
         position={[0, wallHeight / 2, 0]}
         onClick={(e) => { e.stopPropagation(); onClick(); }}
@@ -64,18 +64,18 @@ function RoomBox({ room, isSelected, onClick, showLabel, displayLabel }: {
         onPointerLeave={() => { setHovered(false); document.body.style.cursor = 'default'; }}
       >
         <boxGeometry args={[room.w, wallHeight, room.d]} />
-        <meshStandardMaterial 
-          color={room.color} 
-          transparent 
-          opacity={hovered ? 0.25 : isSelected ? 0.2 : 0.08}
+        <meshStandardMaterial
+          color={room.color}
+          transparent
+          opacity={hovered ? 0.35 : isSelected ? 0.3 : 0.15}
           side={THREE.DoubleSide}
         />
       </mesh>
-      
+
       {/* Edges */}
       <lineSegments position={[0, wallHeight / 2, 0]}>
         <edgesGeometry args={[new THREE.BoxGeometry(room.w, wallHeight, room.d)]} />
-        <lineBasicMaterial color={room.color} transparent opacity={hovered ? 0.8 : 0.3} />
+        <lineBasicMaterial color={room.color} transparent opacity={hovered ? 0.9 : 0.5} />
       </lineSegments>
       
       {/* Label */}
@@ -129,16 +129,16 @@ function FireExitMarker({ exit }: { exit: typeof FIRE_EXITS[0] }) {
 
 function GroundPlane() {
   const texture = useLoader(TextureLoader, '/site-plans/grove-house-ground-floor.png');
-  
-  // The PDF image aspect ratio is roughly 1654:1170 ≈ 1.41:1
-  // Scale to match our building coordinates
+
+  // PDF image: 3309×2339 px, aspect ratio 1.4146:1
+  // Must match coordinate mapping: x=-45..35 (80 units), z=-23.35..33.35 (56.7 units)
   const planeWidth = 80;
-  const planeHeight = planeWidth / 1.41;
-  
+  const planeHeight = planeWidth / (3309 / 2339);
+
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-5, -0.05, 5]}>
       <planeGeometry args={[planeWidth, planeHeight]} />
-      <meshBasicMaterial map={texture} transparent opacity={0.4} />
+      <meshBasicMaterial map={texture} transparent opacity={0.85} />
     </mesh>
   );
 }
@@ -209,7 +209,7 @@ export default function GroveHouse3DScene(props: GroveHouse3DSceneProps) {
   return (
     <div style={{ width: "100%", height: "100%", minHeight: "500px" }}>
       <Canvas
-        camera={{ position: [-15, 50, 50], fov: 50 }}
+        camera={{ position: [-15, 45, -30], fov: 50 }}
         style={{ background: "#0a0f1a" }}
         gl={{ antialias: true }}
       >

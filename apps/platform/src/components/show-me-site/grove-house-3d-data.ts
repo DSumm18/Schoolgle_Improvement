@@ -73,13 +73,17 @@ export interface RoomOutline {
  *   2017 Bldg: pixel x ~990–1370, y ~575–800     → world x ~-21.1 to -12.0, z ~14.0 to 19.4
  */
 export const ROOM_OUTLINES: RoomOutline[] = [
-  // BLOCK 1 (lower-centre, east of Block 2. "BLOCK 1" label at px ~1500,1700)
-  { systemId: "B1-01", pdfNumber: "", schoolLabel: "", label: "Block 1 - Room 1", block: "Block 1", x: -13.6, z: -2.5, w: 5.6, d: 4.6, color: "#3b82f6" },
-  { systemId: "B1-02", pdfNumber: "", schoolLabel: "", label: "Block 1 - Room 2", block: "Block 1", x: -13.6, z: -7.4, w: 5.6, d: 4.4, color: "#3b82f6" },
+  // BLOCK 1 (lower-centre, east of Block 2. Rooms 46, 43, 42 on PDF)
+  { systemId: "B1-01", pdfNumber: "46", schoolLabel: "", label: "Block 1 - Room 1", block: "Block 1", x: -13.3, z: -2.5, w: 5.1, d: 3.5, color: "#3b82f6" },
+  { systemId: "B1-02", pdfNumber: "43", schoolLabel: "", label: "Block 1 - Room 2", block: "Block 1", x: -13.3, z: -6.7, w: 5.1, d: 3.6, color: "#3b82f6" },
+  { systemId: "B1-03", pdfNumber: "", schoolLabel: "", label: "Block 1 - Room 3", block: "Block 1", x: -8.0, z: -2.5, w: 3.6, d: 3.5, color: "#3b82f6" },
+  { systemId: "B1-04", pdfNumber: "42", schoolLabel: "", label: "Block 1 - Room 4", block: "Block 1", x: -8.0, z: -6.7, w: 3.6, d: 3.6, color: "#3b82f6" },
 
-  // BLOCK 2 (lower-centre, west of Block 1. "BLOCK 2" label at px ~1280,1700)
-  { systemId: "B2-01", pdfNumber: "", schoolLabel: "", label: "Block 2 - Room 1", block: "Block 2", x: -22.8, z: -2.5, w: 9.0, d: 4.6, color: "#60a5fa" },
-  { systemId: "B2-02", pdfNumber: "", schoolLabel: "", label: "Block 2 - Room 2", block: "Block 2", x: -22.8, z: -7.4, w: 9.0, d: 4.4, color: "#60a5fa" },
+  // BLOCK 2 (lower-centre, west of Block 1. Rooms 54, 48, 50 on PDF)
+  { systemId: "B2-01", pdfNumber: "54", schoolLabel: "", label: "Block 2 - Room 1", block: "Block 2", x: -23.9, z: -2.3, w: 4.5, d: 3.9, color: "#60a5fa" },
+  { systemId: "B2-02", pdfNumber: "", schoolLabel: "", label: "Block 2 - Room 2", block: "Block 2", x: -23.9, z: -7.4, w: 4.5, d: 4.6, color: "#60a5fa" },
+  { systemId: "B2-03", pdfNumber: "48", schoolLabel: "", label: "Block 2 - Room 3", block: "Block 2", x: -19.1, z: -2.3, w: 5.1, d: 3.9, color: "#60a5fa" },
+  { systemId: "B2-04", pdfNumber: "50", schoolLabel: "", label: "Block 2 - Room 4", block: "Block 2", x: -19.1, z: -7.4, w: 5.1, d: 4.6, color: "#60a5fa" },
 
   // 2001 BUILDING (far-left wing. Rooms 59, 57, 60, 67 on PDF)
   { systemId: "2001-01", pdfNumber: "59", schoolLabel: "", label: "2001 Building - Hall", block: "2001 Building", x: -42.8, z: 4.3, w: 5.3, d: 6.3, color: "#f59e0b" },
