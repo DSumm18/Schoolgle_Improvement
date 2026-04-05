@@ -373,6 +373,16 @@ export const APPS: AppDefinition[] = [
     requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
   },
   {
+    id: "lesson-studio-teacher",
+    moduleId: "teaching-learning",
+    name: "Lesson Studio (Teacher)",
+    route: "/dashboard/lesson-studio",
+    icon: PenTool,
+    shortDescription:
+      "Teacher-facing lesson input — describe, upload, or dictate a lesson and generate visualisations with NC checkpoint matching.",
+    requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
+  },
+  {
     id: "lesson-planning",
     moduleId: "teaching-learning",
     name: "Lesson Planning",
