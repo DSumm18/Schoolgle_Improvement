@@ -367,7 +367,7 @@ User Message → Intent Classifier → Agent Router → Specialist Agent → LLM
 - **Agent Router**: `orchestrator/agent-router.ts` — Routes to specialist, manages LLM calls + tool execution
 - **Intent Classifier**: `orchestrator/intent-classifier.ts` — Keyword scoring per domain, form detection, work-focus check
 - **Context Loader**: `orchestrator/context-loader.ts` — School context, expert knowledge injection, proactive alerts, intelligence data
-- **Agents Registry**: `agents/agents.ts` — 12 specialist definitions + domain keywords
+- **Agents Registry**: `agents/agents.ts` — 14 specialist definitions + domain keywords (see `docs/AGENT_DEFINITIONS.md`)
 - **Skills Agent**: `agents/skills-agent.ts` — LLM function-calling bridge to `/api/skills/invoke`
 - **Models**: `models/` — OpenRouter integration, model selection by task type
 - **Guardrails**: `guardrails/pipeline.ts` — Response safety checks
@@ -375,7 +375,9 @@ User Message → Intent Classifier → Agent Router → Specialist Agent → LLM
 - **Communications**: `communication/` — Email (Resend), SMS (Twilio), TTS (Fish Audio)
 - **Credit Manager**: `credit/manager.ts` — Token/cost tracking per session
 
-### 12 Specialist Agents
+### 14 Specialist Agents
+
+> Full details with qualifications and prompt files: `docs/AGENT_DEFINITIONS.md`
 
 | Agent                       | Domain           | Expertise                                                                    |
 | --------------------------- | ---------------- | ---------------------------------------------------------------------------- |
@@ -390,6 +392,8 @@ User Message → Intent Classifier → Agent Router → Specialist Agent → LLM
 | Communications Specialist   | `communications` | Parent/staff comms, media, crisis communication                              |
 | Form Specialist             | `form`           | Form filling, wording suggestions, red flags, RIDDOR help                    |
 | **Intelligence Specialist** | `intelligence`   | Cohort tracking, attainment gaps, EEF research, teacher accuracy, DfE trends |
+| **Risk Specialist**         | `risk`           | Risk registers, 5x5 scoring, 4T framework, ATH 2025, ISO 31000             |
+| **Canvas Specialist**       | `canvas`         | Smart data ingestion, MIS detection, field matching, reconciliation          |
 | Ed General                  | `general`        | Routing, platform guidance, general support                                  |
 
 ### Intelligence Specialist (NEW)
@@ -429,6 +433,10 @@ Ed's intelligence specialist has full access to:
 - **Website Chat**: `POST /api/ed/website-chat` — Public chat for embedded widget
 - **Skills**: `POST /api/skills/invoke` — Unified skill execution
 - **Skills Discovery**: `GET /api/skills/invoke` — List all available functions + categories
+
+### All Agent Definitions
+
+For a complete index of **every agent** in the repo (Claude Code dev agents, VECTOR review agent, 14 Ed specialists, core-AI personas), see **`docs/AGENT_DEFINITIONS.md`** — the single source of truth. Update that file when adding or modifying any agent.
 
 ---
 
@@ -620,12 +628,19 @@ The API is organized by domain under `apps/platform/src/app/api/`:
 
 Google NotebookLM automation for research and content generation.
 
+- `notebooklm-py` is installed for CLI access to Google NotebookLM
+- Claude Code skill is installed for natural language operations (`/notebooklm` or ask Claude to "create a podcast about X")
+- **Use for**: training podcasts, newsletter content, research, product documentation
+- **NOT for production Schoolgle features** — internal tooling only
+- Uses undocumented Google APIs — use a dedicated Google account, not primary
+- Always add 2s delays between batch operations
+
 **Setup:**
 ```bash
 # Install CLI
 python -m pip install notebooklm-py[browser] yt-dlp
 
-# Authenticate (one-time)
+# Authenticate (one-time — if auth fails, run: notebooklm login)
 python -m notebooklm login
 ```
 
@@ -641,12 +656,6 @@ python -m notebooklm login
 | AI News - YouTube Sources | `9be1115e` | 61 videos from AI/tech channels |
 | Education Research | `f3db1de5` | EEF early years evidence |
 
-**Usage from Claude Code:**
-```
-/schedule "0 9 * * *" python tools/notebooklm/scheduler.py fetch-youtube
-```
-(Runs daily at 9am to fetch new videos)
-
 **Key Commands:**
 ```bash
 # Check notebook status
@@ -657,6 +666,29 @@ python tools/notebooklm/scheduler.py list-notebooks
 
 # Manual YouTube fetch
 python tools/notebooklm/youtube_fetcher.py
+
+# Schedule daily fetch
+/schedule "0 9 * * *" python tools/notebooklm/scheduler.py fetch-youtube
+```
+
+**Common Workflows:**
+```bash
+# Create a training podcast
+notebooklm create "Topic Name"
+notebooklm use <notebook_id>
+notebooklm source add "./document.pdf"
+notebooklm generate audio "Focus prompt here" --wait
+notebooklm download audio ./output.mp3
+
+# Research from web sources
+notebooklm source add "https://example.com/article"
+notebooklm source add-research "search query"
+notebooklm ask "Your question here"
+
+# Generate visual content
+notebooklm generate infographic --wait
+notebooklm generate mind-map --wait
+notebooklm download infographic ./output.png
 ```
 
 ---
@@ -856,6 +888,11 @@ All marketing docs live in `docs/marketing/`:
 | Cross-module map      | `docs/CROSS_MODULE_ARCHITECTURE.md`                     |
 | Staff Connectors spec | `docs/STAFF_CONNECTORS.md`                              |
 | SEND Hub specs        | `docs/modules/sen-funding/`                             |
+| Agent definitions     | `docs/AGENT_DEFINITIONS.md`                             |
+| Claude Code agents    | `.claude/agents/` (coder, reviewer, tester)             |
+| VECTOR review agent   | `.codex/AGENTS.md`                                      |
+| Ed specialist prompts | `packages/ed-agents/src/agents/prompts/`                |
+| Ed agent registry     | `packages/ed-agents/src/agents/agents.ts`               |
 | Auto memory           | `.claude/projects/C--Git-Schoolgle-Improvement/memory/` |
 
 ---
@@ -917,39 +954,6 @@ Grep with pattern="<search term>" path=".claude/projects/C--Git-Schoolgle-Improv
 
 # Search session transcripts (last resort)
 Grep with pattern="<search term>" path="C:\Git\Schoolgle_Improvement/" glob="*.jsonl"
-```
-
----
-
-## NotebookLM Integration
-
-- `notebooklm-py` is installed for CLI access to Google NotebookLM
-- Claude Code skill is installed for natural language NotebookLM operations (`/notebooklm` or ask Claude to "create a podcast about X")
-- **Use for**: training podcasts, newsletter content, research, product documentation
-- **NOT for production Schoolgle features** — internal tooling only
-- If auth fails, run: `notebooklm login`
-- Always add 2s delays between batch operations
-- Uses undocumented Google APIs — use a dedicated Google account, not primary
-
-### Common Workflows
-
-```bash
-# Create a training podcast
-notebooklm create "Topic Name"
-notebooklm use <notebook_id>
-notebooklm source add "./document.pdf"
-notebooklm generate audio "Focus prompt here" --wait
-notebooklm download audio ./output.mp3
-
-# Research from web sources
-notebooklm source add "https://example.com/article"
-notebooklm source add-research "search query"
-notebooklm ask "Your question here"
-
-# Generate visual content
-notebooklm generate infographic --wait
-notebooklm generate mind-map --wait
-notebooklm download infographic ./output.png
 ```
 
 ---
