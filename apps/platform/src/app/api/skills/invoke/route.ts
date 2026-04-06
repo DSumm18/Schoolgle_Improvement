@@ -233,6 +233,21 @@ export async function POST(request: NextRequest) {
         result = await updateHelpdeskTicket(parameters);
         break;
 
+      // Terry Taurus — Propose → Approve estate tools
+      case "terry_create_ticket":
+      case "terry_update_ticket":
+      case "terry_query_tickets":
+      case "terry_query_compliance":
+      case "terry_log_compliance_check":
+      case "terry_assess_risk": {
+        const { handleTerryToolCall } = await import(
+          "@/lib/ed/specialists/terry/handler"
+        );
+        const terryResult = await handleTerryToolCall(functionName, parameters);
+        result = { success: true, data: terryResult };
+        break;
+      }
+
       // Form Helper (Privacy-first form filling with translation)
       case "detect_forms":
         const { detectFormsOnPage } =
@@ -1690,6 +1705,7 @@ export async function GET() {
     RISK_FUNCTION_SCHEMAS,
     DOCUMENT_FUNCTION_SCHEMAS,
     WORKFLOW_FUNCTION_SCHEMAS,
+    TERRY_FUNCTION_SCHEMAS,
   } = await import("@/lib/skills/school-skills-registry");
 
   return NextResponse.json({
@@ -1703,6 +1719,7 @@ export async function GET() {
         ...RISK_FUNCTION_SCHEMAS,
         ...DOCUMENT_FUNCTION_SCHEMAS,
         ...WORKFLOW_FUNCTION_SCHEMAS,
+        ...TERRY_FUNCTION_SCHEMAS,
       ],
       categories: {
         staff: {
@@ -1719,6 +1736,12 @@ export async function GET() {
           name: "Estates & Compliance",
           description: "Estate management and statutory compliance",
           functions: ESTATES_FUNCTION_SCHEMAS.map((f: any) => f.name),
+        },
+        terry: {
+          name: "Terry Taurus (Propose → Approve)",
+          description:
+            "Estate & H&S specialist tools with human-in-the-loop governance. Write ops return proposals for user approval.",
+          functions: TERRY_FUNCTION_SCHEMAS.map((f: any) => f.name),
         },
         intelligence: {
           name: "School Intelligence",

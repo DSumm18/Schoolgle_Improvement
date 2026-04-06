@@ -2544,6 +2544,134 @@ export const SOP_FUNCTION_SCHEMAS = [
   },
 ];
 
+// =====================================================
+// TERRY TAURUS TOOLS (Estates PROPOSE → APPROVE mode)
+// =====================================================
+
+export const TERRY_FUNCTION_SCHEMAS = [
+  {
+    name: 'terry_create_ticket',
+    description:
+      'Create an estate/maintenance ticket from a natural language description. Terry extracts structured fields, performs risk assessment, and returns a PROPOSAL for user approval. Does NOT write to DB until approved.',
+    parameters: {
+      type: 'object',
+      properties: {
+        organization_id: { type: 'string', description: 'Organization ID' },
+        description: {
+          type: 'string',
+          description:
+            'Natural language description of the issue (e.g. "The fence in Year 3 playground is broken")',
+        },
+        reported_by_name: {
+          type: 'string',
+          description: 'Name of the person reporting the issue',
+        },
+      },
+      required: ['organization_id', 'description', 'reported_by_name'],
+    },
+  },
+  {
+    name: 'terry_update_ticket',
+    description:
+      'Update an existing estate ticket from natural language. Terry proposes status changes, updated notes, and risk re-assessment. Returns a PROPOSAL for user approval.',
+    parameters: {
+      type: 'object',
+      properties: {
+        organization_id: { type: 'string', description: 'Organization ID' },
+        ticket_id: {
+          type: 'string',
+          description: 'Ticket ID or ticket number to update',
+        },
+        update_description: {
+          type: 'string',
+          description:
+            'Natural language update (e.g. "Dave put up temporary barriers around the fence")',
+        },
+        actor_name: {
+          type: 'string',
+          description: 'Name of person providing the update',
+        },
+      },
+      required: ['organization_id', 'ticket_id', 'update_description', 'actor_name'],
+    },
+  },
+  {
+    name: 'terry_query_tickets',
+    description:
+      "Query estate tickets using natural language. Returns prioritised, risk-weighted list. Read-only — no approval needed.",
+    parameters: {
+      type: 'object',
+      properties: {
+        organization_id: { type: 'string', description: 'Organization ID' },
+        query: {
+          type: 'string',
+          description:
+            "Natural language query (e.g. \"What's overdue this week?\", \"Show me all critical tickets\")",
+        },
+      },
+      required: ['organization_id', 'query'],
+    },
+  },
+  {
+    name: 'terry_query_compliance',
+    description:
+      'Query compliance status using natural language. Returns compliance check status from compliance_instances. Read-only — no approval needed.',
+    parameters: {
+      type: 'object',
+      properties: {
+        organization_id: { type: 'string', description: 'Organization ID' },
+        query: {
+          type: 'string',
+          description:
+            'Natural language query (e.g. "When is our next fire risk assessment?", "How compliant are we?")',
+        },
+      },
+      required: ['organization_id', 'query'],
+    },
+  },
+  {
+    name: 'terry_log_compliance_check',
+    description:
+      'Log a completed compliance check from natural language. Terry proposes a check completion record with pre-filled fields. Returns a PROPOSAL for user approval.',
+    parameters: {
+      type: 'object',
+      properties: {
+        organization_id: { type: 'string', description: 'Organization ID' },
+        description: {
+          type: 'string',
+          description:
+            'Natural language description (e.g. "We did the weekly fire alarm test today, all clear")',
+        },
+        completed_by_name: {
+          type: 'string',
+          description: 'Name of person who completed the check',
+        },
+      },
+      required: ['organization_id', 'description', 'completed_by_name'],
+    },
+  },
+  {
+    name: 'terry_assess_risk',
+    description:
+      'Perform a 5×5 risk assessment from a situation description. Terry proposes likelihood × impact scoring with reasoning. If score >= 15, suggests risk register entry. Returns a PROPOSAL for user approval — their name is logged against the assessment.',
+    parameters: {
+      type: 'object',
+      properties: {
+        organization_id: { type: 'string', description: 'Organization ID' },
+        situation: {
+          type: 'string',
+          description: 'Description of the situation to assess',
+        },
+        assessor_name: {
+          type: 'string',
+          description: 'Name of the person who will own this risk assessment',
+        },
+      },
+      required: ['organization_id', 'situation', 'assessor_name'],
+    },
+  },
+];
+
 export const SCHOOL_FUNCTION_SCHEMAS = [
   ...STAFF_FUNCTION_SCHEMAS,
   ...ACTIONS_FUNCTION_SCHEMAS,
@@ -2556,6 +2684,7 @@ export const SCHOOL_FUNCTION_SCHEMAS = [
   ...WORKFLOW_FUNCTION_SCHEMAS,
   ...INCIDENT_FUNCTION_SCHEMAS,
   ...SOP_FUNCTION_SCHEMAS,
+  ...TERRY_FUNCTION_SCHEMAS,
 ];
 
 // Helper to get all function names

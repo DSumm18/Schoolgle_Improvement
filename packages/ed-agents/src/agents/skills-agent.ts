@@ -487,6 +487,41 @@ function formatSkillSuccessResponse(
     };
   }
 
+  // Terry Taurus — Propose → Approve responses
+  if (functionName.startsWith("terry_")) {
+    const terryResult = result.data as {
+      type: "proposal" | "query_result";
+      proposal?: Record<string, unknown>;
+      data?: unknown[];
+      message?: string;
+    };
+
+    if (terryResult?.type === "proposal" && terryResult.proposal) {
+      const p = terryResult.proposal;
+      const risk = p.risk_assessment as
+        | { score?: number; safeguarding_flag?: boolean; reasoning?: string }
+        | undefined;
+      const riskLine =
+        risk
+          ? `\n**Risk Score:** ${risk.score ?? "?"}/25${risk.safeguarding_flag ? " — ⚠️ SAFEGUARDING FLAG" : ""}`
+          : "";
+      return {
+        success: true,
+        response: `🐂 **Terry's Proposal — ${String(p.action || "").toUpperCase()}**\n\n${String(p.summary || "")}\n${riskLine}\n\n${String(terryResult.message || "")}\n\nChoose: ✅ **Approve** | ✏️ **Edit** | ❌ **Reject**\n\n*Proposal ID: ${String(p.proposal_id || "")}*`,
+        data: result.data,
+      };
+    }
+
+    if (terryResult?.type === "query_result") {
+      const count = Array.isArray(terryResult.data) ? terryResult.data.length : 0;
+      return {
+        success: true,
+        response: `🐂 **Terry's Answer**\n\n${String(terryResult.message || `Found ${count} result(s).`)}`,
+        data: result.data,
+      };
+    }
+  }
+
   // Default
   return {
     success: true,
