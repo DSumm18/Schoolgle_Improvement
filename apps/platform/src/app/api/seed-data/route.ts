@@ -1,3 +1,6 @@
+// PRODUCTION GUARD: Block in non-dev environments
+const __isDev = process.env.NODE_ENV === "development";
+
 /**
  * Seed data endpoint — DISABLED for security.
  * This route previously allowed unauthenticated data population.

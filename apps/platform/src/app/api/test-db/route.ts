@@ -1,3 +1,6 @@
+// PRODUCTION GUARD: Block in non-dev environments
+const __isDev = process.env.NODE_ENV === "development";
+
 /**
  * Test DB endpoint — DISABLED for security.
  * This route previously exposed database schema details without authentication.

@@ -1,3 +1,6 @@
+// PRODUCTION GUARD: Block in non-dev environments
+const __isDev = process.env.NODE_ENV === "development";
+
 /**
  * Debug endpoint — DISABLED for security.
  * This route previously exposed Supabase configuration details without authentication.
