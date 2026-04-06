@@ -14,6 +14,7 @@
 
 import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { runDailyRiskRecalculation } from "@/lib/risk-integration";
+import { runAutoEscalation } from "@/lib/risk/auto-escalation";
 
 export const POST = protectedRoute(async (auth, request) => {
   const searchParams = request.nextUrl.searchParams;
@@ -24,11 +25,16 @@ export const POST = protectedRoute(async (auth, request) => {
     return apiError("organizationId query parameter is required", 400);
   }
 
+  // Step 1: Run the existing daily risk recalculation pipeline
   const summary = await runDailyRiskRecalculation(organizationId);
+
+  // Step 2: Run the dynamic auto-escalation pipeline
+  const escalationSummary = await runAutoEscalation(organizationId);
 
   return apiSuccess({
     success: true,
     summary,
+    escalation: escalationSummary,
     timestamp: new Date().toISOString(),
   });
 });
