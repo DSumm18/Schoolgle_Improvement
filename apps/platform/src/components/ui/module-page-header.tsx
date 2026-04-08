@@ -90,6 +90,14 @@ const MODULE_COLORS: Record<
     accentText: "text-cyan-700 dark:text-cyan-300",
     accentBorder: "border-cyan-200 dark:border-cyan-800",
   },
+  integrations: {
+    iconBg: "bg-indigo-100 dark:bg-indigo-900/20",
+    iconText: "text-indigo-600 dark:text-indigo-400",
+    labelText: "text-indigo-600 dark:text-indigo-400",
+    accentBg: "bg-indigo-50 dark:bg-indigo-900/10",
+    accentText: "text-indigo-700 dark:text-indigo-300",
+    accentBorder: "border-indigo-200 dark:border-indigo-800",
+  },
 };
 
 export function getModuleColors(moduleId: string) {
