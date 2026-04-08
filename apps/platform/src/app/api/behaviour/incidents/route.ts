@@ -7,30 +7,32 @@
 
 import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
+import { createHmac } from "crypto";
 
 // ─── Demo Data ──────────────────────────────────────────────────────
+// Demo data uses pupil_hash (pseudonymised) — NEVER store real names.
 
-const DEMO_PUPILS = [
-  "Oliver Thompson",
-  "Amira Hassan",
-  "Jake Williams",
-  "Chloe Richards",
-  "Ethan Patel",
-  "Sophie Carter",
-  "Liam O'Brien",
-  "Fatima Ahmed",
-  "Noah Jenkins",
-  "Isabella Martinez",
-  "Mason Clarke",
-  "Ava Robinson",
-  "Harry Wilson",
-  "Mia Taylor",
-  "Leo Brown",
-  "Ella Davies",
-  "Oscar White",
-  "Grace Moore",
-  "Charlie Hall",
-  "Lily Turner",
+const DEMO_PUPIL_HASHES = [
+  "a1b2c3d4e5f6",
+  "b2c3d4e5f6a1",
+  "c3d4e5f6a1b2",
+  "d4e5f6a1b2c3",
+  "e5f6a1b2c3d4",
+  "f6a1b2c3d4e5",
+  "1a2b3c4d5e6f",
+  "2b3c4d5e6f1a",
+  "3c4d5e6f1a2b",
+  "4d5e6f1a2b3c",
+  "5e6f1a2b3c4d",
+  "6f1a2b3c4d5e",
+  "7a8b9c0d1e2f",
+  "8b9c0d1e2f7a",
+  "9c0d1e2f7a8b",
+  "0d1e2f7a8b9c",
+  "1e2f7a8b9c0d",
+  "2f7a8b9c0d1e",
+  "3a4b5c6d7e8f",
+  "4b5c6d7e8f3a",
 ];
 
 const DEMO_STAFF = [
@@ -118,7 +120,7 @@ function generateDemoIncidents() {
     incidents.push({
       id: `demo-pos-${i + 1}`,
       organization_id: "demo",
-      pupil_name: DEMO_PUPILS[Math.floor(Math.random() * DEMO_PUPILS.length)],
+      pupil_hash: DEMO_PUPIL_HASHES[Math.floor(Math.random() * DEMO_PUPIL_HASHES.length)],
       pupil_id: `pupil-${Math.floor(Math.random() * 20) + 1}`,
       year_group: Math.floor(Math.random() * 6) + 7,
       type: "positive",
@@ -182,13 +184,13 @@ function generateDemoIncidents() {
     "Disrupted the learning of others by throwing equipment",
   ];
 
-  // Make some pupils repeat offenders
-  const repeatOffenders = [
-    "Jake Williams",
-    "Ethan Patel",
-    "Mason Clarke",
-    "Charlie Hall",
-    "Noah Jenkins",
+  // Make some pupils repeat offenders (using pseudonymised hashes)
+  const repeatOffenderHashes = [
+    DEMO_PUPIL_HASHES[2],  // hash index 2
+    DEMO_PUPIL_HASHES[4],  // hash index 4
+    DEMO_PUPIL_HASHES[10], // hash index 10
+    DEMO_PUPIL_HASHES[18], // hash index 18
+    DEMO_PUPIL_HASHES[8],  // hash index 8
   ];
 
   for (let i = 0; i < 10; i++) {
@@ -201,15 +203,15 @@ function generateDemoIncidents() {
     );
 
     const isRepeat = i < 5;
-    const pupil = isRepeat
-      ? repeatOffenders[i]
-      : DEMO_PUPILS[Math.floor(Math.random() * DEMO_PUPILS.length)];
+    const pupilHash = isRepeat
+      ? repeatOffenderHashes[i]
+      : DEMO_PUPIL_HASHES[Math.floor(Math.random() * DEMO_PUPIL_HASHES.length)];
 
     incidents.push({
       id: `demo-neg-${i + 1}`,
       organization_id: "demo",
-      pupil_name: pupil,
-      pupil_id: `pupil-${DEMO_PUPILS.indexOf(pupil) + 1}`,
+      pupil_hash: pupilHash,
+      pupil_id: `pupil-${i + 1}`,
       year_group: Math.floor(Math.random() * 6) + 7,
       type: "negative",
       category: negativeCategories[i % negativeCategories.length],
@@ -230,7 +232,8 @@ function generateDemoIncidents() {
   }
 
   // Add extra incidents for repeat offenders
-  for (const offender of repeatOffenders.slice(0, 3)) {
+  for (let idx = 0; idx < 3; idx++) {
+    const offenderHash = repeatOffenderHashes[idx];
     for (let j = 0; j < 2; j++) {
       const daysAgo = Math.floor(Math.random() * 14);
       const date = new Date(now);
@@ -241,10 +244,10 @@ function generateDemoIncidents() {
       );
 
       incidents.push({
-        id: `demo-repeat-${offender.replace(/\s/g, "")}-${j}`,
+        id: `demo-repeat-${idx}-${j}`,
         organization_id: "demo",
-        pupil_name: offender,
-        pupil_id: `pupil-${DEMO_PUPILS.indexOf(offender) + 1}`,
+        pupil_hash: offenderHash,
+        pupil_id: `pupil-repeat-${idx}`,
         year_group: Math.floor(Math.random() * 3) + 9,
         type: "negative",
         category:
@@ -301,7 +304,7 @@ export const GET = protectedRoute(async (auth, request) => {
 
   if (type) query = query.eq("type", type);
   if (category) query = query.eq("category", category);
-  if (pupil) query = query.ilike("pupil_name", `%${pupil}%`);
+  if (pupil) query = query.eq("pupil_hash", pupil);
   if (year_group) query = query.eq("year_group", parseInt(year_group));
   if (date_from) query = query.gte("created_at", date_from);
   if (date_to) query = query.lte("created_at", date_to);
@@ -322,12 +325,17 @@ export const GET = protectedRoute(async (auth, request) => {
 
       if (behaviourResult.data.length > 0) {
         const misIncidents = behaviourResult.data as any[];
+        const hashSalt = process.env.PUPIL_HASH_SALT || "";
 
-        // Map MIS behaviour records to the API format
-        let mapped = misIncidents.map((r: any) => ({
+        // Map MIS behaviour records to the API format (pseudonymised)
+        let mapped = misIncidents.map((r: any) => {
+          const hash = hashSalt && r.student_id
+            ? createHmac("sha256", hashSalt).update(`${r.student_id}`.toLowerCase().trim()).digest("hex")
+            : `mis-${r.student_id || "unknown"}`;
+          return {
           id: r.incident_id,
           organization_id: organizationId,
-          pupil_name: r.student_name,
+          pupil_hash: hash,
           pupil_id: r.student_id,
           year_group: r.year_group,
           type: (r.type as string).toLowerCase(), // "Positive"/"Negative" → "positive"/"negative"
@@ -347,15 +355,13 @@ export const GET = protectedRoute(async (auth, request) => {
           updated_at: r.date
             ? `${r.date}T00:00:00.000Z`
             : new Date().toISOString(),
-        }));
+        };});
 
         // Apply filters
         if (type) mapped = mapped.filter((d) => d.type === type);
         if (category) mapped = mapped.filter((d) => d.category === category);
         if (pupil)
-          mapped = mapped.filter((d) =>
-            d.pupil_name.toLowerCase().includes(pupil.toLowerCase()),
-          );
+          mapped = mapped.filter((d) => d.pupil_hash === pupil);
         if (year_group)
           mapped = mapped.filter((d) => d.year_group === parseInt(year_group));
 
@@ -384,9 +390,7 @@ export const GET = protectedRoute(async (auth, request) => {
     if (type) demoData = demoData.filter((d) => d.type === type);
     if (category) demoData = demoData.filter((d) => d.category === category);
     if (pupil)
-      demoData = demoData.filter((d) =>
-        d.pupil_name.toLowerCase().includes(pupil.toLowerCase()),
-      );
+      demoData = demoData.filter((d) => d.pupil_hash === pupil);
     if (year_group)
       demoData = demoData.filter((d) => d.year_group === parseInt(year_group));
 
@@ -415,7 +419,7 @@ export const POST = protectedRoute(
     const body = await request.json();
 
     const {
-      pupil_name,
+      pupil_hash: rawPupilHash,
       pupil_id,
       year_group,
       type,
@@ -429,8 +433,22 @@ export const POST = protectedRoute(
       notes,
     } = body;
 
-    if (!pupil_name || !type || !category) {
-      return apiError("pupil_name, type, and category are required", 400);
+    // pupil_hash is the pre-hashed identifier from the client.
+    // If pupil_id is provided instead, hash it server-side.
+    // pupil_name is NEVER accepted — names resolve live from Google Drive.
+    let pupil_hash = rawPupilHash;
+    if (!pupil_hash && pupil_id) {
+      const hashSalt = process.env.PUPIL_HASH_SALT;
+      if (!hashSalt) {
+        return apiError("Server configuration error: PUPIL_HASH_SALT is required", 500);
+      }
+      pupil_hash = createHmac("sha256", hashSalt)
+        .update(`${pupil_id}`.toLowerCase().trim())
+        .digest("hex");
+    }
+
+    if (!pupil_hash || !type || !category) {
+      return apiError("pupil_hash (or pupil_id), type, and category are required", 400);
     }
 
     if (!["positive", "negative"].includes(type)) {
@@ -441,7 +459,7 @@ export const POST = protectedRoute(
       .from("behaviour_incidents")
       .insert({
         organization_id: organizationId,
-        pupil_name,
+        pupil_hash,
         pupil_id: pupil_id || null,
         year_group: year_group || null,
         type,

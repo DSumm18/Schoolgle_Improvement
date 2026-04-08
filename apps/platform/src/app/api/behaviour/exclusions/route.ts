@@ -7,18 +7,20 @@
 
 import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
+import { createHmac } from "crypto";
 
 // ─── Demo Exclusions ──────────────────────────────────────────────
 
 function generateDemoExclusions() {
   const now = new Date();
 
+  // Demo data uses pupil_hash (pseudonymised) — NEVER store names or ethnicity.
   return [
     {
       id: "demo-excl-1",
       organization_id: "demo",
       incident_id: "demo-neg-7",
-      pupil_name: "Jake Williams",
+      pupil_hash: "c3d4e5f6a1b2",
       pupil_id: "pupil-3",
       year_group: 10,
       exclusion_type: "fixed_term",
@@ -33,7 +35,6 @@ function generateDemoExclusions() {
       is_sen: false,
       is_fsm: true,
       is_lac: false,
-      ethnicity: "White British",
       governor_informed: true,
       governor_review_date: new Date(now.getTime() + 7 * 86400000)
         .toISOString()
@@ -57,7 +58,7 @@ function generateDemoExclusions() {
       id: "demo-excl-2",
       organization_id: "demo",
       incident_id: "demo-neg-8",
-      pupil_name: "Mason Clarke",
+      pupil_hash: "5e6f1a2b3c4d",
       pupil_id: "pupil-11",
       year_group: 9,
       exclusion_type: "lunchtime",
@@ -72,7 +73,6 @@ function generateDemoExclusions() {
       is_sen: true,
       is_fsm: true,
       is_lac: false,
-      ethnicity: "White British",
       governor_informed: true,
       governor_review_date: null,
       reintegration_meeting: new Date(now.getTime() + 3 * 86400000)
@@ -95,7 +95,7 @@ function generateDemoExclusions() {
       id: "demo-excl-3",
       organization_id: "demo",
       incident_id: "demo-neg-3",
-      pupil_name: "Ethan Patel",
+      pupil_hash: "e5f6a1b2c3d4",
       pupil_id: "pupil-5",
       year_group: 11,
       exclusion_type: "fixed_term",
@@ -110,7 +110,6 @@ function generateDemoExclusions() {
       is_sen: false,
       is_fsm: false,
       is_lac: false,
-      ethnicity: "Asian British",
       governor_informed: true,
       governor_review_date: new Date(now.getTime() - 3 * 86400000)
         .toISOString()
@@ -136,7 +135,7 @@ function generateDemoExclusions() {
       id: "demo-excl-4",
       organization_id: "demo",
       incident_id: null,
-      pupil_name: "Charlie Hall",
+      pupil_hash: "3a4b5c6d7e8f",
       pupil_id: "pupil-19",
       year_group: 10,
       exclusion_type: "managed_move",
@@ -150,7 +149,6 @@ function generateDemoExclusions() {
       is_sen: true,
       is_fsm: true,
       is_lac: true,
-      ethnicity: "White British",
       governor_informed: true,
       governor_review_date: new Date(now.getTime() - 15 * 86400000)
         .toISOString()
@@ -220,9 +218,10 @@ export const POST = protectedRoute(
     const supabase = createServiceRoleClient();
     const body = await request.json();
 
+    // REMOVED from destructure: ethnicity (PII), pupil_name (names resolve live from Google Drive)
     const {
+      pupil_hash: rawPupilHash,
       incident_id,
-      pupil_name,
       pupil_id,
       year_group,
       exclusion_type,
@@ -233,14 +232,26 @@ export const POST = protectedRoute(
       is_sen,
       is_fsm,
       is_lac,
-      ethnicity,
       alternative_provision,
       notes,
     } = body;
 
-    if (!pupil_name || !exclusion_type || !reason || !start_date) {
+    // pupil_hash is the pre-hashed identifier from the client.
+    // If pupil_id is provided instead, hash it server-side.
+    let pupil_hash = rawPupilHash;
+    if (!pupil_hash && pupil_id) {
+      const hashSalt = process.env.PUPIL_HASH_SALT;
+      if (!hashSalt) {
+        return apiError("Server configuration error: PUPIL_HASH_SALT is required", 500);
+      }
+      pupil_hash = createHmac("sha256", hashSalt)
+        .update(`${pupil_id}`.toLowerCase().trim())
+        .digest("hex");
+    }
+
+    if (!pupil_hash || !exclusion_type || !reason || !start_date) {
       return apiError(
-        "pupil_name, exclusion_type, reason, and start_date are required",
+        "pupil_hash (or pupil_id), exclusion_type, reason, and start_date are required",
         400,
       );
     }
@@ -264,7 +275,7 @@ export const POST = protectedRoute(
       .insert({
         organization_id: organizationId,
         incident_id: incident_id || null,
-        pupil_name,
+        pupil_hash,
         pupil_id: pupil_id || null,
         year_group: year_group || null,
         exclusion_type,
@@ -275,7 +286,6 @@ export const POST = protectedRoute(
         is_sen: is_sen || false,
         is_fsm: is_fsm || false,
         is_lac: is_lac || false,
-        ethnicity: ethnicity || null,
         governor_informed: false,
         parent_notified: false,
         la_notified: false,

@@ -40,6 +40,8 @@ export const PUT = protectedRoute(
 
     const body = await request.json();
 
+    // pupil_name is NOT allowed — names are NEVER stored in Supabase.
+    // Pupil identity is tracked via pupil_hash (pseudonymised).
     const allowedFields = [
       "category",
       "description",
@@ -48,7 +50,6 @@ export const PUT = protectedRoute(
       "consequence",
       "parent_notified",
       "notes",
-      "pupil_name",
       "year_group",
       "type",
     ];
