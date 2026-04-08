@@ -1,5 +1,16 @@
+/**
+ * Compliance Consent API Routes
+ *
+ * CRITICAL DATA SAFETY RULE:
+ * This route MUST NOT store pupil_name, parent_guardian_name, or parent_guardian_email
+ * in Supabase. Pupil identity is stored as pupil_hash (HMAC-SHA256 pseudonymised).
+ * Guardian contact info must be resolved LIVE from Google Drive — never persisted.
+ * See: /lib/pupil-pseudonymiser.ts and /api/pupils/route.ts for the pattern.
+ */
+
 import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
+import { createHmac } from "crypto";
 
 /**
  * GET /api/compliance/consent
@@ -45,21 +56,29 @@ export const POST = protectedRoute(
     const { organizationId, userId } = auth;
     const body = await request.json();
     const {
-      pupil_name,
       pupil_id,
-      parent_guardian_name,
-      parent_guardian_email,
       consent_type,
       consent_given,
       consent_date,
       academic_year,
       expiry_date,
       notes,
+      // PII fields accepted from client but NEVER persisted:
+      // pupil_name, parent_guardian_name, parent_guardian_email
     } = body;
 
-    if (!pupil_name || !consent_type) {
-      return apiError("Missing required fields: pupil_name, consent_type", 400);
+    if (!pupil_id || !consent_type) {
+      return apiError("Missing required fields: pupil_id, consent_type", 400);
     }
+
+    // Pseudonymise pupil_id → pupil_hash (SHA-256)
+    const hashSalt = process.env.PUPIL_HASH_SALT;
+    if (!hashSalt) {
+      return apiError("Server configuration error: PUPIL_HASH_SALT is required", 500);
+    }
+    const pupil_hash = createHmac("sha256", hashSalt)
+      .update(`${pupil_id}`.toLowerCase().trim())
+      .digest("hex");
 
     const supabase = createServiceRoleClient();
 
@@ -67,10 +86,8 @@ export const POST = protectedRoute(
       .from("compliance_consent_records")
       .insert({
         organization_id: organizationId,
-        pupil_name,
-        pupil_id,
-        parent_guardian_name,
-        parent_guardian_email,
+        pupil_hash,
+        // NEVER stored: pupil_name, parent_guardian_name, parent_guardian_email
         consent_type,
         consent_given: consent_given ?? true,
         consent_date: consent_date || new Date().toISOString().split("T")[0],
@@ -87,7 +104,7 @@ export const POST = protectedRoute(
       return apiError("Failed to create consent record", 500);
     }
 
-    // Audit log
+    // Audit log — no PII in metadata
     await supabase.from("compliance_audit_log").insert({
       organization_id: organizationId,
       entity_type: "consent_record",
@@ -95,7 +112,7 @@ export const POST = protectedRoute(
       action: "created",
       actor_user_id: userId,
       metadata: {
-        pupil_name,
+        pupil_hash,
         consent_type,
         consent_given: consent_given ?? true,
       },
@@ -126,11 +143,8 @@ export const PUT = protectedRoute(
       updated_at: new Date().toISOString(),
     };
 
+    // PII fields explicitly excluded: pupil_name, parent_guardian_name, parent_guardian_email
     const allowedFields = [
-      "pupil_name",
-      "pupil_id",
-      "parent_guardian_name",
-      "parent_guardian_email",
       "consent_type",
       "consent_given",
       "consent_date",

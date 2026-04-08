@@ -65,10 +65,9 @@ export const PUT = protectedRoute(async (auth, request) => {
   const id = request.nextUrl.pathname.split("/").pop();
   const body = await request.json();
 
+  // PII fields explicitly excluded: first_name, last_name — never persisted
   const allowedFields = [
     "pupil_code",
-    "first_name",
-    "last_name",
     "year_group",
     "sen_status",
     "primary_need",

@@ -1,5 +1,16 @@
+/**
+ * SEND Register API Routes
+ *
+ * CRITICAL DATA SAFETY RULE:
+ * This route MUST NOT store first_name or last_name in Supabase.
+ * Pupil identity is stored as pupil_hash (HMAC-SHA256 pseudonymised).
+ * Names are resolved LIVE from Google Drive at display time — never persisted.
+ * See: /api/pupils/route.ts for the pseudonymisation pattern.
+ */
+
 import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
+import { createHmac } from "crypto";
 import { NextRequest } from "next/server";
 
 // Demo data for when no real data exists
@@ -7,8 +18,7 @@ const DEMO_REGISTER = [
   {
     id: "demo-1",
     pupil_code: "PUP-2024-001",
-    first_name: "Pupil",
-    last_name: "A",
+    display_label: "Pupil A",
     year_group: 3,
     sen_status: "K",
     primary_need: "SPLD",
@@ -24,8 +34,7 @@ const DEMO_REGISTER = [
   {
     id: "demo-2",
     pupil_code: "PUP-2024-002",
-    first_name: "Pupil",
-    last_name: "B",
+    display_label: "Pupil B",
     year_group: 5,
     sen_status: "E",
     primary_need: "ASD",
@@ -41,8 +50,7 @@ const DEMO_REGISTER = [
   {
     id: "demo-3",
     pupil_code: "PUP-2024-003",
-    first_name: "Pupil",
-    last_name: "C",
+    display_label: "Pupil C",
     year_group: 1,
     sen_status: "K",
     primary_need: "SLCN",
@@ -58,8 +66,7 @@ const DEMO_REGISTER = [
   {
     id: "demo-4",
     pupil_code: "PUP-2024-004",
-    first_name: "Pupil",
-    last_name: "D",
+    display_label: "Pupil D",
     year_group: 6,
     sen_status: "E",
     primary_need: "SEMH",
@@ -75,8 +82,7 @@ const DEMO_REGISTER = [
   {
     id: "demo-5",
     pupil_code: "PUP-2024-005",
-    first_name: "Pupil",
-    last_name: "E",
+    display_label: "Pupil E",
     year_group: 4,
     sen_status: "K",
     primary_need: "MLD",
@@ -92,8 +98,7 @@ const DEMO_REGISTER = [
   {
     id: "demo-6",
     pupil_code: "PUP-2024-006",
-    first_name: "Pupil",
-    last_name: "F",
+    display_label: "Pupil F",
     year_group: 2,
     sen_status: "K",
     primary_need: "SEMH",
@@ -109,8 +114,7 @@ const DEMO_REGISTER = [
   {
     id: "demo-7",
     pupil_code: "PUP-2024-007",
-    first_name: "Pupil",
-    last_name: "G",
+    display_label: "Pupil G",
     year_group: 3,
     sen_status: "E",
     primary_need: "PD",
@@ -126,8 +130,7 @@ const DEMO_REGISTER = [
   {
     id: "demo-8",
     pupil_code: "PUP-2024-008",
-    first_name: "Pupil",
-    last_name: "H",
+    display_label: "Pupil H",
     year_group: 5,
     sen_status: "K",
     primary_need: "ASD",
@@ -143,8 +146,7 @@ const DEMO_REGISTER = [
   {
     id: "demo-9",
     pupil_code: "PUP-2024-009",
-    first_name: "Pupil",
-    last_name: "I",
+    display_label: "Pupil I",
     year_group: 6,
     sen_status: "K",
     primary_need: "SPLD",
@@ -160,8 +162,7 @@ const DEMO_REGISTER = [
   {
     id: "demo-10",
     pupil_code: "PUP-2024-010",
-    first_name: "Pupil",
-    last_name: "J",
+    display_label: "Pupil J",
     year_group: 1,
     sen_status: "monitoring",
     primary_need: "SLCN",
@@ -177,8 +178,7 @@ const DEMO_REGISTER = [
   {
     id: "demo-11",
     pupil_code: "PUP-2024-011",
-    first_name: "Pupil",
-    last_name: "K",
+    display_label: "Pupil K",
     year_group: 4,
     sen_status: "E",
     primary_need: "HI",
@@ -195,8 +195,7 @@ const DEMO_REGISTER = [
   {
     id: "demo-12",
     pupil_code: "PUP-2024-012",
-    first_name: "Pupil",
-    last_name: "L",
+    display_label: "Pupil L",
     year_group: 2,
     sen_status: "K",
     primary_need: "SEMH",
@@ -212,8 +211,7 @@ const DEMO_REGISTER = [
   {
     id: "demo-13",
     pupil_code: "PUP-2024-013",
-    first_name: "Pupil",
-    last_name: "M",
+    display_label: "Pupil M",
     year_group: 3,
     sen_status: "K",
     primary_need: "MLD",
@@ -229,8 +227,7 @@ const DEMO_REGISTER = [
   {
     id: "demo-14",
     pupil_code: "PUP-2024-014",
-    first_name: "Pupil",
-    last_name: "N",
+    display_label: "Pupil N",
     year_group: 5,
     sen_status: "E",
     primary_need: "SLD",
@@ -246,8 +243,7 @@ const DEMO_REGISTER = [
   {
     id: "demo-15",
     pupil_code: "PUP-2024-015",
-    first_name: "Pupil",
-    last_name: "O",
+    display_label: "Pupil O",
     year_group: 4,
     sen_status: "monitoring",
     primary_need: "NSA",
@@ -279,7 +275,7 @@ export const GET = protectedRoute(async (auth, request) => {
     .select("*")
     .eq("organization_id", organizationId)
     .order("year_group", { ascending: true })
-    .order("last_name", { ascending: true });
+    .order("pupil_code", { ascending: true });
 
   if (status) query = query.eq("sen_status", status);
   if (primaryNeed) query = query.eq("primary_need", primaryNeed);
@@ -306,8 +302,7 @@ export const GET = protectedRoute(async (auth, request) => {
         let mapped = misResult.data.map((r: any) => ({
           id: r.student_id,
           pupil_code: r.student_id,
-          first_name: r.first_name,
-          last_name: r.last_name,
+          display_label: r.first_name ? `${r.first_name} ${(r.last_name || "")[0] || ""}` : r.student_id,
           year_group: r.year_group,
           sen_status: r.sen_status,
           primary_need: r.sen_primary_need,
@@ -357,8 +352,7 @@ export const POST = protectedRoute(async (auth, request) => {
 
   const {
     pupil_code,
-    first_name,
-    last_name,
+    // PII fields accepted from client but NEVER persisted: first_name, last_name
     year_group,
     sen_status,
     primary_need,
@@ -377,13 +371,22 @@ export const POST = protectedRoute(async (auth, request) => {
     );
   }
 
+  // Pseudonymise pupil_code → pupil_hash (SHA-256)
+  const hashSalt = process.env.PUPIL_HASH_SALT;
+  if (!hashSalt) {
+    return apiError("Server configuration error: PUPIL_HASH_SALT is required", 500);
+  }
+  const pupil_hash = createHmac("sha256", hashSalt)
+    .update(`${pupil_code}`.toLowerCase().trim())
+    .digest("hex");
+
   const { data, error } = await supabase
     .from("send_register")
     .insert({
       organization_id: organizationId,
       pupil_code,
-      first_name: first_name || null,
-      last_name: last_name || null,
+      pupil_hash,
+      // NEVER stored: first_name, last_name — resolved live from Google Drive
       year_group: year_group || null,
       sen_status,
       primary_need,
