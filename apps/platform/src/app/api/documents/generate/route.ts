@@ -96,7 +96,20 @@ export const POST = protectedRoute(async (auth, request) => {
     resolvedValues,
   );
 
-  // Insert the generated document
+  // Sanitise placeholder_values: strip PII fields before persisting
+  const PII_PLACEHOLDER_KEYS = [
+    "recipient_name", "recipient_first_name", "recipient_last_name",
+    "sender_first_name", "sender_last_name", "sender_name",
+    "recipient_email", "sender_email", "recipient_salutation",
+  ];
+  const sanitisedPlaceholders: Record<string, string> = {};
+  for (const [k, v] of Object.entries(resolvedValues)) {
+    if (!PII_PLACEHOLDER_KEYS.includes(k)) {
+      sanitisedPlaceholders[k] = v;
+    }
+  }
+
+  // Insert the generated document — NEVER persist recipient_name or raw PII
   const { data: document, error: insertError } = await supabase
     .from("generated_documents")
     .insert({
@@ -107,13 +120,13 @@ export const POST = protectedRoute(async (auth, request) => {
       created_by: auth.userId,
       recipient_type: recipientType,
       recipient_id: recipientId || null,
-      recipient_name: recipientName,
+      // PII field removed — resolve name live from recipient_id at display time
       recipient_email: recipientEmail || null,
       context_type: contextType || null,
       context_id: contextId || null,
       subject,
       body_html: bodyHtml,
-      placeholder_values: resolvedValues,
+      placeholder_values: sanitisedPlaceholders,
       status: "draft",
     })
     .select()

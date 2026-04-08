@@ -778,8 +778,7 @@ export const POST = protectedRoute(async (auth, request: NextRequest) => {
             demoUpdates.gender = String(raw["Gender"])
               .toLowerCase()
               .replace(/[\s-]/g, "_");
-          if (raw["Date of Birth"])
-            demoUpdates.date_of_birth = parseDate(raw["Date of Birth"]);
+          // date_of_birth: REMOVED — PII. Never store DOB in Supabase.
 
           if (Object.keys(demoUpdates).length > 0) {
             await supabase

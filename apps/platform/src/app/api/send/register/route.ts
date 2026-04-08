@@ -302,7 +302,7 @@ export const GET = protectedRoute(async (auth, request) => {
         let mapped = misResult.data.map((r: any) => ({
           id: r.student_id,
           pupil_code: r.student_id,
-          display_label: r.first_name ? `${r.first_name} ${(r.last_name || "")[0] || ""}` : r.student_id,
+          display_label: r.student_id,  // NEVER return first_name/last_name — resolve live from Google Drive
           year_group: r.year_group,
           sen_status: r.sen_status,
           primary_need: r.sen_primary_need,
@@ -386,7 +386,7 @@ export const POST = protectedRoute(async (auth, request) => {
       organization_id: organizationId,
       pupil_code,
       pupil_hash,
-      // NEVER stored: first_name, last_name — resolved live from Google Drive
+      // PII fields excluded — names resolve live from Google Drive
       year_group: year_group || null,
       sen_status,
       primary_need,
