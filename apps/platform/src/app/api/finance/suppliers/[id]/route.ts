@@ -10,8 +10,8 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
 
   if (!id) return apiError("Supplier ID required", 400);
 
-  const orgId =
-    req.nextUrl.searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
   if (!orgId) return apiError("Organization ID required", 400);
 
   // Fetch the supplier
@@ -88,7 +88,8 @@ export const PATCH = protectedRoute(async (auth, req: NextRequest) => {
   if (!id) return apiError("Supplier ID required", 400);
 
   const body = await req.json();
-  const orgId = body.organizationId || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
   if (!orgId) return apiError("Organization ID required", 400);
 
   // Allowed update fields

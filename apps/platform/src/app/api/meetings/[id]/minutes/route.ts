@@ -31,8 +31,8 @@ function getMeetingId(request: Request): string {
 export const GET = protectedRoute(async (auth, request) => {
   const id = getMeetingId(request);
   const { searchParams } = new URL(request.url);
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
 
   if (!organizationId) {
     return apiError("Missing organizationId", 400);
@@ -71,9 +71,8 @@ export const GET = protectedRoute(async (auth, request) => {
 export const POST = protectedRoute(async (auth, request) => {
   const id = getMeetingId(request);
   const body = await request.json();
-  const { organizationId } = body;
-
-  const resolvedOrgId = organizationId || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const resolvedOrgId = auth.organizationId;
 
   if (!resolvedOrgId) {
     return apiError("Missing organizationId", 400);
@@ -326,9 +325,10 @@ Return ONLY valid JSON in this exact format (no markdown, no code fences):
 export const PATCH = protectedRoute(async (auth, request) => {
   const id = getMeetingId(request);
   const body = await request.json();
-  const { organizationId, content, html, status: minutesStatus } = body;
+  const { content, html, status: minutesStatus } = body;
 
-  const resolvedOrgId = organizationId || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const resolvedOrgId = auth.organizationId;
 
   if (!resolvedOrgId) {
     return apiError("Missing organizationId", 400);

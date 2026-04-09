@@ -8,8 +8,8 @@ import { v4 as uuidv4 } from "uuid";
  */
 export const GET = protectedRoute(async (auth, request) => {
   const { searchParams } = new URL(request.url);
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
   const status = searchParams.get("status");
   const templateId = searchParams.get("templateId");
   const limit = parseInt(searchParams.get("limit") || "50");
@@ -66,7 +66,6 @@ export const GET = protectedRoute(async (auth, request) => {
 export const POST = protectedRoute(async (auth, request) => {
   const body = await request.json();
   const {
-    organizationId,
     leaderId,
     template_id,
     attendee_name,
@@ -77,7 +76,8 @@ export const POST = protectedRoute(async (auth, request) => {
     location,
   } = body;
 
-  const resolvedOrgId = organizationId || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const resolvedOrgId = auth.organizationId;
 
   // Auto-set leader_id from authenticated user header if not provided
   const resolvedLeaderId = leaderId || auth.userId || null;

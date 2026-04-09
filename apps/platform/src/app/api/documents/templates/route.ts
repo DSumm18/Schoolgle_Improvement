@@ -15,8 +15,8 @@ export const GET = protectedRoute(async (auth, request) => {
   const module = searchParams.get("module");
   const category = searchParams.get("category");
   const documentType = searchParams.get("document_type");
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
   const search = searchParams.get("search");
 
   let query = supabase
@@ -79,7 +79,8 @@ export const POST = protectedRoute(
       );
     }
 
-    const resolvedOrgId = organizationId || auth.organizationId;
+    // orgId MUST come from authenticated session — never from caller
+    const resolvedOrgId = auth.organizationId;
 
     // Auto-generate slug from name
     const slug = name

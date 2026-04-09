@@ -7,7 +7,8 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
   const supabase = createServiceRoleClient();
   const url = req.nextUrl;
 
-  const orgId = url.searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
   if (!orgId) return apiError("Organization ID required", 400);
 
   const page = Math.max(1, parseInt(url.searchParams.get("page") || "1", 10));
@@ -137,7 +138,8 @@ export const POST = protectedRoute(async (auth, req: NextRequest) => {
   const supabase = createServiceRoleClient();
   const body = await req.json();
 
-  const orgId = body.organizationId || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
   if (!orgId) return apiError("Organization ID required", 400);
 
   if (!body.supplier_name?.trim()) {

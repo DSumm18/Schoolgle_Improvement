@@ -17,8 +17,8 @@ import { v4 as uuidv4 } from "uuid";
  */
 export const GET = protectedRoute(async (auth, req: NextRequest) => {
   const { searchParams } = new URL(req.url);
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
   const source = searchParams.get("source")?.split(",") as Array<
     "actions" | "estates_compliance_tasks"
   > | null;
@@ -499,8 +499,9 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
  */
 export const POST = protectedRoute(async (auth, req: NextRequest) => {
   const body = await req.json();
-  const { organizationId, userId, task } = body;
-  const orgId = organizationId || auth.organizationId;
+  const { userId, task } = body;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   if (!task) {
     return apiError("Missing required fields: task", 400);
@@ -569,12 +570,12 @@ export const POST = protectedRoute(async (auth, req: NextRequest) => {
  */
 export const PATCH = protectedRoute(async (auth, req: NextRequest) => {
   const body = await req.json();
-  const { organizationId, updates } = body as {
-    organizationId: string;
+  const { updates } = body as {
     updates: Array<{ id: string; changes: Partial<ActionForm> }>;
   };
 
-  const orgId = organizationId || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   if (!updates || !Array.isArray(updates)) {
     return apiError("Missing required fields: updates (array)", 400);
@@ -632,8 +633,8 @@ export const PATCH = protectedRoute(async (auth, req: NextRequest) => {
  */
 export const DELETE = protectedRoute(async (auth, req: NextRequest) => {
   const { searchParams } = new URL(req.url);
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
   const ids = searchParams.get("ids")?.split(",");
   const source = searchParams.get("source");
 

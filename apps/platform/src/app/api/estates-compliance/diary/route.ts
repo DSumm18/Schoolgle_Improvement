@@ -14,8 +14,8 @@ import { createServiceRoleClient } from "@/lib/supabase-server";
 
 export const GET = protectedRoute(async (auth, request) => {
   const searchParams = request.nextUrl.searchParams;
-  const organizationId =
-    searchParams.get("organization_id") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
   const userId = searchParams.get("user_id");
   const searchText = searchParams.get("search");
   const tagsParam = searchParams.get("tags");
@@ -79,7 +79,6 @@ export const GET = protectedRoute(async (auth, request) => {
 export const POST = protectedRoute(async (auth, request) => {
   const body = await request.json();
   const {
-    organization_id,
     user_id,
     entry,
     photos = [],
@@ -91,7 +90,8 @@ export const POST = protectedRoute(async (auth, request) => {
     attachments = [],
   } = body;
 
-  const orgId = organization_id || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
   const uid = user_id || auth.userId;
 
   if (!entry) {

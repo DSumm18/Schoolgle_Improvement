@@ -4,8 +4,8 @@ import { createServiceRoleClient } from "@/lib/supabase-server";
 
 export const GET = protectedRoute(async (auth, req) => {
   const supabase = createServiceRoleClient();
-  const orgId =
-    req.nextUrl.searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   const { data, error } = await supabase
     .from("school_quick_links")
@@ -24,7 +24,6 @@ export const POST = protectedRoute(async (auth, req) => {
   const supabase = createServiceRoleClient();
   const body = await req.json();
   const {
-    organizationId,
     title,
     url,
     icon,
@@ -34,7 +33,8 @@ export const POST = protectedRoute(async (auth, req) => {
     fileUrl,
   } = body;
 
-  const orgId = organizationId || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   if (!title) {
     return apiError("Missing required fields", 400);

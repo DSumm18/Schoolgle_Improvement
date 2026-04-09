@@ -12,8 +12,8 @@ import { createServiceRoleClient } from "@/lib/supabase-server";
  */
 export const GET = protectedRoute(async (auth, request) => {
   const { searchParams } = new URL(request.url);
-  const organizationId =
-    searchParams.get("organization_id") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
   const date =
     searchParams.get("date") ?? new Date().toISOString().split("T")[0];
 
@@ -135,7 +135,6 @@ export const GET = protectedRoute(async (auth, request) => {
 export const POST = protectedRoute(async (auth, request) => {
   const body = await request.json();
   const {
-    organizationId,
     assetId,
     checkedBy,
     checkType,
@@ -156,7 +155,8 @@ export const POST = protectedRoute(async (auth, request) => {
     isSnagging,
   } = body;
 
-  const orgId = organizationId || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   if (!assetId || !checkType) {
     return apiError("assetId and checkType are required", 400);

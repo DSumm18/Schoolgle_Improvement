@@ -7,8 +7,8 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
   const supabase = createServiceRoleClient();
 
   const { searchParams } = new URL(req.url);
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
 
   const { data, error } = await supabase
     .from("invitations")
@@ -44,8 +44,8 @@ export const DELETE = protectedRoute(async (auth, req: NextRequest) => {
 
   const { searchParams } = new URL(req.url);
   const invitationId = searchParams.get("invitationId");
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
 
   if (!invitationId) {
     return apiError("Missing required fields", 400);
@@ -82,8 +82,9 @@ export const DELETE = protectedRoute(async (auth, req: NextRequest) => {
 export const POST = protectedRoute(async (auth, req: NextRequest) => {
   const supabase = createServiceRoleClient();
 
-  const { invitationId, organizationId } = await req.json();
-  const orgId = organizationId || auth.organizationId;
+  const { invitationId } = await req.json();
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   if (!invitationId) {
     return apiError("Missing required fields", 400);

@@ -10,8 +10,8 @@ import { v4 as uuidv4 } from "uuid";
  */
 export const GET = protectedRoute(async (auth, req: NextRequest) => {
   const { searchParams } = new URL(req.url);
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
   const segments = req.nextUrl.pathname.split("/");
   const taskId = segments[segments.indexOf("tasks") + 1];
 
@@ -57,7 +57,6 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
 export const POST = protectedRoute(async (auth, req: NextRequest) => {
   const body = await req.json();
   const {
-    organizationId,
     task_source: taskSource,
     content,
     comment_type,
@@ -65,12 +64,12 @@ export const POST = protectedRoute(async (auth, req: NextRequest) => {
     attachments,
     userId,
   } = body as TaskCommentForm & {
-    organizationId: string;
     userId?: string;
     taskSource?: string;
   };
 
-  const orgId = organizationId || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
   const segments = req.nextUrl.pathname.split("/");
   const taskId = segments[segments.indexOf("tasks") + 1];
 
@@ -120,8 +119,8 @@ export const POST = protectedRoute(async (auth, req: NextRequest) => {
  */
 export const DELETE = protectedRoute(async (auth, req: NextRequest) => {
   const { searchParams } = new URL(req.url);
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
   const commentId = searchParams.get("commentId");
 
   if (!commentId) {

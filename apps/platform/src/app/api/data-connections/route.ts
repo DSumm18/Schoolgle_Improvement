@@ -7,8 +7,8 @@ import { createServiceRoleClient } from "@/lib/supabase-server";
  * List active data connections for the organization
  */
 export const GET = protectedRoute(async (auth, req: NextRequest) => {
-  const orgId =
-    req.nextUrl.searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
   if (!orgId) return apiError("Missing organizationId", 400);
 
   const supabase = createServiceRoleClient();
@@ -28,8 +28,8 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
  */
 export const DELETE = protectedRoute(async (auth, req: NextRequest) => {
   const id = req.nextUrl.searchParams.get("id");
-  const orgId =
-    req.nextUrl.searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
   if (!id || !orgId) return apiError("Missing id or organizationId", 400);
 
   const supabase = createServiceRoleClient();

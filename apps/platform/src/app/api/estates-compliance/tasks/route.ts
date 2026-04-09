@@ -53,9 +53,10 @@ interface AuditLogEntry {
  */
 export const POST = protectedRoute(async (auth, request) => {
   const body = (await request.json()) as TaskActionRequest;
-  const { action, organization_id, check_id } = body;
+  const { action, check_id } = body;
 
-  const orgId = organization_id || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   if (!check_id) {
     return apiError("check_id is required", 400);
@@ -177,8 +178,8 @@ export const POST = protectedRoute(async (auth, request) => {
  */
 export const GET = protectedRoute(async (auth, request) => {
   const { searchParams } = new URL(request.url);
-  const organizationId =
-    searchParams.get("organization_id") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
   const checkId = searchParams.get("check_id");
 
   if (!checkId) {

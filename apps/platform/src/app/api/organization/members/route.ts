@@ -6,8 +6,8 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
   const supabase = createServiceRoleClient();
 
   const { searchParams } = new URL(req.url);
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
 
   // Fetch members with user details
   const { data: members, error } = await supabase

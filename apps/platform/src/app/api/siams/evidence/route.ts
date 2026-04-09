@@ -16,8 +16,8 @@ import type {
  */
 export const GET = protectedRoute(async (auth, req) => {
   const { searchParams } = new URL(req.url);
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
   const strandId = searchParams.get("strandId") as SiamsStrandId | null;
   const questionId = searchParams.get("questionId") as SiamsQuestionId | null;
   const documentId = searchParams.get("documentId");
@@ -106,14 +106,12 @@ export const GET = protectedRoute(async (auth, req) => {
 export const POST = protectedRoute(async (auth, req) => {
   const body = await req.json();
   const {
-    organizationId,
     documentId,
     questionIds,
     confidence,
     relevance_explanation,
     key_quotes,
   } = body as {
-    organizationId: string;
     documentId: string;
     questionIds: SiamsQuestionId[];
     confidence: ConfidenceLevel;
@@ -121,7 +119,8 @@ export const POST = protectedRoute(async (auth, req) => {
     key_quotes: string[];
   };
 
-  const orgId = organizationId || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   if (!orgId || !documentId || !questionIds || questionIds.length === 0) {
     return apiError(
@@ -188,8 +187,8 @@ export const POST = protectedRoute(async (auth, req) => {
  */
 export const DELETE = protectedRoute(async (auth, req) => {
   const { searchParams } = new URL(req.url);
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
   const ids = searchParams.get("ids")?.split(",");
 
   if (!organizationId || !ids || ids.length === 0) {

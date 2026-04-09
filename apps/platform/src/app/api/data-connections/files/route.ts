@@ -9,8 +9,8 @@ const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
  * List files in a specific data category from the connected Drive folder
  */
 export const GET = protectedRoute(async (auth, req: NextRequest) => {
-  const orgId =
-    req.nextUrl.searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
   const category = req.nextUrl.searchParams.get("category");
 
   if (!orgId) return apiError("Missing organizationId", 400);
@@ -117,11 +117,12 @@ const GOOGLE_NATIVE_EXPORT: Record<
  * (Docs, Sheets, Slides) by exporting to a usable format.
  */
 export const POST = protectedRoute(async (auth, req) => {
-  const { organizationId, fileId, parse, mimeType } = await req.json();
-  const orgId = organizationId || auth.organizationId;
+  const { fileId, parse, mimeType } = await req.json();
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   if (!orgId || !fileId) {
-    return apiError("Missing organizationId or fileId", 400);
+    return apiError("Missing fileId", 400);
   }
 
   if (!GOOGLE_API_KEY) {

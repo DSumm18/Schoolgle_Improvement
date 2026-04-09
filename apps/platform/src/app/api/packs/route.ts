@@ -6,7 +6,8 @@ export const GET = protectedRoute(async (auth, request: NextRequest) => {
   const supabase = createServiceRoleClient();
 
   const { searchParams } = new URL(request.url);
-  const orgId = searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   const { data, error } = await supabase
     .from("packs")
@@ -23,9 +24,10 @@ export const POST = protectedRoute(async (auth, request: NextRequest) => {
   const supabase = createServiceRoleClient();
 
   const body = await request.json();
-  const { organizationId, templateId, title, userId, sections } = body;
+  const { templateId, title, userId, sections } = body;
 
-  const orgId = organizationId || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   if (!templateId || !title) {
     return apiError("Missing required fields", 400);

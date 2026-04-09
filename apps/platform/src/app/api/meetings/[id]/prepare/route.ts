@@ -30,8 +30,8 @@ function getMeetingId(request: Request): string {
 export const POST = protectedRoute(async (auth, request) => {
   const id = getMeetingId(request);
   const formData = await request.formData();
-  const organizationId =
-    (formData.get("organizationId") as string) || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
 
   if (!organizationId) {
     return apiError("Missing organizationId", 400);
@@ -110,8 +110,8 @@ export const POST = protectedRoute(async (auth, request) => {
 export const GET = protectedRoute(async (auth, request) => {
   const id = getMeetingId(request);
   const { searchParams } = new URL(request.url);
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
 
   if (!organizationId) {
     return apiError("Missing organizationId", 400);

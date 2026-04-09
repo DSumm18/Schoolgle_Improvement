@@ -91,8 +91,9 @@ export const POST = protectedRoute(async (auth, request) => {
   const supabase = createServiceRoleClient();
   const body = await request.json();
 
-  const { organizationId, csvData, created_by } = body;
-  const orgId = organizationId || auth.organizationId;
+  const { csvData, created_by } = body;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   if (!csvData) {
     return apiError("csvData is required", 400);
@@ -302,8 +303,8 @@ export const GET = protectedRoute(async (auth, request) => {
   const supabase = createServiceRoleClient();
   const { searchParams } = new URL(request.url);
   const type = searchParams.get("type");
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
 
   // Instruction comments to include at the top of CSV
   const instructions = [

@@ -21,8 +21,8 @@ import { SIAMS_STRANDS, SIAMS_QUESTIONS } from "@/lib/siams";
  */
 export const GET = protectedRoute(async (auth, req) => {
   const { searchParams } = new URL(req.url);
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
   const strandId = searchParams.get("strandId") as SiamsStrandId | null;
   const questionId = searchParams.get("questionId") as SiamsQuestionId | null;
 
@@ -172,9 +172,10 @@ export const GET = protectedRoute(async (auth, req) => {
  */
 export const POST = protectedRoute(async (auth, req) => {
   const body = await req.json();
-  const { organizationId, userId, assessments } = body as any;
+  const { userId, assessments } = body as any;
 
-  const orgId = organizationId || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   if (!orgId || !assessments || !Array.isArray(assessments)) {
     return apiError(
@@ -231,8 +232,7 @@ export const POST = protectedRoute(async (auth, req) => {
  */
 export const PATCH = protectedRoute(async (auth, req) => {
   const body = await req.json();
-  const { organizationId, updates } = body as {
-    organizationId: string;
+  const { updates } = body as {
     updates: Array<{
       id?: string;
       question_id: SiamsQuestionId;
@@ -240,7 +240,8 @@ export const PATCH = protectedRoute(async (auth, req) => {
     }>;
   };
 
-  const orgId = organizationId || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   if (!orgId || !updates || !Array.isArray(updates)) {
     return apiError(
@@ -291,8 +292,8 @@ export const PATCH = protectedRoute(async (auth, req) => {
  */
 export const DELETE = protectedRoute(async (auth, req) => {
   const { searchParams } = new URL(req.url);
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
   const questionIds = searchParams.get("questionIds")?.split(",");
 
   if (!organizationId || !questionIds || questionIds.length === 0) {

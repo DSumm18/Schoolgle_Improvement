@@ -11,8 +11,8 @@ import { createServiceRoleClient } from "@/lib/supabase-server";
 
 export const GET = protectedRoute(async (auth, request) => {
   const searchParams = request.nextUrl.searchParams;
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
   const academicYear = searchParams.get("academic_year");
 
   const supabase = createServiceRoleClient();
@@ -52,7 +52,6 @@ export const GET = protectedRoute(async (auth, request) => {
 export const POST = protectedRoute(async (auth, request) => {
   const body = await request.json();
   const {
-    organization_id,
     academic_year,
     // Magnificent Seven
     total_income,
@@ -83,7 +82,8 @@ export const POST = protectedRoute(async (auth, request) => {
     created_by,
   } = body;
 
-  const orgId = organization_id || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   if (!academic_year) {
     return apiError("academic_year is required", 400);

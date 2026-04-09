@@ -11,8 +11,8 @@ import { v4 as uuidv4 } from "uuid";
 export const GET = protectedRoute(async (auth, req: NextRequest) => {
   const id = req.nextUrl.pathname.split("/").at(-1)!;
   const { searchParams } = new URL(req.url);
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
 
   const supabase = createServiceRoleClient();
 
@@ -112,11 +112,10 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
 export const PATCH = protectedRoute(async (auth, req: NextRequest) => {
   const id = req.nextUrl.pathname.split("/").at(-1)!;
   const body = await req.json();
-  const { organizationId, ...changes } = body as {
-    organizationId: string;
-  } & Partial<ActionForm>;
+  const { ...changes } = body as Partial<ActionForm>;
 
-  const orgId = organizationId || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   const supabase = createServiceRoleClient();
 
@@ -188,8 +187,8 @@ export const PATCH = protectedRoute(async (auth, req: NextRequest) => {
 export const DELETE = protectedRoute(async (auth, req: NextRequest) => {
   const id = req.nextUrl.pathname.split("/").at(-1)!;
   const { searchParams } = new URL(req.url);
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
 
   const supabase = createServiceRoleClient();
 
@@ -225,13 +224,13 @@ export const DELETE = protectedRoute(async (auth, req: NextRequest) => {
 export const POST = protectedRoute(async (auth, req: NextRequest) => {
   const id = req.nextUrl.pathname.split("/").at(-1)!;
   const body = await req.json();
-  const { organizationId, userId, completionNotes } = body as {
-    organizationId: string;
+  const { userId, completionNotes } = body as {
     userId?: string;
     completionNotes?: string;
   };
 
-  const orgId = organizationId || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   const supabase = createServiceRoleClient();
 

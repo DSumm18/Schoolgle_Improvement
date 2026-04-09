@@ -14,8 +14,8 @@ import { v4 as uuidv4 } from "uuid";
  */
 export const GET = protectedRoute(async (auth, req: NextRequest) => {
   const { searchParams } = new URL(req.url);
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
   const department = searchParams.get("department");
   const type = searchParams.get("type");
 
@@ -108,7 +108,6 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
 export const POST = protectedRoute(async (auth, req: NextRequest) => {
   const body = await req.json();
   const {
-    organizationId,
     name,
     description,
     color,
@@ -121,9 +120,10 @@ export const POST = protectedRoute(async (auth, req: NextRequest) => {
     can_create_tasks,
     can_assign_tasks,
     can_approve_tasks,
-  } = body as TeamForm & { organizationId: string };
+  } = body as TeamForm;
 
-  const orgId = organizationId || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   if (!name) {
     return apiError("Missing required fields: name", 400);
@@ -172,15 +172,15 @@ export const POST = protectedRoute(async (auth, req: NextRequest) => {
  */
 export const PATCH = protectedRoute(async (auth, req: NextRequest) => {
   const body = await req.json();
-  const { organizationId, updates } = body as {
-    organizationId: string;
+  const { updates } = body as {
     updates: Array<{
       id: string;
       changes: Partial<TeamForm>;
     }>;
   };
 
-  const orgId = organizationId || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   if (!updates || !Array.isArray(updates)) {
     return apiError("Missing required fields: updates (array)", 400);
@@ -221,8 +221,8 @@ export const PATCH = protectedRoute(async (auth, req: NextRequest) => {
  */
 export const DELETE = protectedRoute(async (auth, req: NextRequest) => {
   const { searchParams } = new URL(req.url);
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
   const ids = searchParams.get("ids")?.split(",");
 
   if (!ids || ids.length === 0) {

@@ -31,7 +31,6 @@ export const POST = protectedRoute(async (auth, request) => {
   const body = await request.json();
 
   const {
-    organizationId,
     title,
     week_ending,
     sections,
@@ -47,7 +46,8 @@ export const POST = protectedRoute(async (auth, request) => {
     );
   }
 
-  const orgId = organizationId || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   // Fetch org branding for newsletter header
   const { data: org } = await supabase
@@ -252,7 +252,8 @@ export const GET = protectedRoute(async (auth, request) => {
   const supabase = createServiceRoleClient();
   const { searchParams } = new URL(request.url);
 
-  const orgId = searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
   const limit = parseInt(searchParams.get("limit") || "20", 10);
 
   const { data: newsletters, error } = await supabase

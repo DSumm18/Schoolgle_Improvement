@@ -10,8 +10,8 @@ import { createServiceRoleClient } from "@/lib/supabase-server";
 
 export const GET = protectedRoute(async (auth, request) => {
   const searchParams = request.nextUrl.searchParams;
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
   const locationType = searchParams.get("type");
   const buildingId = searchParams.get("buildingId");
   const parentId = searchParams.get("parentId");
@@ -51,7 +51,6 @@ export const GET = protectedRoute(async (auth, request) => {
 export const POST = protectedRoute(async (auth, request) => {
   const body = await request.json();
   const {
-    organizationId,
     buildingId,
     parentLocationId,
     name,
@@ -67,7 +66,8 @@ export const POST = protectedRoute(async (auth, request) => {
     hazardDetails,
   } = body;
 
-  const orgId = organizationId || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   if (!orgId || !name || !locationType) {
     return apiError("organizationId, name, and locationType are required", 400);

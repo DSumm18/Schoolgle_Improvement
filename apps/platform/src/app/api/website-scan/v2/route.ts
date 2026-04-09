@@ -38,7 +38,8 @@ export const POST = protectedRoute(async (auth, request) => {
     const body: ScrapeRequest = await request.json();
 
     const websiteUrl = body.websiteUrl;
-    const organizationId = body.organizationId || auth.organizationId;
+    // orgId MUST come from authenticated session — never from caller
+    const organizationId = auth.organizationId;
 
     if (!websiteUrl || !organizationId) {
       return apiError("websiteUrl and organizationId are required", 400);
@@ -107,8 +108,8 @@ export const POST = protectedRoute(async (auth, request) => {
  */
 export const GET = protectedRoute(async (auth, request) => {
   const { searchParams } = new URL(request.url);
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
 
   if (!organizationId) {
     return apiError("organizationId is required", 400);

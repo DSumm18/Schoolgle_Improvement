@@ -19,14 +19,14 @@ export const POST = protectedRoute(async (auth, request) => {
   const id = getMeetingId(request);
   const body = await request.json();
   const {
-    organizationId,
     signer_name,
     signer_role,
     signature_data,
     signature_method,
   } = body;
 
-  const resolvedOrgId = organizationId || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const resolvedOrgId = auth.organizationId;
 
   if (!resolvedOrgId || !signer_name || !signer_role || !signature_data) {
     return apiError("Missing required fields", 400);
@@ -91,8 +91,8 @@ export const POST = protectedRoute(async (auth, request) => {
 export const GET = protectedRoute(async (auth, request) => {
   const id = getMeetingId(request);
   const { searchParams } = new URL(request.url);
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
 
   if (!organizationId) {
     return apiError("Missing organizationId", 400);

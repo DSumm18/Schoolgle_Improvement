@@ -13,8 +13,8 @@ export const GET = protectedRoute(async (auth, request) => {
   const supabase = createServiceRoleClient();
   const { searchParams } = new URL(request.url);
 
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
   const module = searchParams.get("module");
   const status = searchParams.get("status");
   const recipientType = searchParams.get("recipientType");

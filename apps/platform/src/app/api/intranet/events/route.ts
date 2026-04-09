@@ -4,8 +4,8 @@ import { createServiceRoleClient } from "@/lib/supabase-server";
 
 export const GET = protectedRoute(async (auth, req) => {
   const supabase = createServiceRoleClient();
-  const orgId =
-    req.nextUrl.searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   // Get events for the next 7 days by default
   const days = parseInt(req.nextUrl.searchParams.get("days") || "7");
@@ -34,7 +34,6 @@ export const POST = protectedRoute(async (auth, req) => {
   const supabase = createServiceRoleClient();
   const body = await req.json();
   const {
-    organizationId,
     title,
     description,
     eventDate,
@@ -47,7 +46,8 @@ export const POST = protectedRoute(async (auth, req) => {
     createdBy,
   } = body;
 
-  const orgId = organizationId || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   if (!title || !eventDate) {
     return apiError("Missing required fields", 400);

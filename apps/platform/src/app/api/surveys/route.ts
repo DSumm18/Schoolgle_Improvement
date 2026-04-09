@@ -5,8 +5,8 @@ import { createServiceRoleClient } from "@/lib/supabase-server";
 export const GET = protectedRoute(async (auth, request) => {
   const supabase = createServiceRoleClient();
   const { searchParams } = new URL(request.url);
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
   const isToolbox = searchParams.get("isToolbox") === "true";
 
   if (!isToolbox && !organizationId) {
@@ -45,13 +45,14 @@ export const POST = protectedRoute(async (auth, request) => {
   const supabase = createServiceRoleClient();
   const body = await request.json();
 
-  const { organizationId, title, surveyType, audienceType, isToolbox } = body;
+  const { title, surveyType, audienceType, isToolbox } = body;
 
   if (!title) {
     return apiError("Title is required", 400);
   }
 
-  const orgId = organizationId || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   // Generate slug
   const slug =

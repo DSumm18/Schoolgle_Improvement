@@ -130,8 +130,8 @@ async function findAssessmentsFolder(
 // ─── GET — List available XML files ──────────────────────────────────────────
 
 export const GET = protectedRoute(async (auth, request: NextRequest) => {
-  const organizationId =
-    request.nextUrl.searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
 
   if (!organizationId) return apiError("Missing organizationId", 400);
   if (!GOOGLE_API_KEY)
@@ -170,7 +170,8 @@ export const GET = protectedRoute(async (auth, request: NextRequest) => {
 
 export const POST = protectedRoute(async (auth, request: NextRequest) => {
   const body = await request.json();
-  const organizationId = body.organizationId || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
   const dryRun = body.dryRun === true;
   const singleFileId = body.fileId as string | undefined;
   const folderIdOverride = body.folderId as string | undefined;

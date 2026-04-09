@@ -5,8 +5,9 @@ import { createServiceRoleClient } from "@/lib/supabase-server";
 export const PUT = protectedRoute(async (auth, req: NextRequest) => {
   const supabase = createServiceRoleClient();
 
-  const { organizationId, userId, newRole } = await req.json();
-  const orgId = organizationId || auth.organizationId;
+  const { userId, newRole } = await req.json();
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   if (!userId || !newRole) {
     return apiError("Missing required fields", 400);
@@ -61,8 +62,8 @@ export const DELETE = protectedRoute(async (auth, req: NextRequest) => {
   const supabase = createServiceRoleClient();
 
   const { searchParams } = new URL(req.url);
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
   const userId = searchParams.get("userId");
 
   if (!userId) {

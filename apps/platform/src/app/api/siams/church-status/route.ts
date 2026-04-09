@@ -16,8 +16,8 @@ import type {
  */
 export const GET = protectedRoute(async (auth, req) => {
   const { searchParams } = new URL(req.url);
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
 
   if (!organizationId) {
     return apiError("Missing organizationId parameter", 400);
@@ -106,7 +106,6 @@ export const GET = protectedRoute(async (auth, req) => {
 export const POST = protectedRoute(async (auth, req) => {
   const body = await req.json();
   const {
-    organizationId,
     urn,
     is_church_school,
     church_denomination,
@@ -115,9 +114,10 @@ export const POST = protectedRoute(async (auth, req) => {
     last_siams_date,
     last_siams_rating,
     next_siams_date,
-  } = body as SchoolChurchStatusForm & { organizationId: string };
+  } = body as SchoolChurchStatusForm;
 
-  const orgId = organizationId || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   if (!orgId) {
     return apiError("Missing organizationId", 400);
@@ -201,11 +201,10 @@ export const POST = protectedRoute(async (auth, req) => {
  */
 export const PATCH = protectedRoute(async (auth, req) => {
   const body = await req.json();
-  const { organizationId, ...changes } = body as {
-    organizationId: string;
-  } & Partial<SchoolChurchStatusForm>;
+  const { ...changes } = body as Partial<SchoolChurchStatusForm>;
 
-  const orgId = organizationId || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   if (!orgId) {
     return apiError("Missing organizationId", 400);
