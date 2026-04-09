@@ -15,8 +15,8 @@ import { v4 as uuidv4 } from "uuid";
  */
 export const GET = protectedRoute(async (auth, req) => {
   const { searchParams } = new URL(req.url);
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
   const governorId = searchParams.get("governorId");
   const visitType = searchParams.get("visitType") as VisitType | null;
   const status = searchParams.get("status") as VisitStatus | null;
@@ -133,7 +133,8 @@ export const POST = protectedRoute(async (auth, req) => {
     key_focus?: string[];
   };
 
-  const orgId = organizationId || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   if (!orgId || !governorId || !visit_type || !title || !scheduled_date) {
     return apiError(
@@ -196,7 +197,8 @@ export const PATCH = protectedRoute(async (auth, req) => {
     }>;
   };
 
-  const orgId = organizationId || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   if (!orgId || !updates || !Array.isArray(updates)) {
     return apiError(
@@ -240,8 +242,8 @@ export const PATCH = protectedRoute(async (auth, req) => {
  */
 export const DELETE = protectedRoute(async (auth, req) => {
   const { searchParams } = new URL(req.url);
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
   const ids = searchParams.get("ids")?.split(",");
 
   if (!organizationId || !ids || ids.length === 0) {

@@ -13,9 +13,8 @@ import type {
  * Get governance board details and statistics for an organization
  */
 export const GET = protectedRoute(async (auth, req) => {
-  const { searchParams } = new URL(req.url);
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
 
   if (!organizationId) {
     return apiError("Missing organizationId parameter", 400);
@@ -130,7 +129,8 @@ export const POST = protectedRoute(async (auth, req) => {
     type?: "maintained" | "academy" | "church";
   };
 
-  const orgId = organizationId || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   if (!orgId) {
     return apiError("Missing organizationId", 400);
