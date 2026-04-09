@@ -24,9 +24,10 @@ const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 
 export const POST = protectedRoute(async (auth, req) => {
   const body = await req.json();
-  const { fileId, fileName, organizationId, pdfBase64: providedBase64 } = body;
+  const { fileId, fileName, pdfBase64: providedBase64 } = body;
 
-  const orgId = organizationId || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
   if (!orgId) return apiError("Missing organizationId", 400);
   if (!fileId && !providedBase64) {
     return apiError("Provide either fileId (Drive) or pdfBase64", 400);

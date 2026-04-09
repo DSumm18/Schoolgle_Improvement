@@ -10,8 +10,9 @@ const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
  * This is the main school data folder (not just Ofsted evidence).
  */
 export const POST = protectedRoute(async (auth, req) => {
-  const { organizationId, folderId, connectedBy } = await req.json();
-  const orgId = organizationId || auth.organizationId;
+  const { folderId, connectedBy } = await req.json();
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   if (!orgId || !folderId) {
     return apiError("Missing organizationId or folderId", 400);

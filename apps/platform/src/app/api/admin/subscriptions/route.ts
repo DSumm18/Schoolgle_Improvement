@@ -85,7 +85,6 @@ export const POST = protectedRoute(
     const supabase = createServiceRoleClient();
     const body = await req.json();
     const {
-      organizationId,
       plan,
       paymentMethod,
       basePriceAnnual,
@@ -96,7 +95,8 @@ export const POST = protectedRoute(
       stripeSubscriptionId,
     } = body;
 
-    const orgId = organizationId || auth.organizationId;
+    // orgId MUST come from authenticated session — never from caller
+    const orgId = auth.organizationId;
 
     const finalPrice = Math.round(
       basePriceAnnual * schoolCount * (1 - discountPercent / 100),

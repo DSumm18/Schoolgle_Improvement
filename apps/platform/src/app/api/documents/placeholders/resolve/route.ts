@@ -18,7 +18,6 @@ export const POST = protectedRoute(async (auth, request) => {
 
   const {
     templateId,
-    organizationId,
     staffId,
     meetingId,
     senderId,
@@ -30,7 +29,8 @@ export const POST = protectedRoute(async (auth, request) => {
     return apiError("templateId is required", 400, "MISSING_FIELDS");
   }
 
-  const resolvedOrgId = organizationId || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const resolvedOrgId = auth.organizationId;
 
   // Fetch the template to know which placeholders are needed
   const { data: template, error: templateError } = await supabase

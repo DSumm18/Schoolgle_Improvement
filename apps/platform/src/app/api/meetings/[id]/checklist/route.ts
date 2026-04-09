@@ -18,15 +18,15 @@ function getMeetingId(request: Request): string {
 export const PATCH = protectedRoute(async (auth, request) => {
   const id = getMeetingId(request);
   const body = await request.json();
-  const { organizationId, items } = body as {
-    organizationId: string;
+  const { items } = body as {
     items: Array<{
       id: string;
       manually_ticked: boolean;
     }>;
   };
 
-  const resolvedOrgId = organizationId || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const resolvedOrgId = auth.organizationId;
 
   if (!resolvedOrgId || !items || !Array.isArray(items)) {
     return apiError(

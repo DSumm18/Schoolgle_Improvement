@@ -9,8 +9,9 @@ const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
  * Re-scan the connected folder to detect new/changed files
  */
 export const POST = protectedRoute(async (auth, req) => {
-  const { organizationId, connectionId } = await req.json();
-  const orgId = organizationId || auth.organizationId;
+  const { connectionId } = await req.json();
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   if (!orgId || !connectionId) {
     return apiError("Missing organizationId or connectionId", 400);

@@ -22,8 +22,8 @@ export const POST = protectedRoute(async (auth, request) => {
   const id = getMeetingId(request);
   const formData = await request.formData();
   const audioFile = formData.get("audio") as File;
-  const organizationId =
-    (formData.get("organizationId") as string) || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
 
   if (!audioFile || !organizationId) {
     return apiError("Missing audio file or organizationId", 400);

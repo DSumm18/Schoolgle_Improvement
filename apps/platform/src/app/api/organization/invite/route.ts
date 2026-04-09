@@ -14,8 +14,9 @@ export const POST = protectedRoute(async (auth, req: NextRequest) => {
     return apiError(validation.error, 400);
   }
 
-  const { email, role, organizationId, invitedBy } = validation.data;
-  const orgId = organizationId || auth.organizationId;
+  const { email, role, invitedBy } = validation.data;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   // Create invitation
   const { data: invitation, error } = await supabase

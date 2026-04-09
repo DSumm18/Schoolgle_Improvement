@@ -10,10 +10,11 @@ const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
  * Uses Google Drive API with API key to access publicly shared folders.
  */
 export const POST = protectedRoute(async (auth, req) => {
-  const { organizationId, folderId, folderLink, connectedBy } =
+  const { folderId, folderLink, connectedBy } =
     await req.json();
 
-  const orgId = organizationId || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   if (!orgId || !folderId) {
     return apiError("Missing organizationId or folderId", 400);

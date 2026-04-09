@@ -98,9 +98,10 @@ function parseCSV(csvContent: string): {
 export const POST = protectedRoute(async (auth, req: NextRequest) => {
   const supabase = createServiceRoleClient();
 
-  const { csvContent, organizationId, invitedBy, previewOnly } =
+  const { csvContent, invitedBy, previewOnly } =
     await req.json();
-  const orgId = organizationId || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   if (!csvContent || !orgId || !invitedBy) {
     return apiError("Missing required fields", 400);

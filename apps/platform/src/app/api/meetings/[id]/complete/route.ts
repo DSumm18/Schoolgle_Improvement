@@ -19,9 +19,8 @@ function getMeetingId(request: Request): string {
 export const POST = protectedRoute(async (auth, request) => {
   const id = getMeetingId(request);
   const body = await request.json();
-  const { organizationId } = body;
-
-  const resolvedOrgId = organizationId || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const resolvedOrgId = auth.organizationId;
 
   if (!resolvedOrgId) {
     return apiError("Missing organizationId", 400);

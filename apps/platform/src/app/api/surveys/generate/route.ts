@@ -19,7 +19,6 @@ export const POST = aiRoute(async (auth, request) => {
   const body: GenerateRequest = await request.json();
   const {
     prompt,
-    organizationId,
     category,
     questionCount = 10,
     isToolbox,
@@ -33,7 +32,8 @@ export const POST = aiRoute(async (auth, request) => {
     return apiError("AI service not configured", 503);
   }
 
-  const orgId = organizationId || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   const systemPrompt = `You are an expert UK school survey designer. Generate a survey based on the user's description.
 

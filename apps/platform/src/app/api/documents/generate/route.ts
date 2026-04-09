@@ -18,7 +18,6 @@ export const POST = protectedRoute(async (auth, request) => {
 
   const {
     templateId,
-    organizationId,
     recipientType,
     recipientId,
     recipientName,
@@ -37,7 +36,8 @@ export const POST = protectedRoute(async (auth, request) => {
     );
   }
 
-  const resolvedOrgId = organizationId || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const resolvedOrgId = auth.organizationId;
 
   // Fetch the template
   const { data: template, error: templateError } = await supabase

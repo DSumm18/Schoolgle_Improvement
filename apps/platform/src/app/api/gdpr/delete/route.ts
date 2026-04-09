@@ -134,8 +134,9 @@ export const DELETE = protectedRoute(
       return apiError(validation.error || "Invalid request", 400);
     }
 
-    const { organizationId, confirmDeletion } = body;
-    const orgId = organizationId || auth.organizationId;
+    const { confirmDeletion } = body;
+    // orgId MUST come from authenticated session — never from caller
+    const orgId = auth.organizationId;
 
     const deletionLog: string[] = [];
 

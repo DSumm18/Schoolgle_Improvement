@@ -19,8 +19,9 @@ import type { Risk, Mitigation } from "@/lib/risk-engine";
 
 export const POST = protectedRoute(async (auth, request) => {
   const body = await request.json();
-  const { organizationId: bodyOrgId, riskId } = body;
-  const organizationId = bodyOrgId || auth.organizationId;
+  const { riskId } = body;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
 
   if (!organizationId) {
     return apiError("organizationId is required", 400);

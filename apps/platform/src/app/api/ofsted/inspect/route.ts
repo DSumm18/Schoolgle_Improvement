@@ -399,10 +399,11 @@ async function extractTextContent(
  * Stores only the verdict — never stores document content (GDPR).
  */
 export const POST = protectedRoute(async (auth, req) => {
-  const { organizationId, driveFileId, fileName, evidenceId, requirementName } =
+  const { driveFileId, fileName, evidenceId, requirementName } =
     await req.json();
 
-  const orgId = organizationId || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   if (!orgId || !driveFileId) {
     return apiError("Missing organizationId or driveFileId", 400);
