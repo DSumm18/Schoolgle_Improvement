@@ -21,7 +21,7 @@ export const GET = protectedRoute(
       supabase
         .from("safeguarding_concerns")
         .select(
-          "id, severity, status, category, created_at, updated_at, follow_up_date, pupil_display_name, pupil_pseudonym_id, reference_number, description, location, date_of_concern, time_of_concern, witnesses, is_anonymous, reported_by, triage_outcome, triage_notes, assigned_to, body_map_data, immediate_actions_taken",
+          "id, severity, status, category, created_at, updated_at, follow_up_date, pupil_pseudonym_label, pupil_pseudonym_id, reference_number, description, location, date_of_concern, time_of_concern, witnesses, is_anonymous, reported_by, triage_outcome, triage_notes, assigned_to, body_map_data, immediate_actions_taken",
         )
         .eq("organization_id", organizationId)
         .in("status", ["open", "triaged", "referred", "monitoring"])
@@ -123,7 +123,7 @@ export const POST = protectedRoute(
     const body = await request.json();
     const {
       pupil_pseudonym_id,
-      pupil_display_name,
+      pupil_pseudonym_label,
       category,
       severity,
       description,
@@ -175,7 +175,7 @@ export const POST = protectedRoute(
         reference_number,
         reported_by: is_anonymous ? null : userId,
         pupil_pseudonym_id: pupil_pseudonym_id || null,
-        pupil_display_name: pupil_display_name || "Unknown Pupil",
+        pupil_pseudonym_label: pupil_pseudonym_label || "Unknown Pupil",
         category,
         severity,
         status: "open",

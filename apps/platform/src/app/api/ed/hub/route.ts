@@ -4,79 +4,68 @@
  * The "go to" place for getting things done
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { ROUTER_MODELS } from "@/lib/ai-openrouter";
+
+import { NextRequest } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { cookies } from "next/headers";
 import { openrouter } from "@/lib/ai-openrouter";
+import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 
 /**
  * GET /api/ed/hub
  *
  * Returns Ed's quick actions, recent questions, and help topics
  */
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const action = searchParams.get("action");
-    const orgId = searchParams.get("org_id");
+export const GET = protectedRoute(async (auth, request) => {
+  const { searchParams } = new URL(request.url);
+  const action = searchParams.get("action");
+  const orgId = auth.organizationId;
 
-    switch (action) {
-      case "quick_actions":
-        return NextResponse.json(await getQuickActions(orgId));
-      case "recent_questions":
-        return NextResponse.json(await getRecentQuestions(orgId));
-      case "help_topics":
-        return NextResponse.json(await getHelpTopics());
-      case "search":
-        const query = searchParams.get("q");
-        return NextResponse.json(await searchHelp(query || ""));
-      default:
-        return NextResponse.json(await getHubContent(orgId));
+  switch (action) {
+    case "quick_actions":
+      return apiSuccess(await getQuickActions(orgId));
+    case "recent_questions":
+      return apiSuccess(await getRecentQuestions(orgId));
+    case "help_topics":
+      return apiSuccess(await getHelpTopics());
+    case "search": {
+      const query = searchParams.get("q");
+      return apiSuccess(await searchHelp(query || ""));
     }
-  } catch (error: any) {
-    console.error("[Ed Hub] Error:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to load Ed Hub" },
-      { status: 500 },
-    );
+    default:
+      return getHubContent(orgId);
   }
-}
+});
 
 /**
  * POST /api/ed/hub
  *
  * Chat with Ed, submit a question, or trigger an action
  */
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { action, message, orgId, userId, shortcut } = body;
+export const POST = protectedRoute(async (auth, request) => {
+  const body = await request.json();
+  const { action, message, shortcut } = body;
+  const orgId = auth.organizationId;
+  const userId = auth.userId;
 
-    switch (action) {
-      case "chat":
-        return await chatWithEd(message, orgId, userId);
-      case "submit_question":
-        return await submitQuestion(message, orgId, userId);
-      case "execute_shortcut":
-        return await executeShortcut(shortcut, orgId, userId);
-      case "trigger_automation":
-        return await triggerAutomation(body);
-      default:
-        return NextResponse.json({ error: "Unknown action" }, { status: 400 });
-    }
-  } catch (error: any) {
-    console.error("[Ed Hub] Error:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to process request" },
-      { status: 500 },
-    );
+  switch (action) {
+    case "chat":
+      return await chatWithEd(message, orgId, userId);
+    case "submit_question":
+      return await submitQuestion(message, orgId, userId);
+    case "execute_shortcut":
+      return await executeShortcut(shortcut, orgId, userId);
+    case "trigger_automation":
+      return await triggerAutomation(body);
+    default:
+      return apiError("Unknown action", 400);
   }
-}
+});
 
 /**
  * Get Ed Hub main content
  */
-async function getHubContent(orgId: string | null) {
+async function getHubContent(orgId: string) {
   const quickActions = await getQuickActions(orgId);
   const recentQuestions = await getRecentQuestions(orgId);
 
@@ -86,7 +75,7 @@ async function getHubContent(orgId: string | null) {
     schoolActions = await getSchoolActions(orgId);
   }
 
-  return NextResponse.json({
+  return apiSuccess({
     welcome: "Hi! I'm Ed. What can I help you with today?",
     quick_actions: quickActions,
     school_actions: schoolActions,
@@ -105,7 +94,7 @@ async function getHubContent(orgId: string | null) {
 /**
  * Get quick actions available to all users
  */
-async function getQuickActions(orgId: string | null) {
+async function getQuickActions(orgId: string) {
   return [
     {
       id: "fill_form",
@@ -170,8 +159,7 @@ async function getSchoolActions(orgId: string) {
 /**
  * Get recent questions from this school
  */
-async function getRecentQuestions(orgId: string | null) {
-  if (!orgId) return [];
+async function getRecentQuestions(orgId: string) {
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -202,14 +190,14 @@ async function getRecentQuestions(orgId: string | null) {
  */
 async function chatWithEd(
   message: string,
-  orgId: string | null,
-  userId: string | null,
+  orgId: string,
+  userId: string,
 ) {
   // Build system prompt with school context
   const systemPrompt = await buildEdContext(orgId);
 
   const response = await openrouter.chat.completions.create({
-    model: "deepseek/deepseek-chat",
+    model: ROUTER_MODELS.DEFAULT,
     messages: [
       {
         role: "system",
@@ -236,11 +224,9 @@ Keep responses concise. If the task is complex, break it into steps.`,
   const answer = response.choices[0].message.content;
 
   // Log the question (anonymously)
-  if (orgId) {
-    await logQuestion(orgId!, userId, message, answer || "");
-  }
+  await logQuestion(orgId, userId, message, answer || "");
 
-  return NextResponse.json({
+  return apiSuccess({
     answer,
     sources: (response.choices[0].message as any).sources || [],
     follow_up_suggestions: generateFollowUpSuggestions(message),
@@ -250,12 +236,7 @@ Keep responses concise. If the task is complex, break it into steps.`,
 /**
  * Build Ed's context about the school
  */
-async function buildEdContext(orgId: string | null): Promise<string> {
-  if (!orgId) {
-    return `You are Ed, a helpful school assistant.
-You help with general questions about school administration, forms, and processes.`;
-  }
-
+async function buildEdContext(orgId: string): Promise<string> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
   const supabase = createClient(supabaseUrl, supabaseKey);
@@ -361,17 +342,17 @@ async function searchHelp(query: string) {
     .or("form_name.ilike.%keyword%,description.ilike.%keyword%")
     .limit(5);
 
-  return NextResponse.json({
+  return {
     knowledge: knowledge || [],
     templates: templates || [],
-  });
+  };
 }
 
 /**
  * Get help topics
  */
 async function getHelpTopics() {
-  return NextResponse.json({
+  return {
     topics: [
       {
         id: "safeguarding",
@@ -384,7 +365,7 @@ async function getHelpTopics() {
       { id: "send", title: "SEND & Inclusion", icon: "📚" },
       { id: "estates", title: "Estates & Facilities", icon: "🏫" },
     ],
-  });
+  };
 }
 
 /**
@@ -392,16 +373,14 @@ async function getHelpTopics() {
  */
 async function submitQuestion(
   message: string,
-  orgId: string | null,
-  userId: string | null,
+  orgId: string,
+  userId: string,
 ) {
   if (!message) {
-    return NextResponse.json({ error: "Message is required" }, { status: 400 });
+    return apiError("Message is required", 400);
   }
-  if (orgId) {
-    await logQuestion(orgId, userId, message, "");
-  }
-  return NextResponse.json({ success: true, message: "Question submitted" });
+  await logQuestion(orgId, userId, message, "");
+  return apiSuccess({ success: true, message: "Question submitted" });
 }
 
 /**
@@ -409,16 +388,13 @@ async function submitQuestion(
  */
 async function executeShortcut(
   shortcut: any,
-  orgId: string | null,
-  userId: string | null,
+  orgId: string,
+  userId: string,
 ) {
   if (!shortcut?.id) {
-    return NextResponse.json(
-      { error: "Shortcut ID is required" },
-      { status: 400 },
-    );
+    return apiError("Shortcut ID is required", 400);
   }
-  return NextResponse.json({
+  return apiSuccess({
     success: true,
     shortcut_id: shortcut.id,
     message: `Shortcut "${shortcut.id}" executed`,
@@ -431,12 +407,9 @@ async function executeShortcut(
 async function triggerAutomation(body: any) {
   const { automation_id } = body;
   if (!automation_id) {
-    return NextResponse.json(
-      { error: "automation_id is required" },
-      { status: 400 },
-    );
+    return apiError("automation_id is required", 400);
   }
-  return NextResponse.json({
+  return apiSuccess({
     success: true,
     automation_id,
     message: `Automation "${automation_id}" triggered`,

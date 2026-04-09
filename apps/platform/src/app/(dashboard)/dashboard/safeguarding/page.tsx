@@ -49,7 +49,7 @@ import {
 interface Concern {
   id: string;
   reference_number: string;
-  pupil_display_name: string;
+  pupil_pseudonym_label: string;
   pupil_pseudonym_id: string | null;
   category: string;
   severity: "red" | "amber" | "green";
@@ -345,7 +345,7 @@ const DEMO_CONCERNS: Concern[] = [
   {
     id: "sg-001",
     reference_number: "SG-2026-001",
-    pupil_display_name: "Pupil A",
+    pupil_pseudonym_label: "Pupil A",
     pupil_pseudonym_id: "h_a1b2c3",
     category: "physical_abuse",
     severity: "red",
@@ -382,7 +382,7 @@ const DEMO_CONCERNS: Concern[] = [
   {
     id: "sg-002",
     reference_number: "SG-2026-002",
-    pupil_display_name: "Pupil B",
+    pupil_pseudonym_label: "Pupil B",
     pupil_pseudonym_id: "h_d4e5f6",
     category: "neglect",
     severity: "amber",
@@ -409,7 +409,7 @@ const DEMO_CONCERNS: Concern[] = [
   {
     id: "sg-003",
     reference_number: "SG-2026-003",
-    pupil_display_name: "Pupil C",
+    pupil_pseudonym_label: "Pupil C",
     pupil_pseudonym_id: "h_g7h8i9",
     category: "online_safety",
     severity: "amber",
@@ -436,7 +436,7 @@ const DEMO_CONCERNS: Concern[] = [
   {
     id: "sg-004",
     reference_number: "SG-2026-004",
-    pupil_display_name: "Pupil D",
+    pupil_pseudonym_label: "Pupil D",
     pupil_pseudonym_id: "h_j0k1l2",
     category: "self_harm",
     severity: "red",
@@ -472,7 +472,7 @@ const DEMO_CONCERNS: Concern[] = [
   {
     id: "sg-005",
     reference_number: "SG-2026-005",
-    pupil_display_name: "Pupil E",
+    pupil_pseudonym_label: "Pupil E",
     pupil_pseudonym_id: "h_m3n4o5",
     category: "peer_on_peer",
     severity: "amber",
@@ -499,7 +499,7 @@ const DEMO_CONCERNS: Concern[] = [
   {
     id: "sg-006",
     reference_number: "SG-2026-006",
-    pupil_display_name: "Pupil F",
+    pupil_pseudonym_label: "Pupil F",
     pupil_pseudonym_id: "h_p6q7r8",
     category: "domestic_abuse",
     severity: "red",
@@ -526,7 +526,7 @@ const DEMO_CONCERNS: Concern[] = [
   {
     id: "sg-007",
     reference_number: "SG-2026-007",
-    pupil_display_name: "Pupil G",
+    pupil_pseudonym_label: "Pupil G",
     pupil_pseudonym_id: "h_s9t0u1",
     category: "mental_health",
     severity: "green",
@@ -553,7 +553,7 @@ const DEMO_CONCERNS: Concern[] = [
   {
     id: "sg-008",
     reference_number: "SG-2026-008",
-    pupil_display_name: "Pupil H",
+    pupil_pseudonym_label: "Pupil H",
     pupil_pseudonym_id: "h_v2w3x4",
     category: "radicalisation",
     severity: "amber",
@@ -580,7 +580,7 @@ const DEMO_CONCERNS: Concern[] = [
   {
     id: "sg-009",
     reference_number: "SG-2026-009",
-    pupil_display_name: "Pupil I",
+    pupil_pseudonym_label: "Pupil I",
     pupil_pseudonym_id: "h_y5z6a7",
     category: "missing_education",
     severity: "amber",
@@ -606,7 +606,7 @@ const DEMO_CONCERNS: Concern[] = [
   {
     id: "sg-010",
     reference_number: "SG-2026-010",
-    pupil_display_name: "Pupil J",
+    pupil_pseudonym_label: "Pupil J",
     pupil_pseudonym_id: "h_b8c9d0",
     category: "contextual_safeguarding",
     severity: "green",
@@ -1334,7 +1334,7 @@ function ConcernDetailPanel({
                   {concern.reference_number}
                 </h2>
                 <p className="text-sm text-gray-600">
-                  {concern.pupil_display_name} &mdash;{" "}
+                  {concern.pupil_pseudonym_label} &mdash;{" "}
                   {formatCategoryLabel(concern.category)}
                 </p>
               </div>
@@ -1807,7 +1807,7 @@ function ReportConcernModal({
 
   const handleSubmit = () => {
     onSubmit({
-      pupil_display_name: pupilName || "Unknown Pupil",
+      pupil_pseudonym_label: pupilName || "Unknown Pupil",
       category,
       severity: severity as "red" | "amber" | "green",
       description,
@@ -2368,7 +2368,7 @@ export default function SafeguardingPage() {
       const q = searchQuery.toLowerCase();
       return (
         (c.reference_number || "").toLowerCase().includes(q) ||
-        (c.pupil_display_name || "").toLowerCase().includes(q) ||
+        (c.pupil_pseudonym_label || "").toLowerCase().includes(q) ||
         c.description.toLowerCase().includes(q) ||
         formatCategoryLabel(c.category).toLowerCase().includes(q)
       );
@@ -2384,7 +2384,7 @@ export default function SafeguardingPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          pupil_display_name: data.pupil_display_name || "Unknown Pupil",
+          pupil_pseudonym_label: data.pupil_pseudonym_label || "Unknown Pupil",
           pupil_pseudonym_id: data.pupil_pseudonym_id || null,
           category: data.category || "other",
           severity: data.severity || "amber",
@@ -2408,7 +2408,7 @@ export default function SafeguardingPage() {
         const newConcern: Concern = {
           id: `sg-new-${Date.now()}`,
           reference_number: `SG-2026-${String(concerns.length + 1).padStart(3, "0")}`,
-          pupil_display_name: data.pupil_display_name || "Unknown Pupil",
+          pupil_pseudonym_label: data.pupil_pseudonym_label || "Unknown Pupil",
           pupil_pseudonym_id: null,
           category: data.category || "other",
           severity: data.severity || "amber",
@@ -2437,7 +2437,7 @@ export default function SafeguardingPage() {
       const newConcern: Concern = {
         id: `sg-new-${Date.now()}`,
         reference_number: `SG-2026-${String(concerns.length + 1).padStart(3, "0")}`,
-        pupil_display_name: data.pupil_display_name || "Unknown Pupil",
+        pupil_pseudonym_label: data.pupil_pseudonym_label || "Unknown Pupil",
         pupil_pseudonym_id: null,
         category: data.category || "other",
         severity: data.severity || "amber",
@@ -2693,7 +2693,7 @@ export default function SafeguardingPage() {
                   <span className="font-mono text-xs">
                     {c.reference_number}
                   </span>
-                  <span>{c.pupil_display_name}</span>
+                  <span>{c.pupil_pseudonym_label}</span>
                   <span className="text-red-500 text-xs">
                     ({daysAgo(c.follow_up_date!)} days overdue)
                   </span>
@@ -2776,7 +2776,7 @@ export default function SafeguardingPage() {
               {sevConcerns.length > 0 && (
                 <div className="mt-3 pt-3 border-t border-gray-100">
                   <div className="text-xs text-gray-500">
-                    Latest: {sevConcerns[0].pupil_display_name} &mdash;{" "}
+                    Latest: {sevConcerns[0].pupil_pseudonym_label} &mdash;{" "}
                     {formatCategoryLabel(sevConcerns[0].category)}
                   </div>
                 </div>
@@ -2969,7 +2969,7 @@ export default function SafeguardingPage() {
                         {concern.reference_number}
                       </span>
                       <span className="text-sm font-medium text-gray-800">
-                        {concern.pupil_display_name}
+                        {concern.pupil_pseudonym_label}
                       </span>
                       <span
                         className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${sev.bgLight} ${sev.text} font-medium`}
@@ -3060,7 +3060,7 @@ export default function SafeguardingPage() {
                     </span>
                   </div>
                   <div className="text-xs text-gray-500">
-                    {concern?.pupil_display_name} &mdash;{" "}
+                    {concern?.pupil_pseudonym_label} &mdash;{" "}
                     {concern ? formatCategoryLabel(concern.category) : ""}{" "}
                     &mdash; Referred: {formatDate(ref.referral_date)}
                   </div>

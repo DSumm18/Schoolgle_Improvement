@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import ActionsDashboard from "@/components/action-plan/ActionsDashboard";
 import ActionModal from "@/components/action-plan/ActionModal";
-import { ActionItem } from "@/lib/ofsted-framework";
+import { ActionItem } from "@/lib/ofsted/types";
 import { NotificationService } from "@/lib/notification-service";
 
 export default function ActionPlanPage() {
@@ -127,7 +127,7 @@ export default function ActionPlanPage() {
         const percentage = Math.round((total / 40) * 100);
         setStats((prev) => ({
           ...prev,
-          overallReadiness: Math.min(percentage + 30, 95),
+          overallReadiness: Math.min(percentage, 100),
         }));
       }
     } catch (err) {

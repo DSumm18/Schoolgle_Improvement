@@ -252,14 +252,7 @@ export default function StaffPersonnelPage() {
                 .join(", ")}
             />
             <Field label="Start Date" value={formatDate(staff.start_date)} />
-            <Field
-              label="NI Number"
-              value={
-                staff.national_insurance_number
-                  ? "••••••" + staff.national_insurance_number.slice(-2)
-                  : null
-              }
-            />
+            {/* NI Number removed — schools should use their payroll system for this */}
             <Field
               label="Pension"
               value={staff.pension_scheme?.replace(/_/g, " ")}

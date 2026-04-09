@@ -353,9 +353,7 @@ export const POST = protectedRoute(async (auth, request: NextRequest) => {
           start_date:
             parseDate(staff.start_date) || parseDate(raw["Start Date"]),
           teacher_reference_number: raw["TRN"] ? String(raw["TRN"]) : undefined,
-          national_insurance_number: raw["NI Number"]
-            ? String(raw["NI Number"])
-            : undefined,
+          // national_insurance_number removed — NI numbers must not be stored in app DB
           payroll_number: raw["Payroll Number"]
             ? String(raw["Payroll Number"])
             : undefined,

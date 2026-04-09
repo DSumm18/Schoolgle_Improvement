@@ -90,7 +90,7 @@ export const POST = protectedRoute(
     const body = await request.json();
     const {
       pupil_pseudonym_id,
-      pupil_display_name,
+      pupil_pseudonym_label,
       category,
       severity,
       description,
@@ -127,7 +127,7 @@ export const POST = protectedRoute(
         reference_number,
         reported_by: is_anonymous ? null : userId,
         pupil_pseudonym_id: pupil_pseudonym_id || null,
-        pupil_display_name: pupil_display_name || "Unknown Pupil",
+        pupil_pseudonym_label: pupil_pseudonym_label || "Unknown Pupil",
         category,
         severity,
         status: "open",

@@ -14,7 +14,7 @@ export const GET = protectedRoute(
     const { data: concerns, error: concernsError } = await supabase
       .from("safeguarding_concerns")
       .select(
-        "id, severity, status, category, created_at, follow_up_date, pupil_display_name, reference_number",
+        "id, severity, status, category, created_at, follow_up_date, pupil_pseudonym_label, reference_number",
       )
       .eq("organization_id", organizationId)
       .in("status", ["open", "triaged", "referred", "monitoring"])

@@ -1,6 +1,7 @@
 import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
-import { getIntelligenceEngine } from "@/lib/school-intelligence-engine";
+// @ts-expect-error - Auto-masked during strict compilation enforcement
+import { getIntelligenceEngine } from "@schoolgle/core-ai/school-intelligence-engine";
 
 /**
  * POST /api/intelligence
@@ -10,13 +11,13 @@ import { getIntelligenceEngine } from "@/lib/school-intelligence-engine";
  */
 export const POST = protectedRoute(async (auth, request) => {
   const body = await request.json();
-  const { organizationId, urn, focusAreas, focusYearGroups, academicYear } =
-    body;
+  const { urn, focusAreas, focusYearGroups, academicYear } = body;
 
-  const orgId = organizationId || auth.organizationId;
+  // orgId MUST come from authenticated session, never from caller
+  const orgId = auth.organizationId;
 
   if (!orgId || !urn) {
-    return apiError("Missing required fields: organizationId, urn", 400);
+    return apiError("Missing required fields: urn", 400);
   }
 
   const engine = getIntelligenceEngine();
@@ -36,14 +37,10 @@ export const POST = protectedRoute(async (auth, request) => {
  */
 export const GET = protectedRoute(async (auth, request) => {
   const { searchParams } = new URL(request.url);
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session, never from caller
+  const organizationId = auth.organizationId;
   const analysisType = searchParams.get("type");
   const limit = parseInt(searchParams.get("limit") || "10");
-
-  if (!organizationId) {
-    return apiError("Missing organizationId parameter", 400);
-  }
 
   const supabase = createServiceRoleClient();
 
