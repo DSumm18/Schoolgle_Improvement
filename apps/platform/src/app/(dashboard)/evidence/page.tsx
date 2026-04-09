@@ -22,12 +22,12 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/context/SupabaseAuthContext";
 import { supabase } from "@/lib/supabase";
-import { EVIDENCE_CATEGORIES, EvidenceItem } from "@/lib/evidence/types";
+import { EVIDENCE_CATEGORIES, OfstedEvidenceItem } from "@/lib/evidence/types";
 import EvidenceUploader from "@/components/evidence/EvidenceUploader";
 
 export default function EvidenceLibraryPage() {
   const { organizationId, user } = useAuth();
-  const [evidence, setEvidence] = useState<EvidenceItem[]>([]);
+  const [evidence, setEvidence] = useState<OfstedEvidenceItem[]>([]);
   const [actions, setActions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");

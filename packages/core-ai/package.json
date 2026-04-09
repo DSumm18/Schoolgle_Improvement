@@ -5,6 +5,9 @@
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "exports": {
+    "./school-intelligence-engine": "./src/engines/school-intelligence-engine.ts",
+    "./ai-evidence-matcher": "./src/engines/ai-evidence-matcher.ts",
+    "./website-crawler": "./src/engines/website-crawler.ts",
     "./ai-engine": "./ai-engine.ts",
     "./voice-engine": "./voice-engine.ts",
     "./types": "./types.ts",

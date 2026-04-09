@@ -1,3 +1,5 @@
+import { ROUTER_MODELS } from "@/lib/ai-openrouter";
+
 import { NextRequest, NextResponse } from "next/server";
 
 const SYSTEM_PROMPT = `You are Ed, the friendly AI assistant for Aurora Primary School.
@@ -34,7 +36,7 @@ const VISION_MODELS = [
 const TEXT_MODELS = [
   "google/gemini-2.0-flash-lite-001",
   "google/gemini-2.0-flash-001",
-  "deepseek/deepseek-chat",
+  ROUTER_MODELS.DEFAULT,
 ];
 
 function buildUserMessage(

@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import type { CheckStatus } from '@/lib/estates-compliance/statutory-checks';
 
-export interface EvidenceItem {
+export interface OfstedEvidenceItem {
     id: string;
     type: 'certificate' | 'report' | 'photo' | 'document';
     title: string;
@@ -27,7 +27,7 @@ export interface HistoryRecord {
     completedBy: string;
     status: CheckStatus;
     notes: string;
-    evidence: EvidenceItem[];
+    evidence: OfstedEvidenceItem[];
     nextDueDate: string;
     documentsReceived: boolean;
     contractorName?: string;
@@ -77,7 +77,7 @@ export function CheckHistoryTimeline({ history }: CheckHistoryTimelineProps) {
         }
     };
 
-    const getEvidenceIcon = (type: EvidenceItem['type']) => {
+    const getEvidenceIcon = (type: OfstedEvidenceItem['type']) => {
         switch (type) {
             case 'certificate':
                 return '📜';

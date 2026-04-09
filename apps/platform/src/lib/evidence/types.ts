@@ -1,7 +1,7 @@
 export type FileType = 'image' | 'pdf' | 'doc' | 'screenshot' | 'spreadsheet';
 export type SourceType = 'upload' | 'sop' | 'navigator' | 'pack' | 'cloud_sync';
 
-export interface EvidenceItem {
+export interface OfstedEvidenceItem {
     id: string;
     organization_id: string;
     title: string;

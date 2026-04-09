@@ -74,7 +74,7 @@ A comprehensive three-tier classification system that distinguishes between **st
 - Drag-and-drop file upload (PDF, DOCX, XLSX, images)
 - Domain selection dropdown (auto-detect or manual)
 - AI-powered text extraction using existing extractors
-- AI-powered finding extraction using OpenRouter/DeepSeek
+- AI-powered finding extraction using OpenRouter/Gemini
 - Automatic classification against regulatory database
 - Confidence scoring
 - Summary statistics:
@@ -100,7 +100,7 @@ A comprehensive three-tier classification system that distinguishes between **st
 
 **Findings Analysis Route** (`app/api/estates-compliance/analyze-findings/route.ts`):
 - POST endpoint for analyzing text and extracting findings
-- Uses OpenAI/DeepSeek for finding extraction
+- Uses OpenAI/Gemini for finding extraction
 - System prompt explains three-tier classification system
 - Returns findings with:
   - Description and severity
@@ -165,7 +165,7 @@ A comprehensive three-tier classification system that distinguishes between **st
                          │
                          ▼
 ┌─────────────────────────────────────────────────────────────┐
-│  AI Analysis (DeepSeek via OpenRouter)                     │
+│  AI Analysis (Gemini via OpenRouter)                     │
 │  - Extracts findings from text                              │
 │  - Identifies severity, action required, cost              │
 │  - Returns structured findings                              │
@@ -247,7 +247,7 @@ To test the system:
 ## API Keys Required
 
 - `OPENROUTER_API_KEY` or `OPENAI_API_KEY` for AI analysis
-- Ensure the API key has access to `deepseek/deepseek-chat` model
+- Ensure the API key has access to `google/gemini-2.5-flash` model
 
 ## Summary
 

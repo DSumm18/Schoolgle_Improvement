@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, Check, X, FileText, ImageIcon, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/SupabaseAuthContext';
-import { EvidenceItem, EVIDENCE_CATEGORIES } from '@/lib/evidence/types';
+import { OfstedEvidenceItem, EVIDENCE_CATEGORIES } from '@/lib/evidence/types';
 
 interface EvidencePickerProps {
     organizationId: string;
@@ -20,7 +20,7 @@ export default function EvidencePicker({
     onSelect,
     onClose
 }: EvidencePickerProps) {
-    const [evidence, setEvidence] = useState<EvidenceItem[]>([]);
+    const [evidence, setEvidence] = useState<OfstedEvidenceItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [activeIds, setActiveIds] = useState<string[]>(selectedIds);

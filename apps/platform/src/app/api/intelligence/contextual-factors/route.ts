@@ -7,8 +7,8 @@ import { createServiceRoleClient } from "@/lib/supabase-server";
  */
 export const GET = protectedRoute(async (auth, request) => {
   const { searchParams } = new URL(request.url);
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
   const factorType = searchParams.get("type");
   const yearGroup = searchParams.get("yearGroup");
 
@@ -53,7 +53,6 @@ export const GET = protectedRoute(async (auth, request) => {
 export const POST = protectedRoute(async (auth, request) => {
   const body = await request.json();
   const {
-    organization_id,
     factor_type,
     title,
     description,
@@ -73,11 +72,12 @@ export const POST = protectedRoute(async (auth, request) => {
     created_by,
   } = body;
 
-  const orgId = organization_id || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   if (!orgId || !factor_type || !title || !start_date || !academic_year_start) {
     return apiError(
-      "Missing required fields: organization_id, factor_type, title, start_date, academic_year_start",
+      "Missing required fields: factor_type, title, start_date, academic_year_start",
       400,
     );
   }
@@ -123,12 +123,13 @@ export const POST = protectedRoute(async (auth, request) => {
  */
 export const PATCH = protectedRoute(async (auth, request) => {
   const body = await request.json();
-  const { id, organization_id, ...updates } = body;
+  const { id, ...updates } = body;
 
-  const orgId = organization_id || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   if (!id || !orgId) {
-    return apiError("Missing required fields: id, organization_id", 400);
+    return apiError("Missing required fields: id", 400);
   }
 
   const supabase = createServiceRoleClient();

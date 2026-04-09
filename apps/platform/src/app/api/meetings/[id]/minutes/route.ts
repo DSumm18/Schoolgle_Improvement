@@ -1,3 +1,5 @@
+import { ROUTER_MODELS } from "@/lib/ai-openrouter";
+
 import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
 import OpenAI from "openai";
@@ -251,7 +253,7 @@ Return ONLY valid JSON in this exact format (no markdown, no code fences):
 }`;
 
   const completion = await openrouter.chat.completions.create({
-    model: "deepseek/deepseek-chat",
+    model: ROUTER_MODELS.DEFAULT,
     messages: [{ role: "user", content: prompt }],
     temperature: 0.3,
     max_tokens: 4000,

@@ -1,9 +1,11 @@
+import { ROUTER_MODELS } from "@/lib/ai-openrouter";
+
 import { NextRequest } from "next/server";
 import { protectedRoute, aiRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
-const AI_MODEL = "deepseek/deepseek-chat";
+const AI_MODEL = ROUTER_MODELS.DEFAULT;
 
 interface GenerateRequest {
   prompt: string;

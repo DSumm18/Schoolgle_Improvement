@@ -44,14 +44,14 @@ interface HistoryRecord {
   completedBy: string;
   status: "completed" | "awaiting_documentation" | "in_progress" | "skipped";
   notes: string;
-  evidence: EvidenceItem[];
+  evidence: OfstedEvidenceItem[];
   nextDueDate: string;
   documentsReceived: boolean;
   contractorName?: string;
   duration?: number; // minutes
 }
 
-interface EvidenceItem {
+interface OfstedEvidenceItem {
   id: string;
   type: "certificate" | "report" | "photo" | "document";
   title: string;
@@ -281,7 +281,7 @@ export default function CheckHistoryPage() {
     }
   };
 
-  const getEvidenceIcon = (type: EvidenceItem["type"]) => {
+  const getEvidenceIcon = (type: OfstedEvidenceItem["type"]) => {
     switch (type) {
       case "certificate":
         return "📜";

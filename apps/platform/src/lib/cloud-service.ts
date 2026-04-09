@@ -427,3 +427,93 @@ export async function batchProcessFiles<T, R>(
 
     return results;
 }
+
+/**
+ * Upload a file to Google Drive
+ */
+export async function uploadToGoogleDrive(
+  accessToken: string,
+  fileName: string,
+  content: string | Buffer,
+  mimeType: string = 'text/plain',
+  folderId?: string,
+): Promise<{ id: string; name: string; webViewLink: string }> {
+  const metadata: Record<string, unknown> = {
+    name: fileName,
+    mimeType,
+  };
+  if (folderId) {
+    metadata.parents = [folderId];
+  }
+
+  const boundary = '----FormBoundary' + Date.now();
+  const delimiter = '\r\n--' + boundary + '\r\n';
+  const closeDelimiter = '\r\n--' + boundary + '--';
+
+  const body = Buffer.concat([
+    Buffer.from(
+      delimiter +
+        'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+        JSON.stringify(metadata) +
+        delimiter +
+        'Content-Type: ' + mimeType + '\r\n\r\n'
+    ),
+    Buffer.isBuffer(content) ? content : Buffer.from(content, 'utf-8'),
+    Buffer.from(closeDelimiter),
+  ]);
+
+  const response = await fetch(
+    'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink',
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': `multipart/related; boundary=${boundary}`,
+      },
+      body,
+    }
+  );
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`Google Drive upload error: ${response.status} ${response.statusText} - ${errorBody}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Create a folder in Google Drive
+ */
+export async function createGoogleDriveFolder(
+  accessToken: string,
+  folderName: string,
+  parentFolderId?: string,
+): Promise<{ id: string; name: string; webViewLink: string }> {
+  const metadata: Record<string, unknown> = {
+    name: folderName,
+    mimeType: 'application/vnd.google-apps.folder',
+  };
+  if (parentFolderId) {
+    metadata.parents = [parentFolderId];
+  }
+
+  const response = await fetch(
+    'https://www.googleapis.com/drive/v3/files?fields=id,name,webViewLink',
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(metadata),
+    }
+  );
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`Google Drive folder creation error: ${response.status} ${response.statusText} - ${errorBody}`);
+  }
+
+  return response.json();
+}

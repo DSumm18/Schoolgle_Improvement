@@ -7,8 +7,8 @@ import { createServiceRoleClient } from "@/lib/supabase-server";
  */
 export const GET = protectedRoute(async (auth, request) => {
   const { searchParams } = new URL(request.url);
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
   const yearGroup = searchParams.get("yearGroup");
   const academicYear = searchParams.get("academicYear");
 
@@ -52,7 +52,6 @@ export const GET = protectedRoute(async (auth, request) => {
 export const POST = protectedRoute(async (auth, request) => {
   const body = await request.json();
   const {
-    organization_id,
     cohort_id,
     year_group,
     academic_year_start,
@@ -60,7 +59,8 @@ export const POST = protectedRoute(async (auth, request) => {
     ...outcomeData
   } = body;
 
-  const orgId = organization_id || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   if (
     !orgId ||
@@ -69,7 +69,7 @@ export const POST = protectedRoute(async (auth, request) => {
     !assessment_period
   ) {
     return apiError(
-      "Missing required fields: organization_id, year_group, academic_year_start, assessment_period",
+      "Missing required fields: year_group, academic_year_start, assessment_period",
       400,
     );
   }

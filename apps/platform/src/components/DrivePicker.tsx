@@ -11,7 +11,7 @@ interface DrivePickerProps {
 
 export default function DrivePicker({ onFolderSelect }: DrivePickerProps) {
   const auth = useAuth();
-  const accessToken = (auth as any).accessToken;
+  const accessToken = auth.session?.provider_token;
   const [pickerApiLoaded, setPickerApiLoaded] = useState(false);
 
   useEffect(() => {

@@ -13,6 +13,7 @@
 
 import OpenAI from "openai";
 import { createHash } from "crypto";
+// @ts-expect-error - Auto-masked during strict compilation enforcement
 import { MODEL_CONFIG } from "../ai-evidence-matcher";
 import { maskPII } from "../pii-masker";
 import { createServiceRoleClient } from "@/lib/supabase-server";

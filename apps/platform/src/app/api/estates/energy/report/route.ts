@@ -4,16 +4,18 @@
  * POST /api/estates/energy/report — Generate a trustee-quality energy report
  * GET  /api/estates/energy/report — List previously generated reports
  *
- * Uses DeepSeek to analyse energy data and produce a structured report
+ * Uses Gemini to analyse energy data and produce a structured report
  * that auto-links to the governance document suite.
  */
+
+import { ROUTER_MODELS } from "@/lib/ai-openrouter";
 
 import { NextRequest } from "next/server";
 import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
-const MODEL = "deepseek/deepseek-chat";
+const MODEL = ROUTER_MODELS.DEFAULT;
 
 // ─── GET: List reports ───────────────────────────────────────────────
 

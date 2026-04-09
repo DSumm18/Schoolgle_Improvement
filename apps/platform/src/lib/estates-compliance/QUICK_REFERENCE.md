@@ -324,7 +324,7 @@ const grouped = findings.reduce((acc, finding) => {
 **Solution**: Check the source. ACoP (HSE L8) = statutory, Guidance (HSE HSG274) = good practice.
 
 **Problem**: API returns error
-**Solution**: Check OPENROUTER_API_KEY is set and has access to deepseek/deepseek-chat model.
+**Solution**: Check OPENROUTER_API_KEY is set and has access to globally available models via ROUTER_MODELS.
 
 ## Further Reading
 

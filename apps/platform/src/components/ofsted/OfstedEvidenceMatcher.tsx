@@ -42,7 +42,7 @@ interface OfstedEvidenceMatcherProps {
     onRefresh?: () => void;
 }
 
-interface EvidenceItem {
+interface OfstedEvidenceItem {
     id: string;
     title: string;
     type: string;
@@ -89,7 +89,7 @@ export default function OfstedEvidenceMatcher({
     onRefresh,
 }: OfstedEvidenceMatcherProps) {
     const [matches, setMatches] = useState<Record<string, OfstedEvidenceMatch[]>>({});
-    const [allEvidence, setAllEvidence] = useState<EvidenceItem[]>([]);
+    const [allEvidence, setAllEvidence] = useState<OfstedEvidenceItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedCategory, setSelectedCategory] = useState<string | 'all'>('all');
     const [selectedQuestion, setSelectedQuestion] = useState<string | null>(null);

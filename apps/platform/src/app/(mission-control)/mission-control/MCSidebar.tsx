@@ -12,10 +12,14 @@ import {
   ChevronRight,
   Shield,
   Rocket,
+  Users,
+  CreditCard,
 } from "lucide-react";
 
 const NAV_ITEMS = [
   { href: "/mission-control", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/mission-control/clients", label: "CRM Pipeline", icon: Users },
+  { href: "/mission-control/finance", label: "Finance Hub", icon: CreditCard },
   { href: "/mission-control/approvals", label: "Approvals", icon: CheckSquare },
   { href: "/mission-control/skills", label: "Skill Registry", icon: Zap },
   { href: "/mission-control/activity", label: "Activity Log", icon: Activity },

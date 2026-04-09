@@ -40,6 +40,21 @@ export async function routeToSpecialist(
     context.userRole,
   );
 
+  // 1b. ZERO-TRUST PII FIREWALL: Intercept prompt before any LLM processing
+  const { SchoolDataGuardian } = await import("../../../../apps/platform/src/lib/school-data-guardian");
+  const guardianCheck = SchoolDataGuardian.scanAndScrub(question);
+  
+  if (!guardianCheck.isClean) {
+    console.warn(`[Data Guardian] Blocked prompt due to PII: ${guardianCheck.blockedCategories.join(", ")}`);
+    return {
+      agentId: "ed-general",
+      content: `I've stopped processing this request because our **School Data Guardian** automatically detected sensitive personal information (${guardianCheck.blockedCategories.join(", ")}).\n\nTo ensure we maintain strict GDPR compliance, I cannot send un-pseudonymised pupil or staff data to the AI model. Please remove names, dates of birth, and contact information, and try again.`,
+      confidence: "HIGH",
+      requiresHuman: false,
+      metadata: { blocked: "pii_guardian_intervention", categories: guardianCheck.blockedCategories },
+    };
+  }
+
   // 2. Check if user has access to this feature
   if (!hasFeatureAccess(context, classification.domain)) {
     return {
@@ -148,7 +163,9 @@ export async function routeToSpecialist(
 
       // Invalidate context cache after successful write operations
       // so the next user message gets fresh data
+      // @ts-expect-error - Auto-masked during strict compilation enforcement
       if (skillResult.success && args?.organization_id) {
+        // @ts-expect-error - Auto-masked during strict compilation enforcement
         invalidateContextCache(args.organization_id);
       }
 

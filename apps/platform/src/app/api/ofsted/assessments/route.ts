@@ -38,8 +38,8 @@ function calculateReadinessScore(assessment: OfstedAssessment): number {
  */
 export const GET = protectedRoute(async (auth, req) => {
   const { searchParams } = new URL(req.url);
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
   const categoryId = searchParams.get("categoryId") as OfstedCategoryId | null;
   const subcategoryId = searchParams.get(
     "subcategoryId",
@@ -226,9 +226,10 @@ export const GET = protectedRoute(async (auth, req) => {
  */
 export const POST = protectedRoute(async (auth, req) => {
   const body: UpsertOfstedAssessmentRequest = await req.json();
-  const { organization_id, assessments, user_id } = body;
+  const { assessments, user_id } = body;
 
-  const orgId = organization_id || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   if (!orgId || !assessments || assessments.length === 0) {
     return apiError(

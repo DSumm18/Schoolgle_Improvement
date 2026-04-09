@@ -9,6 +9,8 @@
  * - Fraud detection (tampered documents, invalid certificates)
  */
 
+import { ROUTER_MODELS } from "@/lib/ai-openrouter";
+
 import OpenAI from 'openai';
 import { parsePDF, parseDocx, parseExcel, parseImage } from '@/lib/extractors';
 
@@ -79,8 +81,8 @@ export interface ParsedDocument {
 
 const MODEL_CONFIG = {
   primary: {
-    id: 'deepseek/deepseek-chat',
-    name: 'DeepSeek V3',
+    id: ROUTER_MODELS.DEFAULT,
+    name: 'Gemini 2.5 Flash',
     maxTokens: 8000
   },
   vision: {

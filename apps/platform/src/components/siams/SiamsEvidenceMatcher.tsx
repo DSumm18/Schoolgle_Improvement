@@ -44,7 +44,7 @@ interface SiamsEvidenceMatcherProps {
   onRefresh?: () => void;
 }
 
-interface EvidenceItem {
+interface OfstedEvidenceItem {
   id: string;
   title: string;
   type: string;
@@ -77,7 +77,7 @@ export default function SiamsEvidenceMatcher({
   const [matches, setMatches] = useState<Record<string, SiamsEvidenceMatch[]>>(
     {},
   );
-  const [allEvidence, setAllEvidence] = useState<EvidenceItem[]>([]);
+  const [allEvidence, setAllEvidence] = useState<OfstedEvidenceItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedStrand, setSelectedStrand] = useState<SiamsStrandId | "all">(
     "all",

@@ -1,10 +1,12 @@
+import { ROUTER_MODELS } from "@/lib/ai-openrouter";
+
 import { NextRequest } from "next/server";
 import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
 import { detectSafeguardingConcerns } from "@/lib/surveys/safeguarding-detector";
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
-const AI_MODEL = "deepseek/deepseek-chat";
+const AI_MODEL = ROUTER_MODELS.DEFAULT;
 
 export const GET = protectedRoute(async (auth, request) => {
   const surveyId = request.nextUrl.pathname

@@ -66,7 +66,7 @@
 │  │ - Detect file type           │    │ }                               │ │
 │  │ - Parse PDF/DOCX/XLSX        │    │                                  │ │
 │  │ - Extract text               │    │ Process:                        │ │
-│  │                              │    │ - AI extraction (DeepSeek)       │ │
+│  │                              │    │ - AI extraction (Gemini)       │ │
 │  │ Output: {                    │    │ - Classification engine         │ │
 │  │   text: string,              │    │ - Confidence scoring            │ │
 │  │   fileName: string,          │    │ - Source lookup                 │ │
@@ -149,7 +149,7 @@
                                         │
                                         ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                          AI LAYER (OpenRouter/DeepSeek)                     │
+│                          AI LAYER (OpenRouter/Gemini)                     │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │  System Prompt:                                                            │
@@ -164,7 +164,7 @@
 │  | Be conservative. If uncertain, classify as good_practice."           │ │
 │  └───────────────────────────────────────────────────────────────────────┘ │
 │                                                                             │
-│  Model: deepseek/deepseek-chat (cost-effective, high accuracy)             │
+│  Model: google/gemini-2.5-flash (cost-effective, high accuracy)          │
 │  Temperature: 0.3 (consistent results)                                     │
 │  Response Format: JSON structured                                           │
 └─────────────────────────────────────────────────────────────────────────────┘
@@ -194,7 +194,7 @@
    ↓
 4. Frontend sends text to /api/analyze-findings
    ↓
-5. AI (DeepSeek) extracts findings:
+5. AI (Gemini) extracts findings:
    {
      "description": "Cold water outlet #3 temperature is 25°C, exceeding the 20°C limit",
      "severity": "high",

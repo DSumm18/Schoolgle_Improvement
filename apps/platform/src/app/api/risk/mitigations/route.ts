@@ -36,7 +36,6 @@ export const POST = protectedRoute(async (auth, request) => {
   const body = await request.json();
   const {
     risk_id,
-    organization_id,
     title,
     mitigation_type,
     source_module,
@@ -62,19 +61,10 @@ export const POST = protectedRoute(async (auth, request) => {
 
   const supabase = createServiceRoleClient();
 
-  // If organization_id not provided, look it up from the risk
-  let orgId = organization_id || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
   if (!orgId) {
-    const { data: risk } = await supabase
-      .from("risk_register")
-      .select("organization_id")
-      .eq("id", risk_id)
-      .single();
-
-    if (!risk) {
-      return apiError("Risk not found", 404);
-    }
-    orgId = risk.organization_id;
+    return apiError("organization_id is required", 400);
   }
 
   const insertData: Record<string, any> = {

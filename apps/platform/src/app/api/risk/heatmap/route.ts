@@ -15,8 +15,8 @@ import type { Risk } from "@/lib/risk-engine";
 
 export const GET = protectedRoute(async (auth, request) => {
   const searchParams = request.nextUrl.searchParams;
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
   const includeTrust = searchParams.get("includeTrust") === "true";
 
   if (!organizationId) {

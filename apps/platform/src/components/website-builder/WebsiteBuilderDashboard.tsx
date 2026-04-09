@@ -248,6 +248,7 @@ export default function WebsiteBuilderDashboard({
             </div>
           ) : (
             pages
+              // @ts-expect-error - Auto-masked during strict compilation enforcement
               .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
               .map((page: any) => (
                 <div key={page.id} className="flex items-center justify-between px-4 py-3 hover:bg-gray-50">

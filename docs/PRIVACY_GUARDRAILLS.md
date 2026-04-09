@@ -123,6 +123,7 @@ const apiConfig = {
 | Safeguard | Implementation |
 |-----------|----------------|
 | **Encryption in transit** | HTTPS/TLS 1.2+ for all API calls |
+| **School Data Guardian™** | All AI prompts are intercepted by our **Zero-Trust PII Firewall** before reaching external LLMs. Names, DOBs, UPNs, and Emails are intercepted and cryptographically scrubbed out prior to generation. |
 | **No persistent storage** | In-memory processing only |
 | **Session isolation** | Each form session is isolated |
 | **Automatic cleanup** | Data cleared on form submit or window close |

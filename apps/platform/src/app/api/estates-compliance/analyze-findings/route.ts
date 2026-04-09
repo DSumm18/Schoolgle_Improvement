@@ -5,6 +5,8 @@
  * POST /api/estates-compliance/analyze-findings
  */
 
+import { ROUTER_MODELS } from "@/lib/ai-openrouter";
+
 import { NextRequest, NextResponse } from "next/server";
 import { aiRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import OpenAI from "openai";
@@ -68,7 +70,7 @@ export const POST = aiRoute(async (auth, request) => {
 
   // Call AI model to extract findings
   const completion = await openai.chat.completions.create({
-    model: "deepseek/deepseek-chat",
+    model: ROUTER_MODELS.DEFAULT,
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt },

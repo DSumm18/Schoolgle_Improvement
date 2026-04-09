@@ -7,9 +7,8 @@ import { createServiceRoleClient } from "@/lib/supabase-server";
  * List active drive connections for an organization
  */
 export const GET = protectedRoute(async (auth, req) => {
-  const { searchParams } = new URL(req.url);
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
 
   if (!organizationId) {
     return apiError("Missing organizationId parameter", 400);
@@ -44,7 +43,6 @@ export const GET = protectedRoute(async (auth, req) => {
 export const POST = protectedRoute(async (auth, req) => {
   const body = await req.json();
   const {
-    organization_id,
     provider,
     folder_id,
     folder_name,
@@ -55,7 +53,8 @@ export const POST = protectedRoute(async (auth, req) => {
     scan_frequency,
   } = body;
 
-  const orgId = organization_id || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   if (!orgId || !provider || !folder_id) {
     return apiError(
@@ -108,9 +107,10 @@ export const POST = protectedRoute(async (auth, req) => {
  */
 export const PATCH = protectedRoute(async (auth, req) => {
   const body = await req.json();
-  const { organizationId, action } = body;
+  const { action } = body;
 
-  const orgId = organizationId || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   if (!orgId) {
     return apiError("Missing organizationId", 400);
@@ -217,8 +217,8 @@ export const PATCH = protectedRoute(async (auth, req) => {
 export const DELETE = protectedRoute(async (auth, req) => {
   const { searchParams } = new URL(req.url);
   const connectionId = searchParams.get("id");
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
 
   if (!connectionId || !organizationId) {
     return apiError("Missing required parameters: id, organizationId", 400);

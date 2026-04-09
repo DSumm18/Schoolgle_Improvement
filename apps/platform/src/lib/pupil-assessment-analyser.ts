@@ -13,6 +13,8 @@
  * All insights reference hash IDs that only the school can decode.
  */
 
+import { ROUTER_MODELS } from "@/lib/ai-openrouter";
+
 import { createClient } from "@supabase/supabase-js";
 import OpenAI from "openai";
 import {
@@ -579,7 +581,7 @@ and whether current attainment matches expected trajectories.
 
   try {
     const completion = await openai.chat.completions.create({
-      model: "deepseek/deepseek-chat",
+      model: ROUTER_MODELS.DEFAULT,
       messages: [
         {
           role: "system",

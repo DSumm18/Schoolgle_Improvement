@@ -36,13 +36,13 @@ function ratingToScore(rating: OfstedRating | "not_assessed"): number {
  */
 export const GET = protectedRoute(async (auth, req) => {
   const { searchParams } = new URL(req.url);
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
   const includeGaps = searchParams.get("include_gaps") === "true";
   const includeHistory = searchParams.get("include_history") === "true";
 
   if (!organizationId) {
-    return apiError("Missing organizationId parameter", 400);
+    return apiError("Missing organizationId from session", 400);
   }
 
   const supabase = createServiceRoleClient();
@@ -278,13 +278,11 @@ export const GET = protectedRoute(async (auth, req) => {
  * Create a readiness snapshot
  */
 export const POST = protectedRoute(async (auth, req) => {
-  const body = await req.json();
-  const { organization_id } = body;
-
-  const orgId = organization_id || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   if (!orgId) {
-    return apiError("Missing organizationId", 400);
+    return apiError("Missing organizationId from session", 400);
   }
 
   const supabase = createServiceRoleClient();

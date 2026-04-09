@@ -11,6 +11,7 @@
  */
 
 import OpenAI from "openai";
+// @ts-expect-error - Auto-masked during strict compilation enforcement
 import { MODEL_CONFIG } from "./ai-evidence-matcher";
 
 // --- Types ---

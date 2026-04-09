@@ -212,24 +212,21 @@ Models configured in `apps/platform/src/lib/ai-evidence-matcher.ts`:
 | `actions-hub.ts`                | Action types, status matrix, EEF toolkit integration      |
 | `ai-evidence-matcher.ts`        | AI matching engine for evidence to framework requirements |
 | `eef-toolkit.ts`                | EEF research strategies with cost/evidence ratings        |
-| `ofsted-framework.ts`           | Ofsted framework data structure and logic                 |
+| `ofsted/types.ts`               | Primary Ofsted EIF 2025 framework data structure and logic                |
 | `siams-framework.ts`            | SIAMS framework data                                      |
 | `skills/`                       | AI skill definitions, function schemas, handlers          |
 | `staff-directory.ts`            | Staff types and utilities                                 |
 | `cloud-service.ts`              | Google Drive/OneDrive API integration                     |
 | `extractors.ts`                 | Document text extraction                                  |
 | `embeddings.ts`                 | Vector embeddings for semantic search                     |
-| `firecrawl-crawler.ts`          | Firecrawl-based website crawler (primary, with Playwright fallback) |
-| `website-crawler.ts`            | Playwright-based website crawler (fallback when no Firecrawl key)   |
-| `assessment-updater.ts`         | Auto-update assessments based on evidence                 |
 | `supabase.ts`                   | Supabase client configuration                             |
-| `school-intelligence-engine.ts` | Cross-module intelligence analysis with DfE + EEF         |
 | `pupil-pseudonymiser.ts`        | Client-side HMAC-SHA256 pupil data pseudonymisation       |
 | `pupil-assessment-analyser.ts`  | Server-side gap analysis, teacher accuracy, EEF matching  |
 | `living-sef-engine.ts`          | Living SEF document engine                                |
 | `sef-data-aggregator.ts`        | SEF data aggregation across modules                       |
 | `email-service.ts`              | Email service for notifications                           |
-| `pii-masker.ts`                 | PII detection and masking                                 |
+| `pii-masker.ts`                 | Legacy PII detection (deprecated)                         |
+| `school-data-guardian.ts`       | Zero-Trust PII Firewall (Intercepts, scrubs, and tokens)  |
 
 ---
 
@@ -327,7 +324,7 @@ Models configured in `apps/platform/src/lib/ai-evidence-matcher.ts`:
 ### School Intelligence Engine (built March 2026)
 
 - **Purpose**: Cross-references ALL data sources (DfE warehouse, contextual factors, cross-module signals from HR/Estates/Compliance/Governance) with EEF research to produce cohort-aware, research-backed analysis
-- **Core Engine**: `apps/platform/src/lib/school-intelligence-engine.ts` — singleton `SchoolIntelligenceEngine` class
+- **Core Engine**: `@schoolgle/core-ai` Turborepo package (moved from `apps/platform/src/lib/school-intelligence-engine.ts` for strict decoupling).
 - **Key Capabilities**:
   - **Cohort Tracking**: Traces year groups backwards using `cohort_reception_year = academic_year - year_group`, auto-detects COVID lockdown impact
   - **DfE Data Trends**: Multi-year attendance, census, KS2, workforce, exclusions (KS2 filter: `breakdown_topic = 'All pupils'`)
@@ -355,7 +352,7 @@ Ed is the school's AI assistant — a multi-specialist chatbot with domain exper
 ### Architecture
 
 ```
-User Message → Intent Classifier → Agent Router → Specialist Agent → LLM (OpenRouter) → Guardrails → Response
+User Message → Intent Classifier → Agent Router → Specialist Agent → School Data Guardian (PII Bouncer) → LLM (OpenRouter) → Guardrails → Response
                                          ↓                               ↓
                                    Context Loader                  Skills (Function Calling)
                                    (School + Intelligence)         via /api/skills/invoke
@@ -555,22 +552,13 @@ FIRECRAWL_API_KEY=
 
 ## Ofsted Framework Architecture
 
-### Dual Framework System
+### EIF 2025 Standard
 
-The codebase maintains **two** Ofsted frameworks:
+The codebase exclusively uses the **New EIF 2025 Framework** (`ofsted/types.ts`):
 
-1. **Legacy 6-Category Framework** (`ofsted-framework.ts`):
-   - Used by most UI components
-   - Categories: Quality of Education, Behaviour & Attitudes, Personal Development, Leadership & Management, Safeguarding (separate), Inclusion
-
-2. **New EIF 2025 Framework** (`ofsted/types.ts`):
-   - 4 Key Judgements (EIF 2025)
-   - Updated types and assessment structure
-   - New rating system: exceptional, strong_standard, expected_standard, needs_attention, urgent_improvement
-
-### Framework Export Pattern
-
-`ofsted.ts` serves as the main export file, re-exporting both frameworks for backwards compatibility. When working with Ofsted-related code, check which framework the component uses.
+- 4 Key Judgements (EIF 2025)
+- Updated types and assessment structure
+- New rating system: exceptional, strong_standard, expected_standard, needs_attention, urgent_improvement
 
 ### Rating System
 

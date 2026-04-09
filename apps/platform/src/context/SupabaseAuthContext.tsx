@@ -61,6 +61,7 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
   const fetchOrganization = async (
     userId: string,
     sessionUser?: User | null,
+    accessToken?: string | null,
   ) => {
     // Prevent concurrent calls for the same user
     if (fetchingOrgRef.current.has(userId)) {
@@ -90,9 +91,14 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
       );
 
       // Use the server-side profile API which bypasses RLS
+      // Get fresh token if not provided
+      const token = accessToken || (await supabase.auth.getSession()).data.session?.access_token;
       const response = await fetch("/api/auth/profile", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           userId,
           email: resolvedEmail,
@@ -183,12 +189,16 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const syncUserProfile = async (currentUser: User) => {
+  const syncUserProfile = async (currentUser: User, accessToken?: string | null) => {
     try {
       console.log("[AuthContext] Syncing user profile to database...");
+      const token = accessToken || (await supabase.auth.getSession()).data.session?.access_token;
       const response = await fetch("/api/auth/profile", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           userId: currentUser.id,
           email: currentUser.email,
@@ -289,6 +299,7 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
               await fetchOrganization(
                 currentSession.user.id,
                 currentSession.user,
+                currentSession.access_token,
               );
             }
           } else {

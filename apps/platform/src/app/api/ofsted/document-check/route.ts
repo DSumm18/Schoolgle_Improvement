@@ -114,14 +114,15 @@ function fuzzyMatch(filename: string, expectedName: string): boolean {
 
 export const POST = protectedRoute(async (auth, request) => {
   const body = await request.json();
-  const { organization_id, provider, access_token, folder_id } = body as {
+  const { provider, access_token, folder_id } = body as {
     organization_id: string;
     provider: "google" | "onedrive";
     access_token: string;
     folder_id: string;
   };
 
-  const orgId = organization_id || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   // Validate required fields
   if (!orgId || !provider || !access_token || !folder_id) {

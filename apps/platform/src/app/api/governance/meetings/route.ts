@@ -15,8 +15,8 @@ import { v4 as uuidv4 } from "uuid";
  */
 export const GET = protectedRoute(async (auth, req) => {
   const { searchParams } = new URL(req.url);
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
   const status = searchParams.get("status") as MeetingStatus | null;
   const meetingType = searchParams.get("meetingType") as CommitteeType | null;
   const fromDate = searchParams.get("from_date");
@@ -155,7 +155,8 @@ export const POST = protectedRoute(async (auth, req) => {
     }>;
   };
 
-  const orgId = organizationId || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   if (!orgId || !title || !meeting_type || !scheduled_date) {
     return apiError(
@@ -235,7 +236,8 @@ export const PATCH = protectedRoute(async (auth, req) => {
     }>;
   };
 
-  const orgId = organizationId || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   if (!orgId || !updates || !Array.isArray(updates)) {
     return apiError(

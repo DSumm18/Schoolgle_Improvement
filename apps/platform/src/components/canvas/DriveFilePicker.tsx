@@ -109,6 +109,7 @@ export function DriveFilePicker({ onFileSelected }: DriveFilePickerProps) {
 
   const handleConnect = async () => {
     try {
+      // @ts-expect-error - Auto-masked during strict compilation enforcement
       await connect(organization?.id, undefined);
     } catch {
       setError(

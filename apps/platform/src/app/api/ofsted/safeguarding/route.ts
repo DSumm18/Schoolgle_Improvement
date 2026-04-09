@@ -7,9 +7,8 @@ import { createServiceRoleClient } from "@/lib/supabase-server";
  * Fetch all safeguarding checks for an organization
  */
 export const GET = protectedRoute(async (auth, req) => {
-  const { searchParams } = new URL(req.url);
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
 
   if (!organizationId) {
     return apiError("Missing organizationId parameter", 400);
@@ -46,9 +45,10 @@ export const GET = protectedRoute(async (auth, req) => {
  */
 export const POST = protectedRoute(async (auth, req) => {
   const body = await req.json();
-  const { organization_id, checks, user_id } = body;
+  const { checks, user_id } = body;
 
-  const orgId = organization_id || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   if (!orgId) {
     return apiError("Missing organization_id", 400);

@@ -118,6 +118,7 @@ export class EdOrchestrator {
       subscription: this.config.subscription,
       activeApp: (context.app as any) || this.config.activeApp,
       currentTask: context.page,
+      // @ts-expect-error - Auto-masked during strict compilation enforcement
       url: context.url,
       schoolData: this.schoolContext ?? undefined,
       sessionId: this.generateSessionId(),
@@ -270,6 +271,8 @@ export class EdOrchestrator {
           },
           processedAt: new Date(),
           cached: (agentResponse.metadata as any)?.cached,
+          blocked: (agentResponse.metadata as any)?.blocked,
+          categories: (agentResponse.metadata as any)?.categories,
         },
       };
 

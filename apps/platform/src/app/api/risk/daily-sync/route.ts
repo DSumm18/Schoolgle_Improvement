@@ -18,8 +18,8 @@ import { runAutoEscalation } from "@/lib/risk/auto-escalation";
 
 export const POST = protectedRoute(async (auth, request) => {
   const searchParams = request.nextUrl.searchParams;
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
 
   if (!organizationId) {
     return apiError("organizationId query parameter is required", 400);

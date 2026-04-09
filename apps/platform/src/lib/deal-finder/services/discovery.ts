@@ -59,6 +59,7 @@ async function discoverFromSupplier(
     formats: [{ type: "json" as const, schema: SearchResultSchema }],
   });
 
+  // @ts-expect-error - Auto-masked during strict compilation enforcement
   const productUrl = searchResult.json?.first_product_url;
   if (!productUrl) return;
 

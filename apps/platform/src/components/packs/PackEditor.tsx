@@ -23,7 +23,7 @@ import {
   ImageIcon,
 } from "lucide-react";
 import { Pack, PackSection, PackStatus } from "@/lib/packs/types";
-import { EvidenceItem } from "@/lib/evidence/types";
+import { OfstedEvidenceItem } from "@/lib/evidence/types";
 import EvidencePicker from "@/components/evidence/EvidencePicker";
 import VersionHistory from "@/components/packs/VersionHistory";
 import ApprovalPanel from "@/components/packs/ApprovalPanel";
@@ -54,7 +54,7 @@ export default function PackEditor({
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [linkedEvidence, setLinkedEvidence] = useState<
-    Record<string, EvidenceItem>
+    Record<string, OfstedEvidenceItem>
   >({});
 
   const activeSection = sections.find((s) => s.id === activeSectionId);
@@ -77,8 +77,8 @@ export default function PackEditor({
         const response = await fetch(`/api/evidence?${params.toString()}`);
         if (response.ok) {
           const data = await response.json();
-          const evidenceMap: Record<string, EvidenceItem> = {};
-          data.evidence.forEach((item: EvidenceItem) => {
+          const evidenceMap: Record<string, OfstedEvidenceItem> = {};
+          data.evidence.forEach((item: OfstedEvidenceItem) => {
             if (uniqueIds.includes(item.id)) evidenceMap[item.id] = item;
           });
           setLinkedEvidence(evidenceMap);

@@ -25,7 +25,6 @@ import { analysePupilAssessments } from "@/lib/pupil-assessment-analyser";
 export const POST = protectedRoute(async (auth, request) => {
   const body = await request.json();
   const {
-    organization_id,
     source_system,
     academic_year_start,
     assessment_period,
@@ -34,7 +33,8 @@ export const POST = protectedRoute(async (auth, request) => {
     auto_analyse,
   } = body;
 
-  const orgId = organization_id || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   if (!orgId || !source_system || !academic_year_start || !assessment_period) {
     return apiError("Missing required fields", 400);
@@ -194,8 +194,8 @@ export const POST = protectedRoute(async (auth, request) => {
  */
 export const GET = protectedRoute(async (auth, request) => {
   const { searchParams } = new URL(request.url);
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
   const importId = searchParams.get("importId");
 
   if (!organizationId) {

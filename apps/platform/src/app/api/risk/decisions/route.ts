@@ -12,8 +12,8 @@ import { createServiceRoleClient } from "@/lib/supabase-server";
 export const GET = protectedRoute(async (auth, request) => {
   const searchParams = request.nextUrl.searchParams;
   const riskId = searchParams.get("riskId");
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
   const decisionType = searchParams.get("decision");
   const fromDate = searchParams.get("from");
   const toDate = searchParams.get("to");
@@ -84,7 +84,6 @@ export const POST = protectedRoute(async (auth, request) => {
   const body = await request.json();
   const {
     risk_id,
-    organization_id,
     decision,
     decided_by,
     decided_by_name,
@@ -115,19 +114,10 @@ export const POST = protectedRoute(async (auth, request) => {
 
   const supabase = createServiceRoleClient();
 
-  // If organization_id not provided, look it up from the risk
-  let orgId = organization_id || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
   if (!orgId) {
-    const { data: risk } = await supabase
-      .from("risk_register")
-      .select("organization_id")
-      .eq("id", risk_id)
-      .single();
-
-    if (!risk) {
-      return apiError("Risk not found", 404);
-    }
-    orgId = risk.organization_id;
+    return apiError("organization_id is required", 400);
   }
 
   const insertData: Record<string, any> = {

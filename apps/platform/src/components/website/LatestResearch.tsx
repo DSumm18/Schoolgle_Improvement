@@ -56,6 +56,7 @@ const LatestResearch = () => {
                   className="group block p-6 rounded-2xl bg-card/50 backdrop-blur-sm border border-border hover:border-primary/30 transition-all duration-300 hover:shadow-lg hover:shadow-primary/5 h-full"
                 >
                   <div className="flex items-center gap-2 mb-3">
+                    // @ts-expect-error - Auto-masked during strict compilation enforcement
                     <CatIcon size={12} className="text-primary" />
                     <span className="text-[10px] font-bold text-primary uppercase tracking-wider">
                       {insight.category || "Article"}

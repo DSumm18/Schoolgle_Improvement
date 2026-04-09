@@ -10,9 +10,8 @@ import type { GovernorMeeting } from "@/lib/governance";
 export const GET = protectedRoute(async (auth, req) => {
   const segments = req.nextUrl.pathname.split("/");
   const id = segments[segments.length - 1];
-  const { searchParams } = new URL(req.url);
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
 
   if (!organizationId) {
     return apiError("Missing organizationId parameter", 400);
@@ -76,11 +75,12 @@ export const PATCH = protectedRoute(async (auth, req) => {
   const segments = req.nextUrl.pathname.split("/");
   const id = segments[segments.length - 1];
   const body = await req.json();
-  const { organizationId, ...changes } = body as {
+  const { organizationId: _orgIdFromBody, ...changes } = body as {
     organizationId: string;
   } & Partial<GovernorMeeting>;
 
-  const orgId = organizationId || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   if (!orgId) {
     return apiError("Missing organizationId", 400);
@@ -119,9 +119,8 @@ export const PATCH = protectedRoute(async (auth, req) => {
 export const DELETE = protectedRoute(async (auth, req) => {
   const segments = req.nextUrl.pathname.split("/");
   const id = segments[segments.length - 1];
-  const { searchParams } = new URL(req.url);
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
 
   if (!organizationId) {
     return apiError("Missing organizationId parameter", 400);
@@ -151,13 +150,14 @@ export const POST = protectedRoute(async (auth, req) => {
   const segments = req.nextUrl.pathname.split("/");
   const id = segments[segments.length - 1];
   const body = await req.json();
-  const { organizationId, attended_governors, apologies_governors } = body as {
+  const { organizationId: _orgIdFromBody2, attended_governors, apologies_governors } = body as {
     organizationId: string;
     attended_governors: string[];
     apologies_governors: string[];
   };
 
-  const orgId = organizationId || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   if (!orgId) {
     return apiError("Missing organizationId", 400);

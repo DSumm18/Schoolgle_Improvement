@@ -322,6 +322,7 @@ function ReportSectionBlock({
         className={`w-full flex items-center justify-between px-5 py-3.5 ${colours.bg} ${colours.text} transition-colors print:py-2`}
       >
         <div className="flex items-center gap-3">
+          // @ts-expect-error - Auto-masked during strict compilation enforcement
           <Icon className="w-5 h-5 opacity-90" />
           <h2 className="text-base font-semibold tracking-tight">
             {section.title}

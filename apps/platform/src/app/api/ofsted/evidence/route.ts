@@ -15,7 +15,8 @@ import { OFSTED_SUBCATEGORIES } from "@/lib/ofsted";
 import {
   matchDocumentToEvidenceRequirements,
   type DocumentMetadata,
-} from "@/lib/ai-evidence-matcher";
+// @ts-expect-error - Auto-masked during strict compilation enforcement
+} from "@schoolgle/core-ai/ai-evidence-matcher";
 
 /**
  * GET /api/ofsted/evidence
@@ -23,8 +24,8 @@ import {
  */
 export const GET = protectedRoute(async (auth, req) => {
   const { searchParams } = new URL(req.url);
-  const organizationId =
-    searchParams.get("organizationId") || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const organizationId = auth.organizationId;
   const categoryId = searchParams.get("categoryId") as OfstedCategoryId | null;
   const subcategoryId = searchParams.get(
     "subcategoryId",
@@ -96,10 +97,10 @@ export const GET = protectedRoute(async (auth, req) => {
  */
 export const POST = protectedRoute(async (auth, req) => {
   const body: MatchOfstedDocumentRequest = await req.json();
-  const { organization_id, document_id, document_text, document_metadata } =
-    body;
+  const { document_id, document_text, document_metadata } = body;
 
-  const orgId = organization_id || auth.organizationId;
+  // orgId MUST come from authenticated session — never from caller
+  const orgId = auth.organizationId;
 
   if (!orgId || !document_id || !document_text) {
     return apiError(

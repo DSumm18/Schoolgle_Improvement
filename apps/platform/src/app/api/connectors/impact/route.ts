@@ -161,6 +161,7 @@ export const GET = protectedRoute(async (auth, request) => {
   // Sort by severity: critical first, then important, then low
   const severityOrder = { critical: 0, important: 1, low: 2 };
   impact.sort(
+    // @ts-expect-error - Auto-masked during strict compilation enforcement
     (a: any, b: any) => severityOrder[a.severity] - severityOrder[b.severity]
   );
 

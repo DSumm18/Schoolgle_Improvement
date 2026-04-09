@@ -6,6 +6,8 @@
  * Falls back to OpenRouter for report generation.
  */
 
+import { ROUTER_MODELS } from "@/lib/ai-openrouter";
+
 import type { VisionContextType } from "./types";
 
 // ---------------------------------------------------------------------------
@@ -63,16 +65,6 @@ const CLAUDE_SONNET: VisionModelConfig = {
   supportsVideo: false,
 };
 
-const DEEPSEEK: VisionModelConfig = {
-  id: "deepseek-chat",
-  provider: "openrouter",
-  modelName: "deepseek/deepseek-chat",
-  costPerCallEstimate: 0.002,
-  maxTokens: 4096,
-  temperature: 0.2,
-  supportsVideo: false,
-};
-
 // ---------------------------------------------------------------------------
 // Task-to-model mapping
 // ---------------------------------------------------------------------------
@@ -84,7 +76,7 @@ const TASK_MODEL_MAP: Record<VisionTaskType, VisionModelConfig[]> = {
   "coshh-scan": [GEMINI_FLASH, QWEN_VISION],
   snagging: [GEMINI_PRO, GEMINI_FLASH],
   "lone-worker": [GEMINI_FLASH],
-  "report-generation": [CLAUDE_SONNET, DEEPSEEK],
+  "report-generation": [CLAUDE_SONNET, GEMINI_PRO],
 };
 
 // ---------------------------------------------------------------------------
