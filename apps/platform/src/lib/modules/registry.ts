@@ -49,6 +49,7 @@ import {
   FileImage,
   Newspaper,
   Database,
+  Plug,
 } from "lucide-react";
 
 export type Role =
@@ -236,6 +237,15 @@ export const MODULES: ModuleDefinition[] = [
     pilotHidden: true,
     pilotNote:
       "Website builder is in development and not yet available in the pilot.",
+  },
+  {
+    id: "connectors",
+    name: "Connectors",
+    color: "violet",
+    icon: Plug,
+    description:
+      "Integrate your school tools — Canva templates, MIS data imports, Google Drive sync, and more.",
+    requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
   },
   {
     id: "canvas",
@@ -598,7 +608,7 @@ export const APPS: AppDefinition[] = [
     id: "staff-connectors",
     moduleId: "hr",
     name: "Staff Connectors",
-    route: "/dashboard/connectors",
+    route: "/dashboard/connectors/staff",
     icon: Settings,
     shortDescription:
       "Statutory roles, responsibilities, and compliance tracking.",
@@ -1098,6 +1108,26 @@ export const APPS: AppDefinition[] = [
     icon: Building2,
     shortDescription: "Trust-wide risk aggregation and board reporting.",
     requiredPermissions: ["admin", "headteacher", "governor"],
+  },
+
+  // Connectors Apps
+  {
+    id: "connectors-hub",
+    moduleId: "connectors",
+    name: "Connectors Hub",
+    route: "/dashboard/connectors",
+    icon: Plug,
+    shortDescription: "Integrate school tools — Canva, Drive, MIS, and more.",
+    requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
+  },
+  {
+    id: "canva-templates",
+    moduleId: "connectors",
+    name: "Canva Templates",
+    route: "/dashboard/connectors/canva",
+    icon: Palette,
+    shortDescription: "Free, professional templates for schools.",
+    requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
   },
 
   // Canvas Apps

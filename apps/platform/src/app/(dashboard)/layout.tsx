@@ -49,7 +49,7 @@ import { ImpersonationBanner } from "@/components/ImpersonationBanner";
 const PLANET_GROUPS = [
   { id: "mercury", name: "School Improvement", color: "#6B7280", icon: TrendingUp, moduleIds: ["improvement"] },
   { id: "venus", name: "Governance", color: "#F59E0B", icon: ShieldCheck, moduleIds: ["governance"] },
-  { id: "earth", name: "Business Operations", color: "#3B82F6", icon: Building2, moduleIds: ["finance", "hr", "estates"] },
+  { id: "earth", name: "Business Operations", color: "#3B82F6", icon: Building2, moduleIds: ["finance", "hr", "estates", "connectors"] },
   { id: "mars", name: "Compliance & Safeguarding", color: "#9F1239", icon: Shield, moduleIds: ["compliance", "safeguarding", "risk"] },
   { id: "jupiter", name: "Communications", color: "#F97316", icon: Radio, moduleIds: ["communications", "calendar", "surveys"] },
   { id: "saturn", name: "Intelligence", color: "#A78BFA", icon: Brain, moduleIds: ["attendance", "send", "behaviour", "canvas"] },

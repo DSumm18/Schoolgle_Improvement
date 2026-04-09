@@ -1,81 +1,162 @@
 "use client";
 
 import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import useSWR from "swr";
+import { motion } from "framer-motion";
+import Link from "next/link";
 import {
-  Shield, Users, AlertTriangle, CheckCircle2, Plus,
-  Search, Filter, ChevronRight, Settings, UserMinus
+  Plug, Search, Palette, HardDrive, Database, Radio, Mail,
+  BookOpen, ChevronRight, CheckCircle2, Clock, Lock,
+  ExternalLink, Sparkles, Users, Settings,
 } from "lucide-react";
-import { useAuth } from "@/context/SupabaseAuthContext";
-import { fetcher } from "@/lib/fetchers";
-import { ComplianceOverview } from "@/components/connectors/ComplianceOverview";
-import { ConnectorBadge } from "@/components/connectors/ConnectorBadge";
-import { LeavingImpactReport } from "@/components/connectors/LeavingImpactReport";
 
-type TabId = "compliance" | "all" | "impact";
+type ConnectorStatus = "active" | "coming_soon" | "planned";
 
-export default function ConnectorsPage() {
-  const { user, organization } = useAuth();
-  const organizationId = organization?.id || "";
-  const userRole = organization?.role;
-  const canManage = userRole === "admin" || userRole === "slt" || userRole === "headteacher";
+interface Connector {
+  id: string;
+  name: string;
+  description: string;
+  status: ConnectorStatus;
+  icon: React.ReactNode;
+  logoUrl?: string;
+  color: string;
+  stats?: string;
+  href?: string;
+  category: "productivity" | "data" | "communication" | "internal";
+}
 
-  const [activeTab, setActiveTab] = useState<TabId>("compliance");
+const CONNECTORS: Connector[] = [
+  {
+    id: "canva",
+    name: "Canva",
+    description: "Free, professionally designed templates for newsletters, letters, posters, and governance docs. One click opens in your Canva account.",
+    status: "active",
+    icon: <Palette className="w-6 h-6" />,
+    color: "#7D2AE8",
+    stats: "30 templates",
+    href: "/dashboard/connectors/canva",
+    category: "productivity",
+  },
+  {
+    id: "google-drive",
+    name: "Google Drive",
+    description: "Automatic document sync from your school's Google Drive. Evidence extraction and mapping to Ofsted/SIAMS frameworks.",
+    status: "active",
+    icon: <HardDrive className="w-6 h-6" />,
+    color: "#4285F4",
+    stats: "Document sync",
+    href: "/dashboard/evidence",
+    category: "data",
+  },
+  {
+    id: "arbor",
+    name: "Arbor MIS",
+    description: "Import pupil data, attendance, and assessment records via CSV export from Arbor. Pseudonymised analysis with zero PII storage.",
+    status: "coming_soon",
+    icon: <Database className="w-6 h-6" />,
+    color: "#00A98F",
+    category: "data",
+  },
+  {
+    id: "sims",
+    name: "SIMS MIS",
+    description: "Connect your SIMS data through CSV exports. Attendance, census, and assessment data for intelligence analysis.",
+    status: "coming_soon",
+    icon: <Database className="w-6 h-6" />,
+    color: "#E6332A",
+    category: "data",
+  },
+  {
+    id: "bromcom",
+    name: "Bromcom MIS",
+    description: "Import data from Bromcom MIS. Supports pupil assessment, attendance, and workforce data formats.",
+    status: "coming_soon",
+    icon: <Database className="w-6 h-6" />,
+    color: "#1B365D",
+    category: "data",
+  },
+  {
+    id: "notebooklm",
+    name: "NotebookLM",
+    description: "AI-powered research and training content generation. Create podcasts, summaries, and briefing packs from your school data.",
+    status: "coming_soon",
+    icon: <BookOpen className="w-6 h-6" />,
+    color: "#EA4335",
+    category: "productivity",
+  },
+  {
+    id: "parentmail",
+    name: "ParentMail",
+    description: "Send communications to parents directly from Schoolgle. Letters, newsletters, and notifications synced to ParentMail.",
+    status: "planned",
+    icon: <Mail className="w-6 h-6" />,
+    color: "#FF6B00",
+    category: "communication",
+  },
+  {
+    id: "dfe-apis",
+    name: "DfE APIs",
+    description: "Direct connection to Department for Education data services. School performance, workforce, and census data feeds.",
+    status: "active",
+    icon: <Radio className="w-6 h-6" />,
+    color: "#003078",
+    stats: "5 data feeds",
+    href: "/dashboard/intelligence",
+    category: "data",
+  },
+  {
+    id: "staff-connectors",
+    name: "Staff Connectors",
+    description: "Track statutory roles, responsibilities, training compliance, and leaving impact analysis across your staff.",
+    status: "active",
+    icon: <Users className="w-6 h-6" />,
+    color: "#6366F1",
+    stats: "Role tracking",
+    href: "/dashboard/connectors/staff",
+    category: "internal",
+  },
+];
+
+const STATUS_CONFIG: Record<ConnectorStatus, { label: string; icon: React.ReactNode; className: string }> = {
+  active: {
+    label: "Active",
+    icon: <CheckCircle2 className="w-3.5 h-3.5" />,
+    className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+  },
+  coming_soon: {
+    label: "Coming Soon",
+    icon: <Clock className="w-3.5 h-3.5" />,
+    className: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+  },
+  planned: {
+    label: "Planned",
+    icon: <Lock className="w-3.5 h-3.5" />,
+    className: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400",
+  },
+};
+
+const CATEGORIES = [
+  { id: "all", label: "All" },
+  { id: "productivity", label: "Productivity" },
+  { id: "data", label: "Data & MIS" },
+  { id: "communication", label: "Communication" },
+  { id: "internal", label: "Internal" },
+];
+
+export default function ConnectorsHubPage() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
 
-  // Data fetching
-  const { data: complianceData, isLoading: compLoading } = useSWR(
-    organizationId && canManage ? "/api/connectors/compliance" : null,
-    fetcher
-  );
-
-  const { data: allConnectors = [], isLoading: connLoading } = useSWR(
-    organizationId && activeTab === "all"
-      ? `/api/connectors?status=active`
-      : null,
-    fetcher
-  );
-
-  const { data: staff = [] } = useSWR(
-    organizationId && activeTab === "impact" && canManage ? "/api/staff" : null,
-    fetcher
-  );
-
-  const tabs = [
-    { id: "compliance" as const, label: "Compliance", icon: Shield },
-    { id: "all" as const, label: "All Connectors", icon: Users },
-    // Impact Analysis contains sensitive leaving/replacement data — SLT+ only
-    ...(canManage
-      ? [{ id: "impact" as const, label: "Impact Analysis", icon: UserMinus }]
-      : []),
-  ];
-
-  // Filter connectors
-  const filteredConnectors = allConnectors.filter((c: any) => {
+  const filtered = CONNECTORS.filter((c) => {
     const matchesSearch =
       !searchQuery ||
-      c.connector_type?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.staff?.display_name?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory =
-      categoryFilter === "all" || c.connector_type?.category === categoryFilter;
+      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = categoryFilter === "all" || c.category === categoryFilter;
     return matchesSearch && matchesCategory;
   });
 
-  // Group filtered connectors by staff
-  const byStaff = filteredConnectors.reduce((acc: any, c: any) => {
-    const sid = c.staff_id;
-    if (!acc[sid]) {
-      acc[sid] = {
-        staff: c.staff,
-        connectors: [],
-      };
-    }
-    acc[sid].connectors.push(c);
-    return acc;
-  }, {});
+  const activeCount = CONNECTORS.filter((c) => c.status === "active").length;
+  const totalCount = CONNECTORS.length;
 
   return (
     <div className="p-6 md:p-8 max-w-[1600px] mx-auto space-y-6">
@@ -83,246 +164,154 @@ export default function ConnectorsPage() {
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-start justify-between"
       >
-        <div>
-          <h1 className="text-2xl font-black flex items-center gap-2">
-            <Settings className="w-6 h-6 text-primary" />
-            Staff Connectors
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Statutory roles, responsibilities, training compliance, and change management
-          </p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-black flex items-center gap-2">
+              <Plug className="w-6 h-6 text-primary" />
+              Connectors
+            </h1>
+            <p className="text-muted-foreground text-sm mt-1">
+              Integrate your school tools. {activeCount} active, {totalCount - activeCount} coming soon.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground bg-muted px-3 py-1.5 rounded-full font-medium">
+              <Sparkles className="w-3 h-3 inline mr-1" />
+              More connectors launching monthly
+            </span>
+          </div>
         </div>
       </motion.div>
 
-      {/* Tab Bar */}
+      {/* Search & Filters */}
       <motion.div
         initial={{ opacity: 0, y: 5 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.05 }}
-        className="flex gap-1 bg-muted/50 p-1 rounded-xl border border-border w-fit"
+        className="flex flex-col sm:flex-row gap-3"
       >
-        {tabs.map((tab) => {
-          const TabIcon = tab.icon;
-          const isActive = activeTab === tab.id;
-
-          return (
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Search connectors..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+          />
+        </div>
+        <div className="flex gap-1 bg-muted/50 p-1 rounded-xl border border-border w-fit">
+          {CATEGORIES.map((cat) => (
             <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`
-                flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all
-                ${isActive
+              key={cat.id}
+              onClick={() => setCategoryFilter(cat.id)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                categoryFilter === cat.id
                   ? "bg-card shadow-sm text-foreground"
                   : "text-muted-foreground hover:text-foreground"
-                }
-              `}
+              }`}
             >
-              <TabIcon className="w-4 h-4" />
-              {tab.label}
-              {tab.id === "compliance" && complianceData?.summary?.non_compliant > 0 && (
-                <span className="w-5 h-5 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center font-bold">
-                  {complianceData.summary.non_compliant}
-                </span>
-              )}
+              {cat.label}
             </button>
-          );
-        })}
+          ))}
+        </div>
       </motion.div>
 
-      {/* Tab Content */}
-      <AnimatePresence mode="wait">
-        {activeTab === "compliance" && (
-          <motion.div
-            key="compliance"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-          >
-            {compLoading ? (
-              <div className="space-y-4 animate-pulse">
-                <div className="grid grid-cols-4 gap-3">
-                  {[...Array(4)].map((_, i) => (
-                    <div key={i} className="h-24 bg-muted rounded-xl" />
-                  ))}
-                </div>
-                <div className="h-48 bg-muted rounded-2xl" />
-              </div>
-            ) : complianceData ? (
-              <ComplianceOverview
-                summary={complianceData.summary}
-                compliance={complianceData.compliance}
-              />
-            ) : (
-              <div className="text-center text-muted-foreground py-12">
-                <Shield className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                <p>No compliance data available yet.</p>
-                <p className="text-sm mt-1">
-                  Assign connectors to staff members to start tracking compliance.
-                </p>
-              </div>
-            )}
-          </motion.div>
-        )}
+      {/* Connector Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {filtered.map((connector, idx) => {
+          const statusConfig = STATUS_CONFIG[connector.status];
+          const isClickable = connector.status === "active" && connector.href;
 
-        {activeTab === "all" && (
-          <motion.div
-            key="all"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="space-y-4"
-          >
-            {/* Search & Filter Bar */}
-            <div className="flex gap-3">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <input
-                  type="text"
-                  placeholder="Search by name or connector type..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                />
+          const Card = (
+            <motion.div
+              key={connector.id}
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.04 }}
+              className={`group relative bg-card border border-border rounded-2xl p-5 transition-all ${
+                isClickable
+                  ? "hover:shadow-lg hover:border-primary/30 cursor-pointer"
+                  : "opacity-80"
+              }`}
+            >
+              {/* Status Badge */}
+              <div className={`absolute top-4 right-4 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusConfig.className}`}>
+                {statusConfig.icon}
+                {statusConfig.label}
               </div>
-              <select
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-                className="px-3 py-2 rounded-xl border border-border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-              >
-                <option value="all">All Categories</option>
-                <option value="safeguarding">Safeguarding</option>
-                <option value="send">SEND</option>
-                <option value="health_safety">Health & Safety</option>
-                <option value="data_governance">Data & Governance</option>
-                <option value="curriculum">Curriculum</option>
-                <option value="custom">Custom</option>
-              </select>
-            </div>
 
-            {/* Connectors grouped by staff */}
-            {connLoading ? (
-              <div className="space-y-3 animate-pulse">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="h-20 bg-muted rounded-2xl" />
-                ))}
-              </div>
-            ) : Object.keys(byStaff).length === 0 ? (
-              <div className="text-center text-muted-foreground py-12">
-                <Users className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                <p>No connectors assigned yet.</p>
-                <p className="text-sm mt-1">
-                  Go to a staff member's profile to assign connectors.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {Object.values(byStaff).map((group: any, idx: number) => (
-                  <motion.div
-                    key={group.staff?.id || idx}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.03 }}
-                    className="bg-card border border-border rounded-2xl p-4"
-                  >
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary text-sm font-bold">
-                        {group.staff?.first_name?.[0]}
-                        {group.staff?.last_name?.[0]}
-                      </div>
-                      <div>
-                        <div className="font-medium text-sm">
-                          {group.staff?.display_name || "Unknown"}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {group.staff?.job_title}
-                        </div>
-                      </div>
-                      <span className="ml-auto text-xs text-muted-foreground">
-                        {group.connectors.length} connector{group.connectors.length !== 1 ? "s" : ""}
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {group.connectors.map((c: any, ci: number) => (
-                        <ConnectorBadge
-                          key={c.id}
-                          name={c.connector_type?.name || "Unknown"}
-                          category={c.connector_type?.category || "custom"}
-                          icon={c.connector_type?.icon}
-                          color={c.connector_type?.color}
-                          isPrimary={c.is_primary}
-                          isStatutory={c.connector_type?.is_statutory}
-                          scope={c.scope}
-                          trainingExpiry={c.training_expiry_date}
-                          size="sm"
-                          delay={ci * 0.03}
-                        />
-                      ))}
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            )}
-          </motion.div>
-        )}
-
-        {activeTab === "impact" && (
-          <motion.div
-            key="impact"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="space-y-4"
-          >
-            {!selectedStaffId ? (
-              <div className="bg-card border border-border rounded-2xl p-6">
-                <h3 className="font-bold mb-4 flex items-center gap-2">
-                  <UserMinus className="w-5 h-5 text-red-500" />
-                  Select a Staff Member
-                </h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Choose a staff member to see the impact of them leaving — which connectors
-                  need reassigning, how many tasks are affected, and suggested replacements.
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                  {staff
-                    .filter((s: any) => s.is_active)
-                    .map((s: any) => (
-                      <button
-                        key={s.id}
-                        onClick={() => setSelectedStaffId(s.id)}
-                        className="text-left p-3 rounded-xl border border-border hover:bg-muted/50 transition-colors flex items-center gap-3"
-                      >
-                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold flex-shrink-0">
-                          {s.first_name?.[0]}{s.last_name?.[0]}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="text-sm font-medium truncate">{s.display_name}</div>
-                          <div className="text-xs text-muted-foreground truncate">{s.job_title}</div>
-                        </div>
-                        <ChevronRight className="w-4 h-4 text-muted-foreground ml-auto flex-shrink-0" />
-                      </button>
-                    ))}
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <button
-                  onClick={() => setSelectedStaffId(null)}
-                  className="text-sm text-primary hover:text-primary/80 flex items-center gap-1"
+              {/* Logo & Title */}
+              <div className="flex items-start gap-3 mb-3">
+                <div
+                  className="w-11 h-11 rounded-xl flex items-center justify-center text-white shrink-0"
+                  style={{ backgroundColor: connector.color }}
                 >
-                  ← Back to staff list
-                </button>
-                <LeavingImpactReport
-                  staffId={selectedStaffId}
-                  organizationId={organizationId}
-                />
+                  {connector.icon}
+                </div>
+                <div className="min-w-0">
+                  <h3 className="font-bold text-sm">{connector.name}</h3>
+                  {connector.stats && (
+                    <span className="text-[11px] text-muted-foreground font-medium">
+                      {connector.stats}
+                    </span>
+                  )}
+                </div>
               </div>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
+
+              {/* Description */}
+              <p className="text-xs text-muted-foreground leading-relaxed mb-4">
+                {connector.description}
+              </p>
+
+              {/* Action */}
+              <div className="flex items-center justify-between">
+                {isClickable ? (
+                  <span className="text-xs font-semibold text-primary flex items-center gap-1 group-hover:gap-2 transition-all">
+                    Open
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </span>
+                ) : connector.status === "coming_soon" ? (
+                  <span className="text-xs text-muted-foreground">Launching soon</span>
+                ) : (
+                  <span className="text-xs text-muted-foreground">In development</span>
+                )}
+              </div>
+            </motion.div>
+          );
+
+          if (isClickable && connector.href) {
+            return (
+              <Link key={connector.id} href={connector.href} className="block">
+                {Card}
+              </Link>
+            );
+          }
+
+          return Card;
+        })}
+      </div>
+
+      {/* Footer CTA */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.4 }}
+        className="bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/20 rounded-2xl p-6 text-center"
+      >
+        <h3 className="font-bold text-sm mb-1">Need a connector we don&apos;t have?</h3>
+        <p className="text-xs text-muted-foreground mb-3">
+          Tell us which tools your school uses and we&apos;ll prioritise them.
+        </p>
+        <a
+          href="mailto:hello@schoolgle.co.uk?subject=Connector%20Request"
+          className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-semibold hover:bg-primary/90 transition-colors"
+        >
+          <Mail className="w-3.5 h-3.5" />
+          Request a Connector
+        </a>
+      </motion.div>
     </div>
   );
 }
