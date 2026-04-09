@@ -1,11 +1,12 @@
 /**
  * Morning Brief TTS Tests
  *
- * Tests Fish Audio text-to-speech integration for morning briefs.
+ * Tests Fish Audio text-to-speech integration and script generation.
  * Run with: npx vitest run apps/platform/src/lib/morning-brief/tts.test.ts
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { emptySection } from "./types";
 
 // Mock fetch globally
 const mockFetch = vi.fn();
@@ -31,50 +32,60 @@ describe("Morning Brief TTS", () => {
   });
 
   describe("briefToScript", () => {
-    it("should convert a brief data object into a spoken script", async () => {
+    it("should convert sections into a spoken script", async () => {
       const { briefToScript } = await import("./tts");
 
-      const script = briefToScript({
-        organizationId: "org-1",
-        generatedAt: "2026-04-08T06:00:00Z",
-        headline: "All clear this morning.",
-        sections: {
-          compliance: { rag: "green", count: 0, items: [] },
-          tasks: { rag: "green", count: 2, items: [{ title: "Review budget", priority: "medium" }] },
-          risks: { rag: "green", count: 0, items: [] },
-          staffing: { rag: "green", count: 0, items: [] },
-          calendar: { rag: "green", count: 1, items: [{ title: "Staff meeting at 9am", priority: "low" }] },
+      const script = briefToScript(
+        {
+          safeguarding: emptySection("Safeguarding module not yet connected."),
+          estates: emptySection("All estates checks up to date."),
+          staffing: emptySection("No staff absences or training issues to report."),
+          governance: {
+            rag: "green",
+            count: 1,
+            items: [{ title: "Board meeting Thursday", priority: "low" }],
+            summary: "1 governance meeting this week.",
+          },
+          finance: emptySection("No financial alerts."),
+          teaching: emptySection("Teaching data not yet connected."),
+          ofsted: emptySection("No new evidence uploaded this week."),
         },
-      });
+        "All clear this morning.",
+      );
 
       expect(typeof script).toBe("string");
       expect(script.length).toBeGreaterThan(20);
       expect(script).toContain("Good morning");
-      expect(script).toContain("clear");
     });
 
     it("should mention urgent items in the script", async () => {
       const { briefToScript } = await import("./tts");
 
-      const script = briefToScript({
-        organizationId: "org-1",
-        generatedAt: "2026-04-08T06:00:00Z",
-        headline: "3 compliance items need attention.",
-        sections: {
-          compliance: {
+      const script = briefToScript(
+        {
+          safeguarding: emptySection(),
+          estates: {
             rag: "red",
             count: 3,
-            items: [{ title: "DBS check overdue", priority: "critical" }],
+            items: [{ title: "Fire alarm overdue", priority: "critical" }],
+            summary: "3 overdue compliance checks.",
           },
-          tasks: { rag: "green", count: 0, items: [] },
-          risks: { rag: "amber", count: 1, items: [{ title: "Budget risk", priority: "medium" }] },
-          staffing: { rag: "green", count: 0, items: [] },
-          calendar: { rag: "green", count: 0, items: [] },
+          staffing: emptySection(),
+          governance: emptySection(),
+          finance: {
+            rag: "amber",
+            count: 1,
+            items: [{ title: "Budget risk", priority: "medium" }],
+            summary: "1 financial risk flagged.",
+          },
+          teaching: emptySection(),
+          ofsted: emptySection(),
         },
-      });
+        "2 areas need attention: estates, finance.",
+      );
 
-      expect(script).toContain("compliance");
-      expect(script).toContain("DBS check overdue");
+      expect(script).toContain("Estates");
+      expect(script).toContain("Fire alarm overdue");
     });
   });
 
@@ -96,7 +107,6 @@ describe("Morning Brief TTS", () => {
         arrayBuffer: () => Promise.resolve(audioBuffer),
       });
 
-      // Re-import to pick up env change
       vi.resetModules();
       const { generateBriefAudio } = await import("./tts");
       const result = await generateBriefAudio("Good morning, here is your brief.");

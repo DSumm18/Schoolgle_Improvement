@@ -9,7 +9,8 @@ import { NextRequest } from "next/server";
 import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
 import { assembleBrief } from "@/lib/morning-brief/assembler";
-import { briefToScript, generateBriefAudio } from "@/lib/morning-brief/tts";
+import { generateScript } from "@/lib/morning-brief/script-generator";
+import { generateBriefAudio } from "@/lib/morning-brief/tts";
 
 export const POST = protectedRoute(async (auth, req: NextRequest) => {
   const orgId = auth.organizationId;
@@ -26,22 +27,43 @@ export const POST = protectedRoute(async (auth, req: NextRequest) => {
   }
 
   // Assemble the brief
-  const brief = await assembleBrief(orgId);
+  const briefData = await assembleBrief(orgId);
 
-  // Generate TTS script
-  const scriptText = briefToScript(brief);
+  // Generate AI script
+  const supabase = createServiceRoleClient();
+  const { data: orgData } = await supabase
+    .from("organizations")
+    .select("name")
+    .eq("id", orgId)
+    .single();
+
+  const { data: headSetting } = await supabase
+    .from("organization_settings")
+    .select("value")
+    .eq("organization_id", orgId)
+    .eq("key", "head_teacher_name")
+    .single();
+
+  const schoolName = orgData?.name ?? "Your School";
+  const headName = headSetting?.value ?? "Head Teacher";
+  const dateStr = new Date().toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+
+  const script = await generateScript(schoolName, headName, dateStr, briefData.sections);
 
   // Persist to database
-  const supabase = createServiceRoleClient();
-
   const { data: stored, error: insertError } = await supabase
     .from("morning_briefs")
     .insert({
       organization_id: orgId,
-      generated_at: brief.generatedAt,
-      headline: brief.headline,
-      sections: brief.sections,
-      script_text: scriptText,
+      generated_at: briefData.generatedAt,
+      headline: briefData.headline,
+      sections: briefData.sections,
+      script_text: script,
     })
     .select("id")
     .single();
@@ -54,7 +76,7 @@ export const POST = protectedRoute(async (auth, req: NextRequest) => {
   const briefId = stored.id;
 
   // Store per-section rows for trending
-  const sectionRows = Object.entries(brief.sections).map(([key, section]) => ({
+  const sectionRows = Object.entries(briefData.sections).map(([key, section]) => ({
     brief_id: briefId,
     organization_id: orgId,
     section_key: key,
@@ -76,7 +98,7 @@ export const POST = protectedRoute(async (auth, req: NextRequest) => {
   // Optional: generate audio
   let audioUrl: string | null = null;
   if (includeAudio) {
-    const audioBuffer = await generateBriefAudio(scriptText);
+    const audioBuffer = await generateBriefAudio(script);
     if (audioBuffer) {
       const fileName = `morning-brief/${orgId}/${briefId}.mp3`;
       const { error: uploadError } = await supabase.storage
@@ -92,13 +114,11 @@ export const POST = protectedRoute(async (auth, req: NextRequest) => {
           .getPublicUrl(fileName);
         audioUrl = urlData?.publicUrl ?? null;
 
-        // Update brief record
         await supabase
           .from("morning_briefs")
           .update({ audio_url: audioUrl })
           .eq("id", briefId);
 
-        // Store audio metadata
         await supabase.from("morning_brief_audio").insert({
           brief_id: briefId,
           organization_id: orgId,
@@ -111,10 +131,10 @@ export const POST = protectedRoute(async (auth, req: NextRequest) => {
 
   return apiSuccess({
     id: briefId,
-    headline: brief.headline,
-    sections: brief.sections,
-    script_text: scriptText,
+    headline: briefData.headline,
+    sections: briefData.sections,
+    script_text: script,
     audio_url: audioUrl,
-    generated_at: brief.generatedAt,
+    generated_at: briefData.generatedAt,
   });
 });

@@ -2,7 +2,11 @@
  * Morning Brief Assembler
  *
  * Gathers cross-module data for a school's daily morning briefing.
- * Pulls from: compliance tasks, unified tasks, risk register, staff/HR, calendar/meetings.
+ * Sections match Task 033 spec: safeguarding, estates, staffing,
+ * governance, finance, teaching, ofsted.
+ *
+ * Sections where the source table doesn't exist yet return stubs.
+ * Phase 1 ships with Estates + Finance live; others light up as modules are built.
  */
 
 import { createServiceRoleClient } from "@/lib/supabase-server";
@@ -13,6 +17,7 @@ import type {
   BriefItem,
   RAGStatus,
 } from "./types";
+import { emptySection } from "./types";
 
 // Re-export types for consumers
 export type { MorningBriefData, BriefSections, BriefSection };
@@ -27,98 +32,80 @@ function computeRAG(critical: number, overdue: number): RAGStatus {
 
 // ─── Section builders ───────────────────────────────────────────────
 
-async function buildComplianceSection(
+/** Safeguarding — source table not yet built. Returns stub. */
+async function buildSafeguardingSection(
+  _supabase: ReturnType<typeof createServiceRoleClient>,
+  _orgId: string,
+): Promise<BriefSection> {
+  return emptySection("Safeguarding module not yet connected.");
+}
+
+/** Estates — pulls from compliance_items & estate helpdesk tickets */
+async function buildEstatesSection(
   supabase: ReturnType<typeof createServiceRoleClient>,
   orgId: string,
 ): Promise<BriefSection> {
   const today = new Date().toISOString().slice(0, 10);
 
+  // Overdue compliance checks
   const { data: overdue } = await supabase
     .from("compliance_items")
     .select("id, title, due_date, priority")
     .eq("organization_id", orgId)
     .eq("status", "pending")
     .lte("due_date", today)
-    .order("due_date", { ascending: true });
+    .order("due_date", { ascending: true })
+    .limit(10);
 
-  const items: BriefItem[] = (overdue ?? []).slice(0, 5).map((row: any) => ({
+  // Open helpdesk tickets
+  const { data: tickets } = await supabase
+    .from("estate_helpdesk_tickets")
+    .select("id, title, priority, status")
+    .eq("organization_id", orgId)
+    .in("status", ["open", "in_progress"])
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  const overdueItems: BriefItem[] = (overdue ?? []).slice(0, 3).map((row: any) => ({
     title: row.title,
     priority: row.priority === "critical" ? "critical" : "high",
     dueDate: row.due_date,
   }));
 
-  const critical = items.filter((i) => i.priority === "critical").length;
-  return {
-    rag: computeRAG(critical, items.length),
-    count: (overdue ?? []).length,
-    items,
-  };
-}
-
-async function buildTasksSection(
-  supabase: ReturnType<typeof createServiceRoleClient>,
-  orgId: string,
-): Promise<BriefSection> {
-  const today = new Date().toISOString().slice(0, 10);
-
-  const { data: dueTasks } = await supabase
-    .from("unified_tasks")
-    .select("id, title, due_date, priority")
-    .eq("organization_id", orgId)
-    .eq("status", "pending")
-    .lte("due_date", today)
-    .order("priority", { ascending: true });
-
-  const items: BriefItem[] = (dueTasks ?? []).slice(0, 5).map((row: any) => ({
+  const ticketItems: BriefItem[] = (tickets ?? []).slice(0, 2).map((row: any) => ({
     title: row.title,
-    priority: row.priority ?? "medium",
-    dueDate: row.due_date,
+    priority: row.priority === "urgent" ? "critical" : "medium",
   }));
 
+  const items = [...overdueItems, ...ticketItems];
+  const overdueCount = (overdue ?? []).length;
+  const ticketCount = (tickets ?? []).length;
   const critical = items.filter((i) => i.priority === "critical").length;
+
+  const parts: string[] = [];
+  if (overdueCount > 0) parts.push(`${overdueCount} overdue compliance check${overdueCount !== 1 ? "s" : ""}`);
+  if (ticketCount > 0) parts.push(`${ticketCount} open helpdesk ticket${ticketCount !== 1 ? "s" : ""}`);
+  const summary = parts.length > 0 ? parts.join(". ") + "." : "All estates checks up to date.";
+
   return {
-    rag: computeRAG(critical, (dueTasks ?? []).length),
-    count: (dueTasks ?? []).length,
+    rag: computeRAG(critical, overdueCount),
+    count: overdueCount + ticketCount,
     items,
+    summary,
   };
 }
 
-async function buildRisksSection(
-  supabase: ReturnType<typeof createServiceRoleClient>,
-  orgId: string,
-): Promise<BriefSection> {
-  const { data: highRisks } = await supabase
-    .from("risk_register")
-    .select("id, title, risk_score, likelihood, impact")
-    .eq("organization_id", orgId)
-    .eq("status", "open")
-    .gte("risk_score", 15)
-    .order("risk_score", { ascending: false });
-
-  const items: BriefItem[] = (highRisks ?? []).slice(0, 5).map((row: any) => ({
-    title: `${row.title} (score: ${row.risk_score})`,
-    priority: row.risk_score >= 20 ? "critical" : "high",
-  }));
-
-  const critical = items.filter((i) => i.priority === "critical").length;
-  return {
-    rag: computeRAG(critical, items.length),
-    count: (highRisks ?? []).length,
-    items,
-  };
-}
-
+/** Staffing — pulls from compliance_items (training category) as proxy */
 async function buildStaffingSection(
   supabase: ReturnType<typeof createServiceRoleClient>,
   orgId: string,
 ): Promise<BriefSection> {
   const today = new Date().toISOString().slice(0, 10);
-
-  // Training about to expire (within 7 days)
   const sevenDays = new Date();
   sevenDays.setDate(sevenDays.getDate() + 7);
   const weekAhead = sevenDays.toISOString().slice(0, 10);
 
+  // Training about to expire
   const { data: expiringTraining } = await supabase
     .from("compliance_items")
     .select("id, title, due_date")
@@ -127,45 +114,132 @@ async function buildStaffingSection(
     .eq("status", "pending")
     .gte("due_date", today)
     .lte("due_date", weekAhead)
-    .order("due_date", { ascending: true });
+    .order("due_date", { ascending: true })
+    .limit(5);
 
-  const items: BriefItem[] = (expiringTraining ?? [])
-    .slice(0, 5)
-    .map((row: any) => ({
-      title: row.title,
-      priority: "medium" as const,
-      dueDate: row.due_date,
-    }));
+  const items: BriefItem[] = (expiringTraining ?? []).map((row: any) => ({
+    title: row.title,
+    priority: "medium" as const,
+    dueDate: row.due_date,
+  }));
+
+  const count = (expiringTraining ?? []).length;
+  const summary = count > 0
+    ? `${count} staff training certificate${count !== 1 ? "s" : ""} expiring within 7 days.`
+    : "No staff absences or training issues to report.";
 
   return {
-    rag: items.length > 3 ? "amber" : "green",
-    count: (expiringTraining ?? []).length,
+    rag: count > 3 ? "amber" : "green",
+    count,
     items,
+    summary,
   };
 }
 
-async function buildCalendarSection(
+/** Governance — pulls from meetings table */
+async function buildGovernanceSection(
   supabase: ReturnType<typeof createServiceRoleClient>,
   orgId: string,
 ): Promise<BriefSection> {
   const today = new Date().toISOString().slice(0, 10);
+  const sevenDays = new Date();
+  sevenDays.setDate(sevenDays.getDate() + 7);
+  const weekAhead = sevenDays.toISOString().slice(0, 10);
 
   const { data: meetings } = await supabase
     .from("meetings")
     .select("id, title, scheduled_date, meeting_type")
     .eq("organization_id", orgId)
-    .eq("scheduled_date", today)
-    .order("scheduled_date", { ascending: true });
+    .gte("scheduled_date", today)
+    .lte("scheduled_date", weekAhead)
+    .order("scheduled_date", { ascending: true })
+    .limit(5);
 
-  const items: BriefItem[] = (meetings ?? []).slice(0, 5).map((row: any) => ({
-    title: row.title,
+  const items: BriefItem[] = (meetings ?? []).map((row: any) => ({
+    title: `${row.title} (${row.scheduled_date})`,
     priority: "low" as const,
   }));
 
+  const count = (meetings ?? []).length;
+  const summary = count > 0
+    ? `${count} governance meeting${count !== 1 ? "s" : ""} this week.`
+    : "No upcoming governance meetings.";
+
   return {
     rag: "green",
-    count: (meetings ?? []).length,
+    count,
     items,
+    summary,
+  };
+}
+
+/** Finance — stubs for now (DealFind tables not guaranteed) */
+async function buildFinanceSection(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  orgId: string,
+): Promise<BriefSection> {
+  // Try to pull from risk_register for financial risks
+  const { data: finRisks } = await supabase
+    .from("risk_register")
+    .select("id, title, risk_score")
+    .eq("organization_id", orgId)
+    .eq("status", "open")
+    .eq("category", "financial")
+    .gte("risk_score", 10)
+    .order("risk_score", { ascending: false })
+    .limit(3);
+
+  if (finRisks && finRisks.length > 0) {
+    const items: BriefItem[] = finRisks.map((row: any) => ({
+      title: `${row.title} (risk score: ${row.risk_score})`,
+      priority: row.risk_score >= 20 ? "critical" : "high",
+    }));
+
+    return {
+      rag: items.some((i) => i.priority === "critical") ? "red" : "amber",
+      count: finRisks.length,
+      items,
+      summary: `${finRisks.length} financial risk${finRisks.length !== 1 ? "s" : ""} flagged.`,
+    };
+  }
+
+  return emptySection("No financial alerts.");
+}
+
+/** Teaching — stub until pupil assessment module matures */
+async function buildTeachingSection(
+  _supabase: ReturnType<typeof createServiceRoleClient>,
+  _orgId: string,
+): Promise<BriefSection> {
+  return emptySection("Teaching data not yet connected.");
+}
+
+/** Ofsted — pulls from assessments / evidence uploads */
+async function buildOfstedSection(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  orgId: string,
+): Promise<BriefSection> {
+  // Check recent evidence uploads (last 7 days)
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+  const { data: recentEvidence, count: evidenceCount } = await supabase
+    .from("evidence")
+    .select("id", { count: "exact" })
+    .eq("organization_id", orgId)
+    .gte("created_at", sevenDaysAgo.toISOString())
+    .limit(1);
+
+  const uploads = evidenceCount ?? 0;
+  const summary = uploads > 0
+    ? `${uploads} evidence item${uploads !== 1 ? "s" : ""} uploaded this week.`
+    : "No new evidence uploaded this week.";
+
+  return {
+    rag: "green",
+    count: uploads,
+    items: [],
+    summary,
   };
 }
 
@@ -205,24 +279,28 @@ export function buildHeadline(sections: BriefSections): string {
 
 export async function assembleBrief(
   organizationId: string,
-): Promise<MorningBriefData> {
+): Promise<Omit<MorningBriefData, "script">> {
   const supabase = createServiceRoleClient();
 
-  const [compliance, tasks, risks, staffing, calendar] =
+  const [safeguarding, estates, staffing, governance, finance, teaching, ofsted] =
     await Promise.all([
-      buildComplianceSection(supabase, organizationId),
-      buildTasksSection(supabase, organizationId),
-      buildRisksSection(supabase, organizationId),
-      buildStaffingSection(supabase, organizationId),
-      buildCalendarSection(supabase, organizationId),
+      buildSafeguardingSection(supabase, organizationId).catch(() => emptySection()),
+      buildEstatesSection(supabase, organizationId).catch(() => emptySection()),
+      buildStaffingSection(supabase, organizationId).catch(() => emptySection()),
+      buildGovernanceSection(supabase, organizationId).catch(() => emptySection()),
+      buildFinanceSection(supabase, organizationId).catch(() => emptySection()),
+      buildTeachingSection(supabase, organizationId).catch(() => emptySection()),
+      buildOfstedSection(supabase, organizationId).catch(() => emptySection()),
     ]);
 
   const sections: BriefSections = {
-    compliance,
-    tasks,
-    risks,
+    safeguarding,
+    estates,
     staffing,
-    calendar,
+    governance,
+    finance,
+    teaching,
+    ofsted,
   };
 
   return {

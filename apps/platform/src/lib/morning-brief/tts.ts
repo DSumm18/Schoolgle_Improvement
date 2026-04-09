@@ -1,19 +1,23 @@
 /**
  * Morning Brief TTS (Text-to-Speech)
  *
- * Converts a MorningBriefData object into a spoken script and generates
- * audio via Fish Audio API.
+ * Converts a script string into audio via Fish Audio API.
+ * Also provides a template-based script builder as a fallback
+ * for the AI script generator.
  */
 
-import type { MorningBriefData, BriefSection } from "./types";
+import type { BriefSection, BriefSections } from "./types";
 
-// Re-export for consumers
-export type { MorningBriefData };
+// Default voice: prefer FISH_AUDIO_VOICE_ID_ED env var, fallback to hardcoded Edwina voice
+function getDefaultVoiceId(): string {
+  return (
+    process.env.FISH_AUDIO_VOICE_ID_ED ??
+    process.env.FISH_AUDIO_VOICE_ID_EDWINA ??
+    "72e3a3135204461ba041df787dc5c834"
+  );
+}
 
-// Default Edwina voice — matches packages/ed-agents Fish Audio provider
-const DEFAULT_VOICE_ID = "72e3a3135204461ba041df787dc5c834";
-
-// ─── Script builder ─────────────────────────────────────────────────
+// ─── Template script builder (fallback) ─────────────────────────────
 
 function sectionNarration(name: string, section: BriefSection): string {
   if (section.count === 0) {
@@ -31,29 +35,31 @@ function sectionNarration(name: string, section: BriefSection): string {
   return `${name}: ${section.count} item${section.count !== 1 ? "s" : ""}. ${itemNames}${extra}.`;
 }
 
-export function briefToScript(brief: MorningBriefData): string {
+export function briefToScript(sections: BriefSections, headline: string): string {
   const lines: string[] = [];
 
   lines.push("Good morning. Here is your morning brief.");
-  lines.push(brief.headline);
+  lines.push(headline);
 
   const sectionOrder: Array<[string, BriefSection]> = [
-    ["Compliance", brief.sections.compliance],
-    ["Tasks", brief.sections.tasks],
-    ["Risks", brief.sections.risks],
-    ["Staffing", brief.sections.staffing],
-    ["Calendar", brief.sections.calendar],
+    ["Safeguarding", sections.safeguarding],
+    ["Estates", sections.estates],
+    ["Staffing", sections.staffing],
+    ["Governance", sections.governance],
+    ["Finance", sections.finance],
+    ["Teaching", sections.teaching],
+    ["Ofsted readiness", sections.ofsted],
   ];
 
   // Only narrate non-green sections, then summarise green ones
   const nonGreen = sectionOrder.filter(([, s]) => s.rag !== "green");
-  const green = sectionOrder.filter(([, s]) => s.rag === "green");
+  const green = sectionOrder.filter(([, s]) => s.rag === "green" && s.count > 0);
 
   for (const [name, section] of nonGreen) {
     lines.push(sectionNarration(name, section));
   }
 
-  if (green.length > 0 && green.length < sectionOrder.length) {
+  if (green.length > 0) {
     const greenNames = green.map(([n]) => n.toLowerCase()).join(", ");
     lines.push(`${greenNames} — all clear.`);
   }
@@ -61,6 +67,11 @@ export function briefToScript(brief: MorningBriefData): string {
   lines.push("That's your brief. Have a great day.");
 
   return lines.join(" ");
+}
+
+/** Strip Fish Audio emotion tags for plain text display */
+export function stripEmotionTags(script: string): string {
+  return script.replace(/\[[\w\s]+\]\s*/g, "");
 }
 
 // ─── Audio generation ───────────────────────────────────────────────
@@ -84,7 +95,7 @@ export async function generateBriefAudio(
       },
       body: JSON.stringify({
         text: scriptText,
-        voice_id: voiceId ?? DEFAULT_VOICE_ID,
+        voice_id: voiceId ?? getDefaultVoiceId(),
       }),
     });
 

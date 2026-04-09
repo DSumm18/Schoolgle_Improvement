@@ -2,6 +2,7 @@
  * Morning Brief Types
  *
  * Shared types for the morning brief system.
+ * Section structure matches Task 033 spec.
  */
 
 export type RAGStatus = "green" | "amber" | "red";
@@ -17,14 +18,17 @@ export interface BriefSection {
   rag: RAGStatus;
   count: number;
   items: BriefItem[];
+  summary: string;
 }
 
 export interface BriefSections {
-  compliance: BriefSection;
-  tasks: BriefSection;
-  risks: BriefSection;
+  safeguarding: BriefSection;
+  estates: BriefSection;
   staffing: BriefSection;
-  calendar: BriefSection;
+  governance: BriefSection;
+  finance: BriefSection;
+  teaching: BriefSection;
+  ofsted: BriefSection;
 }
 
 export interface MorningBriefData {
@@ -32,6 +36,7 @@ export interface MorningBriefData {
   generatedAt: string;
   headline: string;
   sections: BriefSections;
+  script: string;
 }
 
 export interface StoredBrief {
@@ -40,9 +45,19 @@ export interface StoredBrief {
   generated_at: string;
   headline: string;
   sections: BriefSections;
-  audio_url: string | null;
   script_text: string | null;
+  audio_url: string | null;
   delivered_to: string[];
   delivery_channels: string[];
   created_at: string;
+}
+
+/** Empty section stub for modules not yet built */
+export function emptySection(summary?: string): BriefSection {
+  return {
+    rag: "green",
+    count: 0,
+    items: [],
+    summary: summary ?? "No data available yet for this section.",
+  };
 }

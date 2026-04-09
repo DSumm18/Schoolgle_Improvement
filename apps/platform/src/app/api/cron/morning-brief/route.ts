@@ -1,17 +1,22 @@
 /**
  * GET /api/cron/morning-brief
  *
- * Vercel cron: runs daily at 06:00 UTC
- * vercel.json: { "crons": [{ "path": "/api/cron/morning-brief", "schedule": "0 6 * * *" }] }
+ * Vercel cron: runs daily at 06:30 UTC weekdays
+ * vercel.json: { "crons": [{ "path": "/api/cron/morning-brief", "schedule": "30 6 * * 1-5" }] }
  *
  * Generates morning briefs for all active organisations, stores them,
  * and delivers via configured channels (in_app, email, TTS).
+ *
+ * Includes term-time awareness: skips weekends, bank holidays, and school holidays.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { assembleBrief } from "@/lib/morning-brief/assembler";
+import { generateScript } from "@/lib/morning-brief/script-generator";
 import { briefToScript, generateBriefAudio } from "@/lib/morning-brief/tts";
+import { sendBriefingEmail } from "@/lib/morning-brief/send-briefing";
+import { isSchoolDay, type SchoolHolidayPeriod } from "@/lib/morning-brief/term-time";
 
 // ─── Helpers ────────────────────────────────────────────────────────
 
@@ -27,6 +32,8 @@ interface OrgResult {
   organizationName: string;
   briefId: string | null;
   deliveries: number;
+  skipped: boolean;
+  skipReason?: string;
   error: string | null;
 }
 
@@ -41,25 +48,67 @@ async function processOrganization(org: {
     organizationName: org.name,
     briefId: null,
     deliveries: 0,
+    skipped: false,
     error: null,
   };
 
   try {
     const supabase = getServiceSupabase();
 
-    // 1. Assemble brief
-    const brief = await assembleBrief(org.id);
-    const scriptText = briefToScript(brief);
+    // Check term-time for this org
+    const { data: settings } = await supabase
+      .from("organization_settings")
+      .select("value")
+      .eq("organization_id", org.id)
+      .eq("key", "school_holidays")
+      .single();
 
-    // 2. Store brief
+    const schoolHolidays: SchoolHolidayPeriod[] = settings?.value ?? [];
+    const today = new Date();
+
+    if (!(await isSchoolDay(today, schoolHolidays))) {
+      result.skipped = true;
+      result.skipReason = "Not a school day";
+      return result;
+    }
+
+    // 1. Assemble brief
+    const briefData = await assembleBrief(org.id);
+
+    // 2. Generate AI script
+    const dateStr = today.toLocaleDateString("en-GB", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+
+    // Get head teacher name from org settings
+    const { data: headSetting } = await supabase
+      .from("organization_settings")
+      .select("value")
+      .eq("organization_id", org.id)
+      .eq("key", "head_teacher_name")
+      .single();
+
+    const headName = headSetting?.value ?? "Head Teacher";
+
+    const script = await generateScript(
+      org.name,
+      headName,
+      dateStr,
+      briefData.sections,
+    );
+
+    // 3. Store brief
     const { data: stored, error: insertError } = await supabase
       .from("morning_briefs")
       .insert({
         organization_id: org.id,
-        generated_at: brief.generatedAt,
-        headline: brief.headline,
-        sections: brief.sections,
-        script_text: scriptText,
+        generated_at: briefData.generatedAt,
+        headline: briefData.headline,
+        sections: briefData.sections,
+        script_text: script,
       })
       .select("id")
       .single();
@@ -71,8 +120,8 @@ async function processOrganization(org: {
 
     result.briefId = stored.id;
 
-    // 3. Store section rows
-    const sectionRows = Object.entries(brief.sections).map(
+    // 4. Store section rows for trending
+    const sectionRows = Object.entries(briefData.sections).map(
       ([key, section]) => ({
         brief_id: stored.id,
         organization_id: org.id,
@@ -84,22 +133,23 @@ async function processOrganization(org: {
     );
     await supabase.from("morning_brief_sections").insert(sectionRows);
 
-    // 4. Find users who want the brief
+    // 5. Find recipients
     const { data: prefs } = await supabase
       .from("morning_brief_preferences")
       .select("user_id, channels, include_audio")
       .eq("organization_id", org.id)
       .eq("enabled", true);
 
-    // If no explicit preferences, deliver in_app to all org members
     const recipients = prefs && prefs.length > 0
       ? prefs
       : await getDefaultRecipients(supabase, org.id);
 
-    // 5. Deliver to each user
+    // 6. Deliver to each user
     for (const recipient of recipients) {
       const channels: string[] = recipient.channels ?? ["in_app"];
+
       for (const channel of channels) {
+        // Record delivery
         await supabase.from("morning_brief_deliveries").insert({
           brief_id: stored.id,
           organization_id: org.id,
@@ -107,15 +157,35 @@ async function processOrganization(org: {
           channel,
         });
         result.deliveries++;
+
+        // Send email if channel is email
+        if (channel === "email") {
+          const { data: userProfile } = await supabase
+            .from("users")
+            .select("email")
+            .eq("id", recipient.user_id)
+            .single();
+
+          if (userProfile?.email) {
+            await sendBriefingEmail({
+              to: userProfile.email,
+              schoolName: org.name,
+              date: dateStr,
+              script,
+              sections: briefData.sections,
+              briefId: stored.id,
+            });
+          }
+        }
       }
     }
 
-    // 6. Optional: generate audio if any recipient wants it
+    // 7. Optional: generate audio if any recipient wants it
     const wantsAudio = (prefs ?? []).some(
       (p: any) => p.include_audio === true,
     );
     if (wantsAudio) {
-      const audioBuffer = await generateBriefAudio(scriptText);
+      const audioBuffer = await generateBriefAudio(script);
       if (audioBuffer) {
         const fileName = `morning-brief/${org.id}/${stored.id}.mp3`;
         await supabase.storage
@@ -152,7 +222,7 @@ async function processOrganization(org: {
 async function getDefaultRecipients(
   supabase: ReturnType<typeof getServiceSupabase>,
   orgId: string,
-): Promise<Array<{ user_id: string; channels: string[] }>> {
+): Promise<Array<{ user_id: string; channels: string[]; include_audio?: boolean }>> {
   const { data: members } = await supabase
     .from("organization_members")
     .select("user_id, role")
@@ -181,19 +251,12 @@ export async function GET(request: NextRequest) {
     const supabase = getServiceSupabase();
 
     // Get all active organisations
-    const { data: orgs, error: orgError } = await supabase
+    const { data: orgs } = await supabase
       .from("organizations")
       .select("id, name")
       .eq("is_active", true);
 
-    if (orgError || !orgs) {
-      return NextResponse.json(
-        { error: "Failed to load organizations", details: orgError?.message },
-        { status: 500 },
-      );
-    }
-
-    if (orgs.length === 0) {
+    if (!orgs || orgs.length === 0) {
       return NextResponse.json({
         success: true,
         message: "No active organizations",
@@ -216,6 +279,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       organizations_processed: results.length,
+      organizations_skipped: results.filter((r) => r.skipped).length,
       total_deliveries: results.reduce((s, r) => s + r.deliveries, 0),
       errors: results
         .filter((r) => r.error)
