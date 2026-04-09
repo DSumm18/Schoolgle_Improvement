@@ -2758,6 +2758,89 @@ export const WORKFLOW_FUNCTIONS = new Set(getWorkflowFunctionNames());
 export const INCIDENT_FUNCTIONS = new Set(getIncidentFunctionNames());
 export const SOP_FUNCTIONS = new Set(getSopFunctionNames());
 
+// =====================================================
+// GOOGLE DRIVE SKILLS
+// =====================================================
+
+export const GDRIVE_FUNCTION_SCHEMAS = [
+  {
+    name: "upload_to_drive",
+    description: "Upload a file to the school's Google Drive",
+    parameters: {
+      type: "object",
+      properties: {
+        organization_id: {
+          type: "string",
+          description: "Organization ID",
+        },
+        file_name: {
+          type: "string",
+          description: "Name of the file to upload",
+        },
+        content: {
+          type: "string",
+          description: "Text content of the file",
+        },
+        mime_type: {
+          type: "string",
+          description: "MIME type (default: text/plain)",
+        },
+        folder_id: {
+          type: "string",
+          description: "Google Drive folder ID to upload to (optional)",
+        },
+      },
+      required: ["organization_id", "file_name", "content"],
+    },
+  },
+  {
+    name: "create_drive_folder",
+    description: "Create a folder in the school's Google Drive",
+    parameters: {
+      type: "object",
+      properties: {
+        organization_id: {
+          type: "string",
+          description: "Organization ID",
+        },
+        folder_name: {
+          type: "string",
+          description: "Name of the folder to create",
+        },
+        parent_folder_id: {
+          type: "string",
+          description: "Parent folder ID (optional, defaults to root)",
+        },
+      },
+      required: ["organization_id", "folder_name"],
+    },
+  },
+  {
+    name: "list_drive_files",
+    description: "List files in a Google Drive folder",
+    parameters: {
+      type: "object",
+      properties: {
+        organization_id: {
+          type: "string",
+          description: "Organization ID",
+        },
+        folder_id: {
+          type: "string",
+          description: "Folder ID to list (default: root)",
+        },
+      },
+      required: ["organization_id"],
+    },
+  },
+];
+
+export function getGdriveFunctionNames(): string[] {
+  return GDRIVE_FUNCTION_SCHEMAS.map((f) => f.name);
+}
+
+export const GDRIVE_FUNCTIONS = new Set(getGdriveFunctionNames());
+
 export function getSkillForFunction(
   functionName: string,
 ):
@@ -2771,6 +2854,7 @@ export function getSkillForFunction(
   | "workflow"
   | "incidents"
   | "sops"
+  | "gdrive"
   | null {
   if (STAFF_FUNCTIONS.has(functionName)) return "staff";
   if (ACTIONS_FUNCTIONS.has(functionName)) return "actions";
@@ -2783,5 +2867,6 @@ export function getSkillForFunction(
   if (WORKFLOW_FUNCTIONS.has(functionName)) return "workflow";
   if (INCIDENT_FUNCTIONS.has(functionName)) return "incidents";
   if (SOP_FUNCTIONS.has(functionName)) return "sops";
+  if (GDRIVE_FUNCTIONS.has(functionName)) return "gdrive";
   return null;
 }
