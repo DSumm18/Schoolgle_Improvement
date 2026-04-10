@@ -1181,78 +1181,93 @@ export default function EstatesComplianceDashboard() {
           </Card>
         )}
 
-        {/* Compliance Overview Card */}
-        <Card>
-          <CardHeader>
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div>
-                <CardTitle>Compliance Overview</CardTitle>
-                <CardDescription>
-                  {visibleDomainData.reduce(
-                    (sum, d) => sum + d.completedChecks,
-                    0,
-                  )}{" "}
-                  of{" "}
-                  {visibleDomainData.reduce((sum, d) => sum + d.totalChecks, 0)}{" "}
-                  checks completed
-                </CardDescription>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Badge className="bg-green-600 text-white py-1.5 px-3">
-                  {
-                    visibleDomainData.filter((d) => d.status === "compliant")
-                      .length
-                  }{" "}
-                  Compliant
-                </Badge>
-                <Badge className="bg-yellow-500 text-white py-1.5 px-3">
-                  {
-                    visibleDomainData.filter((d) => d.status === "attention")
-                      .length
-                  }{" "}
-                  Needs Attention
-                </Badge>
-                <Badge className="bg-red-600 text-white py-1.5 px-3">
-                  {
-                    visibleDomainData.filter((d) => d.status === "critical")
-                      .length
-                  }{" "}
-                  Critical
-                </Badge>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <Progress
-              value={
-                (visibleDomainData.reduce(
-                  (sum, d) => sum + d.completedChecks,
-                  0,
-                ) /
-                  visibleDomainData.reduce(
-                    (sum, d) => sum + d.totalChecks,
-                    0,
-                  )) *
-                100
-              }
-              className="h-3"
-            />
-            <p className="text-xs text-muted-foreground mt-2">
-              {Math.round(
-                (visibleDomainData.reduce(
-                  (sum, d) => sum + d.completedChecks,
-                  0,
-                ) /
-                  visibleDomainData.reduce(
-                    (sum, d) => sum + d.totalChecks,
-                    0,
-                  )) *
-                  100,
-              )}
-              % completion rate
-            </p>
-          </CardContent>
-        </Card>
+        {/* Compliance Overview Card — RAG summary with totals */}
+        {(() => {
+          const totalChecks = visibleDomainData.reduce(
+            (sum, d) => sum + d.totalChecks,
+            0,
+          );
+          const completedChecks = visibleDomainData.reduce(
+            (sum, d) => sum + d.completedChecks,
+            0,
+          );
+          const overdueChecks = visibleDomainData.reduce(
+            (sum, d) => sum + d.overdueChecks,
+            0,
+          );
+          const pendingChecks = totalChecks - completedChecks - overdueChecks;
+          const compliancePct =
+            totalChecks > 0
+              ? Math.round((completedChecks / totalChecks) * 100)
+              : 0;
+
+          return (
+            <Card>
+              <CardHeader>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div>
+                    <CardTitle>Compliance Overview</CardTitle>
+                    <CardDescription>
+                      {completedChecks} of {totalChecks} checks completed across{" "}
+                      {visibleDomainData.length} domains
+                    </CardDescription>
+                  </div>
+                  <Link href="/estates-compliance/reports/governor">
+                    <Button size="sm" variant="outline">
+                      <FileText className="w-4 h-4 mr-2" />
+                      Governor Report
+                    </Button>
+                  </Link>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* 4-column totals grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="rounded-lg border bg-muted/30 p-3 text-center">
+                    <p className="text-2xl font-bold text-slate-700 dark:text-slate-300">
+                      {totalChecks}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Total Checks
+                    </p>
+                  </div>
+                  <div className="rounded-lg border bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900 p-3 text-center">
+                    <p className="text-2xl font-bold text-green-600">
+                      {completedChecks}
+                    </p>
+                    <p className="text-xs text-green-700 dark:text-green-400 mt-0.5">
+                      Completed
+                    </p>
+                  </div>
+                  <div className="rounded-lg border bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900 p-3 text-center">
+                    <p className="text-2xl font-bold text-amber-500">
+                      {pendingChecks}
+                    </p>
+                    <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
+                      Pending
+                    </p>
+                  </div>
+                  <div className="rounded-lg border bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900 p-3 text-center">
+                    <p className="text-2xl font-bold text-red-600">
+                      {overdueChecks}
+                    </p>
+                    <p className="text-xs text-red-700 dark:text-red-400 mt-0.5">
+                      Overdue
+                    </p>
+                  </div>
+                </div>
+
+                {/* Progress bar */}
+                <div className="space-y-1.5">
+                  <Progress value={compliancePct} className="h-3" />
+                  <p className="text-xs text-muted-foreground">
+                    {compliancePct}% overall completion rate
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })()}
 
         {/* Compliance Reviews Section */}
         {recentReviews.length > 0 && (
