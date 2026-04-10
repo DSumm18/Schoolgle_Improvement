@@ -108,6 +108,10 @@ const SKILL_MODULE_MAP: Record<string, string> = {
   "terry_log_compliance_check": "compliance",
   "terry_assess_risk": "risk",
 
+  "get_compliance_status": "compliance",
+  "get_overdue_checks": "compliance",
+  "create_cost_request": "estates",
+
   "run_intelligence_analysis": "improvement",
   "get_cohort_journey": "improvement",
   "get_assessment_insights": "improvement",
@@ -318,6 +322,149 @@ const SKILL_MODULE_MAP: Record<string, string> = {
         );
         const terryResult = await handleTerryToolCall(functionName, parameters);
         result = { success: true, data: terryResult };
+        break;
+      }
+
+      // ===== ESTATES COMPLIANCE STATUS & COST SKILLS =====
+
+      case "get_compliance_status": {
+        const { getDomainsCompletionSummary } = await import(
+          "@/lib/estates-compliance/database/statutory-completions"
+        );
+        const { DOMAIN_METADATA } = await import(
+          "@/lib/estates-compliance/statutory-checks"
+        );
+        type CDomain = import("@/lib/estates-compliance/statutory-checks").ComplianceDomain;
+        const allDomains = Object.keys(DOMAIN_METADATA) as CDomain[];
+        const summaries = await getDomainsCompletionSummary(orgId, allDomains);
+
+        const totalChecks = summaries.reduce((s, d) => s + d.totalChecks, 0);
+        const completedChecks = summaries.reduce((s, d) => s + d.completedChecks, 0);
+        const overdueChecks = summaries.reduce((s, d) => s + d.overdueChecks, 0);
+
+        result = {
+          success: true,
+          data: {
+            overallCompliance: totalChecks > 0 ? Math.round((completedChecks / totalChecks) * 100) : 0,
+            totalChecks,
+            completedChecks,
+            overdueChecks,
+            pendingChecks: totalChecks - completedChecks - overdueChecks,
+            overallStatus: overdueChecks > 0 ? "action_required" : completedChecks === totalChecks ? "fully_compliant" : "in_progress",
+            domains: summaries.map(d => ({
+              domain: d.domain,
+              name: DOMAIN_METADATA[d.domain]?.name || d.domain,
+              totalChecks: d.totalChecks,
+              completedChecks: d.completedChecks,
+              overdueChecks: d.overdueChecks,
+              status: d.status,
+            })),
+          },
+        };
+        break;
+      }
+
+      case "get_overdue_checks": {
+        const { getDomainsCompletionSummary } = await import(
+          "@/lib/estates-compliance/database/statutory-completions"
+        );
+        const { DOMAIN_METADATA, getChecksForDomain } = await import(
+          "@/lib/estates-compliance/statutory-checks"
+        );
+        type CDomain2 = import("@/lib/estates-compliance/statutory-checks").ComplianceDomain;
+        const filterDomain = parameters.domain as CDomain2 | undefined;
+        const domainsToCheck = filterDomain
+          ? [filterDomain]
+          : (Object.keys(DOMAIN_METADATA) as CDomain2[]);
+
+        const summaries = await getDomainsCompletionSummary(orgId, domainsToCheck);
+        const overdueItems: Array<Record<string, unknown>> = [];
+
+        for (const summary of summaries) {
+          const checks = getChecksForDomain(summary.domain);
+          for (const completion of summary.completions) {
+            if (completion.status === "overdue" || (completion.next_due_date && new Date(completion.next_due_date) < new Date())) {
+              const checkDef = checks.find(c => c.id === completion.check_id);
+              const daysOverdue = completion.next_due_date
+                ? Math.floor((Date.now() - new Date(completion.next_due_date).getTime()) / 86400000)
+                : 0;
+              overdueItems.push({
+                checkId: completion.check_id,
+                checkName: checkDef?.name || completion.check_id,
+                domain: summary.domain,
+                domainName: DOMAIN_METADATA[summary.domain]?.name || summary.domain,
+                frequency: checkDef?.frequency || "unknown",
+                daysOverdue: Math.max(0, daysOverdue),
+                riskLevel: checkDef?.risk_level || "medium",
+                reference: checkDef?.reference || "",
+              });
+            }
+          }
+        }
+
+        overdueItems.sort((a, b) => (b.daysOverdue as number) - (a.daysOverdue as number));
+
+        result = {
+          success: true,
+          data: {
+            totalOverdue: overdueItems.length,
+            items: overdueItems,
+          },
+        };
+        break;
+      }
+
+      case "create_cost_request": {
+        // Create a cost request as a compliance task with type: cost_request
+        const supabaseAdmin = (await import("@/lib/supabase-server")).createServiceRoleClient();
+        const costData = {
+          organization_id: orgId,
+          task_type: "cost_request",
+          task_name: parameters.title as string,
+          description: `${parameters.description || ""}\n\nBusiness Case: ${parameters.business_case || "Not provided"}\n\nClassification: ${parameters.classification || "planned"}\nUrgency: ${parameters.urgency || "planned"}\nCFR Code: ${parameters.cfr_code || "E12"}`,
+          compliance_domain: parameters.compliance_domain || "general",
+          status: "pending",
+          priority: parameters.urgency === "emergency" ? "critical" : parameters.urgency === "urgent" ? "high" : "medium",
+          scheduled_for: new Date().toISOString().split("T")[0],
+          due_by: new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0],
+          checklist: JSON.stringify([
+            { item: "Cost estimate verified", completed: false },
+            { item: "Business case reviewed", completed: false },
+            { item: "SBM approval", completed: false },
+            { item: "Headteacher approval", completed: false },
+          ]),
+          findings: JSON.stringify([{
+            type: "cost_request",
+            estimated_cost: parameters.estimated_cost,
+            classification: parameters.classification,
+            urgency: parameters.urgency,
+            cfr_code: parameters.cfr_code || "E12",
+            linked_risk_id: parameters.linked_risk_id || null,
+          }]),
+        };
+
+        const { data: task, error: taskError } = await supabaseAdmin
+          .from("estates_compliance_tasks")
+          .insert(costData)
+          .select()
+          .single();
+
+        if (taskError) {
+          result = { success: false, error: taskError.message };
+        } else {
+          result = {
+            success: true,
+            data: {
+              taskId: task.id,
+              title: parameters.title,
+              estimatedCost: parameters.estimated_cost,
+              classification: parameters.classification,
+              urgency: parameters.urgency,
+              cfrCode: parameters.cfr_code || "E12",
+              message: `Cost request created. Estimated: £${parameters.estimated_cost}. Awaiting SBM/Headteacher approval.`,
+            },
+          };
+        }
         break;
       }
 
