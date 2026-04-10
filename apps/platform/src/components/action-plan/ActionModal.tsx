@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-// @ts-expect-error - Auto-masked during strict compilation enforcement
-import { ActionItem, OFSTED_FRAMEWORK } from "@/lib/ofsted/types";
+import { ActionItem, OFSTED_FRAMEWORK } from "@/lib/ofsted-framework";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/SupabaseAuthContext";
 import {

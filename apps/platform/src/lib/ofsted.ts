@@ -6,14 +6,12 @@
 // Export the new types (4-category EIF 2025)
 export type {
   OfstedCategoryId,
-  // @ts-expect-error - Auto-masked during strict compilation enforcement
   OfstedSubCategoryId,
   OfstedRating,
   OfstedRatingWithNotAssessed,
   ConfidenceLevel,
   // Database types
   OfstedAssessment,
-  // @ts-expect-error - Auto-masked during strict compilation enforcement
   OfstedEvidenceItem,
   OfstedEvidenceMatch,
   OfstedReadinessSnapshot,
@@ -63,18 +61,12 @@ export {
   calculateAIRating,
   calculateCategoryReadiness,
   calculateOverallReadiness,
-// @ts-expect-error - Auto-masked during strict compilation enforcement
 } from "./ofsted-framework";
 
 export type {
   Category,
-  // @ts-expect-error - Auto-masked during strict compilation enforcement
-  OfstedSubCategoryId,
-  // @ts-expect-error - Auto-masked during strict compilation enforcement
-  OfstedEvidenceItem,
   ActionItem,
   OfstedAssessment as OldOfstedAssessment,
-// @ts-expect-error - Auto-masked during strict compilation enforcement
 } from "./ofsted-framework";
 
 // =====================================================
@@ -90,7 +82,6 @@ import {
 export default OFSTED_FRAMEWORK_DATA;
 
 // Import the 6-category framework for CATEGORY_SUBCATEGORIES
-// @ts-expect-error - Auto-masked during strict compilation enforcement
 import { OFSTED_FRAMEWORK } from "./ofsted-framework";
 
 // Re-export as CATEGORY_SUBCATEGORIES for compatibility with existing components

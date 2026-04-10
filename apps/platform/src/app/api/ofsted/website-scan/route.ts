@@ -12,8 +12,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
-// @ts-expect-error - Auto-masked during strict compilation enforcement
-import { crawlWebsite } from "@schoolgle/core-ai/website-crawler";
+import { crawlWebsite } from "@/lib/website-crawler";
 import {
   smartCrawlWebsite,
   isFirecrawlAvailable,

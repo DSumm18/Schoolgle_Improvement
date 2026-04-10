@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import ActionsDashboard from "@/components/action-plan/ActionsDashboard";
 import ActionModal from "@/components/action-plan/ActionModal";
-import { ActionItem } from "@/lib/ofsted/types";
+import { ActionItem } from "@/lib/ofsted-framework";
 import { NotificationService } from "@/lib/notification-service";
 
 export default function ActionPlanPage() {

@@ -7,17 +7,12 @@ import {
   OFSTED_FRAMEWORK,
   // @ts-expect-error - Auto-masked during strict compilation enforcement
   OFSTED_RATINGS,
-  // @ts-expect-error - Auto-masked during strict compilation enforcement
   SAFEGUARDING_FRAMEWORK,
-  // @ts-expect-error - Auto-masked during strict compilation enforcement
   calculateAIRating,
-  // @ts-expect-error - Auto-masked during strict compilation enforcement
   calculateCategoryReadiness,
-  // @ts-expect-error - Auto-masked during strict compilation enforcement
   calculateOverallReadiness,
-  // @ts-expect-error - Auto-masked during strict compilation enforcement
   ActionItem,
-} from "@/lib/ofsted/types";
+} from "@/lib/ofsted-framework";
 import {
   ChevronDown,
   ChevronRight,

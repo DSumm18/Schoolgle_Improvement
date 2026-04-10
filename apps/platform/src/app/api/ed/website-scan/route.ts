@@ -10,8 +10,7 @@ import {
   createServiceRoleClient,
 } from "@/lib/supabase-server";
 import { smartCrawlWebsite } from "@/lib/firecrawl-crawler";
-// @ts-expect-error - Auto-masked during strict compilation enforcement
-import type { CrawledPage } from "@schoolgle/core-ai/website-crawler";
+import type { CrawledPage } from "@/lib/website-crawler";
 
 interface ScanRequest {
   websiteUrl: string;

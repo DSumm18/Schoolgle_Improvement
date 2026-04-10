@@ -1,7 +1,6 @@
 import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
-// @ts-expect-error - Auto-masked during strict compilation enforcement
-import { getIntelligenceEngine } from "@schoolgle/core-ai/school-intelligence-engine";
+import { getIntelligenceEngine } from "@/lib/school-intelligence-engine";
 
 /**
  * POST /api/intelligence

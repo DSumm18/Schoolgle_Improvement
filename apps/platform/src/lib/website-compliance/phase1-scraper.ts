@@ -18,8 +18,7 @@ import {
   crawlWebsite,
   type CrawlerResult,
   type CrawledPage,
-// @ts-expect-error - Auto-masked during strict compilation enforcement
-} from "@schoolgle/core-ai/website-crawler";
+} from "@/lib/website-crawler";
 
 // ─── Types ────────────────────────────────────────────────────────────
 

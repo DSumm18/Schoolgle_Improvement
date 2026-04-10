@@ -9,8 +9,7 @@ import {
 } from "@/lib/ofsted/inspection-criteria";
 import { OFSTED_FRAMEWORK_DATA } from "@/lib/ofsted/framework-data";
 import type { OfstedSubCategoryId } from "@/lib/ofsted/types";
-// @ts-expect-error - Auto-masked during strict compilation enforcement
-import { getIntelligenceEngine } from "@schoolgle/core-ai/school-intelligence-engine";
+import { getIntelligenceEngine } from "@/lib/school-intelligence-engine";
 
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;

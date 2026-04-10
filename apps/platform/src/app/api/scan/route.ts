@@ -11,8 +11,7 @@ import {
 } from "@/lib/cloud-service";
 import { createClient } from "@supabase/supabase-js";
 import { parseDocx, parseExcel, parseImage } from "@/lib/extractors";
-// @ts-expect-error - Auto-masked during strict compilation enforcement
-import { matchDocumentToEvidenceRequirements } from "@schoolgle/core-ai/ai-evidence-matcher";
+import { matchDocumentToEvidenceRequirements } from "@/lib/ai-evidence-matcher";
 import {
   updateAssessmentsFromEvidence,
   generateCategorySummaries,

@@ -7,13 +7,10 @@ import { useAuth } from "@/context/SupabaseAuthContext";
 import { supabase } from "@/lib/supabase";
 import { useGoogleDriveAccess } from "@/hooks/useGoogleDriveAccess";
 import {
-  // @ts-expect-error - Auto-masked during strict compilation enforcement
   OFSTED_FRAMEWORK,
-  // @ts-expect-error - Auto-masked during strict compilation enforcement
   calculateCategoryReadiness,
-  // @ts-expect-error - Auto-masked during strict compilation enforcement
   calculateOverallReadiness,
-} from "@/lib/ofsted/types";
+} from "@/lib/ofsted-framework";
 import { FrameworkCategoryCard } from "@/components/framework/FrameworkCategoryCard";
 import { SubcategoryAssessment } from "@/components/framework/SubcategoryAssessment";
 import { FrameworkScanControls } from "@/components/framework/FrameworkScanControls";

@@ -1,7 +1,6 @@
 "use client";
 
-// @ts-expect-error - Auto-masked during strict compilation enforcement
-import { ActionItem, OFSTED_FRAMEWORK } from "@/lib/ofsted/types";
+import { ActionItem, OFSTED_FRAMEWORK } from "@/lib/ofsted-framework";
 import { useMemo, useState, useRef, useEffect } from 'react';
 import { Layers, List, Download, Maximize2, Move, Zap, Link as LinkIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';

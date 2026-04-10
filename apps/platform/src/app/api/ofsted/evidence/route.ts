@@ -15,8 +15,7 @@ import { OFSTED_SUBCATEGORIES } from "@/lib/ofsted";
 import {
   matchDocumentToEvidenceRequirements,
   type DocumentMetadata,
-// @ts-expect-error - Auto-masked during strict compilation enforcement
-} from "@schoolgle/core-ai/ai-evidence-matcher";
+} from "@/lib/ai-evidence-matcher";
 
 /**
  * GET /api/ofsted/evidence

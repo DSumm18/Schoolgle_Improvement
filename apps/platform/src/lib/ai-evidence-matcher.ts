@@ -1,0 +1,490 @@
+import OpenAI from "openai";
+import { OFSTED_FRAMEWORK_DATA, type Category } from "./ofsted/framework-data";
+import { maskPII } from "./pii-masker";
+
+// --- Configuration ---
+
+/**
+ * AI Model Configuration — GDPR-Safe Providers Only
+ *
+ * All models selected for UK GDPR compliance:
+ * - Google Gemini: US-based with UK IDTA/SCCs + Data Privacy Framework (primary)
+ * - Mistral: EU-based (Paris), GDPR DPA available (OCR only)
+ * - Anthropic Claude: US-based with DPA and SCCs available (premium only)
+ *
+ * All calls routed via OpenRouter (US) — OpenRouter DPA required.
+ *
+ * REMOVED (non-compliant):
+ * - DeepSeek (China/US, no DPA, no adequacy decision)
+ * - Qwen/Alibaba (China, no UK adequacy decision — Schrems II risk)
+ */
+export const MODEL_CONFIG = {
+  // Primary model — Gemini 2.0 Flash (Google, US with DPF + SCCs)
+  // Best cost/quality ratio; requires signed Google Cloud DPA + UK IDTA
+  primary: {
+    id: "google/gemini-2.0-flash-001",
+    name: "Gemini 2.0 Flash",
+    costPerRequest: 0.001,
+    useFor: ["docx", "xlsx", "txt", "google-docs", "text-pdf"],
+    maxTokens: 8000,
+  },
+
+  // OCR model — Mistral OCR (EU-based, Paris — no international transfer needed)
+  ocr: {
+    id: "mistralai/mistral-ocr-latest",
+    name: "Mistral OCR (EU)",
+    costPerRequest: 0.002,
+    useFor: ["scanned-pdf", "image", "jpg", "png", "jpeg"],
+    maxTokens: 4000,
+  },
+
+  // Vision model — Gemini Flash (same provider as primary, single DPA)
+  vision: {
+    id: "google/gemini-2.0-flash-001",
+    name: "Gemini 2.0 Flash",
+    costPerRequest: 0.001,
+    useFor: ["charts", "diagrams", "visual-reports"],
+    maxTokens: 6000,
+  },
+
+  // Fallback model — Gemini Flash Lite (Google, cheapest option)
+  fallback: {
+    id: "google/gemini-2.0-flash-lite-001",
+    name: "Gemini 2.0 Flash Lite",
+    costPerRequest: 0.0003,
+    useFor: ["retry", "json-parsing-failed"],
+    maxTokens: 8000,
+  },
+
+  // Premium model — Claude Sonnet (Anthropic, US with DPA + SCCs)
+  premium: {
+    id: "anthropic/claude-3.5-sonnet",
+    name: "Claude 3.5 Sonnet",
+    costPerRequest: 0.015,
+    useFor: ["sef-generation", "final-synthesis"],
+    maxTokens: 8000,
+  },
+};
+
+// --- Types ---
+
+export interface DocumentMetadata {
+  filename: string;
+  fileId: string;
+  mimeType: string;
+  foldername?: string;
+  folderPath?: string;
+  webViewLink?: string;
+  modifiedTime?: string;
+}
+
+export interface EvidenceMatch {
+  categoryId: string;
+  categoryName: string;
+  subcategoryId: string;
+  subcategoryName: string;
+  evidenceItem: string;
+  confidence: number; // 0-1
+  confidenceLevel: "HIGH" | "MEDIUM" | "LOW";
+  relevanceExplanation: string;
+  triggeredKeywords: string[];
+  suggestedAlternativeCategory?: string;
+  keyQuotes: string[];
+  documentId: string;
+  documentName: string;
+  documentLink?: string;
+  documentModifiedTime?: string;
+}
+
+export interface MatchResult {
+  documentId: string;
+  documentName: string;
+  matches: EvidenceMatch[];
+  processingTime: number;
+  modelUsed: string;
+  error?: string;
+}
+
+interface AIResponse {
+  matches: {
+    category_id: string;
+    subcategory_id: string;
+    evidence_item: string;
+    confidence: number;
+    confidence_level: "HIGH" | "MEDIUM" | "LOW";
+    explanation: string;
+    triggered_keywords: string[];
+    suggested_alternative?: string;
+    key_quotes: string[];
+  }[];
+  summary?: string;
+}
+
+// --- Helper Functions ---
+
+/**
+ * Select the appropriate AI model based on document type
+ */
+export function selectModel(metadata: DocumentMetadata): string {
+  const { mimeType, filename } = metadata;
+
+  // OCR for scanned PDFs or images
+  if (
+    mimeType.includes("image") ||
+    (mimeType.includes("pdf") &&
+      (filename.toLowerCase().includes("scan") ||
+        filename.toLowerCase().includes("photo") ||
+        filename.toLowerCase().includes("handwritten")))
+  ) {
+    return MODEL_CONFIG.ocr.id;
+  }
+
+  // Vision for visual-heavy documents
+  if (
+    filename.toLowerCase().includes("chart") ||
+    filename.toLowerCase().includes("diagram") ||
+    filename.toLowerCase().includes("infographic") ||
+    filename.toLowerCase().includes("visual") ||
+    filename.toLowerCase().includes("map")
+  ) {
+    return MODEL_CONFIG.vision.id;
+  }
+
+  // Default to DeepSeek V3 for text processing
+  return MODEL_CONFIG.primary.id;
+}
+
+/**
+ * Format framework data for AI prompt
+ */
+function formatFrameworkForPrompt(): string {
+  let formatted = "";
+
+  OFSTED_FRAMEWORK_DATA.forEach((category) => {
+    formatted += `\n## ${category.name}\n`;
+    category.subcategories.forEach((sub) => {
+      formatted += `\n### ${sub.name}\n`;
+      formatted += `Description: ${sub.description}\n`;
+      formatted += `Evidence Required:\n`;
+      sub.evidenceRequired.forEach((evidence, idx) => {
+        formatted += `${idx + 1}. ${evidence}\n`;
+      });
+    });
+  });
+
+  return formatted;
+}
+
+/**
+ * Create system prompt for AI
+ */
+function createSystemPrompt(): string {
+  return `You are an expert Ofsted inspector analyzing school documents to identify evidence.
+
+Your task is to:
+1. Read the document carefully
+2. Identify which Ofsted evidence requirements it satisfies
+3. Provide a confidence score (0-1) AND a level (HIGH, MEDIUM, LOW)
+   - HIGH: Direct, clear evidence that fully satisfies the requirement
+   - MEDIUM: Partial or indirect evidence that requires manual verification
+   - LOW: Weak association or purely contextual information
+4. Extract specific triggered keywords or phrases that led to the match
+5. Extract relevant quotes that demonstrate the evidence
+6. Explain WHY the document satisfies each requirement
+7. If the document seems to fit better in another category, suggest it.
+
+Only return HIGH confidence matches if you are certain.`;
+}
+
+/**
+ * Create user prompt with document content
+ */
+function createUserPrompt(
+  documentText: string,
+  metadata: DocumentMetadata,
+): string {
+  const frameworkData = formatFrameworkForPrompt();
+
+  // Truncate to reasonable size
+  const truncatedText =
+    documentText.length > 20000
+      ? documentText.substring(0, 20000) +
+        "\n\n[Document truncated for analysis...]"
+      : documentText;
+
+  // GDPR: Mask PII before sending to AI providers
+  const { maskedText } = maskPII(truncatedText);
+
+  return `Analyze this school document and identify which Ofsted evidence requirements it satisfies.
+
+**Document Details:**
+- Filename: ${metadata.filename}
+- Folder: ${metadata.folderPath || metadata.foldername || "Root"}
+- Type: ${metadata.mimeType}
+
+**Document Content:**
+${maskedText}
+
+**Ofsted Framework Evidence Requirements:**
+${frameworkData}
+
+**Instructions:**
+Return a JSON object with this exact structure:
+{
+  "matches": [
+    {
+      "category_id": "quality-of-education",
+      "subcategory_id": "education-curriculum",
+      "evidence_item": "Curriculum policy documents",
+      "confidence": 0.95,
+      "confidence_level": "HIGH",
+      "explanation": "This document is a comprehensive curriculum policy...",
+      "triggered_keywords": ["curriculum intent", "progression map"],
+      "suggested_alternative": null,
+      "key_quotes": ["Quote 1 from document", "Quote 2 from document"]
+    }
+  ],
+  "summary": "Overall assessment of what this document provides evidence for"
+}
+
+Only include matches with confidence >= 0.3. Be selective and accurate.`;
+}
+
+/**
+ * Parse AI response and extract matches
+ */
+function parseAIResponse(
+  responseText: string,
+  documentMetadata: DocumentMetadata,
+): EvidenceMatch[] {
+  try {
+    // Try to extract JSON from response (handle code blocks)
+    let jsonText = responseText.trim();
+
+    // Remove markdown code blocks if present
+    if (jsonText.startsWith("```json")) {
+      jsonText = jsonText.replace(/```json\n?/g, "").replace(/```\n?/g, "");
+    } else if (jsonText.startsWith("```")) {
+      jsonText = jsonText.replace(/```\n?/g, "");
+    }
+
+    const parsed: AIResponse = JSON.parse(jsonText);
+
+    if (!parsed.matches || !Array.isArray(parsed.matches)) {
+      console.error("Invalid AI response structure:", parsed);
+      return [];
+    }
+
+    // Convert to EvidenceMatch format
+    return parsed.matches.map((match) => {
+      // Find category and subcategory names
+      const category = OFSTED_FRAMEWORK_DATA.find(
+        (c) => c.id === match.category_id,
+      );
+      const subcategory = category?.subcategories.find(
+        (s) => s.id === match.subcategory_id,
+      );
+
+      // Infer confidence level if missing
+      let level = match.confidence_level;
+      if (!level) {
+        if (match.confidence >= 0.8) level = "HIGH";
+        else if (match.confidence >= 0.5) level = "MEDIUM";
+        else level = "LOW";
+      }
+
+      return {
+        categoryId: match.category_id,
+        categoryName: category?.name || "Unknown Category",
+        subcategoryId: match.subcategory_id,
+        subcategoryName: subcategory?.name || "Unknown Subcategory",
+        evidenceItem: match.evidence_item,
+        confidence: match.confidence,
+        confidenceLevel: level as "HIGH" | "MEDIUM" | "LOW",
+        relevanceExplanation: match.explanation,
+        triggeredKeywords: match.triggered_keywords || [],
+        suggestedAlternativeCategory: match.suggested_alternative,
+        keyQuotes: match.key_quotes || [],
+        documentId: documentMetadata.fileId,
+        documentName: documentMetadata.filename,
+        documentLink: documentMetadata.webViewLink,
+        documentModifiedTime: documentMetadata.modifiedTime,
+      };
+    });
+  } catch (error) {
+    console.error("Failed to parse AI response:", error);
+    console.error("Response text:", responseText);
+    return [];
+  }
+}
+
+// --- Main Functions ---
+
+/**
+ * Match a single document to Ofsted evidence requirements using AI
+ */
+export async function matchDocumentToEvidenceRequirements(
+  documentText: string,
+  documentMetadata: DocumentMetadata,
+  useModel?: string,
+): Promise<MatchResult> {
+  const startTime = Date.now();
+
+  try {
+    // Select model
+    const modelId = useModel || selectModel(documentMetadata);
+
+    // Initialize OpenRouter client
+    const openai = new OpenAI({
+      apiKey: process.env.VITE_OPENROUTER_API_KEY || process.env.OPENAI_API_KEY,
+      baseURL: "https://openrouter.ai/api/v1",
+      defaultHeaders: {
+        "HTTP-Referer": "https://schoolgle.co.uk",
+        "X-Title": "Schoolgle - Improvement",
+      },
+    });
+
+    // Create prompts
+    const systemPrompt = createSystemPrompt();
+    const userPrompt = createUserPrompt(documentText, documentMetadata);
+
+    if (process.env.NODE_ENV === "development") {
+      console.log(`[AI Matcher] Analyzing document with ${modelId}`);
+    }
+
+    // Call AI model
+    const response = await openai.chat.completions.create({
+      model: modelId,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      temperature: 0.3, // Lower temperature for more consistent JSON output
+      max_tokens: MODEL_CONFIG.primary.maxTokens,
+    });
+
+    const responseText = response.choices[0]?.message?.content || "";
+
+    if (!responseText) {
+      throw new Error("Empty response from AI model");
+    }
+
+    // Parse response
+    const matches = parseAIResponse(responseText, documentMetadata);
+
+    const processingTime = Date.now() - startTime;
+
+    console.log(
+      `[AI Matcher] Found ${matches.length} matches in ${processingTime}ms`,
+    );
+
+    return {
+      documentId: documentMetadata.fileId,
+      documentName: documentMetadata.filename,
+      matches,
+      processingTime,
+      modelUsed: modelId,
+    };
+  } catch (error: any) {
+    console.error(
+      `[AI Matcher] Error processing ${documentMetadata.filename}:`,
+      error,
+    );
+
+    // Try fallback model if primary failed
+    if (!useModel || useModel !== MODEL_CONFIG.fallback.id) {
+      console.log("[AI Matcher] Retrying with fallback model...");
+      return matchDocumentToEvidenceRequirements(
+        documentText,
+        documentMetadata,
+        MODEL_CONFIG.fallback.id,
+      );
+    }
+
+    return {
+      documentId: documentMetadata.fileId,
+      documentName: documentMetadata.filename,
+      matches: [],
+      processingTime: Date.now() - startTime,
+      modelUsed: useModel || "unknown",
+      error: error.message,
+    };
+  }
+}
+
+/**
+ * Batch process multiple documents
+ */
+export async function batchMatchDocuments(
+  documents: { text: string; metadata: DocumentMetadata }[],
+  onProgress?: (current: number, total: number) => void,
+): Promise<MatchResult[]> {
+  const results: MatchResult[] = [];
+
+  for (let i = 0; i < documents.length; i++) {
+    const { text, metadata } = documents[i];
+
+    try {
+      const result = await matchDocumentToEvidenceRequirements(text, metadata);
+      results.push(result);
+
+      if (onProgress) {
+        onProgress(i + 1, documents.length);
+      }
+
+      // Small delay to avoid rate limiting
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    } catch (error) {
+      console.error(`Failed to process ${metadata.filename}:`, error);
+      results.push({
+        documentId: metadata.fileId,
+        documentName: metadata.filename,
+        matches: [],
+        processingTime: 0,
+        modelUsed: "failed",
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Legacy function for backward compatibility
+ * Will be replaced by matchDocumentToEvidenceRequirements
+ */
+export function matchDocumentToCategories(text: string): {
+  categoryId: string;
+  subcategoryId: string;
+  evidenceItem: string;
+  confidence: number;
+}[] {
+  const matches: any[] = [];
+
+  // Simple keyword matching as fallback
+  OFSTED_FRAMEWORK_DATA.forEach((category) => {
+    category.subcategories.forEach((sub) => {
+      sub.evidenceRequired.forEach((evidence) => {
+        const keywords = evidence.name
+          .toLowerCase()
+          .split(" ")
+          .filter((w) => w.length > 3);
+        const matchCount = keywords.filter((kw) =>
+          text.toLowerCase().includes(kw),
+        ).length;
+
+        if (matchCount > 2) {
+          matches.push({
+            categoryId: category.id,
+            subcategoryId: sub.id,
+            evidenceItem: evidence.name,
+            confidence: Math.min(matchCount / keywords.length, 1),
+          });
+        }
+      });
+    });
+  });
+
+  return matches;
+}
