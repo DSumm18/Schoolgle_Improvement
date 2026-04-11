@@ -1,0 +1,35 @@
+import type { Connector } from '../types';
+
+export const DOCUMENT_CONNECTORS: Connector[] = [
+  {
+    id: 'google-drive',
+    layer: 2,
+    category: 'documents',
+    name: 'Google Drive',
+    description: 'Policies, evidence, SEF and curriculum documents. School grants OAuth read-only access.',
+    icon: '📁',
+    colour: '#3b82f6',
+    dataController: 'school',
+    setupType: 'oauth',
+    status: 'active',
+    joinKeys: [],
+    consumers: ['ofsted-readiness', 'estates-compliance', 'living-sef'],
+    dataSource: { type: 'oauth-fetch', reference: 'google-drive' },
+    setupGuideUrl: '/dashboard/settings/data-connections',
+  },
+  {
+    id: 'onedrive',
+    layer: 2,
+    category: 'documents',
+    name: 'Microsoft OneDrive',
+    description: 'Policies, evidence, SEF and curriculum documents from OneDrive or SharePoint.',
+    icon: '📁',
+    colour: '#f59e0b',
+    dataController: 'school',
+    setupType: 'oauth',
+    status: 'setup-needed',
+    joinKeys: [],
+    consumers: ['ofsted-readiness', 'estates-compliance', 'living-sef'],
+    dataSource: { type: 'oauth-fetch', reference: 'onedrive' },
+  },
+];
