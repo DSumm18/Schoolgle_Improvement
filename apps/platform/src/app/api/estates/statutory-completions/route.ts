@@ -15,7 +15,6 @@ import {
 } from "@/lib/estates-compliance/database/statutory-completions";
 import {
   DOMAIN_METADATA,
-  getChecksForDomain,
   type ComplianceDomain,
 } from "@/lib/estates-compliance/statutory-checks";
 
@@ -92,23 +91,12 @@ export const POST = protectedRoute(
 
       case "initialize": {
         // Initialize all statutory completions for an organization
-        const domains = Object.keys(DOMAIN_METADATA) as ComplianceDomain[];
-        const domainCheckIds: Record<string, string[]> = {};
-
-        for (const domain of domains) {
-          const checks = getChecksForDomain(domain);
-          domainCheckIds[domain] = checks.map((c) => c.id);
-        }
-
-        await initializeAllStatutoryCompletions(
-          organizationId,
-          domains,
-          domainCheckIds,
-        );
+        const result = await initializeAllStatutoryCompletions(organizationId);
 
         return apiSuccess({
           success: true,
-          message: "Statutory completions initialized",
+          message: `Seeded ${result.totalSeeded} statutory completion records`,
+          ...result,
         });
       }
 

@@ -438,34 +438,46 @@ export function calculateNextDueDate(frequency: string): string {
 export async function initializeDomainCompletions(
   organizationId: string,
   domain: ComplianceDomain,
-  checkIds: string[],
-): Promise<void> {
-  for (const checkId of checkIds) {
-    const existing = await getLatestCompletion(organizationId, checkId);
+  checks: Array<{ id: string; frequency: string }>,
+): Promise<number> {
+  let seeded = 0;
+  for (const check of checks) {
+    const existing = await getLatestCompletion(organizationId, check.id);
 
     if (!existing) {
-      // Get frequency from statutory check definition
-      // This would need to import the statutory checks data
-      // For now, default to annual
       await createCompletion(organizationId, {
-        check_id: checkId,
+        check_id: check.id,
         compliance_domain: domain,
-        next_due_date: calculateNextDueDate("annual"),
+        next_due_date: calculateNextDueDate(check.frequency),
       });
+      seeded++;
     }
   }
+  return seeded;
 }
 
 /**
- * Bulk initialize completions for all statutory checks
+ * Bulk initialize completions for all statutory checks.
+ * Self-contained: imports its own check data from statutory-checks.ts.
  */
 export async function initializeAllStatutoryCompletions(
   organizationId: string,
-  domains: ComplianceDomain[],
-  domainCheckIds: Record<ComplianceDomain, string[]>,
-): Promise<void> {
+): Promise<{ totalSeeded: number; byDomain: Record<string, number> }> {
+  const { DOMAIN_METADATA, getChecksForDomain } = await import(
+    "@/lib/estates-compliance/statutory-checks"
+  );
+  const domains = Object.keys(DOMAIN_METADATA) as ComplianceDomain[];
+
+  const byDomain: Record<string, number> = {};
+  let totalSeeded = 0;
+
   for (const domain of domains) {
-    const checkIds = domainCheckIds[domain] || [];
-    await initializeDomainCompletions(organizationId, domain, checkIds);
+    const checks = getChecksForDomain(domain);
+    const checksWithFreq = checks.map((c) => ({ id: c.id, frequency: c.frequency }));
+    const count = await initializeDomainCompletions(organizationId, domain, checksWithFreq);
+    byDomain[domain] = count;
+    totalSeeded += count;
   }
+
+  return { totalSeeded, byDomain };
 }

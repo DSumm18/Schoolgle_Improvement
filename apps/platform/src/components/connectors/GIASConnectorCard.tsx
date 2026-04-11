@@ -1,20 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { School, Search, ExternalLink, CheckCircle2, MapPin, Phone } from "lucide-react";
 import type { GIASSchool, GIASSchoolSummary } from "@/lib/connectors/gias/types";
 
 interface GIASConnectorCardProps {
   onSchoolSelect?: (school: GIASSchoolSummary) => void;
   defaultURN?: number;
+  autoFetch?: boolean;
 }
 
-export function GIASConnectorCard({ onSchoolSelect, defaultURN }: GIASConnectorCardProps) {
+export function GIASConnectorCard({ onSchoolSelect, defaultURN, autoFetch }: GIASConnectorCardProps) {
   const [query, setQuery] = useState(defaultURN?.toString() || "");
   const [school, setSchool] = useState<GIASSchool | null>(null);
   const [results, setResults] = useState<GIASSchoolSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Auto-fetch school data on mount when autoFetch is true
+  useEffect(() => {
+    if (autoFetch && defaultURN) {
+      handleSearch();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoFetch, defaultURN]);
 
   async function handleSearch() {
     if (!query.trim()) return;
@@ -24,23 +33,31 @@ export function GIASConnectorCard({ onSchoolSelect, defaultURN }: GIASConnectorC
     setResults([]);
 
     try {
-      const isURN = /^\d{6}$/.test(query.trim());
-      const param = isURN ? `urn=${query.trim()}` : `search=${encodeURIComponent(query.trim())}`;
-      const res = await fetch(`/api/connectors/gias?${param}`);
-      const data = await res.json();
+      const isURN = /^\d{5,6}$/.test(query.trim());
 
-      if (!res.ok) {
-        setError(data.error || "Failed to fetch");
-        return;
-      }
-
-      if (data.school && !data.schools) {
-        setSchool(data.school);
-      } else if (data.schools) {
-        setResults(data.schools);
+      if (isURN) {
+        // Direct call to public DfE GIAS API — no auth needed
+        const res = await fetch(`https://dfe-digital.github.io/gias-data/schools/${query.trim()}.json`);
+        if (!res.ok) {
+          setError(res.status === 404 ? "School not found — check the URN" : "Failed to fetch from DfE");
+          return;
+        }
+        const data = await res.json();
+        setSchool(data);
+      } else {
+        // Search goes via our API (needs auth)
+        const res = await fetch(`/api/connectors/gias?search=${encodeURIComponent(query.trim())}`);
+        const data = await res.json();
+        if (!res.ok) {
+          setError(data.error || "Failed to fetch");
+          return;
+        }
+        if (data.schools) {
+          setResults(data.schools);
+        }
       }
     } catch {
-      setError("Network error — could not reach GIAS connector");
+      setError("Network error — could not reach GIAS data");
     } finally {
       setLoading(false);
     }

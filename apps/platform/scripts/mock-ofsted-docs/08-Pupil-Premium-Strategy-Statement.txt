@@ -1,0 +1,129 @@
+GROVE HOUSE PRIMARY SCHOOL
+Pupil Premium Strategy Statement 2024-25
+
+Headteacher: Mrs J. Smith
+PP Governor: Mrs A. Greenwood
+Date: October 2024
+Review: July 2025
+Published on school website: October 2024
+
+---
+
+PART A: PUPIL PREMIUM STRATEGY PLAN
+
+Information about our pupil premium (PP) pupils
+
+Total number of pupils on roll: 312
+Number of PP pupils: 137 (44%)
+PP allocation 2024-25: £183,180
+
+Breakdown of PP cohort:
+- Free School Meals (current and ever 6): 121 pupils
+- Looked After Children (LAC): 8 pupils
+- Previously Looked After Children (PLAC): 5 pupils
+- Service children: 3 pupils
+
+---
+
+STRATEGY STATEMENT
+
+Our Pupil Premium strategy is evidence-based. We draw on the Education Endowment Foundation (EEF) Teaching and Learning Toolkit and the EEF's Pupil Premium guidance (2021) to select interventions. We prioritise approaches with strong evidence and high average impact.
+
+The EEF's three-tiered model underpins our strategy:
+1. HIGH-QUALITY TEACHING for all (greatest impact on PP pupils)
+2. TARGETED ACADEMIC SUPPORT (structured interventions)
+3. WIDER STRATEGIES (attendance, wellbeing, enrichment)
+
+---
+
+BARRIERS TO LEARNING IDENTIFIED FOR OUR PP COHORT
+
+| Barrier                                   | Priority |
+|-------------------------------------------|----------|
+| Language and vocabulary gaps (EAL/low SES)| High     |
+| Attendance — PP PA rate 22.4%             | High     |
+| Writing attainment gap (16% below non-PP) | High     |
+| Limited cultural capital / home literacy  | Medium   |
+| Social, emotional and mental health needs | Medium   |
+| Limited access to devices/internet        | Low      |
+
+---
+
+PART 1: QUALITY OF TEACHING FOR ALL
+
+| Action                                    | Evidence Rating      | Cost      | Lead          |
+|-------------------------------------------|----------------------|-----------|---------------|
+| Metacognition CPD (all staff, 3 sessions) | EEF: +7 months       | £1,800    | Miss Okafor   |
+| Explicit vocabulary instruction training  | EEF: +6 months       | £600      | Miss Thornton |
+| Rosenshine's Principles coaching cycle    | EEF: high impact     | £0        | Mrs Smith     |
+| Feedback quality review (book scrutiny)   | EEF: +8 months       | £400 cover| Mrs Smith     |
+
+Subtotal: £2,800
+
+---
+
+PART 2: TARGETED ACADEMIC SUPPORT
+
+| Intervention                              | Pupils   | Evidence                  | Cost       | Lead          |
+|-------------------------------------------|----------|---------------------------|------------|---------------|
+| 1:1 reading (Read Write Inc. Fresh Start) | 18 PP    | EEF: +5 months            | £4,200     | Mrs C. Barlow |
+| Tuition Partners Programme (NTP)          | 24 PP    | EEF: +4 months (small grp)| £9,600     | Miss Okafor   |
+| IDL Literacy (dyslexia-friendly)          | 12 PP    | Evidence-informed          | £1,800     | Mr D. Patel   |
+| Springboard Maths (Y4-Y5)                | 16 PP    | EEF: moderate positive    | £2,400     | Mrs T. Singh  |
+| Homework and revision club (3x/week)      | All PP Y4-6| Engagement + retrieval  | £3,600     | Rota of staff |
+| ELSA emotional literacy sessions          | 20 PP    | EEF: SEL +4 months        | £5,200     | Mrs K. Ford   |
+
+Subtotal: £26,800
+
+---
+
+PART 3: WIDER STRATEGIES
+
+| Strategy                                  | Rationale                    | Cost       | Lead          |
+|-------------------------------------------|------------------------------|------------|---------------|
+| Family Liaison Officer (0.8 FTE)          | Attendance, SEMH, engagement | £19,200    | Mrs L. Hughes |
+| Breakfast club (free to PP pupils)        | Attendance, nutrition, focus  | £8,400     | Mrs P. Ahmad  |
+| Enrichment fund (trips, music, sports)    | Cultural capital, aspiration  | £4,500     | Miss Thornton |
+| Parent engagement: Stay and Play/Read     | Home literacy, confidence     | £600       | EYFS team     |
+| Device and connectivity support           | Remote learning equity        | £1,200     | IT team       |
+| Transport fund (attendance barriers)      | PA reduction                  | £3,000     | Mrs Hughes    |
+
+Subtotal: £36,900
+
+---
+
+TOTAL PLANNED SPEND
+
+| Tier                               | Planned Spend |
+|------------------------------------|---------------|
+| Quality of Teaching                | £2,800        |
+| Targeted Academic Support          | £26,800       |
+| Wider Strategies                   | £36,900       |
+| Contingency (5%)                   | £3,325        |
+| TOTAL                              | £69,825       |
+
+Note: PP allocation is £183,180. Remaining £113,355 is deployed as part of the school's overall staffing structure to ensure smaller class sizes and higher TA ratios, which benefit PP pupils directly (EEF: Teaching Assistants +4 months when deployed effectively following the MITA model).
+
+---
+
+PART B: REVIEW OF PREVIOUS YEAR'S EXPENDITURE (2023-24)
+
+PP allocation 2023-24: £176,400
+
+| Priority                  | Investment | Outcome                                          |
+|---------------------------|------------|--------------------------------------------------|
+| Reading (RWI Fresh Start)  | £4,000    | PP reading ES: 78% → 81%. Gap: -15% → -11%      |
+| NTP Tuition               | £8,800    | Maths PP gap reduced from -18% to -12%            |
+| FLO + breakfast club      | £22,000   | PP attendance: 91.8% → 93.1%. PP PA: 24.2%→22.4%|
+| ELSA                      | £4,800    | 94% of ELSA pupils showed improved wellbeing score|
+| Writing interventions     | £3,200    | Writing gap remains at 16% — identified as priority|
+
+Key learning: Writing gap has not responded sufficiently to the strategies used in 2023-24. In 2024-25 we are adopting the 'Sentence First' programme with stronger structural support for PP pupils. EEF evidence for structured writing approaches: +5 months.
+
+---
+
+PART C: PUBLICATION
+
+This strategy statement is published on the Grove House Primary School website at www.grovehouseprimary.bradford.sch.uk/pupil-premium and updated annually by October 31st in line with DfE requirements.
+
+Approved by Governing Body: October 2024

@@ -759,6 +759,124 @@ export const ESTATES_FUNCTION_SCHEMAS = [
       required: ["organization_id", "location_id"],
     },
   },
+  {
+    name: "get_compliance_status",
+    description:
+      "Get overall compliance RAG status across all domains. Returns total checks, completed, overdue, and per-domain breakdown. No input needed — uses the authenticated user's organization.",
+    parameters: {
+      type: "object",
+      properties: {
+        organization_id: {
+          type: "string",
+          description: "Organization ID (auto-populated from auth)",
+        },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "get_overdue_checks",
+    description:
+      "List all overdue statutory compliance checks. Returns check name, domain, how many days overdue, and risk level. Optionally filter by compliance domain.",
+    parameters: {
+      type: "object",
+      properties: {
+        organization_id: {
+          type: "string",
+          description: "Organization ID (auto-populated from auth)",
+        },
+        domain: {
+          type: "string",
+          enum: [
+            "legionella",
+            "fire",
+            "asbestos",
+            "electrical",
+            "gas",
+            "water",
+            "mechanical",
+            "lifts",
+            "playground",
+            "accessibility",
+            "security",
+            "coshh",
+            "food_safety",
+            "transport",
+            "safeguarding",
+            "seasonal",
+          ],
+          description: "Optional: filter by compliance domain",
+        },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "create_cost_request",
+    description:
+      "Create a cost/budget request for estates work that needs financial approval. Links to the 5-year estates strategy and routes to SBM/Headteacher for approval. Requires user confirmation before submission.",
+    parameters: {
+      type: "object",
+      properties: {
+        organization_id: {
+          type: "string",
+          description: "Organization ID (auto-populated from auth)",
+        },
+        title: {
+          type: "string",
+          description: "Brief title of the work required (e.g., 'Boiler replacement Block A')",
+        },
+        description: {
+          type: "string",
+          description: "Detailed description of what's needed and why",
+        },
+        estimated_cost: {
+          type: "number",
+          description: "Estimated cost in GBP",
+        },
+        urgency: {
+          type: "string",
+          enum: ["emergency", "urgent", "planned", "strategic"],
+          description: "How urgent: emergency (immediate safety), urgent (this term), planned (this year), strategic (5-year plan)",
+        },
+        classification: {
+          type: "string",
+          enum: ["statutory", "good_practice", "improvement"],
+          description: "Statutory = legal requirement, good_practice = recommended, improvement = enhancement",
+        },
+        compliance_domain: {
+          type: "string",
+          enum: [
+            "legionella",
+            "fire",
+            "asbestos",
+            "electrical",
+            "gas",
+            "water",
+            "mechanical",
+            "lifts",
+            "playground",
+            "general",
+          ],
+          description: "Which compliance domain this cost relates to",
+        },
+        cfr_code: {
+          type: "string",
+          enum: ["E04", "E12", "E13", "E14", "E15", "E16", "E17", "E18"],
+          description: "CFR code: E04=premises staff, E12=maintenance, E13=improvement, E14=insurance, E15=rates, E16=energy, E17=catering, E18=other premises",
+        },
+        business_case: {
+          type: "string",
+          description: "Business case justification — why this spend is necessary, what happens if deferred",
+        },
+        linked_risk_id: {
+          type: "string",
+          description: "Optional: ID of linked risk register entry",
+        },
+      },
+      required: ["title", "estimated_cost", "urgency", "classification"],
+    },
+  },
 ];
 
 // =====================================================

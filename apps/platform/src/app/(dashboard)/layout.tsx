@@ -31,6 +31,7 @@ import {
   Radio,
   Brain,
   GraduationCap,
+  Plug,
 } from "lucide-react";
 import NotificationBell from "@/components/NotificationBell";
 import OrgSwitcher from "@/components/OrgSwitcher";
@@ -294,6 +295,13 @@ export default function DashboardLayout({
       section: "SETTINGS",
       type: "settings" as const,
       items: [
+        {
+          id: "integrations",
+          name: "Integrations",
+          href: "/dashboard/integrations",
+          icon: Plug,
+          color: undefined as string | undefined,
+        },
         {
           id: "skills",
           name: "Skill Library",

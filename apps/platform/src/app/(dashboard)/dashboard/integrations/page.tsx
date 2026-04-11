@@ -6,16 +6,10 @@ import Link from "next/link";
 import {
   Plug,
   Sparkles,
-  HardDrive,
-  GraduationCap,
-  BookOpen,
-  Mail,
-  Database,
   ExternalLink,
   Search,
-  Palette,
-  Brain,
 } from "lucide-react";
+import Image from "next/image";
 import {
   ModulePageHeader,
   ModuleFeatureBanner,
@@ -27,7 +21,7 @@ interface Connector {
   id: string;
   name: string;
   description: string;
-  icon: React.ComponentType<{ className?: string }>;
+  logo: string;
   status: ConnectorStatus;
   href?: string;
   color: string;
@@ -40,7 +34,7 @@ const connectors: Connector[] = [
     name: "Canva",
     description:
       "Access school-branded templates for newsletters, letters, displays, and governor reports. Open directly in Canva.",
-    icon: Palette,
+    logo: "/logos/connectors/canva.png",
     status: "active",
     href: "/dashboard/integrations/canva",
     color: "text-violet-600 dark:text-violet-400",
@@ -51,7 +45,7 @@ const connectors: Connector[] = [
     name: "Google Drive",
     description:
       "Automatically scan school documents for evidence mapping. Connect your school's shared drive for AI-powered analysis.",
-    icon: HardDrive,
+    logo: "/logos/connectors/google-drive.png",
     status: "active",
     href: "/dashboard/evidence",
     color: "text-blue-600 dark:text-blue-400",
@@ -62,7 +56,7 @@ const connectors: Connector[] = [
     name: "Arbor MIS",
     description:
       "Import pupil data, attendance, and assessment records directly from Arbor. Pseudonymised at source.",
-    icon: GraduationCap,
+    logo: "/logos/connectors/arbor.png",
     status: "coming_soon",
     color: "text-emerald-600 dark:text-emerald-400",
     bgColor: "bg-emerald-100 dark:bg-emerald-900/20",
@@ -72,7 +66,7 @@ const connectors: Connector[] = [
     name: "SIMS MIS",
     description:
       "Sync pupil records, attendance, and census data from SIMS. Zero-knowledge pseudonymisation built in.",
-    icon: GraduationCap,
+    logo: "/logos/connectors/sims.png",
     status: "coming_soon",
     color: "text-sky-600 dark:text-sky-400",
     bgColor: "bg-sky-100 dark:bg-sky-900/20",
@@ -82,7 +76,7 @@ const connectors: Connector[] = [
     name: "Bromcom MIS",
     description:
       "Connect Bromcom for seamless pupil data import. Assessment tracking and attendance sync with GDPR compliance.",
-    icon: GraduationCap,
+    logo: "/logos/connectors/bromcom.png",
     status: "coming_soon",
     color: "text-orange-600 dark:text-orange-400",
     bgColor: "bg-orange-100 dark:bg-orange-900/20",
@@ -92,7 +86,7 @@ const connectors: Connector[] = [
     name: "NotebookLM",
     description:
       "Generate AI training podcasts, research summaries, and staff CPD materials from your school documents.",
-    icon: Brain,
+    logo: "/logos/connectors/notebooklm.png",
     status: "coming_soon",
     color: "text-rose-600 dark:text-rose-400",
     bgColor: "bg-rose-100 dark:bg-rose-900/20",
@@ -102,18 +96,19 @@ const connectors: Connector[] = [
     name: "ParentMail",
     description:
       "Send newsletters, permission slips, and surveys to parents. Two-way communication with read receipts.",
-    icon: Mail,
+    logo: "/logos/connectors/parentmail.png",
     status: "planned",
     color: "text-amber-600 dark:text-amber-400",
     bgColor: "bg-amber-100 dark:bg-amber-900/20",
   },
   {
     id: "dfe-apis",
-    name: "DfE APIs",
+    name: "DfE GIAS",
     description:
-      "Pull national benchmarking data, school performance tables, and workforce census data from the Department for Education.",
-    icon: Database,
-    status: "planned",
+      "Live school data from the Department for Education. Search any school in England by URN, name, or postcode.",
+    logo: "/logos/connectors/dfe.png",
+    status: "active",
+    href: "/dashboard/integrations/dfe",
     color: "text-purple-600 dark:text-purple-400",
     bgColor: "bg-purple-100 dark:bg-purple-900/20",
   },
@@ -173,7 +168,6 @@ export default function IntegrationsPage() {
       {/* Connector Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {filtered.map((connector, i) => {
-          const Icon = connector.icon;
           const badge = STATUS_BADGES[connector.status];
           const isClickable = connector.status === "active" && connector.href;
 
@@ -195,13 +189,13 @@ export default function IntegrationsPage() {
                 {/* Header row */}
                 <div className="flex items-start justify-between mb-4">
                   <div
-                    className={`p-2.5 ${connector.bgColor} rounded-xl ${
+                    className={`p-1.5 rounded-xl ${
                       isClickable
                         ? "group-hover:scale-105 transition-transform duration-200"
                         : ""
                     }`}
                   >
-                    <Icon className={`w-5 h-5 ${connector.color}`} />
+                    <Image src={connector.logo} alt={connector.name} width={36} height={36} className="rounded-lg" />
                   </div>
                   <span
                     className={`text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full ${badge.className}`}
