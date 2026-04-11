@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from 'react';
-import { Brain, Sparkles } from 'lucide-react';
+import { Brain, Sparkles, LayoutDashboard } from 'lucide-react';
+import Link from 'next/link';
 import { DocumentTemplateCard, type DocumentTemplate } from '@/components/data-connectors/DocumentTemplateCard';
 import { supabase } from '@/lib/supabase';
 
@@ -106,12 +107,19 @@ export default function SchoolIntelligencePage() {
         <div className="w-12 h-12 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center">
           <Brain className="w-6 h-6 text-purple-500" />
         </div>
-        <div>
+        <div className="flex-1">
           <h1 className="text-2xl font-extrabold text-foreground">School Intelligence</h1>
           <p className="text-sm text-muted-foreground">
             Generate reports from your connected data. The more connectors you have, the richer the reports become.
           </p>
         </div>
+        <Link
+          href="/dashboard/school-intelligence/canvas"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-500 text-white text-sm font-bold hover:from-purple-600 hover:to-indigo-600 shadow-lg shadow-purple-500/20 transition-all"
+        >
+          <LayoutDashboard className="w-4 h-4" />
+          Open Canvas →
+        </Link>
       </div>
 
       <div>
