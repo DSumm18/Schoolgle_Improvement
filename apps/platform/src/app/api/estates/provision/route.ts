@@ -29,6 +29,27 @@ export const POST = protectedRoute(
 
     const result = await initializeAllStatutoryCompletions(organizationId);
 
+    // Activate required modules for estates + compliance operations
+    const modulesToActivate = ["estates_management", "compliance_tracker"];
+    const moduleActivations: Record<string, boolean> = {};
+    for (const moduleId of modulesToActivate) {
+      const { error: moduleError } = await supabase
+        .from("organization_modules")
+        .upsert(
+          {
+            organization_id: organizationId,
+            module_id: moduleId,
+            enabled: true,
+            enabled_at: new Date().toISOString(),
+          },
+          { onConflict: "organization_id,module_id" },
+        );
+      moduleActivations[moduleId] = !moduleError;
+      if (moduleError) {
+        console.warn(`[provision] Could not activate ${moduleId}:`, moduleError.message);
+      }
+    }
+
     await supabase
       .from("organizations")
       .update({
@@ -39,6 +60,7 @@ export const POST = protectedRoute(
     return apiSuccess({
       success: true,
       organization: org.name,
+      modulesActivated: moduleActivations,
       ...result,
     });
   },

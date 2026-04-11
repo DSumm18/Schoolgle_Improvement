@@ -71,59 +71,64 @@ export async function POST(request: NextRequest) {
       user = data.user;
     }
 
+/**
+ * Maps skill function names to module IDs from the `modules` table.
+ * Module IDs must match `modules.id` (FK) — see 20260122_* migration.
+ * The `everything_bundle` and `core` modules grant access to all skills.
+ */
 const SKILL_MODULE_MAP: Record<string, string> = {
-  "create_staff_member": "hr",
-  "update_staff_member": "hr",
-  "list_staff": "hr",
-  "deactivate_staff_member": "hr",
-  "export_staff_csv": "hr",
-  "import_staff_csv": "hr",
+  "create_staff_member": "hr_people",
+  "update_staff_member": "hr_people",
+  "list_staff": "hr_people",
+  "deactivate_staff_member": "hr_people",
+  "export_staff_csv": "hr_people",
+  "import_staff_csv": "hr_people",
 
-  "create_action": "improvement",
-  "update_action": "improvement",
-  "list_actions": "improvement",
-  "get_action_stats": "improvement",
-  "suggest_eef_strategy": "improvement",
-  "add_action_note": "improvement",
+  "create_action": "inspection_ready",
+  "update_action": "inspection_ready",
+  "list_actions": "inspection_ready",
+  "get_action_stats": "inspection_ready",
+  "suggest_eef_strategy": "inspection_ready",
+  "add_action_note": "inspection_ready",
 
-  "search_knowledge": "compliance",
-  "list_compliance_tasks": "compliance",
-  "create_workflow": "compliance",
-  "get_workflow_status": "compliance",
-  "update_workflow_step": "compliance",
+  "search_knowledge": "compliance_tracker",
+  "list_compliance_tasks": "compliance_tracker",
+  "create_workflow": "compliance_tracker",
+  "get_workflow_status": "compliance_tracker",
+  "update_workflow_step": "compliance_tracker",
 
-  "search_contractors": "estates",
-  "validate_contractor_recommendation": "estates",
-  "extract_estates_document": "estates",
-  "analyze_spatial_impact": "estates",
-  "create_helpdesk_ticket": "estates",
-  "update_helpdesk_ticket": "estates",
-  "get_floor_plan": "estates",
-  "get_location_details": "estates",
+  "search_contractors": "estates_management",
+  "validate_contractor_recommendation": "estates_management",
+  "extract_estates_document": "estates_management",
+  "analyze_spatial_impact": "estates_management",
+  "create_helpdesk_ticket": "estates_management",
+  "update_helpdesk_ticket": "estates_management",
+  "get_floor_plan": "estates_management",
+  "get_location_details": "estates_management",
 
-  "terry_create_ticket": "estates",
-  "terry_update_ticket": "estates",
-  "terry_query_tickets": "estates",
-  "terry_query_compliance": "compliance",
-  "terry_log_compliance_check": "compliance",
-  "terry_assess_risk": "risk",
+  "terry_create_ticket": "estates_management",
+  "terry_update_ticket": "estates_management",
+  "terry_query_tickets": "estates_management",
+  "terry_query_compliance": "compliance_tracker",
+  "terry_log_compliance_check": "compliance_tracker",
+  "terry_assess_risk": "compliance_tracker",
 
-  "get_compliance_status": "compliance",
-  "get_overdue_checks": "compliance",
-  "create_cost_request": "estates",
+  "get_compliance_status": "compliance_tracker",
+  "get_overdue_checks": "compliance_tracker",
+  "create_cost_request": "estates_management",
 
-  "run_intelligence_analysis": "improvement",
-  "get_cohort_journey": "improvement",
-  "get_assessment_insights": "improvement",
-  "get_contextual_factors": "improvement",
-  "get_dfe_trends": "improvement",
-  "get_cross_module_signals": "improvement",
+  "run_intelligence_analysis": "insights_pro",
+  "get_cohort_journey": "insights_pro",
+  "get_assessment_insights": "insights_pro",
+  "get_contextual_factors": "insights_pro",
+  "get_dfe_trends": "insights_pro",
+  "get_cross_module_signals": "insights_pro",
 
-  "generate_newsletter": "communications",
+  "generate_newsletter": "stakeholder_voice",
 
-  "upload_to_drive": "improvement",
-  "create_drive_folder": "improvement",
-  "list_drive_files": "improvement",
+  "upload_to_drive": "core",
+  "create_drive_folder": "core",
+  "list_drive_files": "core",
 };
 
     if (orgId && user) {
@@ -132,12 +137,17 @@ const SKILL_MODULE_MAP: Record<string, string> = {
         .from("organization_modules")
         .select("module_id")
         .eq("organization_id", orgId)
-        .eq("is_active", true);
+        .eq("enabled", true);
 
       const activeModuleIds = (activeModules || []).map((m: any) => m.module_id);
       const skillModule = SKILL_MODULE_MAP[functionName];
 
-      if (skillModule && !activeModuleIds.includes(skillModule)) {
+      // everything_bundle and core grant access to all skills
+      const hasUniversalAccess =
+        activeModuleIds.includes("everything_bundle") ||
+        activeModuleIds.includes("core");
+
+      if (skillModule && !hasUniversalAccess && !activeModuleIds.includes(skillModule)) {
         return NextResponse.json(
           { 
             success: false, 
@@ -424,23 +434,25 @@ const SKILL_MODULE_MAP: Record<string, string> = {
           description: `${parameters.description || ""}\n\nBusiness Case: ${parameters.business_case || "Not provided"}\n\nClassification: ${parameters.classification || "planned"}\nUrgency: ${parameters.urgency || "planned"}\nCFR Code: ${parameters.cfr_code || "E12"}`,
           compliance_domain: parameters.compliance_domain || "general",
           status: "pending",
-          priority: parameters.urgency === "emergency" ? "critical" : parameters.urgency === "urgent" ? "high" : "medium",
+          frequency: "ad_hoc",
+          task_source: "internal",
           scheduled_for: new Date().toISOString().split("T")[0],
           due_by: new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0],
-          checklist: JSON.stringify([
+          checklist: [
             { item: "Cost estimate verified", completed: false },
             { item: "Business case reviewed", completed: false },
             { item: "SBM approval", completed: false },
             { item: "Headteacher approval", completed: false },
-          ]),
-          findings: JSON.stringify([{
+          ],
+          findings: [{
             type: "cost_request",
             estimated_cost: parameters.estimated_cost,
             classification: parameters.classification,
             urgency: parameters.urgency,
             cfr_code: parameters.cfr_code || "E12",
             linked_risk_id: parameters.linked_risk_id || null,
-          }]),
+            business_case: parameters.business_case || null,
+          }],
         };
 
         const { data: task, error: taskError } = await supabaseAdmin

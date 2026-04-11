@@ -145,9 +145,10 @@ export default function GovernorReportPrintPage() {
           headers["Authorization"] = `Bearer ${session.access_token}`;
         }
 
-        const res = await fetch("/api/estates/reports/governor-pdf", {
-          headers,
-        });
+        const res = await fetch(
+          `/api/estates/reports/governor-pdf?organizationId=${organizationId}`,
+          { headers },
+        );
 
         if (!res.ok) {
           throw new Error(`API returned ${res.status}`);

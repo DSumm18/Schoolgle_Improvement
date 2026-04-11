@@ -4,8 +4,24 @@
  * Functions for tracking completion status of predefined statutory checks
  */
 
-import { createClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase-server";
 import type { ComplianceDomain } from "@/types/estates-compliance";
+
+/**
+ * Get a Supabase client for server-side DB operations.
+ *
+ * Uses the service role client because:
+ * 1. This code is only called from API routes that have already validated
+ *    the user via auth-middleware (protectedRoute) — RLS enforcement at
+ *    this layer would be redundant.
+ * 2. Supports both cookie-based and Bearer-token authenticated requests.
+ *    The legacy cookie-based createClient() returns empty for Bearer auth.
+ * 3. All queries filter by organizationId (passed explicitly), so tenant
+ *    isolation is preserved.
+ */
+async function getClient() {
+  return createServiceRoleClient();
+}
 
 /**
  * Completion record for a statutory check
@@ -89,7 +105,7 @@ export async function getStatutoryCompletions(
     check_id?: string;
   },
 ): Promise<StatutoryCompletion[]> {
-  const supabase = await createClient();
+  const supabase = await getClient();
 
   let query = supabase
     .from("estates_statutory_completions")
@@ -126,7 +142,7 @@ export async function getLatestCompletion(
   organizationId: string,
   checkId: string,
 ): Promise<StatutoryCompletion | null> {
-  const supabase = await createClient();
+  const supabase = await getClient();
 
   const { data, error } = await supabase
     .from("estates_statutory_completions")
@@ -255,7 +271,7 @@ export async function createCompletion(
   organizationId: string,
   input: CreateCompletionInput,
 ): Promise<StatutoryCompletion> {
-  const supabase = await createClient();
+  const supabase = await getClient();
 
   const { data, error } = await supabase
     .from("estates_statutory_completions")
@@ -286,7 +302,7 @@ export async function updateCompletion(
   completionId: string,
   updates: UpdateCompletionInput,
 ): Promise<StatutoryCompletion> {
-  const supabase = await createClient();
+  const supabase = await getClient();
 
   const { data, error } = await supabase
     .from("estates_statutory_completions")
@@ -329,7 +345,7 @@ export async function completeStatutoryCheck(
     });
   } else {
     // Create new completion record
-    const supabase = await createClient();
+    const supabase = await getClient();
     const { data, error } = await supabase
       .from("estates_statutory_completions")
       .insert({
@@ -376,7 +392,7 @@ export async function getUpcomingChecks(
   organizationId: string,
   daysAhead: number = 30,
 ): Promise<StatutoryCompletion[]> {
-  const supabase = await createClient();
+  const supabase = await getClient();
 
   const futureDate = new Date();
   futureDate.setDate(futureDate.getDate() + daysAhead);
@@ -440,16 +456,38 @@ export async function initializeDomainCompletions(
   domain: ComplianceDomain,
   checks: Array<{ id: string; frequency: string }>,
 ): Promise<number> {
+  // Use service role for provisioning — bypasses cookie-based RLS.
+  // This is a privileged admin operation that writes to a specific org.
+  const { createServiceRoleClient } = await import("@/lib/supabase-server");
+  const supabase = createServiceRoleClient();
+
   let seeded = 0;
   for (const check of checks) {
-    const existing = await getLatestCompletion(organizationId, check.id);
+    // Check if completion already exists
+    const { data: existing } = await supabase
+      .from("estates_statutory_completions")
+      .select("id")
+      .eq("organization_id", organizationId)
+      .eq("check_id", check.id)
+      .limit(1)
+      .maybeSingle();
 
     if (!existing) {
-      await createCompletion(organizationId, {
-        check_id: check.id,
-        compliance_domain: domain,
-        next_due_date: calculateNextDueDate(check.frequency),
-      });
+      const { error } = await supabase
+        .from("estates_statutory_completions")
+        .insert({
+          organization_id: organizationId,
+          check_id: check.id,
+          compliance_domain: domain,
+          next_due_date: calculateNextDueDate(check.frequency),
+          status: "pending",
+          rag_status: "amber",
+        });
+
+      if (error) {
+        console.error(`[provision] Failed to seed ${check.id}:`, error.message);
+        throw new Error(`Failed to seed ${check.id}: ${error.message}`);
+      }
       seeded++;
     }
   }
@@ -459,6 +497,7 @@ export async function initializeDomainCompletions(
 /**
  * Bulk initialize completions for all statutory checks.
  * Self-contained: imports its own check data from statutory-checks.ts.
+ * Uses service role — safe for privileged admin provisioning.
  */
 export async function initializeAllStatutoryCompletions(
   organizationId: string,
