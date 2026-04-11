@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 220" fill="none" role="img" aria-label="Schoolgle Shield">
+  <!-- Gradient definitions -->
+  <defs>
+    <linearGradient id="shieldBody" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a78bfa" />
+      <stop offset="100%" stop-color="#6366f1" />
+    </linearGradient>
+    <linearGradient id="shieldInner" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.12" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
+    </linearGradient>
+    <linearGradient id="sLetter" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#e0e7ff" />
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="4" />
+      <feOffset dx="0" dy="2" result="offsetblur" />
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.4" />
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Shield outer silhouette —
+       Modern crest shape: flat top, curved sides, rounded point at bottom.
+       Works at any size down to 16x16 favicon. -->
+  <path
+    d="M 100 10
+       L 180 30
+       L 180 110
+       Q 180 155, 140 185
+       Q 118 202, 100 210
+       Q 82 202, 60 185
+       Q 20 155, 20 110
+       L 20 30
+       Z"
+    fill="url(#shieldBody)"
+    stroke="#4338ca"
+    stroke-width="2"
+    stroke-linejoin="round"
+    filter="url(#glow)"
+  />
+
+  <!-- Inner highlight gradient for depth -->
+  <path
+    d="M 100 18
+       L 172 35
+       L 172 108
+       Q 172 148, 136 176
+       Q 116 192, 100 200
+       Q 84 192, 64 176
+       Q 28 148, 28 108
+       L 28 35
+       Z"
+    fill="url(#shieldInner)"
+  />
+
+  <!-- Subtle inner border for a crisp edge -->
+  <path
+    d="M 100 18
+       L 172 35
+       L 172 108
+       Q 172 148, 136 176
+       Q 116 192, 100 200
+       Q 84 192, 64 176
+       Q 28 148, 28 108
+       L 28 35
+       Z"
+    fill="none"
+    stroke="#ffffff"
+    stroke-width="1.5"
+    stroke-opacity="0.35"
+  />
+
+  <!-- Stylised "S" — bold sans, works as Schoolgle, School, Security, Shield
+       Designed as a single path so it scales cleanly and can be recoloured. -->
+  <path
+    d="M 125 70
+       Q 125 58, 108 58
+       L 92 58
+       Q 75 58, 75 72
+       Q 75 84, 92 88
+       L 108 92
+       Q 125 96, 125 110
+       Q 125 124, 108 124
+       L 92 124
+       Q 75 124, 75 112"
+    fill="none"
+    stroke="url(#sLetter)"
+    stroke-width="14"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <!-- Tiny accent dot at the foot of the S — echoes the Schoolgle module dot -->
+  <circle cx="100" cy="150" r="3.5" fill="#ffffff" opacity="0.9" />
+</svg>
