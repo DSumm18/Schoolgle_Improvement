@@ -169,6 +169,15 @@ export const MODULES: ModuleDefinition[] = [
     requiredPermissions: ["admin", "headteacher", "slt"],
   },
   {
+    id: "school-intelligence",
+    name: "School Intelligence",
+    color: "violet",
+    icon: Brain,
+    description:
+      "Drag-drop canvas to connect your data and generate reports via Guardian + Gemini.",
+    requiredPermissions: ["admin", "headteacher", "slt"],
+  },
+  {
     id: "attendance",
     name: "Attendance",
     color: "indigo",

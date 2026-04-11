@@ -53,7 +53,7 @@ const PLANET_GROUPS = [
   { id: "earth", name: "Business Operations", color: "#3B82F6", icon: Building2, moduleIds: ["finance", "hr", "estates", "connectors"] },
   { id: "mars", name: "Compliance & Safeguarding", color: "#9F1239", icon: Shield, moduleIds: ["compliance", "safeguarding", "risk"] },
   { id: "jupiter", name: "Communications", color: "#F97316", icon: Radio, moduleIds: ["communications", "calendar", "surveys"] },
-  { id: "saturn", name: "Intelligence", color: "#A78BFA", icon: Brain, moduleIds: ["attendance", "send", "behaviour", "canvas"] },
+  { id: "saturn", name: "Intelligence", color: "#A78BFA", icon: Brain, moduleIds: ["school-intelligence", "attendance", "send", "behaviour", "canvas"] },
   { id: "uranus", name: "Teaching & Learning", color: "#06B6D4", icon: GraduationCap, moduleIds: ["teaching-learning"] },
 ];
 
