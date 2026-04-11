@@ -116,6 +116,9 @@ const SKILL_MODULE_MAP: Record<string, string> = {
   "get_compliance_status": "compliance_tracker",
   "get_overdue_checks": "compliance_tracker",
   "create_cost_request": "estates_management",
+  "get_asset_details": "estates_management",
+  "check_asset_warranty": "estates_management",
+  "draft_warranty_claim_email": "estates_management",
 
   "run_intelligence_analysis": "insights_pro",
   "get_cohort_journey": "insights_pro",
@@ -419,6 +422,229 @@ const SKILL_MODULE_MAP: Record<string, string> = {
           data: {
             totalOverdue: overdueItems.length,
             items: overdueItems,
+          },
+        };
+        break;
+      }
+
+      case "get_asset_details": {
+        const { getAssetWithLinks } = await import(
+          "@/lib/estates-compliance/database/assets"
+        );
+        const { createServiceRoleClient } = await import("@/lib/supabase-server");
+
+        let assetId = parameters.asset_id as string | undefined;
+
+        // Resolve asset_code or serial_number to asset_id if needed
+        if (!assetId && (parameters.asset_code || parameters.serial_number)) {
+          const sAdmin = createServiceRoleClient();
+          const lookup = parameters.asset_code
+            ? { column: "code", value: parameters.asset_code as string }
+            : { column: "serial_number", value: parameters.serial_number as string };
+          const { data: found } = await sAdmin
+            .from("estates_assets")
+            .select("id")
+            .eq("organization_id", orgId)
+            .eq(lookup.column, lookup.value)
+            .maybeSingle();
+          assetId = found?.id;
+        }
+
+        if (!assetId) {
+          result = {
+            success: false,
+            error: "Asset not found — provide asset_id, asset_code, or serial_number",
+          };
+          break;
+        }
+
+        const asset = await getAssetWithLinks(assetId);
+        if (!asset || asset.organization_id !== orgId) {
+          result = { success: false, error: "Asset not found" };
+          break;
+        }
+
+        result = {
+          success: true,
+          data: {
+            id: asset.id,
+            code: asset.code,
+            name: asset.name,
+            asset_type: asset.asset_type,
+            manufacturer: asset.manufacturer,
+            model: asset.model,
+            serial_number: asset.serial_number,
+            location: `${asset.building || ""} ${asset.floor || ""} ${asset.room || ""}`.trim() || null,
+            condition_grade: asset.condition_grade,
+            status: asset.status,
+            purchase_date: asset.purchase_date,
+            purchase_price: asset.purchase_price,
+            invoice_number: asset.invoice_number,
+            purchase_order_number: asset.purchase_order_number,
+            warranty_status: asset.warranty_status,
+            warranty_expiry: asset.warranty_expiry,
+            warranty_provider: asset.warranty_provider,
+            warranty_days_remaining: asset.warranty_days_remaining,
+            supplier_contact: asset.supplier_contact,
+            open_tickets: (asset.linked_tickets || []).filter((t: { status: string }) => t.status !== "closed" && t.status !== "resolved"),
+            linked_compliance_tasks: asset.linked_tasks || [],
+            evidence_count: (asset.linked_evidence || []).length,
+            recent_maintenance: (asset.maintenance_history || []).slice(-5),
+          },
+        };
+        break;
+      }
+
+      case "check_asset_warranty": {
+        const { getAssetWithWarranty } = await import(
+          "@/lib/estates-compliance/database/assets"
+        );
+        const assetId = parameters.asset_id as string;
+        if (!assetId) {
+          result = { success: false, error: "asset_id is required" };
+          break;
+        }
+        const asset = await getAssetWithWarranty(assetId);
+        if (!asset || asset.organization_id !== orgId) {
+          result = { success: false, error: "Asset not found" };
+          break;
+        }
+
+        let recommended_action: string;
+        let user_message: string;
+        switch (asset.warranty_status) {
+          case "active":
+            recommended_action = "call_supplier";
+            user_message = `This asset is still under warranty with ${asset.warranty_provider || "the original supplier"} until ${asset.warranty_expiry} (${asset.warranty_days_remaining} days remaining). Contact them BEFORE booking a different contractor — the repair should be free.`;
+            break;
+          case "expiring_soon":
+            recommended_action = "warranty_expiring";
+            user_message = `⚠️ Warranty expires in ${asset.warranty_days_remaining} days (${asset.warranty_expiry}). Call ${asset.warranty_provider || "the supplier"} urgently to get the work done under warranty while you still can.`;
+            break;
+          case "expired":
+            recommended_action = "out_of_warranty";
+            user_message = `Warranty expired on ${asset.warranty_expiry}. You will need to pay for the repair or book a different contractor.`;
+            break;
+          default:
+            recommended_action = "unknown";
+            user_message = "No warranty information recorded for this asset. Check the purchase documents or contact the original supplier.";
+        }
+
+        result = {
+          success: true,
+          data: {
+            asset_id: asset.id,
+            asset_name: asset.name,
+            asset_code: asset.code,
+            warranty_status: asset.warranty_status,
+            warranty_expiry: asset.warranty_expiry,
+            warranty_provider: asset.warranty_provider,
+            warranty_days_remaining: asset.warranty_days_remaining,
+            warranty_terms: asset.warranty_terms,
+            supplier_contact: asset.supplier_contact,
+            purchase_date: asset.purchase_date,
+            invoice_number: asset.invoice_number,
+            purchase_order_number: asset.purchase_order_number,
+            recommended_action,
+            user_message,
+          },
+        };
+        break;
+      }
+
+      case "draft_warranty_claim_email": {
+        const { getAssetWithWarranty } = await import(
+          "@/lib/estates-compliance/database/assets"
+        );
+        const { createServiceRoleClient } = await import("@/lib/supabase-server");
+        const assetId = parameters.asset_id as string;
+        const issueDescription = (parameters.issue_description as string) || "";
+        const urgency = (parameters.urgency as string) || "routine";
+
+        if (!assetId || !issueDescription) {
+          result = {
+            success: false,
+            error: "asset_id and issue_description are required",
+          };
+          break;
+        }
+
+        const asset = await getAssetWithWarranty(assetId);
+        if (!asset || asset.organization_id !== orgId) {
+          result = { success: false, error: "Asset not found" };
+          break;
+        }
+
+        // Look up organization name for the signature
+        const sAdmin = createServiceRoleClient();
+        const { data: org } = await sAdmin
+          .from("organizations")
+          .select("name")
+          .eq("id", orgId)
+          .single();
+
+        const schoolName = org?.name || "our school";
+        const supplier = asset.supplier_contact;
+        const providerName = asset.warranty_provider || supplier?.company_name || "Supplier";
+        const contactName = supplier?.contact_name || "Sir/Madam";
+        const recipient = supplier?.email || "";
+
+        // Build the email draft
+        const urgencyText = urgency === "emergency"
+          ? "This is an EMERGENCY — we have an immediate safety concern."
+          : urgency === "urgent"
+            ? "This is urgent and we would appreciate attention within 24 hours."
+            : "This is a routine warranty claim.";
+
+        const subject = `Warranty claim — ${asset.name}${asset.code ? ` (${asset.code})` : ""}`;
+
+        const body = [
+          `Dear ${contactName},`,
+          ``,
+          `I am writing to request a warranty service call for equipment we purchased from you.`,
+          ``,
+          `Asset details:`,
+          `  • Item: ${asset.name}`,
+          asset.manufacturer ? `  • Manufacturer: ${asset.manufacturer}` : null,
+          asset.model ? `  • Model: ${asset.model}` : null,
+          asset.serial_number ? `  • Serial number: ${asset.serial_number}` : null,
+          asset.purchase_date ? `  • Purchased: ${asset.purchase_date}` : null,
+          asset.invoice_number ? `  • Invoice number: ${asset.invoice_number}` : null,
+          asset.purchase_order_number ? `  • Purchase order: ${asset.purchase_order_number}` : null,
+          asset.warranty_expiry ? `  • Warranty expires: ${asset.warranty_expiry}` : null,
+          ``,
+          `Issue:`,
+          issueDescription,
+          ``,
+          urgencyText,
+          ``,
+          `Please could you arrange for an engineer to attend ${schoolName} at your earliest convenience. Our site address and contact details are on file. If you need to speak to anyone on site please reply to this email and I'll put you in touch with the right person.`,
+          ``,
+          `Kind regards,`,
+          `${schoolName}`,
+        ].filter(Boolean).join("\n");
+
+        // Return as a PROPOSAL (user must approve before sending)
+        result = {
+          success: true,
+          data: {
+            type: "proposal",
+            proposal: {
+              tool: "draft_warranty_claim_email",
+              action: "email_draft",
+              fields: {
+                to: recipient,
+                to_name: contactName,
+                subject,
+                body,
+                provider: providerName,
+                asset_id: assetId,
+                asset_name: asset.name,
+                warranty_status: asset.warranty_status,
+              },
+              created_at: new Date().toISOString(),
+            },
+            message: `I've drafted an email to ${providerName}. Please review before sending — I will not send it without your approval. The asset is ${asset.warranty_status === "active" ? "still under warranty" : "out of warranty — you may be charged"}.`,
           },
         };
         break;

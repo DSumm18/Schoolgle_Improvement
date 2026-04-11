@@ -19,7 +19,17 @@ export type AssetType =
   | "lift"
   | "playground_equipment"
   | "accessibility_equipment"
-  | "vehicle";
+  | "vehicle"
+  | "furniture"
+  | "it_equipment"
+  | "kitchen_equipment"
+  | "av_equipment"
+  | "musical_instrument"
+  | "sports_equipment"
+  | "grounds_equipment"
+  | "teaching_resource"
+  | "signage"
+  | "security_equipment";
 
 export type AssetStatus =
   | "active"
@@ -30,33 +40,99 @@ export type AssetStatus =
   | "requires_inspection"
   | "retired";
 
+export type ConditionGrade = "A" | "B" | "C" | "D";
+
+export interface MaintenanceHistoryEntry {
+  date: string;
+  action: string;
+  performed_by: string;
+  contractor_id?: string | null;
+  cost?: number | null;
+  notes?: string | null;
+  evidence_ids?: string[];
+}
+
 export interface Asset {
+  // Identity
   id: string;
   organization_id: string;
   asset_type: AssetType;
-  category?: string;
-  subcategory?: string;
+  category?: string | null;
+  subcategory?: string | null;
   name: string;
-  code?: string;
-  qr_code?: string;
-  barcode?: string;
-  building?: string;
-  floor?: string;
-  room?: string;
-  location?: string;
-  location_details?: Record<string, unknown>;
-  parent_asset_id?: string;
-  installation_date?: string; // ISO date string
-  manufacturer?: string;
-  model?: string;
-  serial_number?: string;
-  specifications?: Record<string, unknown>;
+  code?: string | null;
+  qr_code?: string | null;
+  barcode?: string | null;
+
+  // Location
+  building?: string | null;
+  floor?: string | null;
+  room?: string | null;
+  location?: string | null;
+  location_details?: Record<string, unknown> | null;
+  location_id?: string | null;
+  parent_asset_id?: string | null;
+
+  // Technical
+  installation_date?: string | null;
+  manufacturer?: string | null;
+  model?: string | null;
+  serial_number?: string | null;
+  specifications?: Record<string, unknown> | null;
+
+  // Purchase
+  purchase_date?: string | null;
+  purchase_price?: number | null;
+  purchase_currency?: string;
+  purchase_order_number?: string | null;
+  invoice_number?: string | null;
+  purchased_from_contractor_id?: string | null;
+  purchase_document_evidence_id?: string | null;
+
+  // Warranty
+  warranty_start_date?: string | null;
+  warranty_expiry?: string | null;
+  warranty_provider?: string | null;
+  warranty_terms?: string | null;
+
+  // Lifecycle + condition
+  expected_life_years?: number | null;
+  condition_grade?: ConditionGrade | null;
+  replacement_cost_estimate?: number | null;
+  insurance_value?: number | null;
+
+  // Maintenance
+  last_inspection_date?: string | null;
+  next_inspection_due?: string | null;
+  maintenance_history?: MaintenanceHistoryEntry[] | null;
+  linked_compliance_checks?: string[];
+
+  // Status + metadata
   status: AssetStatus;
-  compliance_domains: string[]; // ['legionella', 'fire', 'asbestos']
-  image_url?: string;
-  notes?: string;
-  created_at: string; // ISO timestamp
-  updated_at: string; // ISO timestamp
+  compliance_domains: string[];
+  image_url?: string | null;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Asset with derived warranty status and supplier contact.
+ * Returned by getWarrantyStatus / get_asset_details skills.
+ */
+export type WarrantyStatus = "active" | "expiring_soon" | "expired" | "none";
+
+export interface AssetWithWarrantyStatus extends Asset {
+  warranty_status: WarrantyStatus;
+  warranty_days_remaining: number | null;
+  supplier_contact?: {
+    contractor_id: string;
+    company_name: string;
+    contact_name?: string | null;
+    email?: string | null;
+    phone?: string | null;
+    mobile?: string | null;
+  } | null;
 }
 
 export interface AssetInput {
@@ -69,6 +145,7 @@ export interface AssetInput {
   building?: string;
   floor?: string;
   room?: string;
+  location_id?: string;
   parent_asset_id?: string;
   installation_date?: string;
   manufacturer?: string;
@@ -78,6 +155,34 @@ export interface AssetInput {
   status?: AssetStatus;
   compliance_domains?: string[];
   notes?: string;
+  image_url?: string;
+
+  // Purchase
+  purchase_date?: string;
+  purchase_price?: number;
+  purchase_currency?: string;
+  purchase_order_number?: string;
+  invoice_number?: string;
+  purchased_from_contractor_id?: string;
+  purchase_document_evidence_id?: string;
+
+  // Warranty
+  warranty_start_date?: string;
+  warranty_expiry?: string;
+  warranty_provider?: string;
+  warranty_terms?: string;
+
+  // Lifecycle
+  expected_life_years?: number;
+  condition_grade?: ConditionGrade;
+  replacement_cost_estimate?: number;
+  insurance_value?: number;
+
+  // Maintenance
+  last_inspection_date?: string;
+  next_inspection_due?: string;
+  maintenance_history?: MaintenanceHistoryEntry[];
+  linked_compliance_checks?: string[];
 }
 
 // ============================================================================

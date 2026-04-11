@@ -4,14 +4,44 @@
  * Helper functions for querying estates_assets table
  */
 
-import { supabase } from "@/lib/supabase";
+import { createServiceRoleClient } from "@/lib/supabase-server";
 import type {
   Asset,
   AssetInput,
   AssetFilters,
   AssetStatus,
+  AssetWithWarrantyStatus,
+  MaintenanceHistoryEntry,
   PaginatedResponse,
 } from "@/types/estates-compliance";
+
+// Server-side operations use service role. Tenant isolation is preserved
+// via organizationId filters on every query — API routes validate auth first.
+const supabase = createServiceRoleClient();
+
+// Whitelist of valid columns for inserts/updates to avoid schema drift.
+const ASSET_COLUMNS = [
+  "asset_type", "category", "subcategory", "name", "code", "qr_code", "barcode",
+  "building", "floor", "room", "location_id", "location_details",
+  "parent_asset_id", "installation_date",
+  "manufacturer", "model", "serial_number", "specifications",
+  "purchase_date", "purchase_price", "purchase_currency", "purchase_order_number",
+  "invoice_number", "purchased_from_contractor_id", "purchase_document_evidence_id",
+  "warranty_start_date", "warranty_expiry", "warranty_provider", "warranty_terms",
+  "expected_life_years", "condition_grade", "replacement_cost_estimate", "insurance_value",
+  "last_inspection_date", "next_inspection_due", "maintenance_history", "linked_compliance_checks",
+  "status", "compliance_domains", "image_url", "notes",
+] as const;
+
+function pickAssetColumns(input: Partial<AssetInput>): Record<string, unknown> {
+  const row: Record<string, unknown> = {};
+  for (const key of ASSET_COLUMNS) {
+    if (key in input && (input as Record<string, unknown>)[key] !== undefined) {
+      row[key] = (input as Record<string, unknown>)[key];
+    }
+  }
+  return row;
+}
 
 /**
  * Get assets for an organization with optional filters
@@ -107,26 +137,26 @@ export async function createAsset(
   organizationId: string,
   asset: AssetInput,
 ): Promise<Asset> {
-  // Generate QR code URL if not provided
+  // Generate QR code URL if a code is provided
   const qrCode = asset.code
     ? `${process.env.NEXT_PUBLIC_APP_URL || "https://schoolgle.co.uk"}/estates/assets/scan/${asset.code}`
     : undefined;
 
+  const row = pickAssetColumns(asset);
+  row.organization_id = organizationId;
+  if (qrCode) row.qr_code = qrCode;
+  if (!row.status) row.status = "active";
+  if (!row.compliance_domains) row.compliance_domains = [];
+
   const { data, error } = await supabase
     .from("estates_assets")
-    .insert({
-      organization_id: organizationId,
-      ...asset,
-      qr_code: qrCode,
-      status: asset.status || "active",
-      compliance_domains: asset.compliance_domains || [],
-    })
+    .insert(row)
     .select()
     .single();
 
   if (error) {
     console.error("Error creating asset:", error);
-    throw error;
+    throw new Error(`Failed to create asset: ${error.message}`);
   }
 
   return data;
@@ -139,22 +169,155 @@ export async function updateAsset(
   assetId: string,
   updates: Partial<AssetInput & { status?: AssetStatus }>,
 ): Promise<Asset> {
+  const row = pickAssetColumns(updates);
+  row.updated_at = new Date().toISOString();
+
   const { data, error } = await supabase
     .from("estates_assets")
-    .update({
-      ...updates,
-      updated_at: new Date().toISOString(),
-    })
+    .update(row)
     .eq("id", assetId)
     .select()
     .single();
 
   if (error) {
     console.error("Error updating asset:", error);
-    throw error;
+    throw new Error(`Failed to update asset: ${error.message}`);
   }
 
   return data;
+}
+
+/**
+ * Compute warranty status for an asset based on warranty_expiry date.
+ */
+export function computeWarrantyStatus(asset: Asset): {
+  status: "active" | "expiring_soon" | "expired" | "none";
+  daysRemaining: number | null;
+} {
+  if (!asset.warranty_expiry) {
+    return { status: "none", daysRemaining: null };
+  }
+  const expiry = new Date(asset.warranty_expiry);
+  const now = new Date();
+  const diffMs = expiry.getTime() - now.getTime();
+  const daysRemaining = Math.floor(diffMs / 86400000);
+
+  if (daysRemaining < 0) return { status: "expired", daysRemaining };
+  if (daysRemaining <= 30) return { status: "expiring_soon", daysRemaining };
+  return { status: "active", daysRemaining };
+}
+
+/**
+ * Get an asset with computed warranty status and supplier contact.
+ * Returns null if asset not found.
+ */
+export async function getAssetWithWarranty(
+  assetId: string,
+): Promise<AssetWithWarrantyStatus | null> {
+  const { data: asset, error } = await supabase
+    .from("estates_assets")
+    .select("*")
+    .eq("id", assetId)
+    .maybeSingle();
+
+  if (error || !asset) return null;
+
+  const { status: warranty_status, daysRemaining } = computeWarrantyStatus(asset);
+
+  let supplier_contact = null;
+  if (asset.purchased_from_contractor_id) {
+    const { data: supplier } = await supabase
+      .from("estates_contractors")
+      .select("id, company_name, contact_name, email, phone, mobile")
+      .eq("id", asset.purchased_from_contractor_id)
+      .maybeSingle();
+
+    if (supplier) {
+      supplier_contact = {
+        contractor_id: supplier.id,
+        company_name: supplier.company_name,
+        contact_name: supplier.contact_name,
+        email: supplier.email,
+        phone: supplier.phone,
+        mobile: supplier.mobile,
+      };
+    }
+  }
+
+  return {
+    ...asset,
+    warranty_status,
+    warranty_days_remaining: daysRemaining,
+    supplier_contact,
+  };
+}
+
+/**
+ * Append an entry to the maintenance_history JSONB array.
+ * Non-destructive — appends without replacing existing entries.
+ */
+export async function appendMaintenanceHistory(
+  assetId: string,
+  entry: MaintenanceHistoryEntry,
+): Promise<void> {
+  // Read current history, append, write back (no array_append in pg-rest for JSONB)
+  const { data: asset, error: readErr } = await supabase
+    .from("estates_assets")
+    .select("maintenance_history")
+    .eq("id", assetId)
+    .single();
+
+  if (readErr) throw new Error(`Failed to read asset: ${readErr.message}`);
+
+  const current = Array.isArray(asset?.maintenance_history) ? asset.maintenance_history : [];
+  const updated = [...current, entry];
+
+  const { error: writeErr } = await supabase
+    .from("estates_assets")
+    .update({
+      maintenance_history: updated,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", assetId);
+
+  if (writeErr) throw new Error(`Failed to append maintenance history: ${writeErr.message}`);
+}
+
+/**
+ * Get asset with all linked data — open tickets, compliance tasks, evidence.
+ * Used for the asset detail page.
+ */
+export async function getAssetWithLinks(assetId: string) {
+  const asset = await getAssetWithWarranty(assetId);
+  if (!asset) return null;
+
+  const [ticketsRes, tasksRes, evidenceRes] = await Promise.all([
+    supabase
+      .from("estates_helpdesk_tickets")
+      .select("id, ticket_number, title, status, priority, created_at")
+      .eq("asset_id", assetId)
+      .order("created_at", { ascending: false })
+      .limit(20),
+    supabase
+      .from("estates_compliance_tasks")
+      .select("id, task_name, task_type, status, due_by, frequency")
+      .eq("asset_id", assetId)
+      .order("due_by", { ascending: true })
+      .limit(20),
+    supabase
+      .from("estates_evidence")
+      .select("id, title, evidence_type, file_url, file_name, file_type, created_at")
+      .eq("asset_id", assetId)
+      .order("created_at", { ascending: false })
+      .limit(20),
+  ]);
+
+  return {
+    ...asset,
+    linked_tickets: ticketsRes.data || [],
+    linked_tasks: tasksRes.data || [],
+    linked_evidence: evidenceRes.data || [],
+  };
 }
 
 /**

@@ -812,6 +812,53 @@ export const ESTATES_FUNCTION_SCHEMAS = [
     },
   },
   {
+    name: "get_asset_details",
+    description:
+      "Look up an asset by ID, code, or serial number. Returns full asset record including purchase info, warranty status, supplier contact, linked tickets, and compliance tasks. Use this whenever a user mentions a specific piece of equipment or when creating a ticket to check if the asset is under warranty.",
+    parameters: {
+      type: "object",
+      properties: {
+        organization_id: { type: "string", description: "Organization ID" },
+        asset_id: { type: "string", description: "Asset UUID (preferred)" },
+        asset_code: { type: "string", description: "Asset code like BOI-001 (alternative to asset_id)" },
+        serial_number: { type: "string", description: "Serial number (alternative to asset_id)" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "check_asset_warranty",
+    description:
+      "Check if an asset is under warranty. Returns warranty status (active/expiring_soon/expired/none), days remaining, provider name, supplier contact details, and a recommended action. Use this BEFORE suggesting a school call a contractor — if the asset is under warranty, the original supplier should fix it for free.",
+    parameters: {
+      type: "object",
+      properties: {
+        organization_id: { type: "string", description: "Organization ID" },
+        asset_id: { type: "string", description: "Asset UUID (required)" },
+      },
+      required: ["asset_id"],
+    },
+  },
+  {
+    name: "draft_warranty_claim_email",
+    description:
+      "Draft an email to an asset's warranty provider/supplier requesting service or repair under warranty. Returns a complete email body with asset details, invoice reference, and issue description. Requires user approval (PROPOSE flow) before sending — this skill does NOT actually send the email.",
+    parameters: {
+      type: "object",
+      properties: {
+        organization_id: { type: "string", description: "Organization ID" },
+        asset_id: { type: "string", description: "Asset UUID (required)" },
+        issue_description: { type: "string", description: "What's wrong with the asset" },
+        urgency: {
+          type: "string",
+          enum: ["emergency", "urgent", "routine"],
+          description: "How urgent is the repair",
+        },
+      },
+      required: ["asset_id", "issue_description"],
+    },
+  },
+  {
     name: "create_cost_request",
     description:
       "Create a cost/budget request for estates work that needs financial approval. Links to the 5-year estates strategy and routes to SBM/Headteacher for approval. Requires user confirmation before submission.",
