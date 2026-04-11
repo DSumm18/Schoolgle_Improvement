@@ -9,6 +9,7 @@ import { ResultPanel } from './ResultPanel';
 import { useCanvasState } from './hooks/useCanvasState';
 import { TEMPLATES, getTemplate, canRunTemplate } from './lib/templates';
 import type { Connector } from '@/lib/data-connectors/types';
+import { getAllConnectors } from '@/lib/data-connectors/registry';
 import { supabase } from '@/lib/supabase';
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
@@ -33,38 +34,51 @@ interface GenerationResult {
 }
 
 export function Canvas() {
-  const [allConnectors, setAllConnectors] = useState<Connector[]>([]);
-  const [loadingConnectors, setLoadingConnectors] = useState(true);
+  // Static registry is imported directly — no network round-trip needed.
+  // BYO connectors are fetched separately and merged in if available.
+  const [allConnectors, setAllConnectors] = useState<Connector[]>(() => getAllConnectors());
   const [selectedTemplateId, setSelectedTemplateId] = useState('attendance-story');
   const [generating, setGenerating] = useState(false);
   const [result, setResult] = useState<GenerationResult | null>(null);
   const [resultOpen, setResultOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [byoLoadError, setByoLoadError] = useState<string | null>(null);
 
   const canvas = useCanvasState();
   const template = getTemplate(selectedTemplateId) ?? TEMPLATES[0];
   const { ok: canGenerate, missing } = canRunTemplate(template, canvas.placedConnectorIds);
 
-  // Load connectors from registry
+  // Try to enrich with BYO connectors from the API (best-effort — failures
+  // are shown as an inline notice but don't block the static connectors).
   useEffect(() => {
-    async function load() {
-      const headers = await getAuthHeaders();
+    let cancelled = false;
+    async function loadByo() {
       try {
-        const res = await fetch('/api/connectors/registry', { headers });
-        if (res.ok) {
-          const data = await res.json();
-          setAllConnectors(data.data?.connectors ?? []);
+        const headers = await getAuthHeaders();
+        const res = await fetch('/api/connectors/byo', { headers });
+        if (!res.ok) {
+          if (!cancelled) setByoLoadError(`BYO connectors unavailable (HTTP ${res.status})`);
+          return;
         }
-      } finally {
-        setLoadingConnectors(false);
+        const data = await res.json();
+        const byoConnectors: Connector[] = data.data?.connectors ?? [];
+        if (byoConnectors.length > 0 && !cancelled) {
+          setAllConnectors((prev) => [...prev, ...byoConnectors]);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setByoLoadError(err instanceof Error ? err.message : 'BYO fetch failed');
+        }
       }
     }
-    load();
+    loadByo();
+    return () => { cancelled = true; };
   }, []);
 
-  // Pre-populate canvas with required connectors for the default template
+  // Pre-populate canvas with required connectors for the default template.
+  // Runs once on mount — the static registry is already populated at init.
   useEffect(() => {
-    if (allConnectors.length === 0 || canvas.nodes.length > 0) return;
+    if (canvas.nodes.length > 0) return;
     const template = getTemplate(selectedTemplateId);
     if (!template) return;
     const required = template.requiredConnectorIds
@@ -72,7 +86,7 @@ export function Canvas() {
       .filter((c): c is Connector => c !== undefined);
     required.forEach((c) => canvas.addConnector(c));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allConnectors]);
+  }, []);
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
@@ -110,14 +124,6 @@ export function Canvas() {
     }
   }
 
-  if (loadingConnectors) {
-    return (
-      <div className="flex items-center justify-center h-[calc(100vh-100px)] text-sm text-muted-foreground">
-        Loading connectors from registry...
-      </div>
-    );
-  }
-
   return (
     <DndContext collisionDetection={pointerWithin} onDragEnd={handleDragEnd}>
       <div className="flex h-[calc(100vh-120px)] rounded-2xl border border-border overflow-hidden bg-card">
@@ -141,7 +147,12 @@ export function Canvas() {
           />
           {error && (
             <div className="border-t border-red-500/30 bg-red-500/5 p-3 text-xs text-red-400">
-              Error: {error}
+              <strong>Generation error:</strong> {error}
+            </div>
+          )}
+          {byoLoadError && (
+            <div className="border-t border-amber-500/30 bg-amber-500/5 p-2 text-[10px] text-amber-400">
+              Note: {byoLoadError} — static connectors still loaded ({allConnectors.length} available).
             </div>
           )}
         </div>
