@@ -87,3 +87,12 @@ schoolgle-delivery-plan.html
 .mcp.json
 .claude/settings.local.json
 auth-state.json
+
+# Superpowers brainstorm sessions (ephemeral)
+.superpowers/
+
+# Playwright MCP session snapshots
+.playwright-mcp/
+
+# TypeScript diagnostic dumps
+typecheck_output.txt

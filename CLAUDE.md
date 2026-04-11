@@ -104,6 +104,18 @@ Every task — whether done by Jarvis, a worker session, or any Claude Code inst
 - Committing code that introduces new build failures
 - Using a wrong model name when the API is available to list them
 
+### Integration Test Gate (Mandatory for External AI/API Models)
+
+Any task that integrates an external AI model or API (Gemini, OpenRouter, Fish Audio, Firecrawl, DfE GIAS, etc.) is **NOT COMPLETE** until ALL of the following are met:
+
+1. **Real API call made** — with representative, realistic input data (not mocks)
+2. **Output evaluated for accuracy** — does the model return correct, useful results?
+3. **Evidence saved** — JSON dump or screenshot of real results saved to `/tmp/` or Supabase storage
+4. **Sandra test** — honest assessment: would a school business manager find this output useful? If no, the task is NOT done.
+5. **UI verified** — if there's a user-facing page, it must be loaded in a browser with real data and screenshotted
+
+Mocked unit tests are necessary but NOT sufficient. They prove code structure, not product value.
+
 ---
 
 ## Monorepo Structure
@@ -349,6 +361,13 @@ Models configured in `apps/platform/src/lib/ai-evidence-matcher.ts`:
 
 Ed is the school's AI assistant — a multi-specialist chatbot with domain expertise, function calling, and proactive intelligence.
 
+### ⚠️ IMPORTANT: April 2026 AI Architecture Migration / Legacy Code Removal
+**For the attention of Claude Code / Future Agents:**
+A massive amount of legacy AI interaction code was systematically eradicated from the codebase in April 2026. If you notice large chunks of code missing from older Ofsted-readiness AI evaluation routing or direct prompts, here is why:
+1. **Model Consolidation:** We aggressively removed fragmented `DeepSeek` direct-API calls that were scattered across random utilities. All LLM inferences have been centralized behind `OpenRouter` in `@schoolgle/ed-agents` (`ai-openrouter.ts` / `orchestrator.ts`) to ensure enterprise-grade rate limiting and cost control.
+2. **Zero-Trust Data Governance:** The old AI evaluation scripts (like the Ofsted readiness scanner) were bypassing the PII scrubbing firewall. We eradicated this legacy code to forcefully route **all** AI requests through the new `SchoolDataGuardian` middleware. This ensures that no raw database text is ever passed directly to an LLM without being systematically tokenized and cleansed of student PII first.
+3. **Do NOT rebuild legacy AI shortcuts:** All new AI features must be built as formal "Skills" in the `ed-agents` package or funnel through the strict `routeToSpecialist` pipeline.
+
 ### Architecture
 
 ```
@@ -472,6 +491,18 @@ FIRECRAWL_API_KEY=
 - **Playwright** for form-fill E2E tests (`packages/form-fill-lab/`)
 - Test files: `*.test.ts` or `*.spec.ts`
 - Tests run in jsdom environment with `@` alias for `src/`
+
+### Integration Test Gate (Mandatory for External AI Models)
+
+Any task that integrates an external AI model or API (Gemini, OpenRouter, Fish Audio, Firecrawl, etc.) is NOT COMPLETE until ALL of the following are met:
+
+1. **Real API call made** — with representative, realistic input data (not mocks)
+2. **Output evaluated for accuracy** — does the model return correct, useful results?
+3. **Evidence saved** — JSON dump or screenshot of real results saved to `/tmp/` or Supabase storage
+4. **Sandra test** — honest assessment: would a school business manager find this output useful? If no, the task is NOT done.
+5. **UI verified** — if there's a user-facing page, it must be loaded in a browser with real data and screenshotted
+
+Mocked unit tests are necessary but NOT sufficient. They prove code structure, not product value.
 
 ---
 

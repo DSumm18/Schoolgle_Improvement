@@ -17,6 +17,7 @@ Before claiming any work is done, you MUST complete these gates in order:
    - Your changes must not introduce new build failures
    - Pre-existing build errors should be noted
 3. **Verify functionality**: curl API endpoints, check browser console, etc.
+   - **External AI/API integrations**: mocked tests are NOT sufficient. Must make a real API call with real data, evaluate output accuracy, save evidence to /tmp/, and pass the "Sandra test" (would a school business manager find this useful?)
 4. **Report evidence**: Include test counts, build output, and verification commands in your OUTBOX post
 
 If tests or build fail due to your changes, fix and re-run. Only then mark DONE.
