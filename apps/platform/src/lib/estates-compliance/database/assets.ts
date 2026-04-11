@@ -312,11 +312,14 @@ export async function getAssetWithLinks(assetId: string) {
       .limit(20),
   ]);
 
+  const spend = computeMaintenanceSpend(asset);
+
   return {
     ...asset,
     linked_tickets: ticketsRes.data || [],
     linked_tasks: tasksRes.data || [],
     linked_evidence: evidenceRes.data || [],
+    maintenance_spend: spend,
   };
 }
 
