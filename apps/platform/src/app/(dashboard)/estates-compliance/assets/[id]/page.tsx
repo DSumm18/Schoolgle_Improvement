@@ -10,11 +10,14 @@
  * Layout: two-column on desktop (60/40 split), single column on mobile.
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { toast } from "sonner";
 import {
   ArrowLeft,
+  Book,
+  BookOpen,
   Building2,
   Calendar,
   CheckCircle2,
@@ -24,6 +27,7 @@ import {
   FileText,
   Mail,
   MapPin,
+  MessageCircle,
   MoreHorizontal,
   Phone,
   Plus,
@@ -54,6 +58,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -101,6 +111,7 @@ interface LinkedEvidence {
   file_url?: string | null;
   file_name?: string | null;
   file_type?: string | null;
+  tags?: string[] | null;
   created_at: string;
 }
 
@@ -410,6 +421,49 @@ function InfoRow({
 // Main page component
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Doc type options for the "Upload manual" dialog
+// ---------------------------------------------------------------------------
+
+const DOC_TYPE_OPTIONS = [
+  { value: "user_manual", label: "User Manual" },
+  { value: "setup_guide", label: "Setup Guide" },
+  { value: "data_sheet", label: "Data Sheet" },
+  { value: "troubleshooting", label: "Troubleshooting Guide" },
+  { value: "manual", label: "Service Manual" },
+  { value: "document", label: "Other" },
+] as const;
+
+type DocTypeValue = (typeof DOC_TYPE_OPTIONS)[number]["value"];
+
+const MANUAL_TAG_LABELS: Record<string, string> = {
+  user_manual: "User Manual",
+  setup_guide: "Setup Guide",
+  data_sheet: "Data Sheet",
+  troubleshooting: "Troubleshooting",
+  manual: "Service Manual",
+  spec_sheet: "Spec Sheet",
+  user_guide: "User Guide",
+  datasheet: "Data Sheet",
+  document: "Document",
+};
+
+const MANUAL_TAGS = new Set([
+  "manual",
+  "setup_guide",
+  "user_guide",
+  "data_sheet",
+  "spec_sheet",
+  "troubleshooting",
+  "datasheet",
+  "user_manual",
+]);
+
+function isManualsItem(ev: LinkedEvidence): boolean {
+  const tags = ev.tags ?? [];
+  return tags.some((t) => MANUAL_TAGS.has(t));
+}
+
 export default function AssetDetailPage() {
   const params = useParams();
   const id = params?.id as string;
@@ -418,6 +472,14 @@ export default function AssetDetailPage() {
   const [asset, setAsset] = useState<AssetFullDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Manual upload dialog state
+  const [manualDialogOpen, setManualDialogOpen] = useState(false);
+  const [manualFile, setManualFile] = useState<File | null>(null);
+  const [manualDocType, setManualDocType] = useState<DocTypeValue>("user_manual");
+  const [manualNotes, setManualNotes] = useState("");
+  const [manualUploading, setManualUploading] = useState(false);
+  const manualFileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchAsset = useCallback(async () => {
     if (!organizationId || !id) return;
@@ -458,6 +520,54 @@ export default function AssetDetailPage() {
   useEffect(() => {
     fetchAsset();
   }, [fetchAsset]);
+
+  async function handleManualUpload() {
+    if (!manualFile || !organizationId || !id) return;
+    setManualUploading(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token ?? session?.access_token;
+      if (!token) throw new Error("No auth token");
+
+      const fd = new FormData();
+      fd.append("source_type", "upload");
+      fd.append("file", manualFile);
+      fd.append("title", manualFile.name);
+      fd.append("evidence_type", "document");
+      fd.append("asset_id", id);
+      fd.append("tags", manualDocType);
+      if (manualNotes.trim()) {
+        fd.append("description", manualNotes.trim());
+      }
+
+      const res = await fetch(
+        `/api/estates/evidence?organizationId=${organizationId}`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: fd,
+        },
+      );
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${res.status}`);
+      }
+
+      toast.success("Manual uploaded successfully");
+      setManualDialogOpen(false);
+      setManualFile(null);
+      setManualNotes("");
+      setManualDocType("user_manual");
+      // Refresh evidence list
+      fetchAsset();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Upload failed";
+      toast.error(message);
+    } finally {
+      setManualUploading(false);
+    }
+  }
 
   // -------------------------------------------------------------------------
   // Render states
@@ -1106,67 +1216,287 @@ export default function AssetDetailPage() {
             </CardContent>
           </Card>
 
-          {/* 8. Evidence & documents */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <FileText className="w-4 h-4 text-muted-foreground" />
-                Evidence & Documents
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {(!asset.linked_evidence || asset.linked_evidence.length === 0) ? (
-                <p className="text-sm text-muted-foreground py-1">
-                  No evidence files attached.
-                </p>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {asset.linked_evidence.map((ev) => {
-                    const isImg = isImageFile(ev.file_type, ev.file_name);
-                    return (
-                      <div
-                        key={ev.id}
-                        className="rounded-lg border overflow-hidden group relative"
-                      >
-                        {isImg && ev.file_url ? (
-                          <img
-                            src={ev.file_url}
-                            alt={ev.title}
-                            className="w-full h-24 object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-24 flex items-center justify-center bg-muted">
-                            <FileText className="w-8 h-8 text-muted-foreground" />
-                          </div>
-                        )}
-                        <div className="p-2">
-                          <p className="text-xs font-medium truncate">{ev.title}</p>
-                          <p className="text-xs text-muted-foreground truncate">
-                            {ev.file_name ?? ev.evidence_type}
-                          </p>
-                        </div>
-                        {ev.file_url && (
-                          <a
-                            href={ev.file_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity bg-background rounded p-0.5 shadow"
+          {/* 8a. Photos & Service Records */}
+          {(() => {
+            const photoItems = (asset.linked_evidence ?? []).filter(
+              (ev) => !isManualsItem(ev),
+            );
+            return (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4 text-muted-foreground" />
+                    Photos &amp; Service Records
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {photoItems.length === 0 ? (
+                    <p className="text-sm text-muted-foreground py-1">
+                      No photos or service records attached.
+                    </p>
+                  ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {photoItems.map((ev) => {
+                        const isImg = isImageFile(ev.file_type, ev.file_name);
+                        return (
+                          <div
+                            key={ev.id}
+                            className="rounded-lg border overflow-hidden group relative"
                           >
-                            <Download className="w-3.5 h-3.5" />
-                          </a>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+                            {isImg && ev.file_url ? (
+                              <img
+                                src={ev.file_url}
+                                alt={ev.title}
+                                className="w-full h-24 object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-24 flex items-center justify-center bg-muted">
+                                <FileText className="w-8 h-8 text-muted-foreground" />
+                              </div>
+                            )}
+                            <div className="p-2">
+                              <p className="text-xs font-medium truncate">{ev.title}</p>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {ev.file_name ?? ev.evidence_type}
+                              </p>
+                            </div>
+                            {ev.file_url && (
+                              <a
+                                href={ev.file_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity bg-background rounded p-0.5 shadow"
+                              >
+                                <Download className="w-3.5 h-3.5" />
+                              </a>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <Button variant="outline" size="sm">
+                    <Upload className="w-3.5 h-3.5 mr-1.5" />
+                    Upload photo or report
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          })()}
 
-              <Button variant="outline" size="sm">
-                <Upload className="w-3.5 h-3.5 mr-1.5" />
-                Upload evidence
-              </Button>
-            </CardContent>
-          </Card>
+          {/* 8b. Manuals & Documentation */}
+          {(() => {
+            const manualItems = (asset.linked_evidence ?? []).filter(isManualsItem);
+            return (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <BookOpen className="w-4 h-4 text-muted-foreground" />
+                    Manuals &amp; Documentation
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {manualItems.length === 0 ? (
+                    <p className="text-sm text-muted-foreground py-1">
+                      No manuals or guides attached yet.
+                    </p>
+                  ) : (
+                    <ul className="divide-y divide-border/50">
+                      {manualItems.map((ev) => {
+                        const tags = ev.tags ?? [];
+                        const manualTagLabels = tags
+                          .filter((t) => MANUAL_TAGS.has(t))
+                          .map((t) => MANUAL_TAG_LABELS[t] ?? t);
+                        return (
+                          <li
+                            key={ev.id}
+                            className="flex items-center gap-3 py-3 first:pt-0 last:pb-0"
+                          >
+                            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-muted">
+                              <Book className="w-4 h-4 text-muted-foreground" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate text-foreground">
+                                {ev.title}
+                              </p>
+                              {ev.file_name && ev.file_name !== ev.title && (
+                                <p className="text-xs text-muted-foreground truncate">
+                                  {ev.file_name}
+                                </p>
+                              )}
+                              {manualTagLabels.length > 0 && (
+                                <div className="mt-1 flex flex-wrap gap-1">
+                                  {manualTagLabels.map((label) => (
+                                    <Badge
+                                      key={label}
+                                      variant="secondary"
+                                      className="text-xs px-1.5 py-0"
+                                    >
+                                      {label}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              {ev.file_url && (
+                                <a
+                                  href={ev.file_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="rounded p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                                  title="Download"
+                                >
+                                  <Download className="w-4 h-4" />
+                                </a>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  console.log("[Ask Ed] Manual:", ev.id, ev.title);
+                                }}
+                                className="rounded p-1.5 text-muted-foreground hover:text-primary hover:bg-muted transition-colors"
+                                title="Ask Ed about this manual"
+                              >
+                                <MessageCircle className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setManualDialogOpen(true)}
+                  >
+                    <Upload className="w-3.5 h-3.5 mr-1.5" />
+                    Upload manual or guide
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          })()}
+
+          {/* Manual upload dialog */}
+          <Dialog open={manualDialogOpen} onOpenChange={setManualDialogOpen}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <BookOpen className="w-4 h-4" />
+                  Upload Manual or Guide
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 pt-2">
+                {/* File picker */}
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1.5">
+                    File <span className="text-destructive">*</span>
+                  </label>
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => manualFileInputRef.current?.click()}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ")
+                        manualFileInputRef.current?.click();
+                    }}
+                    className="flex cursor-pointer items-center gap-3 rounded-lg border border-dashed border-border bg-muted/20 p-4 hover:bg-muted/40 transition-colors"
+                  >
+                    <Upload className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                    <div className="min-w-0">
+                      {manualFile ? (
+                        <>
+                          <p className="text-sm font-medium text-foreground truncate">
+                            {manualFile.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {(manualFile.size / 1024).toFixed(0)} KB
+                          </p>
+                        </>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          Click to choose a file (PDF, image, Word, etc.)
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <input
+                    ref={manualFileInputRef}
+                    type="file"
+                    className="hidden"
+                    accept="application/pdf,image/*,.doc,.docx,.xls,.xlsx"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) setManualFile(f);
+                      e.target.value = "";
+                    }}
+                  />
+                </div>
+
+                {/* Doc type */}
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1.5">
+                    Document type
+                  </label>
+                  <select
+                    value={manualDocType}
+                    onChange={(e) =>
+                      setManualDocType(e.target.value as DocTypeValue)
+                    }
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  >
+                    {DOC_TYPE_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Notes */}
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1.5">
+                    Notes{" "}
+                    <span className="text-xs font-normal text-muted-foreground">
+                      (optional)
+                    </span>
+                  </label>
+                  <textarea
+                    value={manualNotes}
+                    onChange={(e) => setManualNotes(e.target.value)}
+                    rows={2}
+                    placeholder="e.g. Applies to model XR-450 only"
+                    className="w-full resize-y rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
+
+                {/* Actions */}
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setManualDialogOpen(false);
+                      setManualFile(null);
+                      setManualNotes("");
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    disabled={!manualFile || manualUploading}
+                    onClick={handleManualUpload}
+                  >
+                    {manualUploading ? "Uploading..." : "Upload"}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
 
         {/* ================================================================

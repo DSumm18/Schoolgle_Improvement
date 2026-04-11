@@ -7,12 +7,24 @@
  * live warranty status check — if the selected asset is under warranty,
  * the user is advised to contact the original supplier first instead
  * of booking a different contractor.
+ *
+ * Also supports attaching photos and documents which are linked to both
+ * the ticket AND the asset (via the ticket_id field on estates_evidence).
  */
 
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Save, Send, Wrench } from "lucide-react";
+import {
+  ArrowLeft,
+  FileText,
+  Image as ImageIcon,
+  Save,
+  Send,
+  Upload,
+  Wrench,
+  X,
+} from "lucide-react";
 import { useAuth } from "@/context/SupabaseAuthContext";
 import { supabase } from "@/lib/supabase";
 import { AssetPicker } from "@/components/estates-compliance/AssetPicker";
@@ -81,6 +93,53 @@ interface WarrantyInfo {
   } | null;
 }
 
+interface AttachedFile {
+  id: string;
+  file: File;
+  preview: string | null; // data URL for images
+}
+
+function FilePreviewCard({
+  attached,
+  onRemove,
+}: {
+  attached: AttachedFile;
+  onRemove: (id: string) => void;
+}) {
+  const isImage = attached.file.type.startsWith("image/");
+  return (
+    <div className="relative flex items-center gap-2 rounded-lg border border-border bg-muted/40 p-2 pr-8 text-sm">
+      {isImage && attached.preview ? (
+        <img
+          src={attached.preview}
+          alt={attached.file.name}
+          className="h-10 w-10 rounded object-cover flex-shrink-0"
+        />
+      ) : (
+        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded bg-muted">
+          <FileText className="h-5 w-5 text-muted-foreground" />
+        </div>
+      )}
+      <div className="min-w-0">
+        <p className="truncate font-medium text-foreground">
+          {attached.file.name}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          {(attached.file.size / 1024).toFixed(0)} KB
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={() => onRemove(attached.id)}
+        className="absolute right-1.5 top-1.5 rounded p-0.5 text-muted-foreground hover:text-foreground"
+        aria-label="Remove file"
+      >
+        <X className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+}
+
 export default function NewTicketPage() {
   const { organizationId } = useAuth();
   const router = useRouter();
@@ -93,6 +152,99 @@ export default function NewTicketPage() {
   const [selectedAsset, setSelectedAsset] = useState<SelectedAsset | null>(null);
   const [warranty, setWarranty] = useState<WarrantyInfo | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
+  const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const addFiles = useCallback((files: FileList | File[]) => {
+    const arr = Array.from(files);
+    const allowed = arr.filter(
+      (f) => f.type.startsWith("image/") || f.type === "application/pdf",
+    );
+    if (allowed.length < arr.length) {
+      toast.warning("Some files were skipped — only images and PDFs are accepted.");
+    }
+    allowed.forEach((file) => {
+      const id = `${Date.now()}-${Math.random()}`;
+      if (file.type.startsWith("image/")) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setAttachedFiles((prev) => [
+            ...prev,
+            { id, file, preview: e.target?.result as string },
+          ]);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        setAttachedFiles((prev) => [...prev, { id, file, preview: null }]);
+      }
+    });
+  }, []);
+
+  function removeFile(id: string) {
+    setAttachedFiles((prev) => prev.filter((f) => f.id !== id));
+  }
+
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDragging(true);
+  }
+
+  function handleDragLeave(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDragging(false);
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files.length > 0) {
+      addFiles(e.dataTransfer.files);
+    }
+  }
+
+  async function uploadAttachments(
+    ticketId: string,
+    ticketTitle: string,
+    token: string,
+  ): Promise<void> {
+    for (const attached of attachedFiles) {
+      try {
+        const fd = new FormData();
+        fd.append("source_type", "upload");
+        fd.append("file", attached.file);
+        fd.append("title", `${ticketTitle} — ${attached.file.name}`);
+        fd.append(
+          "evidence_type",
+          attached.file.type.startsWith("image/") ? "photo" : "report",
+        );
+        fd.append("ticket_id", ticketId);
+        if (selectedAsset?.id) {
+          fd.append("asset_id", selectedAsset.id);
+        }
+        fd.append("tags", "ticket_attachment");
+
+        const res = await fetch(
+          `/api/estates/evidence?organizationId=${organizationId}`,
+          {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+            body: fd,
+          },
+        );
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          console.error("Evidence upload failed:", err);
+          toast.error(`Failed to upload ${attached.file.name}`);
+        }
+      } catch (err) {
+        console.error("Evidence upload error:", err);
+        toast.error(`Error uploading ${attached.file.name}`);
+      }
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -111,6 +263,7 @@ export default function NewTicketPage() {
       const token = session.session?.access_token;
       if (!token) throw new Error("No auth token");
 
+      // Step 1: create ticket
       const res = await fetch("/api/estates/helpdesk", {
         method: "POST",
         headers: {
@@ -136,6 +289,17 @@ export default function NewTicketPage() {
       const body = await res.json();
       const ticket = body?.data || body;
       toast.success(`Ticket ${ticket.ticket_number || ""} created`);
+
+      // Step 2: upload attachments (if any)
+      if (attachedFiles.length > 0) {
+        setUploadingFiles(true);
+        try {
+          await uploadAttachments(ticket.id, title.trim(), token);
+        } finally {
+          setUploadingFiles(false);
+        }
+      }
+
       router.push(`/estates-compliance/helpdesk/${ticket.id}`);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to create ticket";
@@ -144,6 +308,8 @@ export default function NewTicketPage() {
       setSubmitting(false);
     }
   }
+
+  const isWorking = submitting || uploadingFiles;
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-6">
@@ -212,6 +378,70 @@ export default function NewTicketPage() {
             placeholder="What happened? What have you tried? Any error messages? The more detail, the faster it gets fixed."
             className="mt-2 w-full resize-y rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
+        </div>
+
+        {/* Photos & Documents */}
+        <div className="rounded-lg border border-border bg-card p-5 space-y-4">
+          <div className="flex items-center gap-2">
+            <ImageIcon className="h-4 w-4 text-muted-foreground" />
+            <h2 className="text-sm font-medium text-foreground">Photos &amp; Documents</h2>
+            <span className="text-xs text-muted-foreground">(optional)</span>
+          </div>
+
+          {/* Drag-drop zone */}
+          <div
+            role="button"
+            tabIndex={0}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onClick={() => fileInputRef.current?.click()}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") fileInputRef.current?.click();
+            }}
+            className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-8 text-center transition-colors ${
+              isDragging
+                ? "border-primary bg-primary/5"
+                : "border-border bg-muted/20 hover:bg-muted/40"
+            }`}
+          >
+            <Upload className="h-7 w-7 text-muted-foreground" />
+            <p className="text-sm font-medium text-foreground">
+              Drag photos or PDFs here, or{" "}
+              <span className="text-primary underline underline-offset-2">browse</span>
+            </p>
+            <p className="text-xs text-muted-foreground">Images and PDFs up to 50 MB</p>
+          </div>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept="image/*,application/pdf"
+            className="hidden"
+            onChange={(e) => {
+              if (e.target.files) {
+                addFiles(e.target.files);
+                // reset so re-selecting same file works
+                e.target.value = "";
+              }
+            }}
+          />
+
+          {/* File list */}
+          {attachedFiles.length > 0 && (
+            <div className="grid gap-2 sm:grid-cols-2">
+              {attachedFiles.map((af) => (
+                <FilePreviewCard key={af.id} attached={af} onRemove={removeFile} />
+              ))}
+            </div>
+          )}
+
+          {uploadingFiles && (
+            <p className="text-xs text-muted-foreground animate-pulse">
+              Uploading attachments...
+            </p>
+          )}
         </div>
 
         {/* Priority */}
@@ -288,13 +518,13 @@ export default function NewTicketPage() {
           </Link>
           <button
             type="submit"
-            disabled={submitting || !title.trim()}
+            disabled={isWorking || !title.trim()}
             className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {submitting ? (
+            {isWorking ? (
               <>
                 <Save className="h-4 w-4 animate-pulse" />
-                Creating...
+                {uploadingFiles ? "Uploading..." : "Creating..."}
               </>
             ) : (
               <>
