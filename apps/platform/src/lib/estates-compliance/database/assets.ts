@@ -284,6 +284,65 @@ export async function appendMaintenanceHistory(
 }
 
 /**
+ * Compute total maintenance spend from the asset's maintenance_history JSONB.
+ * Returns total spent + a health signal comparing against replacement cost.
+ */
+export function computeMaintenanceSpend(asset: Asset): {
+  totalSpend: number;
+  entryCount: number;
+  percentOfReplacement: number | null;
+  recommendation: "ok" | "monitor" | "consider_replacement" | "replace_urgently";
+  recommendationMessage: string;
+} {
+  const history = Array.isArray(asset.maintenance_history)
+    ? asset.maintenance_history
+    : [];
+  const totalSpend = history.reduce(
+    (sum, entry) => sum + (typeof entry.cost === "number" ? entry.cost : 0),
+    0,
+  );
+
+  let percentOfReplacement: number | null = null;
+  let recommendation: "ok" | "monitor" | "consider_replacement" | "replace_urgently" = "ok";
+  let recommendationMessage = "Maintenance costs are within normal range.";
+
+  if (
+    typeof asset.replacement_cost_estimate === "number" &&
+    asset.replacement_cost_estimate > 0
+  ) {
+    percentOfReplacement = (totalSpend / asset.replacement_cost_estimate) * 100;
+
+    if (percentOfReplacement >= 75) {
+      recommendation = "replace_urgently";
+      recommendationMessage = `Maintenance costs have reached ${Math.round(percentOfReplacement)}% of replacement value (£${totalSpend.toLocaleString()} of £${asset.replacement_cost_estimate.toLocaleString()}). Replace urgently — you are throwing good money after bad.`;
+    } else if (percentOfReplacement >= 50) {
+      recommendation = "consider_replacement";
+      recommendationMessage = `Maintenance costs have reached ${Math.round(percentOfReplacement)}% of replacement value (£${totalSpend.toLocaleString()} of £${asset.replacement_cost_estimate.toLocaleString()}). Start budgeting for a replacement.`;
+    } else if (percentOfReplacement >= 25) {
+      recommendation = "monitor";
+      recommendationMessage = `Maintenance costs are ${Math.round(percentOfReplacement)}% of replacement value. Monitor trend but no immediate action needed.`;
+    }
+  }
+
+  // Also flag if there are 3+ entries in the last 12 months
+  const oneYearAgo = new Date();
+  oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+  const recentEntries = history.filter((e) => new Date(e.date) >= oneYearAgo);
+  if (recentEntries.length >= 3 && recommendation === "ok") {
+    recommendation = "monitor";
+    recommendationMessage = `This asset has been serviced ${recentEntries.length} times in the last 12 months. Consider whether it is reliable enough to keep.`;
+  }
+
+  return {
+    totalSpend,
+    entryCount: history.length,
+    percentOfReplacement,
+    recommendation,
+    recommendationMessage,
+  };
+}
+
+/**
  * Get asset with all linked data — open tickets, compliance tasks, evidence.
  * Used for the asset detail page.
  */
