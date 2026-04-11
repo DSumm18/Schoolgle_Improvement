@@ -121,6 +121,8 @@ const SKILL_MODULE_MAP: Record<string, string> = {
   "draft_warranty_claim_email": "estates_management",
   "get_asset_documentation": "estates_management",
   "read_asset_manual": "estates_management",
+  "log_service_visit": "estates_management",
+  "find_bundling_opportunities": "estates_management",
 
   "run_intelligence_analysis": "insights_pro",
   "get_cohort_journey": "insights_pro",
@@ -424,6 +426,100 @@ const SKILL_MODULE_MAP: Record<string, string> = {
           data: {
             totalOverdue: overdueItems.length,
             items: overdueItems,
+          },
+        };
+        break;
+      }
+
+      case "log_service_visit": {
+        const { createServiceRecord } = await import(
+          "@/lib/estates-compliance/database/service-records"
+        );
+        try {
+          const created = await createServiceRecord({
+            organization_id: orgId,
+            service_date: parameters.service_date as string,
+            service_type: parameters.service_type as string,
+            compliance_domain: (parameters.compliance_domain as string) || null,
+            contractor_id: (parameters.contractor_id as string) || null,
+            engineer_name: (parameters.engineer_name as string) || null,
+            invoice_reference: (parameters.invoice_reference as string) || null,
+            certificate_reference: (parameters.certificate_reference as string) || null,
+            total_cost: typeof parameters.total_cost === "number" ? parameters.total_cost : null,
+            notes: (parameters.notes as string) || null,
+            source: "manual",
+            allocation_strategy: (parameters.allocation_strategy as
+              | "equal_split"
+              | "weighted_capacity"
+              | "manual"
+              | "invoice_line_item") || "equal_split",
+            assets: (parameters.assets as Array<{
+              asset_id: string;
+              result?: "pass" | "fail" | "advisory" | "not_assessed";
+              findings?: string;
+              cost_allocated?: number;
+              next_service_due?: string;
+              remedial_cost_estimate?: number;
+              remedial_actions?: string[];
+            }>) || [],
+          });
+
+          const totalAllocated = created.assets.reduce(
+            (s, a) => s + (Number(a.cost_allocated) || 0),
+            0,
+          );
+
+          result = {
+            success: true,
+            data: {
+              service_record_id: created.record.id,
+              service_date: created.record.service_date,
+              service_type: created.record.service_type,
+              total_cost: created.record.total_cost,
+              total_allocated: totalAllocated,
+              assets_serviced: created.assets.length,
+              per_asset_allocation: created.assets.map((a) => ({
+                asset_id: a.asset_id,
+                cost_allocated: a.cost_allocated,
+                allocation_method: a.allocation_method,
+                result: a.result,
+                next_service_due: a.next_service_due,
+              })),
+              message: `Logged a ${created.record.service_type} visit covering ${created.assets.length} asset${created.assets.length === 1 ? "" : "s"}. Total cost £${created.record.total_cost || 0}, allocated across assets. Each asset's next service date has been updated.`,
+            },
+          };
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : "Failed to log service";
+          result = { success: false, error: message };
+        }
+        break;
+      }
+
+      case "find_bundling_opportunities": {
+        const { findBundlingOpportunities } = await import(
+          "@/lib/estates-compliance/database/service-records"
+        );
+        const windowDays = typeof parameters.window_days === "number" ? parameters.window_days : 90;
+        const calloutFee = typeof parameters.callout_fee === "number" ? parameters.callout_fee : 100;
+
+        const opportunities = await findBundlingOpportunities(orgId, windowDays, calloutFee);
+        const totalSaving = opportunities.reduce((s, o) => s + o.estimated_saving, 0);
+
+        let message: string;
+        if (opportunities.length === 0) {
+          message = "No bundling opportunities found. Either assets are well-distributed across the year or there aren't enough service records yet to identify clusters.";
+        } else {
+          message = `Found ${opportunities.length} bundling opportunit${opportunities.length === 1 ? "y" : "ies"} across ${opportunities.reduce((s, o) => s + o.asset_count, 0)} assets. Total estimated saving: £${totalSaving.toLocaleString()}.`;
+        }
+
+        result = {
+          success: true,
+          data: {
+            opportunities,
+            total_estimated_saving: totalSaving,
+            window_days: windowDays,
+            callout_fee: calloutFee,
+            message,
           },
         };
         break;

@@ -343,14 +343,15 @@ export function computeMaintenanceSpend(asset: Asset): {
 }
 
 /**
- * Get asset with all linked data — open tickets, compliance tasks, evidence.
+ * Get asset with all linked data — open tickets, compliance tasks, evidence,
+ * and service history from estates_service_records + junction.
  * Used for the asset detail page.
  */
 export async function getAssetWithLinks(assetId: string) {
   const asset = await getAssetWithWarranty(assetId);
   if (!asset) return null;
 
-  const [ticketsRes, tasksRes, evidenceRes] = await Promise.all([
+  const [ticketsRes, tasksRes, evidenceRes, historyRes] = await Promise.all([
     supabase
       .from("estates_helpdesk_tickets")
       .select("id, ticket_number, title, status, priority, created_at")
@@ -365,20 +366,76 @@ export async function getAssetWithLinks(assetId: string) {
       .limit(20),
     supabase
       .from("estates_evidence")
-      .select("id, title, evidence_type, file_url, file_name, file_type, created_at")
+      .select("id, title, evidence_type, file_url, file_name, file_type, created_at, tags")
       .eq("asset_id", assetId)
       .order("created_at", { ascending: false })
       .limit(20),
+    // Pull service history from the new first-class table
+    supabase
+      .from("estates_service_record_assets")
+      .select(
+        `
+        id, asset_id, result, findings, remedial_actions, remedial_cost_estimate,
+        cost_allocated, allocation_method, last_service_date, next_service_due,
+        service_record:service_record_id (
+          id, service_date, service_type, compliance_domain,
+          contractor_id, engineer_name, invoice_reference,
+          certificate_reference, total_cost, currency, notes, overall_result
+        )
+        `,
+      )
+      .eq("asset_id", assetId)
+      .order("last_service_date", { ascending: false })
+      .limit(50),
   ]);
 
+  const serviceHistory = historyRes.data || [];
+
+  // Enrich with contractor company name
+  const contractorIds = [
+    ...new Set(
+      serviceHistory
+        .map((r) => (r as unknown as { service_record?: { contractor_id?: string | null } }).service_record?.contractor_id)
+        .filter(Boolean),
+    ),
+  ] as string[];
+  const contractorNameMap: Record<string, string> = {};
+  if (contractorIds.length > 0) {
+    const { data: contractors } = await supabase
+      .from("estates_contractors")
+      .select("id, company_name")
+      .in("id", contractorIds);
+    for (const c of contractors || []) contractorNameMap[c.id] = c.company_name;
+  }
+
+  const enrichedHistory = serviceHistory.map((r) => {
+    const record = (r as unknown as { service_record?: { contractor_id?: string } }).service_record;
+    return {
+      ...r,
+      contractor_name: record?.contractor_id ? contractorNameMap[record.contractor_id] : null,
+    };
+  });
+
+  const totalServiceSpend = enrichedHistory.reduce(
+    (sum, r) => sum + (Number((r as { cost_allocated?: number }).cost_allocated) || 0),
+    0,
+  );
+
   const spend = computeMaintenanceSpend(asset);
+  // Prefer the service_records total over the legacy maintenance_history JSONB
+  const effectiveSpend = {
+    ...spend,
+    totalSpend: totalServiceSpend > 0 ? totalServiceSpend : spend.totalSpend,
+    entryCount: enrichedHistory.length || spend.entryCount,
+  };
 
   return {
     ...asset,
     linked_tickets: ticketsRes.data || [],
     linked_tasks: tasksRes.data || [],
     linked_evidence: evidenceRes.data || [],
-    maintenance_spend: spend,
+    service_history: enrichedHistory,
+    maintenance_spend: effectiveSpend,
   };
 }
 

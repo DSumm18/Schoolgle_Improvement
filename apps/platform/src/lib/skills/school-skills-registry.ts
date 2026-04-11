@@ -812,6 +812,72 @@ export const ESTATES_FUNCTION_SCHEMAS = [
     },
   },
   {
+    name: "log_service_visit",
+    description:
+      "Log a contractor visit that serviced one or more assets. Records service_date, contractor, invoice reference, total cost, findings per asset, and allocates the cost across assets using a chosen strategy (equal_split/weighted_capacity/manual/invoice_line_item). Each asset gets its own next_service_due date. Use this when a user tells you about a completed service — the system will create a service_record + junction rows and update each asset's schedule.",
+    parameters: {
+      type: "object",
+      properties: {
+        organization_id: { type: "string", description: "Organization ID" },
+        service_date: { type: "string", description: "Date work was done (YYYY-MM-DD)" },
+        service_type: { type: "string", description: "e.g. 'Annual gas safety inspection'" },
+        compliance_domain: {
+          type: "string",
+          description: "Compliance domain (gas/fire/electrical/legionella/etc)",
+        },
+        contractor_id: { type: "string", description: "Contractor UUID if known" },
+        engineer_name: { type: "string", description: "Name of the engineer on site" },
+        invoice_reference: { type: "string", description: "Invoice number" },
+        certificate_reference: { type: "string", description: "Certificate number if issued" },
+        total_cost: { type: "number", description: "Total invoice cost in GBP" },
+        notes: { type: "string", description: "Free-form notes" },
+        allocation_strategy: {
+          type: "string",
+          enum: ["equal_split", "weighted_capacity", "manual", "invoice_line_item"],
+          description: "How to split the total_cost across assets. equal_split = divide evenly. weighted_capacity = weight by specifications.capacity_kw. manual = use individual cost_allocated per asset. invoice_line_item = each asset's cost_allocated is set from the invoice line.",
+        },
+        assets: {
+          type: "array",
+          description: "List of assets serviced in this visit",
+          items: {
+            type: "object",
+            properties: {
+              asset_id: { type: "string" },
+              result: { type: "string", enum: ["pass", "fail", "advisory", "not_assessed"] },
+              findings: { type: "string" },
+              cost_allocated: { type: "number", description: "Manual allocation for this asset (only if strategy is manual or invoice_line_item)" },
+              next_service_due: { type: "string", description: "YYYY-MM-DD — when this asset is next due" },
+              remedial_cost_estimate: { type: "number" },
+              remedial_actions: { type: "array", items: { type: "string" } },
+            },
+            required: ["asset_id"],
+          },
+        },
+      },
+      required: ["service_date", "service_type", "assets"],
+    },
+  },
+  {
+    name: "find_bundling_opportunities",
+    description:
+      "Find assets whose next service dates cluster closely enough that booking a single contractor visit would save callout fees compared to separate visits. Returns grouped recommendations per compliance domain with estimated savings. Use when a user asks 'when's my next boiler service?' or 'am I missing any scheduling savings?'",
+    parameters: {
+      type: "object",
+      properties: {
+        organization_id: { type: "string", description: "Organization ID" },
+        window_days: {
+          type: "number",
+          description: "How many days forward/back counts as 'same visit' for bundling (default 90)",
+        },
+        callout_fee: {
+          type: "number",
+          description: "Typical callout fee per contractor visit, for savings calculation (default 100)",
+        },
+      },
+      required: [],
+    },
+  },
+  {
     name: "get_asset_documentation",
     description:
       "List the user manuals, setup guides, data sheets, and troubleshooting guides attached to a specific asset. Use this BEFORE answering a question about how to use/configure/fix a piece of equipment — if the school has uploaded the actual product manual, you should reference it rather than guessing.",

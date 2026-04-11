@@ -44,6 +44,12 @@ export interface ExtractedAssetFinding {
   remedial_cost_estimate?: number | null;
   /** How urgent is the remedial work */
   urgency?: "emergency" | "urgent" | "routine" | null;
+  /**
+   * Per-asset invoice line item cost if the invoice breaks it down.
+   * When present, this is the authoritative allocation for this asset
+   * (allocation_method = invoice_line_item).
+   */
+  line_item_cost?: number | null;
   /** Confidence this extraction is correct (0-1) */
   confidence: number;
 }
@@ -102,6 +108,7 @@ Focus on:
    - Remedial actions needed
    - Estimated remedial cost if quoted
    - Urgency of remedial work
+   - **line_item_cost**: if the invoice breaks down the cost per asset (e.g. "Boiler 1 service £285, Boiler 2 service £285"), extract that number for EACH asset. If the invoice gives only a total without per-asset lines, leave line_item_cost null — the system will split the total equally.
 6. Certificate or invoice reference number
 7. Total cost
 8. Next service due date
@@ -129,6 +136,7 @@ Return ONLY valid JSON matching this schema (no prose, no markdown fences):
       "remedial_actions": string[],
       "remedial_cost_estimate": number | null,
       "urgency": "emergency" | "urgent" | "routine" | null,
+      "line_item_cost": number | null,
       "confidence": number
     }
   ],
