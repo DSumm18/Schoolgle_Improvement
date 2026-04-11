@@ -124,6 +124,7 @@ export const POST = protectedRoute(
         | null;
       const assetId = formData.get("asset_id") as string | null;
       const taskId = formData.get("task_id") as string | null;
+      const ticketId = formData.get("ticket_id") as string | null;
       const contractorId = formData.get("contractor_id") as string | null;
       const contractId = formData.get("contract_id") as string | null;
       const documentNumber = formData.get("document_number") as string | null;
@@ -184,6 +185,7 @@ export const POST = protectedRoute(
         compliance_domain: complianceDomain || undefined,
         asset_id: assetId || undefined,
         task_id: taskId || undefined,
+        ticket_id: ticketId || undefined,
         contractor_id: contractorId || undefined,
         contract_id: contractId || undefined,
         document_number: documentNumber || undefined,

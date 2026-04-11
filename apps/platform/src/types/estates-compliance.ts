@@ -759,6 +759,7 @@ export interface EstatesEvidenceInput {
   compliance_domain?: string;
   asset_id?: string;
   task_id?: string;
+  ticket_id?: string;
   contractor_id?: string;
   contract_id?: string;
   user_qualification_id?: string;

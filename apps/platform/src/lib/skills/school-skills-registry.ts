@@ -812,6 +812,33 @@ export const ESTATES_FUNCTION_SCHEMAS = [
     },
   },
   {
+    name: "get_asset_documentation",
+    description:
+      "List the user manuals, setup guides, data sheets, and troubleshooting guides attached to a specific asset. Use this BEFORE answering a question about how to use/configure/fix a piece of equipment — if the school has uploaded the actual product manual, you should reference it rather than guessing.",
+    parameters: {
+      type: "object",
+      properties: {
+        organization_id: { type: "string", description: "Organization ID" },
+        asset_id: { type: "string", description: "Asset UUID (required)" },
+      },
+      required: ["asset_id"],
+    },
+  },
+  {
+    name: "read_asset_manual",
+    description:
+      "Read a specific user manual or documentation file attached to an asset and answer a specific question about it. Uses Gemini vision to parse the actual PDF. Call this when a user asks 'how do I...' or 'what does X do' or 'why is the light flashing' on a known asset — returns an answer grounded in the actual product documentation, not generic advice.",
+    parameters: {
+      type: "object",
+      properties: {
+        organization_id: { type: "string", description: "Organization ID" },
+        evidence_id: { type: "string", description: "Evidence UUID of the manual (get this from get_asset_documentation)" },
+        question: { type: "string", description: "The specific question to answer from the manual" },
+      },
+      required: ["evidence_id", "question"],
+    },
+  },
+  {
     name: "get_asset_details",
     description:
       "Look up an asset by ID, code, or serial number. Returns full asset record including purchase info, warranty status, supplier contact, linked tickets, and compliance tasks. Use this whenever a user mentions a specific piece of equipment or when creating a ticket to check if the asset is under warranty.",

@@ -160,6 +160,7 @@ export async function createEvidence(
     compliance_domain: evidence.compliance_domain || null,
     asset_id: evidence.asset_id || null,
     task_id: evidence.task_id || null,
+    ticket_id: evidence.ticket_id || null,
     contractor_id: evidence.contractor_id || null,
     contract_id: evidence.contract_id || null,
     user_qualification_id: evidence.user_qualification_id || null,

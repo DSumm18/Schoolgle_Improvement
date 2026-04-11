@@ -119,6 +119,8 @@ const SKILL_MODULE_MAP: Record<string, string> = {
   "get_asset_details": "estates_management",
   "check_asset_warranty": "estates_management",
   "draft_warranty_claim_email": "estates_management",
+  "get_asset_documentation": "estates_management",
+  "read_asset_manual": "estates_management",
 
   "run_intelligence_analysis": "insights_pro",
   "get_cohort_journey": "insights_pro",
@@ -424,6 +426,174 @@ const SKILL_MODULE_MAP: Record<string, string> = {
             items: overdueItems,
           },
         };
+        break;
+      }
+
+      case "get_asset_documentation": {
+        const { createServiceRoleClient } = await import("@/lib/supabase-server");
+        const assetId = parameters.asset_id as string;
+        if (!assetId) {
+          result = { success: false, error: "asset_id is required" };
+          break;
+        }
+        const sAdmin = createServiceRoleClient();
+
+        // Manual-ish tags — anything likely to be a product doc rather than
+        // a photo or service record.
+        const MANUAL_TAGS = [
+          "manual",
+          "user_manual",
+          "setup_guide",
+          "user_guide",
+          "data_sheet",
+          "datasheet",
+          "spec_sheet",
+          "troubleshooting",
+          "service_manual",
+          "installation_guide",
+        ];
+
+        const { data: evidence, error: evErr } = await sAdmin
+          .from("estates_evidence")
+          .select("id, title, description, evidence_type, file_url, file_name, file_type, file_size_bytes, tags, created_at")
+          .eq("organization_id", orgId)
+          .eq("asset_id", assetId)
+          .in("evidence_type", ["document", "report", "manual", "other"])
+          .order("created_at", { ascending: false });
+
+        if (evErr) {
+          result = { success: false, error: `Failed to fetch documentation: ${evErr.message}` };
+          break;
+        }
+
+        // Filter to items tagged as documentation (or items where nothing
+        // else in tags excludes them)
+        const docs = (evidence || []).filter((ev) => {
+          const tags = Array.isArray(ev.tags) ? ev.tags : [];
+          return tags.some((t: string) => MANUAL_TAGS.includes(t));
+        });
+
+        result = {
+          success: true,
+          data: {
+            asset_id: assetId,
+            total: docs.length,
+            documents: docs.map((d) => ({
+              evidence_id: d.id,
+              title: d.title,
+              description: d.description,
+              file_name: d.file_name,
+              file_type: d.file_type,
+              file_url: d.file_url,
+              file_size_bytes: d.file_size_bytes,
+              tags: d.tags,
+              doc_type: (d.tags || []).find((t: string) => MANUAL_TAGS.includes(t)) || "document",
+              uploaded_at: d.created_at,
+            })),
+            user_message:
+              docs.length === 0
+                ? "No manuals or documentation uploaded for this asset yet. The user may want to upload the product manual so I can reference it in future."
+                : `Found ${docs.length} document${docs.length === 1 ? "" : "s"} for this asset. Use read_asset_manual with a specific evidence_id to ask a question against the content.`,
+          },
+        };
+        break;
+      }
+
+      case "read_asset_manual": {
+        const { createServiceRoleClient } = await import("@/lib/supabase-server");
+        const evidenceId = parameters.evidence_id as string;
+        const question = parameters.question as string;
+
+        if (!evidenceId || !question) {
+          result = { success: false, error: "evidence_id and question are required" };
+          break;
+        }
+
+        const sAdmin = createServiceRoleClient();
+
+        // Fetch the evidence record + verify it belongs to the org
+        const { data: evidence, error: fetchErr } = await sAdmin
+          .from("estates_evidence")
+          .select("id, organization_id, title, file_url, file_type, file_name, asset_id")
+          .eq("id", evidenceId)
+          .single();
+
+        if (fetchErr || !evidence || evidence.organization_id !== orgId) {
+          result = { success: false, error: "Documentation not found or you do not have access" };
+          break;
+        }
+
+        if (!evidence.file_url) {
+          result = { success: false, error: "This evidence record has no file attached" };
+          break;
+        }
+
+        // Download the file via the signed URL so we can send it to Gemini
+        try {
+          const fileResponse = await fetch(evidence.file_url);
+          if (!fileResponse.ok) {
+            result = { success: false, error: `Failed to download file: ${fileResponse.status}` };
+            break;
+          }
+          const arrayBuffer = await fileResponse.arrayBuffer();
+          const base64 = Buffer.from(arrayBuffer).toString("base64");
+
+          // Call Gemini 2.5 Flash to answer the question grounded in the document
+          const apiKey = process.env.GOOGLE_AI_API_KEY ?? process.env.GEMINI_API_KEY;
+          if (!apiKey) {
+            result = { success: false, error: "AI service not configured" };
+            break;
+          }
+
+          const { GoogleGenerativeAI } = await import("@google/generative-ai");
+          const genAI = new GoogleGenerativeAI(apiKey);
+          const model = genAI.getGenerativeModel({
+            model: "gemini-2.5-flash",
+            generationConfig: {
+              temperature: 0.2,
+            },
+          });
+
+          const prompt = `You are helping a UK school estates team use a piece of equipment. The user has asked a specific question about this ${evidence.title || "product"}. Read the attached documentation carefully and answer the question using ONLY information from the document.
+
+If the document doesn't contain the answer, say so clearly and suggest what the user should do next (contact the supplier, check online, etc).
+
+If the answer involves multiple steps, number them.
+
+If the answer involves safety (gas, electrical, water, hazardous substances), include a prominent safety note.
+
+Cite the section or page of the document where relevant.
+
+Question: ${question}`;
+
+          const genResult = await model.generateContent([
+            { text: prompt },
+            {
+              inlineData: {
+                mimeType: evidence.file_type || "application/pdf",
+                data: base64,
+              },
+            },
+          ]);
+
+          const answer = genResult.response.text();
+
+          result = {
+            success: true,
+            data: {
+              evidence_id: evidenceId,
+              document_title: evidence.title,
+              document_file: evidence.file_name,
+              question,
+              answer,
+              source: "ai_document_read",
+              note: "This answer was generated by reading the actual product documentation attached to this asset. It is grounded in the manufacturer's own instructions — not generic advice.",
+            },
+          };
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : "Unknown error";
+          result = { success: false, error: `Failed to read documentation: ${message}` };
+        }
         break;
       }
 
