@@ -5,7 +5,7 @@
  * Custom checks are user-created compliance checks specific to a school's needs.
  */
 
-import { createClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase-server";
 import type { CheckVisibility, RecurrencePattern } from "../check-templates";
 import type { ComplianceDomain } from "../statutory-checks";
 
@@ -107,7 +107,7 @@ export async function getCustomChecks(
   filters?: CustomCheckFilters,
   pagination?: PaginationOptions,
 ): Promise<PaginatedResponse<CustomCheck>> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
 
   let query = supabase
     .from("custom_checks")
@@ -176,7 +176,7 @@ export async function getCustomChecks(
 export async function getCustomCheckById(
   checkId: string,
 ): Promise<CustomCheck | null> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
 
   const { data, error } = await supabase
     .from("custom_checks")
@@ -198,7 +198,7 @@ export async function getCustomCheckById(
 export async function createCustomCheck(
   input: CreateCustomCheckInput,
 ): Promise<CustomCheck> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
 
   const { data, error } = await supabase
     .from("custom_checks")
@@ -228,7 +228,7 @@ export async function updateCustomCheck(
   checkId: string,
   updates: UpdateCustomCheckInput,
 ): Promise<CustomCheck> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
 
   const updateData: Record<string, unknown> = {
     ...updates,
@@ -259,7 +259,7 @@ export async function updateCustomCheck(
  * Delete (archive) a custom check
  */
 export async function archiveCustomCheck(checkId: string): Promise<void> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
 
   const { error } = await supabase
     .from("custom_checks")
@@ -276,7 +276,7 @@ export async function archiveCustomCheck(checkId: string): Promise<void> {
  * Permanently delete a custom check
  */
 export async function deleteCustomCheck(checkId: string): Promise<void> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
 
   const { error } = await supabase
     .from("custom_checks")
@@ -332,7 +332,7 @@ export async function cloneCustomCheck(
 export async function incrementTemplateUsage(
   templateId: string,
 ): Promise<void> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
 
   const { error } = await supabase.rpc("increment_usage_count", {
     check_id: templateId,
@@ -357,7 +357,7 @@ export async function getPublicTemplates(
   filters?: CustomCheckFilters,
   pagination?: PaginationOptions,
 ): Promise<PaginatedResponse<CustomCheck>> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
 
   let query = supabase
     .from("custom_checks")

@@ -4,7 +4,7 @@
  * Functions for interacting with estates_compliance_tasks table.
  */
 
-import { createClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase-server";
 import type {
   ComplianceTask,
   TaskPriority,
@@ -54,13 +54,13 @@ export async function getComplianceTasks(
   filters?: TaskFilters,
   pagination?: PaginationOptions,
 ): Promise<PaginatedResponse<ComplianceTask>> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
 
   let query = supabase
     .from("estates_compliance_tasks")
     .select("*", { count: "exact" })
     .eq("organization_id", organizationId)
-    .order("due_date", { ascending: true });
+    .order("due_by", { ascending: true });
 
   // Apply filters
   if (filters?.status) {
@@ -76,14 +76,14 @@ export async function getComplianceTasks(
     query = query.eq("assigned_to", filters.assigned_to);
   }
   if (filters?.due_before) {
-    query = query.lte("due_date", filters.due_before.toISOString());
+    query = query.lte("due_by", filters.due_before.toISOString());
   }
   if (filters?.due_after) {
-    query = query.gte("due_date", filters.due_after.toISOString());
+    query = query.gte("due_by", filters.due_after.toISOString());
   }
   if (filters?.overdue_only) {
     query = query
-      .lt("due_date", new Date().toISOString())
+      .lt("due_by", new Date().toISOString())
       .eq("status", "pending");
   }
   if (filters?.search) {
@@ -125,7 +125,7 @@ export async function getComplianceTasks(
 export async function getComplianceTaskById(
   taskId: string,
 ): Promise<ComplianceTask | null> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
 
   const { data, error } = await supabase
     .from("estates_compliance_tasks")
@@ -174,7 +174,7 @@ export interface CreateTaskInput {
 export async function createComplianceTask(
   input: CreateTaskInput,
 ): Promise<ComplianceTask> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
 
   const { data, error } = await supabase
     .from("estates_compliance_tasks")
@@ -215,7 +215,7 @@ export async function updateComplianceTask(
   taskId: string,
   updates: UpdateTaskInput,
 ): Promise<ComplianceTask> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
 
   const { data, error } = await supabase
     .from("estates_compliance_tasks")
@@ -239,7 +239,7 @@ export async function updateComplianceTask(
  * Delete a compliance task
  */
 export async function deleteComplianceTask(taskId: string): Promise<void> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
 
   const { error } = await supabase
     .from("estates_compliance_tasks")

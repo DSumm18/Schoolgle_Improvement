@@ -4,13 +4,18 @@
  * Helper functions for managing estates_evidence table
  */
 
-import { supabase } from '@/lib/supabase';
+import { createServiceRoleClient } from '@/lib/supabase-server';
 import type {
   EstatesEvidence,
   EstatesEvidenceInput,
   EvidenceFilters,
   PaginatedResponse,
 } from '@/types/estates-compliance';
+
+// Use service role for server-side operations — cookie-based client is empty
+// when API routes are called with Bearer auth. Tenant isolation preserved
+// via organizationId filter in every query.
+const supabase = createServiceRoleClient();
 
 /**
  * Get evidence items with filters and pagination
@@ -138,18 +143,38 @@ export async function createEvidence(
     }
   }
 
+  // Build an explicit row with only valid DB columns.
+  // Spreading `...evidence` caused failures because it included fields like
+  // `file` (the File object) and `existing_evidence_id` which are not columns.
+  const row: Record<string, unknown> = {
+    organization_id: organizationId,
+    uploaded_by: userId,
+    title: evidence.title,
+    description: evidence.description || null,
+    evidence_type: evidence.evidence_type,
+    source_type: evidence.source_type,
+    status: 'pending',
+    ai_verified: false,
+    tags: evidence.tags || [],
+    version: 1,
+    compliance_domain: evidence.compliance_domain || null,
+    asset_id: evidence.asset_id || null,
+    task_id: evidence.task_id || null,
+    contractor_id: evidence.contractor_id || null,
+    contract_id: evidence.contract_id || null,
+    user_qualification_id: evidence.user_qualification_id || null,
+    document_number: evidence.document_number || null,
+    issuing_body: evidence.issuing_body || null,
+    issued_date: evidence.issued_date || null,
+    expiry_date: evidence.expiry_date || null,
+    cloud_provider: evidence.cloud_provider || null,
+    cloud_file_id: evidence.cloud_file_id || null,
+    ...fileDetails,
+  };
+
   const { data, error } = await supabase
     .from('estates_evidence')
-    .insert({
-      organization_id: organizationId,
-      uploaded_by: userId,
-      ...evidence,
-      ...fileDetails,
-      status: 'pending',
-      ai_verified: false,
-      tags: evidence.tags || [],
-      version: 1,
-    })
+    .insert(row)
     .select()
     .single();
 
