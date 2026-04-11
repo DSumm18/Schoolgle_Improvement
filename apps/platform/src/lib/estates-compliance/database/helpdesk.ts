@@ -4,7 +4,7 @@
  * Functions for interacting with estates_helpdesk_tickets table.
  */
 
-import { createClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase-server';
 import type {
   HelpdeskTicket,
   TicketStatus,
@@ -53,7 +53,7 @@ export async function getHelpdeskTickets(
   filters?: TicketFilters,
   pagination?: PaginationOptions
 ): Promise<PaginatedResponse<HelpdeskTicket>> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
 
   let query = supabase
     .from('estates_helpdesk_tickets')
@@ -75,7 +75,7 @@ export async function getHelpdeskTickets(
     query = query.eq('assigned_to', filters.assigned_to);
   }
   if (filters?.reported_by) {
-    query = query.eq('reported_by', filters.reported_by);
+    query = query.eq('raised_by', filters.reported_by);
   }
   if (filters?.asset_id) {
     query = query.eq('asset_id', filters.asset_id);
@@ -116,7 +116,7 @@ export async function getHelpdeskTickets(
  * Get a single helpdesk ticket by ID
  */
 export async function getHelpdeskTicketById(ticketId: string): Promise<HelpdeskTicket | null> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
 
   const { data, error } = await supabase
     .from('estates_helpdesk_tickets')
@@ -136,7 +136,7 @@ export async function getHelpdeskTicketById(ticketId: string): Promise<HelpdeskT
  * Get a helpdesk ticket by ticket number
  */
 export async function getHelpdeskTicketByNumber(ticketNumber: string): Promise<HelpdeskTicket | null> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
 
   const { data, error } = await supabase
     .from('estates_helpdesk_tickets')
@@ -176,21 +176,50 @@ export interface CreateTicketInput {
 /**
  * Create a new helpdesk ticket
  */
-export async function createHelpdeskTicket(input: CreateTicketInput): Promise<HelpdeskTicket> {
-  const supabase = await createClient();
+export async function createHelpdeskTicket(input: CreateTicketInput & Record<string, unknown>): Promise<HelpdeskTicket> {
+  const supabase = createServiceRoleClient();
+
+  // Build an explicit row to avoid passing through unrelated fields
+  // (e.g. camelCase organizationId from the API body) that would break the insert.
+  const row: Record<string, unknown> = {
+    organization_id: input.organization_id,
+    title: input.title,
+    description: input.description,
+    category: input.category || 'general',
+    priority: input.priority || 'medium',
+    status: input.status || 'open',
+    raised_by: input.reported_by,  // DB column is raised_by, not reported_by
+    asset_id: input.asset_id || null,
+    assigned_to: input.assigned_to || null,
+    estimated_cost: input.estimated_cost || null,
+    actual_cost: input.actual_cost || null,
+    attachment_urls: input.attachments || [],
+    module: 'estates',
+  };
+
+  // Optional extended fields from Task 022 migration
+  if ('ticket_type' in input) row.ticket_type = input.ticket_type;
+  if ('created_via' in input) row.created_via = input.created_via;
+  if ('safeguarding_flag' in input) row.safeguarding_flag = input.safeguarding_flag;
+  if ('risk_score' in input) row.risk_score = input.risk_score;
+  if ('linked_compliance_check_id' in input) row.linked_compliance_check_id = input.linked_compliance_check_id;
+  if ('evidence_urls' in input) row.evidence_urls = input.evidence_urls;
+  if ('due_date' in input) row.due_date = input.due_date;
+
+  // Remove undefined to avoid overriding defaults
+  for (const k of Object.keys(row)) {
+    if (row[k] === undefined) delete row[k];
+  }
 
   const { data, error } = await supabase
     .from('estates_helpdesk_tickets')
-    .insert({
-      ...input,
-      status: input.status || 'open',
-    })
+    .insert(row)
     .select()
     .single();
 
   if (error) {
     console.error('Error creating helpdesk ticket:', error);
-    throw new Error('Failed to create helpdesk ticket');
+    throw new Error(`Failed to create helpdesk ticket: ${error.message}`);
   }
 
   return data;
@@ -213,7 +242,7 @@ export async function updateHelpdeskTicket(
   ticketId: string,
   updates: UpdateTicketInput
 ): Promise<HelpdeskTicket> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
 
   const { data, error } = await supabase
     .from('estates_helpdesk_tickets')
@@ -234,7 +263,7 @@ export async function updateHelpdeskTicket(
  * Delete a helpdesk ticket
  */
 export async function deleteHelpdeskTicket(ticketId: string): Promise<void> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
 
   const { error } = await supabase
     .from('estates_helpdesk_tickets')

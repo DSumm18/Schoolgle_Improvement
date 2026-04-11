@@ -64,30 +64,42 @@ export class EvidenceService {
 
     if (input.file) {
       const file = input.file;
-      const fileExt = file.name.split(".").pop();
-      const fileNameWithoutExt = file.name.replace(`.${fileExt}`, "");
+      // Sanitise filename — replace unsafe characters
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
       const timestamp = Date.now();
-      const filePath = `${organizationId}/${timestamp}-${fileNameWithoutExt}.${fileExt}`;
+      const filePath = `${organizationId}/${timestamp}-${safeName}`;
 
       // Determine bucket based on file type
       const isImage = file.type.startsWith("image/");
       const bucket = isImage ? "estates-images" : "estates-documents";
 
-      // Upload to Supabase storage
-      const { data: uploadData, error: uploadError } = await fetch(
-        `/api/upload?bucket=${bucket}&path=${filePath}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": file.type },
-          body: file,
-        },
-      ).then((res) => res.json());
+      // Upload directly via Supabase service role — we are on the server here,
+      // and the calling route has already validated auth via protectedRoute.
+      const { createServiceRoleClient } = await import("@/lib/supabase-server");
+      const supabase = createServiceRoleClient();
+
+      const fileBuffer = Buffer.from(await file.arrayBuffer());
+      const { error: uploadError } = await supabase.storage
+        .from(bucket)
+        .upload(filePath, fileBuffer, {
+          contentType: file.type,
+          upsert: false,
+        });
 
       if (uploadError) {
-        throw new Error(`Failed to upload file: ${uploadError.message}`);
+        throw new Error(`Failed to upload file to storage: ${uploadError.message}`);
       }
 
-      fileUrl = uploadData.publicUrl;
+      // Create a 1-year signed URL for private bucket access
+      const { data: signed, error: signedError } = await supabase.storage
+        .from(bucket)
+        .createSignedUrl(filePath, 60 * 60 * 24 * 365);
+
+      if (signedError || !signed?.signedUrl) {
+        throw new Error(`Failed to create signed URL: ${signedError?.message || "unknown"}`);
+      }
+
+      fileUrl = signed.signedUrl;
       fileName = file.name;
       fileSize = file.size;
       fileType = file.type;

@@ -1,0 +1,26 @@
+{
+  "timestamp": "2026-04-11T10-15-38-396Z",
+  "urn": 148201,
+  "documentId": "f49fe998-dc1a-4701-adad-7cc59d371015",
+  "title": "Attendance Story — Grove House Primary School",
+  "sourceConnectors": [
+    "dfe-attendance",
+    "dfe-census"
+  ],
+  "missingConnectors": [
+    {
+      "id": "contextual-factors",
+      "name": "Contextual Factors",
+      "reason": "Log significant events to explain trends (replaced teacher, interventions, etc.)"
+    },
+    {
+      "id": "live-attendance",
+      "name": "Live Attendance (MIS)",
+      "reason": "Adds current-term view beyond the DfE historic data"
+    }
+  ],
+  "llmModel": "google/gemini-2.5-flash",
+  "llmTokensUsed": 1394,
+  "guardianCategoriesDetected": [],
+  "narrative": "## Grove House Primary School: Attendance Report to Governors (February 2025)\n\n**Headline:** Overall attendance is stable, with a positive trend in the current autumn term. However, persistent absence remains a key area of concern.\n\n**Attendance Story**\n\nGrove House Primary School's overall attendance has remained broadly stable over the past few academic years. The most recent full academic year data for 2023-24 shows an attendance rate of 93.18%, with an overall absence rate of 6.82%. This mirrors the 2021-22 figures exactly. The 2020-21 data presents a discrepancy, showing both 6.36% and 93.64% for attendance, making it difficult to draw a clear trend for that specific year. However, the consistent figures in 2021-22 and 2023-24 suggest a period of stability in overall attendance.\n\nA positive development is observed in the most recent autumn term (2024-25), where attendance has improved to 94.48%. This indicates a positive short-term trend and suggests that current strategies may be having an impact on improving daily attendance. This improvement is a strength and would be viewed positively by an Ofsted inspector.\n\n**Persistent Absence**\n\nPersistent absence (PA) is a significant area of concern for Grove House Primary. In the 2023-24 academic year, 24.65% of pupils were persistently absent. While the data for persistent absence is not available for all years, the most recent autumn term (2024-25) shows a persistent absence rate of 16.95%. Although this is lower than the previous full academic year, it still represents a substantial proportion of pupils missing a significant amount of school. This high level of persistent absence would be a key area of scrutiny for an Ofsted inspector, as it directly impacts pupil progress and attainment. The absence of historical PA data makes it difficult to determine if this is an improving or declining trend over time, but the current figure is high.\n\n**Context**\n\nThe school's demographics show a relatively stable Free School Meal (FSM) percentage, ranging from 25.1% to 28.1% over the past few years. The percentage of pupils with English as an Additional Language (EAL) has seen a slight increase, from 34.8% in 2021-22 to 39.8% in 2024-25. It is important to note that the school has not logged any specific contextual factors to explain attendance trends. While FSM and EAL percentages are often correlated with attendance challenges, without specific contextual information from the school, it is difficult to directly link these demographics to the observed attendance patterns. The increase in EAL pupils could potentially present additional challenges in communicating the importance of attendance to families, but this is an assumption without further context.\n\n**Suggested Actions for Governors**\n\n1.  **Request a Detailed Persistent Absence Strategy:** Given the high persistent absence rates, governors should request a detailed report on the school's strategy to address persistent absence. This should include specific interventions, monitoring processes, and communication plans for affected families.\n2.  **Encourage Contextual Factor Logging:** Governors should encourage the school to regularly log contextual factors that may influence attendance. This would provide valuable insights into the causes of absence and help in developing targeted interventions, which would also be beneficial for Ofsted inspections.\n3.  **Review the Impact of Autumn Term Strategies:** Discuss with the Headteacher what specific strategies were implemented in the autumn term that contributed to the improvement in overall attendance. Governors should then consider how these successful strategies can be sustained and potentially adapted to tackle persistent absence."
+}
