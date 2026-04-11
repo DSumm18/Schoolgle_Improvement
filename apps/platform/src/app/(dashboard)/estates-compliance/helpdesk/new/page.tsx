@@ -151,23 +151,23 @@ export default function NewTicketPage() {
       <div>
         <Link
           href="/estates-compliance/helpdesk"
-          className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Helpdesk
         </Link>
         <div className="mt-3 flex items-center gap-3">
-          <Wrench className="h-6 w-6 text-blue-400" />
-          <h1 className="text-2xl font-semibold text-white">New Helpdesk Ticket</h1>
+          <Wrench className="h-6 w-6 text-primary" />
+          <h1 className="text-2xl font-semibold text-foreground">New Helpdesk Ticket</h1>
         </div>
-        <p className="mt-1 text-sm text-gray-400">
+        <p className="mt-1 text-sm text-muted-foreground">
           Report a maintenance issue, request a repair, or log a new problem.
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Asset picker (drives warranty check) */}
-        <div className="rounded-lg border border-gray-700 bg-gray-900 p-5">
+        <div className="rounded-lg border border-border bg-card p-5">
           {organizationId && (
             <AssetPicker
               organizationId={organizationId}
@@ -184,9 +184,9 @@ export default function NewTicketPage() {
         </div>
 
         {/* Title */}
-        <div className="rounded-lg border border-gray-700 bg-gray-900 p-5">
-          <label className="block text-sm font-medium text-gray-200">
-            Title <span className="text-red-400">*</span>
+        <div className="rounded-lg border border-border bg-card p-5">
+          <label className="block text-sm font-medium text-foreground">
+            Title <span className="text-destructive">*</span>
           </label>
           <input
             type="text"
@@ -197,26 +197,26 @@ export default function NewTicketPage() {
                 ? `e.g. ${selectedAsset.name} not working`
                 : "Brief description of the issue"
             }
-            className="mt-2 w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:border-blue-500 focus:outline-none"
+            className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
             required
           />
         </div>
 
         {/* Description */}
-        <div className="rounded-lg border border-gray-700 bg-gray-900 p-5">
-          <label className="block text-sm font-medium text-gray-200">Description</label>
+        <div className="rounded-lg border border-border bg-card p-5">
+          <label className="block text-sm font-medium text-foreground">Description</label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={4}
             placeholder="What happened? What have you tried? Any error messages? The more detail, the faster it gets fixed."
-            className="mt-2 w-full resize-y rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:border-blue-500 focus:outline-none"
+            className="mt-2 w-full resize-y rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         </div>
 
         {/* Priority */}
-        <div className="rounded-lg border border-gray-700 bg-gray-900 p-5">
-          <label className="mb-3 block text-sm font-medium text-gray-200">Priority</label>
+        <div className="rounded-lg border border-border bg-card p-5">
+          <label className="mb-3 block text-sm font-medium text-foreground">Priority</label>
           <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
             {PRIORITY_OPTIONS.map((opt) => (
               <button
@@ -225,8 +225,8 @@ export default function NewTicketPage() {
                 onClick={() => setPriority(opt.value)}
                 className={`rounded-lg border p-3 text-left transition ${
                   priority === opt.value
-                    ? `${opt.color} ring-2 ring-offset-2 ring-offset-gray-900`
-                    : "border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-600"
+                    ? `${opt.color} ring-2 ring-primary/50 ring-offset-2 ring-offset-background`
+                    : "border-border bg-muted text-muted-foreground hover:border-border/80 hover:bg-accent"
                 }`}
               >
                 <div className="text-sm font-semibold">{opt.label}</div>
@@ -237,14 +237,14 @@ export default function NewTicketPage() {
         </div>
 
         {/* Category + location */}
-        <div className="rounded-lg border border-gray-700 bg-gray-900 p-5">
+        <div className="rounded-lg border border-border bg-card p-5">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium text-gray-200">Category</label>
+              <label className="block text-sm font-medium text-foreground">Category</label>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="mt-2 w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
+                className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
                 {CATEGORIES.map((c) => (
                   <option key={c.value} value={c.value}>
@@ -254,15 +254,15 @@ export default function NewTicketPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-200">
-                Location <span className="text-xs font-normal text-gray-500">(optional)</span>
+              <label className="block text-sm font-medium text-foreground">
+                Location <span className="text-xs font-normal text-muted-foreground">(optional)</span>
               </label>
               <input
                 type="text"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 placeholder="e.g. Plant Room, Year 3 Classroom"
-                className="mt-2 w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:border-blue-500 focus:outline-none"
+                className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
           </div>
@@ -270,7 +270,7 @@ export default function NewTicketPage() {
 
         {/* Warning if asset under warranty */}
         {warranty && warranty.warranty_status === "active" && (
-          <div className="rounded-lg border-2 border-green-700 bg-green-950/30 p-4 text-sm text-green-200">
+          <div className="rounded-lg border-2 border-green-600 bg-green-50 p-4 text-sm text-green-900 dark:border-green-700 dark:bg-green-950/40 dark:text-green-200">
             <strong>Reminder:</strong> this asset is covered by{" "}
             {warranty.warranty_provider || "the supplier"}. Raising this ticket
             is fine for tracking, but the <strong>supplier should fix it for free</strong>.
@@ -282,14 +282,14 @@ export default function NewTicketPage() {
         <div className="flex items-center justify-end gap-3">
           <Link
             href="/estates-compliance/helpdesk"
-            className="rounded-lg border border-gray-700 bg-gray-800 px-4 py-2 text-sm text-gray-200 hover:bg-gray-700"
+            className="rounded-lg border border-border bg-muted px-4 py-2 text-sm text-foreground hover:bg-accent"
           >
             Cancel
           </Link>
           <button
             type="submit"
             disabled={submitting || !title.trim()}
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {submitting ? (
               <>

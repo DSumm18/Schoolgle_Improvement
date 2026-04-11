@@ -174,9 +174,9 @@ export function AssetPicker({
 
   return (
     <div className="space-y-3">
-      <label className="block text-sm font-medium text-gray-200">
+      <label className="block text-sm font-medium text-foreground">
         Affected Asset
-        <span className="ml-2 text-xs font-normal text-gray-400">
+        <span className="ml-2 text-xs font-normal text-muted-foreground">
           (optional but recommended — lets Ed check warranty)
         </span>
       </label>
@@ -184,21 +184,21 @@ export function AssetPicker({
       {!selected && (
         <div className="relative">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input
               type="text"
               value={query}
               onChange={(e) => handleQueryChange(e.target.value)}
               onFocus={() => setShowDropdown(true)}
               placeholder="Search by name, code (e.g. BOI-001), or serial number..."
-              className="w-full rounded-lg border border-gray-700 bg-gray-800 py-2 pl-10 pr-4 text-sm text-white placeholder:text-gray-500 focus:border-blue-500 focus:outline-none"
+              className="w-full rounded-lg border border-border bg-background py-2 pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </div>
 
           {showDropdown && (results.length > 0 || loading) && (
-            <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-64 overflow-y-auto rounded-lg border border-gray-700 bg-gray-900 shadow-lg">
+            <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-64 overflow-y-auto rounded-lg border border-border bg-popover shadow-lg">
               {loading && (
-                <div className="px-4 py-3 text-sm text-gray-400">Searching...</div>
+                <div className="px-4 py-3 text-sm text-muted-foreground">Searching...</div>
               )}
               {!loading &&
                 results.map((a) => (
@@ -206,27 +206,27 @@ export function AssetPicker({
                     key={a.id}
                     type="button"
                     onClick={() => handleSelect(a)}
-                    className="block w-full border-b border-gray-800 px-4 py-3 text-left transition hover:bg-gray-800"
+                    className="block w-full border-b border-border px-4 py-3 text-left transition hover:bg-accent"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           {a.code && (
-                            <span className="rounded bg-blue-900/50 px-2 py-0.5 text-xs font-mono text-blue-300">
+                            <span className="rounded bg-primary/10 px-2 py-0.5 text-xs font-mono text-primary">
                               {a.code}
                             </span>
                           )}
-                          <span className="truncate text-sm font-medium text-white">
+                          <span className="truncate text-sm font-medium text-foreground">
                             {a.name}
                           </span>
                         </div>
-                        <div className="mt-0.5 text-xs text-gray-400">
+                        <div className="mt-0.5 text-xs text-muted-foreground">
                           {[a.manufacturer, a.model, a.serial_number]
                             .filter(Boolean)
                             .join(" • ") || a.asset_type}
                         </div>
                         {(a.building || a.room) && (
-                          <div className="text-xs text-gray-500">
+                          <div className="text-xs text-muted-foreground/70">
                             {[a.building, a.room].filter(Boolean).join(" → ")}
                           </div>
                         )}
@@ -240,26 +240,26 @@ export function AssetPicker({
       )}
 
       {selected && (
-        <div className="rounded-lg border border-gray-700 bg-gray-800 p-3">
+        <div className="rounded-lg border border-border bg-muted p-3">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 {selected.code && (
-                  <span className="rounded bg-blue-900/50 px-2 py-0.5 text-xs font-mono text-blue-300">
+                  <span className="rounded bg-primary/10 px-2 py-0.5 text-xs font-mono text-primary">
                     {selected.code}
                   </span>
                 )}
-                <span className="truncate text-sm font-semibold text-white">
+                <span className="truncate text-sm font-semibold text-foreground">
                   {selected.name}
                 </span>
               </div>
-              <div className="mt-1 text-xs text-gray-400">
+              <div className="mt-1 text-xs text-muted-foreground">
                 {[selected.manufacturer, selected.model, selected.serial_number]
                   .filter(Boolean)
                   .join(" • ")}
               </div>
               {(selected.building || selected.room) && (
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-muted-foreground/70">
                   {[selected.building, selected.room].filter(Boolean).join(" → ")}
                 </div>
               )}
@@ -267,7 +267,7 @@ export function AssetPicker({
             <button
               type="button"
               onClick={handleClear}
-              className="rounded p-1 text-gray-400 hover:bg-gray-700 hover:text-white"
+              className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
               aria-label="Clear asset selection"
             >
               <X className="h-4 w-4" />
@@ -278,20 +278,20 @@ export function AssetPicker({
 
       {/* Warranty banner */}
       {warrantyLoading && (
-        <div className="rounded-lg border border-gray-700 bg-gray-800 p-3 text-sm text-gray-400">
+        <div className="rounded-lg border border-border bg-muted p-3 text-sm text-muted-foreground">
           Checking warranty status...
         </div>
       )}
 
       {warranty && warranty.warranty_status === "active" && (
-        <div className="rounded-lg border-2 border-green-700 bg-green-950/40 p-4">
+        <div className="rounded-lg border-2 border-green-600 bg-green-50 p-4 dark:border-green-700 dark:bg-green-950/40">
           <div className="flex items-start gap-3">
-            <Shield className="mt-0.5 h-5 w-5 flex-shrink-0 text-green-400" />
+            <Shield className="mt-0.5 h-5 w-5 flex-shrink-0 text-green-600 dark:text-green-400" />
             <div className="min-w-0 flex-1">
-              <div className="font-semibold text-green-300">
+              <div className="font-semibold text-green-900 dark:text-green-300">
                 Under warranty — don&apos;t call a different contractor
               </div>
-              <div className="mt-1 text-sm text-green-200">
+              <div className="mt-1 text-sm text-green-800 dark:text-green-200">
                 {warranty.warranty_provider} covers this until{" "}
                 <span className="font-semibold">{warranty.warranty_expiry}</span>
                 {warranty.warranty_days_remaining !== null && (
@@ -300,7 +300,7 @@ export function AssetPicker({
                 . The repair should be free.
               </div>
               {warranty.supplier_contact && (
-                <div className="mt-2 text-xs text-green-100">
+                <div className="mt-2 text-xs text-green-900 dark:text-green-100">
                   Contact:{" "}
                   <span className="font-medium">
                     {warranty.supplier_contact.contact_name || warranty.supplier_contact.company_name}
@@ -310,7 +310,7 @@ export function AssetPicker({
                       •{" "}
                       <a
                         href={`mailto:${warranty.supplier_contact.email}`}
-                        className="underline hover:text-green-50"
+                        className="underline hover:opacity-80"
                       >
                         {warranty.supplier_contact.email}
                       </a>
@@ -322,7 +322,7 @@ export function AssetPicker({
                       •{" "}
                       <a
                         href={`tel:${warranty.supplier_contact.phone}`}
-                        className="underline hover:text-green-50"
+                        className="underline hover:opacity-80"
                       >
                         {warranty.supplier_contact.phone}
                       </a>
@@ -331,15 +331,14 @@ export function AssetPicker({
                 </div>
               )}
               {warranty.invoice_number && (
-                <div className="mt-1 text-xs text-green-300/70">
+                <div className="mt-1 text-xs text-green-700/80 dark:text-green-300/70">
                   Invoice ref: {warranty.invoice_number}
                 </div>
               )}
               <button
                 type="button"
-                className="mt-3 inline-flex items-center gap-2 rounded-lg bg-green-700 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-green-600"
+                className="mt-3 inline-flex items-center gap-2 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600"
                 onClick={() => {
-                  // Dispatch a custom event the parent can catch to open the draft
                   window.dispatchEvent(
                     new CustomEvent("ed:draft-warranty-email", {
                       detail: { asset_id: warranty.asset_id },
@@ -356,14 +355,14 @@ export function AssetPicker({
       )}
 
       {warranty && warranty.warranty_status === "expiring_soon" && (
-        <div className="rounded-lg border-2 border-amber-700 bg-amber-950/40 p-4">
+        <div className="rounded-lg border-2 border-amber-500 bg-amber-50 p-4 dark:border-amber-700 dark:bg-amber-950/40">
           <div className="flex items-start gap-3">
-            <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-400" />
+            <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
             <div className="min-w-0 flex-1">
-              <div className="font-semibold text-amber-300">
+              <div className="font-semibold text-amber-900 dark:text-amber-300">
                 Warranty expiring in {warranty.warranty_days_remaining} days
               </div>
-              <div className="mt-1 text-sm text-amber-200">
+              <div className="mt-1 text-sm text-amber-800 dark:text-amber-200">
                 {warranty.warranty_provider} cover expires{" "}
                 <span className="font-semibold">{warranty.warranty_expiry}</span>.
                 Raise this now while it&apos;s still covered.
@@ -374,10 +373,10 @@ export function AssetPicker({
       )}
 
       {warranty && warranty.warranty_status === "expired" && (
-        <div className="rounded-lg border border-gray-700 bg-gray-800/60 p-3">
+        <div className="rounded-lg border border-border bg-muted/60 p-3">
           <div className="flex items-start gap-3">
-            <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-gray-400" />
-            <div className="text-xs text-gray-400">
+            <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-muted-foreground" />
+            <div className="text-xs text-muted-foreground">
               Warranty expired on {warranty.warranty_expiry}. You will need to pay
               for this repair or book a different contractor.
             </div>
@@ -386,7 +385,7 @@ export function AssetPicker({
       )}
 
       {warranty && warranty.warranty_status === "none" && (
-        <div className="rounded-lg border border-gray-700 bg-gray-800/60 p-3 text-xs text-gray-400">
+        <div className="rounded-lg border border-border bg-muted/60 p-3 text-xs text-muted-foreground">
           No warranty information recorded for this asset.
         </div>
       )}
