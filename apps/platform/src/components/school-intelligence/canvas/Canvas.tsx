@@ -1,13 +1,10 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { DndContext, type DragEndEvent, pointerWithin } from '@dnd-kit/core';
-import { ConnectorShelf } from './ConnectorShelf';
-import { CanvasBoard } from './CanvasBoard';
-import { SettingsPanel } from './SettingsPanel';
+import { useState } from 'react';
+import { TemplatePickerStep } from './TemplatePickerStep';
+import { ConfigureStep } from './ConfigureStep';
 import { ResultPanel } from './ResultPanel';
-import { useCanvasState } from './hooks/useCanvasState';
-import { TEMPLATES, getTemplate, canRunTemplate } from './lib/templates';
+import { TEMPLATES, getTemplate } from './lib/templates';
 import type { Connector } from '@/lib/data-connectors/types';
 import { getAllConnectors } from '@/lib/data-connectors/registry';
 import { supabase } from '@/lib/supabase';
@@ -33,71 +30,35 @@ interface GenerationResult {
   guardianCategoriesDetected: string[];
 }
 
+type Step = 'pick' | 'configure';
+
 export function Canvas() {
-  // Static registry is imported directly — no network round-trip needed.
-  // BYO connectors are fetched separately and merged in if available.
-  const [allConnectors, setAllConnectors] = useState<Connector[]>(() => getAllConnectors());
-  const [selectedTemplateId, setSelectedTemplateId] = useState('attendance-story');
+  const [step, setStep] = useState<Step>('pick');
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>(TEMPLATES[0].id);
+
+  const [timePeriod, setTimePeriod] = useState('Last 5 years');
+  const [audience, setAudience] = useState('Governors');
+
   const [generating, setGenerating] = useState(false);
   const [result, setResult] = useState<GenerationResult | null>(null);
   const [resultOpen, setResultOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [byoLoadError, setByoLoadError] = useState<string | null>(null);
 
-  const canvas = useCanvasState();
+  const allConnectors: Connector[] = getAllConnectors();
   const template = getTemplate(selectedTemplateId) ?? TEMPLATES[0];
-  const { ok: canGenerate, missing } = canRunTemplate(template, canvas.placedConnectorIds);
 
-  // Try to enrich with BYO connectors from the API (best-effort — failures
-  // are shown as an inline notice but don't block the static connectors).
-  useEffect(() => {
-    let cancelled = false;
-    async function loadByo() {
-      try {
-        const headers = await getAuthHeaders();
-        const res = await fetch('/api/connectors/byo', { headers });
-        if (!res.ok) {
-          if (!cancelled) setByoLoadError(`BYO connectors unavailable (HTTP ${res.status})`);
-          return;
-        }
-        const data = await res.json();
-        const byoConnectors: Connector[] = data.data?.connectors ?? [];
-        if (byoConnectors.length > 0 && !cancelled) {
-          setAllConnectors((prev) => [...prev, ...byoConnectors]);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setByoLoadError(err instanceof Error ? err.message : 'BYO fetch failed');
-        }
-      }
-    }
-    loadByo();
-    return () => { cancelled = true; };
-  }, []);
-
-  // Pre-populate canvas with required connectors for the default template.
-  // Runs once on mount — the static registry is already populated at init.
-  useEffect(() => {
-    if (canvas.nodes.length > 0) return;
-    const template = getTemplate(selectedTemplateId);
-    if (!template) return;
-    const required = template.requiredConnectorIds
-      .map((id) => allConnectors.find((c) => c.id === id))
-      .filter((c): c is Connector => c !== undefined);
-    required.forEach((c) => canvas.addConnector(c));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
-    if (!over || over.id !== 'canvas-board') return;
-    const connector = active.data.current?.connector as Connector | undefined;
-    if (!connector) return;
-    canvas.addConnector(connector);
+  function handlePick(templateId: string) {
+    setSelectedTemplateId(templateId);
+    setStep('configure');
+    setError(null);
+    setResult(null);
   }
 
   async function handleGenerate() {
-    if (!canGenerate || template.id !== 'attendance-story') return;
+    if (template.id !== 'attendance-story') {
+      setError('Only Attendance Story is currently wired to a real generator. More coming soon.');
+      return;
+    }
     setGenerating(true);
     setError(null);
     setResult(null);
@@ -114,8 +75,8 @@ export function Canvas() {
         setResult(data.data);
         setResultOpen(true);
       } else {
-        const body = await res.json();
-        setError(body.error ?? 'Generation failed');
+        const body = await res.json().catch(() => ({ error: 'Non-JSON response' }));
+        setError(body.error ?? `Generation failed (HTTP ${res.status})`);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Network error');
@@ -125,49 +86,27 @@ export function Canvas() {
   }
 
   return (
-    <DndContext collisionDetection={pointerWithin} onDragEnd={handleDragEnd}>
-      <div className="flex h-[calc(100vh-120px)] rounded-2xl border border-border overflow-hidden bg-card">
-        {/* Left: connector shelf */}
-        <div className="w-64 flex-shrink-0">
-          <ConnectorShelf connectors={allConnectors} placedIds={canvas.placedConnectorIds} />
-        </div>
-
-        {/* Centre: canvas */}
-        <div className="flex-1 flex flex-col">
-          <CanvasBoard
-            nodes={canvas.nodes}
-            edges={canvas.edges}
+    <>
+      <div className="max-w-[1400px] mx-auto">
+        {step === 'pick' && <TemplatePickerStep onPick={handlePick} />}
+        {step === 'configure' && (
+          <ConfigureStep
             template={template}
-            canGenerate={canGenerate}
-            missing={missing}
-            generating={generating}
-            onRemoveNode={canvas.removeNode}
-            onMoveNode={canvas.moveNode}
+            allConnectors={allConnectors}
+            urn={GROVE_HOUSE_URN}
+            timePeriod={timePeriod}
+            audience={audience}
+            onTimePeriodChange={setTimePeriod}
+            onAudienceChange={setAudience}
+            onBack={() => setStep('pick')}
             onGenerate={handleGenerate}
+            generating={generating}
+            error={error}
           />
-          {error && (
-            <div className="border-t border-red-500/30 bg-red-500/5 p-3 text-xs text-red-400">
-              <strong>Generation error:</strong> {error}
-            </div>
-          )}
-          {byoLoadError && (
-            <div className="border-t border-amber-500/30 bg-amber-500/5 p-2 text-[10px] text-amber-400">
-              Note: {byoLoadError} — static connectors still loaded ({allConnectors.length} available).
-            </div>
-          )}
-        </div>
-
-        {/* Right: settings */}
-        <div className="w-72 flex-shrink-0">
-          <SettingsPanel
-            selectedTemplateId={selectedTemplateId}
-            onTemplateChange={setSelectedTemplateId}
-            placedCount={canvas.nodes.length}
-          />
-        </div>
+        )}
       </div>
 
       <ResultPanel open={resultOpen} onClose={() => setResultOpen(false)} result={result} />
-    </DndContext>
+    </>
   );
 }
