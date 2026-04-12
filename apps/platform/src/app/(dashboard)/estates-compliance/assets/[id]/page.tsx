@@ -609,11 +609,40 @@ export default function AssetDetailPage() {
   const warrantyCfg = WARRANTY_CONFIG[asset.warranty_status];
   const conditionCfg = asset.condition_grade ? CONDITION_CONFIG[asset.condition_grade] : null;
 
-  const maintenanceHistory: MaintenanceHistoryEntry[] = asset.maintenance_history ?? [];
-  const totalMaintenanceSpend = maintenanceHistory.reduce(
-    (sum, entry) => sum + (entry.cost ?? 0),
-    0,
-  );
+  // Prefer service_history from the new service_records junction table;
+  // fall back to legacy maintenance_history JSONB for older data.
+  const serviceHistory = (asset as Record<string, unknown>).service_history as Array<{
+    last_service_date?: string;
+    cost_allocated?: number;
+    result?: string;
+    findings?: string;
+    contractor_name?: string;
+    allocation_method?: string;
+    service_record?: {
+      service_type?: string;
+      engineer_name?: string;
+      contractor_id?: string;
+      total_cost?: number;
+    };
+  }> | undefined;
+
+  const maintenanceHistory: MaintenanceHistoryEntry[] =
+    serviceHistory && serviceHistory.length > 0
+      ? serviceHistory.map((s) => ({
+          date: s.last_service_date || "",
+          action: s.service_record?.service_type || "Service",
+          performed_by: s.contractor_name || s.service_record?.engineer_name || "Unknown",
+          cost: typeof s.cost_allocated === "number" ? s.cost_allocated : null,
+          notes: s.findings || null,
+        }))
+      : (asset.maintenance_history ?? []);
+
+  const totalMaintenanceSpend =
+    (asset as Record<string, unknown>).maintenance_spend &&
+    typeof ((asset as Record<string, unknown>).maintenance_spend as { totalSpend?: number })?.totalSpend === "number"
+      ? ((asset as Record<string, unknown>).maintenance_spend as { totalSpend: number }).totalSpend
+      : maintenanceHistory.reduce((sum, entry) => sum + (entry.cost ?? 0), 0);
+
   const spendRatio =
     asset.replacement_cost_estimate && asset.replacement_cost_estimate > 0
       ? (totalMaintenanceSpend / asset.replacement_cost_estimate) * 100

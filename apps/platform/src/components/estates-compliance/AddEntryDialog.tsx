@@ -51,6 +51,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/context/SupabaseAuthContext";
+import { supabase as supabaseClient } from "@/lib/supabase";
 import { useMediaQuery } from "@/hooks/use-media-query";
 
 interface AddEntryDialogProps {
@@ -251,9 +252,14 @@ export function AddEntryDialog({
             }
           : undefined;
 
+      const { data: sessionData } = await supabaseClient.auth.getSession();
+      const authToken = sessionData.session?.access_token;
+      const fetchHeaders: Record<string, string> = { "Content-Type": "application/json" };
+      if (authToken) fetchHeaders["Authorization"] = `Bearer ${authToken}`;
+
       const response = await fetch("/api/estates-compliance/diary", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: fetchHeaders,
         body: JSON.stringify({
           organizationId: organizationId,
           user_id: user.id,
