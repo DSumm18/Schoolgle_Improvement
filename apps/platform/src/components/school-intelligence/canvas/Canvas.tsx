@@ -7,6 +7,7 @@ import { ResultPanel } from './ResultPanel';
 import { TEMPLATES, getTemplate } from './lib/templates';
 import type { Connector } from '@/lib/data-connectors/types';
 import { getAllConnectors } from '@/lib/data-connectors/registry';
+import { useAuth } from '@/context/SupabaseAuthContext';
 import { supabase } from '@/lib/supabase';
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
@@ -33,6 +34,7 @@ interface GenerationResult {
 type Step = 'pick' | 'configure';
 
 export function Canvas() {
+  const { organizationId } = useAuth();
   const [step, setStep] = useState<Step>('pick');
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(TEMPLATES[0].id);
 
@@ -68,7 +70,7 @@ export function Canvas() {
       const res = await fetch('/api/documents/attendance-story', {
         method: 'POST',
         headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ urn: GROVE_HOUSE_URN }),
+        body: JSON.stringify({ urn: GROVE_HOUSE_URN, organizationId }),
       });
       if (res.ok) {
         const data = await res.json();
