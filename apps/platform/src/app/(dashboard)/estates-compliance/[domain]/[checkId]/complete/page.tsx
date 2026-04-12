@@ -395,6 +395,57 @@ export default function CheckCompletionPage() {
         </div>
       </div>
 
+      {/* AI Report Analysis — quick path for contractor reports */}
+      <div className="rounded-xl border-2 border-primary/30 bg-primary/5 dark:bg-primary/10 p-5">
+        <div className="flex items-start gap-4">
+          <div className="rounded-lg bg-primary/10 p-2.5 shrink-0">
+            <FileText className="w-5 h-5 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-foreground">
+              Got a contractor report or certificate?
+            </h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Upload the PDF and Ed will read it automatically — extract findings per asset, update this compliance check, and create follow-up tickets for anything that failed. No manual data entry needed.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const input = document.createElement("input");
+                  input.type = "file";
+                  input.accept = "application/pdf,image/*";
+                  input.onchange = async (e) => {
+                    const file = (e.target as HTMLInputElement).files?.[0];
+                    if (!file) return;
+                    // Navigate to Ed chat with the file context
+                    const edBtn = document.querySelector('[title="Upload a file (photo, PDF, document)"]') as HTMLButtonElement;
+                    if (edBtn) {
+                      // Open Ed's chat and trigger upload there
+                      edBtn.click();
+                    } else {
+                      // Fallback: open Ed widget
+                      const askEd = [...document.querySelectorAll("div, button")].find(
+                        (el) => el.textContent?.trim() === "Ask Ed"
+                      ) as HTMLElement;
+                      if (askEd) askEd.click();
+                    }
+                  };
+                  input.click();
+                }}
+                className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition"
+              >
+                <Upload className="w-4 h-4" />
+                Upload report for AI analysis
+              </button>
+              <span className="self-center text-xs text-muted-foreground">
+                or complete manually below
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Check Information */}
       <div className="rounded-xl border-2 border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg overflow-hidden">
         <div className="px-6 py-4 border-b-2 border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">

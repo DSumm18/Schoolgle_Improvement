@@ -286,16 +286,35 @@ export default function EdSidebarChat({ collapsed }: EdSidebarChatProps) {
     }
   };
 
-  // Image upload handler
+  // File upload handler — supports images AND PDFs/documents
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    const isImage = file.type.startsWith("image/");
+    const isPdf = file.type === "application/pdf";
+    const isDoc =
+      file.type.includes("word") ||
+      file.type.includes("spreadsheet") ||
+      file.type.includes("excel");
 
     const reader = new FileReader();
     reader.onload = () => {
       const base64 = reader.result as string;
       setPendingImage(base64);
-      setInput((prev) => prev || "Can you help me with what's in this image?");
+
+      // Set a context-appropriate default prompt based on file type
+      if (isPdf || isDoc) {
+        setInput(
+          (prev) =>
+            prev ||
+            `I've uploaded a document: ${file.name}. Can you read it and help me with it?`,
+        );
+      } else if (isImage) {
+        setInput(
+          (prev) => prev || "Can you help me with what's in this image?",
+        );
+      }
       inputRef.current?.focus();
     };
     reader.readAsDataURL(file);
@@ -501,7 +520,7 @@ export default function EdSidebarChat({ collapsed }: EdSidebarChatProps) {
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/*"
+                  accept="image/*,application/pdf,.pdf,.doc,.docx,.xls,.xlsx"
                   onChange={handleImageUpload}
                   className="hidden"
                 />
@@ -526,7 +545,7 @@ export default function EdSidebarChat({ collapsed }: EdSidebarChatProps) {
                     onClick={() => fileInputRef.current?.click()}
                     disabled={isLoading}
                     className="shrink-0 p-2 rounded-lg text-muted-foreground hover:text-primary hover:bg-muted disabled:opacity-40 transition-all"
-                    title="Upload an image"
+                    title="Upload a file (photo, PDF, document)"
                   >
                     <ImageIcon size={16} />
                   </button>
