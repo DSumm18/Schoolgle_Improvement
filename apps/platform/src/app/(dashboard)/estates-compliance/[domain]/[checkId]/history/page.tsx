@@ -174,19 +174,57 @@ export default function CheckHistoryPage() {
           });
 
           if (mounted) {
-            // Convert records to HistoryRecord format
-            const historyRecords: HistoryRecord[] = checkCompletions.map(
-              (record: any) => ({
-                id: record.id,
-                completedDate: record.completed_at,
-                completedBy: record.completed_by || "Unknown",
-                status: record.status || "completed",
-                notes: record.completion_notes || "",
-                nextDueDate: record.next_due || "",
-                documentsReceived: record.documents_received || false,
-                evidence: [],
-                contractorName: record.contractor_name,
-                duration: record.duration_minutes,
+            // Convert records to HistoryRecord format and fetch evidence
+            const historyRecords: HistoryRecord[] = await Promise.all(
+              checkCompletions.map(async (record: any) => {
+                // Fetch evidence files if evidence_ids exist
+                let evidence: OfstedEvidenceItem[] = [];
+                const evidenceIds = record.evidence_ids || [];
+                if (evidenceIds.length > 0) {
+                  try {
+                    const evidenceRes = await fetch(
+                      `/api/estates/evidence?ids=${evidenceIds.join(",")}`,
+                      { headers },
+                    );
+                    if (evidenceRes.ok) {
+                      const evidenceData = await evidenceRes.json();
+                      const items = evidenceData?.data || evidenceData || [];
+                      evidence = (
+                        Array.isArray(items) ? items : [items]
+                      ).map((ev: any) => ({
+                        id: ev.id,
+                        type: ev.evidence_type || "document",
+                        title: ev.title || ev.file_name || "Evidence",
+                        url: ev.file_url || ev.url || "",
+                        uploadedAt: ev.uploaded_at || ev.created_at || "",
+                        uploadedBy: ev.uploaded_by || "Unknown",
+                        fileSize: ev.file_size
+                          ? `${Math.round(ev.file_size / 1024)} KB`
+                          : undefined,
+                      }));
+                    }
+                  } catch (e) {
+                    console.warn(
+                      "[HISTORY] Failed to fetch evidence for record",
+                      record.id,
+                      e,
+                    );
+                  }
+                }
+
+                return {
+                  id: record.id,
+                  completedDate: record.completed_at,
+                  completedBy: record.completed_by || "Unknown",
+                  status: record.status || "completed",
+                  notes: record.completion_notes || "",
+                  nextDueDate: record.next_due || "",
+                  documentsReceived:
+                    record.documents_received || evidenceIds.length > 0,
+                  evidence,
+                  contractorName: record.contractor_name,
+                  duration: record.duration_minutes,
+                };
               }),
             );
 

@@ -75,13 +75,13 @@ export default function CheckCompletionPage() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
-  // User info (would come from auth in production)
-  const [userInfo] = useState({
-    id: "user_001",
-    name: "John Smith",
-    email: "john.smith@school.co.uk",
+  // User info from auth context
+  const userInfo = {
+    id: user?.uid || "unknown",
+    name: user?.displayName || user?.email || "Unknown User",
+    email: user?.email || "",
     role: "Site Manager",
-  });
+  };
 
   // Form state
   const [completionStatus, setCompletionStatus] =
@@ -222,9 +222,63 @@ export default function CheckCompletionPage() {
         checkId,
         domainSlug,
         hasToken: !!session?.access_token,
+        fileCount: evidenceFiles.length,
       });
 
-      // Call the API to complete the statutory check
+      // Step 1: Upload evidence files first
+      const uploadedEvidenceIds: string[] = [];
+      if (evidenceFiles.length > 0) {
+        for (const ef of evidenceFiles) {
+          const formData = new FormData();
+          formData.append("file", ef.file);
+          formData.append("title", ef.file.name);
+          formData.append("evidence_type", ef.category);
+          formData.append("source_type", "upload");
+          formData.append("compliance_domain", domainSlug);
+          formData.append(
+            "description",
+            `Evidence for ${check?.name || checkId} - ${completionStatus}`,
+          );
+          formData.append(
+            "tags",
+            `compliance,${domainSlug},${checkId},${ef.category}`,
+          );
+
+          const uploadHeaders: Record<string, string> = {};
+          if (session?.access_token) {
+            uploadHeaders["Authorization"] = `Bearer ${session.access_token}`;
+          }
+
+          const uploadRes = await fetch("/api/estates/evidence", {
+            method: "POST",
+            headers: uploadHeaders,
+            body: formData,
+          });
+
+          if (uploadRes.ok) {
+            const uploadResult = await uploadRes.json();
+            const evidenceId =
+              uploadResult?.data?.id || uploadResult?.evidence?.id;
+            if (evidenceId) {
+              uploadedEvidenceIds.push(evidenceId);
+            }
+          } else {
+            console.error(
+              "[EVIDENCE UPLOAD FAILED]",
+              ef.file.name,
+              await uploadRes.text(),
+            );
+          }
+        }
+        console.log(
+          "[EVIDENCE UPLOADED]",
+          uploadedEvidenceIds.length,
+          "of",
+          evidenceFiles.length,
+        );
+      }
+
+      // Step 2: Complete the statutory check with uploaded evidence IDs
       const response = await fetch("/api/estates/statutory-completions", {
         method: "POST",
         headers,
@@ -237,15 +291,17 @@ export default function CheckCompletionPage() {
             status: completionStatus === "incomplete" ? "pending" : "completed",
             completion_notes: `${notes}\n\n${observations ? `Additional observations: ${observations}` : ""}`,
             next_due_date: nextDueDate,
-            evidence_ids: [], // TODO: Upload files and get IDs
-            documents_received: false,
+            evidence_ids: uploadedEvidenceIds,
+            documents_received:
+              uploadedEvidenceIds.length > 0 ||
+              completionStatus === "completed",
             findings: findings.map((f) => ({
               severity: f.severity,
               description: f.description,
               action_required: f.actionRequired,
               classification: f.classification,
             })),
-            completion_duration_minutes: undefined, // Could calculate from form start time
+            completion_duration_minutes: undefined,
           },
         }),
       });

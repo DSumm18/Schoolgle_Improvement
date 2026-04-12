@@ -5,7 +5,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import useSWR, { mutate } from "swr";
 import { useAuth } from "@/context/SupabaseAuthContext";
 import { fetcher } from "@/lib/fetchers";
-import { MODULES, APPS, canUserAccess, Role } from "@/lib/modules/registry";
+import {
+  MODULES,
+  APPS,
+  MODULE_GROUPS,
+  canUserAccess,
+  Role,
+} from "@/lib/modules/registry";
 import { MyTasksWidget } from "@/components/dashboard/MyTasksWidget";
 import { DashboardFeed } from "@/components/display/DashboardFeed";
 import Link from "next/link";
@@ -980,13 +986,13 @@ export default function DashboardPage() {
               <h2 className="font-bold text-lg">My Modules</h2>
             </div>
 
-            <div className="p-3 space-y-1">
-              {accessibleModules.map((module) => {
-                const moduleApps = APPS.filter(
-                  (a) =>
-                    a.moduleId === module.id &&
-                    canUserAccess(a.requiredPermissions, userRole),
-                );
+            <div className="p-3 space-y-4">
+              {MODULE_GROUPS.map((group) => {
+                const groupModules = group.moduleIds
+                  .map((id) => accessibleModules.find((m) => m.id === id))
+                  .filter(Boolean);
+
+                if (groupModules.length === 0) return null;
 
                 const colorMap: Record<string, string> = {
                   rose: "bg-rose-500",
@@ -997,30 +1003,55 @@ export default function DashboardPage() {
                   indigo: "bg-indigo-500",
                   gray: "bg-slate-500",
                   sky: "bg-sky-500",
+                  violet: "bg-violet-500",
+                  emerald: "bg-emerald-500",
+                  orange: "bg-orange-500",
+                  red: "bg-red-500",
+                  pink: "bg-pink-500",
+                  cyan: "bg-cyan-500",
+                  fuchsia: "bg-fuchsia-500",
                 };
 
                 return (
-                  <Link
-                    key={module.id}
-                    href={`/dashboard/${module.id}`}
-                    className="flex items-center gap-3 p-3 rounded-xl hover:bg-accent transition-colors group"
-                  >
-                    <div
-                      className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${colorMap[module.color] || "bg-primary"} text-white`}
-                    >
-                      <module.icon className="w-4 h-4" />
+                  <div key={group.id}>
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider px-3 mb-1">
+                      {group.name}
+                    </p>
+                    <div className="space-y-0.5">
+                      {groupModules.map((module) => {
+                        if (!module) return null;
+                        const moduleApps = APPS.filter(
+                          (a) =>
+                            a.moduleId === module.id &&
+                            canUserAccess(a.requiredPermissions, userRole),
+                        );
+
+                        return (
+                          <Link
+                            key={module.id}
+                            href={`/dashboard/${module.id}`}
+                            className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-accent transition-colors group"
+                          >
+                            <div
+                              className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${colorMap[module.color] || "bg-primary"} text-white`}
+                            >
+                              <module.icon className="w-4 h-4" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-bold truncate">
+                                {module.name}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground">
+                                {moduleApps.length} app
+                                {moduleApps.length !== 1 ? "s" : ""}
+                              </p>
+                            </div>
+                            <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </Link>
+                        );
+                      })}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold truncate">
-                        {module.name}
-                      </p>
-                      <p className="text-[10px] text-muted-foreground">
-                        {moduleApps.length} app
-                        {moduleApps.length !== 1 ? "s" : ""}
-                      </p>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </Link>
+                  </div>
                 );
               })}
             </div>

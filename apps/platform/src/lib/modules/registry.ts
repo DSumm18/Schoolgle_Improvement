@@ -1206,6 +1206,52 @@ export const NAVBAR_CONFIG = [
   },
 ];
 
+export interface ModuleGroup {
+  id: string;
+  name: string;
+  moduleIds: string[];
+}
+
+export const MODULE_GROUPS: ModuleGroup[] = [
+  {
+    id: "leadership",
+    name: "School Leadership",
+    moduleIds: [
+      "improvement",
+      "risk",
+      "governance",
+      "school-intelligence",
+      "canvas",
+    ],
+  },
+  {
+    id: "pupils",
+    name: "Pupils & Teaching",
+    moduleIds: [
+      "teaching-learning",
+      "send",
+      "behaviour",
+      "attendance",
+      "safeguarding",
+    ],
+  },
+  {
+    id: "operations",
+    name: "Operations",
+    moduleIds: ["estates", "finance", "hr", "compliance"],
+  },
+  {
+    id: "communications",
+    name: "Communications",
+    moduleIds: ["communications", "calendar", "surveys"],
+  },
+  {
+    id: "digital",
+    name: "Digital",
+    moduleIds: ["website", "connectors"],
+  },
+];
+
 export function getModuleByPath(path: string): ModuleDefinition | undefined {
   // Exact module landing pages
   const module = MODULES.find(

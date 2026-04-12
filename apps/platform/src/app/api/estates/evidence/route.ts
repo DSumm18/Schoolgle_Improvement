@@ -78,6 +78,28 @@ export const GET = protectedRoute(async (auth, request) => {
     filters.tags = searchParams.get("tags")!.split(",");
   }
 
+  // If fetching by specific IDs (e.g. from completion records)
+  const idsParam = searchParams.get("ids");
+  if (idsParam) {
+    const ids = idsParam.split(",").filter(Boolean);
+    if (ids.length > 0) {
+      const { createServiceRoleClient } = await import(
+        "@/lib/supabase-server"
+      );
+      const supabase = createServiceRoleClient();
+      const { data, error } = await supabase
+        .from("estates_evidence")
+        .select("*")
+        .in("id", ids)
+        .eq("organization_id", organizationId);
+
+      if (error) {
+        return apiError(error.message, 500);
+      }
+      return apiSuccess({ data: data || [] });
+    }
+  }
+
   // Parse pagination
   const page = parseInt(searchParams.get("page") || "1", 10);
   const pageSize = parseInt(searchParams.get("page_size") || "50", 10);

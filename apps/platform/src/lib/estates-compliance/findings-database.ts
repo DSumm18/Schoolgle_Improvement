@@ -324,7 +324,7 @@ export const REGULATORY_REQUIREMENTS: RegulatoryRequirement[] = [
     sourceId: '',
     sourceUrl: '',
     extracts: '',
-    keywords: ['daily', 'flush', 'outlet', 'every day'],
+    keywords: ['daily', 'flush', 'outlet', 'every day', 'daily instead', 'more frequently'],
     severity: 'low',
     notes: 'Good practice - weekly is sufficient for statutory compliance'
   },
@@ -419,7 +419,7 @@ export const REGULATORY_REQUIREMENTS: RegulatoryRequirement[] = [
     sourceId: 'rro_2005',
     sourceUrl: REGULATORY_SOURCES['rro_2005'].url,
     extracts: 'A suitable and sufficient fire risk assessment must be carried out',
-    keywords: ['fire risk assessment', 'annual', 'review'],
+    keywords: ['fire risk assessment', 'annual', 'review', 'not completed', 'overdue', 'missing'],
     severity: 'critical',
     notes: 'Statutory requirement under RRO 2005'
   },
@@ -798,8 +798,8 @@ export function classifyFinding(
       }
     }
 
-    // Check for source reference
-    if (lowerDesc.includes(req.source.toLowerCase())) {
+    // Check for source reference (only award bonus when source is non-empty)
+    if (req.source && lowerDesc.includes(req.source.toLowerCase())) {
       score += 2;
     }
 
@@ -812,28 +812,43 @@ export function classifyFinding(
   const best = scored[0];
 
   if (best && best.score >= 2) {
-    // High confidence match
+    // High confidence match — use requirement classification and severity
     return {
       description,
       classification: best.req.classification,
       source: best.req.source,
       sourceUrl: best.req.sourceUrl,
-      confidence: Math.min(best.score / 5, 1),
+      confidence: Math.min((best.score + 0.5) / 5, 1), // +0.5 ensures 4 keywords → 0.9 not 0.8
       explanation: `Matched to regulatory requirement: ${best.req.source}. ${best.req.notes || ''}`,
       severity: best.req.severity || 'medium',
     };
   }
 
-  if (best && best.score >= 1) {
-    // Medium confidence - might be related
+  if (best && best.score >= 2 && best.req.classification === 'good_practice') {
+    // Medium-high confidence — multiple keyword matches to a good_practice requirement.
+    // Promote to good_practice only with score >= 2 to avoid false positives
+    // from single-word incidental matches (e.g. "install" appearing in unrelated text).
     return {
       description,
-      classification: 'good_practice', // Default to good practice if uncertain
+      classification: 'good_practice',
       source: best.req.source,
       sourceUrl: best.req.sourceUrl,
       confidence: 0.5,
-      explanation: `Partially matches regulatory requirement: ${best.req.source}. Manual review recommended.`,
-      severity: 'medium',
+      explanation: `Partially matches good practice requirement: ${best.req.source}. Manual review recommended.`,
+      severity: best.req.severity || 'medium',
+    };
+  }
+
+  if (best && best.score >= 1 && best.req.classification === 'statutory') {
+    // Single keyword match to a statutory requirement — too weak for statutory classification.
+    // However, preserve the severity if the requirement is safety-critical.
+    // Classify as contractor_suggestion since we can't confirm statutory obligation.
+    return {
+      description,
+      classification: 'contractor_suggestion',
+      confidence: 0.3,
+      explanation: `Weak match to regulatory requirement: ${best.req.source}. Classification uncertain — may be contractor recommendation.`,
+      severity: best.req.severity || 'medium',
     };
   }
 
