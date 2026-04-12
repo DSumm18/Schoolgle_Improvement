@@ -207,13 +207,10 @@ export default function CheckCompletionPage() {
 
     try {
       // Get auth session for API call
-      const supabase = createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      );
+      const { supabase: supabaseClient } = await import("@/lib/supabase");
       const {
         data: { session },
-      } = await supabase.auth.getSession();
+      } = await supabaseClient.auth.getSession();
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
       };
