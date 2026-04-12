@@ -3,243 +3,179 @@
 /**
  * Estates Compliance Dashboard
  *
- * Comprehensive dashboard showing all compliance domains with statutory checks,
- * RAG status, and quick access to detailed views.
- * Using shadcn/ui components for consistency.
- *
- * ENHANCEMENTS:
- * - Today's Tasks Card: Shows items due today or overdue prominently
- * - Celebration Confetti: Delightful feedback when completing tasks
- * - Urgency Sorting: Domains sorted by urgency (overdue → due today → by completion %)
- * - Multiple Task Actions: View details, complete, snooze, mark N/A
+ * Clean, focused layout:
+ * 1. Header with top nav bar (My Diary, Asset Register, Contractors, Tasks, Helpdesk)
+ * 2. Stats strip (Overdue, Due This Week, Completed, Compliance Rate)
+ * 3. Tab bar (Compliance Checks | Daily Routines) + domain filter pills
+ * 4. Sorted check list (urgency order) or Daily Routines card
  */
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   ChevronRight,
-  Check,
-  Clock,
   AlertTriangle,
-  Plus,
-  FileText,
-  Settings,
-  ArrowRight,
+  CheckCircle2,
+  Clock,
   Calendar,
-  Sparkles,
-  MoreHorizontal,
+  ClipboardCheck,
+  LayoutList,
+  Settings,
+  FileText,
 } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/context/SupabaseAuthContext";
 import { supabase as supabaseClient } from "@/lib/supabase";
-import { toast } from "sonner";
 import {
   DOMAIN_METADATA,
-  getChecksForDomain,
-  STATUTORY_CHECKS,
+  getAllStatutoryChecks,
   type ComplianceDomain,
+  type StatutoryCheck,
 } from "@/lib/estates-compliance/statutory-checks";
-import { TaskDetailSheet } from "@/components/estates-compliance/TaskDetailSheet";
 import { DailyChecksCard } from "@/components/estates-compliance/DailyChecksCard";
-import EdChatButton from "@/components/estates-compliance/EdChatButton";
-import EdWidgetWrapper from "@/components/EdWidgetWrapper";
-import { EdBrowserControlWrapper } from "@/components/estates-compliance/EdBrowserControlWrapper";
-import confetti from "canvas-confetti";
 import { SettingsDialog } from "@/components/estates-compliance/SettingsDialog";
 import { FeatureChecklist } from "@/components/ui/feature-discovery";
 import { ESTATES_FEATURES } from "@/lib/feature-definitions";
+import EdWidgetWrapper from "@/components/EdWidgetWrapper";
+import { EdBrowserControlWrapper } from "@/components/estates-compliance/EdBrowserControlWrapper";
 
-interface CheckCompletion {
-  checkId: string;
-  status: "pending" | "completed" | "overdue" | "not_applicable";
-  lastCompleted?: string;
-  nextDue?: string;
-  evidence?: string[];
+// ============================================================================
+// TYPES
+// ============================================================================
+
+type CheckUrgency =
+  | "overdue"
+  | "due-today"
+  | "due-this-week"
+  | "due-this-month"
+  | "not-due";
+
+interface CheckWithStatus {
+  check: StatutoryCheck;
+  urgency: CheckUrgency;
+  daysUntilDue: number | null;
+  nextDue: Date | null;
+  lastCompleted: string | null;
+  completionCount: number;
 }
 
-interface DomainCompletion {
-  domain: ComplianceDomain;
-  totalChecks: number;
-  completedChecks: number;
-  overdueChecks: number;
-  status: "compliant" | "attention" | "critical";
-  checks: CheckCompletion[];
+interface CompletionRecord {
+  check_id: string;
+  status: string;
+  completed_at: string | null;
+  next_due_date: string | null;
 }
 
-export interface TodayTask {
-  checkId: string;
-  checkName: string;
-  domain: ComplianceDomain;
-  domainIcon: string;
-  domainName: string;
-  status: "overdue" | "due_today" | "due_soon";
-  frequency: string;
-  category: string;
-  nextDue?: string;
+type ActiveTab = "checks" | "routines";
+
+// ============================================================================
+// HELPERS
+// ============================================================================
+
+function computeUrgency(
+  nextDue: Date | null,
+  lastCompleted: string | null,
+  now: Date,
+): CheckUrgency {
+  if (!nextDue && !lastCompleted) return "overdue";
+  if (!nextDue) return "not-due";
+
+  const diffMs = nextDue.getTime() - now.getTime();
+  const diffDays = diffMs / (1000 * 60 * 60 * 24);
+
+  if (diffDays < 0) return "overdue";
+  if (diffDays < 1) return "due-today";
+  if (diffDays <= 7) return "due-this-week";
+  if (diffDays <= 31) return "due-this-month";
+  return "not-due";
 }
 
-// ============================================================================
-// CONFETTI UTILITY
-// ============================================================================
-
-const triggerConfetti = () => {
-  const duration = 2000;
-  const animationEnd = Date.now() + duration;
-  const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
-
-  const randomInRange = (min: number, max: number) =>
-    Math.random() * (max - min) + min;
-
-  const interval = setInterval(() => {
-    const timeLeft = animationEnd - Date.now();
-
-    if (timeLeft <= 0) {
-      return clearInterval(interval);
-    }
-
-    const particleCount = 50 * (timeLeft / duration);
-
-    confetti({
-      ...defaults,
-      particleCount,
-      origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
-    });
-    confetti({
-      ...defaults,
-      particleCount,
-      origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
-    });
-  }, 250);
-};
-
-// ============================================================================
-// URGENCY SORTING
-// ============================================================================
-
-const sortDomainsByUrgency = (
-  domains: DomainCompletion[],
-): DomainCompletion[] => {
-  return [...domains].sort((a, b) => {
-    // 1. Domains with overdue checks come first
-    if (a.overdueChecks > 0 && b.overdueChecks === 0) return -1;
-    if (b.overdueChecks > 0 && a.overdueChecks === 0) return 1;
-
-    // 2. Both have overdue checks - sort by count (most overdue first)
-    if (a.overdueChecks > 0 && b.overdueChecks > 0) {
-      return b.overdueChecks - a.overdueChecks;
-    }
-
-    // 3. Sort by completion percentage (lowest first)
-    const aCompletion =
-      a.totalChecks > 0 ? a.completedChecks / a.totalChecks : 0;
-    const bCompletion =
-      b.totalChecks > 0 ? b.completedChecks / b.totalChecks : 0;
-    return aCompletion - bCompletion;
-  });
-};
-
-// ============================================================================
-// TODAY'S TASKS HELPER
-// ============================================================================
-
-const getTodayTasks = (
-  domains: DomainCompletion[],
-  maxTasks = 5,
-): TodayTask[] => {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-
-  const nextWeek = new Date(today);
-  nextWeek.setDate(nextWeek.getDate() + 7);
-
-  const tasks: TodayTask[] = [];
-
-  for (const domainData of domains) {
-    const metadata = DOMAIN_METADATA[domainData.domain];
-    const checks = getChecksForDomain(domainData.domain);
-
-    for (const check of checks) {
-      const completion = domainData.checks.find((c) => c.checkId === check.id);
-      const status = completion?.status || "pending";
-
-      // Skip completed checks
-      if (status === "completed" || status === "not_applicable") continue;
-
-      // Check if overdue
-      if (status === "overdue") {
-        tasks.push({
-          checkId: check.id,
-          checkName: check.name,
-          domain: domainData.domain,
-          domainIcon: metadata.icon,
-          domainName: metadata.name,
-          status: "overdue",
-          frequency: check.frequency,
-          category: check.category,
-          nextDue: completion?.nextDue,
-        });
-        continue;
-      }
-
-      // Check if due today or soon
-      if (completion?.nextDue) {
-        const dueDate = new Date(completion.nextDue);
-
-        if (dueDate < tomorrow) {
-          tasks.push({
-            checkId: check.id,
-            checkName: check.name,
-            domain: domainData.domain,
-            domainIcon: metadata.icon,
-            domainName: metadata.name,
-            status: "due_today",
-            frequency: check.frequency,
-            category: check.category,
-            nextDue: completion.nextDue,
-          });
-        } else if (dueDate < nextWeek && tasks.length < maxTasks) {
-          tasks.push({
-            checkId: check.id,
-            checkName: check.name,
-            domain: domainData.domain,
-            domainIcon: metadata.icon,
-            domainName: metadata.name,
-            status: "due_soon",
-            frequency: check.frequency,
-            category: check.category,
-            nextDue: completion.nextDue,
-          });
-        }
-      }
-    }
+function urgencyOrder(u: CheckUrgency): number {
+  switch (u) {
+    case "overdue": return 0;
+    case "due-today": return 1;
+    case "due-this-week": return 2;
+    case "due-this-month": return 3;
+    case "not-due": return 4;
   }
+}
 
-  // Sort by urgency: overdue first, then due today, then due soon
-  return tasks
-    .sort((a, b) => {
-      const statusOrder = { overdue: 0, due_today: 1, due_soon: 2 };
-      return statusOrder[a.status] - statusOrder[b.status];
-    })
-    .slice(0, maxTasks);
-};
+function formatDueBadge(check: CheckWithStatus): {
+  label: string;
+  className: string;
+} {
+  const { urgency, daysUntilDue, nextDue } = check;
+
+  if (urgency === "overdue") {
+    const days = daysUntilDue !== null ? Math.abs(daysUntilDue) : "?";
+    return {
+      label: `Overdue ${days}d`,
+      className: "bg-red-100 text-red-700 border-red-200",
+    };
+  }
+  if (urgency === "due-today") {
+    return {
+      label: "Due today",
+      className: "bg-amber-100 text-amber-700 border-amber-200",
+    };
+  }
+  if (urgency === "due-this-week" && nextDue) {
+    const day = nextDue.toLocaleDateString("en-GB", { weekday: "short" });
+    return {
+      label: `Due ${day}`,
+      className: "bg-amber-50 text-amber-600 border-amber-100",
+    };
+  }
+  if (urgency === "due-this-month" && nextDue) {
+    const dateStr = nextDue.toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "short",
+    });
+    return {
+      label: `Due ${dateStr}`,
+      className: "bg-gray-100 text-gray-600 border-gray-200",
+    };
+  }
+  if (urgency === "not-due") {
+    if (nextDue) {
+      const dateStr = nextDue.toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+      });
+      return {
+        label: `Due ${dateStr}`,
+        className: "bg-gray-100 text-gray-500 border-gray-200",
+      };
+    }
+    return {
+      label: "Not due",
+      className: "bg-gray-100 text-gray-400 border-gray-200",
+    };
+  }
+  return { label: "Not due", className: "bg-gray-100 text-gray-400 border-gray-200" };
+}
+
+function leftBorderClass(urgency: CheckUrgency): string {
+  switch (urgency) {
+    case "overdue": return "border-l-4 border-l-red-500";
+    case "due-today": return "border-l-4 border-l-amber-500";
+    case "due-this-week": return "border-l-4 border-l-amber-300";
+    default: return "";
+  }
+}
+
+function domainPillColor(
+  overdue: number,
+  dueSoon: number,
+  total: number,
+  completed: number,
+): string {
+  if (overdue > 0) return "bg-red-100 text-red-700 border-red-200";
+  if (dueSoon > 0) return "bg-amber-100 text-amber-700 border-amber-200";
+  if (total > 0 && completed === total)
+    return "bg-green-100 text-green-700 border-green-200";
+  return "bg-gray-100 text-gray-600 border-gray-200";
+}
 
 // ============================================================================
 // MAIN COMPONENT
@@ -248,643 +184,269 @@ const getTodayTasks = (
 export default function EstatesComplianceDashboard() {
   const { organizationId, loading: authLoading } = useAuth();
 
-  // Initialize with static data immediately so UI is always visible
-  const [domains, setDomains] = useState<DomainCompletion[]>(() => {
-    return Object.keys(DOMAIN_METADATA).map((domain) => {
-      const checks = getChecksForDomain(domain as ComplianceDomain);
-      return {
-        domain: domain as ComplianceDomain,
-        totalChecks: checks.length,
-        completedChecks: 0,
-        overdueChecks: 0,
-        pendingChecks: checks.length,
-        status: "compliant", // Default to compliant until data loads
-        checks: checks.map((c) => ({
-          checkId: c.id,
-          status: "pending",
-          evidence: [],
-        })),
-      };
-    });
-  });
-
   const [loading, setLoading] = useState(true);
-  const [expandedDomain, setExpandedDomain] = useState<ComplianceDomain | null>(
-    null,
-  );
-  const [celebratingCheckId, setCelebratingCheckId] = useState<string | null>(
-    null,
-  );
-  const [refreshKey, setRefreshKey] = useState(0);
-  const confettiTriggeredRef = useRef(new Set<string>());
-  const [recentReviews, setRecentReviews] = useState<any[]>([]);
-
-  // Ed widget state
+  const [checksWithStatus, setChecksWithStatus] = useState<CheckWithStatus[]>([]);
+  const [activeTab, setActiveTab] = useState<ActiveTab>("checks");
+  const [selectedDomain, setSelectedDomain] = useState<
+    ComplianceDomain | "all"
+  >("all");
+  const [notDueExpanded, setNotDueExpanded] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [edOpen, setEdOpen] = useState(false);
   const [edMinimized, setEdMinimized] = useState(false);
 
-  // Settings state
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [visibleDomains, setVisibleDomains] = useState<ComplianceDomain[]>(
-    () => {
-      // Default to showing all domains
-      return Object.keys(DOMAIN_METADATA) as ComplianceDomain[];
-    },
-  );
-
-  // Location state
-  const [locations, setLocations] = useState<any[]>([]);
-  const [locationsLoading, setLocationsLoading] = useState(true);
-
-  // Load settings from local storage on mount
-  useEffect(() => {
-    const saved = localStorage.getItem("estates-compliance-visible-domains");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          setVisibleDomains(parsed);
-        }
-      } catch (e) {
-        console.error("Failed to parse saved settings", e);
-      }
-    }
-  }, []);
-
-  const handleVisibilityChange = (newDomains: ComplianceDomain[]) => {
-    setVisibleDomains(newDomains);
-    localStorage.setItem(
-      "estates-compliance-visible-domains",
-      JSON.stringify(newDomains),
-    );
-  };
+  // -------------------------------------------------------------------------
+  // DATA FETCHING
+  // -------------------------------------------------------------------------
 
   useEffect(() => {
-    // Only initialize when auth is ready and we have an organizationId
-    const controller = new AbortController();
-
-    if (!authLoading && organizationId) {
-      initializeDomains(controller.signal);
-    } else if (authLoading) {
-      // Auth still loading, waiting...
-    } else if (!organizationId) {
-      console.warn(
-        "[EstatesCompliance] No organization ID, setting loading=false",
-      );
-      setLoading(false);
+    if (authLoading || !organizationId) {
+      if (!authLoading) setLoading(false);
+      return;
     }
 
-    return () => controller.abort("Dashboard refreshed or unmounted");
-  }, [organizationId, refreshKey, authLoading]);
+    let cancelled = false;
 
-  useEffect(() => {
-    if (!authLoading && organizationId) {
-      fetchLocations();
-    }
-  }, [organizationId, authLoading, refreshKey]);
-
-  const fetchLocations = async () => {
-    try {
-      setLocationsLoading(true);
-      const { data, error } = await supabaseClient
-        .from("estates_locations")
-        .select("*, assigned_staff:users(display_name)")
-        .eq("organization_id", organizationId)
-        .order("name");
-
-      if (error) throw error;
-      setLocations(data || []);
-    } catch (err) {
-      console.error("[EstatesCompliance] Error fetching locations:", err);
-    } finally {
-      setLocationsLoading(false);
-    }
-  };
-
-  // Fetch compliance reviews
-  useEffect(() => {
-    if (!organizationId) return;
-    (async () => {
+    async function load() {
       try {
         const {
           data: { session },
         } = await supabaseClient.auth.getSession();
-        const h: Record<string, string> = {};
-        if (session?.access_token)
-          h["Authorization"] = `Bearer ${session.access_token}`;
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json",
+        };
+        if (session?.access_token) {
+          headers["Authorization"] = `Bearer ${session.access_token}`;
+        }
+
+        // Fetch all completion records (not summary — we need next_due per check)
         const res = await fetch(
-          `/api/compliance/reviews?organizationId=${organizationId}&limit=10`,
-          { headers: h },
-        );
-        const data = await res.json();
-        setRecentReviews(data?.reviews || []);
-      } catch {
-        setRecentReviews([]);
-      }
-    })();
-  }, [organizationId, refreshKey]);
-
-  const initializeDomains = async (signal?: AbortSignal) => {
-    // CRITICAL: Always set loading=false at the end, no matter what
-    let loadingCleared = false;
-    const ensureLoadingCleared = () => {
-      if (!loadingCleared) {
-        loadingCleared = true;
-        setLoading(false);
-      }
-    };
-
-    // Global timeout for entire init process
-    const globalTimeoutId = setTimeout(() => {
-      console.warn(
-        "[EstatesCompliance] ⏱️ GLOBAL TIMEOUT - forcing ready state",
-      );
-      toast.error("Data loading took too long. Showing default view.");
-      ensureLoadingCleared();
-    }, 45000); // 45 second max
-
-    try {
-      if (!organizationId) {
-        console.warn(
-          "[EstatesCompliance] No organization ID found, using empty state",
-        );
-        clearTimeout(globalTimeoutId);
-        ensureLoadingCleared();
-        return;
-      }
-
-      // Get session token for API authentication
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-      if (session?.access_token) {
-        headers["Authorization"] = `Bearer ${session.access_token}`;
-      }
-
-      // Fetch statutory completions from Supabase with timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(
-        () => controller.abort("Statutory completions fetch timed out"),
-        30000,
-      );
-
-      // Link the passed signal to our local controller
-      const onAbort = () => controller.abort(signal?.reason);
-      if (signal) {
-        if (signal.aborted) onAbort();
-        else signal.addEventListener("abort", onAbort, { once: true });
-      }
-
-      try {
-        const response = await fetch(
-          `/api/estates/statutory-completions?organizationId=${organizationId}&summary=true`,
-          {
-            headers,
-            signal: controller.signal,
-          },
+          `/api/estates/statutory-completions?organizationId=${organizationId}`,
+          { headers },
         );
 
-        clearTimeout(timeoutId);
-        if (signal) signal.removeEventListener("abort", onAbort);
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.warn(
-            "[EstatesCompliance] API error response:",
-            response.status,
-            errorText,
-          );
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
 
-          if (response.status === 403) {
-            console.error(
-              "[EstatesCompliance] 🚨 ACCESS DENIED: Membership mismatch or authorization failure.",
-            );
-            toast.error(
-              "Access Denied: You are not authorized to view this organization's compliance data.",
-            );
-            clearTimeout(globalTimeoutId);
-            ensureLoadingCleared();
-            return;
-          }
+        let completions: CompletionRecord[] = [];
 
-          // Initialize completions if they don't exist
-          console.warn(
-            "[EstatesCompliance] API error (not 200/403), attempting initialization...",
-          );
-          await initializeData();
-        } else {
-          const data = await response.json();
-          if (!data.domains || data.domains.length === 0) {
-            console.warn(
-              "[EstatesCompliance] Received empty domains list. Triggering initialization...",
-            );
-            await initializeData();
-          } else {
-            processDomainData(data.domains);
+        if (res.ok) {
+          const data = await res.json();
+          // API may return { completions: [...] } or { domains: [...] }
+          if (Array.isArray(data.completions)) {
+            completions = data.completions;
+          } else if (Array.isArray(data.domains)) {
+            // Flatten domain summaries into flat completions
+            for (const d of data.domains) {
+              if (Array.isArray(d.completions)) {
+                completions.push(...d.completions);
+              }
+            }
           }
         }
-      } catch (fetchError: any) {
-        if (!signal) clearTimeout(timeoutId);
 
-        const errorString =
-          typeof fetchError === "string"
-            ? fetchError
-            : fetchError?.message || "";
-        const isTimeout =
-          errorString.toLowerCase().includes("timeout") ||
-          fetchError?.name === "TimeoutError";
-        const isAbort =
-          fetchError.name === "AbortError" ||
-          errorString.toLowerCase().includes("abort") ||
-          errorString.toLowerCase().includes("unmounted") ||
-          errorString.toLowerCase().includes("refreshed");
-
-        if (isTimeout) {
-          console.warn("[EstatesCompliance] API request timed out");
-          toast.error("Data request timed out. Please refresh the page.");
-        } else if (isAbort) {
-          // Silent for intentional aborts
-          // Intentionally aborted
-        } else {
-          console.error("[EstatesCompliance] API fetch error:", fetchError);
-        }
-      }
-    } catch (error) {
-      console.error("[EstatesCompliance] Error initializing domains:", error);
-    } finally {
-      clearTimeout(globalTimeoutId);
-      ensureLoadingCleared();
-    }
-  };
-
-  const initializeData = async () => {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort("Init timeout"), 20000); // 20 second timeout
-
-    try {
-      // Get session for headers
-      const {
-        data: { session },
-      } = await supabaseClient.auth.getSession();
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-      if (session?.access_token) {
-        headers["Authorization"] = `Bearer ${session.access_token}`;
-      }
-
-      const initResponse = await fetch("/api/estates/statutory-completions", {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          organizationId: organizationId,
-          action: "initialize",
-        }),
-        signal: controller.signal,
-      });
-
-      if (!initResponse.ok) {
-        console.error(
-          "[EstatesCompliance] Initialization failed:",
-          initResponse.status,
-        );
-        throw new Error("Failed to initialize data");
-      }
-
-      // Fetch again after initialization
-      const retryResponse = await fetch(
-        `/api/estates/statutory-completions?organizationId=${organizationId}&summary=true`,
-        {
-          headers,
-          signal: controller.signal,
-        },
-      );
-
-      if (!retryResponse.ok) {
-        throw new Error(
-          `Failed to fetch completions after initialization: ${retryResponse.status}`,
-        );
-      }
-
-      const data = await retryResponse.json();
-      processDomainData(data.domains);
-    } catch (err: any) {
-      if (err.name === "AbortError") {
-        console.warn("[EstatesCompliance] initializeData timed out");
-        toast.error("Initialization timed out. Using default view.");
-      } else {
-        console.error(
-          "[EstatesCompliance] Critical error during init sequence:",
-          err,
-        );
-      }
-    } finally {
-      clearTimeout(timeoutId);
-    }
-  };
-
-  const processDomainData = (domainsSummary: any[]) => {
-    const domainData: DomainCompletion[] = Object.keys(DOMAIN_METADATA).map(
-      (domain) => {
-        const checks = getChecksForDomain(domain as ComplianceDomain);
-        const totalChecks = checks.length;
-
-        // Find completion summary for this domain
-        const summary = domainsSummary?.find((d: any) => d.domain === domain);
-
-        const completedChecks = summary?.completedChecks || 0;
-        const overdueChecks = summary?.overdueChecks || 0;
-        const pendingChecks =
-          summary?.pendingChecks || totalChecks - completedChecks;
-
-        let status: "compliant" | "attention" | "critical";
-        if (overdueChecks > 0) {
-          status = "critical";
-        } else if (totalChecks > 0 && completedChecks / totalChecks < 0.8) {
-          status = "attention";
-        } else {
-          status = "compliant";
+        // Build a lookup by check_id
+        const completionMap = new Map<string, CompletionRecord>();
+        for (const c of completions) {
+          completionMap.set(c.check_id, c);
         }
 
-        const checkCompletions: CheckCompletion[] = checks.map((check) => {
-          const completion = summary?.completions?.find(
-            (c: any) => c.check_id === check.id,
-          );
+        // Build CheckWithStatus for every statutory check
+        const allChecks = getAllStatutoryChecks();
+        const result: CheckWithStatus[] = allChecks.map((check) => {
+          const rec = completionMap.get(check.id);
+          const nextDue = rec?.next_due_date ? new Date(rec.next_due_date) : null;
+          const lastCompleted = rec?.completed_at ?? null;
+
+          const urgency = computeUrgency(nextDue, lastCompleted, now);
+          const daysUntilDue = nextDue
+            ? Math.round(
+                (nextDue.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+              )
+            : null;
 
           return {
-            checkId: check.id,
-            status: completion?.status || "pending",
-            lastCompleted: completion?.completed_at,
-            nextDue: completion?.next_due_date,
-            evidence: completion?.evidence_ids || [],
+            check,
+            urgency,
+            daysUntilDue,
+            nextDue,
+            lastCompleted,
+            completionCount: rec ? 1 : 0,
           };
         });
 
-        return {
-          domain: domain as ComplianceDomain,
-          totalChecks,
-          completedChecks,
-          overdueChecks,
-          status,
-          checks: checkCompletions,
-        };
-      },
-    );
+        // Sort by urgency then by daysUntilDue within same urgency
+        result.sort((a, b) => {
+          const oA = urgencyOrder(a.urgency);
+          const oB = urgencyOrder(b.urgency);
+          if (oA !== oB) return oA - oB;
+          // Within overdue: most overdue first (most negative days first)
+          if (a.daysUntilDue !== null && b.daysUntilDue !== null) {
+            return a.daysUntilDue - b.daysUntilDue;
+          }
+          return 0;
+        });
 
-    setDomains(domainData);
-    setLoading(false);
-  };
-
-  const handleCompleteCheck = useCallback((checkId: string) => {
-    setCelebratingCheckId(checkId);
-
-    // Trigger confetti only once per check completion
-    if (!confettiTriggeredRef.current.has(checkId)) {
-      confettiTriggeredRef.current.add(checkId);
-      triggerConfetti();
+        if (!cancelled) {
+          setChecksWithStatus(result);
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error("[EstatesCompliance] Error loading checks:", err);
+        if (!cancelled) {
+          // Fall back to all checks with no status
+          const allChecks = getAllStatutoryChecks();
+          setChecksWithStatus(
+            allChecks.map((check) => ({
+              check,
+              urgency: "not-due" as CheckUrgency,
+              daysUntilDue: null,
+              nextDue: null,
+              lastCompleted: null,
+              completionCount: 0,
+            })),
+          );
+          setLoading(false);
+        }
+      }
     }
 
-    // Reset celebration state after animation
-    setTimeout(() => setCelebratingCheckId(null), 2000);
-  }, []);
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [organizationId, authLoading]);
 
-  const getStatusBadge = (status: "compliant" | "attention" | "critical") => {
-    switch (status) {
-      case "compliant":
-        return (
-          <Badge className="bg-green-600 hover:bg-green-700 text-white border-green-700">
-            Compliant
-          </Badge>
-        );
-      case "attention":
-        return (
-          <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white border-yellow-600">
-            Needs Attention
-          </Badge>
-        );
-      case "critical":
-        return (
-          <Badge className="bg-red-600 hover:bg-red-700 text-white border-red-700">
-            Action Required
-          </Badge>
-        );
-    }
-  };
+  // -------------------------------------------------------------------------
+  // DERIVED STATS
+  // -------------------------------------------------------------------------
 
-  const getStatusIcon = (status: "compliant" | "attention" | "critical") => {
-    switch (status) {
-      case "compliant":
-        return <Check className="w-4 h-4 text-green-600" />;
-      case "attention":
-        return <Clock className="w-4 h-4 text-yellow-600" />;
-      case "critical":
-        return <AlertTriangle className="w-4 h-4 text-red-600" />;
-    }
-  };
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
 
-  const getCheckStatusBadge = (status: string) => {
-    switch (status) {
-      case "completed":
-        return (
-          <Badge
-            variant="outline"
-            className="bg-green-50 text-green-700 border-green-300 hover:bg-green-100"
-          >
-            ✅ Completed
-          </Badge>
-        );
-      case "pending":
-        return (
-          <Badge
-            variant="outline"
-            className="bg-yellow-50 text-yellow-700 border-yellow-300 hover:bg-yellow-100"
-          >
-            ⏰ Pending
-          </Badge>
-        );
-      case "overdue":
-        return (
-          <Badge
-            variant="outline"
-            className="bg-red-50 text-red-700 border-red-300 hover:bg-red-100"
-          >
-            ⚠️ Overdue
-          </Badge>
-        );
-      default:
-        return <Badge variant="outline">⊘ N/A</Badge>;
-    }
-  };
-
-  const getCategoryBadge = (category: string) => {
-    switch (category) {
-      case "statutory":
-        return (
-          <Badge
-            variant="outline"
-            className="bg-red-50 text-red-700 border-red-300"
-          >
-            🔴 Statutory
-          </Badge>
-        );
-      case "good_practice":
-        return (
-          <Badge
-            variant="outline"
-            className="bg-amber-50 text-amber-700 border-amber-300"
-          >
-            🟡 Good Practice
-          </Badge>
-        );
-      case "custom":
-        return (
-          <Badge
-            variant="outline"
-            className="bg-blue-50 text-blue-700 border-blue-300"
-          >
-            🔵 Custom
-          </Badge>
-        );
-      default:
-        return <Badge variant="outline">{category}</Badge>;
-    }
-  };
-
-  const getTaskStatusBadge = (status: TodayTask["status"]) => {
-    switch (status) {
-      case "overdue":
-        return (
-          <Badge className="bg-red-100 text-red-700 border-red-300 animate-pulse">
-            ⚠️ Overdue
-          </Badge>
-        );
-      case "due_today":
-        return (
-          <Badge className="bg-orange-100 text-orange-700 border-orange-300">
-            📅 Due Today
-          </Badge>
-        );
-      case "due_soon":
-        return (
-          <Badge className="bg-blue-50 text-blue-600 border-blue-200">
-            Soon
-          </Badge>
-        );
-    }
-  };
-
-  // Calculate today's tasks
-  const visibleDomainData = domains.filter((d) =>
-    visibleDomains.includes(d.domain),
+  const overdue = checksWithStatus.filter((c) => c.urgency === "overdue");
+  const dueThisWeek = checksWithStatus.filter(
+    (c) => c.urgency === "due-today" || c.urgency === "due-this-week",
   );
-  const todayTasks = loading ? [] : getTodayTasks(visibleDomainData);
-  const sortedDomains = loading ? [] : sortDomainsByUrgency(visibleDomainData);
+  const completed = checksWithStatus.filter((c) => c.lastCompleted !== null);
+  const total = checksWithStatus.length;
+  const compliancePct =
+    total > 0 ? Math.round((completed.length / total) * 100) : 0;
+
+  // Domain stats for pills
+  const domainStats = Object.keys(DOMAIN_METADATA).map((d) => {
+    const domain = d as ComplianceDomain;
+    const domainChecks = checksWithStatus.filter(
+      (c) => c.check.domain === domain,
+    );
+    const overdueCount = domainChecks.filter((c) => c.urgency === "overdue").length;
+    const dueSoonCount = domainChecks.filter(
+      (c) => c.urgency === "due-today" || c.urgency === "due-this-week",
+    ).length;
+    const completedCount = domainChecks.filter(
+      (c) => c.lastCompleted !== null,
+    ).length;
+    return {
+      domain,
+      metadata: DOMAIN_METADATA[domain],
+      total: domainChecks.length,
+      overdue: overdueCount,
+      dueSoon: dueSoonCount,
+      completed: completedCount,
+    };
+  });
+
+  // -------------------------------------------------------------------------
+  // FILTERED + GROUPED CHECKS
+  // -------------------------------------------------------------------------
+
+  const visibleChecks =
+    selectedDomain === "all"
+      ? checksWithStatus
+      : checksWithStatus.filter((c) => c.check.domain === selectedDomain);
+
+  const dueChecks = visibleChecks.filter((c) => c.urgency !== "not-due");
+  const notDueChecks = visibleChecks.filter((c) => c.urgency === "not-due");
+
+  // -------------------------------------------------------------------------
+  // RENDER
+  // -------------------------------------------------------------------------
 
   return (
     <EdBrowserControlWrapper>
-      <div className="space-y-6 p-6">
-        {/* Quick Actions - Compact Version */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
-          <Link href="/estates-compliance/diary" className="group">
-            <Card className="h-full border hover:border-primary/50 hover:shadow-md transition-all duration-300 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm">
-              <CardContent className="p-3 flex items-center gap-3">
-                <div className="p-2 rounded-md bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 group-hover:scale-105 transition-transform duration-300">
-                  <span className="text-lg">📅</span>
+      <div className="space-y-0">
+        {/* ================================================================
+            TOP NAV BAR — Quick Links
+        ================================================================ */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 p-6 pb-4">
+          {[
+            {
+              href: "/estates-compliance/diary",
+              icon: "📅",
+              label: "My Diary",
+              sub: "Daily tasks",
+              bg: "bg-blue-50 text-blue-600",
+            },
+            {
+              href: "/estates-compliance/assets",
+              icon: "🏢",
+              label: "Asset Register",
+              sub: "Manage assets",
+              bg: "bg-emerald-50 text-emerald-600",
+            },
+            {
+              href: "/estates-compliance/contractors",
+              icon: "👷",
+              label: "Contractors",
+              sub: "Approved list",
+              bg: "bg-amber-50 text-amber-600",
+            },
+            {
+              href: "/estates-compliance/tasks",
+              icon: "📋",
+              label: "Tasks",
+              sub: "View & schedule",
+              bg: "bg-purple-50 text-purple-600",
+            },
+            {
+              href: "/estates-compliance/helpdesk",
+              icon: "🎫",
+              label: "Helpdesk",
+              sub: "Report issues",
+              bg: "bg-rose-50 text-rose-600",
+            },
+          ].map((item) => (
+            <Link key={item.href} href={item.href} className="group">
+              <div className="h-full border border-gray-200 rounded-lg hover:border-primary/50 hover:shadow-sm transition-all bg-white p-3 flex items-center gap-3">
+                <div
+                  className={`p-2 rounded-md ${item.bg} group-hover:scale-105 transition-transform`}
+                >
+                  <span className="text-lg">{item.icon}</span>
                 </div>
                 <div className="min-w-0">
-                  <h3 className="font-bold text-xs text-slate-900 dark:text-white group-hover:text-primary transition-colors truncate">
-                    My Diary
-                  </h3>
-                  <p className="text-[10px] text-muted-foreground truncate">
-                    Daily tasks
+                  <p className="font-semibold text-xs text-gray-900 truncate">
+                    {item.label}
                   </p>
+                  <p className="text-[10px] text-gray-500 truncate">{item.sub}</p>
                 </div>
-              </CardContent>
-            </Card>
-          </Link>
-          <Link href="/estates-compliance/assets" className="group">
-            <Card className="h-full border hover:border-primary/50 hover:shadow-md transition-all duration-300 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm">
-              <CardContent className="p-3 flex items-center gap-3">
-                <div className="p-2 rounded-md bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 group-hover:scale-105 transition-transform duration-300">
-                  <span className="text-lg">🏢</span>
-                </div>
-                <div className="min-w-0">
-                  <h3 className="font-bold text-xs text-slate-900 dark:text-white group-hover:text-primary transition-colors truncate">
-                    Asset Register
-                  </h3>
-                  <p className="text-[10px] text-muted-foreground truncate">
-                    Manage assets
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-          <Link href="/estates-compliance/contractors" className="group">
-            <Card className="h-full border hover:border-primary/50 hover:shadow-md transition-all duration-300 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm">
-              <CardContent className="p-3 flex items-center gap-3">
-                <div className="p-2 rounded-md bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 group-hover:scale-105 transition-transform duration-300">
-                  <span className="text-lg">👷</span>
-                </div>
-                <div className="min-w-0">
-                  <h3 className="font-bold text-xs text-slate-900 dark:text-white group-hover:text-primary transition-colors truncate">
-                    Contractors
-                  </h3>
-                  <p className="text-[10px] text-muted-foreground truncate">
-                    Approved list
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-          <Link href="/estates-compliance/tasks" className="group">
-            <Card className="h-full border hover:border-primary/50 hover:shadow-md transition-all duration-300 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm">
-              <CardContent className="p-3 flex items-center gap-3">
-                <div className="p-2 rounded-md bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 group-hover:scale-105 transition-transform duration-300">
-                  <span className="text-lg">📋</span>
-                </div>
-                <div className="min-w-0">
-                  <h3 className="font-bold text-xs text-slate-900 dark:text-white group-hover:text-primary transition-colors truncate">
-                    Tasks
-                  </h3>
-                  <p className="text-[10px] text-muted-foreground truncate">
-                    View & schedule
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-          <Link href="/estates-compliance/helpdesk" className="group">
-            <Card className="h-full border hover:border-primary/50 hover:shadow-md transition-all duration-300 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm">
-              <CardContent className="p-3 flex items-center gap-3">
-                <div className="p-2 rounded-md bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 group-hover:scale-105 transition-transform duration-300">
-                  <span className="text-lg">🎫</span>
-                </div>
-                <div className="min-w-0">
-                  <h3 className="font-bold text-xs text-slate-900 dark:text-white group-hover:text-primary transition-colors truncate">
-                    Helpdesk
-                  </h3>
-                  <p className="text-[10px] text-muted-foreground truncate">
-                    Report issues
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
+              </div>
+            </Link>
+          ))}
         </div>
 
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b">
+        {/* ================================================================
+            HEADER — Title + Action Buttons
+        ================================================================ */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-6 pb-4 border-b">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900">
               Estates Compliance
             </h1>
-            <p className="text-muted-foreground mt-1">
-              Statutory compliance tracking with RAG status monitoring for
-              Ofsted readiness
+            <p className="text-sm text-gray-500 mt-0.5">
+              Statutory compliance tracking with urgency-sorted checks
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -902,692 +464,200 @@ export default function EstatesComplianceDashboard() {
           </div>
         </div>
 
-        {/* Today's Tasks Card - NEW! Prominently displayed at top */}
-        {!loading && (
-          <Card className="border-orange-200 bg-gradient-to-r from-orange-50/50 to-red-50/50 dark:from-orange-950/20 dark:to-red-950/20">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg shadow-lg">
-                    <Calendar className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      Today&apos;s Tasks
-                      {todayTasks.length > 0 && (
-                        <Badge className="bg-orange-500 text-white">
-                          {todayTasks.length}
-                        </Badge>
-                      )}
-                    </CardTitle>
-                    <CardDescription>
-                      {todayTasks.length === 0
-                        ? "No urgent tasks for today. Great job staying on top of compliance!"
-                        : todayTasks.filter((t) => t.status === "overdue")
-                              .length > 0
-                          ? `${todayTasks.filter((t) => t.status === "overdue").length} overdue, ${todayTasks.filter((t) => t.status === "due_today").length} due today`
-                          : `${todayTasks.length} task${todayTasks.length > 1 ? "s" : ""} requiring attention`}
-                    </CardDescription>
-                  </div>
-                </div>
-                {todayTasks.length > 0 && (
-                  <Link href={`/estates-compliance/${todayTasks[0].domain}`}>
-                    <Button size="sm" variant="default">
-                      View All
-                      <ArrowRight className="w-4 h-4 ml-1" />
-                    </Button>
-                  </Link>
-                )}
-              </div>
-            </CardHeader>
-            {todayTasks.length > 0 && (
-              <CardContent>
-                <div className="space-y-2">
-                  {todayTasks.map((task, index) => (
-                    <div
-                      key={task.checkId}
-                      className="flex items-center gap-3 p-3 rounded-lg bg-background/80 hover:bg-background transition-colors group"
-                      style={{ animationDelay: `${index * 50}ms` }}
-                    >
-                      <span className="text-xl">{task.domainIcon}</span>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="font-medium text-sm">
-                            {task.checkName}
-                          </p>
-                          {getTaskStatusBadge(task.status)}
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {task.domainName} • {task.frequency}
-                        </p>
-                      </div>
-
-                      {/* Action Buttons */}
-                      <div className="flex items-center gap-1">
-                        {/* View Details - opens sheet/dialog */}
-                        <TaskDetailSheet
-                          task={task}
-                          onComplete={handleCompleteCheck}
-                          onSnooze={(checkId) => {
-                            // Refresh data after snoozing
-                            setRefreshKey((prev) => prev + 1);
-                          }}
-                          onMarkNA={(checkId) => {
-                            // Refresh data after marking N/A
-                            setRefreshKey((prev) => prev + 1);
-                          }}
-                        />
-
-                        {/* Ask Ed - contextual help */}
-                        <EdChatButton
-                          checkId={task.checkId}
-                          checkName={task.checkName}
-                          domain={task.domain}
-                          status={
-                            task.status === "due_today" ||
-                            task.status === "due_soon"
-                              ? "pending"
-                              : task.status
-                          }
-                          size="sm"
-                          iconOnly
-                        />
-
-                        {/* Quick Actions Menu */}
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-7 w-7 p-0"
-                              aria-label="Task actions"
-                            >
-                              <MoreHorizontal
-                                className="h-4 w-4"
-                                aria-hidden="true"
-                              />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => handleCompleteCheck(task.checkId)}
-                            >
-                              <Check className="h-4 w-4 mr-2" />
-                              Complete
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => {
-                                // Open the TaskDetailSheet instead - it has the snooze dialog
-                                const detailButton = document.querySelector(
-                                  `[data-task-detail="${task.checkId}"]`,
-                                ) as HTMLButtonElement;
-                                detailButton?.click();
-                              }}
-                            >
-                              <Clock className="h-4 w-4 mr-2" />
-                              Snooze (via Details)
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => {
-                                // Open the TaskDetailSheet instead - it has the mark N/A dialog
-                                const detailButton = document.querySelector(
-                                  `[data-task-detail="${task.checkId}"]`,
-                                ) as HTMLButtonElement;
-                                detailButton?.click();
-                              }}
-                            >
-                              <span className="mr-2">⊘</span>
-                              Mark N/A (via Details)
-                            </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                              <Link
-                                href={`/estates-compliance/${task.domain}/${task.checkId}/complete`}
-                                className="cursor-pointer"
-                              >
-                                <FileText className="h-4 w-4 mr-2" />
-                                Full Form
-                              </Link>
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            )}
-          </Card>
-        )}
-
-        {/* Daily Routines Card - Opening & Closing Checklists */}
-        {!loading && <DailyChecksCard />}
-
-        {/* Site Locations & Layout - NEW! Hierarchical Awareness */}
-        {!loading && (
-          <Card className="border-blue-200 bg-gradient-to-br from-white to-blue-50/30 dark:from-slate-950 dark:to-blue-950/10">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                    <span className="text-xl">🗺️</span>
-                  </div>
-                  <div>
-                    <CardTitle>Site Layout & Assignments</CardTitle>
-                    <CardDescription>
-                      Hierarchical room mapping and teacher-to-room links
-                    </CardDescription>
-                  </div>
-                </div>
-                <Link href="/estates-compliance/locations">
-                  <Button size="sm" variant="ghost">
-                    Manage Map
-                    <ArrowRight className="w-3 h-3 ml-1" />
-                  </Button>
-                </Link>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Visual Placeholder for Site Plan */}
-                <div className="relative aspect-video rounded-xl border-2 border-dashed border-blue-200 dark:border-blue-900 bg-blue-50/50 dark:bg-blue-950/20 flex flex-col items-center justify-center overflow-hidden group">
-                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 group-hover:from-blue-500/10 group-hover:to-purple-500/10 transition-colors" />
-                  <span className="text-4xl mb-4 group-hover:scale-110 transition-transform duration-500">
-                    🏢
-                  </span>
-                  <p className="font-bold text-blue-600 dark:text-blue-400">
-                    Interactive Site Plan
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Spatial mapping enabled via Estates Evolution
-                  </p>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="mt-4 bg-white/50 backdrop-blur-sm"
-                  >
-                    Upload Floor Plans
-                  </Button>
-                </div>
-
-                {/* Locations List */}
-                <div className="space-y-3">
-                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                    Active Assignments
-                  </h4>
-                  {locationsLoading ? (
-                    <div className="space-y-2">
-                      <div className="h-10 bg-muted/50 rounded animate-pulse w-full" />
-                      <div className="h-10 bg-muted/50 rounded animate-pulse w-full" />
-                    </div>
-                  ) : locations.length === 0 ? (
-                    <div className="text-center py-6 border rounded-lg bg-muted/20">
-                      <p className="text-sm text-muted-foreground italic">
-                        No locations mapped yet.
-                      </p>
-                      <Button
-                        size="sm"
-                        variant="link"
-                        onClick={() => setRefreshKey((k) => k + 1)}
-                      >
-                        Refresh Setup
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="space-y-2 max-h-[220px] overflow-y-auto pr-2 custom-scrollbar">
-                      {locations.map((loc) => (
-                        <div
-                          key={loc.id}
-                          className="flex items-center justify-between p-2 rounded-md border bg-white/80 dark:bg-slate-900/80 hover:border-primary/30 transition-colors"
-                        >
-                          <div className="flex items-center gap-2">
-                            <Badge
-                              variant="secondary"
-                              className="text-[10px] h-5"
-                            >
-                              {loc.type}
-                            </Badge>
-                            <span className="text-sm font-medium">
-                              {loc.name}
-                            </span>
-                          </div>
-                          {loc.assigned_staff ? (
-                            <div className="flex items-center gap-2">
-                              <span className="text-[10px] text-muted-foreground">
-                                Linked:
-                              </span>
-                              <Badge
-                                variant="outline"
-                                className="text-[10px] bg-green-50 text-green-700 border-green-200"
-                              >
-                                {loc.assigned_staff.display_name}
-                              </Badge>
-                            </div>
-                          ) : (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-6 text-[10px] text-blue-600"
-                            >
-                              + Assign Staff
-                            </Button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Compliance Overview Card — RAG summary with totals */}
-        {(() => {
-          const totalChecks = visibleDomainData.reduce(
-            (sum, d) => sum + d.totalChecks,
-            0,
-          );
-          const completedChecks = visibleDomainData.reduce(
-            (sum, d) => sum + d.completedChecks,
-            0,
-          );
-          const overdueChecks = visibleDomainData.reduce(
-            (sum, d) => sum + d.overdueChecks,
-            0,
-          );
-          const pendingChecks = totalChecks - completedChecks - overdueChecks;
-          const compliancePct =
-            totalChecks > 0
-              ? Math.round((completedChecks / totalChecks) * 100)
-              : 0;
-
-          return (
-            <Card>
-              <CardHeader>
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div>
-                    <CardTitle>Compliance Overview</CardTitle>
-                    <CardDescription>
-                      {completedChecks} of {totalChecks} checks completed across{" "}
-                      {visibleDomainData.length} domains
-                    </CardDescription>
-                  </div>
-                  <Link href="/estates-compliance/reports/governor">
-                    <Button size="sm" variant="outline">
-                      <FileText className="w-4 h-4 mr-2" />
-                      Governor Report
-                    </Button>
-                  </Link>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* 4-column totals grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div className="rounded-lg border bg-muted/30 p-3 text-center">
-                    <p className="text-2xl font-bold text-slate-700 dark:text-slate-300">
-                      {totalChecks}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Total Checks
-                    </p>
-                  </div>
-                  <div className="rounded-lg border bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900 p-3 text-center">
-                    <p className="text-2xl font-bold text-green-600">
-                      {completedChecks}
-                    </p>
-                    <p className="text-xs text-green-700 dark:text-green-400 mt-0.5">
-                      Completed
-                    </p>
-                  </div>
-                  <div className="rounded-lg border bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900 p-3 text-center">
-                    <p className="text-2xl font-bold text-amber-500">
-                      {pendingChecks}
-                    </p>
-                    <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
-                      Pending
-                    </p>
-                  </div>
-                  <div className="rounded-lg border bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900 p-3 text-center">
-                    <p className="text-2xl font-bold text-red-600">
-                      {overdueChecks}
-                    </p>
-                    <p className="text-xs text-red-700 dark:text-red-400 mt-0.5">
-                      Overdue
-                    </p>
-                  </div>
-                </div>
-
-                {/* Progress bar */}
-                <div className="space-y-1.5">
-                  <Progress value={compliancePct} className="h-3" />
-                  <p className="text-xs text-muted-foreground">
-                    {compliancePct}% overall completion rate
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })()}
-
-        {/* Compliance Reviews Section */}
-        {recentReviews.length > 0 && (
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-md bg-purple-100 dark:bg-purple-900/20">
-                    <FileText className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                  </div>
-                  <CardTitle className="text-base">
-                    Compliance Reviews
-                  </CardTitle>
-                </div>
-                <Link href="/dashboard/show-me/site">
-                  <Button variant="ghost" size="sm" className="text-xs gap-1">
-                    View in Show Me <ArrowRight className="w-3 h-3" />
-                  </Button>
-                </Link>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {recentReviews.slice(0, 5).map((review: any) => (
-                  <div
-                    key={review.id}
-                    className="flex items-center justify-between py-2 border-b border-zinc-100 dark:border-zinc-800 last:border-0"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`w-2 h-2 rounded-full shrink-0 ${
-                          review.sign_off_status === "signed_off"
-                            ? "bg-emerald-500"
-                            : review.overall_status === "in_progress"
-                              ? "bg-blue-500 animate-pulse"
-                              : review.sign_off_status === "rejected"
-                                ? "bg-red-500"
-                                : review.overall_status === "concerns"
-                                  ? "bg-amber-500"
-                                  : "bg-zinc-300"
-                        }`}
-                      />
-                      <div>
-                        <p className="text-sm font-medium">
-                          {review.compliance_domain?.toUpperCase()} —{" "}
-                          {review.location_name || "All locations"}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {review.review_date
-                            ? new Date(review.review_date).toLocaleDateString(
-                                "en-GB",
-                                {
-                                  day: "numeric",
-                                  month: "short",
-                                  year: "numeric",
-                                },
-                              )
-                            : ""}
-                          {review.reviewed_by_name &&
-                            ` · ${review.reviewed_by_name}`}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge
-                        variant="outline"
-                        className={`text-[10px] ${
-                          review.overall_status === "compliant"
-                            ? "text-emerald-600 border-emerald-200"
-                            : review.overall_status === "concerns"
-                              ? "text-amber-600 border-amber-200"
-                              : review.overall_status === "non_compliant"
-                                ? "text-red-600 border-red-200"
-                                : review.overall_status === "in_progress"
-                                  ? "text-blue-600 border-blue-200"
-                                  : "text-zinc-400 border-zinc-200"
-                        }`}
-                      >
-                        {review.overall_status || "pending"}
-                      </Badge>
-                      {review.sign_off_status === "signed_off" && (
-                        <Badge
-                          variant="outline"
-                          className="text-[10px] text-emerald-600 border-emerald-200"
-                        >
-                          <Check className="w-3 h-3 mr-0.5" />
-                          Signed off
-                        </Badge>
-                      )}
-                      {review.sign_off_status === "pending" &&
-                        review.overall_status !== "in_progress" && (
-                          <Badge
-                            variant="outline"
-                            className="text-[10px] text-amber-600 border-amber-200"
-                          >
-                            Awaiting sign-off
-                          </Badge>
-                        )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Loading State */}
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-4">
-            <div className="w-12 h-12 border-4 border-muted border-t-primary rounded-full animate-spin"></div>
-            <p className="text-muted-foreground font-medium">
-              Loading compliance data...
-            </p>
+        {/* ================================================================
+            STATS STRIP — 4 pills
+        ================================================================ */}
+        <div className="flex flex-wrap gap-3 px-6 py-4">
+          {/* Overdue */}
+          <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-red-100 border border-red-200">
+            <AlertTriangle className="w-4 h-4 text-red-600" />
+            <span className="text-sm font-semibold text-red-700">
+              {loading ? "…" : overdue.length}
+            </span>
+            <span className="text-xs text-red-600">Overdue</span>
           </div>
-        ) : (
-          <>
-            {/* Compliance Domains - Now sorted by urgency! */}
-            <div className="space-y-4">
-              {sortedDomains.map((domainData) => {
-                const metadata = DOMAIN_METADATA[domainData.domain];
-                const isExpanded = expandedDomain === domainData.domain;
-                const checks = getChecksForDomain(domainData.domain);
 
+          {/* Due This Week */}
+          <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-amber-100 border border-amber-200">
+            <Clock className="w-4 h-4 text-amber-600" />
+            <span className="text-sm font-semibold text-amber-700">
+              {loading ? "…" : dueThisWeek.length}
+            </span>
+            <span className="text-xs text-amber-600">Due This Week</span>
+          </div>
+
+          {/* Completed */}
+          <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-green-100 border border-green-200">
+            <CheckCircle2 className="w-4 h-4 text-green-600" />
+            <span className="text-sm font-semibold text-green-700">
+              {loading ? "…" : `${completed.length}/${total}`}
+            </span>
+            <span className="text-xs text-green-600">Completed</span>
+          </div>
+
+          {/* Compliance Rate */}
+          <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-gray-100 border border-gray-200">
+            <ClipboardCheck className="w-4 h-4 text-gray-600" />
+            <span className="text-sm font-semibold text-gray-700">
+              {loading ? "…" : `${compliancePct}%`}
+            </span>
+            <span className="text-xs text-gray-500">Compliance Rate</span>
+          </div>
+        </div>
+
+        {/* ================================================================
+            TAB BAR + DOMAIN FILTER PILLS
+        ================================================================ */}
+        <div className="px-6 space-y-3 pb-3">
+          {/* Tabs */}
+          <div className="flex gap-1 border-b">
+            <button
+              onClick={() => setActiveTab("checks")}
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === "checks"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              <LayoutList className="w-4 h-4" />
+              Compliance Checks
+            </button>
+            <button
+              onClick={() => setActiveTab("routines")}
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === "routines"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              <Calendar className="w-4 h-4" />
+              Daily Routines
+            </button>
+          </div>
+
+          {/* Domain filter pills — only shown on Compliance Checks tab */}
+          {activeTab === "checks" && (
+            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+              {/* All pill */}
+              <button
+                onClick={() => setSelectedDomain("all")}
+                className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                  selectedDomain === "all"
+                    ? "bg-primary text-white border-primary"
+                    : "bg-gray-100 text-gray-600 border-gray-200 hover:border-gray-300"
+                }`}
+              >
+                All
+                {!loading && (
+                  <span className="ml-1 text-[10px] opacity-70">
+                    {checksWithStatus.length}
+                  </span>
+                )}
+              </button>
+
+              {/* Domain pills */}
+              {domainStats.map(({ domain, metadata, total: dt, overdue: dO, dueSoon: dS, completed: dC }) => {
+                const pillColor =
+                  selectedDomain === domain
+                    ? "bg-primary text-white border-primary"
+                    : domainPillColor(dO, dS, dt, dC);
                 return (
-                  <Card
-                    key={domainData.domain}
-                    className={`transition-all duration-300 ${isExpanded ? "ring-2 ring-primary" : ""}`}
+                  <button
+                    key={domain}
+                    onClick={() => setSelectedDomain(domain)}
+                    className={`flex-shrink-0 flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border transition-colors ${pillColor}`}
                   >
-                    <button
-                      onClick={() =>
-                        setExpandedDomain(isExpanded ? null : domainData.domain)
-                      }
-                      className="w-full text-left"
-                    >
-                      <CardHeader>
-                        <div className="flex items-center justify-between gap-4">
-                          <div className="flex items-center gap-4 flex-1">
-                            <span className="text-3xl">{metadata.icon}</span>
-                            <div className="text-left flex-1">
-                              <div className="flex items-center gap-3 flex-wrap mb-1">
-                                <CardTitle className="text-lg">
-                                  {metadata.name}
-                                </CardTitle>
-                                {getStatusBadge(domainData.status)}
-                                {domainData.overdueChecks > 0 && (
-                                  <Badge className="bg-red-100 text-red-700 border-red-300 animate-pulse">
-                                    {domainData.overdueChecks} overdue
-                                  </Badge>
-                                )}
-                              </div>
-                              <CardDescription>
-                                {metadata.description}
-                              </CardDescription>
-                            </div>
-                          </div>
-                          <div className="text-right bg-muted/50 rounded-lg px-4 py-2">
-                            <p className="text-2xl font-bold">
-                              {domainData.completedChecks}/
-                              {domainData.totalChecks}
-                            </p>
-                            <p className="text-xs text-muted-foreground font-medium">
-                              checks
-                            </p>
-                          </div>
-                          <ChevronRight
-                            className={`w-5 h-5 text-muted-foreground transition-transform ${
-                              isExpanded ? "rotate-90" : ""
-                            }`}
-                          />
-                        </div>
-                      </CardHeader>
-                    </button>
-
-                    {/* Expanded Check List */}
-                    {isExpanded && (
-                      <CardContent className="border-t pt-6">
-                        <div className="flex items-center justify-between mb-4 pb-4 border-b">
-                          <h3 className="font-semibold">
-                            Statutory & Good Practice Checks
-                          </h3>
-                          <Link
-                            href={`/estates-compliance/${domainData.domain}`}
-                          >
-                            <Button variant="outline" size="sm">
-                              View all checks
-                              <ChevronRight className="w-4 h-4 ml-1" />
-                            </Button>
-                          </Link>
-                        </div>
-
-                        <div className="space-y-3">
-                          {checks.slice(0, 5).map((check) => {
-                            const completion = domainData.checks.find(
-                              (c) => c.checkId === check.id,
-                            );
-                            const status = completion?.status || "pending";
-                            const isCelebrating =
-                              celebratingCheckId === check.id;
-
-                            return (
-                              <div
-                                key={check.id}
-                                className={`flex items-start gap-3 p-4 rounded-lg border bg-card hover:bg-muted/50 transition-all ${isCelebrating ? "ring-2 ring-green-500 bg-green-50/50" : ""}`}
-                              >
-                                <div className="mt-1">
-                                  {getStatusIcon(domainData.status)}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 flex-wrap mb-1">
-                                    <p className="font-medium text-sm">
-                                      {check.name}
-                                    </p>
-                                    {getCategoryBadge(check.category)}
-                                    {getCheckStatusBadge(status)}
-                                    <Badge
-                                      variant="outline"
-                                      className="text-xs"
-                                    >
-                                      {check.frequency}
-                                    </Badge>
-                                  </div>
-                                  <p className="text-sm text-muted-foreground line-clamp-2">
-                                    {check.description}
-                                  </p>
-                                  {check.reference && (
-                                    <p className="text-xs text-muted-foreground mt-1 bg-muted/50 inline-block px-2 py-1 rounded">
-                                      📋 Ref: {check.reference}
-                                    </p>
-                                  )}
-                                </div>
-                                <Link
-                                  href={`/estates-compliance/${domainData.domain}/${check.id}/complete`}
-                                  onClick={() => handleCompleteCheck(check.id)}
-                                >
-                                  <Button
-                                    size="sm"
-                                    variant="default"
-                                    className={isCelebrating ? "scale-105" : ""}
-                                  >
-                                    {isCelebrating ? (
-                                      <>
-                                        <Sparkles className="w-3 h-3 mr-1" />
-                                        Done!
-                                      </>
-                                    ) : (
-                                      <>
-                                        Complete
-                                        <ArrowRight className="w-3 h-3 ml-1" />
-                                      </>
-                                    )}
-                                  </Button>
-                                </Link>
-                              </div>
-                            );
-                          })}
-                          {checks.length > 5 && (
-                            <div className="text-center py-3">
-                              <Link
-                                href={`/estates-compliance/${domainData.domain}`}
-                              >
-                                <Button variant="outline" size="sm">
-                                  View all {checks.length} checks
-                                  <ChevronRight className="w-4 h-4 ml-1" />
-                                </Button>
-                              </Link>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Quick Actions */}
-                        <div className="flex flex-wrap gap-2 mt-6 pt-4 border-t">
-                          <Link
-                            href={`/estates-compliance/${domainData.domain}/new`}
-                          >
-                            <Button size="sm" variant="outline">
-                              <Plus className="w-4 h-4 mr-1" />
-                              Add Custom Check
-                            </Button>
-                          </Link>
-                          <Link
-                            href={`/estates-compliance/${domainData.domain}/schedule`}
-                          >
-                            <Button size="sm" variant="outline">
-                              <Clock className="w-4 h-4 mr-1" />
-                              Schedule
-                            </Button>
-                          </Link>
-                          <Link
-                            href={`/estates-compliance/${domainData.domain}`}
-                          >
-                            <Button size="sm" variant="outline">
-                              <FileText className="w-4 h-4 mr-1" />
-                              Details
-                            </Button>
-                          </Link>
-                        </div>
-                      </CardContent>
+                    <span>{metadata.icon}</span>
+                    <span>{metadata.name}</span>
+                    {!loading && (
+                      <span className="text-[10px] opacity-70">
+                        {dC}/{dt}
+                      </span>
                     )}
-                  </Card>
+                  </button>
                 );
               })}
             </div>
-          </>
-        )}
+          )}
+        </div>
 
+        {/* ================================================================
+            CONTENT AREA
+        ================================================================ */}
+        <div className="px-6 pb-8">
+          {/* ----------------------------------------------------------------
+              DAILY ROUTINES TAB
+          ---------------------------------------------------------------- */}
+          {activeTab === "routines" && <DailyChecksCard />}
+
+          {/* ----------------------------------------------------------------
+              COMPLIANCE CHECKS TAB
+          ---------------------------------------------------------------- */}
+          {activeTab === "checks" && (
+            <div className="space-y-2">
+              {loading ? (
+                <div className="flex flex-col items-center justify-center py-16 gap-3">
+                  <div className="w-10 h-10 border-4 border-gray-200 border-t-primary rounded-full animate-spin" />
+                  <p className="text-sm text-gray-500">Loading compliance data...</p>
+                </div>
+              ) : (
+                <>
+                  {/* Due checks (overdue → due-today → due-this-week → due-this-month) */}
+                  {dueChecks.map((item) => (
+                    <CheckRow key={item.check.id} item={item} />
+                  ))}
+
+                  {/* Not-yet-due divider + collapsed list */}
+                  {notDueChecks.length > 0 && (
+                    <>
+                      <div className="flex items-center gap-3 py-3">
+                        <div className="flex-1 h-px bg-gray-200" />
+                        <button
+                          onClick={() => setNotDueExpanded((v) => !v)}
+                          className="text-xs text-gray-500 hover:text-gray-700 font-medium whitespace-nowrap"
+                        >
+                          {notDueExpanded ? "Hide" : "Show"}{" "}
+                          {notDueChecks.length} checks not yet due
+                        </button>
+                        <div className="flex-1 h-px bg-gray-200" />
+                      </div>
+                      {notDueExpanded &&
+                        notDueChecks.map((item) => (
+                          <CheckRow key={item.check.id} item={item} />
+                        ))}
+                    </>
+                  )}
+
+                  {visibleChecks.length === 0 && (
+                    <div className="text-center py-12 text-gray-400">
+                      <ClipboardCheck className="w-10 h-10 mx-auto mb-3 opacity-40" />
+                      <p className="text-sm">No checks found for this domain.</p>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ================================================================
+            SETTINGS DIALOG + FEATURE DISCOVERY + ED WIDGET
+        ================================================================ */}
         <SettingsDialog
           open={settingsOpen}
           onOpenChange={setSettingsOpen}
-          visibleDomains={visibleDomains}
-          onVisibilityChange={handleVisibilityChange}
+          visibleDomains={Object.keys(DOMAIN_METADATA) as ComplianceDomain[]}
+          onVisibilityChange={() => {}}
         />
 
-        {/* Feature Discovery */}
-        <FeatureChecklist
-          features={ESTATES_FEATURES}
-          moduleFilter="estates"
-          accentColor="#00D4D4"
-        />
+        <div className="px-6">
+          <FeatureChecklist
+            features={ESTATES_FEATURES}
+            moduleFilter="estates"
+            accentColor="#00D4D4"
+          />
+        </div>
 
-        {/* Ed Chatbot Widget - Floating Orb */}
         <EdWidgetWrapper
           isOpen={edOpen}
           onToggle={() => setEdOpen(!edOpen)}
@@ -1598,5 +668,46 @@ export default function EstatesComplianceDashboard() {
         />
       </div>
     </EdBrowserControlWrapper>
+  );
+}
+
+// ============================================================================
+// CHECK ROW COMPONENT
+// ============================================================================
+
+function CheckRow({ item }: { item: CheckWithStatus }) {
+  const { check, urgency } = item;
+  const metadata = DOMAIN_METADATA[check.domain];
+  const badge = formatDueBadge(item);
+  const border = leftBorderClass(urgency);
+
+  return (
+    <Link
+      href={`/estates-compliance/${check.domain}/${check.id}`}
+      className={`flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 transition-all group ${border}`}
+    >
+      {/* Domain icon */}
+      <span className="text-xl flex-shrink-0">{metadata.icon}</span>
+
+      {/* Check info */}
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-gray-900 truncate">
+          {check.name}
+        </p>
+        <p className="text-xs text-gray-500 truncate">
+          {metadata.name} &middot; {check.frequency}
+        </p>
+      </div>
+
+      {/* Due date badge */}
+      <span
+        className={`flex-shrink-0 px-2 py-0.5 rounded-full text-[11px] font-medium border ${badge.className}`}
+      >
+        {badge.label}
+      </span>
+
+      {/* Chevron */}
+      <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0 group-hover:text-gray-600 transition-colors" />
+    </Link>
   );
 }

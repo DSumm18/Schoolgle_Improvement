@@ -52,7 +52,17 @@ import {
 } from "lucide-react";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useAuth } from "@/context/SupabaseAuthContext";
-import type { TodayTask } from "@/app/(dashboard)/estates-compliance/page";
+export interface TodayTask {
+  checkId: string;
+  checkName: string;
+  domain: import("@/lib/estates-compliance/statutory-checks").ComplianceDomain;
+  domainIcon: string;
+  domainName: string;
+  status: "overdue" | "due_today" | "due_soon";
+  frequency: string;
+  category: string;
+  nextDue?: string;
+}
 
 interface TaskDetailSheetProps {
   task: TodayTask;
