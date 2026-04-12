@@ -19,9 +19,9 @@ export default function SchoolIntelligenceCanvasPage() {
           <Brain className="w-5 h-5 text-purple-500" />
         </div>
         <div className="flex-1">
-          <h1 className="text-xl font-extrabold text-foreground">Canvas</h1>
+          <h1 className="text-xl font-extrabold text-foreground">Report Builder</h1>
           <p className="text-xs text-muted-foreground">
-            Drag connectors onto the canvas. Edges auto-draw where they share join keys. Generate a report via Guardian + Gemini.
+            Pick a template, see what data feeds into it, then generate a real report via Guardian + Gemini.
           </p>
         </div>
       </div>
