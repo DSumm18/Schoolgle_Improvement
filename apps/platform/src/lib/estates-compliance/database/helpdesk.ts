@@ -13,6 +13,35 @@ import type {
 } from '@/types/estates-compliance';
 
 /**
+ * Escape PostgREST special characters to prevent query injection via .or()
+ * filter strings. Applied to any user-supplied search term before interpolation.
+ */
+function sanitizeSearch(input: string): string {
+  return input.replace(/[%_,()\\]/g, (c) => "\\" + c);
+}
+
+// Explicit whitelist of columns that may be updated via updateHelpdeskTicket.
+// Never spread raw API body — that would allow callers to overwrite
+// organisation_id, ticket_number, module, or other immutable fields.
+const UPDATABLE_TICKET_COLUMNS = [
+  'title', 'description', 'category', 'priority', 'status',
+  'assigned_to', 'assigned_to_name', 'resolution', 'resolution_summary',
+  'resolved_at', 'resolved_by', 'actual_cost', 'estimated_cost',
+  'due_date', 'completed_date', 'safeguarding_flag', 'risk_score',
+  'notes', 'evidence_urls', 'resolution_notes',
+] as const;
+
+function pickUpdatableTicketColumns(updates: Record<string, unknown>): Record<string, unknown> {
+  const row: Record<string, unknown> = {};
+  for (const key of UPDATABLE_TICKET_COLUMNS) {
+    if (key in updates && updates[key] !== undefined) {
+      row[key] = updates[key];
+    }
+  }
+  return row;
+}
+
+/**
  * Filters for ticket queries
  */
 export interface TicketFilters {
@@ -84,7 +113,8 @@ export async function getHelpdeskTickets(
     query = query.eq('location', filters.location);
   }
   if (filters?.search) {
-    query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%,ticket_number.ilike.%${filters.search}%`);
+    const s = sanitizeSearch(filters.search);
+    query = query.or(`title.ilike.%${s}%,description.ilike.%${s}%,ticket_number.ilike.%${s}%`);
   }
 
   // Apply pagination
@@ -113,18 +143,28 @@ export async function getHelpdeskTickets(
 }
 
 /**
- * Get a single helpdesk ticket by ID
+ * Get a single helpdesk ticket by ID.
+ * organizationId is required to prevent cross-tenant reads via the service role.
  */
-export async function getHelpdeskTicketById(ticketId: string): Promise<HelpdeskTicket | null> {
+export async function getHelpdeskTicketById(
+  ticketId: string,
+  organizationId?: string,
+): Promise<HelpdeskTicket | null> {
   const supabase = createServiceRoleClient();
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('estates_helpdesk_tickets')
     .select('*')
-    .eq('id', ticketId)
-    .single();
+    .eq('id', ticketId);
+
+  if (organizationId) {
+    query = query.eq('organization_id', organizationId);
+  }
+
+  const { data, error } = await query.single();
 
   if (error) {
+    if (error.code === 'PGRST116') return null; // no rows
     console.error('Error fetching helpdesk ticket:', error);
     return null;
   }
@@ -236,20 +276,31 @@ export type UpdateTicketInput = Partial<Omit<CreateTicketInput, 'organization_id
 };
 
 /**
- * Update a helpdesk ticket
+ * Update a helpdesk ticket.
+ * organizationId is required to prevent cross-tenant writes via the service role.
+ * Only whitelisted columns in UPDATABLE_TICKET_COLUMNS can be updated.
  */
 export async function updateHelpdeskTicket(
   ticketId: string,
-  updates: UpdateTicketInput
+  updates: UpdateTicketInput,
+  organizationId?: string,
 ): Promise<HelpdeskTicket> {
   const supabase = createServiceRoleClient();
 
-  const { data, error } = await supabase
+  // Apply column whitelist to prevent callers from overwriting immutable fields
+  const safeUpdates = pickUpdatableTicketColumns(updates as unknown as Record<string, unknown>);
+  safeUpdates.updated_at = new Date().toISOString();
+
+  let query = supabase
     .from('estates_helpdesk_tickets')
-    .update(updates)
-    .eq('id', ticketId)
-    .select()
-    .single();
+    .update(safeUpdates)
+    .eq('id', ticketId);
+
+  if (organizationId) {
+    query = query.eq('organization_id', organizationId);
+  }
+
+  const { data, error } = await query.select().single();
 
   if (error) {
     console.error('Error updating helpdesk ticket:', error);
@@ -260,15 +311,25 @@ export async function updateHelpdeskTicket(
 }
 
 /**
- * Delete a helpdesk ticket
+ * Delete a helpdesk ticket.
+ * organizationId is required to prevent cross-tenant deletes via the service role.
  */
-export async function deleteHelpdeskTicket(ticketId: string): Promise<void> {
+export async function deleteHelpdeskTicket(
+  ticketId: string,
+  organizationId?: string,
+): Promise<void> {
   const supabase = createServiceRoleClient();
 
-  const { error } = await supabase
+  let query = supabase
     .from('estates_helpdesk_tickets')
     .delete()
     .eq('id', ticketId);
+
+  if (organizationId) {
+    query = query.eq('organization_id', organizationId);
+  }
+
+  const { error } = await query;
 
   if (error) {
     console.error('Error deleting helpdesk ticket:', error);

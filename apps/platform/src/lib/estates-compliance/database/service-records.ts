@@ -461,10 +461,24 @@ export async function findBundlingOpportunities(
 > {
   const supabase = createServiceRoleClient();
 
-  // Get the latest junction row per asset
+  // Scope to the organization by joining through service_records first.
+  // This prevents globally scanning all junction rows and leaking cross-tenant data.
+  const { data: records } = await supabase
+    .from("estates_service_records")
+    .select("id, compliance_domain")
+    .eq("organization_id", organizationId)
+    .not("compliance_domain", "is", null);
+
+  if (!records || records.length === 0) return [];
+
+  const orgRecordIds = records.map((r) => r.id);
+  const recordMap = new Map(records.map((r) => [r.id, r]));
+
+  // Now fetch junction rows only for this org's service records
   const { data: junctionRows } = await supabase
     .from("estates_service_record_assets")
     .select("asset_id, next_service_due, service_record_id")
+    .in("service_record_id", orgRecordIds)
     .not("next_service_due", "is", null)
     .order("last_service_date", { ascending: false });
 
@@ -481,30 +495,15 @@ export async function findBundlingOpportunities(
     }
   }
 
-  // Get compliance_domain per service_record and asset info
-  const recordIds = [...new Set([...latestPerAsset.values()].map((v) => v.service_record_id))];
-  const { data: records } = await supabase
-    .from("estates_service_records")
-    .select("id, compliance_domain, organization_id")
-    .in("id", recordIds)
-    .eq("organization_id", organizationId);
-
-  if (!records || records.length === 0) return [];
-
-  const recordMap = new Map(records.map((r) => [r.id, r]));
-
-  const assetIds = [...latestPerAsset.keys()].filter((id) => {
-    const entry = latestPerAsset.get(id);
-    const rec = entry ? recordMap.get(entry.service_record_id) : null;
-    return !!rec && rec.organization_id === organizationId;
-  });
+  const assetIds = [...latestPerAsset.keys()];
 
   if (assetIds.length === 0) return [];
 
   const { data: assets } = await supabase
     .from("estates_assets")
     .select("id, name, code")
-    .in("id", assetIds);
+    .in("id", assetIds)
+    .eq("organization_id", organizationId);
 
   const assetMap = new Map((assets || []).map((a) => [a.id, a]));
 
@@ -523,7 +522,8 @@ export async function findBundlingOpportunities(
   const today = new Date();
   for (const [assetId, entry] of latestPerAsset) {
     const rec = recordMap.get(entry.service_record_id);
-    if (!rec || rec.organization_id !== organizationId || !rec.compliance_domain) continue;
+    // All records in recordMap already belong to this org (filtered at query time)
+    if (!rec || !rec.compliance_domain) continue;
     const asset = assetMap.get(assetId);
     if (!asset) continue;
     const due = new Date(entry.next_service_due);

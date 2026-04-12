@@ -102,9 +102,10 @@ export class AssetService {
   static async update(
     assetId: string,
     updates: Partial<AssetInput>,
+    organizationId?: string,
   ): Promise<Asset> {
-    // Check asset exists
-    const existing = await getAssetById(assetId);
+    // Check asset exists (scoped to org when provided)
+    const existing = await getAssetById(assetId, organizationId);
     if (!existing) {
       throw new Error(`Asset not found: ${assetId}`);
     }
@@ -115,27 +116,27 @@ export class AssetService {
         throw new Error("Asset cannot be its own parent");
       }
 
-      const parent = await getAssetById(updates.parent_asset_id);
+      const parent = await getAssetById(updates.parent_asset_id, organizationId);
       if (!parent) {
         throw new Error(`Parent asset not found: ${updates.parent_asset_id}`);
       }
     }
 
-    return dbUpdateAsset(assetId, updates);
+    return dbUpdateAsset(assetId, updates, organizationId);
   }
 
   /**
    * Delete an asset with dependency checks
    */
-  static async delete(assetId: string): Promise<void> {
-    // Check if asset exists
-    const asset = await getAssetById(assetId);
+  static async delete(assetId: string, organizationId?: string): Promise<void> {
+    // Check if asset exists (scoped to org when provided)
+    const asset = await getAssetById(assetId, organizationId);
     if (!asset) {
       throw new Error(`Asset not found: ${assetId}`);
     }
 
     // Check for child assets
-    const children = await getChildAssets(assetId);
+    const children = await getChildAssets(assetId, organizationId);
     if (children.length > 0) {
       throw new Error(
         `Cannot delete asset with ${children.length} child assets. Reassign or delete children first.`,
@@ -144,7 +145,7 @@ export class AssetService {
 
     // TODO: Check for related tasks, helpdesk tickets, etc.
     // For now, just delete
-    return dbDeleteAsset(assetId);
+    return dbDeleteAsset(assetId, organizationId);
   }
 
   /**

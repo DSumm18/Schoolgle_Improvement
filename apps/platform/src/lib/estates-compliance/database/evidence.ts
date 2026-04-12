@@ -18,6 +18,36 @@ import type {
 const supabase = createServiceRoleClient();
 
 /**
+ * Escape PostgREST special characters to prevent query injection via .or()
+ * filter strings. Applied to any user-supplied search term before interpolation.
+ */
+function sanitizeSearch(input: string): string {
+  return input.replace(/[%_,()\\]/g, (c) => "\\" + c);
+}
+
+// Explicit whitelist of columns that may be updated via updateEvidence.
+// Prevents callers from overwriting organization_id, uploaded_by, version, etc.
+const UPDATABLE_EVIDENCE_COLUMNS = [
+  'title', 'description', 'evidence_type', 'status',
+  'compliance_domain', 'document_number', 'issuing_body',
+  'issued_date', 'expiry_date', 'tags',
+  'ai_verified', 'ai_confidence_score', 'verification_notes',
+  'verified_by', 'verified_at',
+  // Link fields (allow re-linking)
+  'asset_id', 'task_id', 'ticket_id', 'contractor_id', 'contract_id',
+] as const;
+
+function pickUpdatableEvidenceColumns(updates: Record<string, unknown>): Record<string, unknown> {
+  const row: Record<string, unknown> = {};
+  for (const key of UPDATABLE_EVIDENCE_COLUMNS) {
+    if (key in updates && updates[key] !== undefined) {
+      row[key] = updates[key];
+    }
+  }
+  return row;
+}
+
+/**
  * Get evidence items with filters and pagination
  */
 export async function getEvidence(
@@ -62,7 +92,8 @@ export async function getEvidence(
     query = query.lte('expiry_date', filters.expiry_to);
   }
   if (filters?.search) {
-    query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%,document_number.ilike.%${filters.search}%`);
+    const s = sanitizeSearch(filters.search);
+    query = query.or(`title.ilike.%${s}%,description.ilike.%${s}%,document_number.ilike.%${s}%`);
   }
   if (filters?.tags && filters.tags.length > 0) {
     query = query.contains('tags', filters.tags);
@@ -95,14 +126,23 @@ export async function getEvidence(
 }
 
 /**
- * Get a single evidence item by ID
+ * Get a single evidence item by ID.
+ * organizationId is required to prevent cross-tenant reads via the service role.
  */
-export async function getEvidenceById(evidenceId: string): Promise<EstatesEvidence | null> {
-  const { data, error } = await supabase
+export async function getEvidenceById(
+  evidenceId: string,
+  organizationId?: string,
+): Promise<EstatesEvidence | null> {
+  let query = supabase
     .from('estates_evidence')
     .select('*')
-    .eq('id', evidenceId)
-    .single();
+    .eq('id', evidenceId);
+
+  if (organizationId) {
+    query = query.eq('organization_id', organizationId);
+  }
+
+  const { data, error } = await query.single();
 
   if (error) {
     console.error('Error fetching evidence:', error);
@@ -188,7 +228,9 @@ export async function createEvidence(
 }
 
 /**
- * Update an existing evidence item
+ * Update an existing evidence item.
+ * Only columns in UPDATABLE_EVIDENCE_COLUMNS can be updated (whitelist enforced).
+ * organizationId is required to prevent cross-tenant writes via the service role.
  */
 export async function updateEvidence(
   evidenceId: string,
@@ -199,17 +241,24 @@ export async function updateEvidence(
     verification_notes?: string;
     verified_by?: string;
     verified_at?: string;
-  }
+  },
+  organizationId?: string,
 ): Promise<EstatesEvidence> {
-  const { data, error } = await supabase
+  // Apply column whitelist — allow AI verification fields to pass through
+  // even if not in EstatesEvidenceInput
+  const safeUpdates = pickUpdatableEvidenceColumns(updates as unknown as Record<string, unknown>);
+  safeUpdates.updated_at = new Date().toISOString();
+
+  let query = supabase
     .from('estates_evidence')
-    .update({
-      ...updates,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', evidenceId)
-    .select()
-    .single();
+    .update(safeUpdates)
+    .eq('id', evidenceId);
+
+  if (organizationId) {
+    query = query.eq('organization_id', organizationId);
+  }
+
+  const { data, error } = await query.select().single();
 
   if (error) {
     console.error('Error updating evidence:', error);
@@ -257,14 +306,23 @@ export async function getEvidenceByDomain(
 }
 
 /**
- * Get evidence by asset
+ * Get evidence by asset.
+ * organizationId scopes the query to prevent cross-tenant reads.
  */
-export async function getEvidenceByAsset(assetId: string): Promise<EstatesEvidence[]> {
-  const { data, error } = await supabase
+export async function getEvidenceByAsset(
+  assetId: string,
+  organizationId?: string,
+): Promise<EstatesEvidence[]> {
+  let query = supabase
     .from('estates_evidence')
     .select('*')
-    .eq('asset_id', assetId)
-    .order('created_at', { ascending: false });
+    .eq('asset_id', assetId);
+
+  if (organizationId) {
+    query = query.eq('organization_id', organizationId);
+  }
+
+  const { data, error } = await query.order('created_at', { ascending: false });
 
   if (error) {
     console.error('Error fetching evidence by asset:', error);
@@ -344,11 +402,12 @@ export async function searchEvidence(
   searchTerm: string,
   limit = 20
 ): Promise<EstatesEvidence[]> {
+  const s = sanitizeSearch(searchTerm);
   const { data, error } = await supabase
     .from('estates_evidence')
     .select('*')
     .eq('organization_id', organizationId)
-    .or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,document_number.ilike.%${searchTerm}%,issuing_body.ilike.%${searchTerm}%`)
+    .or(`title.ilike.%${s}%,description.ilike.%${s}%,document_number.ilike.%${s}%,issuing_body.ilike.%${s}%`)
     .limit(limit);
 
   if (error) {

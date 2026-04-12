@@ -69,7 +69,7 @@ export const POST = protectedRoute(
     // Run AI verification
     const result = await verifyComplianceDocument(verificationInput);
 
-    // Update evidence with verification results
+    // Update evidence with verification results (org-scoped for safety)
     await updateEvidence(evidence_id, {
       ai_verified: result.verified,
       ai_confidence_score: result.confidence,

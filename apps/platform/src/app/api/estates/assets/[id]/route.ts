@@ -38,7 +38,7 @@ export const PUT = protectedRoute(async (auth, request) => {
   const updates = await request.json();
 
   try {
-    const asset = await AssetService.update(id, updates);
+    const asset = await AssetService.update(id, updates, auth.organizationId);
     return apiSuccess({ data: asset });
   } catch (error) {
     if (error instanceof Error) {
@@ -61,7 +61,7 @@ export const DELETE = protectedRoute(async (auth, request) => {
   const id = url.pathname.split("/").pop()!;
 
   try {
-    await AssetService.delete(id);
+    await AssetService.delete(id, auth.organizationId);
     return apiSuccess({ success: true });
   } catch (error) {
     if (error instanceof Error) {

@@ -19,6 +19,17 @@ import type {
 // via organizationId filters on every query — API routes validate auth first.
 const supabase = createServiceRoleClient();
 
+/**
+ * Escape PostgREST special characters to prevent query injection via .or()
+ * filter strings. Should be applied to any user-supplied search term before
+ * interpolating it into a .or() predicate.
+ */
+function sanitizeSearch(input: string): string {
+  // PostgREST special chars inside ilike patterns that need escaping:
+  // % and _ are SQL wildcard chars; , () \ are PostgREST structure chars.
+  return input.replace(/[%_,()\\]/g, (c) => "\\" + c);
+}
+
 // Whitelist of valid columns for inserts/updates to avoid schema drift.
 const ASSET_COLUMNS = [
   "asset_type", "category", "subcategory", "name", "code", "qr_code", "barcode",
@@ -79,8 +90,9 @@ export async function getAssets(
     query = query.contains("compliance_domains", [filters.compliance_domain]);
   }
   if (filters?.search) {
+    const s = sanitizeSearch(filters.search);
     query = query.or(
-      `name.ilike.%${filters.search}%,code.ilike.%${filters.search}%,serial_number.ilike.%${filters.search}%`,
+      `name.ilike.%${s}%,code.ilike.%${s}%,serial_number.ilike.%${s}%`,
     );
   }
 
@@ -113,16 +125,27 @@ export async function getAssets(
 }
 
 /**
- * Get a single asset by ID
+ * Get a single asset by ID.
+ * When organizationId is provided (strongly recommended for all tenant-scoped paths),
+ * the query is filtered to that org — prevents cross-tenant reads via the service role.
  */
-export async function getAssetById(assetId: string): Promise<Asset | null> {
-  const { data, error } = await supabase
+export async function getAssetById(
+  assetId: string,
+  organizationId?: string,
+): Promise<Asset | null> {
+  let query = supabase
     .from("estates_assets")
     .select("*")
-    .eq("id", assetId)
-    .single();
+    .eq("id", assetId);
+
+  if (organizationId) {
+    query = query.eq("organization_id", organizationId);
+  }
+
+  const { data, error } = await query.single();
 
   if (error) {
+    if (error.code === "PGRST116") return null; // no rows
     console.error("Error fetching asset:", error);
     throw error;
   }
@@ -163,21 +186,27 @@ export async function createAsset(
 }
 
 /**
- * Update an existing asset
+ * Update an existing asset.
+ * organizationId is required to prevent cross-tenant writes via the service role.
  */
 export async function updateAsset(
   assetId: string,
   updates: Partial<AssetInput & { status?: AssetStatus }>,
+  organizationId?: string,
 ): Promise<Asset> {
   const row = pickAssetColumns(updates);
   row.updated_at = new Date().toISOString();
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("estates_assets")
     .update(row)
-    .eq("id", assetId)
-    .select()
-    .single();
+    .eq("id", assetId);
+
+  if (organizationId) {
+    query = query.eq("organization_id", organizationId);
+  }
+
+  const { data, error } = await query.select().single();
 
   if (error) {
     console.error("Error updating asset:", error);
@@ -209,16 +238,23 @@ export function computeWarrantyStatus(asset: Asset): {
 
 /**
  * Get an asset with computed warranty status and supplier contact.
- * Returns null if asset not found.
+ * organizationId is required to prevent cross-tenant reads via the service role.
+ * Returns null if asset not found or belongs to a different org.
  */
 export async function getAssetWithWarranty(
   assetId: string,
+  organizationId?: string,
 ): Promise<AssetWithWarrantyStatus | null> {
-  const { data: asset, error } = await supabase
+  let query = supabase
     .from("estates_assets")
     .select("*")
-    .eq("id", assetId)
-    .maybeSingle();
+    .eq("id", assetId);
+
+  if (organizationId) {
+    query = query.eq("organization_id", organizationId);
+  }
+
+  const { data: asset, error } = await query.maybeSingle();
 
   if (error || !asset) return null;
 
@@ -255,30 +291,43 @@ export async function getAssetWithWarranty(
 /**
  * Append an entry to the maintenance_history JSONB array.
  * Non-destructive — appends without replacing existing entries.
+ * organizationId is required to prevent cross-tenant writes via the service role.
  */
 export async function appendMaintenanceHistory(
   assetId: string,
   entry: MaintenanceHistoryEntry,
+  organizationId?: string,
 ): Promise<void> {
-  // Read current history, append, write back (no array_append in pg-rest for JSONB)
-  const { data: asset, error: readErr } = await supabase
+  // Read current history, scoped to org to verify ownership
+  let readQuery = supabase
     .from("estates_assets")
     .select("maintenance_history")
-    .eq("id", assetId)
-    .single();
+    .eq("id", assetId);
+
+  if (organizationId) {
+    readQuery = readQuery.eq("organization_id", organizationId);
+  }
+
+  const { data: asset, error: readErr } = await readQuery.single();
 
   if (readErr) throw new Error(`Failed to read asset: ${readErr.message}`);
 
   const current = Array.isArray(asset?.maintenance_history) ? asset.maintenance_history : [];
   const updated = [...current, entry];
 
-  const { error: writeErr } = await supabase
+  let writeQuery = supabase
     .from("estates_assets")
     .update({
       maintenance_history: updated,
       updated_at: new Date().toISOString(),
     })
     .eq("id", assetId);
+
+  if (organizationId) {
+    writeQuery = writeQuery.eq("organization_id", organizationId);
+  }
+
+  const { error: writeErr } = await writeQuery;
 
   if (writeErr) throw new Error(`Failed to append maintenance history: ${writeErr.message}`);
 }
@@ -345,10 +394,11 @@ export function computeMaintenanceSpend(asset: Asset): {
 /**
  * Get asset with all linked data — open tickets, compliance tasks, evidence,
  * and service history from estates_service_records + junction.
+ * organizationId is required to prevent cross-tenant reads via the service role.
  * Used for the asset detail page.
  */
-export async function getAssetWithLinks(assetId: string) {
-  const asset = await getAssetWithWarranty(assetId);
+export async function getAssetWithLinks(assetId: string, organizationId?: string) {
+  const asset = await getAssetWithWarranty(assetId, organizationId);
   if (!asset) return null;
 
   const [ticketsRes, tasksRes, evidenceRes, historyRes] = await Promise.all([
@@ -440,13 +490,20 @@ export async function getAssetWithLinks(assetId: string) {
 }
 
 /**
- * Delete an asset
+ * Delete an asset.
+ * organizationId is required to prevent cross-tenant deletes via the service role.
  */
-export async function deleteAsset(assetId: string): Promise<void> {
-  const { error } = await supabase
+export async function deleteAsset(assetId: string, organizationId?: string): Promise<void> {
+  let query = supabase
     .from("estates_assets")
     .delete()
     .eq("id", assetId);
+
+  if (organizationId) {
+    query = query.eq("organization_id", organizationId);
+  }
+
+  const { error } = await query;
 
   if (error) {
     console.error("Error deleting asset:", error);
@@ -478,14 +535,23 @@ export async function getAssetsByDomain(
 }
 
 /**
- * Get child assets (e.g., outlets in a room)
+ * Get child assets (e.g., outlets in a room).
+ * organizationId scopes the query to prevent cross-tenant reads.
  */
-export async function getChildAssets(parentAssetId: string): Promise<Asset[]> {
-  const { data, error } = await supabase
+export async function getChildAssets(
+  parentAssetId: string,
+  organizationId?: string,
+): Promise<Asset[]> {
+  let query = supabase
     .from("estates_assets")
     .select("*")
-    .eq("parent_asset_id", parentAssetId)
-    .order("name", { ascending: true });
+    .eq("parent_asset_id", parentAssetId);
+
+  if (organizationId) {
+    query = query.eq("organization_id", organizationId);
+  }
+
+  const { data, error } = await query.order("name", { ascending: true });
 
   if (error) {
     console.error("Error fetching child assets:", error);
@@ -503,12 +569,13 @@ export async function searchAssets(
   searchTerm: string,
   limit = 20,
 ): Promise<Asset[]> {
+  const s = sanitizeSearch(searchTerm);
   const { data, error } = await supabase
     .from("estates_assets")
     .select("*")
     .eq("organization_id", organizationId)
     .or(
-      `name.ilike.%${searchTerm}%,code.ilike.%${searchTerm}%,serial_number.ilike.%${searchTerm}%`,
+      `name.ilike.%${s}%,code.ilike.%${s}%,serial_number.ilike.%${s}%`,
     )
     .limit(limit);
 

@@ -36,8 +36,8 @@ export class HelpdeskService {
   /**
    * Get a single ticket by ID
    */
-  static async getById(ticketId: string): Promise<HelpdeskTicket | null> {
-    return getHelpdeskTicketById(ticketId);
+  static async getById(ticketId: string, organizationId?: string): Promise<HelpdeskTicket | null> {
+    return getHelpdeskTicketById(ticketId, organizationId);
   }
 
   /**
@@ -67,15 +67,19 @@ export class HelpdeskService {
   /**
    * Update an existing ticket
    */
-  static async update(ticketId: string, updates: UpdateTicketInput): Promise<HelpdeskTicket> {
-    return updateHelpdeskTicket(ticketId, updates);
+  static async update(
+    ticketId: string,
+    updates: UpdateTicketInput,
+    organizationId?: string,
+  ): Promise<HelpdeskTicket> {
+    return updateHelpdeskTicket(ticketId, updates, organizationId);
   }
 
   /**
    * Delete a ticket
    */
-  static async delete(ticketId: string): Promise<void> {
-    return deleteHelpdeskTicket(ticketId);
+  static async delete(ticketId: string, organizationId?: string): Promise<void> {
+    return deleteHelpdeskTicket(ticketId, organizationId);
   }
 
   /**

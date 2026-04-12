@@ -44,8 +44,8 @@ export class EvidenceService {
   /**
    * Get a single evidence item by ID
    */
-  static async get(evidenceId: string): Promise<EstatesEvidence | null> {
-    return getEvidenceById(evidenceId);
+  static async get(evidenceId: string, organizationId?: string): Promise<EstatesEvidence | null> {
+    return getEvidenceById(evidenceId, organizationId);
   }
 
   /**
@@ -90,10 +90,14 @@ export class EvidenceService {
         throw new Error(`Failed to upload file to storage: ${uploadError.message}`);
       }
 
-      // Create a 1-year signed URL for private bucket access
+      // Create a long-lived signed URL for private bucket access.
+      // 10 years is effectively permanent for school use.
+      // TODO: longer-term, store storage_path and regenerate on demand rather
+      // than storing the URL — signed URLs will expire if bucket policies change.
+      const TEN_YEARS_SECONDS = 60 * 60 * 24 * 365 * 10;
       const { data: signed, error: signedError } = await supabase.storage
         .from(bucket)
-        .createSignedUrl(filePath, 60 * 60 * 24 * 365);
+        .createSignedUrl(filePath, TEN_YEARS_SECONDS);
 
       if (signedError || !signed?.signedUrl) {
         throw new Error(`Failed to create signed URL: ${signedError?.message || "unknown"}`);
@@ -173,14 +177,15 @@ export class EvidenceService {
       ai_verified?: boolean;
       verification_notes?: string;
     },
+    organizationId?: string,
   ): Promise<EstatesEvidence> {
-    // Check evidence exists
-    const existing = await getEvidenceById(evidenceId);
+    // Check evidence exists (scoped to org when provided)
+    const existing = await getEvidenceById(evidenceId, organizationId);
     if (!existing) {
       throw new Error(`Evidence not found: ${evidenceId}`);
     }
 
-    return dbUpdateEvidence(evidenceId, updates);
+    return dbUpdateEvidence(evidenceId, updates, organizationId);
   }
 
   /**
@@ -208,8 +213,8 @@ export class EvidenceService {
   /**
    * Delete evidence
    */
-  static async delete(evidenceId: string): Promise<void> {
-    const evidence = await getEvidenceById(evidenceId);
+  static async delete(evidenceId: string, organizationId?: string): Promise<void> {
+    const evidence = await getEvidenceById(evidenceId, organizationId);
     if (!evidence) {
       throw new Error(`Evidence not found: ${evidenceId}`);
     }

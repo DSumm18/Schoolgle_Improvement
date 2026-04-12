@@ -18,7 +18,7 @@ export const GET = protectedRoute(async (auth, request) => {
   const segments = url.pathname.split("/");
   const id = segments[segments.length - 1];
 
-  const evidence = await EvidenceService.get(id);
+  const evidence = await EvidenceService.get(id, auth.organizationId);
 
   if (!evidence) {
     return apiError("Evidence not found", 404);
@@ -38,7 +38,7 @@ export const PUT = protectedRoute(
 
     const updates = await request.json();
 
-    const evidence = await EvidenceService.update(id, updates);
+    const evidence = await EvidenceService.update(id, updates, auth.organizationId);
 
     return apiSuccess({ data: evidence });
   },
@@ -54,7 +54,7 @@ export const DELETE = protectedRoute(
     const segments = url.pathname.split("/");
     const id = segments[segments.length - 1];
 
-    await EvidenceService.delete(id);
+    await EvidenceService.delete(id, auth.organizationId);
 
     return apiSuccess({ success: true });
   },
