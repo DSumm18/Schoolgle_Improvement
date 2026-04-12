@@ -1074,7 +1074,31 @@ export default function AssetDetailPage() {
                 </div>
               )}
 
-              <Button variant="outline" size="sm">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  // Open Ed chat with context about this asset for logging a service
+                  const askEdEl = document.querySelector('[title="Open Assistant — drag to move"]') as HTMLElement;
+                  if (askEdEl) askEdEl.click();
+                  // Set a helpful prompt after a short delay for Ed to open
+                  setTimeout(() => {
+                    const edInput = document.querySelector('textarea[placeholder*="Ask Ed"]') as HTMLTextAreaElement;
+                    if (edInput) {
+                      const nativeSet = Object.getOwnPropertyDescriptor(
+                        window.HTMLTextAreaElement.prototype,
+                        "value",
+                      )?.set;
+                      nativeSet?.call(
+                        edInput,
+                        `I need to log a service visit for asset ${asset.code || asset.name}. The contractor has completed work and I need to record it.`,
+                      );
+                      edInput.dispatchEvent(new Event("input", { bubbles: true }));
+                      edInput.focus();
+                    }
+                  }, 500);
+                }}
+              >
                 <Plus className="w-3.5 h-3.5 mr-1.5" />
                 Add service record
               </Button>
