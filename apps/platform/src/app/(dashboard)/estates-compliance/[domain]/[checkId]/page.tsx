@@ -194,9 +194,9 @@ export default function CheckDetailPage() {
   const [completionStatus, setCompletionStatus] =
     useState<CompletionStatus>("completed");
   const [notes, setNotes] = useState("");
-  const [inspectionDate, setInspectionDate] = useState(
-    new Date().toISOString().split("T")[0],
-  );
+  const todayStr = new Date().toISOString().split("T")[0];
+  const [inspectionDate, setInspectionDate] = useState(todayStr);
+  const [docsReceivedDate, setDocsReceivedDate] = useState(todayStr);
   const [nextDueDate, setNextDueDate] = useState("");
   const [evidenceFiles, setEvidenceFiles] = useState<EvidenceFile[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -425,6 +425,9 @@ export default function CheckDetailPage() {
               completionStatus === "incomplete" ? "pending" : completionStatus,
             completion_notes: notes,
             completed_at: new Date(inspectionDate + "T12:00:00").toISOString(),
+            docs_received_at: new Date(
+              docsReceivedDate + "T12:00:00",
+            ).toISOString(),
             next_due_date: nextDueDate,
             evidence_ids: uploadedIds,
             documents_received:
@@ -894,8 +897,8 @@ export default function CheckDetailPage() {
               )}
             </div>
 
-            {/* Inspection date + Next due date */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Dates: inspection, docs received, next due (auto) */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                   Date of inspection
@@ -909,26 +912,40 @@ export default function CheckDetailPage() {
                       calculateNextDueDate(check.frequency, e.target.value),
                     );
                   }}
-                  className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-teal-500"
                 />
                 <p className="text-xs text-gray-400 mt-1">
-                  When the check was actually carried out (not when docs were
-                  received)
+                  When the check was carried out
                 </p>
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Next due date
+                  Docs received
                 </label>
                 <input
                   type="date"
-                  value={nextDueDate}
-                  onChange={(e) => setNextDueDate(e.target.value)}
-                  className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  value={docsReceivedDate}
+                  onChange={(e) => setDocsReceivedDate(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-teal-500"
                 />
                 <p className="text-xs text-gray-400 mt-1">
-                  Auto-calculated from inspection date + {check.frequency}{" "}
-                  frequency — adjust if needed
+                  When certificate/report arrived
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  Next due
+                </label>
+                <div className="px-3 py-2 rounded-lg border border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-800 text-sm font-bold text-green-800 dark:text-green-300">
+                  {nextDueDate
+                    ? new Date(nextDueDate + "T00:00:00").toLocaleDateString(
+                        "en-GB",
+                        { day: "numeric", month: "short", year: "numeric" },
+                      )
+                    : "—"}
+                </div>
+                <p className="text-xs text-gray-400 mt-1">
+                  Auto-calculated ({check.frequency})
                 </p>
               </div>
             </div>
