@@ -70,7 +70,11 @@ interface CompletionRecord {
 
 function formatDate(dateStr?: string) {
   if (!dateStr) return "Never";
-  return new Date(dateStr).toLocaleDateString("en-GB", {
+  // Parse as local date to avoid timezone shifts with YYYY-MM-DD strings
+  const d = dateStr.includes("T")
+    ? new Date(dateStr)
+    : new Date(dateStr + "T12:00:00");
+  return d.toLocaleDateString("en-GB", {
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -107,30 +111,45 @@ function calculateNextDueDate(
   frequency: string,
   fromDate?: string,
 ): string {
-  const next = fromDate ? new Date(fromDate + "T00:00:00") : new Date();
+  // Parse as local date parts to avoid timezone shifts
+  const parts = fromDate
+    ? fromDate.split("-").map(Number)
+    : [
+        new Date().getFullYear(),
+        new Date().getMonth() + 1,
+        new Date().getDate(),
+      ];
+  let [year, month, day] = parts;
+
   switch (frequency) {
     case "daily":
-      next.setDate(next.getDate() + 1);
+      day += 1;
       break;
     case "weekly":
-      next.setDate(next.getDate() + 7);
+      day += 7;
       break;
     case "monthly":
-      next.setMonth(next.getMonth() + 1);
+      month += 1;
       break;
     case "quarterly":
-      next.setMonth(next.getMonth() + 3);
+      month += 3;
       break;
     case "annually":
-      next.setFullYear(next.getFullYear() + 1);
+      year += 1;
       break;
     case "termly":
-      next.setMonth(next.getMonth() + 4);
+      month += 4;
       break;
     default:
-      next.setMonth(next.getMonth() + 1);
+      month += 1;
   }
-  return next.toISOString().split("T")[0];
+
+  // Let Date normalise overflow (e.g. month 13 → next year)
+  const result = new Date(year, month - 1, day);
+  const y = result.getFullYear();
+  const m = String(result.getMonth() + 1).padStart(2, "0");
+  const d = String(result.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 function statusBadgeClasses(status: string) {
