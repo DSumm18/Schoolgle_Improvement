@@ -290,7 +290,11 @@ export default function CheckDetailPage() {
                   }
                 }
 
-                return { ...record, evidence };
+                return {
+                  ...record,
+                  next_due: record.next_due_date || record.next_due || "",
+                  evidence,
+                };
               }),
             );
 
@@ -937,12 +941,7 @@ export default function CheckDetailPage() {
                   Next due
                 </label>
                 <div className="px-3 py-2 rounded-lg border border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-800 text-sm font-bold text-green-800 dark:text-green-300">
-                  {nextDueDate
-                    ? new Date(nextDueDate + "T00:00:00").toLocaleDateString(
-                        "en-GB",
-                        { day: "numeric", month: "short", year: "numeric" },
-                      )
-                    : "—"}
+                  {nextDueDate ? formatDate(nextDueDate) : "—"}
                 </div>
                 <p className="text-xs text-gray-400 mt-1">
                   Auto-calculated ({check.frequency})
