@@ -58,6 +58,8 @@ interface CheckWithStatus {
   nextDue: Date | null;
   lastCompleted: string | null;
   completionCount: number;
+  awaitingDocs: boolean;
+  completionStatus: string | null;
 }
 
 interface CompletionRecord {
@@ -65,7 +67,11 @@ interface CompletionRecord {
   status: string;
   completed_at: string | null;
   next_due_date: string | null;
+  documents_received: boolean;
+  contractor_id: string | null;
 }
+
+type StatusFilter = "needs-doing" | "awaiting-docs" | "completed" | "all";
 
 type ActiveTab = "checks" | "routines";
 
@@ -200,6 +206,7 @@ export default function EstatesComplianceDashboard() {
     ComplianceDomain | "all"
   >("all");
   const [notDueExpanded, setNotDueExpanded] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("needs-doing");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [edOpen, setEdOpen] = useState(false);
   const [edMinimized, setEdMinimized] = useState(false);
@@ -274,11 +281,16 @@ export default function EstatesComplianceDashboard() {
               nextDue: null,
               lastCompleted: rec?.completed_at ?? null,
               completionCount: 0,
+              awaitingDocs: false,
+              completionStatus: "not_applicable",
             };
           }
 
           const nextDue = rec?.next_due_date ? new Date(rec.next_due_date) : null;
           const lastCompleted = rec?.completed_at ?? null;
+          const awaitingDocs =
+            rec?.status === "awaiting_documentation" ||
+            (rec?.status === "completed" && rec?.documents_received === false);
 
           const urgency = computeUrgency(nextDue, lastCompleted, now);
           const daysUntilDue = nextDue
@@ -294,6 +306,8 @@ export default function EstatesComplianceDashboard() {
             nextDue,
             lastCompleted,
             completionCount: rec ? 1 : 0,
+            awaitingDocs,
+            completionStatus: rec?.status ?? null,
           };
         });
 
@@ -326,6 +340,8 @@ export default function EstatesComplianceDashboard() {
               nextDue: null,
               lastCompleted: null,
               completionCount: 0,
+              awaitingDocs: false,
+              completionStatus: null,
             })),
           );
           setLoading(false);
@@ -360,6 +376,7 @@ export default function EstatesComplianceDashboard() {
   const completed = applicableChecks.filter(
     (c) => c.lastCompleted !== null,
   );
+  const awaitingDocsChecks = applicableChecks.filter((c) => c.awaitingDocs);
   const total = applicableChecks.length;
   const compliancePct =
     total > 0 ? Math.round((completed.length / total) * 100) : 0;
@@ -395,13 +412,38 @@ export default function EstatesComplianceDashboard() {
   // FILTERED + GROUPED CHECKS
   // -------------------------------------------------------------------------
 
-  const visibleChecks =
+  // Apply domain filter
+  const domainFiltered =
     selectedDomain === "all"
       ? checksWithStatus
       : checksWithStatus.filter((c) => c.check.domain === selectedDomain);
 
-  const dueChecks = visibleChecks.filter((c) => c.urgency !== "not-due");
-  const notDueChecks = visibleChecks.filter((c) => c.urgency === "not-due");
+  // Apply status filter
+  const visibleChecks = domainFiltered.filter((c) => {
+    switch (statusFilter) {
+      case "needs-doing":
+        return (
+          c.urgency !== "not-applicable" &&
+          !c.awaitingDocs &&
+          c.completionStatus !== "completed"
+        ) || c.urgency === "overdue" || c.urgency === "due-today" || c.urgency === "due-this-week" || c.urgency === "due-this-month" || c.urgency === "not-due";
+      case "awaiting-docs":
+        return c.awaitingDocs;
+      case "completed":
+        return c.lastCompleted !== null && !c.awaitingDocs && c.urgency !== "not-applicable";
+      case "all":
+        return true;
+      default:
+        return true;
+    }
+  });
+
+  const dueChecks = visibleChecks.filter(
+    (c) => c.urgency !== "not-due" && c.urgency !== "not-applicable",
+  );
+  const notDueChecks = visibleChecks.filter(
+    (c) => c.urgency === "not-due" || c.urgency === "not-applicable",
+  );
 
   // -------------------------------------------------------------------------
   // RENDER
@@ -614,6 +656,59 @@ export default function EstatesComplianceDashboard() {
               })}
             </div>
           )}
+
+          {/* Status filter bar — only shown on Compliance Checks tab */}
+          {activeTab === "checks" && (
+            <div className="flex gap-1.5 pt-2">
+              {(
+                [
+                  {
+                    key: "needs-doing" as StatusFilter,
+                    label: "Needs doing",
+                    count: overdue.length + dueThisWeek.length,
+                  },
+                  {
+                    key: "awaiting-docs" as StatusFilter,
+                    label: "Awaiting docs",
+                    count: awaitingDocsChecks.length,
+                  },
+                  {
+                    key: "completed" as StatusFilter,
+                    label: "Completed",
+                    count: completed.length,
+                  },
+                  { key: "all" as StatusFilter, label: "All checks", count: total },
+                ] as const
+              ).map(({ key, label, count }) => (
+                <button
+                  key={key}
+                  onClick={() => setStatusFilter(key)}
+                  className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                    statusFilter === key
+                      ? key === "awaiting-docs"
+                        ? "bg-amber-100 text-amber-800 border border-amber-300"
+                        : "bg-gray-900 text-white dark:bg-white dark:text-gray-900"
+                      : "text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  }`}
+                >
+                  {label}
+                  {!loading && count > 0 && (
+                    <span
+                      className={`ml-1.5 text-[10px] ${
+                        statusFilter === key
+                          ? "opacity-80"
+                          : key === "awaiting-docs" && count > 0
+                            ? "bg-amber-200 text-amber-800 px-1.5 py-0.5 rounded-full"
+                            : "opacity-50"
+                      }`}
+                    >
+                      {count}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* ================================================================
@@ -711,11 +806,21 @@ export default function EstatesComplianceDashboard() {
 // ============================================================================
 
 function CheckRow({ item }: { item: CheckWithStatus }) {
-  const { check, urgency } = item;
+  const { check, urgency, awaitingDocs, lastCompleted } = item;
   const metadata = DOMAIN_METADATA[check.domain];
   const badge = formatDueBadge(item);
   const border = leftBorderClass(urgency);
   const isNA = urgency === "not-applicable";
+
+  // Calculate days since completion for awaiting docs
+  let daysWaiting: number | null = null;
+  if (awaitingDocs && lastCompleted) {
+    const completedDate = new Date(lastCompleted);
+    const now = new Date();
+    daysWaiting = Math.floor(
+      (now.getTime() - completedDate.getTime()) / (1000 * 60 * 60 * 24),
+    );
+  }
 
   return (
     <Link
@@ -727,21 +832,36 @@ function CheckRow({ item }: { item: CheckWithStatus }) {
 
       {/* Check info */}
       <div className="flex-1 min-w-0">
-        <p className={`text-sm font-medium truncate ${isNA ? "text-gray-400 line-through" : "text-gray-900"}`}>
+        <p
+          className={`text-sm font-medium truncate ${isNA ? "text-gray-400 line-through" : "text-gray-900"}`}
+        >
           {check.name}
         </p>
         <p className="text-xs text-gray-500 truncate">
           {metadata.name} &middot; {check.frequency}
           {isNA && " · Not applicable to this school"}
+          {awaitingDocs && daysWaiting !== null && (
+            <span className="text-amber-600 font-medium">
+              {" "}
+              · Docs outstanding {daysWaiting}d
+            </span>
+          )}
         </p>
       </div>
 
-      {/* Due date badge */}
-      <span
-        className={`flex-shrink-0 px-2 py-0.5 rounded-full text-[11px] font-medium border ${badge.className}`}
-      >
-        {badge.label}
-      </span>
+      {/* Badge area */}
+      <div className="flex items-center gap-2 flex-shrink-0">
+        {awaitingDocs && (
+          <span className="px-2 py-0.5 rounded-full text-[11px] font-medium border bg-amber-50 text-amber-700 border-amber-200">
+            Awaiting docs
+          </span>
+        )}
+        <span
+          className={`px-2 py-0.5 rounded-full text-[11px] font-medium border ${badge.className}`}
+        >
+          {badge.label}
+        </span>
+      </div>
 
       {/* Chevron */}
       <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0 group-hover:text-gray-600 transition-colors" />
