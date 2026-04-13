@@ -27,6 +27,9 @@ export * from './types';
 // Agent registry and definitions
 export * from './agents';
 
+// Ed's core personality preamble
+export { ED_PERSONALITY_PREAMBLE } from './agents/personality';
+
 // Orchestrator (main entry point)
 export * from './orchestrator';
 
