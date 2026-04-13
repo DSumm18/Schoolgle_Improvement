@@ -318,6 +318,59 @@ export async function toneCheck(
 }
 
 // ============================================================================
+// Brevity Check
+// ============================================================================
+
+/**
+ * Waffle patterns — things Ed should never say
+ */
+const WAFFLE_PATTERNS = [
+  /great question/gi,
+  /i'd be happy to help/gi,
+  /i would be happy to/gi,
+  /absolutely[!,]/gi,
+  /that's a really good point/gi,
+  /let me know if you need anything else/gi,
+  /don't hesitate to ask/gi,
+  /feel free to reach out/gi,
+  /i hope this helps/gi,
+  /here are some things i can help with/gi,
+  /i can assist you with/gi,
+  /i can help you with/gi,
+  /is there anything else/gi,
+];
+
+/**
+ * Check for unnecessary verbosity and waffle
+ */
+export function brevityCheck(response: string): GuardrailCheckResult {
+  // Check for waffle patterns
+  for (const pattern of WAFFLE_PATTERNS) {
+    if (pattern.test(response)) {
+      return {
+        passed: false,
+        confidence: 0.8,
+        reason: `Contains filler phrase: ${pattern.source}`,
+        suggestion: "Remove filler phrases — be direct.",
+      };
+    }
+  }
+
+  // Check for capability lists (bullet points starting with "I can")
+  const capabilityListMatch = response.match(/^[•\-\*]\s*(I can|Help with|Assist with)/gim);
+  if (capabilityListMatch && capabilityListMatch.length >= 3) {
+    return {
+      passed: false,
+      confidence: 0.7,
+      reason: "Response contains a capability list",
+      suggestion: "Don't list capabilities — offer a specific action instead.",
+    };
+  }
+
+  return { passed: true, confidence: 1.0 };
+}
+
+// ============================================================================
 // Permission Check
 // ============================================================================
 
@@ -438,6 +491,9 @@ export async function applyGuardrails(
     permissionCheck(response, context),
   ]);
 
+  // Brevity check (synchronous, fast)
+  const brevity = brevityCheck(response);
+
   // Confidence check is synchronous
   const confidenceResult = await confidenceCheck(response, context);
 
@@ -458,6 +514,13 @@ export async function applyGuardrails(
       warning: "Tone adjustment recommended",
       response: await adjustTone(response, tone.reason),
     };
+  }
+
+  // 2b. Brevity check — strip waffle if detected
+  if (!brevity.passed) {
+    // Log for monitoring but don't block — the personality preamble should
+    // prevent most waffle. If this fires frequently, the prompts need tuning.
+    console.warn(`[Guardrails] Brevity check failed: ${brevity.reason}`);
   }
 
   // 3. Permission check - access control
