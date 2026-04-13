@@ -64,6 +64,13 @@ describe('parseGradingResponse', () => {
   it('throws on invalid grade', () => {
     expect(() => parseGradingResponse(JSON.stringify({ grade: 'INVALID', score: 1, total: 1, misconceptions: [], feedback: '', next_steps: '', confidence: 0.5 }))).toThrow();
   });
+
+  it('throws on missing feedback', () => {
+    expect(() => parseGradingResponse(JSON.stringify({
+      grade: 'EXS', score: 5, total: 6, misconceptions: [],
+      feedback: '', next_steps: 'Do more practice', confidence: 0.8
+    }))).toThrow('feedback');
+  });
 });
 
 describe('computeTriangulation', () => {
@@ -84,5 +91,9 @@ describe('computeTriangulation', () => {
   it('returns pending when moderator is null', () => {
     expect(computeTriangulation('EXS', 'EXS', null)).toBe('pending');
     expect(computeTriangulation('EXS', 'WTS', null)).toBe('pending');
+  });
+
+  it('returns pending when aiGrade is null', () => {
+    expect(computeTriangulation('EXS', null, 'WTS')).toBe('pending');
   });
 });

@@ -83,13 +83,20 @@ export function parseGradingResponse(raw: string): GradingResult {
       }))
     : [];
 
+  if (typeof parsed.feedback !== 'string' || !parsed.feedback.trim()) {
+    throw new Error('Missing required field: feedback must be a non-empty string');
+  }
+  if (typeof parsed.next_steps !== 'string' || !parsed.next_steps.trim()) {
+    throw new Error('Missing required field: next_steps must be a non-empty string');
+  }
+
   return {
     grade: grade as AttainmentLevel,
     score: parsed.score as number,
     total: parsed.total as number,
     misconceptions,
-    feedback: String(parsed.feedback || ''),
-    next_steps: String(parsed.next_steps || ''),
+    feedback: parsed.feedback as string,
+    next_steps: parsed.next_steps as string,
     confidence: parsed.confidence as number,
   };
 }
@@ -101,13 +108,14 @@ export function computeTriangulation(
   aiGrade: string | null,
   moderatorGrade: string | null,
 ): TriangulationStatus {
-  if (moderatorGrade === null) return 'pending';
+  // Can't triangulate without all three voices
+  if (aiGrade === null || moderatorGrade === null) return 'pending';
 
-  const grades = [teacherGrade, aiGrade, moderatorGrade].filter(Boolean) as string[];
+  const grades = [teacherGrade, aiGrade, moderatorGrade];
   const unique = new Set(grades);
 
   if (unique.size === 1) return 'aligned';
-  if (unique.size === grades.length && grades.length === 3) return 'disputed';
+  if (unique.size === 3) return 'disputed';
   return 'majority';
 }
 
@@ -145,7 +153,7 @@ export async function extractTextFromImage(imageUrl: string): Promise<{ text: st
   const pages = annotation.pages || [];
   const avgConfidence = pages.length > 0
     ? pages.reduce((sum: number, p: { confidence?: number }) => sum + (p.confidence || 0), 0) / pages.length
-    : 0.5;
+    : 0;
 
   return { text: annotation.text || '', confidence: avgConfidence };
 }
@@ -165,7 +173,7 @@ export async function gradeWork(
       Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
     },
     body: JSON.stringify({
-      model: 'google/gemini-2.5-flash-preview',
+      model: 'google/gemini-2.5-flash',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.2,
       response_format: { type: 'json_object' },
