@@ -423,11 +423,11 @@ export default function CheckDetailPage() {
             compliance_domain: domainSlug,
             status:
               completionStatus === "incomplete" ? "pending" : completionStatus,
-            completion_notes: notes,
+            completion_notes:
+              docsReceivedDate !== inspectionDate
+                ? `${notes}\n\n[Docs received: ${docsReceivedDate}]`
+                : notes,
             completed_at: new Date(inspectionDate + "T12:00:00").toISOString(),
-            docs_received_at: new Date(
-              docsReceivedDate + "T12:00:00",
-            ).toISOString(),
             next_due_date: nextDueDate,
             evidence_ids: uploadedIds,
             documents_received:
