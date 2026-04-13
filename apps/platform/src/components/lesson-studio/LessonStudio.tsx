@@ -336,6 +336,7 @@ export function LessonStudio() {
           <LessonPlanPanel
             plan={selectedPlan}
             slot={selectedSlot}
+            pupils={pupils}
             onClose={() => {
               setSelectedPlan(null);
               setSelectedSlot(null);

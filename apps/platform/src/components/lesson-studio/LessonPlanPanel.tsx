@@ -1,16 +1,18 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import {
   X, BookOpen, Target, Sparkles, Users, Brain, FileText,
   Zap, Pencil, ClipboardList, Presentation, Download,
 } from "lucide-react";
-import type { LSLessonPlan, LSTimetableSlot, PlanSection, DifferentiationGroup, SENDAdaptation, VocabularyItem } from "@/types/lesson-studio";
+import type { LSLessonPlan, LSTimetableSlot, LSPupil, PlanSection, DifferentiationGroup, SENDAdaptation, VocabularyItem } from "@/types/lesson-studio";
+import { AssessmentPanel } from "./AssessmentPanel";
 import { SUBJECT_COLORS, STATUS_CONFIG, DAY_NAMES } from "@/types/lesson-studio";
 
 interface LessonPlanPanelProps {
   plan: LSLessonPlan;
   slot: LSTimetableSlot;
+  pupils: LSPupil[];
   onClose: () => void;
   onTeach: (planId: string) => void;
   onMarkTaught: (planId: string) => void;
@@ -30,57 +32,89 @@ const DIFF_COLORS: Record<string, string> = {
   Guided: "border-red-400 bg-red-50 dark:bg-red-900/20",
 };
 
-export function LessonPlanPanel({ plan, slot, onClose, onTeach, onMarkTaught }: LessonPlanPanelProps) {
+export function LessonPlanPanel({ plan, slot, pupils, onClose, onTeach, onMarkTaught }: LessonPlanPanelProps) {
+  const [activeTab, setActiveTab] = useState<"plan" | "assessment">("plan");
   const sc = STATUS_CONFIG[plan.status];
   const subjectColor = SUBJECT_COLORS[plan.subject] ?? SUBJECT_COLORS.English;
 
   return (
     <div className="fixed inset-y-0 right-0 w-full max-w-2xl bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-700 shadow-2xl z-50 overflow-y-auto">
       {/* Header */}
-      <div className={`sticky top-0 z-10 border-b border-slate-200 dark:border-slate-700 p-4 ${subjectColor.bg}`}>
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${sc.bg} ${sc.color}`}>
-                {sc.label}
-              </span>
-              <span className="text-xs text-slate-500">
-                {DAY_NAMES[plan.day_of_week]} {slot.start_time.slice(0, 5)}–{slot.end_time.slice(0, 5)}
-              </span>
-            </div>
-            <h2 className={`text-lg font-bold ${subjectColor.text}`}>{plan.title}</h2>
-            {plan.scheme_name && (
-              <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                {plan.scheme_name} {plan.scheme_step && `• ${plan.scheme_step}`}
+      <div className={`sticky top-0 z-10 border-b border-slate-200 dark:border-slate-700 ${subjectColor.bg}`}>
+        <div className="p-4">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${sc.bg} ${sc.color}`}>
+                  {sc.label}
+                </span>
+                <span className="text-xs text-slate-500">
+                  {DAY_NAMES[plan.day_of_week]} {slot.start_time.slice(0, 5)}–{slot.end_time.slice(0, 5)}
+                </span>
               </div>
+              <h2 className={`text-lg font-bold ${subjectColor.text}`}>{plan.title}</h2>
+              {plan.scheme_name && (
+                <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  {plan.scheme_name} {plan.scheme_step && `• ${plan.scheme_step}`}
+                </div>
+              )}
+            </div>
+            <button onClick={onClose} className="p-1 hover:bg-slate-200/50 rounded-lg transition-colors">
+              <X className="w-5 h-5 text-slate-500" />
+            </button>
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex gap-2 mt-3">
+            <button
+              onClick={() => onTeach(plan.id)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-600 text-white text-xs font-medium rounded-lg hover:bg-teal-700 transition-colors"
+            >
+              <Presentation className="w-3.5 h-3.5" />
+              Teach Mode
+            </button>
+            {plan.status !== "taught" && (
+              <button
+                onClick={() => onMarkTaught(plan.id)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700 transition-colors"
+              >
+                <ClipboardList className="w-3.5 h-3.5" />
+                Mark Taught
+              </button>
             )}
           </div>
-          <button onClick={onClose} className="p-1 hover:bg-slate-200/50 rounded-lg transition-colors">
-            <X className="w-5 h-5 text-slate-500" />
-          </button>
         </div>
 
-        {/* Action buttons */}
-        <div className="flex gap-2 mt-3">
+        {/* Tab bar */}
+        <div className="flex border-t border-slate-200 dark:border-slate-700">
           <button
-            onClick={() => onTeach(plan.id)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-600 text-white text-xs font-medium rounded-lg hover:bg-teal-700 transition-colors"
+            onClick={() => setActiveTab("plan")}
+            className={`flex-1 text-sm py-2.5 px-4 border-b-2 transition-colors ${
+              activeTab === "plan"
+                ? "font-semibold text-indigo-600 border-indigo-500"
+                : "font-medium text-gray-500 border-transparent hover:text-gray-700"
+            }`}
           >
-            <Presentation className="w-3.5 h-3.5" />
-            Teach Mode
+            Lesson Plan
           </button>
-          {plan.status !== "taught" && (
-            <button
-              onClick={() => onMarkTaught(plan.id)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700 transition-colors"
-            >
-              <ClipboardList className="w-3.5 h-3.5" />
-              Mark Taught
-            </button>
-          )}
+          <button
+            onClick={() => setActiveTab("assessment")}
+            className={`flex-1 text-sm py-2.5 px-4 border-b-2 transition-colors ${
+              activeTab === "assessment"
+                ? "font-semibold text-indigo-600 border-indigo-500"
+                : "font-medium text-gray-500 border-transparent hover:text-gray-700"
+            }`}
+          >
+            Assessment
+          </button>
         </div>
       </div>
 
+      {activeTab === "assessment" ? (
+        <div className="p-4">
+          <AssessmentPanel lessonPlanId={plan.id} pupils={pupils} />
+        </div>
+      ) : (
       <div className="p-4 space-y-6">
         {/* Learning Objective */}
         <Section title="Learning Objective" icon={<Target className="w-4 h-4 text-teal-500" />}>
@@ -177,6 +211,7 @@ export function LessonPlanPanel({ plan, slot, onClose, onTeach, onMarkTaught }: 
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }
