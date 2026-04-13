@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { ModulePageHeader } from "@/components/ui/module-page-header";
 import { TimetableGrid } from "./TimetableGrid";
+import { CalendarView } from "./CalendarView";
 import { LessonPlanPanel } from "./LessonPlanPanel";
 import { TeachMode } from "./TeachMode";
 import type {
@@ -21,6 +22,7 @@ import type {
   LSPupil,
   LSTimetableSlot,
   LSLessonPlan,
+  CalendarEventWithPlan,
 } from "@/types/lesson-studio";
 import { useAuth } from "@/context/SupabaseAuthContext";
 
@@ -61,6 +63,7 @@ export function LessonStudio() {
     null,
   );
   const [teachMode, setTeachMode] = useState<LSLessonPlan | null>(null);
+  const [viewMode, setViewMode] = useState<"calendar" | "timetable">("calendar");
 
   // Load classes on mount
   useEffect(() => {
@@ -269,7 +272,7 @@ export function LessonStudio() {
         )}
       </div>
 
-      {/* Week navigator */}
+      {/* Week navigator + view toggle */}
       <div className="flex items-center gap-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-2">
         <button
           onClick={prevWeek}
@@ -295,10 +298,61 @@ export function LessonStudio() {
         >
           <ChevronRight className="w-4 h-4 text-slate-500" />
         </button>
+
+        {/* View toggle */}
+        <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5 ml-2">
+          <button
+            onClick={() => setViewMode("calendar")}
+            className={`px-2.5 py-1 text-xs rounded-md transition-all ${
+              viewMode === "calendar"
+                ? "bg-white shadow-sm font-semibold text-gray-900"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            Calendar
+          </button>
+          <button
+            onClick={() => setViewMode("timetable")}
+            className={`px-2.5 py-1 text-xs rounded-md transition-all ${
+              viewMode === "timetable"
+                ? "bg-white shadow-sm font-semibold text-gray-900"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            Timetable
+          </button>
+        </div>
       </div>
 
-      {/* Timetable Grid */}
-      {selectedClass && slots.length > 0 ? (
+      {/* Calendar or Timetable view */}
+      {viewMode === "calendar" ? (
+        selectedClass ? (
+          <CalendarView
+            classes={classes}
+            selectedClassId={selectedClass.id}
+            onEventClick={(evt: CalendarEventWithPlan) => {
+              // If the event has a lesson plan, open it in the plan panel
+              if (evt.lesson_plan) {
+                const matchingSlot = slots.find(
+                  (s) =>
+                    s.day_of_week ===
+                      new Date(evt.event_date).getDay() &&
+                    s.subject === evt.subject,
+                );
+                if (matchingSlot) {
+                  setSelectedSlot(matchingSlot);
+                  setSelectedPlan(evt.lesson_plan as LSLessonPlan);
+                }
+              }
+            }}
+          />
+        ) : (
+          <div className="text-center py-12 text-slate-400">
+            <GraduationCap className="w-12 h-12 mx-auto mb-3 opacity-50" />
+            <p className="text-sm">Select a class to get started.</p>
+          </div>
+        )
+      ) : selectedClass && slots.length > 0 ? (
         <TimetableGrid
           slots={slots}
           plans={plans}
