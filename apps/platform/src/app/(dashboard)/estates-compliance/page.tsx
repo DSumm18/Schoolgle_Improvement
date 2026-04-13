@@ -48,7 +48,8 @@ type CheckUrgency =
   | "due-today"
   | "due-this-week"
   | "due-this-month"
-  | "not-due";
+  | "not-due"
+  | "not-applicable";
 
 interface CheckWithStatus {
   check: StatutoryCheck;
@@ -97,6 +98,7 @@ function urgencyOrder(u: CheckUrgency): number {
     case "due-this-week": return 2;
     case "due-this-month": return 3;
     case "not-due": return 4;
+    case "not-applicable": return 5;
   }
 }
 
@@ -136,6 +138,12 @@ function formatDueBadge(check: CheckWithStatus): {
       className: "bg-gray-100 text-gray-600 border-gray-200",
     };
   }
+  if (urgency === "not-applicable") {
+    return {
+      label: "N/A",
+      className: "bg-slate-100 text-slate-400 border-slate-200",
+    };
+  }
   if (urgency === "not-due") {
     if (nextDue) {
       const dateStr = nextDue.toLocaleDateString("en-GB", {
@@ -160,6 +168,7 @@ function leftBorderClass(urgency: CheckUrgency): string {
     case "overdue": return "border-l-4 border-l-red-500";
     case "due-today": return "border-l-4 border-l-amber-500";
     case "due-this-week": return "border-l-4 border-l-amber-300";
+    case "not-applicable": return "border-l-4 border-l-slate-200";
     default: return "";
   }
 }
@@ -255,6 +264,19 @@ export default function EstatesComplianceDashboard() {
         const allChecks = getAllStatutoryChecks();
         const result: CheckWithStatus[] = allChecks.map((check) => {
           const rec = completionMap.get(check.id);
+
+          // If marked as not applicable, skip urgency calculation
+          if (rec?.status === "not_applicable") {
+            return {
+              check,
+              urgency: "not-applicable" as CheckUrgency,
+              daysUntilDue: null,
+              nextDue: null,
+              lastCompleted: rec?.completed_at ?? null,
+              completionCount: 0,
+            };
+          }
+
           const nextDue = rec?.next_due_date ? new Date(rec.next_due_date) : null;
           const lastCompleted = rec?.completed_at ?? null;
 
@@ -324,12 +346,21 @@ export default function EstatesComplianceDashboard() {
   const now = new Date();
   now.setHours(0, 0, 0, 0);
 
-  const overdue = checksWithStatus.filter((c) => c.urgency === "overdue");
-  const dueThisWeek = checksWithStatus.filter(
+  // Exclude N/A checks from stats — they shouldn't count against compliance
+  const applicableChecks = checksWithStatus.filter(
+    (c) => c.urgency !== "not-applicable",
+  );
+  const naChecks = checksWithStatus.filter(
+    (c) => c.urgency === "not-applicable",
+  );
+  const overdue = applicableChecks.filter((c) => c.urgency === "overdue");
+  const dueThisWeek = applicableChecks.filter(
     (c) => c.urgency === "due-today" || c.urgency === "due-this-week",
   );
-  const completed = checksWithStatus.filter((c) => c.lastCompleted !== null);
-  const total = checksWithStatus.length;
+  const completed = applicableChecks.filter(
+    (c) => c.lastCompleted !== null,
+  );
+  const total = applicableChecks.length;
   const compliancePct =
     total > 0 ? Math.round((completed.length / total) * 100) : 0;
 
@@ -337,7 +368,7 @@ export default function EstatesComplianceDashboard() {
   const domainStats = Object.keys(DOMAIN_METADATA).map((d) => {
     const domain = d as ComplianceDomain;
     const domainChecks = checksWithStatus.filter(
-      (c) => c.check.domain === domain,
+      (c) => c.check.domain === domain && c.urgency !== "not-applicable",
     );
     const overdueCount = domainChecks.filter((c) => c.urgency === "overdue").length;
     const dueSoonCount = domainChecks.filter(
@@ -346,6 +377,9 @@ export default function EstatesComplianceDashboard() {
     const completedCount = domainChecks.filter(
       (c) => c.lastCompleted !== null,
     ).length;
+    const naCount = checksWithStatus.filter(
+      (c) => c.check.domain === domain && c.urgency === "not-applicable",
+    ).length;
     return {
       domain,
       metadata: DOMAIN_METADATA[domain],
@@ -353,6 +387,7 @@ export default function EstatesComplianceDashboard() {
       overdue: overdueCount,
       dueSoon: dueSoonCount,
       completed: completedCount,
+      naCount,
     };
   });
 
@@ -680,22 +715,24 @@ function CheckRow({ item }: { item: CheckWithStatus }) {
   const metadata = DOMAIN_METADATA[check.domain];
   const badge = formatDueBadge(item);
   const border = leftBorderClass(urgency);
+  const isNA = urgency === "not-applicable";
 
   return (
     <Link
       href={`/estates-compliance/${check.domain}/${check.id}`}
-      className={`flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 transition-all group ${border}`}
+      className={`flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 transition-all group ${border} ${isNA ? "opacity-50" : ""}`}
     >
       {/* Domain icon */}
       <span className="text-xl flex-shrink-0">{metadata.icon}</span>
 
       {/* Check info */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-gray-900 truncate">
+        <p className={`text-sm font-medium truncate ${isNA ? "text-gray-400 line-through" : "text-gray-900"}`}>
           {check.name}
         </p>
         <p className="text-xs text-gray-500 truncate">
           {metadata.name} &middot; {check.frequency}
+          {isNA && " · Not applicable to this school"}
         </p>
       </div>
 

@@ -201,6 +201,8 @@ export default function CheckDetailPage() {
   const [evidenceFiles, setEvidenceFiles] = useState<EvidenceFile[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isNotApplicable, setIsNotApplicable] = useState(false);
+  const [markingNA, setMarkingNA] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -294,8 +296,16 @@ export default function CheckDetailPage() {
 
             if (!cancelled) {
               setCompletions(withEvidence);
-              // Auto-expand form if check is due
-              setFormExpanded(isCheckDue(withEvidence));
+              // Check if marked as N/A
+              const naRecord = withEvidence.find(
+                (r) => r.status === "not_applicable",
+              );
+              if (naRecord) {
+                setIsNotApplicable(true);
+                setFormExpanded(false);
+              } else {
+                setFormExpanded(isCheckDue(withEvidence));
+              }
             }
           }
         } catch (err) {
@@ -447,6 +457,56 @@ export default function CheckDetailPage() {
     }
   };
 
+  const handleToggleNA = async () => {
+    if (!organizationId) return;
+    setMarkingNA(true);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const authHeader: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (session?.access_token) {
+        authHeader["Authorization"] = `Bearer ${session.access_token}`;
+      }
+
+      const newStatus = isNotApplicable ? "pending" : "not_applicable";
+
+      await fetch("/api/estates/statutory-completions", {
+        method: "POST",
+        headers: authHeader,
+        body: JSON.stringify({
+          organizationId,
+          action: "complete",
+          check_id: checkId,
+          check_data: {
+            compliance_domain: domainSlug,
+            status: newStatus,
+            completion_notes: isNotApplicable
+              ? "Re-enabled — check now applies to this school"
+              : "Marked as not applicable to this school",
+            next_due_date: isNotApplicable
+              ? calculateNextDueDate(
+                  check?.frequency || "annually",
+                  new Date().toISOString().split("T")[0],
+                )
+              : "2099-12-31",
+            evidence_ids: [],
+            documents_received: false,
+          },
+        }),
+      });
+
+      setIsNotApplicable(!isNotApplicable);
+      window.location.reload();
+    } catch (err) {
+      console.error("[TOGGLE NA]", err);
+    } finally {
+      setMarkingNA(false);
+    }
+  };
+
   // --- Render ---
 
   if (loading) {
@@ -516,24 +576,58 @@ export default function CheckDetailPage() {
             </div>
           </div>
 
-          {/* Due date chip */}
-          <div
-            className={`text-right shrink-0 px-3 py-2 rounded-lg border ${isOverdue ? "bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-800" : "bg-gray-50 border-gray-200 dark:bg-gray-800 dark:border-gray-700"}`}
-          >
-            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">
-              Next Due
-            </p>
-            <p
-              className={`text-sm font-bold ${isOverdue ? "text-red-700 dark:text-red-400" : "text-gray-900 dark:text-white"}`}
+          {/* Due date chip + N/A toggle */}
+          <div className="flex items-start gap-2 shrink-0">
+            <button
+              onClick={handleToggleNA}
+              disabled={markingNA}
+              className={`px-3 py-2 rounded-lg border text-xs font-semibold transition-colors ${
+                isNotApplicable
+                  ? "bg-slate-200 text-slate-700 border-slate-300 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600"
+                  : "bg-white text-gray-500 border-gray-200 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700"
+              }`}
+              title={
+                isNotApplicable
+                  ? "Click to re-enable this check"
+                  : "Mark as not applicable (e.g. no lift on site)"
+              }
             >
-              {formatDate(currentDue)}
-            </p>
-            {daysUntil && (
-              <p
-                className={`text-xs font-medium ${isOverdue ? "text-red-600 dark:text-red-400" : "text-gray-500 dark:text-gray-400"}`}
+              {markingNA
+                ? "..."
+                : isNotApplicable
+                  ? "Re-enable"
+                  : "N/A"}
+            </button>
+            {isNotApplicable ? (
+              <div className="text-right px-3 py-2 rounded-lg border bg-slate-50 border-slate-200 dark:bg-slate-800 dark:border-slate-700">
+                <p className="text-xs font-semibold text-slate-500">Status</p>
+                <p className="text-sm font-bold text-slate-500">
+                  Not Applicable
+                </p>
+                <p className="text-xs text-slate-400">
+                  Does not affect compliance
+                </p>
+              </div>
+            ) : (
+              <div
+                className={`text-right px-3 py-2 rounded-lg border ${isOverdue ? "bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-800" : "bg-gray-50 border-gray-200 dark:bg-gray-800 dark:border-gray-700"}`}
               >
-                {daysUntil}
-              </p>
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">
+                  Next Due
+                </p>
+                <p
+                  className={`text-sm font-bold ${isOverdue ? "text-red-700 dark:text-red-400" : "text-gray-900 dark:text-white"}`}
+                >
+                  {formatDate(currentDue)}
+                </p>
+                {daysUntil && (
+                  <p
+                    className={`text-xs font-medium ${isOverdue ? "text-red-600 dark:text-red-400" : "text-gray-500 dark:text-gray-400"}`}
+                  >
+                    {daysUntil}
+                  </p>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -595,7 +689,18 @@ export default function CheckDetailPage() {
         )}
       </div>
 
-      {/* 3. Completion form */}
+      {/* 3. Completion form (hidden when N/A) */}
+      {isNotApplicable ? (
+        <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 p-5 text-center">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            This check is marked as <strong>not applicable</strong> to your
+            school. It does not affect your compliance rating.
+          </p>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+            Click &quot;Re-enable&quot; above if this check becomes relevant.
+          </p>
+        </div>
+      ) : (
       <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
         {/* Form header — always visible */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800">
@@ -868,6 +973,7 @@ export default function CheckDetailPage() {
           </div>
         )}
       </div>
+      )}
 
       {/* 4. Completion history */}
       <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
