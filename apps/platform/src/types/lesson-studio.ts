@@ -285,6 +285,98 @@ export interface LSCurriculumCoverage {
   created_at: string;
 }
 
+/* ── Assessment Pipeline v2 types ────────────────────────────── */
+
+export type TriangulationStatus = 'pending' | 'aligned' | 'majority' | 'disputed' | 'resolved';
+
+export type WorkSubmissionStatus = 'uploaded' | 'processing' | 'graded' | 'reviewed' | 'error';
+
+export interface LSWorkSubmission {
+  id: string;
+  organization_id: string;
+  lesson_plan_id: string;
+  pupil_id: string;
+  storage_path: string;
+  file_type: string;
+  file_size_bytes: number | null;
+  ocr_text: string | null;
+  ocr_confidence: number | null;
+  ocr_model: string | null;
+  grading_result: GradingResult | null;
+  grading_model: string | null;
+  grading_confidence: number | null;
+  status: WorkSubmissionStatus;
+  error_message: string | null;
+  uploaded_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GradingResult {
+  grade: AttainmentLevel;
+  score: number;
+  total: number;
+  misconceptions: Misconception[];
+  feedback: string;
+  next_steps: string;
+  confidence: number;
+}
+
+export interface Misconception {
+  description: string;
+  severity: 'minor' | 'significant' | 'fundamental';
+  curriculum_code: string | null;
+}
+
+export interface LSModerationItem {
+  id: string;
+  organization_id: string;
+  assessment_id: string;
+  flagged_by: string;
+  flagged_reason: string | null;
+  teacher_grade: string;
+  ai_grade: string | null;
+  status: 'pending' | 'in_review' | 'resolved';
+  resolved_by: string | null;
+  resolved_grade: string | null;
+  resolved_notes: string | null;
+  resolved_at: string | null;
+  created_at: string;
+}
+
+export interface LSCalendarEvent {
+  id: string;
+  organization_id: string;
+  class_id: string;
+  teacher_user_id: string | null;
+  title: string;
+  subject: string;
+  event_date: string;
+  start_time: string;
+  end_time: string;
+  room: string | null;
+  lesson_plan_id: string | null;
+  recurrence_rule: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type CalendarEventWithPlan = LSCalendarEvent & {
+  lesson_plan?: LSLessonPlan | null;
+};
+
+export type AssessmentWithSubmission = LSAssessment & {
+  work_submission?: LSWorkSubmission | null;
+  pupil?: LSPupil | null;
+  moderator_grade?: string | null;
+  moderator_notes?: string | null;
+  triangulation_status?: TriangulationStatus;
+  misconceptions?: Misconception[];
+  next_steps?: string | null;
+  feedback_text?: string | null;
+};
+
 // ─── UI / Composite Types ────────────────────────────────────────────────
 
 export interface TimetableSlotWithPlan extends LSTimetableSlot {
