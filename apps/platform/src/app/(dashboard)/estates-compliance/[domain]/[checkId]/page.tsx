@@ -195,6 +195,18 @@ export default function CheckDetailPage() {
   const router = useRouter();
   const { user, organizationId } = useAuth();
   const params = useParams();
+
+  // Resolve a user ID to a display name
+  function resolveUserName(uid?: string): string {
+    if (!uid) return "Unknown";
+    // Current user — show their name
+    if (user && uid === user.uid) {
+      return user.displayName || user.email || uid;
+    }
+    // For other users, show email-style format from UID if we can't resolve
+    // TODO: add user lookup API for full names
+    return uid.length > 20 ? `User ${uid.substring(0, 8)}...` : uid;
+  }
   const domainSlug = params.domain as ComplianceDomain;
   const checkId = params.checkId as string;
 
@@ -447,7 +459,8 @@ export default function CheckDetailPage() {
               docsReceivedDate !== inspectionDate
                 ? `${notes}\n\n[Docs received: ${docsReceivedDate}]`
                 : notes,
-            completed_at: new Date(inspectionDate + "T12:00:00").toISOString(),
+            completed_at: new Date().toISOString(),
+            inspection_date: inspectionDate,
             next_due_date: nextDueDate,
             evidence_ids: uploadedIds,
             documents_received:
@@ -1076,7 +1089,7 @@ export default function CheckDetailPage() {
                   <span className="flex items-center gap-1">
                     By{" "}
                     <span className="font-medium text-gray-700 dark:text-gray-300">
-                      {record.completed_by || "Unknown"}
+                      {resolveUserName(record.completed_by)}
                     </span>
                   </span>
                 </div>
