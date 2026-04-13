@@ -363,10 +363,12 @@ export class EdOrchestrator {
   }
 
   /**
-   * Handle proactive greeting based on page context (The "Wow Factor")
+   * Handle greeting — conversation-aware
    *
-   * Ed greets users by first name with a contextual, domain-aware opener
-   * that feels personal and anticipates what they might need.
+   * Checks how many times this user has chatted today.
+   * First visit: "Hi David, what can I help you with?"
+   * Returning: "Hi David, what else can I help you with today?"
+   * With alerts: leads with the most urgent alert.
    */
   async handleProactiveGreeting(context: {
     url?: string;
@@ -377,174 +379,64 @@ export class EdOrchestrator {
     const domain = context.url ? mapUrlToDomain(context.url) : null;
     const name = context.userName || "there";
     let alerts: string[] = [];
-    let recentTopics: string[] = [];
+    let conversationsToday = 0;
+    let lastTopic: string | undefined;
 
-    // Load recent conversation topics (lightweight, no PII)
     if (this.config.supabase && this.config.orgId) {
+      // Count today's conversations for this user
       try {
-        const { data: history } = await this.config.supabase
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+
+        const { data: todayChats, count } = await this.config.supabase
           .from("ed_conversation_log")
-          .select("domain, topic_summary, created_at")
+          .select("topic_summary, created_at", { count: "exact" })
           .eq("organization_id", this.config.orgId)
           .eq("user_id", this.config.userId)
+          .gte("created_at", todayStart.toISOString())
           .order("created_at", { ascending: false })
           .limit(5);
 
-        if (history && history.length > 0) {
-          recentTopics = history.map((h: any) => h.topic_summary || h.domain);
+        conversationsToday = count || 0;
+
+        if (todayChats && todayChats.length > 0) {
+          lastTopic = todayChats[0].topic_summary;
         }
       } catch {
-        // Table may not exist yet — that's fine
+        // Table may not exist yet
+      }
+
+      // Load proactive alerts for the current domain
+      if (domain) {
+        alerts = await generateProactiveContext(
+          this.config.orgId,
+          domain,
+          this.config.supabase,
+        );
       }
     }
 
-    // Load proactive alerts for the current domain
-    if (domain && this.config.supabase && this.config.orgId) {
-      alerts = await generateProactiveContext(
-        this.config.orgId,
-        domain,
-        this.config.supabase,
-      );
-    }
-
-    // Build personalised, domain-aware greeting
-    const greeting = this.buildPersonalGreeting(
-      name,
-      domain,
+    // Build greeting using the new system
+    const { buildGreeting } = await import("../agents/contextual-greeting");
+    const result = buildGreeting({
+      firstName: name,
+      conversationsToday,
+      lastTopic,
       alerts,
-      recentTopics,
-      context.userRole,
-    );
+      domain: domain || undefined,
+    });
 
-    return { greeting, alerts, recentTopics };
+    return {
+      greeting: result.greeting,
+      alerts: result.suggestions,
+    };
   }
 
   /**
-   * Build a warm, contextual greeting that feels like Ed knows the user
-   */
-  private buildPersonalGreeting(
-    name: string,
-    domain: string | null,
-    alerts: string[],
-    recentTopics: string[],
-    userRole?: string,
-  ): string {
-    const timeGreeting = this.getTimeOfDayGreeting();
-    const hasAlerts = alerts.length > 0;
-    const hasHistory = recentTopics.length > 0;
-
-    // Domain-specific personalised openers
-    const domainGreetings: Record<string, { opener: string; prompt: string }> =
-      {
-        estates: {
-          opener: `${timeGreeting} ${name}! Popping into Estates`,
-          prompt:
-            "Need a hand with any compliance checks, contractor queries, or building issues?",
-        },
-        hr: {
-          opener: `${timeGreeting} ${name}! I see you're in HR`,
-          prompt:
-            "Anything I can help with — staffing, absence, or policy questions?",
-        },
-        send: {
-          opener: `${timeGreeting} ${name}! You're looking at SEND`,
-          prompt:
-            "Happy to help with EHCP reviews, provision mapping, or graduated approach queries.",
-        },
-        intelligence: {
-          opener: `${timeGreeting} ${name}! Welcome to Intelligence`,
-          prompt:
-            "I've been keeping an eye on your cohort data — want me to flag any attainment gaps or EEF recommendations?",
-        },
-        risk: {
-          opener: `${timeGreeting} ${name}! Checking in on Risk`,
-          prompt:
-            "Want me to walk through any open risks or overdue mitigations?",
-        },
-        governance: {
-          opener: `${timeGreeting} ${name}! In Governance today`,
-          prompt:
-            "Need help preparing for a board meeting or checking training compliance?",
-        },
-        finance: {
-          opener: `${timeGreeting} ${name}! Looking at Finance`,
-          prompt:
-            "I can help with budget queries, supplier checks, or transaction reconciliation.",
-        },
-        curriculum: {
-          opener: `${timeGreeting} ${name}! Teaching & Learning`,
-          prompt:
-            "Anything I can support with — lesson planning, assessment data, or Ofsted readiness?",
-        },
-        compliance: {
-          opener: `${timeGreeting} ${name}! In Compliance`,
-          prompt:
-            "Need a policy review, training check, or help with a statutory return?",
-        },
-        data: {
-          opener: `${timeGreeting} ${name}! On the Data side`,
-          prompt:
-            "I can help with census returns, GDPR queries, or data reporting questions.",
-        },
-      };
-
-    let greeting = "";
-
-    if (domain && domainGreetings[domain]) {
-      const { opener, prompt } = domainGreetings[domain];
-      greeting = `${opener} — `;
-
-      if (hasAlerts) {
-        greeting += `I've spotted **${alerts.length}** thing${alerts.length > 1 ? "s" : ""} worth a look. ${prompt}`;
-      } else {
-        greeting += `everything looks in order. ${prompt}`;
-      }
-    } else {
-      // Generic dashboard greeting — warm and anticipatory
-      greeting = `${timeGreeting} ${name}! `;
-
-      if (hasAlerts) {
-        greeting += `I've been keeping watch and have **${alerts.length}** update${alerts.length > 1 ? "s" : ""} for you. What would you like to tackle first?`;
-      } else {
-        greeting += `How can I help you today? I'm across all your school's modules — just ask.`;
-      }
-    }
-
-    // Add continuity from recent conversations (no PII, just topics)
-    if (hasHistory) {
-      const lastTopic = recentTopics[0];
-      greeting += `\n\nBy the way, we were last looking at **${lastTopic}** — happy to pick that up again if you need.`;
-    }
-
-    return greeting;
-  }
-
-  /**
-   * Time-of-day aware greeting
-   */
-  private getTimeOfDayGreeting(): string {
-    const hour = new Date().getHours();
-    if (hour < 12) return "Good morning";
-    if (hour < 17) return "Good afternoon";
-    return "Good evening";
-  }
-
-  /**
-   * Get work focus redirect message
+   * Redirect non-work queries — short, no capability list
    */
   private getWorkFocusRedirect(): string {
-    return `Hi! I'm Ed, and I'm here to help you get work done.
-
-I can help with things like:
-• School compliance (RIDDOR, fire safety, legionella)
-• HR questions (sickness, policies, contracts)
-• Data reporting (census, returns)
-• School intelligence (attainment gaps, cohort tracking, EEF research)
-• Pupil assessment analysis (with full GDPR privacy)
-• Using school systems (SIMS, Arbor, etc.)
-• And much more...
-
-What work task can I help you with right now?`;
+    return "I'm set up to help with school work — what do you need?";
   }
 
   /**
