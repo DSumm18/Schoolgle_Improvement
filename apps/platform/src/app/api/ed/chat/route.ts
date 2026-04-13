@@ -15,6 +15,15 @@ import {
   buildGreeting,
 } from "@schoolgle/ed-agents";
 import type { OrchestratorConfig } from "@schoolgle/ed-agents/types";
+import {
+  scrubAndPrepareMessage,
+  writeToCache,
+  readRecentContext,
+  formatRecentContext,
+  getMemorySettings,
+  shouldExcludeDomain,
+} from '@/lib/ed/conversation-cache';
+import { SchoolDataGuardian } from '@/lib/school-data-guardian';
 
 interface ChatRequest {
   question: string;
@@ -83,6 +92,7 @@ interface ChatResponse {
     translatedText: string;
     suggestedWording?: string;
   };
+  guardianActive?: boolean;
 }
 
 // Tool-specific knowledge base for quick responses (retained for compatibility)
@@ -456,13 +466,42 @@ export async function POST(request: NextRequest) {
     // Get screenshot from either direct image upload or pageState
     const screenshot = image || pageState?.screenshot;
 
+    // Inject recent conversation context from cache
+    let contextualMessages = messages?.slice(-8) || [];
+    if (organization?.id && user?.id) {
+      try {
+        const settings = await getMemorySettings(supabase, organization.id);
+        if (settings.retention_days > 0) {
+          const recentCache = await readRecentContext(
+            supabase,
+            organization.id,
+            user.id,
+            settings.retention_days,
+            10,
+          );
+
+          if (recentCache.length > 0) {
+            const contextBlock = formatRecentContext(recentCache);
+            if (contextBlock) {
+              contextualMessages = [
+                { role: 'assistant' as const, content: contextBlock },
+                ...contextualMessages,
+              ];
+            }
+          }
+        }
+      } catch {
+        // Never fail — context injection is best-effort
+      }
+    }
+
     // Process through agent framework — pass URL and conversation history
     const edResponse = await orchestrator.processQuestion(question, {
       app: activeApp,
       page: context?.title,
       url: context?.url,
       screenshot,
-      messages: messages?.slice(-8), // Last 8 messages for conversation context
+      messages: contextualMessages,
     });
 
     // Map EdResponse to ChatResponse format
@@ -483,15 +522,51 @@ export async function POST(request: NextRequest) {
       response.suggestions = edResponse.warnings;
     }
 
-    // Log conversation topic (lightweight, no PII — just domain + summary)
+    // Write scrubbed messages to conversation cache (fire-and-forget)
     if (organization?.id && user?.id) {
+      (async () => {
+        try {
+          const domain = (edResponse.metadata?.domain as string) || 'general';
+          const settings = await getMemorySettings(supabase, organization.id);
+
+          // Skip if retention is 0 (disabled) or domain is excluded
+          if (settings.retention_days === 0) return;
+          if (shouldExcludeDomain(domain, settings)) return;
+
+          // Scrub both user message and Ed's response
+          const userMsg = scrubAndPrepareMessage(question, 'user', domain);
+          const edMsg = scrubAndPrepareMessage(edResponse.response, 'assistant', domain);
+
+          // Write to cache (creates conversation if needed)
+          const convId = await writeToCache(supabase, organization.id, user.id, null, userMsg);
+          if (convId) {
+            await writeToCache(supabase, organization.id, user.id, convId, edMsg);
+          }
+        } catch {
+          // Never fail the response — cache is best-effort
+        }
+      })();
+
+      // Keep the lightweight topic log for greeting system
       logConversationTopic(
         supabase,
         organization.id,
         user.id,
         edResponse.specialist || "general",
         question,
-      ).catch(() => {}); // Fire-and-forget, don't block response
+      ).catch(() => {});
+    }
+
+    // Flag if Guardian scrubbed PII from this interaction (for UI shield indicator)
+    try {
+      const guardianCheck = SchoolDataGuardian.scrub(question, {
+        callerName: 'ed-chat-guardian-indicator',
+      });
+      if (!guardianCheck.isClean) {
+        response.guardianActive = true;
+      }
+    } catch {
+      // Never fail
     }
 
     return NextResponse.json(response);
