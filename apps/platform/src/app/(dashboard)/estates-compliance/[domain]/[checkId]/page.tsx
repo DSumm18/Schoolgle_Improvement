@@ -99,8 +99,15 @@ function getDaysUntil(dateStr?: string) {
   return `${days}d left`;
 }
 
-function calculateNextDueDate(frequency: string): string {
-  const next = new Date();
+/**
+ * Calculate the next due date based on the INSPECTION date (not today).
+ * Compliance period runs from the date of inspection, not receipt of docs.
+ */
+function calculateNextDueDate(
+  frequency: string,
+  fromDate?: string,
+): string {
+  const next = fromDate ? new Date(fromDate + "T00:00:00") : new Date();
   switch (frequency) {
     case "daily":
       next.setDate(next.getDate() + 1);
@@ -187,6 +194,9 @@ export default function CheckDetailPage() {
   const [completionStatus, setCompletionStatus] =
     useState<CompletionStatus>("completed");
   const [notes, setNotes] = useState("");
+  const [inspectionDate, setInspectionDate] = useState(
+    new Date().toISOString().split("T")[0],
+  );
   const [nextDueDate, setNextDueDate] = useState("");
   const [evidenceFiles, setEvidenceFiles] = useState<EvidenceFile[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -212,7 +222,9 @@ export default function CheckDetailPage() {
 
       if (!cancelled) {
         setCheck(foundCheck);
-        setNextDueDate(calculateNextDueDate(foundCheck.frequency));
+        const today = new Date().toISOString().split("T")[0];
+        setInspectionDate(today);
+        setNextDueDate(calculateNextDueDate(foundCheck.frequency, today));
       }
 
       if (organizationId) {
@@ -402,6 +414,7 @@ export default function CheckDetailPage() {
             status:
               completionStatus === "incomplete" ? "pending" : completionStatus,
             completion_notes: notes,
+            completed_at: new Date(inspectionDate + "T12:00:00").toISOString(),
             next_due_date: nextDueDate,
             evidence_ids: uploadedIds,
             documents_received:
@@ -776,21 +789,43 @@ export default function CheckDetailPage() {
               )}
             </div>
 
-            {/* Next due date */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                Next due date
-              </label>
-              <input
-                type="date"
-                value={nextDueDate}
-                onChange={(e) => setNextDueDate(e.target.value)}
-                className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-teal-500"
-              />
-              <p className="text-xs text-gray-400 mt-1">
-                Auto-calculated from frequency ({check.frequency}) — adjust if
-                needed
-              </p>
+            {/* Inspection date + Next due date */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  Date of inspection
+                </label>
+                <input
+                  type="date"
+                  value={inspectionDate}
+                  onChange={(e) => {
+                    setInspectionDate(e.target.value);
+                    setNextDueDate(
+                      calculateNextDueDate(check.frequency, e.target.value),
+                    );
+                  }}
+                  className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  When the check was actually carried out (not when docs were
+                  received)
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  Next due date
+                </label>
+                <input
+                  type="date"
+                  value={nextDueDate}
+                  onChange={(e) => setNextDueDate(e.target.value)}
+                  className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  Auto-calculated from inspection date + {check.frequency}{" "}
+                  frequency — adjust if needed
+                </p>
+              </div>
             </div>
 
             {/* Error */}
