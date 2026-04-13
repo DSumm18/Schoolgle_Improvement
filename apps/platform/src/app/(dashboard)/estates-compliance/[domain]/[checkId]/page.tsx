@@ -69,27 +69,22 @@ interface CompletionRecord {
 // --- Helpers ---
 
 function formatDate(dateStr?: string) {
-  if (!dateStr) return "Never";
-  // Parse as local date to avoid timezone shifts with YYYY-MM-DD strings
-  const d = dateStr.includes("T")
-    ? new Date(dateStr)
-    : new Date(dateStr + "T12:00:00");
-  return d.toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  if (!dateStr) return "—";
+  // Parse date parts directly to avoid any timezone issues
+  const parts = dateStr.split("T")[0].split("-");
+  if (parts.length !== 3) return dateStr;
+  return `${parts[2]}/${parts[1]}/${parts[0]}`;
 }
 
 function formatDateTime(dateStr?: string) {
-  if (!dateStr) return "-";
-  return new Date(dateStr).toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  if (!dateStr) return "—";
+  const d = new Date(dateStr);
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const year = d.getFullYear();
+  const hours = String(d.getHours()).padStart(2, "0");
+  const mins = String(d.getMinutes()).padStart(2, "0");
+  return `${day}/${month}/${year}, ${hours}:${mins}`;
 }
 
 function getDaysUntil(dateStr?: string) {

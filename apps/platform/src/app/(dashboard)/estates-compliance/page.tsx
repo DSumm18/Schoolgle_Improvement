@@ -128,19 +128,18 @@ function formatDueBadge(check: CheckWithStatus): {
     };
   }
   if (urgency === "due-this-week" && nextDue) {
-    const day = nextDue.toLocaleDateString("en-GB", { weekday: "short" });
+    const dd = String(nextDue.getDate()).padStart(2, "0");
+    const mm = String(nextDue.getMonth() + 1).padStart(2, "0");
     return {
-      label: `Due ${day}`,
+      label: `Due ${dd}/${mm}`,
       className: "bg-amber-50 text-amber-600 border-amber-100",
     };
   }
   if (urgency === "due-this-month" && nextDue) {
-    const dateStr = nextDue.toLocaleDateString("en-GB", {
-      day: "numeric",
-      month: "short",
-    });
+    const dd = String(nextDue.getDate()).padStart(2, "0");
+    const mm = String(nextDue.getMonth() + 1).padStart(2, "0");
     return {
-      label: `Due ${dateStr}`,
+      label: `Due ${dd}/${mm}`,
       className: "bg-gray-100 text-gray-600 border-gray-200",
     };
   }
@@ -152,12 +151,10 @@ function formatDueBadge(check: CheckWithStatus): {
   }
   if (urgency === "not-due") {
     if (nextDue) {
-      const dateStr = nextDue.toLocaleDateString("en-GB", {
-        day: "numeric",
-        month: "short",
-      });
+      const dd = String(nextDue.getDate()).padStart(2, "0");
+      const mm = String(nextDue.getMonth() + 1).padStart(2, "0");
       return {
-        label: `Due ${dateStr}`,
+        label: `Due ${dd}/${mm}`,
         className: "bg-gray-100 text-gray-500 border-gray-200",
       };
     }
