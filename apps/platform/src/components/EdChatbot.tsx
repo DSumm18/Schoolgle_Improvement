@@ -28,7 +28,7 @@ export default function EdChatbot({
     {
       id: '1',
       role: 'assistant',
-      content: "Hello! I'm Ed, your Schoolgle assistant. How can I help you today?",
+      content: "Hi — what can I help you with?",
       timestamp: new Date(),
     },
   ]);

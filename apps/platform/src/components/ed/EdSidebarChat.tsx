@@ -125,7 +125,7 @@ export default function EdSidebarChat({ collapsed }: EdSidebarChatProps) {
           {
             id: crypto.randomUUID(),
             role: "assistant",
-            content: `Hello! I'm Ed, your school assistant. How can I help you today?`,
+            content: `Hi — what can I help you with?`,
             timestamp: new Date(),
           },
         ]);
@@ -135,7 +135,7 @@ export default function EdSidebarChat({ collapsed }: EdSidebarChatProps) {
         {
           id: crypto.randomUUID(),
           role: "assistant",
-          content: `Hello! I'm Ed, your school assistant. How can I help you today?`,
+          content: `Hi — what can I help you with?`,
           timestamp: new Date(),
         },
       ]);
