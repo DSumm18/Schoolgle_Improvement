@@ -653,49 +653,92 @@ export default function DashboardLayout({
                                       : "var(--border)",
                                   }}
                                 >
-                                  {subApps.map((app) => {
-                                    const isSubActive =
-                                      pathname === app.route ||
-                                      pathname.startsWith(app.route + "/");
-                                    return (
-                                      <Link
-                                        key={app.id}
-                                        href={app.route}
-                                        className={`flex items-center gap-2.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-150 ${
-                                          isSubActive
-                                            ? "text-primary bg-primary/10"
-                                            : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                                        }`}
-                                      >
-                                        <app.icon
-                                          size={14}
-                                          className={
+                                  {(() => {
+                                    // Group sub-apps by module for multi-module planets
+                                    const moduleGroups = itemModuleIds && itemModuleIds.length > 1
+                                      ? itemModuleIds
+                                          .map((mid) => ({
+                                            module: MODULES.find((m) => m.id === mid),
+                                            apps: subApps.filter((a) => a.moduleId === mid),
+                                          }))
+                                          .filter((g) => g.module && g.apps.length > 0)
+                                      : null;
+
+                                    if (moduleGroups) {
+                                      return moduleGroups.map((group) => (
+                                        <div key={group.module!.id} className="mb-1.5">
+                                          <Link
+                                            href={`/dashboard/${group.module!.id}`}
+                                            className="block px-3 py-1 text-[10px] font-bold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
+                                          >
+                                            {group.module!.name}
+                                          </Link>
+                                          {group.apps.map((app) => {
+                                            const isSubActive =
+                                              pathname === app.route ||
+                                              pathname.startsWith(app.route + "/");
+                                            return (
+                                              <Link
+                                                key={app.id}
+                                                href={app.route}
+                                                className={`flex items-center gap-2.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-150 ${
+                                                  isSubActive
+                                                    ? "text-primary bg-primary/10"
+                                                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                                                }`}
+                                              >
+                                                <app.icon
+                                                  size={14}
+                                                  className={isSubActive ? "text-primary" : "text-muted-foreground"}
+                                                />
+                                                <span className="truncate">{app.name}</span>
+                                                {isSubActive && (
+                                                  <motion.div
+                                                    layoutId="active-sub"
+                                                    className="ml-auto w-1.5 h-3 rounded-full shrink-0"
+                                                    style={{ backgroundColor: moduleColor || "var(--primary)" }}
+                                                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                                  />
+                                                )}
+                                              </Link>
+                                            );
+                                          })}
+                                        </div>
+                                      ));
+                                    }
+
+                                    // Single-module planets — flat list (no headings needed)
+                                    return subApps.map((app) => {
+                                      const isSubActive =
+                                        pathname === app.route ||
+                                        pathname.startsWith(app.route + "/");
+                                      return (
+                                        <Link
+                                          key={app.id}
+                                          href={app.route}
+                                          className={`flex items-center gap-2.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-150 ${
                                             isSubActive
-                                              ? "text-primary"
-                                              : "text-muted-foreground"
-                                          }
-                                        />
-                                        <span className="truncate">
-                                          {app.name}
-                                        </span>
-                                        {isSubActive && (
-                                          <motion.div
-                                            layoutId="active-sub"
-                                            className="ml-auto w-1.5 h-3 rounded-full shrink-0"
-                                            style={{
-                                              backgroundColor:
-                                                moduleColor || "var(--primary)",
-                                            }}
-                                            transition={{
-                                              type: "spring",
-                                              stiffness: 300,
-                                              damping: 30,
-                                            }}
+                                              ? "text-primary bg-primary/10"
+                                              : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                                          }`}
+                                        >
+                                          <app.icon
+                                            size={14}
+                                            className={isSubActive ? "text-primary" : "text-muted-foreground"}
                                           />
-                                        )}
-                                      </Link>
-                                    );
-                                  })}
+                                          <span className="truncate">{app.name}</span>
+                                          {isSubActive && (
+                                            <motion.div
+                                              layoutId="active-sub"
+                                              className="ml-auto w-1.5 h-3 rounded-full shrink-0"
+                                              style={{ backgroundColor: moduleColor || "var(--primary)" }}
+                                              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                            />
+                                          )}
+                                        </Link>
+                                      );
+                                    });
+                                  })()}
                                 </div>
                               </motion.div>
                             )}
