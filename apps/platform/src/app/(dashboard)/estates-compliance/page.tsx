@@ -609,54 +609,33 @@ export default function EstatesComplianceDashboard() {
             </button>
           </div>
 
-          {/* Domain filter pills — only shown on Compliance Checks tab */}
+          {/* Filter row — domain dropdown + status tabs */}
           {activeTab === "checks" && (
-            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-              {/* All pill */}
-              <button
-                onClick={() => setSelectedDomain("all")}
-                className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
-                  selectedDomain === "all"
-                    ? "bg-primary text-white border-primary"
-                    : "bg-gray-100 text-gray-600 border-gray-200 hover:border-gray-300"
-                }`}
+            <div className="flex items-center gap-3 flex-wrap">
+              {/* Domain dropdown */}
+              <select
+                value={selectedDomain}
+                onChange={(e) =>
+                  setSelectedDomain(e.target.value as ComplianceDomain | "all")
+                }
+                className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white dark:bg-gray-800 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer"
               >
-                All
-                {!loading && (
-                  <span className="ml-1 text-[10px] opacity-70">
-                    {checksWithStatus.length}
-                  </span>
+                <option value="all">
+                  All domains ({applicableChecks.length})
+                </option>
+                {domainStats.map(
+                  ({ domain, metadata, total: dt, completed: dC }) => (
+                    <option key={domain} value={domain}>
+                      {metadata.icon} {metadata.name} ({dC}/{dt})
+                    </option>
+                  ),
                 )}
-              </button>
+              </select>
 
-              {/* Domain pills */}
-              {domainStats.map(({ domain, metadata, total: dt, overdue: dO, dueSoon: dS, completed: dC }) => {
-                const pillColor =
-                  selectedDomain === domain
-                    ? "bg-primary text-white border-primary"
-                    : domainPillColor(dO, dS, dt, dC);
-                return (
-                  <button
-                    key={domain}
-                    onClick={() => setSelectedDomain(domain)}
-                    className={`flex-shrink-0 flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border transition-colors ${pillColor}`}
-                  >
-                    <span>{metadata.icon}</span>
-                    <span>{metadata.name}</span>
-                    {!loading && (
-                      <span className="text-[10px] opacity-70">
-                        {dC}/{dt}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          )}
+              {/* Divider */}
+              <div className="w-px h-5 bg-gray-200 dark:bg-gray-700" />
 
-          {/* Status filter bar — only shown on Compliance Checks tab */}
-          {activeTab === "checks" && (
-            <div className="flex gap-1.5 pt-2">
+              {/* Status filters */}
               {(
                 [
                   {
@@ -674,13 +653,17 @@ export default function EstatesComplianceDashboard() {
                     label: "Completed",
                     count: completed.length,
                   },
-                  { key: "all" as StatusFilter, label: "All checks", count: total },
+                  {
+                    key: "all" as StatusFilter,
+                    label: "All",
+                    count: total,
+                  },
                 ] as const
               ).map(({ key, label, count }) => (
                 <button
                   key={key}
                   onClick={() => setStatusFilter(key)}
-                  className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
                     statusFilter === key
                       ? key === "awaiting-docs"
                         ? "bg-amber-100 text-amber-800 border border-amber-300"
@@ -690,15 +673,7 @@ export default function EstatesComplianceDashboard() {
                 >
                   {label}
                   {!loading && count > 0 && (
-                    <span
-                      className={`ml-1.5 text-[10px] ${
-                        statusFilter === key
-                          ? "opacity-80"
-                          : key === "awaiting-docs" && count > 0
-                            ? "bg-amber-200 text-amber-800 px-1.5 py-0.5 rounded-full"
-                            : "opacity-50"
-                      }`}
-                    >
+                    <span className="ml-1 text-[10px] opacity-70">
                       {count}
                     </span>
                   )}
@@ -731,7 +706,7 @@ export default function EstatesComplianceDashboard() {
                 <>
                   {/* Due checks (overdue → due-today → due-this-week → due-this-month) */}
                   {dueChecks.map((item) => (
-                    <CheckRow key={item.check.id} item={item} />
+                    <CheckRow key={item.check.id} item={item} onDomainClick={setSelectedDomain} />
                   ))}
 
                   {/* Not-yet-due divider + collapsed list */}
@@ -750,7 +725,7 @@ export default function EstatesComplianceDashboard() {
                       </div>
                       {notDueExpanded &&
                         notDueChecks.map((item) => (
-                          <CheckRow key={item.check.id} item={item} />
+                          <CheckRow key={item.check.id} item={item} onDomainClick={setSelectedDomain} />
                         ))}
                     </>
                   )}
@@ -802,7 +777,13 @@ export default function EstatesComplianceDashboard() {
 // CHECK ROW COMPONENT
 // ============================================================================
 
-function CheckRow({ item }: { item: CheckWithStatus }) {
+function CheckRow({
+  item,
+  onDomainClick,
+}: {
+  item: CheckWithStatus;
+  onDomainClick?: (domain: ComplianceDomain) => void;
+}) {
   const { check, urgency, awaitingDocs, lastCompleted } = item;
   const metadata = DOMAIN_METADATA[check.domain];
   const badge = formatDueBadge(item);
@@ -824,8 +805,18 @@ function CheckRow({ item }: { item: CheckWithStatus }) {
       href={`/estates-compliance/${check.domain}/${check.id}`}
       className={`flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 transition-all group ${border} ${isNA ? "opacity-50" : ""}`}
     >
-      {/* Domain icon */}
-      <span className="text-xl flex-shrink-0">{metadata.icon}</span>
+      {/* Domain icon — clickable to filter */}
+      <button
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onDomainClick?.(check.domain);
+        }}
+        className="text-xl flex-shrink-0 hover:scale-110 transition-transform"
+        title={`Filter to ${metadata.name}`}
+      >
+        {metadata.icon}
+      </button>
 
       {/* Check info */}
       <div className="flex-1 min-w-0">
