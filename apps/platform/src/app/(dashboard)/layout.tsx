@@ -659,83 +659,136 @@ export default function DashboardLayout({
                                       ? itemModuleIds
                                           .map((mid) => ({
                                             module: MODULES.find((m) => m.id === mid),
-                                            apps: subApps.filter((a) => a.moduleId === mid),
+                                            // Filter out the "home" app that duplicates the module name
+                                            apps: subApps.filter(
+                                              (a) => a.moduleId === mid && !a.id.endsWith("-home"),
+                                            ),
                                           }))
                                           .filter((g) => g.module && g.apps.length > 0)
                                       : null;
 
                                     if (moduleGroups) {
-                                      return moduleGroups.map((group) => (
-                                        <div key={group.module!.id} className="mb-1.5">
-                                          <Link
-                                            href={`/dashboard/${group.module!.id}`}
-                                            className="block px-3 py-1 text-[10px] font-bold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
+                                      return moduleGroups.map((group, gi) => {
+                                        const mod = group.module!;
+                                        const ModIcon = mod.icon;
+                                        const modActive =
+                                          pathname === `/dashboard/${mod.id}` ||
+                                          pathname.startsWith(`/dashboard/${mod.id}/`) ||
+                                          group.apps.some(
+                                            (a) =>
+                                              pathname === a.route ||
+                                              pathname.startsWith(a.route + "/"),
+                                          );
+                                        return (
+                                          <motion.div
+                                            key={mod.id}
+                                            className={gi > 0 ? "mt-2" : ""}
+                                            initial={{ opacity: 0, y: -4 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: gi * 0.05 }}
                                           >
-                                            {group.module!.name}
-                                          </Link>
-                                          {group.apps.map((app) => {
-                                            const isSubActive =
-                                              pathname === app.route ||
-                                              pathname.startsWith(app.route + "/");
-                                            return (
-                                              <Link
-                                                key={app.id}
-                                                href={app.route}
-                                                className={`flex items-center gap-2.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-150 ${
-                                                  isSubActive
-                                                    ? "text-primary bg-primary/10"
-                                                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                                                }`}
-                                              >
-                                                <app.icon
-                                                  size={14}
-                                                  className={isSubActive ? "text-primary" : "text-muted-foreground"}
-                                                />
-                                                <span className="truncate">{app.name}</span>
-                                                {isSubActive && (
-                                                  <motion.div
-                                                    layoutId="active-sub"
-                                                    className="ml-auto w-1.5 h-3 rounded-full shrink-0"
-                                                    style={{ backgroundColor: moduleColor || "var(--primary)" }}
-                                                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                                                  />
-                                                )}
-                                              </Link>
-                                            );
-                                          })}
-                                        </div>
-                                      ));
+                                            {/* Module heading — bold, clickable, replaces the old "home" app */}
+                                            <Link
+                                              href={`/dashboard/${mod.id}`}
+                                              className={`flex items-center gap-2.5 px-3 py-1.5 rounded-md text-xs transition-all duration-150 ${
+                                                modActive
+                                                  ? "font-bold text-foreground"
+                                                  : "font-bold text-muted-foreground hover:text-foreground hover:bg-accent"
+                                              }`}
+                                            >
+                                              <ModIcon
+                                                size={14}
+                                                className={modActive ? "text-primary" : "text-muted-foreground"}
+                                              />
+                                              <span>{mod.name}</span>
+                                            </Link>
+                                            {/* Sub-apps branching off */}
+                                            {group.apps.map((app, ai) => {
+                                              const isSubActive =
+                                                pathname === app.route ||
+                                                pathname.startsWith(app.route + "/");
+                                              return (
+                                                <motion.div
+                                                  key={app.id}
+                                                  initial={{ opacity: 0, x: -6 }}
+                                                  animate={{ opacity: 1, x: 0 }}
+                                                  transition={{
+                                                    delay: gi * 0.05 + (ai + 1) * 0.03,
+                                                    type: "spring",
+                                                    stiffness: 400,
+                                                    damping: 25,
+                                                  }}
+                                                >
+                                                  <Link
+                                                    href={app.route}
+                                                    className={`flex items-center gap-2.5 ml-3 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-150 ${
+                                                      isSubActive
+                                                        ? "text-primary bg-primary/10"
+                                                        : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                                                    }`}
+                                                  >
+                                                    <app.icon
+                                                      size={13}
+                                                      className={isSubActive ? "text-primary" : "text-muted-foreground"}
+                                                    />
+                                                    <span className="truncate">{app.name}</span>
+                                                    {isSubActive && (
+                                                      <motion.div
+                                                        layoutId="active-sub"
+                                                        className="ml-auto w-1.5 h-3 rounded-full shrink-0"
+                                                        style={{ backgroundColor: moduleColor || "var(--primary)" }}
+                                                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                                      />
+                                                    )}
+                                                  </Link>
+                                                </motion.div>
+                                              );
+                                            })}
+                                          </motion.div>
+                                        );
+                                      });
                                     }
 
-                                    // Single-module planets — flat list (no headings needed)
-                                    return subApps.map((app) => {
+                                    // Single-module planets — flat list with spring animations
+                                    return subApps.map((app, ai) => {
                                       const isSubActive =
                                         pathname === app.route ||
                                         pathname.startsWith(app.route + "/");
                                       return (
-                                        <Link
+                                        <motion.div
                                           key={app.id}
-                                          href={app.route}
-                                          className={`flex items-center gap-2.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-150 ${
-                                            isSubActive
-                                              ? "text-primary bg-primary/10"
-                                              : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                                          }`}
+                                          initial={{ opacity: 0, x: -6 }}
+                                          animate={{ opacity: 1, x: 0 }}
+                                          transition={{
+                                            delay: ai * 0.03,
+                                            type: "spring",
+                                            stiffness: 400,
+                                            damping: 25,
+                                          }}
                                         >
-                                          <app.icon
-                                            size={14}
-                                            className={isSubActive ? "text-primary" : "text-muted-foreground"}
-                                          />
-                                          <span className="truncate">{app.name}</span>
-                                          {isSubActive && (
-                                            <motion.div
-                                              layoutId="active-sub"
-                                              className="ml-auto w-1.5 h-3 rounded-full shrink-0"
-                                              style={{ backgroundColor: moduleColor || "var(--primary)" }}
-                                              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                          <Link
+                                            href={app.route}
+                                            className={`flex items-center gap-2.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-150 ${
+                                              isSubActive
+                                                ? "text-primary bg-primary/10"
+                                                : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                                            }`}
+                                          >
+                                            <app.icon
+                                              size={14}
+                                              className={isSubActive ? "text-primary" : "text-muted-foreground"}
                                             />
-                                          )}
-                                        </Link>
+                                            <span className="truncate">{app.name}</span>
+                                            {isSubActive && (
+                                              <motion.div
+                                                layoutId="active-sub"
+                                                className="ml-auto w-1.5 h-3 rounded-full shrink-0"
+                                                style={{ backgroundColor: moduleColor || "var(--primary)" }}
+                                                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                              />
+                                            )}
+                                          </Link>
+                                        </motion.div>
                                       );
                                     });
                                   })()}
