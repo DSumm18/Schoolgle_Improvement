@@ -12,7 +12,7 @@ import { checkRateLimit, getRateLimitKey, RATE_LIMITS } from "@/lib/rate-limit";
 import {
   createOrchestrator,
   isGreeting,
-  getContextualGreeting,
+  buildGreeting,
 } from "@schoolgle/ed-agents";
 import type { OrchestratorConfig } from "@schoolgle/ed-agents/types";
 

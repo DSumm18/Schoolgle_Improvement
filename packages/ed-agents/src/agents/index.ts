@@ -15,4 +15,5 @@ export * from "./prompts/communications-specialist";
 export * from "./prompts/intelligence-specialist";
 export * from "./prompts/risk-specialist";
 export * from "./skills-agent";
-export * from "./contextual-greeting";
+export { buildGreeting, isGreeting } from "./contextual-greeting";
+export type { GreetingInput, GreetingOutput } from "./contextual-greeting";
