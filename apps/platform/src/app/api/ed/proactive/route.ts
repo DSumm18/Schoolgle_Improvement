@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ success: true, suggestions: [] });
         }
 
-        const supabase = createServerSupabaseClient();
+        const supabase = await createServerSupabaseClient();
         const suggestions = await generateProactiveContext(organizationId, domain, supabase);
 
         return NextResponse.json({
@@ -27,10 +27,10 @@ export async function POST(request: NextRequest) {
             suggestions
         });
     } catch (error: any) {
-        console.error('Error in /api/ed/proactive:', error);
-        return NextResponse.json(
-            { success: false, error: error.message || 'Internal server error' },
-            { status: 500 }
-        );
+        // Return empty suggestions on error — don't pollute console with 500s
+        return NextResponse.json({
+            success: true,
+            suggestions: [],
+        });
     }
 }

@@ -219,6 +219,92 @@ export default function CheckDetailPage() {
   const [markingNA, setMarkingNA] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Reusable function to fetch completions — called on mount and after save
+  async function fetchCompletions() {
+    if (!organizationId || !domainSlug) return;
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const headers: Record<string, string> = {};
+      if (session?.access_token) {
+        headers["Authorization"] = `Bearer ${session.access_token}`;
+      }
+
+      const res = await fetch(
+        `/api/estates/statutory-completions?organizationId=${organizationId}&domain=${domainSlug}`,
+        { headers },
+      );
+
+      if (res.ok) {
+        const result = await res.json();
+        const all = result.completions || [];
+        const mine = all.filter((r: any) => r.check_id === checkId);
+
+        mine.sort(
+          (a: any, b: any) =>
+            new Date(b.completed_at).getTime() -
+            new Date(a.completed_at).getTime(),
+        );
+
+        const withEvidence: CompletionRecord[] = await Promise.all(
+          mine.map(async (record: any) => {
+            const evidenceIds: string[] = record.evidence_ids || [];
+            let evidence: EvidenceItem[] = [];
+
+            if (evidenceIds.length > 0) {
+              try {
+                const evRes = await fetch(
+                  `/api/estates/evidence?ids=${evidenceIds.join(",")}`,
+                  { headers },
+                );
+                if (evRes.ok) {
+                  const evData = await evRes.json();
+                  const items = evData?.data || evData || [];
+                  evidence = (Array.isArray(items) ? items : [items]).map(
+                    (ev: any) => ({
+                      id: ev.id,
+                      type: ev.evidence_type || "document",
+                      title: ev.title || ev.file_name || "Evidence",
+                      url: ev.file_url || ev.url || "",
+                      uploadedAt: ev.uploaded_at || ev.created_at || "",
+                      uploadedBy: ev.uploaded_by || "Unknown",
+                      fileSize: ev.file_size
+                        ? `${Math.round(ev.file_size / 1024)} KB`
+                        : undefined,
+                    }),
+                  );
+                }
+              } catch {
+                // silent fail
+              }
+            }
+
+            return {
+              ...record,
+              next_due: record.next_due_date || record.next_due || "",
+              evidence,
+            };
+          }),
+        );
+
+        setCompletions(withEvidence);
+        const naRecord = withEvidence.find(
+          (r) => r.status === "not_applicable",
+        );
+        if (naRecord) {
+          setIsNotApplicable(true);
+          setFormExpanded(false);
+        } else {
+          setFormExpanded(isCheckDue(withEvidence));
+        }
+      }
+    } catch (err) {
+      console.error("[CHECK DETAIL] fetch error", err);
+    }
+  }
+
   useEffect(() => {
     let cancelled = false;
 
@@ -244,91 +330,7 @@ export default function CheckDetailPage() {
       }
 
       if (organizationId) {
-        try {
-          const {
-            data: { session },
-          } = await supabase.auth.getSession();
-          const headers: Record<string, string> = {};
-          if (session?.access_token) {
-            headers["Authorization"] = `Bearer ${session.access_token}`;
-          }
-
-          const res = await fetch(
-            `/api/estates/statutory-completions?organizationId=${organizationId}&domain=${domainSlug}`,
-            { headers },
-          );
-
-          if (res.ok) {
-            const result = await res.json();
-            const all = result.completions || [];
-            const mine = all.filter((r: any) => r.check_id === checkId);
-
-            // Sort newest first
-            mine.sort(
-              (a: any, b: any) =>
-                new Date(b.completed_at).getTime() -
-                new Date(a.completed_at).getTime(),
-            );
-
-            // Fetch evidence for each record
-            const withEvidence: CompletionRecord[] = await Promise.all(
-              mine.map(async (record: any) => {
-                const evidenceIds: string[] = record.evidence_ids || [];
-                let evidence: EvidenceItem[] = [];
-
-                if (evidenceIds.length > 0) {
-                  try {
-                    const evRes = await fetch(
-                      `/api/estates/evidence?ids=${evidenceIds.join(",")}`,
-                      { headers },
-                    );
-                    if (evRes.ok) {
-                      const evData = await evRes.json();
-                      const items = evData?.data || evData || [];
-                      evidence = (Array.isArray(items) ? items : [items]).map(
-                        (ev: any) => ({
-                          id: ev.id,
-                          type: ev.evidence_type || "document",
-                          title: ev.title || ev.file_name || "Evidence",
-                          url: ev.file_url || ev.url || "",
-                          uploadedAt: ev.uploaded_at || ev.created_at || "",
-                          uploadedBy: ev.uploaded_by || "Unknown",
-                          fileSize: ev.file_size
-                            ? `${Math.round(ev.file_size / 1024)} KB`
-                            : undefined,
-                        }),
-                      );
-                    }
-                  } catch {
-                    // silent fail — evidence just won't show
-                  }
-                }
-
-                return {
-                  ...record,
-                  next_due: record.next_due_date || record.next_due || "",
-                  evidence,
-                };
-              }),
-            );
-
-            if (!cancelled) {
-              setCompletions(withEvidence);
-              // Check if marked as N/A
-              const naRecord = withEvidence.find(
-                (r) => r.status === "not_applicable",
-              );
-              if (naRecord) {
-                setIsNotApplicable(true);
-                setFormExpanded(false);
-              } else {
-                setFormExpanded(isCheckDue(withEvidence));
-              }
-            }
-          }
-        } catch (err) {
-          console.error("[CHECK DETAIL] fetch error", err);
-        }
+        await fetchCompletions();
       } else {
         if (!cancelled) setFormExpanded(true);
       }
@@ -459,16 +461,15 @@ export default function CheckDetailPage() {
         throw new Error(err.error || "Failed to save completion");
       }
 
-      // Reset form and reload
+      // Reset form and refresh data without full page reload
       setNotes("");
       setEvidenceFiles([]);
       setCompletionStatus("completed");
       setFormExpanded(false);
+      setSubmitError(null);
 
-      // Reload page to show new history entry
-      router.refresh();
-      // Trigger a re-fetch by reloading
-      window.location.reload();
+      // Re-fetch completions to update the history timeline
+      await fetchCompletions();
     } catch (err) {
       setSubmitError(
         err instanceof Error ? err.message : "Failed to save completion",
@@ -520,7 +521,7 @@ export default function CheckDetailPage() {
       });
 
       setIsNotApplicable(!isNotApplicable);
-      window.location.reload();
+      await fetchCompletions();
     } catch (err) {
       console.error("[TOGGLE NA]", err);
     } finally {
