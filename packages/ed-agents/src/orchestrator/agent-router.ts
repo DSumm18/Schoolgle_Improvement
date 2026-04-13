@@ -21,6 +21,7 @@ import {
   buildSchoolContextBlock,
   buildIntelligenceContextBlock,
 } from "./context-loader";
+import { ED_PERSONALITY_PREAMBLE } from "../agents/personality";
 
 /**
  * Route question to appropriate specialist and get response
@@ -142,7 +143,7 @@ export async function routeToSpecialist(
     const llmResponse = await modelRouter.chatMessages(llmMessages as any, {
       model: model.id,
       temperature: 0.7,
-      maxTokens: 2048,
+      maxTokens: 1024,
       tools: tools,
     });
 
@@ -282,7 +283,8 @@ async function buildSpecialistPrompt(
   context?: AppContext,
   domain?: string,
 ): Promise<string> {
-  let prompt = basePrompt;
+  // Ed's personality comes first — every specialist inherits the same voice
+  let prompt = `${ED_PERSONALITY_PREAMBLE}\n\n${basePrompt}`;
 
   // Add school context if available
   if (schoolContext) {
@@ -302,108 +304,13 @@ async function buildSpecialistPrompt(
     prompt = `${prompt}\n\n${accessRules}`;
   }
 
-  // Inject platform knowledge so Ed can guide users through every module
-  const platformGuide = `## Schoolgle Platform Guide
-You are an expert on every module in Schoolgle. Guide users step-by-step. Use markdown links for navigation: [Go to Page](/route)
-User is on: ${(context as any)?.url || "/dashboard"}
-
-### Modules & How to Use Them
-
-**Estates** (/dashboard/estates) — Building management, compliance, energy
-- [Maintenance](/dashboard/estates/maintenance): Log repairs via helpdesk. Click "+ New Ticket", set priority, assign location, describe issue.
-- [Energy](/dashboard/estates/energy): View consumption charts, meter readings, anomaly alerts. Upload meter photos for AI extraction.
-- [Floor Plans](/dashboard/estates/floor-plan): Interactive building maps. Click rooms to see assets, compliance status, recent inspections.
-- [Compliance Checks](/estates-compliance): 200+ statutory checks (fire, legionella, asbestos, electrical). Each domain has its own checklist.
-- [Asset Tags](/dashboard/estates/asset-tags): Generate QR codes. Print and stick on equipment for mobile scanning.
-- [Workflows](/dashboard/workflows): Multi-step processes (incident response, equipment failure). Follow the guided checklist.
-- [SOPs](/dashboard/sops): Step-by-step procedures for H&S tasks (fire checks, legionella flushing, RIDDOR reporting).
-
-**HR & People** (/dashboard/hr) — Staff management, absence, performance
-- [Staff Directory](/dashboard/hr/people): Add/edit staff, CSV import/export. Click "+ Add Staff" or use bulk import.
-- [Meetings](/dashboard/hr/meetings): AI-guided HR meetings (sickness, disciplinary, grievance). Generates minutes automatically.
-- [Sickness](/dashboard/hr/sickness): Bradford Factor tracking (S²×D formula). Triggers at thresholds (200=concern, 500=action).
-- [Performance](/dashboard/hr/performance): Appraisal cycles, objectives, ECT tracking. Set cycle → assign objectives → review.
-- [Cover](/dashboard/hr/cover): Record absences (13 types), arrange supply, track costs against ICFP budget line E02.
-- [Connectors](/dashboard/connectors): Statutory roles (DSL, SENCO, Fire Marshal). Shows who holds what, training expiry, leaving impact.
-
-**Finance** (/dashboard/finance) — Budget, spending, staffing analysis
-- [Budget Monitor](/dashboard/finance/monitor): Real-time spend vs budget by CFR code. Drill into any line to see transactions.
-- [Staffing Modeller](/dashboard/finance/staffing-modeller): Drag staff cards to model scenarios. ICFP metrics auto-calculate.
-- [Payroll Import](/dashboard/finance/payroll): Upload payroll CSV. Auto-maps to CFR codes and staff records.
-
-**Compliance** (/dashboard/compliance) — Policies, training, GDPR, SCR
-- [Policies](/dashboard/compliance/policies): 36 policy templates. Set review dates, assign owners, track versions.
-- [Training](/dashboard/compliance/training): Staff training matrix. Upload certificates, set expiry alerts.
-- [GDPR](/dashboard/compliance/gdpr): DPIAs, SARs, breach log. Step-by-step DPIA wizard.
-- [SCR](/dashboard/compliance/scr): Single Central Record. DBS checks, right to work, qualifications in one view.
-- [Complaints](/dashboard/compliance/complaints): 3-stage procedure. Log → investigate → resolve. Auto-tracks timescales.
-
-**Governance** (/dashboard/governance) — Governor portal, meetings, policies
-- [Portal](/dashboard/governance): Governor directory, training matrix, term dates. Click governor to see DBS, training, attendance.
-- [Visits](/dashboard/governance/visits): Plan monitoring visits, log findings, share reports with board.
-
-**Risk Register** (/dashboard/risk) — Risk management, 4T decisions
-- [Heat Map](/dashboard/risk): 5×5 likelihood × impact matrix. Click any risk to see details and mitigations.
-- [Decisions](/dashboard/risk/decisions): Record 4T decisions (Treat/Tolerate/Transfer/Terminate) with rationale.
-- [ICFP](/dashboard/risk/icfp): Magnificent Seven staffing metrics. Benchmarks against DfE thresholds.
-- [Trust](/dashboard/risk/trust): Trust-wide risk aggregation. ATH 2025 compliance checklist.
-
-**Inspection Readiness** (/dashboard/improvement) — Ofsted, SIAMS, SEF, SDP
-- [Ofsted Readiness](/dashboard/ofsted-readiness): 4 key judgements tracked with evidence. Auto-generated readiness score.
-- [SEF Builder](/dashboard/sef): Living self-evaluation form. Pulls data from all modules automatically.
-- [SDP](/dashboard/sdp): School development plan with priorities, milestones, and progress tracking.
-- [Actions](/dashboard/action-plan): Improvement actions with EEF research backing and dual status tracking.
-
-**Teaching & Learning** (/dashboard/teaching-learning) — Lesson planning, assessment
-- [Lesson Studio](/dashboard/teaching-learning/lesson-studio): AI-connected lesson planning. Knows your pupils, links to curriculum.
-- [Assessment Support](/dashboard/teaching-learning/assessment-support): Marking templates, feedback generators.
-
-**Safeguarding** (/dashboard/safeguarding) — Concern logging, body maps, chronology
-- Log concerns via "+ New Concern". Body map tool for recording injuries. KCSIE 2025 compliant.
-
-**Attendance** (/dashboard/attendance) — AM/PM registration, PA tracking
-- 25 DfE attendance codes. Mark present/absent per session. Auto-flags persistent absence (below 90%).
-
-**SEND** (/dashboard/send) — SEN register, graduated approach, provision map
-- Add pupils to register (K=SEN Support, E=EHCP). Track Assess→Plan→Do→Review cycles.
-
-**Behaviour** (/dashboard/behaviour) — Incidents, consequences, exclusions
-- Log incidents, apply consequence ladder, track exclusions (suspension/permanent). Bradford Factor for patterns.
-
-**Communications** (/dashboard/communications) — Notices, broadcasts, displays
-- [Notices](/dashboard/notices): Quick messages to staff/parents. Pin important ones.
-- [Emergency Broadcast](/dashboard/emergency-broadcast): Zone-aware alerts (lockdown, evacuation, shelter). One click.
-
-**Calendar** (/dashboard/calendar) — Term dates, events, parents' evening
-- Add events, set term dates, manage parents' evening slot bookings.
-
-**Surveys** (/dashboard/surveys) — Create, distribute, analyse
-- Build surveys with drag-and-drop. Pre-built templates for parent/staff/pupil voice.
-
-**School Website** (/dashboard/website) — Build, design, publish
-- [Builder](/dashboard/website): Drag-and-drop page editor. Auto-compliance checking against 28 DfE requirements.
-- [Compliance](/dashboard/website/compliance): Scan school website. Shows what's missing and what passes.
-
-**Canvas** (/dashboard/canvas) — Data intelligence
-- Upload CSV/Excel from any system (Arbor, SIMS, Bromcom, payroll). Auto-detects fields. Reconcile across systems.
-
-**Documents** (/dashboard/documents) — Templates, generation, delivery
-- 38 document templates. Auto-fills school/staff/meeting data. Generate → approve → send via email.
-
-**Settings** (/dashboard/settings)
-- [Data Connections](/dashboard/settings/data-connections): Connect Google Drive, OneDrive. Auto-scan for MIS data.
-- [Class Assignments](/dashboard/settings/class-assignments): Assign teachers to classes for data visibility rules.
-- [Privileges](/dashboard/settings/privileges): Role-based access control matrix.
-
-### How to Help Users
-1. When user asks "how do I..." → give step-by-step instructions with navigation links
-2. When user asks "take me to..." → auto-navigate with [link](/route)
-3. When user asks about data → offer to pull it via skills (list_staff, get_risk_register, etc.)
-4. When user is confused → explain the module purpose and suggest where to start
-5. Always reference the school by name. Be warm, concise, and action-oriented.
-6. Don't add source citations for platform guidance — you ARE the source.`;
-
-  prompt = `${prompt}\n\n${platformGuide}`;
+  // Platform guide — only inject for navigation/how-to questions
+  // This saves ~2000 tokens on every non-navigation message
+  const isNavigationQuestion = isHowToQuestion(question);
+  if (isNavigationQuestion) {
+    const platformGuide = buildPlatformGuide(context);
+    prompt = `${prompt}\n\n${platformGuide}`;
+  }
 
   // Inject intelligence data when the intelligence specialist is handling
   if (domain === "intelligence" && context?.orgId && context?.supabase) {
@@ -424,6 +331,43 @@ User is on: ${(context as any)?.url || "/dashboard"}
   }
 
   return prompt;
+}
+
+/**
+ * Detect if the user is asking a navigation or how-to question
+ */
+function isHowToQuestion(question: string): boolean {
+  const q = question.toLowerCase();
+  const patterns = [
+    "how do i", "how to", "where is", "where do i", "where can i",
+    "take me to", "navigate to", "show me", "find the", "go to",
+    "open the", "what page", "which page", "how does the",
+    "where are the settings", "how do i get to",
+  ];
+  return patterns.some((p) => q.includes(p));
+}
+
+/**
+ * Build the platform navigation guide (only injected for how-to questions)
+ */
+function buildPlatformGuide(context?: AppContext): string {
+  return `## Schoolgle Platform Guide
+You are an expert on every module in Schoolgle. Guide users step-by-step. Use markdown links for navigation: [Go to Page](/route)
+User is on: ${(context as any)?.url || "/dashboard"}
+
+### Key Routes
+- **Estates**: [Maintenance](/dashboard/estates/maintenance), [Compliance](/estates-compliance), [Floor Plans](/dashboard/estates/floor-plan), [Energy](/dashboard/estates/energy)
+- **HR**: [Staff](/dashboard/hr/people), [Meetings](/dashboard/hr/meetings), [Sickness](/dashboard/hr/sickness), [Cover](/dashboard/hr/cover)
+- **Finance**: [Budget](/dashboard/finance/monitor), [Staffing Modeller](/dashboard/finance/staffing-modeller)
+- **Compliance**: [Policies](/dashboard/compliance/policies), [Training](/dashboard/compliance/training), [GDPR](/dashboard/compliance/gdpr), [SCR](/dashboard/compliance/scr)
+- **Governance**: [Portal](/dashboard/governance), [Visits](/dashboard/governance/visits)
+- **Risk**: [Register](/dashboard/risk), [ICFP](/dashboard/risk/icfp)
+- **Inspection**: [Ofsted](/dashboard/ofsted-readiness), [SEF](/dashboard/sef), [SDP](/dashboard/sdp), [Actions](/dashboard/action-plan)
+- **Teaching**: [Lesson Studio](/dashboard/teaching-learning/lesson-studio), [Assessment](/dashboard/teaching-learning/assessment-support)
+- **Intelligence**: [Analysis](/dashboard/school-intelligence), [Canvas](/dashboard/canvas)
+- **Settings**: [Data Connections](/dashboard/settings/data-connections), [Privileges](/dashboard/settings/privileges)
+
+When guiding: give the route link, then 1-2 sentences on what to do there. Don't describe every feature of the page.`;
 }
 
 /**
