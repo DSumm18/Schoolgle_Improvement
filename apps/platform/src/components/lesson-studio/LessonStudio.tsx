@@ -72,7 +72,7 @@ export function LessonStudio() {
   );
   const [teachMode, setTeachMode] = useState<LSLessonPlan | null>(null);
   const [viewMode, setViewMode] = useState<"calendar" | "timetable">("calendar");
-  const [mainView, setMainView] = useState<"lessons" | "dashboard" | "curriculum" | "schemes">("lessons");
+  const [mainView, setMainView] = useState<"lessons" | "dashboard" | "curriculum">("curriculum");
   const [selectedPupilId, setSelectedPupilId] = useState<string | null>(null);
   const [selectedTopic, setSelectedTopic] = useState<{
     unitName: string;
@@ -335,14 +335,14 @@ export function LessonStudio() {
         {/* View toggle */}
         <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5 ml-2">
           <button
-            onClick={() => { setMainView("lessons"); setViewMode("calendar"); }}
+            onClick={() => setMainView("curriculum")}
             className={`px-2.5 py-1 text-xs rounded-md transition-all ${
-              mainView === "lessons" && viewMode === "calendar"
+              mainView === "curriculum"
                 ? "bg-white shadow-sm font-semibold text-gray-900"
                 : "text-gray-500 hover:text-gray-700"
             }`}
           >
-            Calendar
+            Curriculum
           </button>
           <button
             onClick={() => { setMainView("lessons"); setViewMode("timetable"); }}
@@ -355,6 +355,16 @@ export function LessonStudio() {
             Timetable
           </button>
           <button
+            onClick={() => { setMainView("lessons"); setViewMode("calendar"); }}
+            className={`px-2.5 py-1 text-xs rounded-md transition-all ${
+              mainView === "lessons" && viewMode === "calendar"
+                ? "bg-white shadow-sm font-semibold text-gray-900"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            Calendar
+          </button>
+          <button
             onClick={() => setMainView("dashboard")}
             className={`px-2.5 py-1 text-xs rounded-md transition-all ${
               mainView === "dashboard"
@@ -363,26 +373,6 @@ export function LessonStudio() {
             }`}
           >
             Dashboard
-          </button>
-          <button
-            onClick={() => setMainView("curriculum")}
-            className={`px-2.5 py-1 text-xs rounded-md transition-all ${
-              mainView === "curriculum"
-                ? "bg-white shadow-sm font-semibold text-gray-900"
-                : "text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            Curriculum
-          </button>
-          <button
-            onClick={() => setMainView("schemes")}
-            className={`px-2.5 py-1 text-xs rounded-md transition-all ${
-              mainView === "schemes"
-                ? "bg-white shadow-sm font-semibold text-gray-900"
-                : "text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            Curriculum
           </button>
         </div>
       </div>
@@ -396,8 +386,8 @@ export function LessonStudio() {
         />
       )}
 
-      {/* Curriculum / Schemes view */}
-      {mainView === "schemes" && selectedClass && (
+      {/* Curriculum — scheme progression + NC objectives + scheme setup */}
+      {mainView === "curriculum" && selectedClass && (
         <div className="space-y-6">
           <CurriculumProgressionView
             classId={selectedClass.id}
@@ -410,6 +400,10 @@ export function LessonStudio() {
               setViewMode("timetable");
             }}
           />
+          <CurriculumChecklist
+            classId={selectedClass.id}
+            yearGroup={selectedClass.year_group}
+          />
           <SchemeManager
             classId={selectedClass.id}
             yearGroup={selectedClass.year_group}
@@ -418,14 +412,6 @@ export function LessonStudio() {
             }}
           />
         </div>
-      )}
-
-      {/* Curriculum view */}
-      {mainView === "curriculum" && selectedClass && (
-        <CurriculumChecklist
-          classId={selectedClass.id}
-          yearGroup={selectedClass.year_group}
-        />
       )}
 
       {/* Calendar or Timetable view */}
