@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/SupabaseAuthContext";
-import { Loader2, ChevronLeft, Star, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { Loader2, ChevronLeft, Star, CheckCircle2, XCircle, AlertCircle, Printer } from "lucide-react";
+import { createClient } from "@supabase/supabase-js";
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
@@ -56,6 +57,12 @@ interface GradingResults {
   questionResults: QuestionResult[];
 }
 
+interface PupilRecord {
+  accessibility_needs: string[] | null;
+  send_primary_need: string | null;
+  interests: string[] | null;
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────
 
 const GROUP_COLOURS: Record<string, { border: string; bg: string; text: string; badge: string }> = {
@@ -78,6 +85,44 @@ const GRADE_STYLES: Record<string, { bg: string; text: string; label: string }> 
   WTS: { bg: "bg-amber-500", text: "text-white", label: "Working Towards" },
 };
 
+// ─── Accessibility Helpers ────────────────────────────────────────────────
+
+function getAccessibilityStyles(needs: string[]): string {
+  const styles: string[] = [];
+
+  if (needs.includes("dyslexia")) {
+    // Larger text, increased spacing, cream background
+    styles.push("[&_*]:tracking-wide", "text-lg", "bg-amber-50", "[&_input]:bg-white", "[&_textarea]:bg-white");
+  }
+  if (needs.includes("visual_impairment")) {
+    // Much larger text, high contrast, thick borders
+    styles.push("text-xl", "[&_*]:border-2", "font-bold", "[&_input]:text-xl", "[&_textarea]:text-xl");
+  }
+  if (needs.includes("asd")) {
+    // Calm colours, clear structure, no animations
+    styles.push("[&_*]:transition-none", "border-2", "border-slate-300");
+  }
+  if (needs.includes("adhd")) {
+    // Reduced visual clutter, focused layout
+    styles.push("[&_*]:transition-none");
+  }
+
+  return styles.join(" ");
+}
+
+function getAccessibilityLabel(needs: string[]): string {
+  const labels: Record<string, string> = {
+    dyslexia: "Dyslexia support",
+    visual_impairment: "Visual impairment support",
+    asd: "ASD support",
+    adhd: "ADHD support",
+    sensory_processing: "Sensory processing support",
+    hearing_impairment: "Hearing impairment support",
+    physical_disability: "Physical disability support",
+  };
+  return needs.map((n) => labels[n] ?? n).join(", ");
+}
+
 // ─── Pupil Work Page ──────────────────────────────────────────────────────
 
 export default function PupilWorkPage() {
@@ -87,6 +132,7 @@ export default function PupilWorkPage() {
 
   const [classList, setClassList] = useState<ClassListData | null>(null);
   const [pupilWork, setPupilWork] = useState<PupilWorkData | null>(null);
+  const [pupilRecord, setPupilRecord] = useState<PupilRecord | null>(null);
   const [selectedPupilId, setSelectedPupilId] = useState<string | null>(null);
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [submitted, setSubmitted] = useState(false);
@@ -128,11 +174,41 @@ export default function PupilWorkPage() {
     loadClassList();
   }, [loadClassList]);
 
+  // Fetch pupil accessibility record from Supabase
+  const fetchPupilRecord = async (pupilId: string) => {
+    try {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      if (!supabaseUrl || !supabaseKey) return;
+
+      const supabase = createClient(supabaseUrl, supabaseKey, {
+        global: {
+          headers: session?.access_token
+            ? { Authorization: `Bearer ${session.access_token}` }
+            : {},
+        },
+      });
+
+      const { data } = await supabase
+        .from("ls_pupils")
+        .select("accessibility_needs, send_primary_need, interests")
+        .eq("id", pupilId)
+        .maybeSingle();
+
+      if (data) {
+        setPupilRecord(data as PupilRecord);
+      }
+    } catch {
+      // Non-critical — accessibility styles degrade gracefully
+    }
+  };
+
   // Load pupil-specific questions
   const selectPupil = async (pupilId: string) => {
     if (!planId) return;
     setLoadingPupil(true);
     setError(null);
+    setPupilRecord(null);
     try {
       const params = new URLSearchParams({ lessonPlanId: planId, pupilId });
       if (organizationId) params.set("organizationId", organizationId);
@@ -147,6 +223,8 @@ export default function PupilWorkPage() {
       setSubmitted(false);
       setGradingResults(null);
       setSubmitError(null);
+      // Fetch accessibility profile in parallel (non-blocking)
+      fetchPupilRecord(pupilId);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Error loading questions";
       setError(msg);
@@ -157,6 +235,7 @@ export default function PupilWorkPage() {
 
   const handleBack = () => {
     setPupilWork(null);
+    setPupilRecord(null);
     setSelectedPupilId(null);
     setAnswers({});
     setSubmitted(false);
@@ -267,6 +346,11 @@ export default function PupilWorkPage() {
     const allAnswered = pupilWork.questions.length > 0 &&
       pupilWork.questions.every((_, i) => (answers[i] ?? "").trim().length > 0);
 
+    const accessibilityNeeds = pupilRecord?.accessibility_needs ?? [];
+    const accessibilityStyles = getAccessibilityStyles(accessibilityNeeds);
+    const firstName = pupilWork.pupilName.split(" ")[0];
+    const today = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+
     // ─── Results View ────────────────────────────────────────────
     if (submitted && gradingResults) {
       const gradeStyle = GRADE_STYLES[gradingResults.grade] ?? GRADE_STYLES.EXS;
@@ -276,7 +360,7 @@ export default function PupilWorkPage() {
           <div className={`sticky top-0 z-10 border-b-4 ${gc.border} bg-white px-4 pt-4 pb-3 shadow-sm`}>
             <button
               onClick={handleBack}
-              className="flex items-center gap-1 text-slate-400 text-sm mb-2 hover:text-slate-600 transition-colors"
+              className="flex items-center gap-1 text-slate-400 text-sm mb-2 hover:text-slate-600 transition-colors print:hidden"
             >
               <ChevronLeft className="w-4 h-4" />
               Back to class
@@ -400,9 +484,49 @@ export default function PupilWorkPage() {
 
     // ─── Questions form ───────────────────────────────────────────
     return (
-      <div className="min-h-screen bg-white" style={{ fontFamily: "Poppins, sans-serif" }}>
+      <div
+        className={`min-h-screen ${accessibilityStyles || "bg-white"}`}
+        style={{ fontFamily: "Poppins, sans-serif" }}
+      >
+        {/* Print styles */}
+        <style jsx global>{`
+          @media print {
+            nav, header, .print\\:hidden, button { display: none !important; }
+            body { background: white !important; }
+            main { padding: 0 !important; }
+            .print-worksheet-header { display: block !important; }
+          }
+          .print-worksheet-header { display: none; }
+        `}</style>
+
+        {/* Print-only worksheet header */}
+        <div className="print-worksheet-header px-8 pt-8 pb-4 border-b-2 border-slate-800">
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="w-16 h-16 rounded border-2 border-slate-300 flex items-center justify-center text-slate-300 text-xs mb-2">
+                Logo
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-slate-500">{today}</p>
+            </div>
+          </div>
+          <h1 className="text-2xl font-bold text-slate-900 mt-2">
+            {firstName}&apos;s {pupilWork.subject} Worksheet
+          </h1>
+          <p className="text-sm text-slate-600 mt-1">{pupilWork.lessonTitle}</p>
+          <div className="flex items-center gap-3 mt-2">
+            <span className="text-xs font-semibold px-2 py-0.5 rounded border border-slate-400 text-slate-700">
+              {pupilWork.groupLabel}
+            </span>
+            {accessibilityNeeds.length > 0 && (
+              <span className="text-xs text-slate-500">{getAccessibilityLabel(accessibilityNeeds)}</span>
+            )}
+          </div>
+        </div>
+
         {/* Header */}
-        <div className={`sticky top-0 z-10 border-b-4 ${gc.border} bg-white px-4 pt-4 pb-3 shadow-sm`}>
+        <div className={`sticky top-0 z-10 border-b-4 ${gc.border} bg-white px-4 pt-4 pb-3 shadow-sm print:hidden`}>
           <button
             onClick={handleBack}
             className="flex items-center gap-1 text-slate-400 text-sm mb-2 hover:text-slate-600 transition-colors"
@@ -427,12 +551,32 @@ export default function PupilWorkPage() {
           <div className="mt-2 text-xs text-slate-400">
             {pupilWork.questions.length} question{pupilWork.questions.length !== 1 ? "s" : ""} &bull; {pupilWork.totalMarks} mark{pupilWork.totalMarks !== 1 ? "s" : ""} total
           </div>
+          {/* Accessibility indicator */}
+          {accessibilityNeeds.length > 0 && (
+            <div className="mt-2 text-xs text-purple-600 font-medium">
+              Adapted for: {getAccessibilityLabel(accessibilityNeeds)}
+            </div>
+          )}
         </div>
 
         <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
+          {/* Personalised worksheet title + print button */}
+          <div className="flex items-center justify-between mb-4 print:hidden">
+            <h1 className="text-2xl font-bold text-slate-800">
+              {firstName}&apos;s {pupilWork.subject} Work
+            </h1>
+            <button
+              onClick={() => window.print()}
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 text-slate-600 text-xs font-medium rounded-lg hover:bg-slate-50 transition-colors print:hidden"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              Print
+            </button>
+          </div>
+
           {/* SEND adaptation note */}
           {pupilWork.adaptations && (
-            <div className="rounded-2xl border border-purple-200 bg-purple-50 px-4 py-3">
+            <div className="rounded-2xl border border-purple-200 bg-purple-50 px-4 py-3 print:hidden">
               <p className="text-sm font-semibold text-purple-700 mb-0.5">Support note</p>
               <p className="text-sm text-purple-600">{pupilWork.adaptations}</p>
             </div>
@@ -452,6 +596,7 @@ export default function PupilWorkPage() {
                 question={q}
                 answer={answers[i] ?? ""}
                 submitted={submitted}
+                accessibilityNeeds={accessibilityNeeds}
                 onChange={(val) => setAnswers((prev) => ({ ...prev, [i]: val }))}
               />
             ))
@@ -459,7 +604,7 @@ export default function PupilWorkPage() {
 
           {/* Submit error */}
           {submitError && (
-            <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3">
+            <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 print:hidden">
               <p className="text-sm font-medium text-red-600">{submitError}</p>
               <p className="text-xs text-red-400 mt-1">Please try again or ask your teacher for help.</p>
             </div>
@@ -470,7 +615,7 @@ export default function PupilWorkPage() {
             <button
               onClick={handleSubmit}
               disabled={!allAnswered || submitting}
-              className={`w-full py-4 rounded-2xl text-lg font-bold transition-all ${
+              className={`w-full py-4 rounded-2xl text-lg font-bold transition-all print:hidden ${
                 allAnswered && !submitting
                   ? "bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg hover:shadow-xl active:scale-95"
                   : "bg-slate-100 text-slate-400 cursor-not-allowed"
@@ -542,51 +687,97 @@ interface QuestionCardProps {
   question: Question;
   answer: string;
   submitted: boolean;
+  accessibilityNeeds: string[];
   onChange: (val: string) => void;
 }
 
-function QuestionCard({ index, question, answer, submitted, onChange }: QuestionCardProps) {
+function QuestionCard({ index, question, answer, submitted, accessibilityNeeds, onChange }: QuestionCardProps) {
+  // Visual impairment: thicker borders, larger answer boxes
+  const hasVisualImpairment = accessibilityNeeds.includes("visual_impairment");
+  // Dyslexia: cream inputs, larger text
+  const hasDyslexia = accessibilityNeeds.includes("dyslexia");
+
+  const textareaClass = [
+    "w-full mt-2 rounded-xl border bg-slate-50 px-3 py-2.5 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none disabled:opacity-60",
+    hasVisualImpairment ? "border-2 border-slate-400 text-xl py-4" : "border border-slate-200 text-base",
+    hasDyslexia ? "bg-amber-50 tracking-wide leading-relaxed" : "",
+  ].join(" ");
+
+  const inputClass = [
+    "flex-1 min-w-0 border-b-2 bg-transparent text-slate-800 placeholder-slate-300 focus:outline-none disabled:opacity-60",
+    hasVisualImpairment ? "border-slate-600 text-xl py-2" : "border-indigo-300 text-base focus:border-indigo-500",
+    hasDyslexia ? "tracking-wide" : "",
+  ].join(" ");
+
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+    <div className={[
+      "rounded-2xl border bg-white shadow-sm overflow-hidden",
+      hasVisualImpairment ? "border-2 border-slate-400" : "border-slate-200",
+    ].join(" ")}>
       {/* Question header */}
       <div className="px-4 pt-4 pb-2">
         <div className="flex items-start gap-2">
-          <span className="flex-shrink-0 w-7 h-7 rounded-full bg-indigo-600 text-white text-sm font-bold flex items-center justify-center">
+          <span className={[
+            "flex-shrink-0 rounded-full bg-indigo-600 text-white font-bold flex items-center justify-center",
+            hasVisualImpairment ? "w-9 h-9 text-base" : "w-7 h-7 text-sm",
+          ].join(" ")}>
             {index + 1}
           </span>
-          <p className="text-base font-medium text-slate-800 leading-snug flex-1">
+          <p className={[
+            "font-medium text-slate-800 leading-snug flex-1",
+            hasVisualImpairment ? "text-xl" : hasDyslexia ? "text-lg tracking-wide" : "text-base",
+          ].join(" ")}>
             {question.q}
           </p>
         </div>
         {question.hint && (
-          <p className="text-sm text-slate-400 mt-2 pl-9 italic">Hint: {question.hint}</p>
+          <p className={[
+            "text-slate-400 mt-2 pl-9 italic",
+            hasVisualImpairment ? "text-base" : "text-sm",
+          ].join(" ")}>
+            Hint: {question.hint}
+          </p>
         )}
-        <p className="text-xs text-slate-400 mt-1 pl-9">{question.marks} mark{question.marks !== 1 ? "s" : ""}</p>
+        <p className={[
+          "text-slate-400 mt-1 pl-9",
+          hasVisualImpairment ? "text-sm" : "text-xs",
+        ].join(" ")}>
+          {question.marks} mark{question.marks !== 1 ? "s" : ""}
+        </p>
       </div>
 
       {/* Answer area */}
       <div className="px-4 pb-4">
+        {/* Print answer lines for open questions */}
         {question.type === "open" && (
-          <textarea
-            disabled={submitted}
-            value={answer}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder="Write your answer here..."
-            rows={3}
-            className="w-full mt-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-base text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none disabled:opacity-60"
-          />
+          <>
+            <textarea
+              disabled={submitted}
+              value={answer}
+              onChange={(e) => onChange(e.target.value)}
+              placeholder="Write your answer here..."
+              rows={hasVisualImpairment ? 5 : 3}
+              className={`${textareaClass} print:hidden`}
+            />
+            {/* Print-only ruled lines */}
+            <div className="hidden print:block mt-2 space-y-6">
+              {Array.from({ length: 4 }).map((_, li) => (
+                <div key={li} className="border-b border-slate-300 h-8" />
+              ))}
+            </div>
+          </>
         )}
 
         {question.type === "fill" && (
           <div className="mt-2 space-y-2">
             {(question.parts ?? []).map((part, pi) => (
-              <div key={pi} className="flex items-center gap-2 text-base text-slate-700">
+              <div key={pi} className="flex items-center gap-2 text-slate-700" style={{ fontSize: hasVisualImpairment ? "1.25rem" : "1rem" }}>
                 <span>{part}</span>
                 <input
                   disabled={submitted}
                   type="text"
                   placeholder="______"
-                  className="flex-1 min-w-0 border-b-2 border-indigo-300 bg-transparent text-base text-slate-800 placeholder-slate-300 focus:outline-none focus:border-indigo-500 disabled:opacity-60"
+                  className={inputClass}
                   value={answer.split("||")[pi] ?? ""}
                   onChange={(e) => {
                     const parts = answer.split("||");
@@ -601,7 +792,7 @@ function QuestionCard({ index, question, answer, submitted, onChange }: Question
                 disabled={submitted}
                 type="text"
                 placeholder="Fill in the blank..."
-                className="w-full border-b-2 border-indigo-300 bg-transparent text-base text-slate-800 focus:outline-none focus:border-indigo-500 py-1 disabled:opacity-60"
+                className={`w-full border-b-2 bg-transparent text-slate-800 focus:outline-none py-1 disabled:opacity-60 ${hasVisualImpairment ? "border-slate-600 text-xl" : "border-indigo-300 text-base focus:border-indigo-500"}`}
                 value={answer}
                 onChange={(e) => onChange(e.target.value)}
               />
@@ -616,13 +807,16 @@ function QuestionCard({ index, question, answer, submitted, onChange }: Question
                 key={opt}
                 disabled={submitted}
                 onClick={() => onChange(opt)}
-                className={`flex-1 py-3 rounded-xl text-base font-bold transition-all ${
+                className={[
+                  "flex-1 rounded-xl font-bold transition-all",
+                  hasVisualImpairment ? "py-4 text-xl" : "py-3 text-base",
                   answer === opt
                     ? opt === "Yes"
                       ? "bg-green-500 text-white shadow"
                       : "bg-red-400 text-white shadow"
-                    : "bg-slate-100 text-slate-500 hover:bg-slate-200"
-                } disabled:opacity-60`}
+                    : "bg-slate-100 text-slate-500 hover:bg-slate-200",
+                  "disabled:opacity-60",
+                ].join(" ")}
               >
                 {opt}
               </button>
@@ -637,11 +831,14 @@ function QuestionCard({ index, question, answer, submitted, onChange }: Question
                 key={oi}
                 disabled={submitted}
                 onClick={() => onChange(opt)}
-                className={`w-full text-left px-4 py-3 rounded-xl border text-base font-medium transition-all ${
+                className={[
+                  "w-full text-left px-4 rounded-xl border font-medium transition-all",
+                  hasVisualImpairment ? "py-4 text-xl border-2" : "py-3 text-base",
                   answer === opt
                     ? "border-indigo-500 bg-indigo-50 text-indigo-800"
-                    : "border-slate-200 bg-white text-slate-700 hover:border-indigo-300 hover:bg-indigo-50/30"
-                } disabled:opacity-60`}
+                    : "border-slate-200 bg-white text-slate-700 hover:border-indigo-300 hover:bg-indigo-50/30",
+                  "disabled:opacity-60",
+                ].join(" ")}
               >
                 {opt}
               </button>
