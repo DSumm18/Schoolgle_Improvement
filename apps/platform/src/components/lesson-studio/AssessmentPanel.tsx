@@ -6,6 +6,7 @@ import { WorkUploadZone } from "./WorkUploadZone";
 import { PupilAssessmentCard } from "./PupilAssessmentCard";
 import type { LSPupil, AssessmentWithSubmission, AttainmentLevel } from "@/types/lesson-studio";
 import { supabase } from "@/lib/supabase";
+import { syncAssessmentToIntelligence } from "@/lib/lesson-studio/intelligence-bridge";
 
 // Subject → pupil attainment field mapping
 const SUBJECT_ATTAINMENT_FIELD: Record<string, keyof LSPupil> = {
@@ -84,11 +85,42 @@ export function AssessmentPanel({ lessonPlanId, pupils, subject = "Maths" }: Ass
     action: "agree" | "override" | "flag",
     data?: Record<string, string>,
   ) => {
+    // Find the assessment record before the update so we have its data
+    const assessment = assessments.find((a) => a.id === assessmentId);
+
     await fetch("/api/lesson-studio/assess/review", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ assessmentId, action, ...data }),
     });
+
+    // Fire-and-forget sync to Intelligence module for agree and override actions
+    if (assessment && (action === "agree" || action === "override")) {
+      const wasOverridden = action === "override";
+      const verifiedGrade = wasOverridden
+        ? (data?.teacherGrade ?? assessment.ai_suggested_grade ?? "")
+        : (assessment.ai_suggested_grade ?? "");
+
+      void syncAssessmentToIntelligence({
+        organizationId: assessment.organization_id,
+        pupilId: assessment.pupil_id,
+        lessonPlanId: assessment.lesson_plan_id ?? lessonPlanId,
+        subject: assessment.subject ?? subject,
+        verifiedGrade,
+        aiSuggestedGrade: assessment.ai_suggested_grade ?? "",
+        wasOverridden,
+        misconceptions: (assessment.misconceptions ?? []).map((m) => ({
+          description: typeof m === "object" && m !== null && "description" in m
+            ? String((m as { description: unknown }).description)
+            : String(m),
+          severity: typeof m === "object" && m !== null && "severity" in m
+            ? String((m as { severity: unknown }).severity)
+            : "medium",
+        })),
+        assessedAt: new Date().toISOString(),
+      });
+    }
+
     await loadAssessments();
   };
 
@@ -110,6 +142,26 @@ export function AssessmentPanel({ lessonPlanId, pupils, subject = "Maths" }: Ass
             action: "agree",
             grade: a.ai_suggested_grade ?? "",
           }),
+        });
+
+        // Fire-and-forget sync to Intelligence module
+        void syncAssessmentToIntelligence({
+          organizationId: a.organization_id,
+          pupilId: a.pupil_id,
+          lessonPlanId: a.lesson_plan_id ?? lessonPlanId,
+          subject: a.subject ?? subject,
+          verifiedGrade: a.ai_suggested_grade ?? "",
+          aiSuggestedGrade: a.ai_suggested_grade ?? "",
+          wasOverridden: false,
+          misconceptions: (a.misconceptions ?? []).map((m) => ({
+            description: typeof m === "object" && m !== null && "description" in m
+              ? String((m as { description: unknown }).description)
+              : String(m),
+            severity: typeof m === "object" && m !== null && "severity" in m
+              ? String((m as { severity: unknown }).severity)
+              : "medium",
+          })),
+          assessedAt: new Date().toISOString(),
         });
       }
       await loadAssessments();
