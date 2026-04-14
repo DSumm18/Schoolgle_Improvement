@@ -156,8 +156,10 @@ export function LessonStudio() {
         }),
       });
       const result = await res.json();
-      if (result.data) {
-        const newPlan = result.data as LSLessonPlan;
+      // API returns plan at root level (apiSuccess wraps directly)
+      const planData = result.data ?? result;
+      if (planData?.id) {
+        const newPlan = planData as LSLessonPlan;
         setPlans((prev) => [
           ...prev.filter(
             (p) =>
