@@ -119,9 +119,6 @@ export const MODULES: ModuleDefinition[] = [
     icon: GraduationCap,
     description: "Classroom tools and pedagogy support.",
     requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
-    pilotHidden: true,
-    pilotNote:
-      "Teaching & Learning tools are in development and not yet available in the pilot.",
   },
   {
     id: "estates",
