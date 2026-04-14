@@ -77,10 +77,10 @@ export function LessonPlanPanel({ plan, slot, pupils, onClose, onTeach, onMarkTa
             {plan.status !== "taught" && (
               <button
                 onClick={() => onMarkTaught(plan.id)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 border border-green-300 text-green-700 bg-green-50 text-xs font-medium rounded-lg hover:bg-green-100 transition-colors"
               >
                 <ClipboardList className="w-3.5 h-3.5" />
-                Mark Taught
+                Lesson Complete
               </button>
             )}
           </div>

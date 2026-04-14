@@ -397,5 +397,24 @@ export const POST = protectedRoute(async (auth, req: NextRequest) => {
     .single();
 
   if (saveError) return apiError(saveError.message, 500);
+
+  // Sync matching calendar event — update title and link to plan
+  if (saved?.id) {
+    const eventDate = new Date(weekCommencing);
+    // day_of_week: 1=Mon, so add (day_of_week - 1) days to Monday
+    eventDate.setDate(eventDate.getDate() + (slot.day_of_week - 1));
+    const eventDateStr = eventDate.toISOString().split("T")[0];
+
+    await supabase
+      .from("ls_calendar_events")
+      .update({
+        title: saved.title,
+        lesson_plan_id: saved.id,
+      })
+      .eq("class_id", classId)
+      .eq("event_date", eventDateStr)
+      .eq("subject", slot.subject);
+  }
+
   return apiSuccess(saved);
 });
