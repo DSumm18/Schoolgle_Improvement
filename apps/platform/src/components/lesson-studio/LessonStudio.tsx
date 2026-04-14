@@ -12,6 +12,7 @@ import {
   Sparkles,
   BarChart3,
   Loader2,
+  X,
 } from "lucide-react";
 import { ModulePageHeader } from "@/components/ui/module-page-header";
 import { TimetableGrid } from "./TimetableGrid";
@@ -29,6 +30,7 @@ import type {
   LSLessonPlan,
   CalendarEventWithPlan,
 } from "@/types/lesson-studio";
+import { DAY_NAMES } from "@/types/lesson-studio";
 import { useAuth } from "@/context/SupabaseAuthContext";
 
 function getMonday(d: Date): string {
@@ -49,6 +51,9 @@ function formatWeek(dateStr: string): string {
 
 export function LessonStudio() {
   const { organizationId, session } = useAuth();
+  const authHeaders: HeadersInit = session?.access_token
+    ? { Authorization: `Bearer ${session.access_token}` }
+    : {};
   // State
   const [classes, setClasses] = useState<LSClass[]>([]);
   const [selectedClass, setSelectedClass] = useState<LSClass | null>(null);
@@ -152,6 +157,7 @@ export function LessonStudio() {
       });
       const result = await res.json();
       if (result.data) {
+        const newPlan = result.data as LSLessonPlan;
         setPlans((prev) => [
           ...prev.filter(
             (p) =>
@@ -159,8 +165,11 @@ export function LessonStudio() {
                 p.day_of_week === slot.day_of_week && p.subject === slot.subject
               ),
           ),
-          result.data,
+          newPlan,
         ]);
+        // Auto-open the generated plan in the detail panel
+        setSelectedPlan(newPlan);
+        setSelectedSlot(slot);
       }
     } finally {
       setGenerating(null);
@@ -401,19 +410,39 @@ export function LessonStudio() {
             <CalendarView
               classes={classes}
               selectedClassId={selectedClass.id}
+              weekStart={new Date(weekCommencing)}
+              onWeekChange={(monday) => setWeekCommencing(monday.toISOString().split("T")[0])}
               onEventClick={(evt: CalendarEventWithPlan) => {
-                // If the event has a lesson plan, open it in the plan panel
-                if (evt.lesson_plan) {
-                  const matchingSlot = slots.find(
-                    (s) =>
-                      s.day_of_week ===
-                        new Date(evt.event_date).getDay() &&
-                      s.subject === evt.subject,
-                  );
-                  if (matchingSlot) {
-                    setSelectedSlot(matchingSlot);
+                // Find matching timetable slot for this event
+                const eventDayOfWeek = new Date(evt.event_date).getDay();
+                const matchingSlot = slots.find(
+                  (s) =>
+                    s.day_of_week === eventDayOfWeek &&
+                    s.subject === evt.subject,
+                );
+                if (matchingSlot) {
+                  setSelectedSlot(matchingSlot);
+                  if (evt.lesson_plan) {
                     setSelectedPlan(evt.lesson_plan as LSLessonPlan);
+                  } else {
+                    // Open empty slot panel with generate option
+                    setSelectedPlan(null);
                   }
+                } else {
+                  // No matching timetable slot — create a temporary one from event data
+                  const tempSlot: LSTimetableSlot = {
+                    id: evt.id,
+                    organization_id: evt.organization_id,
+                    class_id: evt.class_id,
+                    day_of_week: eventDayOfWeek,
+                    subject: evt.subject,
+                    start_time: evt.start_time,
+                    end_time: evt.end_time,
+                    room: evt.room,
+                    created_at: evt.created_at,
+                  };
+                  setSelectedSlot(tempSlot);
+                  setSelectedPlan(evt.lesson_plan ? (evt.lesson_plan as LSLessonPlan) : null);
                 }
               }}
             />
@@ -449,7 +478,7 @@ export function LessonStudio() {
         )
       )}
 
-      {/* Lesson Plan Panel (slide-over) */}
+      {/* Lesson Plan Panel (slide-over) — with existing plan */}
       {selectedPlan && selectedSlot && (
         <>
           <div
@@ -473,6 +502,85 @@ export function LessonStudio() {
             }}
             onMarkTaught={handleMarkTaught}
           />
+        </>
+      )}
+
+      {/* Empty Slot Panel (slide-over) — no plan yet, show Generate */}
+      {!selectedPlan && selectedSlot && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/30 z-40"
+            onClick={() => setSelectedSlot(null)}
+          />
+          <div className="fixed inset-y-0 right-0 w-full max-w-md bg-white border-l border-slate-200 shadow-2xl z-50 overflow-y-auto">
+            <div className="p-6 space-y-6">
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="text-xs text-slate-500 mb-1">
+                    {DAY_NAMES[selectedSlot.day_of_week]} {selectedSlot.start_time.slice(0, 5)}–{selectedSlot.end_time.slice(0, 5)}
+                  </div>
+                  <h2 className="text-lg font-bold text-slate-800">{selectedSlot.subject}</h2>
+                  {selectedSlot.room && (
+                    <div className="text-xs text-slate-400 mt-0.5">{selectedSlot.room}</div>
+                  )}
+                </div>
+                <button
+                  onClick={() => setSelectedSlot(null)}
+                  className="p-1 hover:bg-slate-100 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-slate-400" />
+                </button>
+              </div>
+
+              <div className="border border-dashed border-slate-200 rounded-xl p-8 text-center">
+                <Sparkles className="w-10 h-10 text-teal-400 mx-auto mb-3" />
+                <h3 className="text-sm font-semibold text-slate-700 mb-1">No lesson plan yet</h3>
+                <p className="text-xs text-slate-500 mb-4">
+                  Generate an AI lesson plan tailored to {selectedClass?.class_name || "this class"}'s
+                  needs, with differentiated activities and SEND adaptations.
+                </p>
+                <button
+                  onClick={() => {
+                    handleGenerate(selectedSlot);
+                  }}
+                  disabled={generating === selectedSlot.id}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-teal-600 text-white text-sm font-medium rounded-lg hover:bg-teal-700 disabled:opacity-50 transition-colors"
+                >
+                  <Sparkles className={`w-4 h-4 ${generating === selectedSlot.id ? "animate-spin" : ""}`} />
+                  {generating === selectedSlot.id ? "Generating..." : "Generate Lesson Plan"}
+                </button>
+              </div>
+
+              {/* Class summary */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Class Profile</h4>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="bg-slate-50 rounded-lg p-3">
+                    <div className="text-lg font-bold text-slate-800">{pupils.length}</div>
+                    <div className="text-[10px] text-slate-500">Pupils</div>
+                  </div>
+                  <div className="bg-slate-50 rounded-lg p-3">
+                    <div className="text-lg font-bold text-slate-800">
+                      {pupils.filter((p) => p.has_ehcp || p.has_send_support).length}
+                    </div>
+                    <div className="text-[10px] text-slate-500">SEND</div>
+                  </div>
+                  <div className="bg-slate-50 rounded-lg p-3">
+                    <div className="text-lg font-bold text-slate-800">
+                      {pupils.filter((p) => p.is_pupil_premium).length}
+                    </div>
+                    <div className="text-[10px] text-slate-500">Pupil Premium</div>
+                  </div>
+                  <div className="bg-slate-50 rounded-lg p-3">
+                    <div className="text-lg font-bold text-slate-800">
+                      {pupils.filter((p) => p.is_eal).length}
+                    </div>
+                    <div className="text-[10px] text-slate-500">EAL</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </>
       )}
 

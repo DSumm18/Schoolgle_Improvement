@@ -87,6 +87,8 @@ interface CalendarViewProps {
   classes: LSClass[];
   selectedClassId: string | null;
   onEventClick: (event: CalendarEventWithPlan) => void;
+  weekStart?: Date;
+  onWeekChange?: (monday: Date) => void;
 }
 
 /* ── Component ───────────────────────────────────────────────────────── */
@@ -95,10 +97,23 @@ export function CalendarView({
   classes,
   selectedClassId,
   onEventClick,
+  weekStart: controlledWeekStart,
+  onWeekChange,
 }: CalendarViewProps) {
-  const [weekStart, setWeekStart] = useState<Date>(() =>
+  const [internalWeekStart, setInternalWeekStart] = useState<Date>(() =>
     getMondayDate(new Date()),
   );
+  // Use controlled week if provided, otherwise internal state
+  const weekStart = controlledWeekStart ?? internalWeekStart;
+  const setWeekStart = (updater: Date | ((d: Date) => Date)) => {
+    const newDate = typeof updater === "function" ? updater(weekStart) : updater;
+    if (onWeekChange) {
+      onWeekChange(newDate);
+    } else {
+      setInternalWeekStart(newDate);
+    }
+  };
+
   const [events, setEvents] = useState<CalendarEventWithPlan[]>([]);
   const [loading, setLoading] = useState(false);
 
