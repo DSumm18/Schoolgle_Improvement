@@ -421,3 +421,56 @@ export const STATUS_CONFIG: Record<LessonStatus, { label: string; color: string;
 };
 
 export const DAY_NAMES = ["", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday"] as const;
+
+/* ── Intervention types ──────────────────────────────────────── */
+
+export type InterventionFormat = 'one_to_one' | 'small_group' | 'in_class' | 'catch_up' | 'homework';
+export type InterventionStatus = 'draft' | 'active' | 'paused' | 'completed' | 'cancelled';
+export type CPAStage = 'concrete' | 'pictorial' | 'abstract' | 'fluency' | 'application';
+
+export interface LSIntervention {
+  id: string;
+  organization_id: string;
+  pupil_id: string;
+  class_id: string | null;
+  title: string;
+  target: string;
+  subject: string;
+  format: InterventionFormat;
+  frequency: string | null;
+  duration_weeks: number | null;
+  delivered_by: string | null;
+  eef_strategy_id: string | null;
+  eef_strategy_name: string | null;
+  eef_impact_months: number | null;
+  success_criteria: string | null;
+  lesson_adaptations: string | null;
+  resources: string | null;
+  status: InterventionStatus;
+  started_at: string | null;
+  target_end_date: string | null;
+  completed_at: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LSInterventionSession {
+  id: string;
+  intervention_id: string;
+  session_number: number;
+  session_date: string;
+  duration_minutes: number | null;
+  delivered_by: string | null;
+  focus: string;
+  observation: string | null;
+  next_session_plan: string | null;
+  progress_note: string | null;
+  stage: CPAStage | null;
+  created_at: string;
+}
+
+export type InterventionWithSessions = LSIntervention & {
+  sessions?: LSInterventionSession[];
+  pupil?: LSPupil | null;
+};

@@ -22,6 +22,7 @@ import type {
 } from "@/types/lesson-studio";
 import { useAuth } from "@/context/SupabaseAuthContext";
 import { getRelevantStrategies } from "@/lib/eef-toolkit";
+import { InterventionPanel } from "./InterventionPanel";
 
 /* ── Prerequisite skill mappings ─────────────────────────────────── */
 
@@ -271,6 +272,7 @@ export function PupilDetailPanel({
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabId>("skills");
   const [selectedSubject, setSelectedSubject] = useState("maths");
+  const [showIntervention, setShowIntervention] = useState(false);
 
   const headers: HeadersInit = session?.access_token
     ? { Authorization: `Bearer ${session.access_token}` }
@@ -716,7 +718,10 @@ export function PupilDetailPanel({
 
         {/* Quick actions footer */}
         <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/50 space-y-2">
-          <button className="w-full px-4 py-2.5 text-xs font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors duration-150 flex items-center justify-center gap-2">
+          <button
+            onClick={() => setShowIntervention(true)}
+            className="w-full px-4 py-2.5 text-xs font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors duration-150 flex items-center justify-center gap-2"
+          >
             Create intervention plan
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
@@ -730,6 +735,20 @@ export function PupilDetailPanel({
           </div>
         </div>
       </div>
+
+      {/* Intervention Panel overlay */}
+      {showIntervention && pupil && (
+        <InterventionPanel
+          pupilId={pupilId}
+          classId={classId}
+          pupilName={name}
+          subject={selectedSubject}
+          currentGrade={
+            ((pupil as Record<string, unknown>)[`attainment_${selectedSubject}`] as string) ?? "WTS"
+          }
+          onClose={() => setShowIntervention(false)}
+        />
+      )}
     </>
   );
 }
