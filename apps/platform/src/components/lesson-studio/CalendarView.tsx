@@ -8,7 +8,7 @@ import type {
   LessonStatus,
 } from "@/types/lesson-studio";
 import { SUBJECT_COLORS } from "@/types/lesson-studio";
-import { useAuth } from "@/context/SupabaseAuthContext";
+import { supabase } from "@/lib/supabase";
 
 /* ── Constants ───────────────────────────────────────────────────────── */
 
@@ -96,11 +96,6 @@ export function CalendarView({
   selectedClassId,
   onEventClick,
 }: CalendarViewProps) {
-  const { session } = useAuth();
-  const authHeaders: HeadersInit = session?.access_token
-    ? { Authorization: `Bearer ${session.access_token}` }
-    : {};
-
   const [weekStart, setWeekStart] = useState<Date>(() =>
     getMondayDate(new Date()),
   );
@@ -109,31 +104,32 @@ export function CalendarView({
 
   const todayStr = toDateStr(new Date());
 
-  // Fetch events when weekStart or selectedClassId changes
-  const fetchEvents = useCallback(async () => {
+  // Fetch events directly from Supabase
+  useEffect(() => {
     const startDate = toDateStr(weekStart);
     const endDate = toDateStr(addDays(weekStart, 4));
-    const params = new URLSearchParams({ startDate, endDate });
-    if (selectedClassId) params.set("classId", selectedClassId);
 
     setLoading(true);
-    try {
-      const res = await fetch(
-        `/api/lesson-studio/calendar?${params.toString()}`,
-        { headers: authHeaders },
-      );
-      const json = await res.json();
-      setEvents(json.data?.events ?? []);
-    } catch {
-      setEvents([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [weekStart, selectedClassId]);
+    let query = supabase
+      .from("ls_calendar_events")
+      .select("*, lesson_plan:ls_lesson_plans(id, title, status, learning_objective)")
+      .gte("event_date", startDate)
+      .lte("event_date", endDate)
+      .order("event_date")
+      .order("start_time");
 
-  useEffect(() => {
-    fetchEvents();
-  }, [fetchEvents]);
+    if (selectedClassId) {
+      query = query.eq("class_id", selectedClassId);
+    }
+
+    query.then(({ data }) => {
+      setEvents((data || []) as CalendarEventWithPlan[]);
+      setLoading(false);
+    }).catch(() => {
+      setEvents([]);
+      setLoading(false);
+    });
+  }, [weekStart, selectedClassId]);
 
   // Navigation
   const prevWeek = () => setWeekStart((d) => addDays(d, -7));

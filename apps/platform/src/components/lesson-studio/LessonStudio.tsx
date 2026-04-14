@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { supabase } from "@/lib/supabase";
 import {
   GraduationCap,
   ChevronLeft,
@@ -68,57 +69,58 @@ export function LessonStudio() {
   const [mainView, setMainView] = useState<"lessons" | "dashboard" | "curriculum" | "schemes">("lessons");
   const [selectedPupilId, setSelectedPupilId] = useState<string | null>(null);
 
-  // Helper: build fetch options with cookie auth + optional Bearer token
-  const fetchOpts = useCallback((): RequestInit => {
-    const opts: RequestInit = { credentials: "include" };
-    if (session?.access_token) {
-      opts.headers = { Authorization: `Bearer ${session.access_token}` };
-    }
-    return opts;
-  }, [session?.access_token]);
-
-  // Load classes when org is known
+  // Load classes directly from Supabase
   useEffect(() => {
     if (!organizationId) return;
-    fetch(`/api/lesson-studio/classes?organizationId=${organizationId}`, fetchOpts())
-      .then((r) => r.json())
-      .then((res) => {
-        const data = res.data ?? [];
-        setClasses(data);
-        if (data.length > 0 && !selectedClass) setSelectedClass(data[0]);
+    supabase
+      .from("ls_classes")
+      .select("*")
+      .eq("organization_id", organizationId)
+      .order("year_group")
+      .then(({ data }) => {
+        const classes = data || [];
+        setClasses(classes);
+        if (classes.length > 0) setSelectedClass(classes[0]);
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [organizationId, fetchOpts]);
+  }, [organizationId]);
 
   // Load timetable + pupils when class changes
   useEffect(() => {
     if (!selectedClass || !organizationId) return;
     Promise.all([
-      fetch(
-        `/api/lesson-studio/timetable?classId=${selectedClass.id}&organizationId=${organizationId}`,
-        fetchOpts(),
-      ).then((r) => r.json()),
-      fetch(
-        `/api/lesson-studio/pupils?classId=${selectedClass.id}&organizationId=${organizationId}`,
-        fetchOpts(),
-      ).then((r) => r.json()),
-    ]).then(([timetableRes, pupilsRes]) => {
-      setSlots(timetableRes.data ?? []);
-      setPupils(pupilsRes.data ?? []);
+      supabase
+        .from("ls_timetable_slots")
+        .select("*")
+        .eq("class_id", selectedClass.id)
+        .eq("organization_id", organizationId)
+        .order("day_of_week")
+        .order("start_time"),
+      supabase
+        .from("ls_pupils")
+        .select("*")
+        .eq("class_id", selectedClass.id)
+        .eq("organization_id", organizationId),
+    ]).then(([slotsRes, pupilsRes]) => {
+      setSlots((slotsRes.data || []) as LSTimetableSlot[]);
+      setPupils((pupilsRes.data || []) as LSPupil[]);
     });
-  }, [selectedClass, organizationId, fetchOpts]);
+  }, [selectedClass, organizationId]);
 
   // Load plans when class or week changes
   useEffect(() => {
     if (!selectedClass || !organizationId) return;
-    fetch(
-      `/api/lesson-studio/plans?classId=${selectedClass.id}&week=${weekCommencing}&organizationId=${organizationId}`,
-      fetchOpts(),
-    )
-      .then((r) => r.json())
-      .then((res) => setPlans(res.data ?? []));
-  }, [selectedClass, weekCommencing, organizationId, fetchOpts]);
+    supabase
+      .from("ls_lesson_plans")
+      .select("*")
+      .eq("class_id", selectedClass.id)
+      .eq("organization_id", organizationId)
+      .eq("week_commencing", weekCommencing)
+      .order("day_of_week")
+      .order("subject")
+      .then(({ data }) => setPlans((data || []) as LSLessonPlan[]));
+  }, [selectedClass, weekCommencing, organizationId]);
 
   // Week navigation
   const prevWeek = () => {
