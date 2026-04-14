@@ -24,6 +24,13 @@ const PHASE_ACCENT: Record<string, string> = {
   Plenary: "text-purple-700",
 };
 
+const PHASE_EMOJI: Record<string, { emoji: string; bg: string }> = {
+  Starter:  { emoji: "⚡", bg: "bg-amber-100" },
+  Teach:    { emoji: "📖", bg: "bg-blue-100" },
+  Practice: { emoji: "✏️", bg: "bg-green-100" },
+  Plenary:  { emoji: "🎯", bg: "bg-purple-100" },
+};
+
 const DIFF_COLORS = [
   "border-blue-300 bg-blue-50",
   "border-green-300 bg-green-50",
@@ -79,10 +86,12 @@ export function TeachMode({ plan, onExit }: TeachModeProps) {
     title: plan.title,
     content: (
       <div className="text-center max-w-3xl mx-auto">
-        <div className="text-sm font-semibold text-teal-600 uppercase tracking-wide mb-3">{plan.subject}</div>
-        <h1 className="text-5xl font-bold text-slate-800 mb-4">{plan.title}</h1>
+        <div className="w-24 h-1 bg-gradient-to-r from-teal-400 to-teal-600 mx-auto mb-8 rounded-full" />
+        <div className="text-sm font-semibold text-teal-600 uppercase tracking-widest mb-4">{plan.subject}</div>
+        <h1 className="text-5xl font-bold text-slate-800 mb-6 leading-tight">{plan.title}</h1>
+        <div className="w-24 h-1 bg-gradient-to-r from-teal-400 to-teal-600 mx-auto mt-6 rounded-full" />
         {plan.scheme_name && (
-          <p className="text-lg text-slate-500">{plan.scheme_name} {plan.scheme_step && `— ${plan.scheme_step}`}</p>
+          <p className="text-base text-slate-400 mt-8">{plan.scheme_name} {plan.scheme_step && `— ${plan.scheme_step}`}</p>
         )}
       </div>
     ),
@@ -148,22 +157,30 @@ export function TeachMode({ plan, onExit }: TeachModeProps) {
 
   for (const section of (plan.plan_sections as PlanSection[]) || []) {
     const accent = PHASE_ACCENT[section.phase] ?? "text-slate-700";
+    const phaseIconData = PHASE_EMOJI[section.phase] ?? { emoji: "📋", bg: "bg-slate-100" };
     slides.push({
       type: "phase",
       label: section.phase,
       title: section.phase,
       time: section.time,
       content: (
-        <div className="max-w-3xl mx-auto">
-          <div className="flex items-center gap-3 mb-6">
-            <span className={`text-2xl font-bold ${accent}`}>{section.phase}</span>
-            {section.time && (
-              <span className="px-3 py-1 bg-slate-100 text-slate-600 text-sm font-medium rounded-full">
-                {section.time}
-              </span>
-            )}
+        <div className="max-w-3xl mx-auto w-full">
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-8">
+            <div className="flex items-center gap-4 mb-6">
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${phaseIconData.bg}`}>
+                <span className="text-2xl">{phaseIconData.emoji}</span>
+              </div>
+              <div>
+                <span className={`text-2xl font-bold ${accent}`}>{section.phase}</span>
+                {section.time && (
+                  <span className="ml-3 px-3 py-1 bg-slate-100 text-slate-600 text-sm font-medium rounded-full">
+                    {section.time}
+                  </span>
+                )}
+              </div>
+            </div>
+            <p className="text-xl text-slate-700 leading-relaxed">{section.description}</p>
           </div>
-          <p className="text-2xl text-slate-700 leading-relaxed">{section.description}</p>
         </div>
       ),
     });

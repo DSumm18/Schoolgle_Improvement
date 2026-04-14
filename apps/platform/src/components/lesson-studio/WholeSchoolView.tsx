@@ -315,6 +315,7 @@ export function WholeSchoolView({
                 slotMap.set(key, slot);
               }
 
+              const hasNoSlotsToday = slotMap.size === 0;
               const lunch = getLunchTime(cls.year_group);
 
               const row = (
@@ -332,8 +333,18 @@ export function WholeSchoolView({
                     </div>
                   </td>
 
+                  {/* No timetable message — spans all time columns */}
+                  {hasNoSlotsToday && (
+                    <td
+                      colSpan={timeColumns.length}
+                      className="px-3 py-2 text-left"
+                    >
+                      <span className="text-[10px] text-slate-300 italic">No timetable set up</span>
+                    </td>
+                  )}
+
                   {/* Time slot cells */}
-                  {timeColumns.map((col) => {
+                  {!hasNoSlotsToday && timeColumns.map((col) => {
                     if (col.isLunch) {
                       // Lunch cell — show staggered time
                       return (
@@ -349,9 +360,7 @@ export function WholeSchoolView({
                     const slot = slotMap.get(col.key);
                     if (!slot) {
                       return (
-                        <td key={col.key} className="px-2 py-1.5 text-center bg-slate-50/60">
-                          <span className="text-[10px] text-slate-300">—</span>
-                        </td>
+                        <td key={col.key} className="px-2 py-1.5 text-center bg-slate-50/60" />
                       );
                     }
 
