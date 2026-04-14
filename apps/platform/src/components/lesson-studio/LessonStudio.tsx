@@ -25,6 +25,7 @@ import { PupilDetailPanel } from "./PupilDetailPanel";
 import { CurriculumChecklist } from "./CurriculumChecklist";
 import { SchemeManager } from "./SchemeManager";
 import { CurriculumProgressionView } from "./CurriculumProgressionView";
+import { WholeSchoolView } from "./WholeSchoolView";
 import type {
   LSClass,
   LSPupil,
@@ -446,6 +447,21 @@ export function LessonStudio() {
           </button>
         </div>
       </div>
+
+      {/* Whole-school view when no class selected */}
+      {!selectedClass && !loading && (
+        <WholeSchoolView
+          organizationId={organizationId || ""}
+          weekCommencing={weekCommencing}
+          onClassClick={(classId) => {
+            const cls = classes.find((c) => c.id === classId);
+            if (cls) {
+              setSelectedClass(cls);
+              setMainView("curriculum");
+            }
+          }}
+        />
+      )}
 
       {/* Dashboard view */}
       {mainView === "dashboard" && selectedClass && (
