@@ -87,8 +87,10 @@ export async function analyseImage(
   context?: string,
 ): Promise<VisionAnalysisResult> {
   // Use GOOGLE_AI_API_KEY, falling back to GEMINI_API_KEY for backwards compatibility
-  const apiKey = process.env.GOOGLE_AI_API_KEY ?? process.env.GEMINI_API_KEY;
-  if (!apiKey || apiKey === "placeholder_david_will_replace") {
+  const googleKey = process.env.GOOGLE_AI_API_KEY;
+  const geminiKey = process.env.GEMINI_API_KEY;
+  const apiKey = (googleKey && googleKey !== "placeholder_david_will_replace") ? googleKey : geminiKey;
+  if (!apiKey) {
     throw new Error(
       "GOOGLE_AI_API_KEY is not configured. Set it in .env.local with your Google AI Studio key.",
     );
