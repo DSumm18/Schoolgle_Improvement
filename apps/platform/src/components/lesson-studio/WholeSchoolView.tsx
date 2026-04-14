@@ -182,7 +182,7 @@ export function WholeSchoolView({
       : {};
 
     fetch(
-      `/api/lesson-studio/whole-school?weekCommencing=${weekCommencing}`,
+      `/api/lesson-studio/whole-school?weekCommencing=${weekCommencing}&organizationId=${organizationId}`,
       { headers },
     )
       .then((r) => r.json())
