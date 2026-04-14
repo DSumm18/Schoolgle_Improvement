@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/SupabaseAuthContext";
-import { Loader2, ChevronLeft, Star } from "lucide-react";
+import { Loader2, ChevronLeft, Star, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
@@ -38,6 +38,24 @@ interface ClassListData {
   pupils: PupilListItem[];
 }
 
+interface QuestionResult {
+  questionIndex: number;
+  correct: boolean;
+  marksAwarded: number;
+  marksAvailable: number;
+  feedback: string;
+}
+
+interface GradingResults {
+  score: number;
+  totalMarks: number;
+  percentage: number;
+  grade: string;
+  feedback: string;
+  nextSteps: string;
+  questionResults: QuestionResult[];
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────
 
 const GROUP_COLOURS: Record<string, { border: string; bg: string; text: string; badge: string }> = {
@@ -54,6 +72,12 @@ const GROUP_PICKER_COLOURS: Record<string, string> = {
   guided:   "bg-red-100 hover:bg-red-200 text-red-900 border-2 border-red-300",
 };
 
+const GRADE_STYLES: Record<string, { bg: string; text: string; label: string }> = {
+  GDS: { bg: "bg-blue-600",  text: "text-white", label: "Greater Depth" },
+  EXS: { bg: "bg-green-500", text: "text-white", label: "Expected Standard" },
+  WTS: { bg: "bg-amber-500", text: "text-white", label: "Working Towards" },
+};
+
 // ─── Pupil Work Page ──────────────────────────────────────────────────────
 
 export default function PupilWorkPage() {
@@ -63,8 +87,12 @@ export default function PupilWorkPage() {
 
   const [classList, setClassList] = useState<ClassListData | null>(null);
   const [pupilWork, setPupilWork] = useState<PupilWorkData | null>(null);
+  const [selectedPupilId, setSelectedPupilId] = useState<string | null>(null);
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [gradingResults, setGradingResults] = useState<GradingResults | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingPupil, setLoadingPupil] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -87,8 +115,9 @@ export default function PupilWorkPage() {
       if (!res.ok) throw new Error("Could not load class list");
       const data = await res.json();
       setClassList(data);
-    } catch (e: any) {
-      setError(e.message ?? "Error loading lesson");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Error loading lesson";
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -113,10 +142,14 @@ export default function PupilWorkPage() {
       if (!res.ok) throw new Error("Could not load questions");
       const data = await res.json();
       setPupilWork(data);
+      setSelectedPupilId(pupilId);
       setAnswers({});
       setSubmitted(false);
-    } catch (e: any) {
-      setError(e.message ?? "Error loading questions");
+      setGradingResults(null);
+      setSubmitError(null);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Error loading questions";
+      setError(msg);
     } finally {
       setLoadingPupil(false);
     }
@@ -124,13 +157,61 @@ export default function PupilWorkPage() {
 
   const handleBack = () => {
     setPupilWork(null);
+    setSelectedPupilId(null);
     setAnswers({});
     setSubmitted(false);
+    setGradingResults(null);
+    setSubmitError(null);
   };
 
-  const handleSubmit = () => {
-    alert("Well done! Your answers have been submitted.");
-    setSubmitted(true);
+  const handleSubmit = async () => {
+    if (!planId || !selectedPupilId || !pupilWork) return;
+
+    setSubmitting(true);
+    setSubmitError(null);
+
+    const answersArray = Object.entries(answers).map(([idx, answer]) => ({
+      questionIndex: parseInt(idx, 10),
+      answer,
+    }));
+
+    try {
+      const res = await fetch("/api/lesson-studio/pupil-work/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeaders,
+        },
+        body: JSON.stringify({
+          lessonPlanId: planId,
+          pupilId: selectedPupilId,
+          organizationId,
+          answers: answersArray,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error ?? "Submission failed");
+      }
+
+      setGradingResults({
+        score: data.score,
+        totalMarks: data.totalMarks,
+        percentage: data.percentage,
+        grade: data.grade,
+        feedback: data.feedback,
+        nextSteps: data.nextSteps,
+        questionResults: data.questionResults ?? [],
+      });
+      setSubmitted(true);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Something went wrong";
+      setSubmitError(msg);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   // ─── Loading state ───────────────────────────────────────────────
@@ -186,6 +267,138 @@ export default function PupilWorkPage() {
     const allAnswered = pupilWork.questions.length > 0 &&
       pupilWork.questions.every((_, i) => (answers[i] ?? "").trim().length > 0);
 
+    // ─── Results View ────────────────────────────────────────────
+    if (submitted && gradingResults) {
+      const gradeStyle = GRADE_STYLES[gradingResults.grade] ?? GRADE_STYLES.EXS;
+      return (
+        <div className="min-h-screen bg-white" style={{ fontFamily: "Poppins, sans-serif" }}>
+          {/* Header */}
+          <div className={`sticky top-0 z-10 border-b-4 ${gc.border} bg-white px-4 pt-4 pb-3 shadow-sm`}>
+            <button
+              onClick={handleBack}
+              className="flex items-center gap-1 text-slate-400 text-sm mb-2 hover:text-slate-600 transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Back to class
+            </button>
+            <h1 className="text-xl font-bold text-slate-800">Your Results</h1>
+            <p className="text-sm text-slate-500">{pupilWork.subject} — {pupilWork.lessonTitle}</p>
+          </div>
+
+          <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
+            {/* Score circle + grade */}
+            <div className="flex flex-col items-center gap-3 py-6">
+              <div className="relative w-36 h-36 flex items-center justify-center rounded-full border-8 border-indigo-100 bg-indigo-50 shadow">
+                <div className="text-center">
+                  <p className="text-3xl font-extrabold text-indigo-700">
+                    {gradingResults.score}/{gradingResults.totalMarks}
+                  </p>
+                  <p className="text-sm font-semibold text-indigo-400">{gradingResults.percentage}%</p>
+                </div>
+              </div>
+              <span className={`px-5 py-2 rounded-full text-base font-bold ${gradeStyle.bg} ${gradeStyle.text}`}>
+                {gradingResults.grade} — {gradeStyle.label}
+              </span>
+              <p className="text-slate-500 text-sm text-center max-w-xs">
+                {gradingResults.percentage >= 80
+                  ? "Fantastic work! You really nailed this lesson."
+                  : gradingResults.percentage >= 60
+                  ? "Well done! You're meeting the expected standard."
+                  : "Keep going — every mistake is a chance to learn!"}
+              </p>
+            </div>
+
+            {/* Overall feedback */}
+            <div className="rounded-2xl border border-indigo-100 bg-indigo-50 px-4 py-4">
+              <p className="text-sm font-semibold text-indigo-700 mb-1">Teacher feedback</p>
+              <p className="text-sm text-slate-700 leading-relaxed">{gradingResults.feedback}</p>
+            </div>
+
+            {/* Per-question results */}
+            <div>
+              <p className="text-sm font-semibold text-slate-600 mb-3">Question by question</p>
+              <div className="space-y-3">
+                {gradingResults.questionResults.map((qr, i) => {
+                  const originalQ = pupilWork.questions[qr.questionIndex];
+                  const isCorrect = qr.correct;
+                  const isPartial = !isCorrect && qr.marksAwarded > 0;
+
+                  return (
+                    <div
+                      key={i}
+                      className={`rounded-2xl border p-4 ${
+                        isCorrect
+                          ? "border-green-200 bg-green-50"
+                          : isPartial
+                          ? "border-amber-200 bg-amber-50"
+                          : "border-red-100 bg-red-50"
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="flex-shrink-0 mt-0.5">
+                          {isCorrect ? (
+                            <CheckCircle2 className="w-5 h-5 text-green-500" />
+                          ) : isPartial ? (
+                            <AlertCircle className="w-5 h-5 text-amber-500" />
+                          ) : (
+                            <XCircle className="w-5 h-5 text-red-400" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2 flex-wrap">
+                            <p className="text-sm font-medium text-slate-800 leading-snug">
+                              Q{qr.questionIndex + 1}: {originalQ?.q ?? ""}
+                            </p>
+                            <span className={`text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${
+                              isCorrect
+                                ? "bg-green-100 text-green-700"
+                                : isPartial
+                                ? "bg-amber-100 text-amber-700"
+                                : "bg-red-100 text-red-600"
+                            }`}>
+                              {qr.marksAwarded}/{qr.marksAvailable}
+                            </span>
+                          </div>
+                          <p className="text-sm text-slate-600 mt-1">{qr.feedback}</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Next steps */}
+            {gradingResults.nextSteps && (
+              <div className="rounded-2xl border border-purple-200 bg-purple-50 px-4 py-4">
+                <p className="text-sm font-semibold text-purple-700 mb-1">Next steps</p>
+                <p className="text-sm text-slate-700 leading-relaxed">{gradingResults.nextSteps}</p>
+              </div>
+            )}
+
+            {/* Star */}
+            <div className="flex justify-center py-4">
+              <Star className="w-10 h-10 text-yellow-400 fill-yellow-300" />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ─── Submitting / marking state ───────────────────────────────
+    if (submitting) {
+      return (
+        <div className="min-h-screen bg-white flex flex-col items-center justify-center gap-4">
+          <Loader2 className="w-12 h-12 text-indigo-500 animate-spin" />
+          <p className="text-lg font-semibold text-slate-700" style={{ fontFamily: "Poppins, sans-serif" }}>
+            Marking your work...
+          </p>
+          <p className="text-sm text-slate-400">The AI is reading your answers. This takes a few seconds.</p>
+        </div>
+      );
+    }
+
+    // ─── Questions form ───────────────────────────────────────────
     return (
       <div className="min-h-screen bg-white" style={{ fontFamily: "Poppins, sans-serif" }}>
         {/* Header */}
@@ -244,29 +457,27 @@ export default function PupilWorkPage() {
             ))
           )}
 
+          {/* Submit error */}
+          {submitError && (
+            <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3">
+              <p className="text-sm font-medium text-red-600">{submitError}</p>
+              <p className="text-xs text-red-400 mt-1">Please try again or ask your teacher for help.</p>
+            </div>
+          )}
+
           {/* Submit button */}
           {!submitted && pupilWork.questions.length > 0 && (
             <button
               onClick={handleSubmit}
-              disabled={!allAnswered}
+              disabled={!allAnswered || submitting}
               className={`w-full py-4 rounded-2xl text-lg font-bold transition-all ${
-                allAnswered
+                allAnswered && !submitting
                   ? "bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg hover:shadow-xl active:scale-95"
                   : "bg-slate-100 text-slate-400 cursor-not-allowed"
               }`}
             >
               {allAnswered ? "Submit my answers" : "Answer all questions to submit"}
             </button>
-          )}
-
-          {submitted && (
-            <div className="rounded-2xl bg-green-50 border border-green-200 p-6 text-center">
-              <div className="flex justify-center mb-3">
-                <Star className="w-10 h-10 text-green-500 fill-green-400" />
-              </div>
-              <p className="text-xl font-bold text-green-700">Great work!</p>
-              <p className="text-sm text-green-600 mt-1">Your answers have been submitted.</p>
-            </div>
           )}
         </div>
       </div>
