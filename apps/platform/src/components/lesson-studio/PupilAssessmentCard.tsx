@@ -6,6 +6,10 @@ import type { AssessmentWithSubmission, AttainmentLevel } from "@/types/lesson-s
 
 interface PupilAssessmentCardProps {
   assessment: AssessmentWithSubmission;
+  /** Teacher's grade for this pupil's subject attainment (pre-computed by parent) */
+  teacherGrade?: AttainmentLevel | null;
+  /** Whether AI grade differs from teacher's existing grade */
+  hasDiscrepancy?: boolean;
   onReview: (
     assessmentId: string,
     action: "agree" | "override" | "flag",
@@ -72,7 +76,7 @@ function getInitials(name: string | null | undefined): string {
     .toUpperCase();
 }
 
-export function PupilAssessmentCard({ assessment, onReview }: PupilAssessmentCardProps) {
+export function PupilAssessmentCard({ assessment, teacherGrade, hasDiscrepancy, onReview }: PupilAssessmentCardProps) {
   const [overrideMode, setOverrideMode] = useState(false);
   const [overrideGrade, setOverrideGrade] = useState<AttainmentLevel | "">(
     assessment.teacher_grade ?? "",
@@ -82,16 +86,30 @@ export function PupilAssessmentCard({ assessment, onReview }: PupilAssessmentCar
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const pupil = assessment.pupil;
-  const displayName = pupil?.display_name_encrypted ?? `Pupil ${assessment.pupil_id.slice(0, 6)}`;
+  // Strip "enc:" prefix from display name if present
+  const rawName = pupil?.display_name_encrypted ?? `Pupil ${assessment.pupil_id.slice(0, 6)}`;
+  const displayName = rawName.startsWith("enc:") ? rawName.slice(4) : rawName;
   const isReviewed = assessment.teacher_agreed != null;
-  const disagrees =
+
+  // Use the pre-computed teacherGrade from subject attainment if available,
+  // otherwise fall back to assessment.teacher_grade
+  const resolvedTeacherGrade = teacherGrade ?? assessment.teacher_grade ?? null;
+
+  // Discrepancy: teacher grade differs from AI grade and not yet reviewed
+  const disagrees = hasDiscrepancy ?? (
     !isReviewed &&
     assessment.ai_suggested_grade &&
-    assessment.teacher_grade &&
-    assessment.ai_suggested_grade !== assessment.teacher_grade;
+    resolvedTeacherGrade &&
+    assessment.ai_suggested_grade !== resolvedTeacherGrade
+  );
 
   const misconceptions = assessment.misconceptions ?? [];
   const nextSteps = assessment.next_steps;
+
+  // Raw scores from work submission grading result
+  const gradingResult = assessment.work_submission?.grading_result;
+  const rawScore = gradingResult?.score ?? null;
+  const rawTotal = gradingResult?.total ?? null;
 
   const handleAction = async (action: "agree" | "override" | "flag", data?: Record<string, string>) => {
     setSubmitting(true);
@@ -103,11 +121,18 @@ export function PupilAssessmentCard({ assessment, onReview }: PupilAssessmentCar
     }
   };
 
+  // Colour coding: amber left border for discrepancy, green for aligned, neutral for pending/reviewed
+  const cardBorder = isReviewed
+    ? "border-gray-100"
+    : disagrees
+    ? "border-amber-200 border-l-4 border-l-amber-400"
+    : resolvedTeacherGrade && assessment.ai_suggested_grade
+    ? "border-emerald-100 border-l-4 border-l-emerald-400"
+    : "border-gray-100";
+
   return (
     <div
-      className={`rounded-xl border bg-white p-4 transition-colors duration-150 ${
-        disagrees ? "border-amber-200" : "border-gray-100"
-      }`}
+      className={`rounded-xl border bg-white p-4 transition-colors duration-150 ${cardBorder}`}
     >
       {/* Header: avatar + name + tags */}
       <div className="flex items-center gap-3 mb-3">
@@ -146,7 +171,7 @@ export function PupilAssessmentCard({ assessment, onReview }: PupilAssessmentCar
 
       {/* Grade boxes */}
       <div className="flex gap-2 mb-3">
-        <GradeBox label="Teacher" grade={assessment.teacher_grade} />
+        <GradeBox label="Teacher" grade={resolvedTeacherGrade} />
         <GradeBox
           label="AI Grade"
           grade={assessment.ai_suggested_grade}
@@ -159,11 +184,28 @@ export function PupilAssessmentCard({ assessment, onReview }: PupilAssessmentCar
               ? assessment.teacher_agreed
                 ? "Agreed"
                 : "Overridden"
+              : disagrees
+              ? "Differs"
+              : resolvedTeacherGrade && assessment.ai_suggested_grade
+              ? "Match"
               : "Pending"
           }
-          muted={!isReviewed}
+          muted={!isReviewed && !disagrees && !(resolvedTeacherGrade && assessment.ai_suggested_grade)}
         />
       </div>
+
+      {/* Raw score */}
+      {rawScore != null && rawTotal != null && (
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">Score</span>
+          <span className="text-xs font-semibold text-gray-700">
+            {rawScore}/{rawTotal}{" "}
+            <span className="font-normal text-gray-400">
+              ({Math.round((rawScore / rawTotal) * 100)}%)
+            </span>
+          </span>
+        </div>
+      )}
 
       {/* Misconceptions */}
       {misconceptions.length > 0 && (

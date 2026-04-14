@@ -138,7 +138,7 @@ export function LessonPlanPanel({ plan, slot, pupils, onClose, onTeach, onMarkTa
         </div>
       ) : activeTab === "assessment" ? (
         <div className="p-4">
-          <AssessmentPanel lessonPlanId={plan.id} pupils={pupils} />
+          <AssessmentPanel lessonPlanId={plan.id} pupils={pupils} subject={plan.subject} />
         </div>
       ) : (
       <div className="p-4 space-y-6">
