@@ -35,6 +35,7 @@ import type {
 } from "@/types/lesson-studio";
 import { DAY_NAMES } from "@/types/lesson-studio";
 import { useAuth } from "@/context/SupabaseAuthContext";
+import { ThemeCarousel } from "./ThemeCarousel";
 
 function getMonday(d: Date): string {
   const date = new Date(d);
@@ -95,6 +96,7 @@ export function LessonStudio() {
     ncCodes: string[];
     weekRange: string;
   } | null>(null);
+  const [selectedTheme, setSelectedTheme] = useState("none");
 
   // Load classes directly from Supabase
   useEffect(() => {
@@ -175,9 +177,18 @@ export function LessonStudio() {
           slotId: slot.id,
           weekCommencing,
           organizationId,
-          teacherNote: selectedTopic
-            ? `Teach: ${selectedTopic.unitName}. Topics: ${selectedTopic.keyTopics.join(", ")}. NC codes: ${selectedTopic.ncCodes.join(", ")}.`
-            : undefined,
+          teacherNote: (() => {
+            const themeNote = selectedTheme !== "none"
+              ? `Theme: ${selectedTheme}. Weave this theme into examples, word problems, and activities to make the lesson engaging. Use ${selectedTheme}-related contexts for mathematical concepts.`
+              : "";
+            const fullNote = [
+              selectedTopic
+                ? `Teach: ${selectedTopic.unitName}. Topics: ${selectedTopic.keyTopics.join(", ")}. NC codes: ${selectedTopic.ncCodes.join(", ")}.`
+                : "",
+              themeNote,
+            ].filter(Boolean).join(" ");
+            return fullNote || undefined;
+          })(),
         }),
       });
       const result = await res.json();
@@ -657,12 +668,22 @@ export function LessonStudio() {
                 </button>
               </div>
 
+              <ThemeCarousel
+                selectedTheme={selectedTheme}
+                onSelect={setSelectedTheme}
+              />
+
               <div className="border border-dashed border-slate-200 rounded-xl p-8 text-center">
                 <Sparkles className="w-10 h-10 text-teal-400 mx-auto mb-3" />
                 <h3 className="text-sm font-semibold text-slate-700 mb-1">No lesson plan yet</h3>
                 <p className="text-xs text-slate-500 mb-4">
                   Generate an AI lesson plan tailored to {selectedClass?.class_name || "this class"}'s
                   needs, with differentiated activities and SEND adaptations.
+                  {selectedTheme !== "none" && (
+                    <span className="block mt-1 text-teal-600 font-medium">
+                      Theme: {selectedTheme} will be woven into the lesson.
+                    </span>
+                  )}
                 </p>
                 <button
                   onClick={() => {
