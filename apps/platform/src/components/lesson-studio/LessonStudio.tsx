@@ -332,7 +332,14 @@ export function LessonStudio() {
                                 : "text-slate-700"
                             }`}
                           >
-                            <span>{cls.class_name}</span>
+                            <div>
+                              <span>{cls.class_name}</span>
+                              {(cls as LSClass & { teacher_name?: string }).teacher_name && (
+                                <span className="text-xs text-slate-400 ml-1.5">
+                                  {(cls as LSClass & { teacher_name?: string }).teacher_name}
+                                </span>
+                              )}
+                            </div>
                             <span className="text-xs text-slate-400">
                               {(cls as LSClass & { pupil_count?: number }).pupil_count
                                 ? `${(cls as LSClass & { pupil_count?: number }).pupil_count} pupils`

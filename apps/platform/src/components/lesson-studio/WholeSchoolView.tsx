@@ -327,7 +327,9 @@ export function WholeSchoolView({
                     <div className="font-semibold text-slate-800 truncate max-w-[128px]" title={cls.class_name}>
                       {cls.class_name}
                     </div>
-                    <div className="text-[10px] text-slate-400">{cls.year_group}</div>
+                    <div className="text-[10px] text-slate-400">
+                      {cls.teacher_name || cls.year_group}
+                    </div>
                   </td>
 
                   {/* Time slot cells */}

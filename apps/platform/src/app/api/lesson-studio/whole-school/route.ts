@@ -13,7 +13,7 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
   // Load all classes for the org
   const { data: classes, error: classesError } = await supabase
     .from("ls_classes")
-    .select("id, class_name, year_group, teacher_user_id")
+    .select("id, class_name, year_group, teacher_user_id, teacher_name")
     .eq("organization_id", orgId)
     .order("year_group")
     .order("class_name");
@@ -69,7 +69,7 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
       id: cls.id,
       class_name: cls.class_name,
       year_group: cls.year_group,
-      teacher_name: undefined as string | undefined,
+      teacher_name: (cls as Record<string, unknown>).teacher_name as string | undefined,
       slots: classSlots.map((slot) => {
         const planBySlot = planMap.get(`slot:${slot.id}`);
         const planByKey = planMap.get(`${cls.id}:${slot.day_of_week}:${slot.subject}`);
