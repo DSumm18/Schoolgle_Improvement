@@ -66,7 +66,7 @@ export function LessonPlanPanel({ plan, slot, pupils, onClose, onTeach, onMarkTa
           </div>
 
           {/* Action buttons */}
-          <div className="flex gap-2 mt-3">
+          <div className="flex gap-2 mt-3 flex-wrap">
             <button
               onClick={() => onTeach(plan.id)}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-600 text-white text-xs font-medium rounded-lg hover:bg-teal-700 transition-colors"
@@ -83,6 +83,17 @@ export function LessonPlanPanel({ plan, slot, pupils, onClose, onTeach, onMarkTa
                 Lesson Complete
               </button>
             )}
+            <button
+              onClick={() => {
+                const url = `${window.location.origin}/dashboard/teaching-learning/lesson-studio/pupil?plan=${plan.id}`;
+                navigator.clipboard.writeText(url);
+                alert("Link copied! Open on pupil devices:\n" + url);
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-indigo-300 text-indigo-700 bg-indigo-50 text-xs font-medium rounded-lg hover:bg-indigo-100 transition-colors"
+            >
+              <Users className="w-3.5 h-3.5" />
+              Send to Pupils
+            </button>
           </div>
         </div>
 
