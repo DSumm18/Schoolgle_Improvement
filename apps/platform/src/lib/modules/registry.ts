@@ -144,9 +144,6 @@ export const MODULES: ModuleDefinition[] = [
     icon: PoundSterling,
     description: "Budget monitoring and procurement.",
     requiredPermissions: ["admin", "headteacher", "slt"],
-    pilotHidden: true,
-    pilotNote:
-      "Finance module is in development. Budget import and analysis coming soon.",
   },
   {
     id: "hr",
@@ -240,9 +237,6 @@ export const MODULES: ModuleDefinition[] = [
     description:
       "Design, build, and publish your school website with AI-powered compliance checking.",
     requiredPermissions: ["admin", "headteacher", "slt"],
-    pilotHidden: true,
-    pilotNote:
-      "Website builder is in development and not yet available in the pilot.",
   },
   {
     id: "connectors",
@@ -261,8 +255,6 @@ export const MODULES: ModuleDefinition[] = [
     description:
       "Data intelligence platform — connect, understand, reconcile, and visualise your school data.",
     requiredPermissions: ["admin", "headteacher", "slt"],
-    pilotHidden: true,
-    pilotNote: "Canvas data intelligence is in early development.",
   },
 ];
 
@@ -612,14 +604,13 @@ export const APPS: AppDefinition[] = [
 
   {
     id: "staff-connectors",
-    moduleId: "hr",
+    moduleId: "estates",
     name: "Staff Connectors",
     route: "/dashboard/connectors/staff",
     icon: Settings,
     shortDescription:
       "Statutory roles, responsibilities, and compliance tracking.",
     requiredPermissions: ["admin", "headteacher", "slt"],
-    pilotHidden: true,
   },
 
   // Estates Apps
@@ -788,24 +779,22 @@ export const APPS: AppDefinition[] = [
   // Performance Management
   {
     id: "performance-management",
-    moduleId: "hr",
+    moduleId: "estates",
     name: "Performance Management",
     route: "/dashboard/hr/performance",
     icon: Target,
     shortDescription: "Appraisals, objectives, and pay recommendations.",
     requiredPermissions: ["admin", "headteacher", "slt"],
-    pilotHidden: true,
   },
   // Cover Management
   {
     id: "cover-management",
-    moduleId: "hr",
+    moduleId: "estates",
     name: "Cover Management",
     route: "/dashboard/hr/cover",
     icon: UserCheck,
     shortDescription: "Staff absence recording and cover arrangements.",
     requiredPermissions: ["admin", "headteacher", "slt"],
-    pilotHidden: true,
   },
 
   // Pupil Premium
@@ -1139,9 +1128,9 @@ export const APPS: AppDefinition[] = [
   // Canvas Apps
   {
     id: "canvas-home",
-    moduleId: "canvas",
+    moduleId: "school-intelligence",
     name: "Canvas",
-    route: "/dashboard/canvas",
+    route: "/dashboard/school-intelligence/canvas",
     icon: Database,
     shortDescription: "Data intelligence — ingest, reconcile, visualise.",
     requiredPermissions: ["admin", "headteacher", "slt"],
