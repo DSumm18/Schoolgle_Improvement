@@ -7,6 +7,8 @@ import type { LSLessonPlan, PlanSection, VocabularyItem, DifferentiationGroup } 
 interface TeachModeProps {
   plan: LSLessonPlan;
   onExit: () => void;
+  schoolName?: string;
+  schoolLogoUrl?: string;
 }
 
 interface Slide {
@@ -69,7 +71,7 @@ function parseMinutes(time?: string): number {
   return match ? parseInt(match[1], 10) : 0;
 }
 
-export function TeachMode({ plan, onExit }: TeachModeProps) {
+export function TeachMode({ plan, onExit, schoolName, schoolLogoUrl }: TeachModeProps) {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [timerRunning, setTimerRunning] = useState(false);
@@ -86,6 +88,17 @@ export function TeachMode({ plan, onExit }: TeachModeProps) {
     title: plan.title,
     content: (
       <div className="text-center max-w-3xl mx-auto">
+        {/* School branding */}
+        {(schoolLogoUrl || schoolName) && (
+          <div className="flex items-center justify-center gap-3 mb-8">
+            {schoolLogoUrl && (
+              <img src={schoolLogoUrl} alt="" className="w-12 h-12 rounded-lg object-contain" />
+            )}
+            {schoolName && (
+              <span className="text-sm font-medium text-slate-400 tracking-wide">{schoolName}</span>
+            )}
+          </div>
+        )}
         <div className="w-24 h-1 bg-gradient-to-r from-teal-400 to-teal-600 mx-auto mb-8 rounded-full" />
         <div className="text-sm font-semibold text-teal-600 uppercase tracking-widest mb-4">{plan.subject}</div>
         <h1 className="text-5xl font-bold text-slate-800 mb-6 leading-tight">{plan.title}</h1>

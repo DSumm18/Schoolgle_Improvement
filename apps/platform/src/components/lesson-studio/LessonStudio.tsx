@@ -64,7 +64,7 @@ function groupClassesByYear(classes: LSClass[]): Record<string, LSClass[]> {
 }
 
 export function LessonStudio() {
-  const { organizationId, session } = useAuth();
+  const { organizationId, session, organization } = useAuth();
   const authHeaders: HeadersInit = session?.access_token
     ? { Authorization: `Bearer ${session.access_token}` }
     : {};
@@ -732,7 +732,12 @@ export function LessonStudio() {
 
       {/* Teach Mode (full screen) */}
       {teachMode && (
-        <TeachMode plan={teachMode} onExit={() => setTeachMode(null)} />
+        <TeachMode
+          plan={teachMode}
+          onExit={() => setTeachMode(null)}
+          schoolName={organization?.name}
+          schoolLogoUrl={(organization as Record<string, unknown>)?.logo_url as string | undefined}
+        />
       )}
 
       {/* Pupil Detail Panel (slide-over) */}
