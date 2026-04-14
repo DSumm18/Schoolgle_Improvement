@@ -10,7 +10,7 @@ interface TeachModeProps {
 }
 
 interface Slide {
-  type: "welcome" | "objective" | "vocabulary" | "phase" | "groups";
+  type: "welcome" | "objective" | "vocabulary" | "phase" | "groups" | "visual";
   label: string;
   title: string;
   content: React.ReactNode;
@@ -109,6 +109,24 @@ export function TeachMode({ plan, onExit }: TeachModeProps) {
       </div>
     ),
   });
+
+  // Visual slide — rendered SVG diagram from AI
+  const visData = (plan.generated_resources_json as Record<string, unknown>)?.visualisation as { svg?: string; html?: string } | null;
+  if (visData?.svg) {
+    slides.push({
+      type: "visual",
+      label: "Visual",
+      title: "Interactive Visual",
+      content: (
+        <div className="max-w-4xl mx-auto w-full">
+          <div
+            className="w-full rounded-xl overflow-hidden border border-slate-200 bg-white p-6 [&_svg]:w-full [&_svg]:h-auto [&_svg]:max-h-[60vh]"
+            dangerouslySetInnerHTML={{ __html: visData.svg }}
+          />
+        </div>
+      ),
+    });
+  }
 
   if (plan.key_vocabulary?.length > 0) {
     slides.push({
