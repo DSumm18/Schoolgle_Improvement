@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { ChevronLeft, ChevronRight, Clock, X, Target, Volume2, VolumeX } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, Target, Volume2, VolumeX, Timer, Pause, Play } from "lucide-react";
 import type { LSLessonPlan, PlanSection, VocabularyItem, DifferentiationGroup } from "@/types/lesson-studio";
 
 interface TeachModeProps {
@@ -14,14 +14,14 @@ interface Slide {
   label: string;
   title: string;
   content: React.ReactNode;
-  time?: string; // phase duration for auto-timer
+  time?: string;
 }
 
-const PHASE_COLORS: Record<string, { bg: string; accent: string }> = {
-  Starter: { bg: "bg-amber-50", accent: "text-amber-700" },
-  Teach: { bg: "bg-blue-50", accent: "text-blue-700" },
-  Practice: { bg: "bg-green-50", accent: "text-green-700" },
-  Plenary: { bg: "bg-purple-50", accent: "text-purple-700" },
+const PHASE_ACCENT: Record<string, string> = {
+  Starter: "text-amber-700",
+  Teach: "text-blue-700",
+  Practice: "text-green-700",
+  Plenary: "text-purple-700",
 };
 
 const DIFF_COLORS = [
@@ -36,8 +36,6 @@ function playChime() {
   try {
     const ctx = new AudioContext();
     const now = ctx.currentTime;
-
-    // Three-note ascending chime (C5, E5, G5)
     const frequencies = [523.25, 659.25, 783.99];
     frequencies.forEach((freq, i) => {
       const osc = ctx.createOscillator();
@@ -52,15 +50,12 @@ function playChime() {
       osc.start(now + i * 0.15);
       osc.stop(now + i * 0.15 + 0.8);
     });
-
-    // Clean up after sounds finish
     setTimeout(() => ctx.close(), 2000);
   } catch {
-    // Web Audio not available — silent fallback
+    // silent fallback
   }
 }
 
-/** Parse "5 mins" / "10 minutes" / "15m" to number */
 function parseMinutes(time?: string): number {
   if (!time) return 0;
   const match = time.match(/(\d+)/);
@@ -78,7 +73,6 @@ export function TeachMode({ plan, onExit }: TeachModeProps) {
   // Build slides
   const slides: Slide[] = [];
 
-  // Welcome / Title
   slides.push({
     type: "welcome",
     label: "Title",
@@ -94,7 +88,6 @@ export function TeachMode({ plan, onExit }: TeachModeProps) {
     ),
   });
 
-  // Learning Objective
   slides.push({
     type: "objective",
     label: "Objective",
@@ -117,7 +110,6 @@ export function TeachMode({ plan, onExit }: TeachModeProps) {
     ),
   });
 
-  // Vocabulary
   if (plan.key_vocabulary?.length > 0) {
     slides.push({
       type: "vocabulary",
@@ -136,9 +128,8 @@ export function TeachMode({ plan, onExit }: TeachModeProps) {
     });
   }
 
-  // Phase slides
   for (const section of (plan.plan_sections as PlanSection[]) || []) {
-    const colors = PHASE_COLORS[section.phase] ?? { bg: "bg-slate-50", accent: "text-slate-700" };
+    const accent = PHASE_ACCENT[section.phase] ?? "text-slate-700";
     slides.push({
       type: "phase",
       label: section.phase,
@@ -147,10 +138,10 @@ export function TeachMode({ plan, onExit }: TeachModeProps) {
       content: (
         <div className="max-w-3xl mx-auto">
           <div className="flex items-center gap-3 mb-6">
-            <span className={`text-2xl font-bold ${colors.accent}`}>{section.phase}</span>
+            <span className={`text-2xl font-bold ${accent}`}>{section.phase}</span>
             {section.time && (
               <span className="px-3 py-1 bg-slate-100 text-slate-600 text-sm font-medium rounded-full">
-                <Clock className="w-3.5 h-3.5 inline mr-1" />{section.time}
+                {section.time}
               </span>
             )}
           </div>
@@ -160,7 +151,6 @@ export function TeachMode({ plan, onExit }: TeachModeProps) {
     });
   }
 
-  // Differentiation Groups
   if ((plan.differentiation_groups as DifferentiationGroup[])?.length > 0) {
     slides.push({
       type: "groups",
@@ -186,18 +176,22 @@ export function TeachMode({ plan, onExit }: TeachModeProps) {
   const totalSlides = slides.length;
   const slide = slides[currentSlide];
 
-  // Auto-start timer when entering a phase slide
+  const goNext = () => setCurrentSlide((prev) => Math.min(prev + 1, totalSlides - 1));
+  const goPrev = () => setCurrentSlide((prev) => Math.max(prev - 1, 0));
+
+  // Start timer (manual or auto)
+  const startTimer = (minutes: number) => {
+    setTimerSeconds(0);
+    setTimerTarget(minutes * 60);
+    setTimerRunning(true);
+    hasPlayedRef.current = false;
+  };
+
+  // Auto-start timer on phase slides
   useEffect(() => {
     if (slide?.type === "phase" && slide.time) {
       const mins = parseMinutes(slide.time);
-      if (mins > 0) {
-        setTimerSeconds(0);
-        setTimerTarget(mins * 60);
-        setTimerRunning(true);
-        hasPlayedRef.current = false;
-      }
-    } else {
-      setTimerRunning(false);
+      if (mins > 0) startTimer(mins);
     }
   }, [currentSlide]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -206,14 +200,14 @@ export function TeachMode({ plan, onExit }: TeachModeProps) {
     (e: KeyboardEvent) => {
       if (e.key === "ArrowRight" || e.key === " ") {
         e.preventDefault();
-        setCurrentSlide((prev) => Math.min(prev + 1, totalSlides - 1));
+        goNext();
       } else if (e.key === "ArrowLeft") {
-        setCurrentSlide((prev) => Math.max(prev - 1, 0));
+        goPrev();
       } else if (e.key === "Escape") {
         onExit();
       }
     },
-    [totalSlides, onExit],
+    [totalSlides, onExit], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   useEffect(() => {
@@ -248,9 +242,10 @@ export function TeachMode({ plan, onExit }: TeachModeProps) {
   const timerProgress = timerTarget > 0 ? Math.min(timerSeconds / timerTarget, 1) : 0;
 
   return (
-    <div className="fixed inset-0 z-[100] bg-white flex flex-col">
-      {/* Top bar — light, visible */}
+    <div className="fixed inset-0 z-[100] bg-white flex flex-col select-none">
+      {/* Top bar */}
       <div className="flex items-center justify-between px-6 py-2.5 border-b border-slate-200 bg-slate-50">
+        {/* Left: slide counter */}
         <div className="flex items-center gap-3">
           <span className="text-sm font-semibold text-slate-800">
             {currentSlide + 1} <span className="text-slate-400">/ {totalSlides}</span>
@@ -258,11 +253,39 @@ export function TeachMode({ plan, onExit }: TeachModeProps) {
           <span className="text-sm text-slate-500">{slide.label}</span>
         </div>
 
-        {/* Timer */}
+        {/* Centre: timer display + manual timer buttons */}
         <div className="flex items-center gap-3">
+          {/* Manual timer buttons — always visible */}
+          <div className="flex items-center gap-1 border border-slate-200 rounded-lg p-0.5 bg-white">
+            <Timer className="w-3.5 h-3.5 text-slate-400 ml-1.5" />
+            {[1, 2, 5, 10, 15].map((m) => (
+              <button
+                key={m}
+                onClick={() => startTimer(m)}
+                className={`px-2 py-1 text-xs font-medium rounded-md transition-colors ${
+                  timerTarget === m * 60 && timerRunning
+                    ? "bg-teal-100 text-teal-700"
+                    : "text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+                }`}
+              >
+                {m}m
+              </button>
+            ))}
+          </div>
+
+          {/* Active timer countdown */}
           {timerTarget > 0 && (
             <div className="flex items-center gap-2">
-              <div className="w-32 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+              <button
+                onClick={() => setTimerRunning(!timerRunning)}
+                className="p-1 hover:bg-slate-200 rounded transition-colors"
+              >
+                {timerRunning
+                  ? <Pause className="w-3.5 h-3.5 text-slate-500" />
+                  : <Play className="w-3.5 h-3.5 text-slate-500" />
+                }
+              </button>
+              <div className="w-24 h-1.5 bg-slate-200 rounded-full overflow-hidden">
                 <div
                   className={`h-full rounded-full transition-all duration-1000 ${timerExpired ? "bg-red-400" : "bg-teal-400"}`}
                   style={{ width: `${timerProgress * 100}%` }}
@@ -273,6 +296,8 @@ export function TeachMode({ plan, onExit }: TeachModeProps) {
               </span>
             </div>
           )}
+
+          {/* Sound toggle + exit */}
           <button
             onClick={() => setSoundEnabled(!soundEnabled)}
             className="p-1.5 hover:bg-slate-200 rounded-lg transition-colors"
@@ -283,53 +308,60 @@ export function TeachMode({ plan, onExit }: TeachModeProps) {
               : <VolumeX className="w-4 h-4 text-slate-400" />
             }
           </button>
-          <button onClick={onExit} className="p-1.5 hover:bg-slate-200 rounded-lg transition-colors" title="Exit Teach Mode">
+          <button onClick={onExit} className="p-1.5 hover:bg-slate-200 rounded-lg transition-colors" title="Exit">
             <X className="w-5 h-5 text-slate-500" />
           </button>
         </div>
       </div>
 
-      {/* Slide content */}
-      <div className="flex-1 flex items-center justify-center px-12 py-8">
+      {/* Main content area with floating side arrows */}
+      <div className="flex-1 relative flex items-center justify-center px-20 py-8">
+        {/* LEFT ARROW — big, obvious, always visible */}
+        {currentSlide > 0 && (
+          <button
+            onClick={goPrev}
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center rounded-full bg-slate-100 border border-slate-200 text-slate-600 hover:bg-slate-200 hover:text-slate-800 transition-all shadow-sm"
+          >
+            <ChevronLeft className="w-7 h-7" />
+          </button>
+        )}
+
+        {/* Slide content */}
         {slide.content}
+
+        {/* RIGHT ARROW — big, obvious, always visible */}
+        {currentSlide < totalSlides - 1 && (
+          <button
+            onClick={goNext}
+            className="absolute right-3 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center rounded-full bg-teal-500 text-white hover:bg-teal-600 transition-all shadow-md"
+          >
+            <ChevronRight className="w-7 h-7" />
+          </button>
+        )}
       </div>
 
-      {/* Bottom navigation — clear, visible buttons */}
-      <div className="border-t border-slate-200 bg-slate-50 px-6 py-3">
-        <div className="flex items-center justify-between">
-          <button
-            onClick={() => setCurrentSlide((prev) => Math.max(prev - 1, 0))}
-            disabled={currentSlide === 0}
-            className="flex items-center gap-1.5 px-4 py-2 bg-white border border-slate-200 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed shadow-sm"
-          >
-            <ChevronLeft className="w-4 h-4" /> Previous
-          </button>
-
-          {/* Slide thumbnail strip */}
-          <div className="flex gap-1">
-            {slides.map((s, i) => (
-              <button
-                key={i}
-                onClick={() => setCurrentSlide(i)}
-                className={`px-2 py-1 text-[10px] font-medium rounded transition-all ${
-                  i === currentSlide
-                    ? "bg-teal-600 text-white shadow-sm"
-                    : "bg-white border border-slate-200 text-slate-500 hover:border-teal-300 hover:text-teal-600"
-                }`}
-                title={s.title}
-              >
-                {s.label}
-              </button>
-            ))}
-          </div>
-
-          <button
-            onClick={() => setCurrentSlide((prev) => Math.min(prev + 1, totalSlides - 1))}
-            disabled={currentSlide === totalSlides - 1}
-            className="flex items-center gap-1.5 px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-30 disabled:cursor-not-allowed shadow-sm"
-          >
-            Next <ChevronRight className="w-4 h-4" />
-          </button>
+      {/* Bottom bar: slide strip */}
+      <div className="border-t border-slate-200 bg-slate-50 px-6 py-2.5">
+        <div className="flex items-center justify-center gap-1">
+          {slides.map((s, i) => (
+            <button
+              key={i}
+              onClick={() => setCurrentSlide(i)}
+              className={`px-2.5 py-1.5 text-xs font-medium rounded transition-all ${
+                i === currentSlide
+                  ? "bg-teal-600 text-white shadow-sm"
+                  : i < currentSlide
+                    ? "bg-teal-50 border border-teal-200 text-teal-600"
+                    : "bg-white border border-slate-200 text-slate-500 hover:border-teal-300"
+              }`}
+              title={s.title}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+        <div className="text-center mt-1">
+          <span className="text-[10px] text-slate-400">Use arrow keys or click arrows to navigate</span>
         </div>
       </div>
     </div>
