@@ -11,7 +11,7 @@ import {
   Hash,
   ClipboardCheck,
 } from "lucide-react";
-import { useAuth } from "@/context/SupabaseAuthContext";
+import { supabase } from "@/lib/supabase";
 
 // ─── Types ───────────────────────────────────────────────────────────────
 
@@ -424,40 +424,123 @@ function StatusLegend() {
 // ─── Main Component ──────────────────────────────────────────────────────
 
 export function CurriculumChecklist({ classId, yearGroup }: CurriculumChecklistProps) {
-  const { session } = useAuth();
   const [subjects, setSubjects] = useState<SubjectGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [totalObjectives, setTotalObjectives] = useState(0);
 
-  const authHeaders: HeadersInit = session?.access_token
-    ? { Authorization: `Bearer ${session.access_token}` }
-    : {};
-
   useEffect(() => {
     if (!classId) return;
     setLoading(true);
     setError(null);
 
-    const params = new URLSearchParams({ classId, yearGroup });
-    if (activeFilter) params.set("subject", activeFilter);
+    (async () => {
+      try {
+        // Load curriculum objectives (shared reference data, no org filter)
+        let objectivesQuery = supabase
+          .from("ls_curriculum_objectives")
+          .select("*")
+          .eq("year_group", yearGroup)
+          .order("display_order", { ascending: true });
 
-    fetch(`/api/lesson-studio/curriculum?${params}`, { headers: authHeaders })
-      .then((r) => r.json())
-      .then((res) => {
-        if (res.error) {
-          setError(res.error);
-        } else {
-          setSubjects(res.data?.subjects ?? []);
-          setTotalObjectives(res.data?.totalObjectives ?? 0);
+        if (activeFilter) {
+          objectivesQuery = objectivesQuery.eq("subject", activeFilter);
         }
+
+        const { data: objectiveRows, error: objError } = await objectivesQuery;
+        if (objError) throw new Error(objError.message);
+
+        // Load coverage for this class
+        const { data: coverageRows, error: covError } = await supabase
+          .from("ls_curriculum_coverage")
+          .select("*")
+          .eq("class_id", classId);
+
+        if (covError) throw new Error(covError.message);
+
+        // Build a map of objective_id → coverage
+        const coverageMap: Record<string, {
+          status: ObjectiveStatus;
+          first_taught_date: string | null;
+          times_taught: number;
+          times_assessed: number;
+          coverage_depth: string | null;
+        }> = {};
+
+        for (const cov of (coverageRows ?? [])) {
+          coverageMap[cov.objective_id] = {
+            status: cov.status ?? "not_started",
+            first_taught_date: cov.first_taught_date ?? null,
+            times_taught: cov.times_taught ?? 0,
+            times_assessed: cov.times_assessed ?? 0,
+            coverage_depth: cov.coverage_depth ?? null,
+          };
+        }
+
+        // Enrich objectives with coverage data
+        const enrichedObjectives: CurriculumObjective[] = (objectiveRows ?? []).map((obj) => {
+          const cov = coverageMap[obj.id];
+          return {
+            id: obj.id,
+            objective_code: obj.objective_code,
+            objective_text: obj.objective_text,
+            strand: obj.strand ?? null,
+            sub_strand: obj.sub_strand ?? null,
+            display_order: obj.display_order ?? 0,
+            status: cov?.status ?? "not_started",
+            first_taught_date: cov?.first_taught_date ?? null,
+            times_taught: cov?.times_taught ?? 0,
+            times_assessed: cov?.times_assessed ?? 0,
+            coverage_depth: cov?.coverage_depth ?? null,
+          };
+        });
+
+        // Group by subject → strand
+        const subjectMap: Record<string, Record<string, CurriculumObjective[]>> = {};
+        for (const obj of enrichedObjectives) {
+          const subj = obj.strand ? (objectiveRows?.find((r) => r.id === obj.id)?.subject ?? "Unknown") : "Unknown";
+          const subjectName = (objectiveRows?.find((r) => r.id === obj.id) as Record<string, string> | undefined)?.subject ?? "Unknown";
+          if (!subjectMap[subjectName]) subjectMap[subjectName] = {};
+          const strandKey = obj.strand ?? "General";
+          if (!subjectMap[subjectName][strandKey]) subjectMap[subjectName][strandKey] = [];
+          subjectMap[subjectName][strandKey].push(obj);
+        }
+
+        const subjectGroups: SubjectGroup[] = Object.entries(subjectMap).map(([subjectName, strands]) => {
+          const strandGroups: StrandGroup[] = Object.entries(strands).map(([strandName, objs]) => {
+            const taughtCount = objs.filter((o) => ["taught", "assessed", "evidenced"].includes(o.status)).length;
+            const evidencedCount = objs.filter((o) => o.status === "evidenced").length;
+            return {
+              strand: strandName,
+              objectives: objs,
+              taught_count: taughtCount,
+              evidenced_count: evidencedCount,
+              total: objs.length,
+            };
+          });
+
+          const taught = strandGroups.reduce((s, g) => s + g.taught_count, 0);
+          const evidenced = strandGroups.reduce((s, g) => s + g.evidenced_count, 0);
+          const total = strandGroups.reduce((s, g) => s + g.total, 0);
+
+          return {
+            subject: subjectName,
+            strands: strandGroups,
+            taught_count: taught,
+            evidenced_count: evidenced,
+            total,
+          };
+        });
+
+        setSubjects(subjectGroups);
+        setTotalObjectives(enrichedObjectives.length);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load curriculum");
+      } finally {
         setLoading(false);
-      })
-      .catch((err) => {
-        setError(err.message);
-        setLoading(false);
-      });
+      }
+    })();
   }, [classId, yearGroup, activeFilter]);
 
   // Compute overall stats

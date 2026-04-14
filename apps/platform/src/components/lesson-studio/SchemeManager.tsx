@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import type { LSSchemeMapping, LSSchemeProgression, LSSchemeStep } from "@/types/lesson-studio";
 import { useAuth } from "@/context/SupabaseAuthContext";
+import { supabase } from "@/lib/supabase";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -82,20 +83,25 @@ export function SchemeManager({ classId, yearGroup, onSchemeConnected }: SchemeM
   // ---------------------------------------------------------------------------
 
   const fetchSchemes = useCallback(async () => {
-    if (!organizationId) return;
+    if (!classId) return;
     try {
-      const res = await fetch(
-        `/api/lesson-studio/schemes?classId=${classId}&organizationId=${organizationId}`,
-        { headers: authHeaders },
-      );
-      const json = await res.json();
-      setSchemes(json.data ?? []);
+      const { data, error } = await supabase
+        .from("ls_scheme_mappings")
+        .select("*, progressions:ls_scheme_progressions(*)")
+        .eq("class_id", classId)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Schemes fetch error:", error.message);
+      } else {
+        setSchemes(data ?? []);
+      }
     } catch {
       // silent
     } finally {
       setLoading(false);
     }
-  }, [classId, organizationId]);
+  }, [classId]);
 
   useEffect(() => {
     fetchSchemes();

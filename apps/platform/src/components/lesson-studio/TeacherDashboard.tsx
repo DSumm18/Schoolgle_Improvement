@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import type { AttainmentLevel, LSPupil } from "@/types/lesson-studio";
 import { useAuth } from "@/context/SupabaseAuthContext";
+import { supabase } from "@/lib/supabase";
 
 /* ── Types ───────────────────────────────────────────────────────── */
 
@@ -294,24 +295,165 @@ export function TeacherDashboard({
     if (!classId) return;
     setLoading(true);
 
-    const headers: HeadersInit = session?.access_token
-      ? { Authorization: `Bearer ${session.access_token}` }
-      : {};
+    (async () => {
+      try {
+        // Load pupils for this class
+        const { data: pupilRows, error: pupilError } = await supabase
+          .from("ls_pupils")
+          .select("*")
+          .eq("class_id", classId)
+          .eq("is_active", true);
 
-    fetch(`/api/lesson-studio/dashboard?classId=${classId}`, { headers })
-      .then((r) => r.json())
-      .then((res) => {
-        if (res.error) {
-          console.error("Dashboard error:", res.error);
+        if (pupilError) {
+          console.error("Pupils fetch error:", pupilError.message);
           return;
         }
-        setStats(res.stats ?? null);
-        setAlerts(res.alerts ?? []);
-        setPupils(res.pupils ?? []);
-      })
-      .catch((err) => console.error("Dashboard fetch failed:", err))
-      .finally(() => setLoading(false));
-  }, [classId, session?.access_token]);
+
+        const pupilList = pupilRows ?? [];
+        const pupilIds = pupilList.map((p) => p.id);
+
+        // Load latest assessments for those pupils
+        let assessmentRows: Array<{
+          pupil_id: string;
+          subject: string;
+          teacher_grade: AttainmentLevel | null;
+          ai_suggested_grade: AttainmentLevel | null;
+          assessment_date: string;
+        }> = [];
+
+        if (pupilIds.length > 0) {
+          const { data: aRows } = await supabase
+            .from("ls_assessments")
+            .select("pupil_id, subject, teacher_grade, ai_suggested_grade, assessment_date")
+            .in("pupil_id", pupilIds)
+            .order("assessment_date", { ascending: false });
+
+          assessmentRows = aRows ?? [];
+        }
+
+        // Build a map of pupil → latestAssessments (one per subject, most recent)
+        const assessmentMap: Record<string, Record<string, {
+          teacher_grade: AttainmentLevel | null;
+          ai_suggested_grade: AttainmentLevel | null;
+          assessment_date: string;
+        }>> = {};
+
+        for (const a of assessmentRows) {
+          if (!assessmentMap[a.pupil_id]) assessmentMap[a.pupil_id] = {};
+          if (!assessmentMap[a.pupil_id][a.subject]) {
+            assessmentMap[a.pupil_id][a.subject] = {
+              teacher_grade: a.teacher_grade,
+              ai_suggested_grade: a.ai_suggested_grade,
+              assessment_date: a.assessment_date,
+            };
+          }
+        }
+
+        const enrichedPupils: PupilWithAssessments[] = pupilList.map((p) => ({
+          ...p,
+          latestAssessments: assessmentMap[p.id] ?? {},
+        }));
+
+        // Compute stats locally
+        const SUBJECTS = ["reading", "writing", "maths", "science"];
+        const ATTAINMENT_FIELDS: Record<string, keyof LSPupil> = {
+          reading: "attainment_reading",
+          writing: "attainment_writing",
+          maths: "attainment_maths",
+          science: "attainment_science",
+        };
+
+        let atExpectedPlus = 0;
+        let greaterDepth = 0;
+        let belowExpected = 0;
+        let prerequisiteGaps = 0;
+
+        for (const pupil of enrichedPupils) {
+          let hasGD = false;
+          let hasBelow = false;
+
+          for (const subj of SUBJECTS) {
+            const field = ATTAINMENT_FIELDS[subj];
+            const grade =
+              (field && (pupil[field] as string | null)) ??
+              pupil.latestAssessments?.[subj]?.teacher_grade ??
+              pupil.latestAssessments?.[subj]?.ai_suggested_grade ??
+              null;
+
+            if (grade === "GDS") hasGD = true;
+            if (grade === "WTS" || grade === "PKE" || grade === "PKF") hasBelow = true;
+          }
+
+          if (hasGD) greaterDepth++;
+          if (hasBelow) {
+            belowExpected++;
+            prerequisiteGaps++;
+          }
+          if (!hasBelow) atExpectedPlus++;
+        }
+
+        const computedStats: DashboardStats = {
+          total: enrichedPupils.length,
+          atExpectedPlus,
+          greaterDepth,
+          belowExpected,
+          prerequisiteGaps,
+        };
+
+        // Generate alerts locally
+        const generatedAlerts: DashboardAlert[] = [];
+        for (const pupil of enrichedPupils) {
+          const name = pupil.display_name_encrypted ?? "Unknown";
+          for (const subj of SUBJECTS) {
+            const assessmentEntry = pupil.latestAssessments?.[subj];
+            if (assessmentEntry) {
+              const teacherGrade = assessmentEntry.teacher_grade;
+              const aiGrade = assessmentEntry.ai_suggested_grade;
+              if (
+                teacherGrade &&
+                aiGrade &&
+                teacherGrade !== aiGrade
+              ) {
+                generatedAlerts.push({
+                  id: `${pupil.id}-${subj}-inconsistency`,
+                  type: "inconsistency",
+                  severity: "medium",
+                  pupilId: pupil.id,
+                  pupilName: name,
+                  title: `Grade inconsistency: ${name}`,
+                  description: `Teacher marked ${teacherGrade} but AI suggested ${aiGrade} for ${subj}.`,
+                  subject: subj,
+                });
+              }
+
+              const grade =
+                teacherGrade ?? aiGrade;
+              if (grade === "WTS" || grade === "PKE" || grade === "PKF") {
+                generatedAlerts.push({
+                  id: `${pupil.id}-${subj}-gap`,
+                  type: "gap",
+                  severity: "high",
+                  pupilId: pupil.id,
+                  pupilName: name,
+                  title: `Below expected: ${name}`,
+                  description: `${name} is below expected standard in ${subj} (${grade}).`,
+                  subject: subj,
+                });
+              }
+            }
+          }
+        }
+
+        setStats(computedStats);
+        setAlerts(generatedAlerts);
+        setPupils(enrichedPupils);
+      } catch (err) {
+        console.error("Dashboard fetch failed:", err);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [classId]);
 
   const filteredPupils = searchQuery
     ? pupils.filter((p) =>

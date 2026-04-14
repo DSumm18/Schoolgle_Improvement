@@ -5,6 +5,7 @@ import { Loader2, CheckCircle2, ClipboardList } from "lucide-react";
 import { WorkUploadZone } from "./WorkUploadZone";
 import { PupilAssessmentCard } from "./PupilAssessmentCard";
 import type { LSPupil, AssessmentWithSubmission } from "@/types/lesson-studio";
+import { supabase } from "@/lib/supabase";
 
 interface AssessmentPanelProps {
   lessonPlanId: string;
@@ -18,12 +19,18 @@ export function AssessmentPanel({ lessonPlanId, pupils }: AssessmentPanelProps) 
 
   const loadAssessments = useCallback(async () => {
     try {
-      const res = await fetch(
-        `/api/lesson-studio/assess?lessonPlanId=${encodeURIComponent(lessonPlanId)}`,
-      );
-      if (res.ok) {
-        const body = await res.json();
-        setAssessments(body.data ?? []);
+      const { data, error } = await supabase
+        .from("ls_assessments")
+        .select(`
+          *,
+          submission:ls_work_submissions(*),
+          pupil:ls_pupils(id, display_name_encrypted, pupil_ref)
+        `)
+        .eq("lesson_plan_id", lessonPlanId)
+        .order("created_at", { ascending: true });
+
+      if (!error) {
+        setAssessments((data ?? []) as AssessmentWithSubmission[]);
       }
     } catch {
       // silent
