@@ -23,6 +23,7 @@ import { TeacherDashboard } from "./TeacherDashboard";
 import { PupilDetailPanel } from "./PupilDetailPanel";
 import { CurriculumChecklist } from "./CurriculumChecklist";
 import { SchemeManager } from "./SchemeManager";
+import { CurriculumProgressionView } from "./CurriculumProgressionView";
 import type {
   LSClass,
   LSPupil,
@@ -73,6 +74,12 @@ export function LessonStudio() {
   const [viewMode, setViewMode] = useState<"calendar" | "timetable">("calendar");
   const [mainView, setMainView] = useState<"lessons" | "dashboard" | "curriculum" | "schemes">("lessons");
   const [selectedPupilId, setSelectedPupilId] = useState<string | null>(null);
+  const [selectedTopic, setSelectedTopic] = useState<{
+    unitName: string;
+    keyTopics: string[];
+    ncCodes: string[];
+    weekRange: string;
+  } | null>(null);
 
   // Load classes directly from Supabase
   useEffect(() => {
@@ -153,6 +160,9 @@ export function LessonStudio() {
           slotId: slot.id,
           weekCommencing,
           organizationId,
+          teacherNote: selectedTopic
+            ? `Teach: ${selectedTopic.unitName}. Topics: ${selectedTopic.keyTopics.join(", ")}. NC codes: ${selectedTopic.ncCodes.join(", ")}.`
+            : undefined,
         }),
       });
       const result = await res.json();
@@ -372,7 +382,7 @@ export function LessonStudio() {
                 : "text-gray-500 hover:text-gray-700"
             }`}
           >
-            Schemes
+            Curriculum
           </button>
         </div>
       </div>
@@ -386,15 +396,28 @@ export function LessonStudio() {
         />
       )}
 
-      {/* Schemes view */}
+      {/* Curriculum / Schemes view */}
       {mainView === "schemes" && selectedClass && (
-        <SchemeManager
-          classId={selectedClass.id}
-          yearGroup={selectedClass.year_group}
-          onSchemeConnected={() => {
-            // Refresh plans when scheme connected
-          }}
-        />
+        <div className="space-y-6">
+          <CurriculumProgressionView
+            classId={selectedClass.id}
+            subject={slots[0]?.subject || "Maths"}
+            yearGroup={selectedClass.year_group}
+            schemeName="white-rose-maths"
+            onSelectTopic={(topic) => {
+              setSelectedTopic(topic);
+              setMainView("lessons");
+              setViewMode("timetable");
+            }}
+          />
+          <SchemeManager
+            classId={selectedClass.id}
+            yearGroup={selectedClass.year_group}
+            onSchemeConnected={() => {
+              // Refresh plans when scheme connected
+            }}
+          />
+        </div>
       )}
 
       {/* Curriculum view */}
@@ -455,13 +478,34 @@ export function LessonStudio() {
             </div>
           )
         ) : selectedClass && slots.length > 0 ? (
-          <TimetableGrid
-            slots={slots}
-            plans={plans}
-            onSlotClick={handleSlotClick}
-            onGenerate={handleGenerate}
-            generating={generating}
-          />
+          <>
+            {selectedTopic && (
+              <div className="flex items-center gap-3 bg-teal-50 border border-teal-200 rounded-xl p-3 mb-2">
+                <BookOpen className="w-5 h-5 text-teal-600 flex-shrink-0" />
+                <div className="flex-1">
+                  <div className="text-sm font-semibold text-teal-800">
+                    Next lesson: {selectedTopic.unitName}
+                  </div>
+                  <div className="text-xs text-teal-600">
+                    {selectedTopic.keyTopics.join(" · ")}
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedTopic(null)}
+                  className="text-xs text-teal-500 hover:text-teal-700 px-2 py-1 hover:bg-teal-100 rounded-lg"
+                >
+                  Clear
+                </button>
+              </div>
+            )}
+            <TimetableGrid
+              slots={slots}
+              plans={plans}
+              onSlotClick={handleSlotClick}
+              onGenerate={handleGenerate}
+              generating={generating}
+            />
+          </>
         ) : selectedClass ? (
           <div className="text-center py-12 text-slate-400">
             <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
