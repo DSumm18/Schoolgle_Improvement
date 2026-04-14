@@ -48,9 +48,6 @@ function formatWeek(dateStr: string): string {
 
 export function LessonStudio() {
   const { organizationId, session } = useAuth();
-  const authHeaders: HeadersInit = session?.access_token
-    ? { Authorization: `Bearer ${session.access_token}` }
-    : {};
   // State
   const [classes, setClasses] = useState<LSClass[]>([]);
   const [selectedClass, setSelectedClass] = useState<LSClass | null>(null);
@@ -71,11 +68,12 @@ export function LessonStudio() {
   const [mainView, setMainView] = useState<"lessons" | "dashboard" | "curriculum" | "schemes">("lessons");
   const [selectedPupilId, setSelectedPupilId] = useState<string | null>(null);
 
-  // Load classes on mount
+  // Load classes when session is ready
   useEffect(() => {
-    if (!organizationId) return;
+    if (!organizationId || !session?.access_token) return;
+    const headers: HeadersInit = { Authorization: `Bearer ${session.access_token}` };
     fetch(`/api/lesson-studio/classes?organizationId=${organizationId}`, {
-      headers: authHeaders,
+      headers,
     })
       .then((r) => r.json())
       .then((res) => {
@@ -85,36 +83,38 @@ export function LessonStudio() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [organizationId]);
+  }, [organizationId, session?.access_token]);
 
   // Load timetable + pupils when class changes
   useEffect(() => {
-    if (!selectedClass || !organizationId) return;
+    if (!selectedClass || !organizationId || !session?.access_token) return;
+    const headers: HeadersInit = { Authorization: `Bearer ${session.access_token}` };
     Promise.all([
       fetch(
         `/api/lesson-studio/timetable?classId=${selectedClass.id}&organizationId=${organizationId}`,
-        { headers: authHeaders },
+        { headers },
       ).then((r) => r.json()),
       fetch(
         `/api/lesson-studio/pupils?classId=${selectedClass.id}&organizationId=${organizationId}`,
-        { headers: authHeaders },
+        { headers },
       ).then((r) => r.json()),
     ]).then(([timetableRes, pupilsRes]) => {
       setSlots(timetableRes.data ?? []);
       setPupils(pupilsRes.data ?? []);
     });
-  }, [selectedClass, organizationId]);
+  }, [selectedClass, organizationId, session?.access_token]);
 
   // Load plans when class or week changes
   useEffect(() => {
-    if (!selectedClass || !organizationId) return;
+    if (!selectedClass || !organizationId || !session?.access_token) return;
+    const headers: HeadersInit = { Authorization: `Bearer ${session.access_token}` };
     fetch(
       `/api/lesson-studio/plans?classId=${selectedClass.id}&week=${weekCommencing}&organizationId=${organizationId}`,
-      { headers: authHeaders },
+      { headers },
     )
       .then((r) => r.json())
       .then((res) => setPlans(res.data ?? []));
-  }, [selectedClass, weekCommencing, organizationId]);
+  }, [selectedClass, weekCommencing, organizationId, session?.access_token]);
 
   // Week navigation
   const prevWeek = () => {
