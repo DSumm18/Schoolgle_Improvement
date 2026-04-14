@@ -96,3 +96,21 @@ auth-state.json
 
 # TypeScript diagnostic dumps
 typecheck_output.txt
+
+# Testing screenshots (session artifacts)
+*.png
+!apps/platform/public/**/*.png
+!docs/**/*.png
+
+# Test markdown artifacts
+test-*.md
+compliance-*.md
+
+# Test result artifacts
+**/test-results/
+
+# Superpowers brainstorm sessions
+.superpowers/
+
+# Functional test scripts
+*-functional-test.mjs
