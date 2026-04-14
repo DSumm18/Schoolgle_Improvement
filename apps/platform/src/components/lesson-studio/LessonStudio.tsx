@@ -68,53 +68,57 @@ export function LessonStudio() {
   const [mainView, setMainView] = useState<"lessons" | "dashboard" | "curriculum" | "schemes">("lessons");
   const [selectedPupilId, setSelectedPupilId] = useState<string | null>(null);
 
-  // Load classes when session is ready
+  // Helper: build fetch options with cookie auth + optional Bearer token
+  const fetchOpts = useCallback((): RequestInit => {
+    const opts: RequestInit = { credentials: "include" };
+    if (session?.access_token) {
+      opts.headers = { Authorization: `Bearer ${session.access_token}` };
+    }
+    return opts;
+  }, [session?.access_token]);
+
+  // Load classes when org is known
   useEffect(() => {
-    if (!organizationId || !session?.access_token) return;
-    const headers: HeadersInit = { Authorization: `Bearer ${session.access_token}` };
-    fetch(`/api/lesson-studio/classes?organizationId=${organizationId}`, {
-      headers,
-    })
+    if (!organizationId) return;
+    fetch(`/api/lesson-studio/classes?organizationId=${organizationId}`, fetchOpts())
       .then((r) => r.json())
       .then((res) => {
         const data = res.data ?? [];
         setClasses(data);
-        if (data.length > 0) setSelectedClass(data[0]);
+        if (data.length > 0 && !selectedClass) setSelectedClass(data[0]);
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [organizationId, session?.access_token]);
+  }, [organizationId, fetchOpts]);
 
   // Load timetable + pupils when class changes
   useEffect(() => {
-    if (!selectedClass || !organizationId || !session?.access_token) return;
-    const headers: HeadersInit = { Authorization: `Bearer ${session.access_token}` };
+    if (!selectedClass || !organizationId) return;
     Promise.all([
       fetch(
         `/api/lesson-studio/timetable?classId=${selectedClass.id}&organizationId=${organizationId}`,
-        { headers },
+        fetchOpts(),
       ).then((r) => r.json()),
       fetch(
         `/api/lesson-studio/pupils?classId=${selectedClass.id}&organizationId=${organizationId}`,
-        { headers },
+        fetchOpts(),
       ).then((r) => r.json()),
     ]).then(([timetableRes, pupilsRes]) => {
       setSlots(timetableRes.data ?? []);
       setPupils(pupilsRes.data ?? []);
     });
-  }, [selectedClass, organizationId, session?.access_token]);
+  }, [selectedClass, organizationId, fetchOpts]);
 
   // Load plans when class or week changes
   useEffect(() => {
-    if (!selectedClass || !organizationId || !session?.access_token) return;
-    const headers: HeadersInit = { Authorization: `Bearer ${session.access_token}` };
+    if (!selectedClass || !organizationId) return;
     fetch(
       `/api/lesson-studio/plans?classId=${selectedClass.id}&week=${weekCommencing}&organizationId=${organizationId}`,
-      { headers },
+      fetchOpts(),
     )
       .then((r) => r.json())
       .then((res) => setPlans(res.data ?? []));
-  }, [selectedClass, weekCommencing, organizationId, session?.access_token]);
+  }, [selectedClass, weekCommencing, organizationId, fetchOpts]);
 
   // Week navigation
   const prevWeek = () => {
