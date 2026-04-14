@@ -17,6 +17,8 @@ import { TimetableGrid } from "./TimetableGrid";
 import { CalendarView } from "./CalendarView";
 import { LessonPlanPanel } from "./LessonPlanPanel";
 import { TeachMode } from "./TeachMode";
+import { TeacherDashboard } from "./TeacherDashboard";
+import { PupilDetailPanel } from "./PupilDetailPanel";
 import type {
   LSClass,
   LSPupil,
@@ -64,6 +66,8 @@ export function LessonStudio() {
   );
   const [teachMode, setTeachMode] = useState<LSLessonPlan | null>(null);
   const [viewMode, setViewMode] = useState<"calendar" | "timetable">("calendar");
+  const [mainView, setMainView] = useState<"lessons" | "dashboard">("lessons");
+  const [selectedPupilId, setSelectedPupilId] = useState<string | null>(null);
 
   // Load classes on mount
   useEffect(() => {
@@ -302,9 +306,9 @@ export function LessonStudio() {
         {/* View toggle */}
         <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5 ml-2">
           <button
-            onClick={() => setViewMode("calendar")}
+            onClick={() => { setMainView("lessons"); setViewMode("calendar"); }}
             className={`px-2.5 py-1 text-xs rounded-md transition-all ${
-              viewMode === "calendar"
+              mainView === "lessons" && viewMode === "calendar"
                 ? "bg-white shadow-sm font-semibold text-gray-900"
                 : "text-gray-500 hover:text-gray-700"
             }`}
@@ -312,69 +316,90 @@ export function LessonStudio() {
             Calendar
           </button>
           <button
-            onClick={() => setViewMode("timetable")}
+            onClick={() => { setMainView("lessons"); setViewMode("timetable"); }}
             className={`px-2.5 py-1 text-xs rounded-md transition-all ${
-              viewMode === "timetable"
+              mainView === "lessons" && viewMode === "timetable"
                 ? "bg-white shadow-sm font-semibold text-gray-900"
                 : "text-gray-500 hover:text-gray-700"
             }`}
           >
             Timetable
           </button>
+          <button
+            onClick={() => setMainView("dashboard")}
+            className={`px-2.5 py-1 text-xs rounded-md transition-all ${
+              mainView === "dashboard"
+                ? "bg-white shadow-sm font-semibold text-gray-900"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            Dashboard
+          </button>
         </div>
       </div>
 
+      {/* Dashboard view */}
+      {mainView === "dashboard" && selectedClass && (
+        <TeacherDashboard
+          classId={selectedClass.id}
+          className={selectedClass.class_name}
+          onViewPupil={(pupilId) => setSelectedPupilId(pupilId)}
+        />
+      )}
+
       {/* Calendar or Timetable view */}
-      {viewMode === "calendar" ? (
-        selectedClass ? (
-          <CalendarView
-            classes={classes}
-            selectedClassId={selectedClass.id}
-            onEventClick={(evt: CalendarEventWithPlan) => {
-              // If the event has a lesson plan, open it in the plan panel
-              if (evt.lesson_plan) {
-                const matchingSlot = slots.find(
-                  (s) =>
-                    s.day_of_week ===
-                      new Date(evt.event_date).getDay() &&
-                    s.subject === evt.subject,
-                );
-                if (matchingSlot) {
-                  setSelectedSlot(matchingSlot);
-                  setSelectedPlan(evt.lesson_plan as LSLessonPlan);
+      {mainView === "lessons" && (
+        viewMode === "calendar" ? (
+          selectedClass ? (
+            <CalendarView
+              classes={classes}
+              selectedClassId={selectedClass.id}
+              onEventClick={(evt: CalendarEventWithPlan) => {
+                // If the event has a lesson plan, open it in the plan panel
+                if (evt.lesson_plan) {
+                  const matchingSlot = slots.find(
+                    (s) =>
+                      s.day_of_week ===
+                        new Date(evt.event_date).getDay() &&
+                      s.subject === evt.subject,
+                  );
+                  if (matchingSlot) {
+                    setSelectedSlot(matchingSlot);
+                    setSelectedPlan(evt.lesson_plan as LSLessonPlan);
+                  }
                 }
-              }
-            }}
+              }}
+            />
+          ) : (
+            <div className="text-center py-12 text-slate-400">
+              <GraduationCap className="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <p className="text-sm">Select a class to get started.</p>
+            </div>
+          )
+        ) : selectedClass && slots.length > 0 ? (
+          <TimetableGrid
+            slots={slots}
+            plans={plans}
+            onSlotClick={handleSlotClick}
+            onGenerate={handleGenerate}
+            generating={generating}
           />
+        ) : selectedClass ? (
+          <div className="text-center py-12 text-slate-400">
+            <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
+            <p className="text-sm">
+              No timetable found for {selectedClass.class_name}.
+            </p>
+            <p className="text-xs mt-1">
+              Import your timetable from your MIS or create one manually.
+            </p>
+          </div>
         ) : (
           <div className="text-center py-12 text-slate-400">
             <GraduationCap className="w-12 h-12 mx-auto mb-3 opacity-50" />
             <p className="text-sm">Select a class to get started.</p>
           </div>
         )
-      ) : selectedClass && slots.length > 0 ? (
-        <TimetableGrid
-          slots={slots}
-          plans={plans}
-          onSlotClick={handleSlotClick}
-          onGenerate={handleGenerate}
-          generating={generating}
-        />
-      ) : selectedClass ? (
-        <div className="text-center py-12 text-slate-400">
-          <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
-          <p className="text-sm">
-            No timetable found for {selectedClass.class_name}.
-          </p>
-          <p className="text-xs mt-1">
-            Import your timetable from your MIS or create one manually.
-          </p>
-        </div>
-      ) : (
-        <div className="text-center py-12 text-slate-400">
-          <GraduationCap className="w-12 h-12 mx-auto mb-3 opacity-50" />
-          <p className="text-sm">Select a class to get started.</p>
-        </div>
       )}
 
       {/* Lesson Plan Panel (slide-over) */}
@@ -407,6 +432,15 @@ export function LessonStudio() {
       {/* Teach Mode (full screen) */}
       {teachMode && (
         <TeachMode plan={teachMode} onExit={() => setTeachMode(null)} />
+      )}
+
+      {/* Pupil Detail Panel (slide-over) */}
+      {selectedPupilId && selectedClass && (
+        <PupilDetailPanel
+          pupilId={selectedPupilId}
+          classId={selectedClass.id}
+          onClose={() => setSelectedPupilId(null)}
+        />
       )}
     </div>
   );
