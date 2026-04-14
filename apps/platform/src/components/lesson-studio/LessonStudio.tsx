@@ -6,6 +6,7 @@ import {
   GraduationCap,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Calendar,
   Users,
   BookOpen,
@@ -50,6 +51,16 @@ function formatWeek(dateStr: string): string {
   return `${d.toLocaleDateString("en-GB", opts)} – ${end.toLocaleDateString("en-GB", opts)} ${d.getFullYear()}`;
 }
 
+function groupClassesByYear(classes: LSClass[]): Record<string, LSClass[]> {
+  const groups: Record<string, LSClass[]> = {};
+  for (const cls of classes) {
+    const yg = cls.year_group || "Other";
+    if (!groups[yg]) groups[yg] = [];
+    groups[yg].push(cls);
+  }
+  return groups;
+}
+
 export function LessonStudio() {
   const { organizationId, session } = useAuth();
   const authHeaders: HeadersInit = session?.access_token
@@ -64,6 +75,9 @@ export function LessonStudio() {
   const [weekCommencing, setWeekCommencing] = useState(getMonday(new Date()));
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState<string | null>(null);
+
+  // Class picker
+  const [classPickerOpen, setClassPickerOpen] = useState(false);
 
   // Panel state
   const [selectedPlan, setSelectedPlan] = useState<LSLessonPlan | null>(null);
@@ -256,25 +270,81 @@ export function LessonStudio() {
 
       {/* Class selector + stats */}
       <div className="flex flex-col md:flex-row gap-4">
-        {/* Class picker */}
+        {/* Class picker — grouped dropdown */}
         <div className="flex-1">
-          <div className="flex gap-2 flex-wrap">
-            {classes.map((cls) => (
-              <button
-                key={cls.id}
-                onClick={() => setSelectedClass(cls)}
-                className={`px-3 py-2 rounded-xl text-sm font-medium transition-all ${
-                  selectedClass?.id === cls.id
-                    ? "bg-teal-600 text-white shadow-lg shadow-teal-600/20"
-                    : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-teal-300"
-                }`}
-              >
-                <span className="font-bold">{cls.class_name}</span>
-                <span className="text-xs ml-1 opacity-70">
-                  {cls.year_group}
-                </span>
-              </button>
-            ))}
+          <div className="relative inline-block">
+            <button
+              onClick={() => setClassPickerOpen(!classPickerOpen)}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 hover:border-teal-300 transition-colors shadow-sm min-w-[200px]"
+            >
+              <Users className="w-4 h-4 text-teal-500 flex-shrink-0" />
+              <span className="flex-1 text-left">
+                {selectedClass?.class_name || "All Classes"}
+              </span>
+              <span className="text-xs text-slate-400">
+                {selectedClass
+                  ? `${pupils.length} pupils`
+                  : `${classes.length} classes`}
+              </span>
+              <ChevronDown className="w-4 h-4 text-slate-400 flex-shrink-0" />
+            </button>
+
+            {classPickerOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-30"
+                  onClick={() => setClassPickerOpen(false)}
+                />
+                <div className="absolute top-full left-0 mt-1 w-72 bg-white border border-slate-200 rounded-xl shadow-lg z-40 max-h-80 overflow-y-auto">
+                  {/* All Classes option */}
+                  <button
+                    onClick={() => {
+                      setSelectedClass(null);
+                      setClassPickerOpen(false);
+                    }}
+                    className={`w-full text-left px-4 py-2 text-sm hover:bg-slate-50 border-b border-slate-100 transition-colors ${
+                      selectedClass === null
+                        ? "bg-teal-50 text-teal-700 font-medium"
+                        : "text-slate-700"
+                    }`}
+                  >
+                    All Classes
+                  </button>
+
+                  {/* Grouped by year group */}
+                  {Object.entries(groupClassesByYear(classes)).map(
+                    ([yearGroup, yearClasses]) => (
+                      <div key={yearGroup}>
+                        <div className="px-4 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wider bg-slate-50">
+                          {yearGroup}
+                        </div>
+                        {yearClasses.map((cls) => (
+                          <button
+                            key={cls.id}
+                            onClick={() => {
+                              setSelectedClass(cls);
+                              setClassPickerOpen(false);
+                            }}
+                            className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between hover:bg-teal-50 transition-colors ${
+                              selectedClass?.id === cls.id
+                                ? "bg-teal-50 text-teal-700 font-medium"
+                                : "text-slate-700"
+                            }`}
+                          >
+                            <span>{cls.class_name}</span>
+                            <span className="text-xs text-slate-400">
+                              {(cls as LSClass & { pupil_count?: number }).pupil_count
+                                ? `${(cls as LSClass & { pupil_count?: number }).pupil_count} pupils`
+                                : ""}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    ),
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </div>
 
