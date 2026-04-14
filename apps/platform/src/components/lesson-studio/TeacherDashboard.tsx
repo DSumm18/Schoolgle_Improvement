@@ -301,8 +301,7 @@ export function TeacherDashboard({
         const { data: pupilRows, error: pupilError } = await supabase
           .from("ls_pupils")
           .select("*")
-          .eq("class_id", classId)
-          .eq("is_active", true);
+          .eq("class_id", classId);
 
         if (pupilError) {
           console.error("Pupils fetch error:", pupilError.message);
