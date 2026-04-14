@@ -8,6 +8,8 @@ import type {
   LSSchemeProgression,
   LSTimetableSlot,
 } from "@/types/lesson-studio";
+import { generateVisualisation } from "@/lib/lesson-studio/generate-visualisation";
+import type { LessonIntent } from "@/lib/lesson-studio/extract-intent";
 
 const openai = new OpenAI({
   baseURL: "https://openrouter.ai/api/v1",
@@ -352,6 +354,25 @@ export const POST = protectedRoute(async (auth, req: NextRequest) => {
 
   const generationTimeMs = Math.round(performance.now() - startTime);
 
+  // Build visualisation intent from the generated content
+  const visIntent: LessonIntent = {
+    subject: slot.subject,
+    year_group: cls.year_group,
+    topic: (generated.title as string) || slot.subject,
+    concept_to_visualise: (generated.objective as string) || "",
+    learning_objectives: (generated.successCriteria as string[]) ?? [],
+    key_vocabulary: ((generated.vocabulary as Array<{ word: string; definition: string }>) ?? []),
+    curriculum_codes: progression?.steps?.[(schemeMapping?.scheme_config?.current_step ?? 1) - 1]?.nc_codes ?? [],
+    suggested_interaction_points: [],
+  };
+
+  let visualisation: { svg: string; html: string; interaction_manifest: unknown } | null = null;
+  try {
+    visualisation = await generateVisualisation(visIntent);
+  } catch (e) {
+    console.warn("[Lesson Generate] Visualisation generation failed, continuing without:", e);
+  }
+
   // Build lesson plan row
   const plan = {
     organization_id: orgId,
@@ -382,6 +403,7 @@ export const POST = protectedRoute(async (auth, req: NextRequest) => {
       exitTicket: generated.exitTicket ?? [],
       quiz: generated.quiz ?? [],
       starterQuestions: generated.starterQuestions ?? [],
+      visualisation: visualisation ?? null,
     },
     status: "draft",
     ai_model: MODEL_ID,
