@@ -20,6 +20,7 @@ import { TeachMode } from "./TeachMode";
 import { TeacherDashboard } from "./TeacherDashboard";
 import { PupilDetailPanel } from "./PupilDetailPanel";
 import { CurriculumChecklist } from "./CurriculumChecklist";
+import { SchemeManager } from "./SchemeManager";
 import type {
   LSClass,
   LSPupil,
@@ -67,7 +68,7 @@ export function LessonStudio() {
   );
   const [teachMode, setTeachMode] = useState<LSLessonPlan | null>(null);
   const [viewMode, setViewMode] = useState<"calendar" | "timetable">("calendar");
-  const [mainView, setMainView] = useState<"lessons" | "dashboard" | "curriculum">("lessons");
+  const [mainView, setMainView] = useState<"lessons" | "dashboard" | "curriculum" | "schemes">("lessons");
   const [selectedPupilId, setSelectedPupilId] = useState<string | null>(null);
 
   // Load classes on mount
@@ -346,6 +347,16 @@ export function LessonStudio() {
           >
             Curriculum
           </button>
+          <button
+            onClick={() => setMainView("schemes")}
+            className={`px-2.5 py-1 text-xs rounded-md transition-all ${
+              mainView === "schemes"
+                ? "bg-white shadow-sm font-semibold text-gray-900"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            Schemes
+          </button>
         </div>
       </div>
 
@@ -355,6 +366,17 @@ export function LessonStudio() {
           classId={selectedClass.id}
           className={selectedClass.class_name}
           onViewPupil={(pupilId) => setSelectedPupilId(pupilId)}
+        />
+      )}
+
+      {/* Schemes view */}
+      {mainView === "schemes" && selectedClass && (
+        <SchemeManager
+          classId={selectedClass.id}
+          yearGroup={selectedClass.year_group}
+          onSchemeConnected={() => {
+            // Refresh plans when scheme connected
+          }}
         />
       )}
 

@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import type { LSLessonPlan, LSTimetableSlot, LSPupil, PlanSection, DifferentiationGroup, SENDAdaptation, VocabularyItem } from "@/types/lesson-studio";
 import { AssessmentPanel } from "./AssessmentPanel";
+import { LessonVisualisation } from "./LessonVisualisation";
 import { SUBJECT_COLORS, STATUS_CONFIG, DAY_NAMES } from "@/types/lesson-studio";
 
 interface LessonPlanPanelProps {
@@ -33,7 +34,7 @@ const DIFF_COLORS: Record<string, string> = {
 };
 
 export function LessonPlanPanel({ plan, slot, pupils, onClose, onTeach, onMarkTaught }: LessonPlanPanelProps) {
-  const [activeTab, setActiveTab] = useState<"plan" | "assessment">("plan");
+  const [activeTab, setActiveTab] = useState<"plan" | "assessment" | "visualisation">("plan");
   const sc = STATUS_CONFIG[plan.status];
   const subjectColor = SUBJECT_COLORS[plan.subject] ?? SUBJECT_COLORS.English;
 
@@ -98,6 +99,16 @@ export function LessonPlanPanel({ plan, slot, pupils, onClose, onTeach, onMarkTa
             Lesson Plan
           </button>
           <button
+            onClick={() => setActiveTab("visualisation")}
+            className={`flex-1 text-sm py-2.5 px-4 border-b-2 transition-colors ${
+              activeTab === "visualisation"
+                ? "font-semibold text-indigo-600 border-indigo-500"
+                : "font-medium text-gray-500 border-transparent hover:text-gray-700"
+            }`}
+          >
+            Visualisation
+          </button>
+          <button
             onClick={() => setActiveTab("assessment")}
             className={`flex-1 text-sm py-2.5 px-4 border-b-2 transition-colors ${
               activeTab === "assessment"
@@ -110,7 +121,11 @@ export function LessonPlanPanel({ plan, slot, pupils, onClose, onTeach, onMarkTa
         </div>
       </div>
 
-      {activeTab === "assessment" ? (
+      {activeTab === "visualisation" ? (
+        <div className="p-4">
+          <LessonVisualisation plan={plan} />
+        </div>
+      ) : activeTab === "assessment" ? (
         <div className="p-4">
           <AssessmentPanel lessonPlanId={plan.id} pupils={pupils} />
         </div>
