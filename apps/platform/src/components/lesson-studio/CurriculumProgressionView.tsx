@@ -38,7 +38,7 @@ interface UnitWithStatus extends SchemeUnit {
 
 function getCurrentTerm(): string {
   const month = new Date().getMonth() + 1; // 1-12
-  if (month >= 9 || month <= 12) return "Autumn";
+  if (month >= 9 && month <= 12) return "Autumn";
   if (month >= 1 && month <= 3) return "Spring";
   return "Summer";
 }

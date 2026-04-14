@@ -325,7 +325,8 @@ export function getSchemeProgression(
   yearGroup: string,
   term: string
 ): SchemeUnit[] {
-  if (schemeId === 'white-rose-maths' && yearGroup === 'Y6') {
+  const normYG = yearGroup.replace(/^Year\s*/i, 'Y');
+  if (schemeId === 'white-rose-maths' && normYG === 'Y6') {
     return WHITE_ROSE_Y6_PROGRESSION[term] ?? [];
   }
   return [];
