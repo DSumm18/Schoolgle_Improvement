@@ -26,7 +26,7 @@ import type {
   CPAStage,
   InterventionWithSessions,
 } from "@/types/lesson-studio";
-import { useAuth } from "@/context/SupabaseAuthContext";
+import { supabase } from "@/lib/supabase";
 import { getRelevantStrategies, type EEFStrategy } from "@/lib/eef-toolkit";
 import { generateOfstedNarrative } from "@/lib/lesson-studio/ofsted-narrative";
 
@@ -79,11 +79,6 @@ export function InterventionPanel({
   currentGrade,
   onClose,
 }: InterventionPanelProps) {
-  const { session } = useAuth();
-  const headers: HeadersInit = session?.access_token
-    ? { Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" }
-    : { "Content-Type": "application/json" };
-
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [intervention, setIntervention] = useState<InterventionWithSessions | null>(null);
@@ -133,12 +128,15 @@ export function InterventionPanel({
   // Load existing interventions
   const loadIntervention = useCallback(async () => {
     try {
-      const res = await fetch(
-        `/api/lesson-studio/interventions?pupilId=${pupilId}&status=active`,
-        { headers: { Authorization: headers.Authorization as string } },
-      );
-      const json = await res.json();
-      const interventions: InterventionWithSessions[] = json.data?.interventions ?? json.interventions ?? [];
+      const { data, error } = await supabase
+        .from("ls_interventions")
+        .select("*, sessions:ls_intervention_sessions(*)")
+        .eq("pupil_id", pupilId)
+        .eq("status", "active");
+
+      if (error) throw error;
+
+      const interventions: InterventionWithSessions[] = data ?? [];
       // Find one matching this subject
       const match = interventions.find(
         (i) => i.subject.toLowerCase() === subject.toLowerCase(),
@@ -187,13 +185,14 @@ export function InterventionPanel({
           : null,
       };
 
-      const res = await fetch("/api/lesson-studio/interventions", {
-        method: "POST",
-        headers,
-        body: JSON.stringify(body),
-      });
-      const json = await res.json();
-      const created = json.data?.intervention ?? json.intervention;
+      const { data: created, error } = await supabase
+        .from("ls_interventions")
+        .insert(body)
+        .select()
+        .single();
+
+      if (error) throw error;
+
       if (created) {
         setIntervention({ ...created, sessions: [] });
         setShowCreateForm(false);
@@ -211,23 +210,25 @@ export function InterventionPanel({
     if (!intervention || !sessionFocus) return;
     setSavingSession(true);
     try {
-      const body = {
-        interventionId: intervention.id,
-        session_date: sessionDate,
-        durationMinutes: sessionDuration,
-        focus: sessionFocus,
-        observation: sessionObservation || null,
-        stage: sessionStage || null,
-        nextSessionPlan: sessionNextPlan || null,
-        progressNote: sessionProgressNote || null,
-      };
-      const res = await fetch("/api/lesson-studio/interventions/sessions", {
-        method: "POST",
-        headers,
-        body: JSON.stringify(body),
-      });
-      const json = await res.json();
-      const newSession = json.data?.session ?? json.session;
+      const sessionCount = (intervention.sessions ?? []).length;
+      const { data: newSession, error } = await supabase
+        .from("ls_intervention_sessions")
+        .insert({
+          intervention_id: intervention.id,
+          session_number: sessionCount + 1,
+          session_date: sessionDate,
+          duration_minutes: sessionDuration,
+          focus: sessionFocus,
+          observation: sessionObservation || null,
+          stage: sessionStage || null,
+          next_session_plan: sessionNextPlan || null,
+          progress_note: sessionProgressNote || null,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
       if (newSession && intervention) {
         setIntervention({
           ...intervention,
@@ -252,24 +253,18 @@ export function InterventionPanel({
   const handleStatusChange = async (newStatus: InterventionStatus) => {
     if (!intervention) return;
     try {
-      const body: Record<string, unknown> = {
-        id: intervention.id,
-        pupil_id: intervention.pupil_id,
-        title: intervention.title,
-        target: intervention.target,
-        subject: intervention.subject,
-        format: intervention.format,
-        status: newStatus,
-      };
-      if (newStatus === "completed") body.completed_at = new Date().toISOString().split("T")[0];
+      const updates: Record<string, unknown> = { status: newStatus };
+      if (newStatus === "completed") updates.completed_at = new Date().toISOString().split("T")[0];
 
-      const res = await fetch("/api/lesson-studio/interventions", {
-        method: "POST",
-        headers,
-        body: JSON.stringify(body),
-      });
-      const json = await res.json();
-      const updated = json.data?.intervention ?? json.intervention;
+      const { data: updated, error } = await supabase
+        .from("ls_interventions")
+        .update(updates)
+        .eq("id", intervention.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
       if (updated) {
         setIntervention({ ...intervention, ...updated });
       }

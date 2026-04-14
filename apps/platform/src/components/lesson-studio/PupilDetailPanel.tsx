@@ -20,7 +20,7 @@ import type {
   LSAssessment,
   LSWorkSubmission,
 } from "@/types/lesson-studio";
-import { useAuth } from "@/context/SupabaseAuthContext";
+import { supabase } from "@/lib/supabase";
 import { getRelevantStrategies } from "@/lib/eef-toolkit";
 import { InterventionPanel } from "./InterventionPanel";
 
@@ -265,7 +265,6 @@ export function PupilDetailPanel({
   classId,
   onClose,
 }: PupilDetailPanelProps) {
-  const { session } = useAuth();
   const [pupil, setPupil] = useState<LSPupil | null>(null);
   const [assessments, setAssessments] = useState<LSAssessment[]>([]);
   const [workSubmissions, setWorkSubmissions] = useState<LSWorkSubmission[]>([]);
@@ -274,45 +273,27 @@ export function PupilDetailPanel({
   const [selectedSubject, setSelectedSubject] = useState("maths");
   const [showIntervention, setShowIntervention] = useState(false);
 
-  const headers: HeadersInit = session?.access_token
-    ? { Authorization: `Bearer ${session.access_token}` }
-    : {};
-
   useEffect(() => {
     if (!pupilId) return;
     setLoading(true);
 
-    // Load pupil data from the dashboard endpoint or pupils endpoint
     const fetchData = async () => {
       try {
-        // Get pupils for the class
-        const pupilsRes = await fetch(
-          `/api/lesson-studio/pupils?classId=${classId}`,
-          { headers },
-        );
-        const pupilsData = await pupilsRes.json();
-        const allPupils: LSPupil[] = pupilsData.data ?? pupilsData ?? [];
-        const found = allPupils.find((p) => p.id === pupilId);
-        if (found) setPupil(found);
+        // Get the pupil directly
+        const { data: pupilData } = await supabase
+          .from("ls_pupils")
+          .select("*")
+          .eq("id", pupilId)
+          .single();
+        if (pupilData) setPupil(pupilData as LSPupil);
 
-        // Get assessments - try to load all for this pupil
-        // The assess endpoint uses lessonPlanId, so we use dashboard data instead
-        const dashRes = await fetch(
-          `/api/lesson-studio/dashboard?classId=${classId}`,
-          { headers },
-        );
-        const dashData = await dashRes.json();
-        if (dashData.pupils) {
-          const pupilDash = dashData.pupils.find(
-            (p: LSPupil & { latestAssessments?: Record<string, LSAssessment> }) => p.id === pupilId,
-          );
-          if (pupilDash?.latestAssessments) {
-            const assessmentsList = Object.values(
-              pupilDash.latestAssessments,
-            ) as LSAssessment[];
-            setAssessments(assessmentsList);
-          }
-        }
+        // Get assessments for this pupil
+        const { data: assessmentData } = await supabase
+          .from("ls_assessments")
+          .select("*")
+          .eq("pupil_id", pupilId)
+          .order("assessment_date", { ascending: false });
+        if (assessmentData) setAssessments(assessmentData as LSAssessment[]);
       } catch (err) {
         console.error("Failed to load pupil details:", err);
       } finally {
@@ -321,7 +302,7 @@ export function PupilDetailPanel({
     };
 
     fetchData();
-  }, [pupilId, classId]);
+  }, [pupilId]);
 
   if (loading) {
     return (
