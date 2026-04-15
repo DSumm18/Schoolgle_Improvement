@@ -208,12 +208,22 @@ export default function TrustAnalysisPage() {
 
           {activeTab === 'cohort-journey' && (
             <motion.div key="cohort-journey" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <h2 className="text-lg font-bold text-gray-900 mb-2">Cohort Journey: Follow the Children</h2>
-              <p className="text-sm text-gray-500 mb-6">
-                Select a school and see each cohort&apos;s reported attainment plotted across year groups.
-                The dotted lines show last validated KS2 results &mdash; where the self-report line diverges
-                from validated history, that&apos;s the question the trust needs to answer.
+              <h2 className="text-lg font-bold text-gray-900 mb-2">Cohort Journey</h2>
+              <p className="text-sm text-gray-600 mb-3">
+                The &ldquo;All Cohorts Pipeline&rdquo; view shows every year group at their current position from
+                the trust&apos;s spreadsheet. Each point is a <strong>different group of children</strong> &mdash;
+                it shows whether the school&apos;s incoming cohorts are getting stronger or weaker.
+                The dotted lines show validated KS2 results from previous years (also different children)
+                as a school performance benchmark.
               </p>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-sm text-blue-900">
+                <strong>Why can&apos;t we track one cohort over time?</strong> The DfE only publishes school-level
+                assessment data at KS2 (Year 6). There is no publicly available data for what a school reported
+                about their Year 3 class two years ago, or their Year 4 class last year. That data exists
+                inside the school&apos;s MIS system. To unlock full cohort tracking from Reception to Year 6,
+                schools provide their assessment data through Schoolgle &mdash; per-pupil, automated, every
+                assessment point filled.
+              </div>
               {loading ? (
                 <div className="text-center py-12">
                   <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mb-4" />
@@ -230,11 +240,19 @@ export default function TrustAnalysisPage() {
 
           {activeTab === 'cross-reference' && (
             <motion.div key="cross-ref" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <h2 className="text-lg font-bold text-gray-900 mb-2">Reality Check: What a Spreadsheet Can&apos;t Tell You</h2>
-              <p className="text-sm text-gray-500 mb-6">
-                Track record analysis, pipeline consistency checks, and DfE progress measures.
-                This is what happens when you cross-reference self-reported data against reality.
+              <h2 className="text-lg font-bold text-gray-900 mb-2">Reality Check: School Benchmarking Against DfE Data</h2>
+              <p className="text-sm text-gray-600 mb-3">
+                This analysis compares each school&apos;s mid-year self-report against their <strong>historical KS2 results from the DfE</strong>.
+                It answers the question: <em>&ldquo;Based on what this school has delivered in previous years, is what they&apos;re claiming now plausible?&rdquo;</em>
               </p>
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6 text-sm text-amber-900">
+                <strong>Important context:</strong> Each year&apos;s KS2 result is for a different group of children.
+                This is not cohort tracking &mdash; it&apos;s school performance benchmarking.
+                A school&apos;s results can legitimately change if the cohort composition shifts
+                (e.g. higher SEND, increased FSM, pupil mobility). Where census data shows significant
+                demographic changes, we flag that as context. The analysis raises questions for school
+                leaders to answer &mdash; it does not deliver a verdict.
+              </div>
               {loading ? (
                 <div className="text-center py-12">
                   <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mb-4" />
