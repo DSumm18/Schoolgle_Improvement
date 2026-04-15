@@ -9,6 +9,7 @@ import DfeCrossReference from '@/components/trust-analysis/DfeCrossReference';
 import TrendCharts from '@/components/trust-analysis/TrendCharts';
 import SchoolNarrativeCard from '@/components/trust-analysis/SchoolNarrativeCard';
 import GroveHouseDemo from '@/components/trust-analysis/GroveHouseDemo';
+import GroveHouseAnalytics from '@/components/trust-analysis/GroveHouseAnalytics';
 import CohortJourneyChart from '@/components/trust-analysis/CohortJourneyChart';
 import ProductValueCard from '@/components/trust-analysis/ProductValueCard';
 import { PENNINE_SELF_REPORTS } from '@/lib/trust-analysis/pennine-data';
@@ -22,7 +23,7 @@ import {
   TrackRecordFlag, PipelineTrajectory, ProgressMeasure, PipelinePrediction,
 } from '@/lib/trust-analysis/types';
 
-type TabKey = 'overview' | 'cohort-journey' | 'cross-reference' | 'trends' | 'narratives' | 'grove-house';
+type TabKey = 'overview' | 'cohort-journey' | 'cross-reference' | 'trends' | 'narratives' | 'grove-house' | 'grove-house-analytics';
 
 const TABS: { key: TabKey; label: string; description: string }[] = [
   { key: 'overview', label: 'Trust Overview', description: 'Heatmaps, gap analysis, data quality' },
@@ -30,7 +31,8 @@ const TABS: { key: TabKey; label: string; description: string }[] = [
   { key: 'cross-reference', label: 'Reality Check', description: 'Track record, pipeline, progress measures' },
   { key: 'trends', label: 'Historical Trends', description: 'KS2, FSM, scaled scores over time' },
   { key: 'narratives', label: 'School Reports', description: 'Per-school narrative with Ofsted Qs' },
-  { key: 'grove-house', label: 'Grove House Demo', description: 'Per-pupil analysis (SENSITIVE)' },
+  { key: 'grove-house-analytics', label: 'Grove House Analytics', description: 'Per-pupil deep dive (CTF data)' },
+  { key: 'grove-house', label: 'Grove House Demo', description: 'Per-pupil placeholder' },
 ];
 
 export default function TrustAnalysisPage() {
@@ -326,6 +328,17 @@ export default function TrustAnalysisPage() {
                 valueStatement="These reports combine your self-reported data with validated DfE results to produce Ofsted-ready analysis for every school in your trust. The questions at the bottom of each report are the exact questions an inspector would ask — now you can prepare the answers before they walk through the door."
                 nextTierTeaser="These reports analyse school-level data. Imagine the same analysis at individual pupil level — every child, every subject, every term."
               />
+            </motion.div>
+          )}
+
+          {activeTab === 'grove-house-analytics' && (
+            <motion.div key="grove-house-analytics" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <h2 className="text-lg font-bold text-gray-900 mb-2">Grove House Primary &mdash; Per-Pupil Analytics</h2>
+              <p className="text-sm text-gray-600 mb-6">
+                Real assessment data from Grove House&apos;s CTF files. 473 pseudonymised pupils, 7,143 assessment records,
+                6 years of data. This is what becomes possible when a school provides their assessment exports.
+              </p>
+              <GroveHouseAnalytics />
             </motion.div>
           )}
 
