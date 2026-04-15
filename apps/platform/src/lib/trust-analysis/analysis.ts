@@ -19,6 +19,11 @@ import {
   SubjectScores,
   PENNINE_SCHOOLS,
   getSchoolByAbbrev,
+  PipelineTrajectory,
+  TrackRecordFlag,
+  ProgressMeasure,
+  PipelinePrediction,
+  YEAR_GROUPS,
 } from './types';
 
 // ─── Subject Mapping ────────────────────────────────────────────────────────
@@ -450,4 +455,281 @@ export function buildCensusTrends(census: CensusRecord[]): CensusTrend[] {
   });
 
   return trends;
+}
+
+// ─── 6. Pipeline Trajectory Analysis ────────────────────────────────────────
+// Tracks a subject across year groups within a single school's self-report.
+// If Y5 Writing is 33% and Y6 Writing is 51%, that's +18pp in one year.
+// Is that realistic? The pipeline tells the story.
+
+const ORDERED_YEAR_GROUPS: YearGroup[] = ['Y1', 'Y2', 'Y3', 'Y4', 'Y5', 'Y6'];
+
+export function analysePipelines(
+  selfReports: SchoolSelfReport[],
+): PipelineTrajectory[] {
+  const trajectories: PipelineTrajectory[] = [];
+
+  for (const report of selfReports) {
+    const school = getSchoolByAbbrev(report.school);
+    if (!school) continue;
+
+    for (const mapping of SUBJECT_MAPPINGS) {
+      const points: { yearGroup: YearGroup; pct: number }[] = [];
+
+      for (const yg of ORDERED_YEAR_GROUPS) {
+        const ygData = report.yearGroups.find(y => y.yearGroup === yg);
+        const val = ygData?.allPupils[mapping.selfKey];
+        if (val != null) {
+          points.push({ yearGroup: yg, pct: val });
+        }
+      }
+
+      if (points.length < 3) continue;
+
+      // Overall trend: last point minus first point
+      const trendPp = points[points.length - 1].pct - points[0].pct;
+
+      // Detect implausible year-on-year jumps (>15pp improvement in one year)
+      const implausibleJumps: PipelineTrajectory['implausibleJumps'] = [];
+      for (let i = 1; i < points.length; i++) {
+        const jump = points[i].pct - points[i - 1].pct;
+        if (jump > 15) {
+          implausibleJumps.push({
+            from: points[i - 1].yearGroup,
+            to: points[i].yearGroup,
+            jumpPp: jump,
+          });
+        }
+      }
+
+      const rag: RAGStatus = implausibleJumps.length > 0 ? 'red'
+        : trendPp < -10 ? 'amber'
+        : 'green';
+
+      let narrative: string;
+      if (implausibleJumps.length > 0) {
+        const jumpDescs = implausibleJumps.map(
+          j => `${j.from}→${j.to}: +${j.jumpPp}pp`,
+        ).join('; ');
+        narrative = `${school.abbrev} ${mapping.label}: Pipeline shows implausible year-on-year jumps (${jumpDescs}). ` +
+          `A ${implausibleJumps[0].jumpPp}pp improvement in a single year is unusual — ` +
+          `is this genuine progress or inconsistent teacher assessment?`;
+      } else if (trendPp < -10) {
+        narrative = `${school.abbrev} ${mapping.label}: Declining pipeline (${trendPp > 0 ? '+' : ''}${trendPp}pp from ${points[0].yearGroup} to ${points[points.length - 1].yearGroup}). ` +
+          `Lower year groups are weaker than upper years — future KS2 outcomes are likely to deteriorate.`;
+      } else if (trendPp > 10) {
+        narrative = `${school.abbrev} ${mapping.label}: Improving pipeline (+${trendPp}pp across year groups). ` +
+          `Upper year groups are stronger, suggesting good progression. Verify with assessment evidence.`;
+      } else {
+        narrative = `${school.abbrev} ${mapping.label}: Stable pipeline (${trendPp > 0 ? '+' : ''}${trendPp}pp variation). ` +
+          `Consistent attainment across year groups.`;
+      }
+
+      trajectories.push({
+        school: report.school,
+        subject: mapping.label,
+        points,
+        trendPp,
+        implausibleJumps,
+        rag,
+        narrative,
+      });
+    }
+  }
+
+  return trajectories;
+}
+
+// ─── 7. Track Record Analysis ───────────────────────────────────────────────
+// Compares current Y6 self-report against the school's OWN KS2 history.
+// If CHPS claims 67% Writing but has NEVER achieved more than 33% at KS2,
+// that's a massive claim that needs evidence.
+
+export function analyseTrackRecord(
+  selfReports: SchoolSelfReport[],
+  ks2Results: KS2Result[],
+): TrackRecordFlag[] {
+  const flags: TrackRecordFlag[] = [];
+
+  for (const report of selfReports) {
+    const y6 = report.yearGroups.find(yg => yg.yearGroup === 'Y6');
+    if (!y6) continue;
+
+    const school = getSchoolByAbbrev(report.school);
+    if (!school) continue;
+
+    for (const mapping of SUBJECT_MAPPINGS) {
+      const currentPct = y6.allPupils[mapping.selfKey];
+      if (currentPct == null) continue;
+
+      // Get all historical KS2 results for this subject
+      const history = ks2Results
+        .filter(
+          r => r.urn === school.urn &&
+            r.subject === mapping.ks2Subject &&
+            r.breakdownTopic === 'All pupils' &&
+            r.expectedStandardPct != null,
+        )
+        .map(r => ({ year: r.academicYearEnd, pct: r.expectedStandardPct! }))
+        .sort((a, b) => a.year - b.year);
+
+      if (history.length === 0) continue;
+
+      const bestHistorical = history.reduce((best, h) => h.pct > best.pct ? h : best, history[0]);
+      const vsHistoryPp = currentPct - bestHistorical.pct;
+
+      let rag: RAGStatus;
+      let narrative: string;
+
+      if (vsHistoryPp > 20) {
+        rag = 'red';
+        narrative = `${school.abbrev} claims ${currentPct}% ${mapping.label} for Y6 mid-year, ` +
+          `but the school's best-ever validated KS2 result was ${bestHistorical.pct}% (${bestHistorical.year}). ` +
+          `This school has NEVER produced ${currentPct}% at KS2. ` +
+          `What evidence supports a ${vsHistoryPp}pp improvement over the school's historical best?`;
+      } else if (vsHistoryPp > 10) {
+        rag = 'amber';
+        narrative = `${school.abbrev} claims ${currentPct}% ${mapping.label}, which is ${vsHistoryPp}pp above ` +
+          `their best KS2 result (${bestHistorical.pct}% in ${bestHistorical.year}). ` +
+          `Ambitious but unprecedented — verify with work scrutiny and moderation evidence.`;
+      } else if (vsHistoryPp < -15) {
+        rag = 'amber';
+        narrative = `${school.abbrev} reports ${currentPct}% ${mapping.label} mid-year, ` +
+          `which is ${Math.abs(vsHistoryPp)}pp below their best KS2 result (${bestHistorical.pct}% in ${bestHistorical.year}). ` +
+          `This represents a significant decline from the school's track record.`;
+      } else {
+        rag = 'green';
+        narrative = `${school.abbrev} ${mapping.label} at ${currentPct}% mid-year is consistent with historical KS2 performance ` +
+          `(best: ${bestHistorical.pct}% in ${bestHistorical.year}).`;
+      }
+
+      flags.push({
+        school: report.school,
+        subject: mapping.label,
+        currentY6Pct: currentPct,
+        bestHistoricalPct: bestHistorical.pct,
+        bestHistoricalYear: bestHistorical.year,
+        history,
+        vsHistoryPp,
+        rag,
+        narrative,
+      });
+    }
+  }
+
+  return flags;
+}
+
+// ─── 8. Progress Measures ───────────────────────────────────────────────────
+// KS2 progress measures are GENUINE cohort-based indicators.
+// They measure the progress a cohort makes from KS1 to KS2.
+// Positive = school adds value. Negative = school loses value.
+
+export function extractProgressMeasures(
+  ks2Results: KS2Result[],
+): ProgressMeasure[] {
+  const measures: ProgressMeasure[] = [];
+
+  const withProgress = ks2Results.filter(
+    r => r.breakdownTopic === 'All pupils' && r.progressMeasureScore != null &&
+      ['Reading', 'Writing', 'Maths'].includes(r.subject),
+  );
+
+  for (const r of withProgress) {
+    const school = PENNINE_SCHOOLS.find(s => s.urn === r.urn);
+    if (!school) continue;
+
+    const score = r.progressMeasureScore!;
+    let interpretation: string;
+
+    if (score >= 3) {
+      interpretation = 'Well above average progress — school adds significant value';
+    } else if (score >= 1) {
+      interpretation = 'Above average progress — school adds value';
+    } else if (score >= -1) {
+      interpretation = 'Average progress — in line with national expectation';
+    } else if (score >= -3) {
+      interpretation = 'Below average progress — school loses value';
+    } else {
+      interpretation = 'Well below average progress — significant concerns about school effectiveness';
+    }
+
+    measures.push({
+      school: school.abbrev,
+      subject: r.subject,
+      year: r.academicYearEnd,
+      score,
+      interpretation,
+    });
+  }
+
+  return measures;
+}
+
+// ─── 9. Pipeline Predictions ────────────────────────────────────────────────
+// Current Y5 data predicts NEXT year's Y6.
+// Current Y6 data predicts THIS year's KS2.
+// Cross-reference against last validated KS2 to spot trajectory.
+
+export function buildPipelinePredictions(
+  selfReports: SchoolSelfReport[],
+  ks2Results: KS2Result[],
+): PipelinePrediction[] {
+  const predictions: PipelinePrediction[] = [];
+
+  for (const report of selfReports) {
+    const school = getSchoolByAbbrev(report.school);
+    if (!school) continue;
+
+    const y5 = report.yearGroups.find(yg => yg.yearGroup === 'Y5');
+    const y6 = report.yearGroups.find(yg => yg.yearGroup === 'Y6');
+
+    const y5Combined = y5?.allPupils.combined ?? null;
+    const y6Combined = y6?.allPupils.combined ?? null;
+
+    // Last validated KS2 combined
+    const lastKs2 = ks2Results
+      .filter(
+        r => r.urn === school.urn &&
+          r.subject === 'Reading, writing and maths' &&
+          r.breakdownTopic === 'All pupils' &&
+          r.expectedStandardPct != null,
+      )
+      .sort((a, b) => b.academicYearEnd - a.academicYearEnd)[0];
+
+    const lastKs2Combined = lastKs2?.expectedStandardPct ?? null;
+    const lastKs2Year = lastKs2?.academicYearEnd ?? null;
+
+    let narrative = `${school.abbrev}: `;
+
+    if (y5Combined != null && lastKs2Combined != null) {
+      const gap = y5Combined - lastKs2Combined;
+      if (gap < -15) {
+        narrative += `Y5 pipeline at ${y5Combined}% Combined is ${Math.abs(gap)}pp BELOW last KS2 (${lastKs2Combined}% in ${lastKs2Year}). ` +
+          `Next year's KS2 is heading for a significant decline unless interventions are in place.`;
+      } else if (gap < -5) {
+        narrative += `Y5 at ${y5Combined}% Combined suggests next year's KS2 may dip below the ${lastKs2Combined}% achieved in ${lastKs2Year}.`;
+      } else {
+        narrative += `Y5 at ${y5Combined}% Combined suggests the school can maintain or improve on ${lastKs2Combined}% (${lastKs2Year}).`;
+      }
+    } else if (y6Combined != null) {
+      narrative += `Y6 mid-year at ${y6Combined}% Combined.`;
+      if (lastKs2Combined != null) {
+        narrative += ` Last validated KS2 was ${lastKs2Combined}% (${lastKs2Year}).`;
+      }
+    } else {
+      narrative += `Insufficient data for pipeline prediction.`;
+    }
+
+    predictions.push({
+      school: report.school,
+      currentY5Combined: y5Combined,
+      currentY6Combined: y6Combined,
+      lastKs2Combined,
+      lastKs2Year,
+      narrative,
+    });
+  }
+
+  return predictions;
 }

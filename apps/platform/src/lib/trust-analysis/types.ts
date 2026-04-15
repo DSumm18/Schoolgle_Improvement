@@ -127,3 +127,59 @@ export interface SchoolNarrative {
   ofstedQuestions: string[];
   overallAssessment: string;
 }
+
+// ─── Cohort-Based Analysis Types ─────────────────────────────────────
+
+/** Pipeline analysis: tracks a subject across year groups within a single school */
+export interface PipelineTrajectory {
+  school: string;
+  subject: string;
+  /** Year group data points ordered Y1→Y6 */
+  points: { yearGroup: YearGroup; pct: number }[];
+  /** Overall trend: positive = improving pipeline, negative = declining */
+  trendPp: number;
+  /** Year-on-year jumps that look implausible (>15pp in one year) */
+  implausibleJumps: { from: YearGroup; to: YearGroup; jumpPp: number }[];
+  rag: RAGStatus;
+  narrative: string;
+}
+
+/** Track record: compares current Y6 self-report against school's KS2 history */
+export interface TrackRecordFlag {
+  school: string;
+  subject: string;
+  /** Current Y6 mid-year self-report */
+  currentY6Pct: number;
+  /** Best-ever KS2 result for this subject at this school */
+  bestHistoricalPct: number;
+  bestHistoricalYear: number;
+  /** All historical KS2 results */
+  history: { year: number; pct: number }[];
+  /** How far above/below best-ever result */
+  vsHistoryPp: number;
+  rag: RAGStatus;
+  narrative: string;
+}
+
+/** KS2 progress measures — genuine cohort-based school quality indicator */
+export interface ProgressMeasure {
+  school: string;
+  subject: string;
+  year: number;
+  score: number;
+  /** Positive = school adds value, negative = school loses value */
+  interpretation: string;
+}
+
+/** Predicted KS2 outcome based on current pipeline */
+export interface PipelinePrediction {
+  school: string;
+  /** Current Y5 data predicts next year's Y6 */
+  currentY5Combined: number | null;
+  /** Current Y6 mid-year predicts this year's KS2 */
+  currentY6Combined: number | null;
+  /** Last validated KS2 combined */
+  lastKs2Combined: number | null;
+  lastKs2Year: number | null;
+  narrative: string;
+}

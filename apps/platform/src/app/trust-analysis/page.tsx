@@ -12,17 +12,19 @@ import GroveHouseDemo from '@/components/trust-analysis/GroveHouseDemo';
 import { PENNINE_SELF_REPORTS } from '@/lib/trust-analysis/pennine-data';
 import {
   calculateDivergences, detectDataQualityIssues, calculateDisadvantageGaps,
+  analysePipelines, analyseTrackRecord, extractProgressMeasures, buildPipelinePredictions,
 } from '@/lib/trust-analysis/analysis';
 import { generateSchoolNarrative } from '@/lib/trust-analysis/school-narratives';
 import {
   DfEData, SchoolNarrative, DivergenceFlag, DataQualityFlag, DisadvantageGap,
+  TrackRecordFlag, PipelineTrajectory, ProgressMeasure, PipelinePrediction,
 } from '@/lib/trust-analysis/types';
 
 type TabKey = 'overview' | 'cross-reference' | 'trends' | 'narratives' | 'grove-house';
 
 const TABS: { key: TabKey; label: string; description: string }[] = [
   { key: 'overview', label: 'Trust Overview', description: 'Heatmaps, gap analysis, data quality' },
-  { key: 'cross-reference', label: 'DfE Cross-Reference', description: 'Self-report vs validated SATs' },
+  { key: 'cross-reference', label: 'Reality Check', description: 'Track record, pipeline, progress measures' },
   { key: 'trends', label: 'Historical Trends', description: 'KS2, FSM, scaled scores over time' },
   { key: 'narratives', label: 'School Reports', description: 'Per-school narrative with Ofsted Qs' },
   { key: 'grove-house', label: 'Grove House Demo', description: 'Per-pupil analysis (SENSITIVE)' },
@@ -56,6 +58,19 @@ export default function TrustAnalysisPage() {
     : [];
   const qualityFlags: DataQualityFlag[] = detectDataQualityIssues(PENNINE_SELF_REPORTS);
   const gaps: DisadvantageGap[] = calculateDisadvantageGaps(PENNINE_SELF_REPORTS);
+
+  // New cohort-based analyses
+  const pipelines: PipelineTrajectory[] = analysePipelines(PENNINE_SELF_REPORTS);
+  const trackRecords: TrackRecordFlag[] = dfeData
+    ? analyseTrackRecord(PENNINE_SELF_REPORTS, dfeData.ks2Results)
+    : [];
+  const progressMeasures: ProgressMeasure[] = dfeData
+    ? extractProgressMeasures(dfeData.ks2Results)
+    : [];
+  const predictions: PipelinePrediction[] = dfeData
+    ? buildPipelinePredictions(PENNINE_SELF_REPORTS, dfeData.ks2Results)
+    : [];
+
   const narratives: SchoolNarrative[] = PENNINE_SELF_REPORTS.map(report =>
     generateSchoolNarrative(
       report,
@@ -105,8 +120,8 @@ export default function TrustAnalysisPage() {
               <div className="text-xs text-gray-500">Data Errors</div>
             </div>
             <div className="bg-gray-50 rounded-lg p-3 text-center border border-gray-100">
-              <div className="text-2xl font-bold text-red-600">{divergences.filter(d => d.rag === 'red').length}</div>
-              <div className="text-xs text-gray-500">Red Divergences</div>
+              <div className="text-2xl font-bold text-red-600">{trackRecords.filter(t => t.rag === 'red').length}</div>
+              <div className="text-xs text-gray-500">Unprecedented Claims</div>
             </div>
             <div className="bg-gray-50 rounded-lg p-3 text-center border border-gray-100">
               <div className={`text-2xl font-bold ${loading ? 'text-gray-400' : 'text-emerald-600'}`}>
@@ -174,10 +189,10 @@ export default function TrustAnalysisPage() {
 
           {activeTab === 'cross-reference' && (
             <motion.div key="cross-ref" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <h2 className="text-lg font-bold text-gray-900 mb-2">Layer 2: DfE Cross-Reference Analysis</h2>
+              <h2 className="text-lg font-bold text-gray-900 mb-2">Reality Check: What a Spreadsheet Can&apos;t Tell You</h2>
               <p className="text-sm text-gray-500 mb-6">
-                This is what a spreadsheet cannot do. We cross-reference the trust&apos;s self-reported mid-year data
-                against validated DfE SATs results stored in Schoolgle&apos;s data warehouse.
+                Track record analysis, pipeline consistency checks, and DfE progress measures.
+                This is what happens when you cross-reference self-reported data against reality.
               </p>
               {loading ? (
                 <div className="text-center py-12">
@@ -185,7 +200,12 @@ export default function TrustAnalysisPage() {
                   <p className="text-gray-500">Loading DfE data from Supabase...</p>
                 </div>
               ) : (
-                <DfeCrossReference divergences={divergences} />
+                <DfeCrossReference
+                  trackRecords={trackRecords}
+                  pipelines={pipelines}
+                  progressMeasures={progressMeasures}
+                  predictions={predictions}
+                />
               )}
             </motion.div>
           )}
