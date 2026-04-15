@@ -9,6 +9,7 @@ import DfeCrossReference from '@/components/trust-analysis/DfeCrossReference';
 import TrendCharts from '@/components/trust-analysis/TrendCharts';
 import SchoolNarrativeCard from '@/components/trust-analysis/SchoolNarrativeCard';
 import GroveHouseDemo from '@/components/trust-analysis/GroveHouseDemo';
+import CohortJourneyChart from '@/components/trust-analysis/CohortJourneyChart';
 import { PENNINE_SELF_REPORTS } from '@/lib/trust-analysis/pennine-data';
 import {
   calculateDivergences, detectDataQualityIssues, calculateDisadvantageGaps,
@@ -20,10 +21,11 @@ import {
   TrackRecordFlag, PipelineTrajectory, ProgressMeasure, PipelinePrediction,
 } from '@/lib/trust-analysis/types';
 
-type TabKey = 'overview' | 'cross-reference' | 'trends' | 'narratives' | 'grove-house';
+type TabKey = 'overview' | 'cohort-journey' | 'cross-reference' | 'trends' | 'narratives' | 'grove-house';
 
 const TABS: { key: TabKey; label: string; description: string }[] = [
   { key: 'overview', label: 'Trust Overview', description: 'Heatmaps, gap analysis, data quality' },
+  { key: 'cohort-journey', label: 'Cohort Journey', description: 'Track each cohort through the pipeline' },
   { key: 'cross-reference', label: 'Reality Check', description: 'Track record, pipeline, progress measures' },
   { key: 'trends', label: 'Historical Trends', description: 'KS2, FSM, scaled scores over time' },
   { key: 'narratives', label: 'School Reports', description: 'Per-school narrative with Ofsted Qs' },
@@ -184,6 +186,28 @@ export default function TrustAnalysisPage() {
                   <DataQualityFlags flags={qualityFlags} />
                 </div>
               </section>
+            </motion.div>
+          )}
+
+          {activeTab === 'cohort-journey' && (
+            <motion.div key="cohort-journey" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <h2 className="text-lg font-bold text-gray-900 mb-2">Cohort Journey: Follow the Children</h2>
+              <p className="text-sm text-gray-500 mb-6">
+                Select a school and see each cohort&apos;s reported attainment plotted across year groups.
+                The dotted lines show last validated KS2 results &mdash; where the self-report line diverges
+                from validated history, that&apos;s the question the trust needs to answer.
+              </p>
+              {loading ? (
+                <div className="text-center py-12">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mb-4" />
+                  <p className="text-gray-500">Loading DfE data...</p>
+                </div>
+              ) : dfeData ? (
+                <CohortJourneyChart
+                  selfReports={PENNINE_SELF_REPORTS}
+                  ks2Results={dfeData.ks2Results}
+                />
+              ) : null}
             </motion.div>
           )}
 
