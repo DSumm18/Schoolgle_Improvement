@@ -33,6 +33,16 @@ export interface PathfinderBounds {
   height: number;
 }
 
+export interface PathfinderGeoPoint {
+  lat: number;
+  lon: number;
+}
+
+export interface PathfinderScenePoint {
+  x: number;
+  z: number;
+}
+
 export interface PathfinderRoomDraft {
   id: string;
   sourceId?: string;
@@ -61,11 +71,15 @@ export interface PathfinderAssetDraft {
     | "sounder"
     | "defibrillator"
     | "emergency_exit"
+    | "access_control"
     | "boiler"
     | "other";
   x: number;
   y: number;
   linkedRoomId?: string;
+  linkedSiteFeatureId?: string;
+  geoPoint?: PathfinderGeoPoint;
+  locationScope?: "building" | "site";
   qrCode?: string;
   wallSide?: "north" | "east" | "south" | "west" | "ceiling" | "floor" | "external";
   status?: "mapped" | "needs_position" | "service_due" | "issue_open";
@@ -94,6 +108,7 @@ export interface PathfinderTicketDraft {
   x: number;
   y: number;
   linkedRoomId?: string;
+  linkedSiteFeatureId?: string;
   linkedAssetId?: string;
   sourceTable: "estates_helpdesk_tickets";
   notes: string;
@@ -129,14 +144,10 @@ export interface PathfinderMusterPointDraft {
   capacityNote: string;
 }
 
-export interface PathfinderGeoPoint {
-  lat: number;
-  lon: number;
-}
-
 export type PathfinderSiteFeatureType =
   | "site_boundary"
   | "building"
+  | "field"
   | "playground"
   | "play_area"
   | "muga"
@@ -154,6 +165,7 @@ export interface PathfinderSiteFeatureDraft {
   label: string;
   type: PathfinderSiteFeatureType;
   points: PathfinderGeoPoint[];
+  scenePoints?: PathfinderScenePoint[];
   confidence: number;
   needsReview: boolean;
   notes?: string;
@@ -322,6 +334,57 @@ const PATHFINDER_OPERATIONAL_ASSET_SEEDS: Array<Omit<PathfinderAssetDraft, "link
     sourceId: "asset-gh-exit-003",
     confidence: 0.46,
   },
+  {
+    id: "asset-paxton-car-park-gate",
+    label: "Paxton access control - car park vehicle gate",
+    type: "access_control",
+    x: 2876,
+    y: 1454,
+    linkedSiteFeatureId: "car-park-vehicle-gate",
+    geoPoint: { lat: 53.81650, lon: -1.74062 },
+    locationScope: "site",
+    qrCode: "PF-GH-PAX-001",
+    wallSide: "external",
+    status: "mapped",
+    sourceTable: "estates_assets",
+    sourceId: "asset-gh-paxton-001",
+    serviceDue: "2026-08-15",
+    confidence: 0.36,
+  },
+  {
+    id: "asset-paxton-visitor-gate",
+    label: "Paxton access control - visitor pedestrian gate",
+    type: "access_control",
+    x: 2050,
+    y: 1810,
+    linkedSiteFeatureId: "visitor-pedestrian-gate",
+    geoPoint: { lat: 53.81640, lon: -1.74118 },
+    locationScope: "site",
+    qrCode: "PF-GH-PAX-002",
+    wallSide: "external",
+    status: "mapped",
+    sourceTable: "estates_assets",
+    sourceId: "asset-gh-paxton-002",
+    serviceDue: "2026-08-15",
+    confidence: 0.34,
+  },
+  {
+    id: "asset-paxton-service-yard",
+    label: "Paxton access control - rear service gate",
+    type: "access_control",
+    x: 2910,
+    y: 1080,
+    linkedSiteFeatureId: "bins-service-yard",
+    geoPoint: { lat: 53.81692, lon: -1.74050 },
+    locationScope: "site",
+    qrCode: "PF-GH-PAX-003",
+    wallSide: "external",
+    status: "needs_position",
+    sourceTable: "estates_assets",
+    sourceId: "asset-gh-paxton-003",
+    serviceDue: "2026-08-15",
+    confidence: 0.28,
+  },
 ];
 
 const PATHFINDER_SUPPORT_PROFILE_SEEDS: Omit<PathfinderSupportProfileDraft, "linkedRoomId">[] = [
@@ -451,8 +514,10 @@ const PATHFINDER_TICKET_SEEDS: Array<Omit<PathfinderTicketDraft, "linkedRoomId">
     risk: "medium",
     x: 2876,
     y: 1454,
+    linkedSiteFeatureId: "car-park-vehicle-gate",
+    linkedAssetId: "asset-paxton-car-park-gate",
     sourceTable: "estates_helpdesk_tickets",
-    notes: "External access issue candidate for linking site context, gates, and vehicle-route checks.",
+    notes: "External access issue linked to the Paxton vehicle gate so site assets and outside tickets appear on the whole-site model.",
   },
   {
     id: "ticket-gh-water-2025-001",
@@ -821,9 +886,13 @@ export function buildExtractionResult(input: {
     confidence: clamp(room.confidence, 0, 1),
   }));
   const assets = mergeOperationalAssets(input.assets ?? [], rooms);
+  const assetById = new Map(assets.map((asset) => [asset.id, asset]));
   const tickets = PATHFINDER_TICKET_SEEDS.map((ticket) => ({
     ...ticket,
-    linkedRoomId: findNearestRoomId(rooms, ticket.x, ticket.y),
+    linkedRoomId: assetById.get(ticket.linkedAssetId ?? "")?.locationScope === "site"
+      ? undefined
+      : findNearestRoomId(rooms, ticket.x, ticket.y),
+    linkedSiteFeatureId: ticket.linkedSiteFeatureId ?? assetById.get(ticket.linkedAssetId ?? "")?.linkedSiteFeatureId,
   }));
   const supportProfiles = PATHFINDER_SUPPORT_PROFILE_SEEDS.map((profile) => ({
     ...profile,
@@ -867,10 +936,18 @@ function mergeOperationalAssets(
   const existingIds = new Set(inputAssets.map((asset) => asset.id));
   const operationalAssets = PATHFINDER_OPERATIONAL_ASSET_SEEDS.filter((asset) => !existingIds.has(asset.id)).map((asset) => ({
     ...asset,
-    linkedRoomId: findNearestRoomId(rooms, asset.x, asset.y),
+    locationScope: asset.locationScope ?? "building",
+    linkedRoomId: asset.locationScope === "site" ? undefined : findNearestRoomId(rooms, asset.x, asset.y),
   }));
 
-  return [...inputAssets, ...operationalAssets];
+  return [
+    ...inputAssets.map((asset) => ({
+      ...asset,
+      locationScope: asset.locationScope ?? "building",
+      linkedRoomId: asset.locationScope === "site" ? undefined : asset.linkedRoomId ?? findNearestRoomId(rooms, asset.x, asset.y),
+    })),
+    ...operationalAssets,
+  ];
 }
 
 function findNearestRoomId(

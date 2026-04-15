@@ -1,14 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { Canvas } from "@react-three/fiber";
 import { Edges, Html, Line, OrbitControls } from "@react-three/drei";
+import { AuthContext } from "@/context/SupabaseAuthContext";
 import type {
   PathfinderAssetDraft,
   PathfinderExtractionResult,
   PathfinderGeoPoint,
   PathfinderPoint,
+  PathfinderScenePoint,
   PathfinderSupportProfileDraft,
   PathfinderRouteDraft,
   PathfinderRoomDraft,
@@ -70,6 +72,7 @@ const ASSET_COLORS: Record<PathfinderAssetDraft["type"], string> = {
   sounder: "#2563eb",
   defibrillator: "#c11574",
   emergency_exit: "#16a34a",
+  access_control: "#0f766e",
   boiler: "#57534e",
   other: "#475467",
 };
@@ -83,6 +86,7 @@ const FILTERABLE_ASSET_TYPES: PathfinderAssetDraft["type"][] = [
   "sounder",
   "defibrillator",
   "emergency_exit",
+  "access_control",
   "boiler",
 ];
 
@@ -104,6 +108,7 @@ const SUPPORT_COLORS = {
 const SITE_FEATURE_COLORS: Record<PathfinderSiteFeatureType, string> = {
   site_boundary: "#111827",
   building: "#2563eb",
+  field: "#4d7c0f",
   playground: "#16a34a",
   play_area: "#0d9488",
   muga: "#7c3aed",
@@ -122,6 +127,16 @@ const SITE_TILE_RADIUS = 1;
 
 type SetupApprovalState = "school_review" | "ai_fix" | "approved" | "published";
 type ControlDeckTab = "tickets" | "layers" | "wayfinding" | "assets" | "edit";
+
+interface PathfinderPrototypeProps {
+  estatesMode?: boolean;
+}
+
+interface EstatesAssetSummary {
+  total: number;
+  mapped: number;
+  unplaced: number;
+}
 
 const SETUP_WORKFLOW_STEPS: Array<{
   id: SetupApprovalState;
@@ -148,6 +163,19 @@ const SETUP_WORKFLOW_STEPS: Array<{
     label: "Publish assets",
     description: "Push QR asset pins, tickets, fire exits, and routes into Estates and navigation workflows.",
   },
+];
+
+const SITE_DRAW_TYPES: PathfinderSiteFeatureType[] = [
+  "site_boundary",
+  "fence",
+  "gate",
+  "field",
+  "playground",
+  "play_area",
+  "muga",
+  "car_park",
+  "bin_store",
+  "service_yard",
 ];
 
 function polygonPoints(room: PathfinderRoomDraft): string {
@@ -187,6 +215,77 @@ function pointToScene(point: PathfinderPoint, image: PathfinderExtractionResult[
     0.62,
     (point.y / image.height - 0.5) * 50,
   ] as [number, number, number];
+}
+
+type SiteSceneProjection = {
+  project: (point: PathfinderGeoPoint) => [number, number];
+};
+
+function geoToLocalMeters(point: PathfinderGeoPoint, origin: PathfinderGeoPoint): { x: number; z: number } {
+  const metresPerDegreeLatitude = 111_320;
+  const metresPerDegreeLongitude = metresPerDegreeLatitude * Math.cos((origin.lat * Math.PI) / 180);
+  return {
+    x: (point.lon - origin.lon) * metresPerDegreeLongitude,
+    z: -(point.lat - origin.lat) * metresPerDegreeLatitude,
+  };
+}
+
+function geoBounds(points: PathfinderGeoPoint[]) {
+  return points.reduce(
+    (bounds, point) => ({
+      minLat: Math.min(bounds.minLat, point.lat),
+      maxLat: Math.max(bounds.maxLat, point.lat),
+      minLon: Math.min(bounds.minLon, point.lon),
+      maxLon: Math.max(bounds.maxLon, point.lon),
+    }),
+    { minLat: Infinity, maxLat: -Infinity, minLon: Infinity, maxLon: -Infinity },
+  );
+}
+
+function createSiteSceneProjection(data: PathfinderExtractionResult): SiteSceneProjection {
+  const roomShapes = data.rooms.map((room) => toScene(room, data.image));
+  const roomBounds = roomShapes.reduce(
+    (bounds, shape) => ({
+      minX: Math.min(bounds.minX, shape.x - shape.w / 2),
+      maxX: Math.max(bounds.maxX, shape.x + shape.w / 2),
+      minZ: Math.min(bounds.minZ, shape.z - shape.d / 2),
+      maxZ: Math.max(bounds.maxZ, shape.z + shape.d / 2),
+    }),
+    { minX: Infinity, maxX: -Infinity, minZ: Infinity, maxZ: -Infinity },
+  );
+  const buildingFeature = data.siteContext.features.find((feature) => feature.type === "building");
+  const anchorPoints = buildingFeature?.points.length ? buildingFeature.points : [data.siteContext.center];
+  const anchorBounds = geoBounds(anchorPoints);
+  const anchorCenter = {
+    lat: (anchorBounds.minLat + anchorBounds.maxLat) / 2,
+    lon: (anchorBounds.minLon + anchorBounds.maxLon) / 2,
+  };
+  const anchorMeters = anchorPoints.map((point) => geoToLocalMeters(point, anchorCenter));
+  const anchorMeterBounds = anchorMeters.reduce(
+    (bounds, point) => ({
+      minX: Math.min(bounds.minX, point.x),
+      maxX: Math.max(bounds.maxX, point.x),
+      minZ: Math.min(bounds.minZ, point.z),
+      maxZ: Math.max(bounds.maxZ, point.z),
+    }),
+    { minX: Infinity, maxX: -Infinity, minZ: Infinity, maxZ: -Infinity },
+  );
+  const roomWidth = Math.max(8, roomBounds.maxX - roomBounds.minX);
+  const roomDepth = Math.max(8, roomBounds.maxZ - roomBounds.minZ);
+  const anchorWidth = Math.max(1, anchorMeterBounds.maxX - anchorMeterBounds.minX);
+  const anchorDepth = Math.max(1, anchorMeterBounds.maxZ - anchorMeterBounds.minZ);
+  const scale = Math.min(roomWidth / anchorWidth, roomDepth / anchorDepth) * 1.02;
+  const roomCenter = {
+    x: (roomBounds.minX + roomBounds.maxX) / 2,
+    z: (roomBounds.minZ + roomBounds.maxZ) / 2,
+  };
+
+  return {
+    project: (point) => {
+      const metres = geoToLocalMeters(point, anchorCenter);
+      return [roomCenter.x + metres.x * scale, roomCenter.z + metres.z * scale];
+    },
+  };
 }
 
 function isCriticalHub(room: PathfinderRoomDraft): boolean {
@@ -229,6 +328,8 @@ function assetIconLabel(type: PathfinderAssetDraft["type"]): string {
       return "AED";
     case "emergency_exit":
       return "EX";
+    case "access_control":
+      return "PX";
     case "boiler":
       return "BLR";
     default:
@@ -315,6 +416,12 @@ function formatSiteFeatureType(type: PathfinderSiteFeatureType): string {
   return type.replaceAll("_", " ");
 }
 
+function minimumSiteFeaturePoints(type: PathfinderSiteFeatureType): number {
+  if (type === "gate" || type === "entrance" || type === "risk") return 1;
+  if (type === "fence" || type === "road") return 2;
+  return 3;
+}
+
 function formatAssetType(type: PathfinderAssetDraft["type"]): string {
   return type.replaceAll("_", " ");
 }
@@ -393,22 +500,24 @@ function RoomMesh({
 function AssetMarker3D({
   asset,
   image,
+  scenePosition,
   active,
   selected,
   onSelect,
 }: {
   asset: PathfinderAssetDraft;
   image: PathfinderExtractionResult["image"];
+  scenePosition?: [number, number, number];
   active: boolean;
   selected: boolean;
   onSelect: (asset: PathfinderAssetDraft) => void;
 }) {
   const [hovered, setHovered] = useState(false);
-  const [x, , z] = pointToScene({ x: asset.x, y: asset.y }, image);
+  const [defaultX, , defaultZ] = pointToScene({ x: asset.x, y: asset.y }, image);
   const color = ASSET_COLORS[asset.type] ?? ASSET_COLORS.other;
-  const radius = asset.type === "door" ? (active ? 0.34 : 0.18) : asset.type === "emergency_exit" ? 0.92 : 0.72;
-  const y = asset.type === "door" ? 0.38 : 1.05;
-  const shouldLabel = hovered || selected;
+  const radius = asset.type === "door" ? (active ? 0.34 : 0.18) : asset.type === "emergency_exit" ? 0.92 : asset.type === "access_control" ? 0.82 : 0.72;
+  const [x, y, z] = scenePosition ?? [defaultX, asset.type === "door" ? 0.38 : 1.05, defaultZ];
+  const shouldLabel = hovered || selected || asset.type === "access_control";
 
   return (
     <group position={[x, y, z]}>
@@ -434,7 +543,7 @@ function AssetMarker3D({
         <Html center position={[0, asset.type === "emergency_exit" ? 1.05 : 0.88, 0]} style={{ pointerEvents: "none" }}>
           <div className="max-w-[150px] rounded-md bg-[#111827] px-2 py-1 text-center text-[10px] font-black text-[#f8fafc] shadow-lg">
             {asset.type === "emergency_exit" ? "FIRE EXIT" : assetIconLabel(asset.type)}
-            <span className="block font-semibold">{asset.label}</span>
+            {(hovered || selected) && <span className="block font-semibold">{asset.label}</span>}
           </div>
         </Html>
       )}
@@ -445,21 +554,24 @@ function AssetMarker3D({
 function TicketMarker3D({
   ticket,
   image,
+  scenePosition,
   selected,
   onSelect,
 }: {
   ticket: PathfinderTicketDraft;
   image: PathfinderExtractionResult["image"];
+  scenePosition?: [number, number, number];
   selected: boolean;
   onSelect: (ticket: PathfinderTicketDraft) => void;
 }) {
   const [hovered, setHovered] = useState(false);
-  const [x, , z] = pointToScene({ x: ticket.x, y: ticket.y }, image);
+  const [defaultX, , defaultZ] = pointToScene({ x: ticket.x, y: ticket.y }, image);
+  const [x, y, z] = scenePosition ?? [defaultX, 1.35, defaultZ];
   const color = TICKET_RISK_COLORS[ticket.risk];
   const shouldLabel = hovered || selected;
 
   return (
-    <group position={[x, 1.35, z]}>
+    <group position={[x, y, z]}>
       <mesh
         onClick={(event) => {
           event.stopPropagation();
@@ -492,11 +604,218 @@ function TicketMarker3D({
   );
 }
 
+function siteFeatureBadge(type: PathfinderSiteFeatureType): string | null {
+  switch (type) {
+    case "field":
+      return "FIELD";
+    case "playground":
+    case "play_area":
+      return "PLAY";
+    case "muga":
+      return "MUGA";
+    case "car_park":
+      return "P";
+    case "bin_store":
+      return "BIN";
+    case "service_yard":
+      return "YARD";
+    case "road":
+      return "ROAD";
+    default:
+      return null;
+  }
+}
+
+function SiteFeature3D({
+  feature,
+  projection,
+  selected,
+  onSelect,
+  onStartFeatureDrag,
+  onStartPointDrag,
+}: {
+  feature: PathfinderSiteFeatureDraft;
+  projection: SiteSceneProjection;
+  selected: boolean;
+  onSelect: (featureId: string) => void;
+  onStartFeatureDrag: (featureId: string, point: PathfinderScenePoint) => void;
+  onStartPointDrag: (featureId: string, pointIndex: number) => void;
+}) {
+  if (feature.type === "building") return null;
+  const color = SITE_FEATURE_COLORS[feature.type];
+  const scenePoints = feature.scenePoints?.map((point) => [point.x, point.z] as [number, number]) ?? feature.points.map((point) => projection.project(point));
+  const shouldClose = scenePoints.length > 2 && feature.type !== "fence" && feature.type !== "road";
+  const linePoints = shouldClose ? [...scenePoints, scenePoints[0]] : scenePoints;
+  const isPerimeter = feature.type === "site_boundary";
+  const isFence = feature.type === "fence";
+  const badge = siteFeatureBadge(feature.type);
+  const labelPoint = scenePoints.reduce(
+    (sum, point) => ({ x: sum.x + point[0] / scenePoints.length, z: sum.z + point[1] / scenePoints.length }),
+    { x: 0, z: 0 },
+  );
+
+  if (scenePoints.length === 1) {
+    const [x, z] = scenePoints[0];
+    return (
+      <group position={[x, 0.16, z]}>
+        <mesh
+          rotation={[0, Math.PI / 4, 0]}
+          onClick={(event) => {
+            event.stopPropagation();
+            onSelect(feature.id);
+          }}
+          onPointerDown={(event) => {
+            if (!feature.scenePoints?.length) return;
+            event.stopPropagation();
+            onSelect(feature.id);
+            onStartPointDrag(feature.id, 0);
+          }}
+        >
+          <boxGeometry args={[0.8, 0.18, 0.8]} />
+          <meshStandardMaterial
+            color={selected ? SELECTED_STROKE_COLOR : color}
+            emissive={color}
+            emissiveIntensity={selected ? 0.38 : 0.18}
+            transparent
+            opacity={0.9}
+          />
+        </mesh>
+      </group>
+    );
+  }
+
+  return (
+    <group>
+      {shouldClose && !isPerimeter && (
+        <Line
+          points={linePoints.map(([x, z]) => [x, 0.045, z] as [number, number, number])}
+          color={color}
+          lineWidth={8}
+          transparent
+          opacity={0.14}
+        />
+      )}
+      <Line
+        points={linePoints.map(([x, z]) => [x, isPerimeter || isFence ? 0.24 : 0.12, z] as [number, number, number])}
+        color={selected ? SELECTED_STROKE_COLOR : color}
+        lineWidth={selected ? 5.5 : isPerimeter ? 4.5 : isFence ? 3.5 : 2.4}
+        onClick={(event) => {
+          event.stopPropagation();
+          onSelect(feature.id);
+        }}
+      />
+      {isFence && (
+        <Line
+          points={linePoints.map(([x, z]) => [x, 0.42, z] as [number, number, number])}
+          color="#f8fafc"
+          lineWidth={1.4}
+        />
+      )}
+      {badge && (
+        <Html center position={[labelPoint.x, 0.7, labelPoint.z]} style={{ pointerEvents: "none" }}>
+          <div className="rounded-md border border-[#d8dfdc] bg-[#111827]/90 px-1.5 py-0.5 text-[9px] font-black leading-none text-[#f8fafc] shadow-lg">
+            {badge}
+          </div>
+        </Html>
+      )}
+      {selected && feature.scenePoints?.length ? (
+        <group position={[labelPoint.x, 0.92, labelPoint.z]}>
+          <mesh
+            onClick={(event) => {
+              event.stopPropagation();
+              onSelect(feature.id);
+            }}
+            onPointerDown={(event) => {
+              event.stopPropagation();
+              onSelect(feature.id);
+              onStartFeatureDrag(feature.id, { x: Number(event.point.x.toFixed(2)), z: Number(event.point.z.toFixed(2)) });
+            }}
+          >
+            <boxGeometry args={[1.25, 0.22, 1.25]} />
+            <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.42} />
+          </mesh>
+          <Html center position={[0, 0.85, 0]} style={{ pointerEvents: "none" }}>
+            <div className="rounded-md border border-[#f8fafc] bg-[#111827] px-1.5 py-0.5 text-[9px] font-black leading-none text-[#f8fafc]">
+              MOVE
+            </div>
+          </Html>
+        </group>
+      ) : null}
+      {selected && feature.scenePoints?.map((point, index) => (
+        <group key={`${feature.id}-handle-${index}`} position={[point.x, 0.78, point.z]}>
+          <mesh
+            onClick={(event) => {
+              event.stopPropagation();
+              onSelect(feature.id);
+            }}
+            onPointerDown={(event) => {
+              event.stopPropagation();
+              onSelect(feature.id);
+              onStartPointDrag(feature.id, index);
+            }}
+          >
+            <sphereGeometry args={[0.62, 16, 16]} />
+            <meshStandardMaterial
+              color={SELECTED_STROKE_COLOR}
+              emissive={color}
+              emissiveIntensity={0.36}
+              roughness={0.35}
+            />
+          </mesh>
+          <Html center position={[0, 0.9, 0]} style={{ pointerEvents: "none" }}>
+            <div className="rounded-md border border-[#f8fafc] bg-[#111827] px-1.5 py-0.5 text-[9px] font-black leading-none text-[#f8fafc]">
+              {index + 1}
+            </div>
+          </Html>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+function SiteDraft3D({
+  points,
+  type,
+}: {
+  points: PathfinderScenePoint[];
+  type: PathfinderSiteFeatureType;
+}) {
+  if (points.length === 0) return null;
+  const color = SITE_FEATURE_COLORS[type];
+  const linePoints = points.map((point) => [point.x, 0.62, point.z] as [number, number, number]);
+
+  return (
+    <group>
+      {points.length > 1 && (
+        <Line
+          points={linePoints}
+          color={color}
+          lineWidth={4}
+        />
+      )}
+      {points.map((point, index) => (
+        <group key={`${point.x}-${point.z}-${index}`} position={[point.x, 0.68, point.z]}>
+          <mesh>
+            <sphereGeometry args={[0.5, 12, 12]} />
+            <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.36} />
+          </mesh>
+          <Html center position={[0, 0.85, 0]} style={{ pointerEvents: "none" }}>
+            <div className="rounded-md border border-[#f8fafc] bg-[#111827] px-1.5 py-0.5 text-[9px] font-black leading-none text-[#f8fafc]">
+              {index + 1}
+            </div>
+          </Html>
+        </group>
+      ))}
+    </group>
+  );
+}
+
 function SiteContextMap({ siteContext }: { siteContext: PathfinderSiteContextDraft }) {
   const layout = useMemo(() => getSiteMapLayout(siteContext), [siteContext]);
-  const polygonFeatures = siteContext.features.filter((feature) => feature.points.length > 2 && feature.type !== "fence");
-  const lineFeatures = siteContext.features.filter((feature) => feature.points.length > 1 && (feature.type === "road" || feature.type === "fence"));
-  const pointFeatures = siteContext.features.filter((feature) => feature.points.length === 1);
+  const approvedFeatures = siteContext.features.filter((feature) => !feature.needsReview || feature.scenePoints?.length);
+  const polygonFeatures = approvedFeatures.filter((feature) => feature.points.length > 2 && feature.type !== "fence");
+  const lineFeatures = approvedFeatures.filter((feature) => feature.points.length > 1 && (feature.type === "road" || feature.type === "fence"));
+  const pointFeatures = approvedFeatures.filter((feature) => feature.points.length === 1);
 
   return (
     <section className="order-3 min-w-0 border-t border-[#c8d3cf] bg-[#eef3f1] p-4 lg:order-3 lg:col-span-2">
@@ -648,7 +967,7 @@ function SiteContextMap({ siteContext }: { siteContext: PathfinderSiteContextDra
         <div className="min-w-0">
           <h3 className="font-semibold">Site review layer</h3>
           <p className="mt-1 text-sm text-[#4c5854]">
-            {siteContext.features.length} draft features, {siteContext.features.filter((feature) => feature.needsReview).length} needing confirmation.
+            {approvedFeatures.length} locked features visible. {siteContext.features.filter((feature) => feature.needsReview).length} AI candidates are kept for review, not drawn by default.
           </p>
           <div className="mt-3 flex flex-wrap gap-2 text-xs text-[#4c5854]">
             {Object.entries(SITE_FEATURE_COLORS).map(([type, color]) => (
@@ -823,11 +1142,20 @@ function PathfinderScene({
   activeDoorIds,
   visibleAssets,
   visibleTickets,
+  showExternalSite,
+  isDrawingSiteFeature,
+  siteDraftType,
+  siteDraftPoints,
+  selectedSiteFeatureId,
   selectedAssetId,
   selectedTicketId,
   onSelectRoom,
   onSelectAsset,
   onSelectTicket,
+  onSelectSiteFeature,
+  onAddSiteDraftPoint,
+  onMoveSiteFeaturePoint,
+  onMoveSiteFeature,
 }: {
   data: PathfinderExtractionResult;
   selectedRoomId: string | null;
@@ -836,22 +1164,134 @@ function PathfinderScene({
   activeDoorIds: Set<string>;
   visibleAssets: PathfinderAssetDraft[];
   visibleTickets: PathfinderTicketDraft[];
+  showExternalSite: boolean;
+  isDrawingSiteFeature: boolean;
+  siteDraftType: PathfinderSiteFeatureType;
+  siteDraftPoints: PathfinderScenePoint[];
+  selectedSiteFeatureId: string | null;
   selectedAssetId: string | null;
   selectedTicketId: string | null;
   onSelectRoom: (roomId: string) => void;
   onSelectAsset: (asset: PathfinderAssetDraft) => void;
   onSelectTicket: (ticket: PathfinderTicketDraft) => void;
+  onSelectSiteFeature: (featureId: string) => void;
+  onAddSiteDraftPoint: (point: PathfinderScenePoint) => void;
+  onMoveSiteFeaturePoint: (featureId: string, pointIndex: number, point: PathfinderScenePoint) => void;
+  onMoveSiteFeature: (featureId: string, delta: PathfinderScenePoint) => void;
 }) {
+  const [draggedSitePoint, setDraggedSitePoint] = useState<{ featureId: string; pointIndex: number } | null>(null);
+  const [draggedSiteFeature, setDraggedSiteFeature] = useState<{ featureId: string; lastPoint: PathfinderScenePoint } | null>(null);
+  const siteProjection = useMemo(() => createSiteSceneProjection(data), [data]);
+  const visibleSiteFeatures = useMemo(
+    () => data.siteContext.features.filter((feature) => !feature.needsReview || feature.scenePoints?.length),
+    [data.siteContext.features],
+  );
+  const visibleSiteFeatureIds = useMemo(
+    () => new Set(visibleSiteFeatures.map((feature) => feature.id)),
+    [visibleSiteFeatures],
+  );
+  const siteAssets = useMemo(
+    () =>
+      visibleAssets.filter(
+        (asset) =>
+          asset.locationScope === "site" &&
+          asset.geoPoint &&
+          (!asset.linkedSiteFeatureId || visibleSiteFeatureIds.has(asset.linkedSiteFeatureId)),
+      ),
+    [visibleAssets, visibleSiteFeatureIds],
+  );
+  const siteAssetById = useMemo(() => new Map(siteAssets.map((asset) => [asset.id, asset])), [siteAssets]);
+  const buildingAssets = useMemo(
+    () => visibleAssets.filter((asset) => asset.locationScope !== "site"),
+    [visibleAssets],
+  );
+  const siteTickets = useMemo(
+    () =>
+      visibleTickets.filter((ticket) => {
+        if (ticket.linkedAssetId && siteAssetById.has(ticket.linkedAssetId)) return true;
+        return Boolean(ticket.linkedSiteFeatureId && visibleSiteFeatureIds.has(ticket.linkedSiteFeatureId));
+      }),
+    [siteAssetById, visibleSiteFeatureIds, visibleTickets],
+  );
+  const buildingTickets = useMemo(
+    () => visibleTickets.filter((ticket) => !siteTickets.some((siteTicket) => siteTicket.id === ticket.id)),
+    [siteTickets, visibleTickets],
+  );
+
   return (
-    <Canvas camera={{ position: [0, 42, 36], fov: 44 }} gl={{ antialias: true, preserveDrawingBuffer: true }}>
+    <Canvas camera={{ position: [0, 58, 58], fov: 48 }} gl={{ antialias: true, preserveDrawingBuffer: true }}>
       <color attach="background" args={["#101312"]} />
       <ambientLight intensity={0.78} />
       <directionalLight position={[25, 35, 20]} intensity={1.05} />
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.04, 0]}>
-        <planeGeometry args={[82, 58]} />
-                        <meshStandardMaterial color="#1e2221" roughness={0.9} />
+        <planeGeometry args={[130, 118]} />
+        <meshStandardMaterial color="#1e2221" roughness={0.9} />
       </mesh>
-      <gridHelper args={[80, 32, "#4f635f", "#303a37"]} position={[0, -0.02, 0]} />
+      {(draggedSitePoint || draggedSiteFeature) && (
+        <mesh
+          rotation={[-Math.PI / 2, 0, 0]}
+          position={[0, 3.7, 0]}
+          onPointerMove={(event) => {
+            event.stopPropagation();
+            const point = {
+              x: Number(event.point.x.toFixed(2)),
+              z: Number(event.point.z.toFixed(2)),
+            };
+            if (draggedSitePoint) {
+              onMoveSiteFeaturePoint(draggedSitePoint.featureId, draggedSitePoint.pointIndex, point);
+              return;
+            }
+            if (draggedSiteFeature) {
+              setDraggedSiteFeature((current) => {
+                if (!current) return current;
+                onMoveSiteFeature(current.featureId, {
+                  x: Number((point.x - current.lastPoint.x).toFixed(2)),
+                  z: Number((point.z - current.lastPoint.z).toFixed(2)),
+                });
+                return { ...current, lastPoint: point };
+              });
+            }
+          }}
+          onPointerUp={(event) => {
+            event.stopPropagation();
+            setDraggedSitePoint(null);
+            setDraggedSiteFeature(null);
+          }}
+          onPointerLeave={() => {
+            setDraggedSitePoint(null);
+            setDraggedSiteFeature(null);
+          }}
+        >
+          <planeGeometry args={[130, 118]} />
+          <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+        </mesh>
+      )}
+      {isDrawingSiteFeature && (
+        <mesh
+          rotation={[-Math.PI / 2, 0, 0]}
+          position={[0, 3.5, 0]}
+          onClick={(event) => {
+            event.stopPropagation();
+            onAddSiteDraftPoint({ x: Number(event.point.x.toFixed(2)), z: Number(event.point.z.toFixed(2)) });
+          }}
+        >
+          <planeGeometry args={[130, 118]} />
+          <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+        </mesh>
+      )}
+      <gridHelper args={[128, 48, "#4f635f", "#303a37"]} position={[0, -0.02, 0]} />
+      {showExternalSite && visibleSiteFeatures.map((feature) => (
+        <SiteFeature3D
+          key={feature.id}
+          feature={feature}
+          projection={siteProjection}
+          selected={selectedSiteFeatureId === feature.id}
+          onSelect={onSelectSiteFeature}
+          onStartFeatureDrag={(featureId, point) => setDraggedSiteFeature({ featureId, lastPoint: point })}
+          onStartPointDrag={(featureId, pointIndex) => setDraggedSitePoint({ featureId, pointIndex })}
+        />
+      ))}
+      {isDrawingSiteFeature && <SiteDraft3D points={siteDraftPoints} type={siteDraftType} />}
       {data.rooms.map((room) => (
         <RoomMesh
           key={room.id}
@@ -869,7 +1309,7 @@ function PathfinderScene({
           lineWidth={3}
         />
       )}
-      {visibleAssets.map((asset) => (
+      {buildingAssets.map((asset) => (
         <AssetMarker3D
           key={asset.id}
           asset={asset}
@@ -879,7 +1319,22 @@ function PathfinderScene({
           onSelect={onSelectAsset}
         />
       ))}
-      {visibleTickets.map((ticket) => (
+      {showExternalSite && siteAssets.map((asset) => {
+        if (!asset.geoPoint) return null;
+        const [x, z] = siteProjection.project(asset.geoPoint);
+        return (
+          <AssetMarker3D
+            key={asset.id}
+            asset={asset}
+            image={data.image}
+            scenePosition={[x, 1.05, z]}
+            active
+            selected={selectedAssetId === asset.id}
+            onSelect={onSelectAsset}
+          />
+        );
+      })}
+      {buildingTickets.map((ticket) => (
         <TicketMarker3D
           key={ticket.id}
           ticket={ticket}
@@ -888,11 +1343,31 @@ function PathfinderScene({
           onSelect={onSelectTicket}
         />
       ))}
+      {showExternalSite && siteTickets.map((ticket) => {
+        const linkedAsset = ticket.linkedAssetId ? siteAssetById.get(ticket.linkedAssetId) : undefined;
+        const linkedFeature = ticket.linkedSiteFeatureId
+          ? data.siteContext.features.find((feature) => feature.id === ticket.linkedSiteFeatureId)
+          : undefined;
+        const anchor = linkedAsset?.geoPoint ?? linkedFeature?.points[0];
+        if (!anchor) return null;
+        const [x, z] = siteProjection.project(anchor);
+        return (
+          <TicketMarker3D
+            key={ticket.id}
+            ticket={ticket}
+            image={data.image}
+            scenePosition={[x + 1.4, 1.32, z - 1.4]}
+            selected={selectedTicketId === ticket.id}
+            onSelect={onSelectTicket}
+          />
+        );
+      })}
       <OrbitControls
         makeDefault
+        enabled={!isDrawingSiteFeature && !draggedSitePoint && !draggedSiteFeature}
         enableDamping
         dampingFactor={0.08}
-        target={[0, 0, 2]}
+        target={[0, 0, 0]}
         minPolarAngle={0.2}
         maxPolarAngle={Math.PI / 2.15}
       />
@@ -1077,11 +1552,15 @@ function findPath(
   };
 }
 
-export default function PathfinderPrototype() {
+export default function PathfinderPrototype({ estatesMode = false }: PathfinderPrototypeProps = {}) {
+  const auth = useContext(AuthContext);
+  const organizationId = auth?.organizationId ?? null;
+  const session = auth?.session ?? null;
   const [data, setData] = useState<PathfinderExtractionResult | null>(null);
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
+  const [selectedSiteFeatureId, setSelectedSiteFeatureId] = useState<string | null>(null);
   const [visibleAssetTypes, setVisibleAssetTypes] = useState<Set<PathfinderAssetDraft["type"]>>(
     () => new Set(FILTERABLE_ASSET_TYPES),
   );
@@ -1089,6 +1568,7 @@ export default function PathfinderPrototype() {
   const [blockedRoomIds, setBlockedRoomIds] = useState<Set<string>>(() => new Set());
   const [showSupportNeeds, setShowSupportNeeds] = useState(false);
   const [showEvacuationPlan, setShowEvacuationPlan] = useState(false);
+  const [showExternalSite, setShowExternalSite] = useState(true);
   const [fireRouteMode, setFireRouteMode] = useState(false);
   const [startRoomId, setStartRoomId] = useState<string | null>(null);
   const [destinationRoomId, setDestinationRoomId] = useState<string | null>(null);
@@ -1098,6 +1578,12 @@ export default function PathfinderPrototype() {
   const [approvalState, setApprovalState] = useState<SetupApprovalState>("school_review");
   const [correctionPrompt, setCorrectionPrompt] = useState("");
   const [activeControlDeck, setActiveControlDeck] = useState<ControlDeckTab>("tickets");
+  const [siteDraftType, setSiteDraftType] = useState<PathfinderSiteFeatureType>("site_boundary");
+  const [siteDraftName, setSiteDraftName] = useState("Site boundary");
+  const [siteDraftPoints, setSiteDraftPoints] = useState<PathfinderScenePoint[]>([]);
+  const [isDrawingSiteFeature, setIsDrawingSiteFeature] = useState(false);
+  const [estatesModelId, setEstatesModelId] = useState<string | null>(null);
+  const [estatesAssetSummary, setEstatesAssetSummary] = useState<EstatesAssetSummary | null>(null);
 
   const selectedRoom = useMemo(
     () => data?.rooms.find((room) => room.id === selectedRoomId) ?? null,
@@ -1110,6 +1596,10 @@ export default function PathfinderPrototype() {
   const selectedTicket = useMemo(
     () => data?.tickets.find((ticket) => ticket.id === selectedTicketId) ?? null,
     [data?.tickets, selectedTicketId],
+  );
+  const selectedSiteFeature = useMemo(
+    () => data?.siteContext.features.find((feature) => feature.id === selectedSiteFeatureId) ?? null,
+    [data?.siteContext.features, selectedSiteFeatureId],
   );
   const operationalAssets = useMemo(
     () => data?.assets.filter((asset) => asset.type !== "door" && asset.type !== "qr_anchor") ?? [],
@@ -1211,9 +1701,17 @@ export default function PathfinderPrototype() {
     () => data?.rooms.find((room) => room.id === selectedAsset?.linkedRoomId) ?? null,
     [data?.rooms, selectedAsset?.linkedRoomId],
   );
+  const selectedAssetSiteFeature = useMemo(
+    () => data?.siteContext.features.find((feature) => feature.id === selectedAsset?.linkedSiteFeatureId) ?? null,
+    [data?.siteContext.features, selectedAsset?.linkedSiteFeatureId],
+  );
   const selectedTicketRoom = useMemo(
     () => data?.rooms.find((room) => room.id === selectedTicket?.linkedRoomId) ?? null,
     [data?.rooms, selectedTicket?.linkedRoomId],
+  );
+  const selectedTicketSiteFeature = useMemo(
+    () => data?.siteContext.features.find((feature) => feature.id === selectedTicket?.linkedSiteFeatureId) ?? null,
+    [data?.siteContext.features, selectedTicket?.linkedSiteFeatureId],
   );
 
   const toggleAssetType = useCallback((type: PathfinderAssetDraft["type"]) => {
@@ -1242,6 +1740,40 @@ export default function PathfinderPrototype() {
     setStatus(`${targetRoom.roomCode || targetRoom.id} diversion ${blockedRoomIds.has(targetRoom.id) ? "removed" : "added"} for route planning.`);
   }, [blockedRoomIds, data, destinationRoomId, startRoomId]);
 
+  const loadEstatesAssetsIntoModel = useCallback(
+    async (model: PathfinderExtractionResult): Promise<PathfinderExtractionResult> => {
+      if (!estatesMode || !organizationId) return model;
+
+      const response = await fetch("/api/estates/pathfinder/assets", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({ organizationId, model }),
+      });
+
+      if (!response.ok) return model;
+      const result = (await response.json()) as {
+        pathfinderAssets?: PathfinderAssetDraft[];
+        summary?: EstatesAssetSummary;
+      };
+      setEstatesAssetSummary(result.summary ?? null);
+
+      const structuralAssets = model.assets.filter((asset) => asset.sourceTable !== "estates_assets");
+      const pathfinderAssets = result.pathfinderAssets ?? [];
+      return {
+        ...model,
+        assets: [...structuralAssets, ...pathfinderAssets],
+        metrics: {
+          ...model.metrics,
+          assetCount: structuralAssets.length + pathfinderAssets.length,
+        },
+      };
+    },
+    [estatesMode, organizationId, session?.access_token],
+  );
+
   const runExtraction = useCallback(async (mode: "local" | "raster" | "vision") => {
     setIsLoading(true);
     setStatus(
@@ -1260,16 +1792,17 @@ export default function PathfinderPrototype() {
       if (!response.ok) {
         throw new Error(`Extraction failed with HTTP ${response.status}`);
       }
-      const result = (await response.json()) as PathfinderExtractionResult;
+      const result = await loadEstatesAssetsIntoModel((await response.json()) as PathfinderExtractionResult);
       const start = pickStartRoomId(result);
       const destination = pickDestinationRoomId(result);
       setData(result);
       setStartRoomId(start);
       setDestinationRoomId(destination);
       setIsNavigating(true);
-      setSelectedRoomId(start ?? destination ?? result.rooms[0]?.id ?? null);
-      setSelectedAssetId(result.assets.find((asset) => asset.type === "fire_extinguisher")?.id ?? null);
-      setSelectedTicketId(result.tickets[0]?.id ?? null);
+      setSelectedRoomId(null);
+      setSelectedAssetId(null);
+      setSelectedTicketId(null);
+      setSelectedSiteFeatureId(null);
       setApprovalState("school_review");
       setCorrectionPrompt("");
       setStatus(
@@ -1282,7 +1815,7 @@ export default function PathfinderPrototype() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [loadEstatesAssetsIntoModel]);
 
   const simulateQrScan = useCallback(() => {
     if (!data) return;
@@ -1355,7 +1888,7 @@ export default function PathfinderPrototype() {
             return {
               ...asset,
               ...point,
-              linkedRoomId: linkedRoom?.id ?? asset.linkedRoomId,
+              linkedRoomId: asset.locationScope === "site" ? undefined : linkedRoom?.id ?? asset.linkedRoomId,
               status: "needs_position",
               confidence: Math.min(asset.confidence, 0.72),
             };
@@ -1420,6 +1953,73 @@ export default function PathfinderPrototype() {
     setApprovalState("published");
     setStatus("Approved locations and QR asset pins are ready to publish into Estates assets, tickets, and navigation.");
   }, []);
+
+  const saveEstatesModel = useCallback(
+    async (modelStatus: SetupApprovalState = approvalState) => {
+      if (!data || !organizationId) {
+        setStatus("Sign in to a school organization before saving the Pathfinder model.");
+        return null;
+      }
+
+      const response = await fetch("/api/estates/pathfinder/model", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({
+          organizationId,
+          modelId: estatesModelId,
+          name: data.image.title,
+          status: modelStatus,
+          sourceDocumentName: data.image.title,
+          extractionResult: data,
+        }),
+      });
+
+      if (!response.ok) {
+        setStatus(`Pathfinder model save failed with HTTP ${response.status}.`);
+        return null;
+      }
+
+      const result = (await response.json()) as { model?: { id?: string } };
+      const nextModelId = result.model?.id ?? null;
+      setEstatesModelId(nextModelId);
+      setStatus("Pathfinder model saved against the school. Asset Register overlays can now reference this model.");
+      return nextModelId;
+    },
+    [approvalState, data, estatesModelId, organizationId, session?.access_token],
+  );
+
+  const syncEstatesLocations = useCallback(async () => {
+    if (!data || !organizationId) {
+      setStatus("Sign in to a school organization before syncing Pathfinder locations.");
+      return;
+    }
+
+    const modelId = estatesModelId ?? (await saveEstatesModel("approved"));
+    if (!modelId) return;
+
+    const response = await fetch("/api/estates/pathfinder/sync", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+      },
+      body: JSON.stringify({ organizationId, modelId, publish: true }),
+    });
+
+    if (!response.ok) {
+      setStatus(`Pathfinder location sync failed with HTTP ${response.status}.`);
+      return;
+    }
+
+    const result = (await response.json()) as { created: number; skipped: number; total: number };
+    setApprovalState("published");
+    setStatus(
+      `Pathfinder published to Estates locations: ${result.created} created, ${result.skipped} already existed, ${result.total} checked.`,
+    );
+  }, [data, estatesModelId, organizationId, saveEstatesModel, session?.access_token]);
 
   const updateRoomDetails = useCallback(
     (roomId: string, updates: Partial<Pick<PathfinderRoomDraft, "label" | "type" | "block">>) => {
@@ -1517,6 +2117,229 @@ export default function PathfinderPrototype() {
     });
   }, [selectedRoom]);
 
+  const addPaxtonGate = useCallback(() => {
+    setData((current) => {
+      if (!current) return current;
+      const count = current.assets.filter((asset) => asset.id.startsWith("manual-paxton-gate")).length + 1;
+      const suffix = String(count).padStart(2, "0");
+      const featureId = `manual-paxton-gate-feature-${suffix}`;
+      const geoPoint = {
+        lat: current.siteContext.center.lat - 0.00052 + count * 0.00004,
+        lon: current.siteContext.center.lon + 0.00062 + count * 0.00004,
+      };
+      const feature: PathfinderSiteFeatureDraft = {
+        id: featureId,
+        label: `Paxton gate point ${count}`,
+        type: "gate",
+        points: [geoPoint],
+        confidence: 0.2,
+        needsReview: false,
+        notes: "External access-control point added from the whole-site model. Link it to the Paxton controller and Estates asset record before publishing.",
+      };
+      const asset: PathfinderAssetDraft = {
+        id: `manual-paxton-gate-${suffix}`,
+        label: `Paxton access control - new gate ${count}`,
+        type: "access_control",
+        x: Math.round(current.image.width * 0.87),
+        y: Math.round(current.image.height * 0.62),
+        linkedSiteFeatureId: featureId,
+        geoPoint,
+        locationScope: "site",
+        qrCode: `PF-GH-PAX-MAN-${suffix}`,
+        wallSide: "external",
+        status: "needs_position",
+        sourceTable: "estates_assets",
+        sourceId: `asset-gh-paxton-man-${suffix}`,
+        confidence: 0.2,
+      };
+      setSelectedAssetId(asset.id);
+      setSelectedTicketId(null);
+
+      return {
+        ...current,
+        assets: [...current.assets, asset],
+        siteContext: {
+          ...current.siteContext,
+          features: [...current.siteContext.features, feature],
+        },
+        metrics: {
+          ...current.metrics,
+          assetCount: current.metrics.assetCount + 1,
+        },
+      };
+    });
+    setActiveControlDeck("assets");
+    setShowExternalSite(true);
+    setStatus("Added a Paxton gate asset to the whole-site Pathfinder model.");
+  }, []);
+
+  const selectSiteFeature = useCallback(
+    (featureId: string) => {
+      const feature = data?.siteContext.features.find((candidate) => candidate.id === featureId);
+      setSelectedSiteFeatureId(featureId);
+      setSelectedAssetId(null);
+      setSelectedTicketId(null);
+      if (feature) {
+        setStatus(
+          feature.scenePoints?.length
+            ? `${feature.label} selected. Drag MOVE to reposition it, or drag the numbered handles to resize and reshape it.`
+            : `${feature.label} selected. This is still an AI/map candidate, so redraw it before publishing.`,
+        );
+      }
+    },
+    [data?.siteContext.features],
+  );
+
+  const moveSiteFeaturePoint = useCallback((featureId: string, pointIndex: number, point: PathfinderScenePoint) => {
+    setData((current) => {
+      if (!current) return current;
+      return {
+        ...current,
+        siteContext: {
+          ...current.siteContext,
+          features: current.siteContext.features.map((feature) => {
+            if (feature.id !== featureId || !feature.scenePoints?.[pointIndex]) return feature;
+            return {
+              ...feature,
+              scenePoints: feature.scenePoints.map((scenePoint, index) => (index === pointIndex ? point : scenePoint)),
+              confidence: Math.min(feature.confidence, 0.9),
+              needsReview: false,
+              notes: "Adjusted in the Pathfinder whole-site builder. Assets and tickets can still link to this external site feature.",
+            };
+          }),
+        },
+      };
+    });
+  }, []);
+
+  const moveSiteFeature = useCallback((featureId: string, delta: PathfinderScenePoint) => {
+    if (Math.abs(delta.x) < 0.01 && Math.abs(delta.z) < 0.01) return;
+    setData((current) => {
+      if (!current) return current;
+      return {
+        ...current,
+        siteContext: {
+          ...current.siteContext,
+          features: current.siteContext.features.map((feature) => {
+            if (feature.id !== featureId || !feature.scenePoints?.length) return feature;
+            return {
+              ...feature,
+              scenePoints: feature.scenePoints.map((point) => ({
+                x: Number((point.x + delta.x).toFixed(2)),
+                z: Number((point.z + delta.z).toFixed(2)),
+              })),
+              confidence: Math.min(feature.confidence, 0.9),
+              needsReview: false,
+              notes: "Moved in the Pathfinder whole-site builder. Assets and tickets can still link to this external site feature.",
+            };
+          }),
+        },
+      };
+    });
+  }, []);
+
+  const addRectangleSiteFeature = useCallback(() => {
+    if (!data) return;
+    const featureType = siteDraftType === "fence" ? "site_boundary" : siteDraftType;
+    const label = siteDraftName.trim() || `Editable ${formatSiteFeatureType(featureType)}`;
+    const rectanglePoints: PathfinderScenePoint[] = [
+      { x: -42, z: -33 },
+      { x: -24, z: -33 },
+      { x: -24, z: -20 },
+      { x: -42, z: -20 },
+    ];
+
+    setData((current) => {
+      if (!current) return current;
+      const count = current.siteContext.features.filter((feature) => feature.id.startsWith(`drawn-${featureType}`)).length + 1;
+      const id = `drawn-${featureType}-${String(count).padStart(2, "0")}`;
+      const feature: PathfinderSiteFeatureDraft = {
+        id,
+        label,
+        type: featureType,
+        points: rectanglePoints.map((_, index) => ({
+          lat: current.siteContext.center.lat + index * 0.000001,
+          lon: current.siteContext.center.lon + index * 0.000001,
+        })),
+        scenePoints: rectanglePoints,
+        confidence: 0.86,
+        needsReview: false,
+        notes: "Rectangle starter added in the Pathfinder whole-site builder. Drag MOVE to reposition it, or drag the corner handles to scale and reshape it.",
+      };
+
+      setSelectedSiteFeatureId(id);
+      return {
+        ...current,
+        siteContext: {
+          ...current.siteContext,
+          features: [...current.siteContext.features, feature],
+        },
+      };
+    });
+    setSiteDraftType(featureType);
+    setIsDrawingSiteFeature(false);
+    setSiteDraftPoints([]);
+    setShowExternalSite(true);
+    setStatus(`${label} added. Drag MOVE to reposition it, or drag the numbered corner handles to scale it around the site.`);
+  }, [data, siteDraftName, siteDraftType]);
+
+  const addSiteDraftPoint = useCallback((point: PathfinderScenePoint) => {
+    setSiteDraftPoints((current) => [...current, point]);
+    setShowExternalSite(true);
+  }, []);
+
+  const undoSiteDraftPoint = useCallback(() => {
+    setSiteDraftPoints((current) => current.slice(0, -1));
+  }, []);
+
+  const cancelSiteDraft = useCallback(() => {
+    setIsDrawingSiteFeature(false);
+    setSiteDraftPoints([]);
+    setStatus("Site drawing cancelled.");
+  }, []);
+
+  const finishSiteDraft = useCallback(() => {
+    if (!data) return;
+    const minimumPoints = minimumSiteFeaturePoints(siteDraftType);
+    if (siteDraftPoints.length < minimumPoints) {
+      setStatus(`${formatSiteFeatureType(siteDraftType)} needs at least ${minimumPoints} point${minimumPoints === 1 ? "" : "s"}.`);
+      return;
+    }
+
+    setData((current) => {
+      if (!current) return current;
+      const count = current.siteContext.features.filter((feature) => feature.id.startsWith(`drawn-${siteDraftType}`)).length + 1;
+      const id = `drawn-${siteDraftType}-${String(count).padStart(2, "0")}`;
+      const label = siteDraftName.trim() || `Drawn ${formatSiteFeatureType(siteDraftType)} ${count}`;
+      const feature: PathfinderSiteFeatureDraft = {
+        id,
+        label,
+        type: siteDraftType,
+        points: siteDraftPoints.map((_, index) => ({
+          lat: current.siteContext.center.lat + index * 0.000001,
+          lon: current.siteContext.center.lon + index * 0.000001,
+        })),
+        scenePoints: siteDraftPoints,
+        confidence: 0.92,
+        needsReview: false,
+        notes: "Drawn and locked in the Pathfinder whole-site builder. Assets and tickets can now link to this external site feature.",
+      };
+
+      return {
+        ...current,
+        siteContext: {
+          ...current.siteContext,
+          features: [...current.siteContext.features, feature],
+        },
+      };
+    });
+    setSelectedSiteFeatureId(`drawn-${siteDraftType}-${String((data.siteContext.features.filter((feature) => feature.id.startsWith(`drawn-${siteDraftType}`)).length + 1)).padStart(2, "0")}`);
+    setIsDrawingSiteFeature(false);
+    setSiteDraftPoints([]);
+    setShowExternalSite(true);
+    setStatus(`${siteDraftName.trim() || formatSiteFeatureType(siteDraftType)} locked into the whole-site model. Drag its numbered handles to fine-tune it.`);
+  }, [data, siteDraftName, siteDraftPoints, siteDraftType]);
+
   useEffect(() => {
     void runExtraction("raster");
   }, [runExtraction]);
@@ -1527,11 +2350,38 @@ export default function PathfinderPrototype() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#2f7d6d]">
-              Pathfinder Prototype
+              {estatesMode ? "Estates Pathfinder" : "Pathfinder Prototype"}
             </p>
-            <h1 className="text-2xl font-bold">Grove House floor-plan extraction</h1>
+            <h1 className="text-2xl font-bold">
+              {estatesMode ? "School site map and Asset Register overlay" : "Grove House floor-plan extraction"}
+            </h1>
+            {estatesAssetSummary && (
+              <p className="mt-1 text-xs text-[#5d6965]">
+                Asset Register: {estatesAssetSummary.total} assets, {estatesAssetSummary.mapped} mapped, {estatesAssetSummary.unplaced} needing pins.
+              </p>
+            )}
           </div>
           <div className="flex flex-wrap gap-2">
+            {estatesMode && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => void saveEstatesModel()}
+                  disabled={isLoading || !data}
+                  className="rounded-md border border-[#2f7d6d] bg-[#fbfcfc] px-3 py-2 text-sm font-semibold text-[#216e60] disabled:opacity-50"
+                >
+                  Save model
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void syncEstatesLocations()}
+                  disabled={isLoading || !data}
+                  className="rounded-md bg-[#111827] px-3 py-2 text-sm font-semibold text-[#f8fafc] disabled:opacity-50"
+                >
+                  Publish locations
+                </button>
+              </>
+            )}
             <button
               type="button"
               onClick={() => runExtraction("raster")}
@@ -1572,7 +2422,7 @@ export default function PathfinderPrototype() {
             onCorrectionPromptChange={setCorrectionPrompt}
             onQueueCorrection={queueCorrectionNote}
             onApprove={approveOperationalModel}
-            onPublish={publishToEstates}
+            onPublish={estatesMode ? syncEstatesLocations : publishToEstates}
           />
           <div className="grid min-h-[calc(100vh-96px)] min-w-0 grid-cols-1 lg:grid-cols-[minmax(360px,0.82fr)_minmax(0,1.18fr)]">
           <section className="order-2 min-h-[520px] min-w-0 border-b border-[#c8d3cf] bg-[#fbfcfc] lg:order-1 lg:border-b-0 lg:border-r">
@@ -2066,11 +2916,20 @@ export default function PathfinderPrototype() {
                 activeDoorIds={activeDoorIds}
                 visibleAssets={visibleAssets}
                 visibleTickets={visibleTickets}
+                showExternalSite={showExternalSite}
+                isDrawingSiteFeature={isDrawingSiteFeature}
+                siteDraftType={siteDraftType}
+                siteDraftPoints={siteDraftPoints}
+                selectedSiteFeatureId={selectedSiteFeatureId}
                 selectedAssetId={selectedAssetId}
                 selectedTicketId={selectedTicketId}
                 onSelectRoom={setSelectedRoomId}
                 onSelectAsset={selectAsset}
                 onSelectTicket={selectTicket}
+                onSelectSiteFeature={selectSiteFeature}
+                onAddSiteDraftPoint={addSiteDraftPoint}
+                onMoveSiteFeaturePoint={moveSiteFeaturePoint}
+                onMoveSiteFeature={moveSiteFeature}
               />
             </div>
             <div className="border-t border-[#3b4642] bg-[#1f1f1f] p-3">
@@ -2137,7 +2996,11 @@ export default function PathfinderPrototype() {
                     </div>
                     {selectedTicket && (
                       <p className="mt-3 text-xs text-[#d8dfdc]">
-                        {selectedTicket.notes} {selectedTicketRoom ? `Location: ${selectedTicketRoom.roomCode || selectedTicketRoom.id} - ${selectedTicketRoom.label}.` : ""}
+                        {selectedTicket.notes} {selectedTicketRoom
+                          ? `Location: ${selectedTicketRoom.roomCode || selectedTicketRoom.id} - ${selectedTicketRoom.label}.`
+                          : selectedTicketSiteFeature
+                            ? `Location: ${selectedTicketSiteFeature.label}.`
+                            : ""}
                       </p>
                     )}
                   </div>
@@ -2182,11 +3045,115 @@ export default function PathfinderPrototype() {
                         </button>
                         <button
                           type="button"
+                          onClick={() => setShowExternalSite((value) => !value)}
+                          className={`rounded-md px-2 py-1 text-xs font-semibold ${
+                            showExternalSite ? "bg-[#0f766e] text-[#f8fafc]" : "border border-[#4f635f] text-[#d8dfdc]"
+                          }`}
+                        >
+                          {showExternalSite ? "Hide external site" : "Show external site"}
+                        </button>
+                        <button
+                          type="button"
                           onClick={showNearestFireExit}
                           className="rounded-md bg-[#dc2626] px-2 py-1 text-xs font-semibold text-[#f8fafc]"
                         >
                           Nearest fire exit
                         </button>
+                        <button
+                          type="button"
+                          onClick={addPaxtonGate}
+                          className="rounded-md border border-[#0f766e] px-2 py-1 text-xs font-semibold text-[#d8dfdc]"
+                        >
+                          Add Paxton gate
+                        </button>
+                      </div>
+                    </div>
+                    <div className="mt-3 rounded-md border border-[#3b4642] bg-[#111827] p-3">
+                      <div className="flex flex-wrap items-end gap-2">
+                        <label className="min-w-[180px] flex-1 text-xs font-semibold text-[#d8dfdc]">
+                          Draw feature
+                          <input
+                            value={siteDraftName}
+                            onChange={(event) => setSiteDraftName(event.target.value)}
+                            className="mt-1 w-full rounded-md border border-[#4f635f] bg-[#141414] px-2 py-2 text-sm text-[#f8fafc]"
+                            placeholder="Fence perimeter, school field, junior playground"
+                          />
+                        </label>
+                        <label className="min-w-[160px] text-xs font-semibold text-[#d8dfdc]">
+                          Type
+                          <select
+                            value={siteDraftType}
+                            onChange={(event) => setSiteDraftType(event.target.value as PathfinderSiteFeatureType)}
+                            className="mt-1 w-full rounded-md border border-[#4f635f] bg-[#141414] px-2 py-2 text-sm text-[#f8fafc]"
+                          >
+                            {SITE_DRAW_TYPES.map((type) => (
+                              <option key={type} value={type}>{formatSiteFeatureType(type)}</option>
+                            ))}
+                          </select>
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsDrawingSiteFeature(true);
+                            setShowExternalSite(true);
+                            setStatus("Click points on the black Pathfinder model to draw the external site feature.");
+                          }}
+                          className="rounded-md bg-[#0f766e] px-3 py-2 text-xs font-semibold text-[#f8fafc]"
+                        >
+                          Start drawing
+                        </button>
+                        <button
+                          type="button"
+                          onClick={addRectangleSiteFeature}
+                          className="rounded-md border border-[#0f766e] px-3 py-2 text-xs font-semibold text-[#d8dfdc]"
+                        >
+                          Add rectangle starter
+                        </button>
+                        <button
+                          type="button"
+                          onClick={undoSiteDraftPoint}
+                          disabled={siteDraftPoints.length === 0}
+                          className="rounded-md border border-[#4f635f] px-3 py-2 text-xs font-semibold text-[#d8dfdc] disabled:opacity-40"
+                        >
+                          Undo point
+                        </button>
+                        <button
+                          type="button"
+                          onClick={finishSiteDraft}
+                          disabled={siteDraftPoints.length === 0}
+                          className="rounded-md border border-[#f59e0b] px-3 py-2 text-xs font-semibold text-[#f8fafc] disabled:opacity-40"
+                        >
+                          Lock shape
+                        </button>
+                        <button
+                          type="button"
+                          onClick={cancelSiteDraft}
+                          disabled={!isDrawingSiteFeature && siteDraftPoints.length === 0}
+                          className="rounded-md border border-[#4f635f] px-3 py-2 text-xs font-semibold text-[#d8dfdc] disabled:opacity-40"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                      <p className="mt-2 text-xs text-[#aeb8b4]">
+                        {isDrawingSiteFeature
+                          ? `${siteDraftPoints.length} point${siteDraftPoints.length === 1 ? "" : "s"} placed. Click the model to add more, then lock it as ${formatSiteFeatureType(siteDraftType)}.`
+                          : selectedSiteFeature?.scenePoints?.length
+                            ? `${selectedSiteFeature.label} is editable. Drag MOVE to reposition it, or drag the numbered handles to resize and reshape it after locking.`
+                            : "Use this for fence perimeters, odd-shaped fields, playgrounds, car parks, bins areas, and other site spaces that the plan cannot infer perfectly."}
+                      </p>
+                      <div className="mt-3 flex max-h-[92px] flex-wrap gap-2 overflow-auto pr-1">
+                        {(data?.siteContext.features.filter((feature) => !feature.needsReview || feature.scenePoints?.length) ?? []).map((feature) => (
+                          <button
+                            key={feature.id}
+                            type="button"
+                            onClick={() => selectSiteFeature(feature.id)}
+                            className={`rounded-md border px-2 py-1 text-xs ${
+                              selectedSiteFeatureId === feature.id ? "border-[#f8fafc] bg-[#303a37] text-[#f8fafc]" : "border-[#4f635f] text-[#aeb8b4]"
+                            }`}
+                          >
+                            {feature.label} · {formatSiteFeatureType(feature.type)}
+                          </button>
+                        ))}
                       </div>
                     </div>
                     <div className="mt-3 flex max-h-[112px] flex-wrap gap-2 overflow-auto pr-1">
@@ -2282,7 +3249,7 @@ export default function PathfinderPrototype() {
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         <h3 className="font-semibold">Asset QR capture</h3>
-                        <p className="text-xs text-[#aeb8b4]">{operationalAssets.length} estates assets mapped to rooms and corridors.</p>
+                        <p className="text-xs text-[#aeb8b4]">{operationalAssets.length} estates assets mapped to rooms, corridors, gates, and external site features.</p>
                       </div>
                       <button type="button" onClick={simulateAssetQrScan} className="rounded-md bg-[#2f7d6d] px-2 py-1 text-xs font-semibold text-[#f8fafc]">
                         Scan asset QR
@@ -2307,7 +3274,16 @@ export default function PathfinderPrototype() {
                         <div>
                           <p className="font-semibold text-[#f8fafc]">{selectedAsset.label}</p>
                           <p>QR: {selectedAsset.qrCode ?? "not assigned"} · wall: {selectedAsset.wallSide ?? "review"} · due: {selectedAsset.serviceDue ?? "not set"}</p>
-                          <p>Location: {selectedAssetRoom ? `${selectedAssetRoom.roomCode || selectedAssetRoom.id} - ${selectedAssetRoom.label}` : "needs room link"}</p>
+                          <p>
+                            Location: {selectedAssetRoom
+                              ? `${selectedAssetRoom.roomCode || selectedAssetRoom.id} - ${selectedAssetRoom.label}`
+                              : selectedAssetSiteFeature
+                                ? `${selectedAssetSiteFeature.label} (${formatSiteFeatureType(selectedAssetSiteFeature.type)})`
+                                : "needs location link"}
+                          </p>
+                          {selectedAsset.locationScope === "site" && selectedAsset.geoPoint && (
+                            <p>Coordinate: {selectedAsset.geoPoint.lat.toFixed(6)}, {selectedAsset.geoPoint.lon.toFixed(6)}</p>
+                          )}
                         </div>
                         <div className="grid grid-cols-4 gap-2 md:w-[260px]">
                           <button className="rounded-md bg-[#303a37] px-2 py-1" onClick={() => moveSelectedAsset(0, -16)}>Up</button>

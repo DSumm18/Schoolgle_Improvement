@@ -63,13 +63,32 @@ export async function runScrapePipeline(url: string): Promise<ScrapeResponse> {
 
     // Extract product data - Firecrawl first, legacy extractors as fallback
     let validated: ExtractedProduct;
+    let extractionMethod = 'unknown';
     try {
+      console.log('[DealFind] Attempting Firecrawl extraction for:', url);
       const raw = await firecrawlExtract(url);
       validated = ExtractedProductSchema.parse(raw);
-    } catch {
-      const extractor = findExtractor(url);
-      const rawProduct = await extractor.extract(url);
-      validated = ExtractedProductSchema.parse(rawProduct);
+      extractionMethod = 'firecrawl';
+      console.log('[DealFind] Firecrawl succeeded:', validated.name, '£' + validated.price);
+    } catch (firecrawlError) {
+      const fcMsg = firecrawlError instanceof Error ? firecrawlError.message : String(firecrawlError);
+      console.warn('[DealFind] Firecrawl failed, trying fallback extractor. Reason:', fcMsg);
+      try {
+        const extractor = findExtractor(url);
+        console.log('[DealFind] Using fallback extractor:', extractor.key, 'for', url);
+        const rawProduct = await extractor.extract(url);
+        validated = ExtractedProductSchema.parse(rawProduct);
+        extractionMethod = extractor.key;
+        console.log('[DealFind] Fallback extractor succeeded:', validated.name, '£' + validated.price);
+      } catch (fallbackError) {
+        const fbMsg = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
+        console.error('[DealFind] Both extractors failed for:', url);
+        console.error('[DealFind] Firecrawl error:', fcMsg);
+        console.error('[DealFind] Fallback error:', fbMsg);
+        throw new Error(
+          `Could not extract product data. Firecrawl: ${fcMsg}. Fallback: ${fbMsg}`
+        );
+      }
     }
 
     // Parse pack info
@@ -314,7 +333,20 @@ export async function runScrapePipeline(url: string): Promise<ScrapeResponse> {
       }).catch(() => {});
     }
 
-    console.error("Scrape failed:", errorMessage);
+    console.error("[DealFind] Scrape failed for URL:", url);
+    console.error("[DealFind] Error:", errorMessage);
+
+    // Provide a user-friendly error message
+    let userMessage = errorMessage;
+    if (errorMessage.includes('Could not extract product') || errorMessage.includes('no product data')) {
+      userMessage = `We couldn't read product details from this page. The site may be blocking automated access. Try pasting a URL from a different supplier, or try removing tracking parameters (everything after the "?" in the URL).`;
+    } else if (errorMessage.includes('timeout') || errorMessage.includes('ETIMEDOUT') || errorMessage.includes('abort')) {
+      userMessage = `The product page took too long to respond. Please try again in a moment.`;
+    } else if (errorMessage.includes('ENOTFOUND') || errorMessage.includes('EAI_AGAIN')) {
+      userMessage = `Couldn't reach the website. Please check the URL and try again.`;
+    } else if (errorMessage.includes('status code 403') || errorMessage.includes('status code 503')) {
+      userMessage = `This site is blocking our access. Try a different supplier or copy the product details manually.`;
+    }
 
     return {
       job_id: jobId || "",
@@ -329,7 +361,7 @@ export async function runScrapePipeline(url: string): Promise<ScrapeResponse> {
       match_count: 0,
       duration_ms: durationMs,
       discovery_pending: false,
-      error: errorMessage,
+      error: userMessage,
     };
   }
 }

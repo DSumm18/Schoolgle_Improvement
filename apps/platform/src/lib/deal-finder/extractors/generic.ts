@@ -14,14 +14,43 @@ export class GenericExtractor extends BaseExtractor {
   }
 
   async extract(url: string): Promise<ExtractedProduct> {
-    const { data: html } = await axios.get(url, {
+    // Strip common tracking parameters that can trigger bot detection
+    const cleanUrl = this.stripTrackingParams(url);
+
+    const { data: html, status } = await axios.get(cleanUrl, {
       timeout: 15000,
+      maxRedirects: 5,
       headers: {
         "User-Agent":
-          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        Accept: "text/html,application/xhtml+xml",
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Accept-Language": "en-GB,en;q=0.9",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Cache-Control": "no-cache",
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none",
+        "Sec-Fetch-User": "?1",
+        "Upgrade-Insecure-Requests": "1",
       },
     });
+
+    // Detect bot protection / challenge pages
+    if (typeof html === 'string' && html.length < 5000) {
+      const lower = html.toLowerCase();
+      if (
+        lower.includes('captcha') ||
+        lower.includes('challenge-platform') ||
+        lower.includes('cf-browser-verification') ||
+        lower.includes('just a moment') ||
+        lower.includes('access denied') ||
+        lower.includes('please verify')
+      ) {
+        throw new Error(
+          `Site returned a bot protection page (status ${status}). This site blocks automated access.`
+        );
+      }
+    }
 
     const $ = cheerio.load(html);
 
@@ -38,7 +67,7 @@ export class GenericExtractor extends BaseExtractor {
     const meta = this.extractMetaTags($);
 
     const name = og.name || meta.name || $("h1").first().text().trim();
-    if (!name) throw new Error("Could not extract product name from page");
+    if (!name) throw new Error("Could not extract product name from page — the site may require JavaScript rendering or is blocking automated access");
 
     // @ts-expect-error - Auto-masked during strict compilation enforcement
     const ratings = this.extractRatings($);
@@ -56,6 +85,33 @@ export class GenericExtractor extends BaseExtractor {
       rating_value: ratings.ratingValue,
       rating_count: ratings.ratingCount,
     };
+  }
+
+  /**
+   * Remove tracking/ad parameters that can trigger bot detection.
+   * Keeps only product-relevant params.
+   */
+  private stripTrackingParams(url: string): string {
+    try {
+      const parsed = new URL(url);
+      const trackingPrefixes = [
+        'gclid', 'gad_source', 'gad_campaignid', 'gbraid', 'utm_',
+        'fbclid', 'msclkid', 'dclid', 'mc_cid', 'mc_eid',
+        '_ga', '_gl', 'ref', 'agp', 'dip',
+      ];
+      const keysToRemove: string[] = [];
+      parsed.searchParams.forEach((_val, key) => {
+        if (trackingPrefixes.some(prefix => key.toLowerCase().startsWith(prefix))) {
+          keysToRemove.push(key);
+        }
+      });
+      for (const key of keysToRemove) {
+        parsed.searchParams.delete(key);
+      }
+      return parsed.toString();
+    } catch {
+      return url;
+    }
   }
 
   private extractJsonLd($: cheerio.CheerioAPI): ExtractedProduct | null {

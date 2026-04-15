@@ -146,6 +146,7 @@ export interface AssetInput {
   floor?: string;
   room?: string;
   location_id?: string;
+  location_details?: Record<string, unknown>;
   parent_asset_id?: string;
   installation_date?: string;
   manufacturer?: string;

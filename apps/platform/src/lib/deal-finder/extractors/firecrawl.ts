@@ -35,13 +35,21 @@ export async function firecrawlExtract(url: string): Promise<ExtractedProduct> {
 
   const client = await getClient();
 
-  const result = await client.scrape(url, {
-    formats: [{ type: "json" as const, schema: FirecrawlProductSchema }],
-  });
+  let result: { json: Record<string, unknown> };
+  try {
+    result = await client.scrape(url, {
+      formats: [{ type: "json" as const, schema: FirecrawlProductSchema }],
+    });
+  } catch (scrapeErr) {
+    const msg = scrapeErr instanceof Error ? scrapeErr.message : String(scrapeErr);
+    throw new Error(`Firecrawl scrape request failed: ${msg}`);
+  }
 
-  const extracted = result.json;
+  const extracted = result?.json;
   if (!extracted?.product_name) {
-    throw new Error("Firecrawl: no product data extracted from page");
+    throw new Error(
+      `Firecrawl: no product data extracted from page. Got keys: ${extracted ? Object.keys(extracted).join(', ') : 'null'}`,
+    );
   }
 
   const nonEmpty = (v: string | undefined) =>

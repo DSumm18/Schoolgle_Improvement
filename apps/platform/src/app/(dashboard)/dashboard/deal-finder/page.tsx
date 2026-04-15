@@ -84,8 +84,14 @@ export default function DealFinderPage() {
 
       {/* Error State */}
       {error && !isLoading && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm mb-6">
-          {error}
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+          <p className="text-red-700 text-sm font-medium mb-1">
+            Something went wrong
+          </p>
+          <p className="text-red-600 text-sm">{error}</p>
+          <p className="text-red-400 text-xs mt-2">
+            Tip: Try removing tracking parameters from the URL (everything after the &quot;?&quot;) or paste a URL from a different supplier.
+          </p>
         </div>
       )}
 

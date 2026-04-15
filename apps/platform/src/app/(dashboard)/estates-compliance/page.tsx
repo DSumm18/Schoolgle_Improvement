@@ -213,9 +213,13 @@ export default function EstatesComplianceDashboard() {
   // -------------------------------------------------------------------------
 
   useEffect(() => {
-    if (authLoading || !organizationId) {
-      if (!authLoading) setLoading(false);
+    if (authLoading) {
       return;
+    }
+
+    if (!organizationId) {
+      const timeoutId = window.setTimeout(() => setLoading(false), 0);
+      return () => window.clearTimeout(timeoutId);
     }
 
     let cancelled = false;
@@ -452,7 +456,7 @@ export default function EstatesComplianceDashboard() {
         {/* ================================================================
             TOP NAV BAR — Quick Links
         ================================================================ */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 p-6 pb-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 p-6 pb-4">
           {[
             {
               href: "/estates-compliance/diary",
@@ -467,6 +471,13 @@ export default function EstatesComplianceDashboard() {
               label: "Asset Register",
               sub: "Manage assets",
               bg: "bg-emerald-50 text-emerald-600",
+            },
+            {
+              href: "/estates-compliance/pathfinder",
+              icon: "🗺️",
+              label: "Pathfinder",
+              sub: "Site map",
+              bg: "bg-teal-50 text-teal-600",
             },
             {
               href: "/estates-compliance/contractors",
