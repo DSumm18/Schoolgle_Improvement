@@ -3,11 +3,12 @@
 import { useState, useMemo } from 'react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  ResponsiveContainer, ComposedChart,
+  ResponsiveContainer, ReferenceLine,
 } from 'recharts';
 import { motion } from 'framer-motion';
 import {
   SchoolSelfReport, KS2Result, PENNINE_SCHOOLS,
+  YEAR_GROUPS, YearGroup,
 } from '@/lib/trust-analysis/types';
 
 interface Props {
@@ -21,458 +22,526 @@ const SUBJECT_COLORS: Record<string, string> = {
   Maths: '#10b981',
 };
 
-// Define all cohorts that are currently in school or recently left.
-// Each cohort is identified by when they were in Reception.
-interface CohortDef {
-  id: string;
-  label: string;
-  receptionYear: string;     // e.g. "2019/20"
-  currentYearGroup: string;  // e.g. "Y6" or "Left (KS2 2025)"
-  /** Map from assessment stage to academic year end */
-  timeline: { stage: string; yearEnd: number; yearLabel: string }[];
+// For each year group currently in school, when did that cohort start Reception?
+function cohortReceptionYear(yg: YearGroup): string {
+  const map: Record<YearGroup, string> = {
+    EYFS: '2025/26', Y1: '2024/25', Y2: '2023/24', Y3: '2022/23',
+    Y4: '2021/22', Y5: '2020/21', Y6: '2019/20',
+  };
+  return map[yg];
 }
 
-function buildCohorts(): CohortDef[] {
-  // Current academic year is 2025/26.
-  // Y6 in 2025/26 started Reception in 2019/20.
-  return [
-    {
-      id: 'left-2025',
-      label: 'KS2 2025 leavers',
-      receptionYear: '2018/19',
-      currentYearGroup: 'Left (KS2 2025)',
-      timeline: [
-        { stage: 'EYFS GLD', yearEnd: 2019, yearLabel: '2018/19' },
-        { stage: 'Phonics Y1', yearEnd: 2020, yearLabel: '2019/20' },
-        { stage: 'KS1 Y2', yearEnd: 2021, yearLabel: '2020/21' },
-        { stage: 'Y3', yearEnd: 2022, yearLabel: '2021/22' },
-        { stage: 'Y4 (MTC)', yearEnd: 2023, yearLabel: '2022/23' },
-        { stage: 'Y5', yearEnd: 2024, yearLabel: '2023/24' },
-        { stage: 'KS2 Y6', yearEnd: 2025, yearLabel: '2024/25' },
-      ],
-    },
-    {
-      id: 'current-y6',
-      label: 'Current Y6 (KS2 May 2026)',
-      receptionYear: '2019/20',
-      currentYearGroup: 'Y6',
-      timeline: [
-        { stage: 'EYFS GLD', yearEnd: 2020, yearLabel: '2019/20' },
-        { stage: 'Phonics Y1', yearEnd: 2021, yearLabel: '2020/21' },
-        { stage: 'KS1 Y2', yearEnd: 2022, yearLabel: '2021/22' },
-        { stage: 'Y3', yearEnd: 2023, yearLabel: '2022/23' },
-        { stage: 'Y4 (MTC)', yearEnd: 2024, yearLabel: '2023/24' },
-        { stage: 'Y5', yearEnd: 2025, yearLabel: '2024/25' },
-        { stage: 'Y6 Mid-Year', yearEnd: 2026, yearLabel: '2025/26' },
-      ],
-    },
-    {
-      id: 'current-y5',
-      label: 'Current Y5 (KS2 May 2027)',
-      receptionYear: '2020/21',
-      currentYearGroup: 'Y5',
-      timeline: [
-        { stage: 'EYFS GLD', yearEnd: 2021, yearLabel: '2020/21' },
-        { stage: 'Phonics Y1', yearEnd: 2022, yearLabel: '2021/22' },
-        { stage: 'KS1 Y2', yearEnd: 2023, yearLabel: '2022/23' },
-        { stage: 'Y3', yearEnd: 2024, yearLabel: '2023/24' },
-        { stage: 'Y4 (MTC)', yearEnd: 2025, yearLabel: '2024/25' },
-        { stage: 'Y5 Mid-Year', yearEnd: 2026, yearLabel: '2025/26' },
-      ],
-    },
-    {
-      id: 'current-y4',
-      label: 'Current Y4 (KS2 May 2028)',
-      receptionYear: '2021/22',
-      currentYearGroup: 'Y4',
-      timeline: [
-        { stage: 'EYFS GLD', yearEnd: 2022, yearLabel: '2021/22' },
-        { stage: 'Phonics Y1', yearEnd: 2023, yearLabel: '2022/23' },
-        { stage: 'KS1 Y2', yearEnd: 2024, yearLabel: '2023/24' },
-        { stage: 'Y3', yearEnd: 2025, yearLabel: '2024/25' },
-        { stage: 'Y4 Mid-Year', yearEnd: 2026, yearLabel: '2025/26' },
-      ],
-    },
-    {
-      id: 'current-y3',
-      label: 'Current Y3 (KS2 May 2029)',
-      receptionYear: '2022/23',
-      currentYearGroup: 'Y3',
-      timeline: [
-        { stage: 'EYFS GLD', yearEnd: 2023, yearLabel: '2022/23' },
-        { stage: 'Phonics Y1', yearEnd: 2024, yearLabel: '2023/24' },
-        { stage: 'KS1 Y2', yearEnd: 2025, yearLabel: '2024/25' },
-        { stage: 'Y3 Mid-Year', yearEnd: 2026, yearLabel: '2025/26' },
-      ],
-    },
-  ];
+// Describe where this cohort is heading
+function cohortDestination(yg: YearGroup): string {
+  const map: Record<YearGroup, string> = {
+    EYFS: 'KS2 in 2032', Y1: 'KS2 in 2031', Y2: 'KS2 in 2030', Y3: 'KS2 in 2029',
+    Y4: 'KS2 in 2028', Y5: 'KS2 in 2027', Y6: 'KS2 May 2026',
+  };
+  return map[yg];
 }
 
-type DataSource = 'dfe-validated' | 'self-report' | 'no-data';
-
-interface TimelinePoint {
-  stage: string;
-  yearLabel: string;
-  Reading: number | null;
-  Writing: number | null;
-  Maths: number | null;
-  source: DataSource;
-  sourceLabel: string;
-  cohortSize?: number;
-}
+type ViewMode = 'all-cohorts' | 'single-cohort';
 
 export default function CohortJourneyChart({ selfReports, ks2Results }: Props) {
   const [selectedSchool, setSelectedSchool] = useState<string>('CHPS');
-  const [selectedCohort, setSelectedCohort] = useState<string>('current-y6');
+  const [viewMode, setViewMode] = useState<ViewMode>('all-cohorts');
+  const [selectedYearGroup, setSelectedYearGroup] = useState<YearGroup>('Y6');
 
-  const cohorts = useMemo(() => buildCohorts(), []);
-  const cohort = cohorts.find(c => c.id === selectedCohort)!;
   const school = PENNINE_SCHOOLS.find(s => s.abbrev === selectedSchool);
   const report = selfReports.find(r => r.school === selectedSchool);
 
-  // Build timeline data for the selected cohort + school
-  const timelineData = useMemo((): TimelinePoint[] => {
-    if (!school || !cohort) return [];
+  // Get KS2 2025 validated results for this school (last year's Y6 — now left)
+  const ks2_2025 = useMemo(() => {
+    if (!school) return null;
+    const results = ks2Results.filter(
+      r => r.urn === school.urn && r.academicYearEnd === 2025 &&
+        r.breakdownTopic === 'All pupils' && r.expectedStandardPct != null,
+    );
+    if (results.length === 0) return null;
+    return {
+      Reading: results.find(r => r.subject === 'Reading')?.expectedStandardPct ?? null,
+      Writing: results.find(r => r.subject === 'Writing')?.expectedStandardPct ?? null,
+      Maths: results.find(r => r.subject === 'Maths')?.expectedStandardPct ?? null,
+    };
+  }, [school, ks2Results]);
 
-    return cohort.timeline.map(step => {
-      const point: TimelinePoint = {
-        stage: step.stage,
-        yearLabel: step.yearLabel,
-        Reading: null,
-        Writing: null,
-        Maths: null,
-        source: 'no-data',
-        sourceLabel: '',
-      };
-
-      // Check if this is a KS2 endpoint and we have DfE data
-      if (step.stage === 'KS2 Y6') {
-        const ks2 = ks2Results.filter(
-          r => r.urn === school.urn &&
-            r.academicYearEnd === step.yearEnd &&
-            r.breakdownTopic === 'All pupils' &&
-            r.expectedStandardPct != null,
-        );
-        if (ks2.length > 0) {
-          point.Reading = ks2.find(r => r.subject === 'Reading')?.expectedStandardPct ?? null;
-          point.Writing = ks2.find(r => r.subject === 'Writing')?.expectedStandardPct ?? null;
-          point.Maths = ks2.find(r => r.subject === 'Maths')?.expectedStandardPct ?? null;
-          point.source = 'dfe-validated';
-          point.sourceLabel = 'DfE Validated (KS2 SATs)';
-        }
-      }
-
-      // Check if this is a mid-year point from the self-report
-      if (step.stage.includes('Mid-Year') && report) {
-        const ygMap: Record<string, string> = {
-          'Y6 Mid-Year': 'Y6', 'Y5 Mid-Year': 'Y5', 'Y4 Mid-Year': 'Y4', 'Y3 Mid-Year': 'Y3',
+  // ─── View 1: All Cohorts Pipeline ─────────────────────────────────
+  // Each year group is a different cohort at a different stage.
+  // X-axis = year groups (Y1→Y6). Each data point = self-reported mid-year.
+  // KS2 2025 leavers shown as reference.
+  const pipelineData = useMemo(() => {
+    if (!report) return [];
+    return YEAR_GROUPS
+      .filter(yg => yg !== 'EYFS')
+      .map(yg => {
+        const ygData = report.yearGroups.find(y => y.yearGroup === yg);
+        return {
+          yearGroup: yg,
+          cohort: `Started ${cohortReceptionYear(yg)}`,
+          cohortSize: ygData?.cohortSize ?? 0,
+          Reading: ygData?.allPupils.reading ?? null,
+          Writing: ygData?.allPupils.writing ?? null,
+          Maths: ygData?.allPupils.maths ?? null,
         };
-        const ygKey = ygMap[step.stage];
-        if (ygKey) {
-          const ygData = report.yearGroups.find(y => y.yearGroup === ygKey);
-          if (ygData) {
-            point.Reading = ygData.allPupils.reading;
-            point.Writing = ygData.allPupils.writing;
-            point.Maths = ygData.allPupils.maths;
-            point.cohortSize = ygData.cohortSize;
-            point.source = 'self-report';
-            point.sourceLabel = 'Trust Self-Report (mid-year 2025/26)';
+      });
+  }, [report]);
+
+  // ─── View 2: Single Cohort Journey ────────────────────────────────
+  // For a selected year group, show that cohort's journey through every
+  // DfE assessment point from EYFS to their current position.
+  const cohortJourneyData = useMemo(() => {
+    if (!school || !report) return [];
+
+    const ygData = report.yearGroups.find(y => y.yearGroup === selectedYearGroup);
+    if (!ygData) return [];
+
+    // Build timeline stages from EYFS to current year group
+    const allStages: { stage: string; yg: YearGroup; label: string }[] = [
+      { stage: 'EYFS (GLD)', yg: 'EYFS', label: 'EYFS' },
+      { stage: 'Y1 (Phonics)', yg: 'Y1', label: 'Y1' },
+      { stage: 'Y2 (KS1)', yg: 'Y2', label: 'Y2' },
+      { stage: 'Y3', yg: 'Y3', label: 'Y3' },
+      { stage: 'Y4 (MTC)', yg: 'Y4', label: 'Y4' },
+      { stage: 'Y5', yg: 'Y5', label: 'Y5' },
+      { stage: 'Y6 (KS2)', yg: 'Y6', label: 'Y6' },
+    ];
+
+    const ygIndex = YEAR_GROUPS.indexOf(selectedYearGroup);
+
+    return allStages
+      .filter((_, i) => i <= ygIndex) // Only show stages up to current year group
+      .map((stageInfo, i) => {
+        const isCurrentStage = i === ygIndex;
+        const isFutureAssessed = !isCurrentStage;
+
+        // We only have the self-report for the CURRENT year group position
+        // Historical stages are gaps (unless we have DfE data)
+        let reading: number | null = null;
+        let writing: number | null = null;
+        let maths: number | null = null;
+        let source = 'no-data' as string;
+        let reason = '';
+
+        if (isCurrentStage) {
+          reading = ygData.allPupils.reading;
+          writing = ygData.allPupils.writing;
+          maths = ygData.allPupils.maths;
+          source = 'self-report';
+          reason = 'Trust self-report (mid-year 2025/26)';
+        } else {
+          // Check if we have DfE data for a past checkpoint
+          // For KS2 — only if this cohort was in Y6 in a past year (they weren't)
+          // For KS1 — ks1_results is empty
+          // So everything is a gap
+          if (stageInfo.yg === 'EYFS') {
+            reason = selectedYearGroup === 'Y6' ? 'COVID year — EYFSP cancelled' : 'EYFSP data not loaded';
+          } else if (stageInfo.yg === 'Y1') {
+            reason = selectedYearGroup === 'Y6' ? 'COVID year — Phonics cancelled' : 'Phonics data not loaded';
+          } else if (stageInfo.yg === 'Y2') {
+            reason = 'KS1 data not imported yet';
+          } else {
+            reason = 'No DfE assessment published for this year group';
           }
         }
-      }
 
-      // Label no-data points
-      if (point.source === 'no-data') {
-        if (step.stage.includes('EYFS') && step.yearEnd === 2020) {
-          point.sourceLabel = 'COVID — EYFSP cancelled';
-        } else if (step.stage.includes('Phonics') && step.yearEnd === 2021) {
-          point.sourceLabel = 'COVID — Phonics cancelled';
-        } else if (step.stage.includes('KS1') && step.yearEnd === 2021) {
-          point.sourceLabel = 'COVID — KS1 cancelled';
-        } else if (step.stage.includes('KS1')) {
-          point.sourceLabel = 'KS1 data not loaded (DfE)';
-        } else if (step.stage === 'Y3' || step.stage === 'Y5' || step.stage.includes('MTC')) {
-          point.sourceLabel = 'No DfE assessment at this stage';
-        } else if (step.stage.includes('EYFS') || step.stage.includes('Phonics')) {
-          point.sourceLabel = 'Data not loaded (DfE)';
-        } else {
-          point.sourceLabel = 'No data available';
-        }
-      }
-
-      return point;
-    });
-  }, [school, cohort, report, ks2Results]);
-
-  // Count data gaps
-  const gapCount = timelineData.filter(p => p.source === 'no-data').length;
-  const dataCount = timelineData.filter(p => p.source !== 'no-data').length;
+        return {
+          stage: stageInfo.stage,
+          Reading: reading,
+          Writing: writing,
+          Maths: maths,
+          source,
+          reason,
+          cohortSize: isCurrentStage ? ygData.cohortSize : null,
+        };
+      });
+  }, [school, report, selectedYearGroup]);
 
   return (
     <div className="space-y-6">
-      {/* Controls */}
+      {/* Controls — dark text, clearly visible */}
       <div className="flex flex-wrap gap-4 items-end">
         <div>
-          <label className="block text-xs text-gray-500 mb-1 font-medium">School</label>
+          <label className="block text-xs font-semibold text-gray-700 mb-1">School</label>
           <select
             value={selectedSchool}
             onChange={e => setSelectedSchool(e.target.value)}
-            className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium bg-white min-w-[280px]"
+            className="px-4 py-2.5 rounded-lg border border-gray-300 text-sm font-semibold text-gray-900 bg-white min-w-[320px] shadow-sm"
           >
             {PENNINE_SCHOOLS.map(s => (
               <option key={s.abbrev} value={s.abbrev}>
-                {s.abbrev} — {s.name} ({s.nor} NOR, {s.fsmPct}% FSM)
+                {s.abbrev} — {s.name} ({s.nor} pupils, {s.fsmPct}% FSM)
               </option>
             ))}
           </select>
         </div>
+
         <div>
-          <label className="block text-xs text-gray-500 mb-1 font-medium">Cohort</label>
-          <select
-            value={selectedCohort}
-            onChange={e => setSelectedCohort(e.target.value)}
-            className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium bg-white min-w-[280px]"
-          >
-            {cohorts.map(c => (
-              <option key={c.id} value={c.id}>
-                {c.label} (Reception {c.receptionYear})
-              </option>
-            ))}
-          </select>
+          <label className="block text-xs font-semibold text-gray-700 mb-1">View</label>
+          <div className="flex gap-1">
+            <button
+              onClick={() => setViewMode('all-cohorts')}
+              className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                viewMode === 'all-cohorts'
+                  ? 'bg-gray-900 text-white shadow-lg'
+                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              All Cohorts Pipeline
+            </button>
+            <button
+              onClick={() => setViewMode('single-cohort')}
+              className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                viewMode === 'single-cohort'
+                  ? 'bg-gray-900 text-white shadow-lg'
+                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              Single Cohort Journey
+            </button>
+          </div>
         </div>
-      </div>
 
-      {/* The Chart */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-4">
+        {viewMode === 'single-cohort' && (
           <div>
-            <h3 className="text-base font-bold text-gray-900">
-              {school?.name} — {cohort.label}
-            </h3>
-            <p className="text-xs text-gray-500">
-              Following this cohort from Reception ({cohort.receptionYear}) through every DfE assessment point
-            </p>
-          </div>
-          <div className="flex gap-3 text-xs">
-            <span className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-emerald-200" />
-              DfE Validated
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-full bg-amber-500 ring-2 ring-amber-200" />
-              Self-Reported
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded border-2 border-dashed border-gray-300 bg-gray-50" />
-              No Data
-            </span>
-          </div>
-        </div>
-
-        <ResponsiveContainer width="100%" height={420}>
-          <ComposedChart data={timelineData} margin={{ top: 20, right: 30, left: 0, bottom: 60 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-            <XAxis
-              dataKey="stage"
-              tick={{ fontSize: 11 }}
-              angle={-20}
-              textAnchor="end"
-              height={60}
-            />
-            <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} label={{ value: '%', position: 'insideTopLeft', fontSize: 11 }} />
-            <Tooltip
-              content={({ active, payload, label }) => {
-                if (!active || !payload?.length) return null;
-                const point = timelineData.find(p => p.stage === label);
-                if (!point) return null;
-
+            <label className="block text-xs font-semibold text-gray-700 mb-1">Select Cohort</label>
+            <select
+              value={selectedYearGroup}
+              onChange={e => setSelectedYearGroup(e.target.value as YearGroup)}
+              className="px-4 py-2.5 rounded-lg border border-gray-300 text-sm font-semibold text-gray-900 bg-white min-w-[320px] shadow-sm"
+            >
+              {YEAR_GROUPS.filter(yg => yg !== 'EYFS').map(yg => {
+                const ygData = report?.yearGroups.find(y => y.yearGroup === yg);
                 return (
-                  <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-3 text-sm max-w-xs">
-                    <div className="font-bold mb-0.5">{point.stage}</div>
-                    <div className="text-xs text-gray-500 mb-2">{point.yearLabel}</div>
-
-                    {point.source === 'no-data' ? (
-                      <div className="text-gray-400 italic">{point.sourceLabel}</div>
-                    ) : (
-                      <>
-                        <div className={`text-xs font-medium mb-1 ${point.source === 'dfe-validated' ? 'text-emerald-600' : 'text-amber-600'}`}>
-                          {point.sourceLabel}
-                        </div>
-                        {point.cohortSize && <div className="text-xs text-gray-400 mb-1">Cohort: {point.cohortSize} pupils</div>}
-                        {['Reading', 'Writing', 'Maths'].map(s => {
-                          const val = (point as unknown as Record<string, unknown>)[s] as number | null;
-                          return val != null ? (
-                            <div key={s} className="flex items-center gap-2">
-                              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: SUBJECT_COLORS[s] }} />
-                              {s}: <strong>{val}%</strong>
-                            </div>
-                          ) : null;
-                        })}
-                      </>
-                    )}
-                  </div>
+                  <option key={yg} value={yg}>
+                    {yg} — Started Reception {cohortReceptionYear(yg)} — {cohortDestination(yg)}
+                    {ygData ? ` (${ygData.cohortSize} pupils)` : ''}
+                  </option>
                 );
-              }}
-            />
-            <Legend />
-
-            {['Reading', 'Writing', 'Maths'].map(subject => (
-              <Line
-                key={subject}
-                type="monotone"
-                dataKey={subject}
-                stroke={SUBJECT_COLORS[subject]}
-                strokeWidth={3}
-                connectNulls={false}
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              dot={(dotProps: any) => {
-                  const { cx, cy, index } = dotProps as { cx: number; cy: number; index: number };
-                  const point = timelineData[index];
-                  if (!point || (point as unknown as Record<string, unknown>)[subject] == null) return <g />;
-
-                  const isValidated = point.source === 'dfe-validated';
-                  const isSelfReport = point.source === 'self-report';
-
-                  return (
-                    <g>
-                      {/* Outer ring */}
-                      <circle
-                        cx={cx}
-                        cy={cy}
-                        r={10}
-                        fill={isValidated ? '#d1fae5' : isSelfReport ? '#fef3c7' : '#f3f4f6'}
-                        stroke={isValidated ? '#10b981' : isSelfReport ? '#f59e0b' : '#d1d5db'}
-                        strokeWidth={2}
-                      />
-                      {/* Inner dot */}
-                      <circle
-                        cx={cx}
-                        cy={cy}
-                        r={5}
-                        fill={isValidated ? '#10b981' : isSelfReport ? '#f59e0b' : '#d1d5db'}
-                      />
-                    </g>
-                  );
-                }}
-              />
-            ))}
-          </ComposedChart>
-        </ResponsiveContainer>
+              })}
+            </select>
+          </div>
+        )}
       </div>
 
-      {/* The Gap Callout — this IS the sales pitch */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-r from-gray-900 to-gray-800 text-white rounded-xl p-6"
-      >
-        <h3 className="text-lg font-bold mb-2">The Data Gap</h3>
-        <div className="grid grid-cols-3 gap-6 mb-4">
-          <div className="text-center">
-            <div className="text-3xl font-bold text-red-400">{gapCount}</div>
-            <div className="text-xs text-gray-400">Assessment points with NO data</div>
-          </div>
-          <div className="text-center">
-            <div className="text-3xl font-bold text-amber-400">{timelineData.filter(p => p.source === 'self-report').length}</div>
-            <div className="text-xs text-gray-400">Self-reported (unvalidated)</div>
-          </div>
-          <div className="text-center">
-            <div className="text-3xl font-bold text-emerald-400">{timelineData.filter(p => p.source === 'dfe-validated').length}</div>
-            <div className="text-xs text-gray-400">DfE validated</div>
-          </div>
-        </div>
+      {/* ─── VIEW 1: ALL COHORTS PIPELINE ─────────────────────────── */}
+      {viewMode === 'all-cohorts' && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <h3 className="text-base font-bold text-gray-900 mb-1">
+              {school?.name} — All Cohorts at Their Current Stage
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Each point on the X-axis is a <strong>different cohort</strong> at their current year group.
+              Y1 children started in 2024, Y6 children started in 2019.
+              The dotted lines show last year&apos;s validated KS2 results (a different cohort who have now left).
+            </p>
 
-        <p className="text-sm text-gray-300">
-          Between KS1 (age 7) and KS2 (age 11), there are <strong>four years of flying blind</strong>.
-          The only data you have is whatever teachers put in a spreadsheet. No external validation.
-          No automated levelling. No consistency checks.
-        </p>
-        <p className="text-sm text-gray-300 mt-2">
-          <strong>Schoolgle&apos;s assessment engine fills every gap on this chart</strong> — automated levelling
-          at every assessment point, cross-referenced against prior attainment, with AI-powered
-          consistency checks that flag exactly the kind of implausible jumps we&apos;ve found in this data.
-        </p>
-      </motion.div>
+            <ResponsiveContainer width="100%" height={420}>
+              <LineChart data={pipelineData} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis
+                  dataKey="yearGroup"
+                  tick={{ fontSize: 13, fontWeight: 600, fill: '#111827' }}
+                />
+                <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
+                <Tooltip
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload?.length) return null;
+                    const point = pipelineData.find(d => d.yearGroup === label);
+                    return (
+                      <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-3 text-sm">
+                        <div className="font-bold text-gray-900">{label}</div>
+                        <div className="text-xs text-gray-500 mb-2">
+                          {point?.cohort} &middot; {point?.cohortSize} pupils
+                        </div>
+                        {payload.map((p: { name?: string; value?: number; color?: string }) => (
+                          p.value != null ? (
+                            <div key={p.name} className="flex items-center gap-2">
+                              <span className="w-3 h-3 rounded-full" style={{ backgroundColor: p.color }} />
+                              <span className="text-gray-700">{p.name}: <strong>{p.value}%</strong></span>
+                            </div>
+                          ) : null
+                        ))}
+                      </div>
+                    );
+                  }}
+                />
+                <Legend />
 
-      {/* Per-cohort quick view for the selected school */}
+                {/* KS2 2025 reference lines */}
+                {ks2_2025 && Object.entries(ks2_2025).map(([subj, val]) => (
+                  val != null ? (
+                    <ReferenceLine
+                      key={`ref-${subj}`}
+                      y={val}
+                      stroke={SUBJECT_COLORS[subj]}
+                      strokeDasharray="8 4"
+                      strokeOpacity={0.5}
+                      strokeWidth={2}
+                      label={{
+                        value: `KS2 2025: ${val}%`,
+                        position: 'right',
+                        fontSize: 10,
+                        fill: SUBJECT_COLORS[subj],
+                        fontWeight: 600,
+                      }}
+                    />
+                  ) : null
+                ))}
+
+                {Object.entries(SUBJECT_COLORS).map(([subject, color]) => (
+                  <Line
+                    key={subject}
+                    type="monotone"
+                    dataKey={subject}
+                    stroke={color}
+                    strokeWidth={3}
+                    dot={{ fill: color, r: 7, strokeWidth: 3, stroke: '#fff' }}
+                    activeDot={{ r: 10 }}
+                    connectNulls
+                  />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+
+            <div className="mt-3 flex items-center gap-6 text-xs text-gray-500">
+              <span className="flex items-center gap-1">
+                <span className="w-8 border-t-2 border-dashed border-gray-400" />
+                Dotted = KS2 2025 validated (last year&apos;s leavers)
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-3 h-3 rounded-full bg-gray-400" />
+                Solid = Self-reported mid-year 2025/26
+              </span>
+            </div>
+          </div>
+
+          {/* Interpretation callout */}
+          {report && (() => {
+            const y5 = report.yearGroups.find(y => y.yearGroup === 'Y5');
+            const y6 = report.yearGroups.find(y => y.yearGroup === 'Y6');
+            if (!y5 || !y6) return null;
+            const subjects = ['writing', 'reading', 'maths'] as const;
+            const jumps = subjects
+              .filter(s => y5.allPupils[s] != null && y6.allPupils[s] != null)
+              .map(s => ({
+                subject: s.charAt(0).toUpperCase() + s.slice(1),
+                y5: y5.allPupils[s]!,
+                y6: y6.allPupils[s]!,
+                jump: y6.allPupils[s]! - y5.allPupils[s]!,
+              }))
+              .filter(j => j.jump > 12);
+
+            if (jumps.length === 0) return null;
+
+            return (
+              <div className="bg-red-50 border-2 border-red-200 rounded-xl p-5">
+                <h4 className="font-bold text-red-900 mb-2">Pipeline Inconsistency Detected</h4>
+                {jumps.map(j => (
+                  <p key={j.subject} className="text-sm text-red-800 mb-1">
+                    <strong>{j.subject}</strong>: Y5 at {j.y5}% jumps to Y6 at {j.y6}% — that&apos;s
+                    <strong> +{j.jump}pp in a single year</strong>.
+                    Is this genuine progress or inconsistent teacher assessment?
+                  </p>
+                ))}
+              </div>
+            );
+          })()}
+        </motion.div>
+      )}
+
+      {/* ─── VIEW 2: SINGLE COHORT JOURNEY ────────────────────────── */}
+      {viewMode === 'single-cohort' && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <h3 className="text-base font-bold text-gray-900 mb-1">
+              {school?.name} — {selectedYearGroup} Cohort Journey
+            </h3>
+            <p className="text-sm text-gray-600 mb-1">
+              These children started Reception in <strong>{cohortReceptionYear(selectedYearGroup)}</strong>.
+              Every DfE assessment checkpoint is shown below &mdash; data points where we have results, and gaps where we don&apos;t.
+            </p>
+            <p className="text-sm text-gray-600 mb-4">
+              {cohortDestination(selectedYearGroup)}.
+              {report?.yearGroups.find(y => y.yearGroup === selectedYearGroup)
+                ? ` Currently ${report.yearGroups.find(y => y.yearGroup === selectedYearGroup)!.cohortSize} pupils.`
+                : ''}
+            </p>
+
+            {/* The journey timeline */}
+            <div className="space-y-3">
+              {cohortJourneyData.map((point, idx) => {
+                const hasData = point.source !== 'no-data';
+                return (
+                  <motion.div
+                    key={point.stage}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: idx * 0.08 }}
+                    className="flex items-center gap-4"
+                  >
+                    {/* Timeline dot and connector */}
+                    <div className="flex flex-col items-center w-8 shrink-0">
+                      <div className={`w-5 h-5 rounded-full border-2 ${
+                        point.source === 'dfe-validated' ? 'bg-emerald-500 border-emerald-300' :
+                        point.source === 'self-report' ? 'bg-amber-500 border-amber-300' :
+                        'bg-gray-200 border-gray-300 border-dashed'
+                      }`} />
+                      {idx < cohortJourneyData.length - 1 && (
+                        <div className={`w-0.5 h-8 ${hasData ? 'bg-gray-300' : 'bg-gray-200 border-l border-dashed border-gray-300'}`} />
+                      )}
+                    </div>
+
+                    {/* Content */}
+                    <div className={`flex-1 rounded-lg p-4 border ${
+                      point.source === 'dfe-validated' ? 'bg-emerald-50 border-emerald-200' :
+                      point.source === 'self-report' ? 'bg-amber-50 border-amber-200' :
+                      'bg-gray-50 border-gray-200 border-dashed'
+                    }`}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-bold text-sm text-gray-900">{point.stage}</span>
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                          point.source === 'dfe-validated' ? 'bg-emerald-100 text-emerald-800' :
+                          point.source === 'self-report' ? 'bg-amber-100 text-amber-800' :
+                          'bg-gray-100 text-gray-500'
+                        }`}>
+                          {point.source === 'dfe-validated' ? 'DfE Validated' :
+                           point.source === 'self-report' ? 'Self-Reported' :
+                           'No Data'}
+                        </span>
+                      </div>
+
+                      {hasData ? (
+                        <div className="flex gap-6 mt-2">
+                          {[
+                            { label: 'Reading', val: point.Reading, color: SUBJECT_COLORS.Reading },
+                            { label: 'Writing', val: point.Writing, color: SUBJECT_COLORS.Writing },
+                            { label: 'Maths', val: point.Maths, color: SUBJECT_COLORS.Maths },
+                          ].map(s => (
+                            <div key={s.label} className="flex items-center gap-2">
+                              <span className="w-3 h-3 rounded-full" style={{ backgroundColor: s.color }} />
+                              <span className="text-sm text-gray-700">{s.label}: <strong className="text-gray-900">{s.val ?? '—'}%</strong></span>
+                            </div>
+                          ))}
+                          {point.cohortSize && (
+                            <span className="text-xs text-gray-400">n={point.cohortSize}</span>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-400 italic">{point.reason}</p>
+                      )}
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* The Gap = The Pitch */}
+          {(() => {
+            const gaps = cohortJourneyData.filter(p => p.source === 'no-data').length;
+            const total = cohortJourneyData.length;
+            if (gaps === 0) return null;
+
+            return (
+              <div className="bg-gradient-to-r from-gray-900 to-gray-800 text-white rounded-xl p-6">
+                <h3 className="text-lg font-bold mb-2">The Data Gap</h3>
+                <div className="flex gap-8 mb-4">
+                  <div>
+                    <span className="text-3xl font-bold text-red-400">{gaps}</span>
+                    <span className="text-sm text-gray-400 ml-2">of {total} checkpoints have no data</span>
+                  </div>
+                </div>
+                <p className="text-sm text-gray-300">
+                  For this cohort, you have <strong>{total - gaps === 1 ? 'one single data point' : `${total - gaps} data points`}</strong> across
+                  their entire school journey. Everything else is a gap.
+                  Between KS1 (age 7) and KS2 (age 11), there are four years where the only data is whatever
+                  teachers enter into a spreadsheet &mdash; with no external validation, no automated levelling,
+                  no consistency checks.
+                </p>
+                <p className="text-sm text-gray-300 mt-2 font-semibold">
+                  Schoolgle fills every gap on this timeline with automated, AI-powered assessment.
+                </p>
+              </div>
+            );
+          })()}
+        </motion.div>
+      )}
+
+      {/* ─── ALL COHORTS TABLE (always visible) ───────────────────── */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         <h3 className="text-base font-bold text-gray-900 mb-3">
-          All Current Cohorts — {school?.name}
+          All Current Cohorts &mdash; {school?.name}
         </h3>
-        <p className="text-xs text-gray-500 mb-4">
-          Each row is a different cohort currently in school. The percentage shown is from the mid-year self-report.
-          Green dots indicate validated DfE data also exists for that cohort.
+        <p className="text-xs text-gray-600 mb-4">
+          Click any row to see that cohort&apos;s full journey in the chart above.
         </p>
 
         <div className="overflow-x-auto">
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr className="border-b-2 border-gray-200">
-                <th className="text-left p-2 font-medium text-gray-500">Year Group</th>
-                <th className="text-left p-2 font-medium text-gray-500 text-xs">Cohort Started</th>
-                <th className="p-2 text-center font-medium text-gray-500">n</th>
-                <th className="p-2 text-center font-medium" style={{ color: SUBJECT_COLORS.Reading }}>Reading</th>
-                <th className="p-2 text-center font-medium" style={{ color: SUBJECT_COLORS.Writing }}>Writing</th>
-                <th className="p-2 text-center font-medium" style={{ color: SUBJECT_COLORS.Maths }}>Maths</th>
-                <th className="p-2 text-center font-medium text-gray-500">KS2 Validated?</th>
+                <th className="text-left p-3 font-bold text-gray-900">Year Group</th>
+                <th className="text-left p-3 font-bold text-gray-700 text-xs">Cohort Started</th>
+                <th className="p-3 text-center font-bold text-gray-700">Pupils</th>
+                <th className="p-3 text-center font-bold" style={{ color: SUBJECT_COLORS.Reading }}>Reading</th>
+                <th className="p-3 text-center font-bold" style={{ color: SUBJECT_COLORS.Writing }}>Writing</th>
+                <th className="p-3 text-center font-bold" style={{ color: SUBJECT_COLORS.Maths }}>Maths</th>
+                <th className="p-3 text-center font-bold text-gray-700">Source</th>
               </tr>
             </thead>
             <tbody>
-              {report?.yearGroups.filter(yg => yg.yearGroup !== 'EYFS').map(yg => {
-                // Figure out when this cohort started Reception
-                const ygOffset: Record<string, number> = { Y1: 1, Y2: 2, Y3: 3, Y4: 4, Y5: 5, Y6: 6 };
-                const offset = ygOffset[yg.yearGroup] ?? 0;
-                const receptionYearEnd = 2026 - offset;
-                const receptionLabel = `${receptionYearEnd - 1}/${String(receptionYearEnd).slice(-2)}`;
+              {/* KS2 2025 leavers (validated) */}
+              {ks2_2025 && (
+                <tr className="border-b border-gray-100 bg-emerald-50/50">
+                  <td className="p-3 font-bold text-gray-500">Leavers (was Y6)</td>
+                  <td className="p-3 text-xs text-gray-500">Reception 2018/19</td>
+                  <td className="p-3 text-center text-gray-400">&mdash;</td>
+                  <td className="p-3 text-center font-bold" style={{ color: SUBJECT_COLORS.Reading }}>
+                    {ks2_2025.Reading ?? '—'}%
+                  </td>
+                  <td className="p-3 text-center font-bold" style={{ color: SUBJECT_COLORS.Writing }}>
+                    {ks2_2025.Writing ?? '—'}%
+                  </td>
+                  <td className="p-3 text-center font-bold" style={{ color: SUBJECT_COLORS.Maths }}>
+                    {ks2_2025.Maths ?? '—'}%
+                  </td>
+                  <td className="p-3 text-center">
+                    <span className="inline-flex items-center gap-1 text-xs text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full">
+                      KS2 Validated
+                    </span>
+                  </td>
+                </tr>
+              )}
 
-                return (
-                  <tr key={yg.yearGroup} className="border-b border-gray-50 hover:bg-gray-50">
-                    <td className="p-2 font-semibold">{yg.yearGroup}</td>
-                    <td className="p-2 text-xs text-gray-400">Reception {receptionLabel}</td>
-                    <td className="p-2 text-center text-gray-500">{yg.cohortSize}</td>
-                    <td className="p-2 text-center font-bold" style={{ color: SUBJECT_COLORS.Reading }}>
-                      {yg.allPupils.reading ?? '—'}%
-                    </td>
-                    <td className="p-2 text-center font-bold" style={{ color: SUBJECT_COLORS.Writing }}>
-                      {yg.allPupils.writing ?? '—'}%
-                    </td>
-                    <td className="p-2 text-center font-bold" style={{ color: SUBJECT_COLORS.Maths }}>
-                      {yg.allPupils.maths ?? '—'}%
-                    </td>
-                    <td className="p-2 text-center">
-                      <span className="text-xs text-gray-400">Not yet</span>
-                    </td>
-                  </tr>
-                );
-              })}
-              {/* Add the leavers row if we have KS2 2025 data */}
-              {(() => {
-                const ks2_2025 = ks2Results.filter(
-                  r => r.urn === school?.urn && r.academicYearEnd === 2025 && r.breakdownTopic === 'All pupils' && r.expectedStandardPct != null,
-                );
-                if (ks2_2025.length === 0) return null;
-                return (
-                  <tr className="border-b border-gray-50 bg-emerald-50/50">
-                    <td className="p-2 font-semibold text-gray-400">Left (was Y6)</td>
-                    <td className="p-2 text-xs text-gray-400">Reception 2018/19</td>
-                    <td className="p-2 text-center text-gray-400">—</td>
-                    <td className="p-2 text-center font-bold" style={{ color: SUBJECT_COLORS.Reading }}>
-                      {ks2_2025.find(r => r.subject === 'Reading')?.expectedStandardPct ?? '—'}%
-                    </td>
-                    <td className="p-2 text-center font-bold" style={{ color: SUBJECT_COLORS.Writing }}>
-                      {ks2_2025.find(r => r.subject === 'Writing')?.expectedStandardPct ?? '—'}%
-                    </td>
-                    <td className="p-2 text-center font-bold" style={{ color: SUBJECT_COLORS.Maths }}>
-                      {ks2_2025.find(r => r.subject === 'Maths')?.expectedStandardPct ?? '—'}%
-                    </td>
-                    <td className="p-2 text-center">
-                      <span className="inline-flex items-center gap-1 text-xs text-emerald-700 font-medium">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500" /> KS2 2025
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })()}
+              {/* Current year groups (self-reported) */}
+              {report?.yearGroups.filter(yg => yg.yearGroup !== 'EYFS').map(yg => (
+                <tr
+                  key={yg.yearGroup}
+                  className={`border-b border-gray-50 hover:bg-amber-50/30 cursor-pointer transition-colors ${
+                    viewMode === 'single-cohort' && selectedYearGroup === yg.yearGroup ? 'bg-amber-50 ring-1 ring-amber-200' : ''
+                  }`}
+                  onClick={() => { setViewMode('single-cohort'); setSelectedYearGroup(yg.yearGroup); }}
+                >
+                  <td className="p-3 font-bold text-gray-900">{yg.yearGroup}</td>
+                  <td className="p-3 text-xs text-gray-600">Reception {cohortReceptionYear(yg.yearGroup)}</td>
+                  <td className="p-3 text-center font-semibold text-gray-700">{yg.cohortSize}</td>
+                  <td className="p-3 text-center font-bold" style={{ color: SUBJECT_COLORS.Reading }}>
+                    {yg.allPupils.reading ?? '—'}%
+                  </td>
+                  <td className="p-3 text-center font-bold" style={{ color: SUBJECT_COLORS.Writing }}>
+                    {yg.allPupils.writing ?? '—'}%
+                  </td>
+                  <td className="p-3 text-center font-bold" style={{ color: SUBJECT_COLORS.Maths }}>
+                    {yg.allPupils.maths ?? '—'}%
+                  </td>
+                  <td className="p-3 text-center">
+                    <span className="inline-flex items-center gap-1 text-xs text-amber-700 font-bold bg-amber-100 px-2 py-0.5 rounded-full">
+                      Self-Reported
+                    </span>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
