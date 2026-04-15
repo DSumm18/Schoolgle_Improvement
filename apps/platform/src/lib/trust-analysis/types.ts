@@ -21,6 +21,23 @@ export const PENNINE_SCHOOLS: PennineSchool[] = [
 
 export const PENNINE_URNS = PENNINE_SCHOOLS.map(s => s.urn);
 
+// Academy conversion: predecessor URNs (community school → academy converter)
+// Data before the conversion date is under the old URN
+export const URN_PREDECESSORS: Record<number, { oldUrn: number; convertedDate: string }> = {
+  148869: { oldUrn: 107199, convertedDate: '2022-01-04' },  // CVPS
+  146581: { oldUrn: 107203, convertedDate: '2018-01-12' },  // CHPS
+  144862: { oldUrn: 107294, convertedDate: '2018-01-05' },  // FPS
+  148201: { oldUrn: 107242, convertedDate: '2020-11-01' },  // GHPS
+  144860: { oldUrn: 107435, convertedDate: '2018-01-05' },  // HPS
+  144861: { oldUrn: 107263, convertedDate: '2018-01-05' },  // LPS
+  150016: { oldUrn: 107212, convertedDate: '2023-09-01' },  // LGPS
+};
+
+export const ALL_PENNINE_URNS = [
+  ...PENNINE_URNS,
+  ...Object.values(URN_PREDECESSORS).map(p => p.oldUrn),
+];
+
 export function getSchoolByUrn(urn: number): PennineSchool | undefined {
   return PENNINE_SCHOOLS.find(s => s.urn === urn);
 }
