@@ -90,7 +90,8 @@ function KS2CombinedChart({ ks2Results }: { ks2Results: KS2Result[] }) {
 
   return (
     <div>
-      <h3 className="text-lg font-semibold mb-4">KS2 Combined (RWM) &mdash; Expected Standard %</h3>
+      <h3 className="text-lg font-semibold mb-1">KS2 Combined (RWM) &mdash; Expected Standard %</h3>
+      <p className="text-xs text-gray-500 mb-4">Source: DfE validated KS2 results. Each year is a different cohort of Y6 pupils who sat the SATs that year.</p>
       <ResponsiveContainer width="100%" height={400}>
         <BarChart data={chartData}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -108,6 +109,7 @@ function KS2CombinedChart({ ks2Results }: { ks2Results: KS2Result[] }) {
           ))}
         </BarChart>
       </ResponsiveContainer>
+      <p className="text-xs text-gray-400 mt-2">Note: Each year represents a different group of children. This shows school performance over time, not cohort progress.</p>
     </div>
   );
 }
@@ -127,7 +129,8 @@ function FSMTrendChart({ censusTrends }: { censusTrends: ReturnType<typeof build
 
   return (
     <div>
-      <h3 className="text-lg font-semibold mb-4">Free School Meals % &mdash; Multi-Year Trend</h3>
+      <h3 className="text-lg font-semibold mb-1">Free School Meals % &mdash; Multi-Year Trend</h3>
+      <p className="text-xs text-gray-500 mb-4">Source: DfE School Census (whole-school figures reported annually by each school to the DfE). This is NOT from the trust&apos;s spreadsheet.</p>
       <ResponsiveContainer width="100%" height={400}>
         <LineChart data={chartData}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -148,6 +151,7 @@ function FSMTrendChart({ censusTrends }: { censusTrends: ReturnType<typeof build
           ))}
         </LineChart>
       </ResponsiveContainer>
+      <p className="text-xs text-gray-400 mt-2">Note: FSM% is calculated across all pupils on roll (including nursery where applicable). The trust&apos;s spreadsheet may show different percentages as it only covers the year groups submitted.</p>
     </div>
   );
 }
@@ -170,7 +174,8 @@ function ScaledScoresChart({ ks2Results }: { ks2Results: KS2Result[] }) {
 
   return (
     <div>
-      <h3 className="text-lg font-semibold mb-4">Average Scaled Scores &mdash; 2025 SATs</h3>
+      <h3 className="text-lg font-semibold mb-1">Average Scaled Scores &mdash; 2025 SATs</h3>
+      <p className="text-xs text-gray-500 mb-4">Source: DfE validated KS2 results (2024/25 SATs). These are the actual test scores, not teacher assessment.</p>
       <ResponsiveContainer width="100%" height={400}>
         <BarChart data={chartData}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -205,7 +210,8 @@ function SchoolRadarChart({ ks2Results }: { ks2Results: KS2Result[] }) {
 
   return (
     <div>
-      <h3 className="text-lg font-semibold mb-4">2025 SATs &mdash; School Comparison Radar</h3>
+      <h3 className="text-lg font-semibold mb-1">2025 SATs &mdash; School Comparison Radar</h3>
+      <p className="text-xs text-gray-500 mb-4">Source: DfE validated KS2 results (2024/25). % of pupils reaching expected standard in Reading, Writing, and Maths.</p>
       <ResponsiveContainer width="100%" height={400}>
         <RadarChart data={radarData}>
           <PolarGrid />

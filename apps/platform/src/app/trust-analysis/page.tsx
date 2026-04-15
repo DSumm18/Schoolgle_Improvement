@@ -170,7 +170,8 @@ export default function TrustAnalysisPage() {
           {activeTab === 'overview' && (
             <motion.div key="overview" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-8">
               <section>
-                <h2 className="text-lg font-bold text-gray-900 mb-4">Trust-Wide Heatmap &mdash; ARE by Subject</h2>
+                <h2 className="text-lg font-bold text-gray-900 mb-1">Trust-Wide Heatmap &mdash; ARE by Subject</h2>
+                <p className="text-xs text-gray-500 mb-4">Source: Trust mid-year data capture spreadsheet (2025/26). Self-reported by each school &mdash; not externally validated.</p>
                 <div className="bg-white rounded-xl border border-gray-200 p-6">
                   <TrustOverviewHeatmap selfReports={PENNINE_SELF_REPORTS} />
                 </div>
