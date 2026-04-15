@@ -368,6 +368,15 @@ export const APPS: AppDefinition[] = [
     shortDescription: "Review AI-extracted data before it flows to modules.",
     requiredPermissions: ["admin", "headteacher", "slt"],
   },
+  {
+    id: "trust-analysis",
+    moduleId: "improvement",
+    name: "Trust Analysis",
+    route: "/dashboard/school-improvement/trust-analysis",
+    icon: BarChart3,
+    shortDescription: "Cross-reference trust data against DfE validated results.",
+    requiredPermissions: ["admin", "headteacher", "slt"],
+  },
 
   // Teaching & Learning Apps
   {
