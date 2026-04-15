@@ -8,7 +8,6 @@ import DataQualityFlags from '@/components/trust-analysis/DataQualityFlags';
 import DfeCrossReference from '@/components/trust-analysis/DfeCrossReference';
 import TrendCharts from '@/components/trust-analysis/TrendCharts';
 import SchoolNarrativeCard from '@/components/trust-analysis/SchoolNarrativeCard';
-import GroveHouseDemo from '@/components/trust-analysis/GroveHouseDemo';
 import GroveHouseAnalytics from '@/components/trust-analysis/GroveHouseAnalytics';
 import CohortJourneyChart from '@/components/trust-analysis/CohortJourneyChart';
 import ProductValueCard from '@/components/trust-analysis/ProductValueCard';

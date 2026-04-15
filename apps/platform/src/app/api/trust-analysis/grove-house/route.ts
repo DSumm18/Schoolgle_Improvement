@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { protectedRoute, apiSuccess, apiError } from '@/lib/api-utils';
 import { createServiceRoleClient } from '@/lib/supabase-server';
-
-const ORG_ID = 'd9d1ac2c-5eff-4043-98f4-e1c43f616fd3';
 
 // Trust spreadsheet figures for Grove House (mid-year / reported)
 const SPREADSHEET_FIGURES: Record<string, { r: number; w: number; m: number; c?: number }> = {
@@ -12,12 +11,15 @@ const SPREADSHEET_FIGURES: Record<string, { r: number; w: number; m: number; c?:
 
 /**
  * GET /api/trust-analysis/grove-house
- * Returns per-pupil aggregated analytics from CTF assessment data.
+ * Authenticated route — returns per-pupil aggregated analytics from CTF assessment data.
+ * Scoped to the logged-in user's organization.
  * All data is pseudonymised — no PII returned.
  */
-export async function GET(_req: NextRequest) {
+export const GET = protectedRoute(async (auth, _req: NextRequest) => {
   try {
     const supabase = createServiceRoleClient();
+    // Use the authenticated user's organization, not a hardcoded ID
+    const ORG_ID = auth.organizationId;
 
     // Paginated fetch — override default 1000-row Supabase limit
     let allRecords: Record<string, unknown>[] = [];
@@ -35,7 +37,7 @@ export async function GET(_req: NextRequest) {
         .range(page * pageSize, (page + 1) * pageSize - 1);
 
       if (batchError) {
-        return NextResponse.json({ error: batchError.message }, { status: 500 });
+        return apiError(batchError.message, 500);
       }
 
       allRecords = allRecords.concat(batch ?? []);
@@ -304,7 +306,7 @@ export async function GET(_req: NextRequest) {
     const yearsSpan = [...new Set(records.map(r => r.academic_year_start as number))].sort();
     const trackablePupilsCount = [...pupilYears.values()].filter(v => v.years.length > 1).length;
 
-    return NextResponse.json({
+    return apiSuccess({
       summary: {
         totalPupils,
         totalRecords,
@@ -321,9 +323,6 @@ export async function GET(_req: NextRequest) {
       spreadsheetComparison,
     });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Internal server error' },
-      { status: 500 },
-    );
+    return apiError(err instanceof Error ? err.message : 'Internal server error', 500);
   }
-}
+});
