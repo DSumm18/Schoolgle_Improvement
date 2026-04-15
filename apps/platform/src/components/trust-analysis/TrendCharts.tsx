@@ -118,19 +118,16 @@ function KS2CombinedChart({ ks2Results, selfReports }: { ks2Results: KS2Result[]
             tick={(props: { x: number; y: number; payload: { value: string } }) => {
               const { x, y, payload } = props;
               const isDfE = payload.value.includes('DfE');
-              const lines = payload.value.split(' (');
+              const label = payload.value.replace(' (DfE Validated)', '').replace(' (School Self-Report)', '');
               return (
                 <g transform={`translate(${x},${y})`}>
-                  <text x={0} y={0} dy={12} textAnchor="middle" fontSize={10} fontWeight={700} fill="#111827">
-                    {lines[0]}
-                  </text>
-                  <text x={0} y={0} dy={24} textAnchor="middle" fontSize={9} fill={isDfE ? '#1d4ed8' : '#b45309'} fontWeight={600}>
-                    {isDfE ? '\u{1F451} DfE Validated' : '\u{1F4CB} School Self-Report'}
+                  <text x={0} y={0} dy={14} textAnchor="middle" fontSize={11} fontWeight={700} fill="#111827">
+                    {label}
                   </text>
                 </g>
               );
             }}
-            height={50}
+            height={30}
           />
           <YAxis domain={[0, 100]} />
           <Tooltip />
@@ -145,7 +142,25 @@ function KS2CombinedChart({ ks2Results, selfReports }: { ks2Results: KS2Result[]
           ))}
         </BarChart>
       </ResponsiveContainer>
-      <p className="text-xs text-gray-400 mt-2">
+      {/* Source logos aligned under the chart */}
+      <div className="flex mt-2">
+        {chartData.map((d, i) => {
+          const isDfE = String(d.year).includes('DfE');
+          return (
+            <div key={i} className="flex-1 flex flex-col items-center gap-1">
+              {isDfE ? (
+                <img src="/logos/connectors/dfe.png" alt="DfE" className="h-6 w-6 rounded" />
+              ) : (
+                <img src="/logos/pennine-academies.jpg" alt="Pennine Academies Yorkshire" className="h-6 w-6 rounded" />
+              )}
+              <span className={`text-[9px] font-bold ${isDfE ? 'text-blue-700' : 'text-amber-700'}`}>
+                {isDfE ? 'DfE Validated' : 'School Data'}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      <p className="text-xs text-gray-400 mt-3">
         The final column shows what each school claims their current Y6 will achieve.
         Compare against the validated KS2 columns to assess whether the claim is consistent with the school&apos;s track record.
       </p>
