@@ -82,7 +82,7 @@ function KS2CombinedChart({ ks2Results, selfReports }: { ks2Results: KS2Result[]
   // Build chart data with DfE years + self-report as final column
   const chartData = [
     ...years.map(year => {
-      const row: Record<string, number | string> = { year: `KS2 ${year}` };
+      const row: Record<string, number | string> = { year: `KS2 ${year} (DfE Validated)` };
       for (const school of PENNINE_SCHOOLS) {
         const val = combined.find(r => r.urn === school.urn && r.academicYearEnd === year);
         if (val?.expectedStandardPct != null) {
@@ -93,7 +93,7 @@ function KS2CombinedChart({ ks2Results, selfReports }: { ks2Results: KS2Result[]
     }),
     // Add the self-report mid-year Y6 as the final column
     ...(selfReports ? [{
-      year: 'Mid-Year\n2025/26',
+      year: 'Mid-Year 25/26 (School Self-Report)',
       ...Object.fromEntries(
         selfReports.map(report => {
           const y6 = report.yearGroups.find(yg => yg.yearGroup === 'Y6');
@@ -110,10 +110,28 @@ function KS2CombinedChart({ ks2Results, selfReports }: { ks2Results: KS2Result[]
         <strong>KS2 2023&ndash;2025:</strong> Source: DfE validated SATs results (different cohort each year).
         <strong> Mid-Year 2025/26:</strong> Source: Trust spreadsheet (self-reported, current Y6, not yet validated).
       </p>
-      <ResponsiveContainer width="100%" height={400}>
-        <BarChart data={chartData}>
+      <ResponsiveContainer width="100%" height={450}>
+        <BarChart data={chartData} margin={{ bottom: 60 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-          <XAxis dataKey="year" tick={{ fontSize: 11 }} />
+          <XAxis
+            dataKey="year"
+            tick={(props: { x: number; y: number; payload: { value: string } }) => {
+              const { x, y, payload } = props;
+              const isDfE = payload.value.includes('DfE');
+              const lines = payload.value.split(' (');
+              return (
+                <g transform={`translate(${x},${y})`}>
+                  <text x={0} y={0} dy={12} textAnchor="middle" fontSize={10} fontWeight={700} fill="#111827">
+                    {lines[0]}
+                  </text>
+                  <text x={0} y={0} dy={24} textAnchor="middle" fontSize={9} fill={isDfE ? '#1d4ed8' : '#b45309'} fontWeight={600}>
+                    {isDfE ? '\u{1F451} DfE Validated' : '\u{1F4CB} School Self-Report'}
+                  </text>
+                </g>
+              );
+            }}
+            height={50}
+          />
           <YAxis domain={[0, 100]} />
           <Tooltip />
           <Legend />
