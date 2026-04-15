@@ -158,61 +158,65 @@ export default function CohortJourneyChart({ selfReports, ks2Results }: Props) {
 
   return (
     <div className="space-y-6">
-      {/* Controls — dark text, clearly visible */}
-      <div className="flex flex-wrap gap-4 items-end">
-        <div>
-          <label className="block text-xs font-semibold text-gray-700 mb-1">School</label>
-          <select
-            value={selectedSchool}
-            onChange={e => setSelectedSchool(e.target.value)}
-            className="px-4 py-2.5 rounded-lg border border-gray-300 text-sm font-semibold text-gray-900 bg-white min-w-[320px] shadow-sm"
-          >
-            {PENNINE_SCHOOLS.map(s => (
-              <option key={s.abbrev} value={s.abbrev}>
-                {s.abbrev} — {s.name} ({s.nor} pupils, {s.fsmPct}% FSM)
-              </option>
-            ))}
-          </select>
-        </div>
+      {/* Controls */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-bold text-gray-900 mb-2">School</label>
+            <select
+              value={selectedSchool}
+              onChange={e => setSelectedSchool(e.target.value)}
+              className="w-full px-4 py-3 rounded-lg border-2 border-gray-400 text-base font-bold text-gray-900 bg-white shadow-sm appearance-none cursor-pointer hover:border-gray-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+              style={{ fontSize: '16px', color: '#111827' }}
+            >
+              {PENNINE_SCHOOLS.map(s => (
+                <option key={s.abbrev} value={s.abbrev} style={{ fontSize: '15px', color: '#111827', padding: '8px' }}>
+                  {s.abbrev} — {s.name} ({s.nor} pupils, {s.fsmPct}% FSM)
+                </option>
+              ))}
+            </select>
+          </div>
 
-        <div>
-          <label className="block text-xs font-semibold text-gray-700 mb-1">View</label>
-          <div className="flex gap-1">
-            <button
-              onClick={() => setViewMode('all-cohorts')}
-              className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${
-                viewMode === 'all-cohorts'
-                  ? 'bg-gray-900 text-white shadow-lg'
-                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-              }`}
-            >
-              All Cohorts Pipeline
-            </button>
-            <button
-              onClick={() => setViewMode('single-cohort')}
-              className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${
-                viewMode === 'single-cohort'
-                  ? 'bg-gray-900 text-white shadow-lg'
-                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-              }`}
-            >
-              Single Cohort Journey
-            </button>
+          <div>
+            <label className="block text-sm font-bold text-gray-900 mb-2">View</label>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setViewMode('all-cohorts')}
+                className={`flex-1 px-5 py-3 rounded-lg text-base font-bold transition-all ${
+                  viewMode === 'all-cohorts'
+                    ? 'bg-gray-900 text-white shadow-lg'
+                    : 'bg-gray-100 text-gray-900 border-2 border-gray-300 hover:bg-gray-200'
+                }`}
+              >
+                All Cohorts Pipeline
+              </button>
+              <button
+                onClick={() => setViewMode('single-cohort')}
+                className={`flex-1 px-5 py-3 rounded-lg text-base font-bold transition-all ${
+                  viewMode === 'single-cohort'
+                    ? 'bg-gray-900 text-white shadow-lg'
+                    : 'bg-gray-100 text-gray-900 border-2 border-gray-300 hover:bg-gray-200'
+                }`}
+              >
+                Single Cohort Journey
+              </button>
+            </div>
           </div>
         </div>
 
         {viewMode === 'single-cohort' && (
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1">Select Cohort</label>
+            <label className="block text-sm font-bold text-gray-900 mb-2">Select Cohort</label>
             <select
               value={selectedYearGroup}
               onChange={e => setSelectedYearGroup(e.target.value as YearGroup)}
-              className="px-4 py-2.5 rounded-lg border border-gray-300 text-sm font-semibold text-gray-900 bg-white min-w-[320px] shadow-sm"
+              className="w-full px-4 py-3 rounded-lg border-2 border-gray-400 text-base font-bold text-gray-900 bg-white shadow-sm appearance-none cursor-pointer hover:border-gray-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+              style={{ fontSize: '16px', color: '#111827' }}
             >
               {YEAR_GROUPS.filter(yg => yg !== 'EYFS').map(yg => {
                 const ygData = report?.yearGroups.find(y => y.yearGroup === yg);
                 return (
-                  <option key={yg} value={yg}>
+                  <option key={yg} value={yg} style={{ fontSize: '15px', color: '#111827', padding: '8px' }}>
                     {yg} — Started Reception {cohortReceptionYear(yg)} — {cohortDestination(yg)}
                     {ygData ? ` (${ygData.cohortSize} pupils)` : ''}
                   </option>
