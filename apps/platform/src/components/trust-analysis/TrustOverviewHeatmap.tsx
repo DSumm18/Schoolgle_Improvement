@@ -74,16 +74,18 @@ export default function TrustOverviewHeatmap({ selfReports }: Props) {
                     const ygData = report?.yearGroups.find(y => y.yearGroup === yg);
                     const key = getSubjectKey(selectedSubject);
                     const value = ygData?.allPupils[key] ?? null;
+                    const cohortSize = ygData?.cohortSize ?? null;
+                    const isSmallCohort = cohortSize != null && cohortSize < 15;
                     return (
                       <td key={yg} className="p-1 text-center">
                         <motion.div
-                          className={`rounded-lg p-3 text-sm font-bold ${getCellColor(value)}`}
+                          className={`rounded-lg p-3 text-sm font-bold ${getCellColor(value)} ${isSmallCohort ? 'opacity-60' : ''}`}
                           initial={{ scale: 0.8, opacity: 0 }}
                           animate={{ scale: 1, opacity: 1 }}
                           transition={{ delay: schoolIdx * 0.05 + 0.1 }}
-                          title={`${school.abbrev} ${yg} ${selectedSubject}: ${value ?? 'No data'}%`}
+                          title={`${school.abbrev} ${yg} ${selectedSubject}: ${value ?? 'No data'}%${isSmallCohort ? ` (small cohort: ${cohortSize} pupils)` : ''}`}
                         >
-                          {value != null ? `${value}%` : '\u2014'}
+                          {value != null ? `${value}%` : '\u2014'}{isSmallCohort ? '*' : ''}
                         </motion.div>
                       </td>
                     );
@@ -104,6 +106,7 @@ export default function TrustOverviewHeatmap({ selfReports }: Props) {
         <span className="flex items-center gap-1"><span className="w-4 h-4 rounded bg-red-400" /> 40-49%</span>
         <span className="flex items-center gap-1"><span className="w-4 h-4 rounded bg-red-600" /> Below 40%</span>
       </div>
+      <p className="text-xs text-gray-400">* Small cohort (&lt;15 pupils) &mdash; percentages may be statistically unreliable</p>
     </div>
   );
 }

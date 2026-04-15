@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import TrustOverviewHeatmap from '@/components/trust-analysis/TrustOverviewHeatmap';
 import DisadvantageGapTable from '@/components/trust-analysis/DisadvantageGapTable';
@@ -23,7 +23,7 @@ import {
   TrackRecordFlag, PipelineTrajectory, ProgressMeasure, PipelinePrediction,
 } from '@/lib/trust-analysis/types';
 
-type TabKey = 'overview' | 'cohort-journey' | 'cross-reference' | 'trends' | 'narratives' | 'grove-house' | 'grove-house-analytics';
+type TabKey = 'overview' | 'cohort-journey' | 'cross-reference' | 'trends' | 'narratives' | 'grove-house-analytics';
 
 const TABS: { key: TabKey; label: string; description: string }[] = [
   { key: 'overview', label: 'Trust Overview', description: 'Heatmaps, gap analysis, data quality' },
@@ -32,7 +32,6 @@ const TABS: { key: TabKey; label: string; description: string }[] = [
   { key: 'trends', label: 'Historical Trends', description: 'KS2, FSM, scaled scores over time' },
   { key: 'narratives', label: 'School Reports', description: 'Per-school narrative with Ofsted Qs' },
   { key: 'grove-house-analytics', label: 'Grove House Analytics', description: 'Per-pupil deep dive (CTF data)' },
-  { key: 'grove-house', label: 'Grove House Demo', description: 'Per-pupil placeholder' },
 ];
 
 export default function TrustAnalysisPage() {
@@ -58,32 +57,48 @@ export default function TrustAnalysisPage() {
   }, []);
 
   // Compute analyses
-  const divergences: DivergenceFlag[] = dfeData
-    ? calculateDivergences(PENNINE_SELF_REPORTS, dfeData.ks2Results)
-    : [];
-  const qualityFlags: DataQualityFlag[] = detectDataQualityIssues(PENNINE_SELF_REPORTS);
-  const gaps: DisadvantageGap[] = calculateDisadvantageGaps(PENNINE_SELF_REPORTS);
+  const divergences: DivergenceFlag[] = useMemo(
+    () => dfeData ? calculateDivergences(PENNINE_SELF_REPORTS, dfeData.ks2Results) : [],
+    [dfeData],
+  );
+  const qualityFlags: DataQualityFlag[] = useMemo(
+    () => detectDataQualityIssues(PENNINE_SELF_REPORTS),
+    [],
+  );
+  const gaps: DisadvantageGap[] = useMemo(
+    () => calculateDisadvantageGaps(PENNINE_SELF_REPORTS),
+    [],
+  );
 
   // New cohort-based analyses
-  const pipelines: PipelineTrajectory[] = analysePipelines(PENNINE_SELF_REPORTS);
-  const trackRecords: TrackRecordFlag[] = dfeData
-    ? analyseTrackRecord(PENNINE_SELF_REPORTS, dfeData.ks2Results)
-    : [];
-  const progressMeasures: ProgressMeasure[] = dfeData
-    ? extractProgressMeasures(dfeData.ks2Results)
-    : [];
-  const predictions: PipelinePrediction[] = dfeData
-    ? buildPipelinePredictions(PENNINE_SELF_REPORTS, dfeData.ks2Results)
-    : [];
+  const pipelines: PipelineTrajectory[] = useMemo(
+    () => analysePipelines(PENNINE_SELF_REPORTS),
+    [],
+  );
+  const trackRecords: TrackRecordFlag[] = useMemo(
+    () => dfeData ? analyseTrackRecord(PENNINE_SELF_REPORTS, dfeData.ks2Results) : [],
+    [dfeData],
+  );
+  const progressMeasures: ProgressMeasure[] = useMemo(
+    () => dfeData ? extractProgressMeasures(dfeData.ks2Results) : [],
+    [dfeData],
+  );
+  const predictions: PipelinePrediction[] = useMemo(
+    () => dfeData ? buildPipelinePredictions(PENNINE_SELF_REPORTS, dfeData.ks2Results) : [],
+    [dfeData],
+  );
 
-  const narratives: SchoolNarrative[] = PENNINE_SELF_REPORTS.map(report =>
-    generateSchoolNarrative(
-      report,
-      dfeData?.ks2Results ?? [],
-      dfeData?.census ?? [],
-      divergences,
-      qualityFlags,
+  const narratives: SchoolNarrative[] = useMemo(
+    () => PENNINE_SELF_REPORTS.map(report =>
+      generateSchoolNarrative(
+        report,
+        dfeData?.ks2Results ?? [],
+        dfeData?.census ?? [],
+        divergences,
+        qualityFlags,
+      ),
     ),
+    [dfeData, divergences, qualityFlags],
   );
 
   const totalPupils = 2821; // Sum of all NOR
@@ -178,14 +193,18 @@ export default function TrustAnalysisPage() {
                   <TrustOverviewHeatmap selfReports={PENNINE_SELF_REPORTS} />
                 </div>
               </section>
-              {gaps.some(g => g.fsmPct != null) && (
               <section>
                 <h2 className="text-lg font-bold text-gray-900 mb-4">Year 6 Disadvantage Gap (FSM6 vs Non-FSM)</h2>
-                <div className="bg-white rounded-xl border border-gray-200 p-6">
-                  <DisadvantageGapTable gaps={gaps} />
-                </div>
+                {gaps.some(g => g.fsmPct != null) ? (
+                  <div className="bg-white rounded-xl border border-gray-200 p-6">
+                    <DisadvantageGapTable gaps={gaps} />
+                  </div>
+                ) : (
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 text-sm text-amber-900">
+                    The trust&apos;s spreadsheet does not include a breakdown by FSM/disadvantaged status. This means we cannot analyse the attainment gap between disadvantaged and non-disadvantaged pupils from the self-reported data. The DfE publishes disadvantaged breakdowns for KS2 &mdash; see the Reality Check tab for validated disadvantaged data.
+                  </div>
+                )}
               </section>
-              )}
               <section>
                 <h2 className="text-lg font-bold text-gray-900 mb-4">Data Quality Flags</h2>
                 <div className="bg-white rounded-xl border border-gray-200 p-6">
@@ -342,28 +361,6 @@ export default function TrustAnalysisPage() {
             </motion.div>
           )}
 
-          {activeTab === 'grove-house' && (
-            <motion.div key="grove-house" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <h2 className="text-lg font-bold text-gray-900 mb-2">Per-Pupil Analytics</h2>
-              <p className="text-sm text-gray-500 mb-6">
-                What becomes possible when schools share their assessment data.
-              </p>
-              <GroveHouseDemo />
-
-              <ProductValueCard
-                tier={4}
-                title="Per-Pupil Analytics"
-                subtitle="Track every child from Reception to Year 6. Every assessment point. Every gap identified."
-                questions={[
-                  { question: 'What data do you need to provide?', context: 'Your school\'s CTF (Common Transfer File) exports and census XML. These are files your MIS system (Arbor, SIMS, Bromcom) already generates. One upload per school.' },
-                  { question: 'What about data protection?', context: 'All pupil data is pseudonymised using SHA-256 hashing before it enters our system. No pupil names, dates of birth, or addresses are stored. A data processing agreement is required.' },
-                  { question: 'What does per-pupil analysis reveal that school-level data cannot?', context: 'School-level percentages hide individual stories. A school at 65% Reading could have 35% of pupils stuck at Working Towards for three years with no progress — or it could have a cohort making steady gains. Only per-pupil data tells you which.' },
-                  { question: 'How does this connect to the trust analysis above?', context: 'The spreadsheet health check found inconsistencies. The DfE cross-reference found track record violations. Per-pupil analytics finds the root cause: which pupils, which subjects, which year groups — and what to do about it.' },
-                ]}
-                valueStatement="This is where spreadsheets end and real school improvement begins. Per-pupil cohort tracking from Reception to Year 6, cross-referenced against FSM, SEND, EAL, and Pupil Premium status. AI-powered intervention recommendations. Evidence packs ready for Ofsted. All from the data your school already has — just not using."
-              />
-            </motion.div>
-          )}
         </AnimatePresence>
       </div>
     </div>
