@@ -296,7 +296,7 @@ export default function TrustAnalysisPage() {
                   <p className="text-gray-500">Loading trend data...</p>
                 </div>
               ) : dfeData ? (
-                <TrendCharts ks2Results={dfeData.ks2Results} census={dfeData.census} />
+                <TrendCharts ks2Results={dfeData.ks2Results} census={dfeData.census} selfReports={PENNINE_SELF_REPORTS} />
               ) : null}
             </motion.div>
           )}

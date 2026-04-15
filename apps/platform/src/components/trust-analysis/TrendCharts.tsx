@@ -7,7 +7,7 @@ import {
   PolarAngleAxis, PolarRadiusAxis,
 } from 'recharts';
 import { motion } from 'framer-motion';
-import { KS2Result, CensusRecord, PENNINE_SCHOOLS } from '@/lib/trust-analysis/types';
+import { KS2Result, CensusRecord, SchoolSelfReport, PENNINE_SCHOOLS, getSchoolByAbbrev } from '@/lib/trust-analysis/types';
 import { buildCensusTrends } from '@/lib/trust-analysis/analysis';
 
 const SCHOOL_COLORS: Record<string, string> = {
@@ -23,11 +23,12 @@ const SCHOOL_COLORS: Record<string, string> = {
 interface Props {
   ks2Results: KS2Result[];
   census: CensusRecord[];
+  selfReports?: SchoolSelfReport[];
 }
 
 type ChartView = 'ks2-combined' | 'fsm-trend' | 'scaled-scores' | 'radar';
 
-export default function TrendCharts({ ks2Results, census }: Props) {
+export default function TrendCharts({ ks2Results, census, selfReports }: Props) {
   const [chartView, setChartView] = useState<ChartView>('ks2-combined');
   const censusTrends = buildCensusTrends(census);
 
@@ -62,7 +63,7 @@ export default function TrendCharts({ ks2Results, census }: Props) {
         animate={{ opacity: 1, y: 0 }}
         className="bg-white rounded-xl border border-gray-200 p-6"
       >
-        {chartView === 'ks2-combined' && <KS2CombinedChart ks2Results={ks2Results} />}
+        {chartView === 'ks2-combined' && <KS2CombinedChart ks2Results={ks2Results} selfReports={selfReports} />}
         {chartView === 'fsm-trend' && <FSMTrendChart censusTrends={censusTrends} />}
         {chartView === 'scaled-scores' && <ScaledScoresChart ks2Results={ks2Results} />}
         {chartView === 'radar' && <SchoolRadarChart ks2Results={ks2Results} />}
@@ -71,31 +72,48 @@ export default function TrendCharts({ ks2Results, census }: Props) {
   );
 }
 
-function KS2CombinedChart({ ks2Results }: { ks2Results: KS2Result[] }) {
+function KS2CombinedChart({ ks2Results, selfReports }: { ks2Results: KS2Result[]; selfReports?: SchoolSelfReport[] }) {
   const combined = ks2Results.filter(
     r => r.subject === 'Reading, writing and maths' && r.breakdownTopic === 'All pupils' && r.expectedStandardPct != null,
   );
 
   const years = [...new Set(combined.map(r => r.academicYearEnd))].sort();
-  const chartData = years.map(year => {
-    const row: Record<string, number | string> = { year: year.toString() };
-    for (const school of PENNINE_SCHOOLS) {
-      const val = combined.find(r => r.urn === school.urn && r.academicYearEnd === year);
-      if (val?.expectedStandardPct != null) {
-        row[school.abbrev] = val.expectedStandardPct;
+
+  // Build chart data with DfE years + self-report as final column
+  const chartData = [
+    ...years.map(year => {
+      const row: Record<string, number | string> = { year: `KS2 ${year}` };
+      for (const school of PENNINE_SCHOOLS) {
+        const val = combined.find(r => r.urn === school.urn && r.academicYearEnd === year);
+        if (val?.expectedStandardPct != null) {
+          row[school.abbrev] = val.expectedStandardPct;
+        }
       }
-    }
-    return row;
-  });
+      return row;
+    }),
+    // Add the self-report mid-year Y6 as the final column
+    ...(selfReports ? [{
+      year: 'Mid-Year\n2025/26',
+      ...Object.fromEntries(
+        selfReports.map(report => {
+          const y6 = report.yearGroups.find(yg => yg.yearGroup === 'Y6');
+          return [report.school, y6?.allPupils.combined ?? undefined];
+        }).filter(([, v]) => v != null),
+      ),
+    }] : []),
+  ];
 
   return (
     <div>
-      <h3 className="text-lg font-semibold mb-1">KS2 Combined (RWM) &mdash; Expected Standard %</h3>
-      <p className="text-xs text-gray-500 mb-4">Source: DfE validated KS2 results. Each year is a different cohort of Y6 pupils who sat the SATs that year.</p>
+      <h3 className="text-lg font-semibold mb-1">KS2 Combined (RWM) &mdash; Validated vs Self-Reported</h3>
+      <p className="text-xs text-gray-500 mb-4">
+        <strong>KS2 2023&ndash;2025:</strong> Source: DfE validated SATs results (different cohort each year).
+        <strong> Mid-Year 2025/26:</strong> Source: Trust spreadsheet (self-reported, current Y6, not yet validated).
+      </p>
       <ResponsiveContainer width="100%" height={400}>
         <BarChart data={chartData}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-          <XAxis dataKey="year" />
+          <XAxis dataKey="year" tick={{ fontSize: 11 }} />
           <YAxis domain={[0, 100]} />
           <Tooltip />
           <Legend />
@@ -109,7 +127,10 @@ function KS2CombinedChart({ ks2Results }: { ks2Results: KS2Result[] }) {
           ))}
         </BarChart>
       </ResponsiveContainer>
-      <p className="text-xs text-gray-400 mt-2">Note: Each year represents a different group of children. This shows school performance over time, not cohort progress.</p>
+      <p className="text-xs text-gray-400 mt-2">
+        The final column shows what each school claims their current Y6 will achieve.
+        Compare against the validated KS2 columns to assess whether the claim is consistent with the school&apos;s track record.
+      </p>
     </div>
   );
 }
@@ -130,7 +151,15 @@ function FSMTrendChart({ censusTrends }: { censusTrends: ReturnType<typeof build
   return (
     <div>
       <h3 className="text-lg font-semibold mb-1">Free School Meals % &mdash; Multi-Year Trend</h3>
-      <p className="text-xs text-gray-500 mb-4">Source: DfE School Census (whole-school figures reported annually by each school to the DfE). This is NOT from the trust&apos;s spreadsheet.</p>
+      <p className="text-xs text-gray-500 mb-2">Source: DfE School Census (whole-school figures reported annually by each school to the DfE). This is NOT from the trust&apos;s spreadsheet.</p>
+      <p className="text-xs text-gray-600 mb-4">
+        <strong>Why this matters:</strong> FSM% is the primary indicator of disadvantage.
+        Nationally, disadvantaged pupils attain significantly lower than their peers.
+        A rising FSM% means the school is serving an increasingly disadvantaged community &mdash;
+        attainment data must be interpreted in that context. A school whose FSM% has doubled
+        cannot be compared like-for-like against its own historical results without acknowledging
+        the changing cohort demographics.
+      </p>
       <ResponsiveContainer width="100%" height={400}>
         <LineChart data={chartData}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
