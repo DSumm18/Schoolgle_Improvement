@@ -10,6 +10,7 @@ import TrendCharts from '@/components/trust-analysis/TrendCharts';
 import SchoolNarrativeCard from '@/components/trust-analysis/SchoolNarrativeCard';
 import GroveHouseDemo from '@/components/trust-analysis/GroveHouseDemo';
 import CohortJourneyChart from '@/components/trust-analysis/CohortJourneyChart';
+import ProductValueCard from '@/components/trust-analysis/ProductValueCard';
 import { PENNINE_SELF_REPORTS } from '@/lib/trust-analysis/pennine-data';
 import {
   calculateDivergences, detectDataQualityIssues, calculateDisadvantageGaps,
@@ -186,6 +187,20 @@ export default function TrustAnalysisPage() {
                   <DataQualityFlags flags={qualityFlags} />
                 </div>
               </section>
+
+              <ProductValueCard
+                tier={1}
+                title="Spreadsheet Health Check"
+                subtitle="Instant analysis of the data you already have."
+                questions={[
+                  { question: 'How many hours did your teachers spend building this spreadsheet?', context: '7 schools, EYFS to Y6, All Pupils + FSM + GD breakdowns. Estimate 2-3 hours per school, per data collection point. That\'s 14-21 hours of teacher time per term — time not spent teaching.' },
+                  { question: 'Where is this data stored and who has access?', context: 'A shared spreadsheet has no audit trail, no version control, and no validation. If someone types 0.67 instead of 67%, every calculation downstream is wrong.' },
+                  { question: 'Are the percentages calculated consistently across all schools?', context: 'We\'ve already found missing data, zero Greater Depth in Writing across multiple schools, and cohort sizes that don\'t match census records. How confident are you in the numbers?' },
+                  { question: 'What happens to this data between collection points?', context: 'This is a snapshot. It doesn\'t tell you whether children are making progress between assessments. The next data point is another manual spreadsheet in another term.' },
+                ]}
+                valueStatement="This analysis took Schoolgle 3 seconds. It found data quality issues, missing fields, and inconsistencies that would take a human analyst hours to spot. Every school in your trust gets this instantly, every time they submit data."
+                nextTierTeaser="Want to see how this data compares to validated DfE results? That's the next level."
+              />
             </motion.div>
           )}
 
@@ -231,6 +246,20 @@ export default function TrustAnalysisPage() {
                   predictions={predictions}
                 />
               )}
+
+              <ProductValueCard
+                tier={2}
+                title="DfE Cross-Reference Analysis"
+                subtitle="Your self-reported data validated against 3 years of government-verified results."
+                questions={[
+                  { question: 'Could your trust produce this analysis internally?', context: 'This requires access to DfE validated KS2 data for every school, mapped against your mid-year assessments, with automated divergence detection. No school or trust has this capability built in.' },
+                  { question: 'Do your school leaders know their track record?', context: 'Some schools are claiming mid-year results they have never achieved at validated KS2. Without this cross-reference, those claims go unchallenged until SATs results arrive in July — too late to intervene.' },
+                  { question: 'Which schools are adding value and which are losing it?', context: 'DfE progress measures show whether a school accelerates or decelerates pupil progress from KS1 to KS2. This is the single most important indicator of school effectiveness — and most trusts never look at it.' },
+                  { question: 'What will you tell Ofsted when they ask about data reliability?', context: 'An inspector will compare your self-evaluation against published data. If there are significant divergences, they will question your leadership\'s understanding of the school\'s performance.' },
+                ]}
+                valueStatement="This analysis cross-references your trust's self-reported data against 3 years of validated DfE results for all 7 schools. It identifies track record violations, pipeline inconsistencies, and progress patterns that are invisible in a spreadsheet. This is what Ofsted sees — and now you can see it first."
+                nextTierTeaser="Want to track individual pupils from Reception to Year 6? See what per-pupil analytics can reveal."
+              />
             </motion.div>
           )}
 
@@ -263,16 +292,42 @@ export default function TrustAnalysisPage() {
               {narratives.map((narrative, idx) => (
                 <SchoolNarrativeCard key={narrative.school} narrative={narrative} index={idx} />
               ))}
+
+              <ProductValueCard
+                tier={2}
+                title="Automated School Reports"
+                subtitle="Every school gets a written narrative report with strengths, concerns, and Ofsted questions — generated in seconds."
+                questions={[
+                  { question: 'How long would it take a School Improvement Partner to write these reports manually?', context: '7 schools, each needing strengths, concerns, data analysis, and Ofsted-style questioning. Conservatively 2 hours per school. That\'s a full working day for one person — and the reports would be based on the same unreliable spreadsheet data.' },
+                  { question: 'Are these reports consistent in their methodology?', context: 'Every school is assessed using identical criteria, identical DfE cross-referencing, identical thresholds. No human bias. No varying standards between reviewers.' },
+                  { question: 'Can your trust produce these reports before every standards meeting?', context: 'With Schoolgle, updated reports are generated instantly whenever new data is submitted. No waiting, no manual analysis, no consultant fees.' },
+                ]}
+                valueStatement="These reports combine your self-reported data with validated DfE results to produce Ofsted-ready analysis for every school in your trust. The questions at the bottom of each report are the exact questions an inspector would ask — now you can prepare the answers before they walk through the door."
+                nextTierTeaser="These reports analyse school-level data. Imagine the same analysis at individual pupil level — every child, every subject, every term."
+              />
             </motion.div>
           )}
 
           {activeTab === 'grove-house' && (
             <motion.div key="grove-house" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <h2 className="text-lg font-bold text-gray-900 mb-2">Layer 3: Grove House Per-Pupil Demo</h2>
+              <h2 className="text-lg font-bold text-gray-900 mb-2">Per-Pupil Analytics</h2>
               <p className="text-sm text-gray-500 mb-6">
-                SENSITIVE &mdash; For David&apos;s wife&apos;s school only. Not for trust-wide sharing.
+                What becomes possible when schools share their assessment data.
               </p>
               <GroveHouseDemo />
+
+              <ProductValueCard
+                tier={4}
+                title="Per-Pupil Analytics"
+                subtitle="Track every child from Reception to Year 6. Every assessment point. Every gap identified."
+                questions={[
+                  { question: 'What data do you need to provide?', context: 'Your school\'s CTF (Common Transfer File) exports and census XML. These are files your MIS system (Arbor, SIMS, Bromcom) already generates. One upload per school.' },
+                  { question: 'What about data protection?', context: 'All pupil data is pseudonymised using SHA-256 hashing before it enters our system. No pupil names, dates of birth, or addresses are stored. A data processing agreement is required.' },
+                  { question: 'What does per-pupil analysis reveal that school-level data cannot?', context: 'School-level percentages hide individual stories. A school at 65% Reading could have 35% of pupils stuck at Working Towards for three years with no progress — or it could have a cohort making steady gains. Only per-pupil data tells you which.' },
+                  { question: 'How does this connect to the trust analysis above?', context: 'The spreadsheet health check found inconsistencies. The DfE cross-reference found track record violations. Per-pupil analytics finds the root cause: which pupils, which subjects, which year groups — and what to do about it.' },
+                ]}
+                valueStatement="This is where spreadsheets end and real school improvement begins. Per-pupil cohort tracking from Reception to Year 6, cross-referenced against FSM, SEND, EAL, and Pupil Premium status. AI-powered intervention recommendations. Evidence packs ready for Ofsted. All from the data your school already has — just not using."
+              />
             </motion.div>
           )}
         </AnimatePresence>
