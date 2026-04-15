@@ -26,6 +26,7 @@ import { CurriculumChecklist } from "./CurriculumChecklist";
 import { SchemeManager } from "./SchemeManager";
 import { CurriculumProgressionView } from "./CurriculumProgressionView";
 import { WholeSchoolView } from "./WholeSchoolView";
+import { TimetableSetup } from "./TimetableSetup";
 import type {
   LSClass,
   LSPupil,
@@ -597,15 +598,20 @@ export function LessonStudio() {
             />
           </>
         ) : selectedClass ? (
-          <div className="text-center py-12 text-slate-400">
-            <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
-            <p className="text-sm">
-              No timetable found for {selectedClass.class_name}.
-            </p>
-            <p className="text-xs mt-1">
-              Import your timetable from your MIS or create one manually.
-            </p>
-          </div>
+          <TimetableSetup
+            classId={selectedClass.id}
+            organizationId={organizationId || ""}
+            onComplete={() => {
+              supabase
+                .from("ls_timetable_slots")
+                .select("*")
+                .eq("class_id", selectedClass.id)
+                .eq("organization_id", organizationId)
+                .order("day_of_week")
+                .order("start_time")
+                .then(({ data }) => setSlots((data || []) as LSTimetableSlot[]));
+            }}
+          />
         ) : (
           <div className="text-center py-12 text-slate-400">
             <GraduationCap className="w-12 h-12 mx-auto mb-3 opacity-50" />
