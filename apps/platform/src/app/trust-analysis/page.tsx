@@ -175,12 +175,14 @@ export default function TrustAnalysisPage() {
                   <TrustOverviewHeatmap selfReports={PENNINE_SELF_REPORTS} />
                 </div>
               </section>
+              {gaps.some(g => g.fsmPct != null) && (
               <section>
                 <h2 className="text-lg font-bold text-gray-900 mb-4">Year 6 Disadvantage Gap (FSM6 vs Non-FSM)</h2>
                 <div className="bg-white rounded-xl border border-gray-200 p-6">
                   <DisadvantageGapTable gaps={gaps} />
                 </div>
               </section>
+              )}
               <section>
                 <h2 className="text-lg font-bold text-gray-900 mb-4">Data Quality Flags</h2>
                 <div className="bg-white rounded-xl border border-gray-200 p-6">

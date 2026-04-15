@@ -51,19 +51,28 @@ export default function CohortJourneyChart({ selfReports, ks2Results }: Props) {
   const report = selfReports.find(r => r.school === selectedSchool);
 
   // Get KS2 2025 validated results for this school (last year's Y6 — now left)
-  const ks2_2025 = useMemo(() => {
-    if (!school) return null;
-    const results = ks2Results.filter(
-      r => r.urn === school.urn && r.academicYearEnd === 2025 &&
-        r.breakdownTopic === 'All pupils' && r.expectedStandardPct != null,
-    );
-    if (results.length === 0) return null;
-    return {
-      Reading: results.find(r => r.subject === 'Reading')?.expectedStandardPct ?? null,
-      Writing: results.find(r => r.subject === 'Writing')?.expectedStandardPct ?? null,
-      Maths: results.find(r => r.subject === 'Maths')?.expectedStandardPct ?? null,
-    };
+  // Get ALL years of KS2 validated data for this school
+  const ks2ByYear = useMemo(() => {
+    if (!school) return [];
+    const years = [2023, 2024, 2025];
+    return years.map(year => {
+      const results = ks2Results.filter(
+        r => r.urn === school.urn && r.academicYearEnd === year &&
+          r.breakdownTopic === 'All pupils' && r.expectedStandardPct != null,
+      );
+      if (results.length === 0) return null;
+      return {
+        year,
+        Reading: results.find(r => r.subject === 'Reading')?.expectedStandardPct ?? null,
+        Writing: results.find(r => r.subject === 'Writing')?.expectedStandardPct ?? null,
+        Maths: results.find(r => r.subject === 'Maths')?.expectedStandardPct ?? null,
+        Combined: results.find(r => r.subject === 'Reading, writing and maths')?.expectedStandardPct ?? null,
+      };
+    }).filter(Boolean) as { year: number; Reading: number | null; Writing: number | null; Maths: number | null; Combined: number | null }[];
   }, [school, ks2Results]);
+
+  // Latest KS2 for reference lines (most recent year with data)
+  const ks2_2025 = ks2ByYear.find(k => k.year === 2025) ?? ks2ByYear[ks2ByYear.length - 1] ?? null;
 
   // ─── View 1: All Cohorts Pipeline ─────────────────────────────────
   // Each year group is a different cohort at a different stage.
@@ -272,26 +281,28 @@ export default function CohortJourneyChart({ selfReports, ks2Results }: Props) {
                 />
                 <Legend />
 
-                {/* KS2 2025 reference lines */}
-                {ks2_2025 && Object.entries(ks2_2025).map(([subj, val]) => (
-                  val != null ? (
+                {/* KS2 validated reference lines — latest year, thick and visible */}
+                {ks2_2025 && ['Reading', 'Writing', 'Maths'].map(subj => {
+                  const val = (ks2_2025 as Record<string, unknown>)[subj] as number | null;
+                  if (val == null) return null;
+                  return (
                     <ReferenceLine
                       key={`ref-${subj}`}
                       y={val}
                       stroke={SUBJECT_COLORS[subj]}
-                      strokeDasharray="8 4"
-                      strokeOpacity={0.5}
-                      strokeWidth={2}
+                      strokeDasharray="10 5"
+                      strokeOpacity={0.7}
+                      strokeWidth={3}
                       label={{
-                        value: `KS2 2025: ${val}%`,
+                        value: `KS2 ${ks2_2025.year}: ${val}%`,
                         position: 'right',
-                        fontSize: 10,
+                        fontSize: 11,
                         fill: SUBJECT_COLORS[subj],
-                        fontWeight: 600,
+                        fontWeight: 700,
                       }}
                     />
-                  ) : null
-                ))}
+                  );
+                })}
 
                 {Object.entries(SUBJECT_COLORS).map(([subject, color]) => (
                   <Line
@@ -495,20 +506,20 @@ export default function CohortJourneyChart({ selfReports, ks2Results }: Props) {
               </tr>
             </thead>
             <tbody>
-              {/* KS2 2025 leavers (validated) */}
-              {ks2_2025 && (
-                <tr className="border-b border-gray-100 bg-emerald-50/50">
-                  <td className="p-3 font-bold text-gray-500">Leavers (was Y6)</td>
-                  <td className="p-3 text-xs text-gray-500">Reception 2018/19</td>
+              {/* KS2 validated leavers — all years */}
+              {ks2ByYear.map(ks2Year => (
+                <tr key={ks2Year.year} className="border-b border-gray-100 bg-emerald-50/50">
+                  <td className="p-3 font-bold text-gray-500">KS2 {ks2Year.year}</td>
+                  <td className="p-3 text-xs text-gray-500">Reception {ks2Year.year - 7}/{String(ks2Year.year - 6).slice(-2)}</td>
                   <td className="p-3 text-center text-gray-400">&mdash;</td>
                   <td className="p-3 text-center font-bold" style={{ color: SUBJECT_COLORS.Reading }}>
-                    {ks2_2025.Reading ?? '—'}%
+                    {ks2Year.Reading != null ? `${ks2Year.Reading}%` : '\u2014'}
                   </td>
                   <td className="p-3 text-center font-bold" style={{ color: SUBJECT_COLORS.Writing }}>
-                    {ks2_2025.Writing ?? '—'}%
+                    {ks2Year.Writing != null ? `${ks2Year.Writing}%` : '\u2014'}
                   </td>
                   <td className="p-3 text-center font-bold" style={{ color: SUBJECT_COLORS.Maths }}>
-                    {ks2_2025.Maths ?? '—'}%
+                    {ks2Year.Maths != null ? `${ks2Year.Maths}%` : '\u2014'}
                   </td>
                   <td className="p-3 text-center">
                     <span className="inline-flex items-center gap-1 text-xs text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full">
@@ -516,7 +527,7 @@ export default function CohortJourneyChart({ selfReports, ks2Results }: Props) {
                     </span>
                   </td>
                 </tr>
-              )}
+              ))}
 
               {/* Current year groups (self-reported) */}
               {report?.yearGroups.filter(yg => yg.yearGroup !== 'EYFS').map(yg => (
