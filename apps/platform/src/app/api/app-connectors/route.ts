@@ -50,6 +50,8 @@ export const POST = protectedRoute(async (auth, req: NextRequest) => {
     processing_purpose,
   } = body;
 
+  console.log('[app-connectors] POST:', { app_id, source_type, source_file_id, connector_name, org: auth.organizationId });
+
   if (!app_id || !source_type || !connector_name) {
     return apiError('app_id, source_type, and connector_name are required', 400);
   }

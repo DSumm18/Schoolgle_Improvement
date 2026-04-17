@@ -1367,7 +1367,10 @@ interface AppConnector {
 }
 
 export default function TrustAssessorPage() {
-  const { organizationId } = useAuth();
+  const { organizationId, session } = useAuth();
+  const authHeaders = session?.access_token
+    ? { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' }
+    : { 'Content-Type': 'application/json' };
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [parsed, setParsed] = useState<ParsedSpreadsheet | null>(null);
   const [parseError, setParseError] = useState<string | null>(null);
@@ -1390,14 +1393,18 @@ export default function TrustAssessorPage() {
     if (!organizationId) return;
     (async () => {
       try {
-        const res = await fetch(`/api/app-connectors?app_id=trust-assessor&organizationId=${organizationId}`, { credentials: 'include' });
-        if (!res.ok) { setConnectorLoading(false); return; }
+        const res = await fetch(`/api/app-connectors?app_id=trust-assessor&organizationId=${organizationId}`, { credentials: 'include', headers: authHeaders });
         const json = await res.json();
+        console.log('[Trust Assessor] Connector load:', res.status, json);
+        if (!res.ok) { setConnectorLoading(false); return; }
         const connectors = Array.isArray(json) ? json : json.data ?? json;
-        const active = connectors.find((c: AppConnector) => c.status === 'active' && c.source_file_id);
+        const active = Array.isArray(connectors) ? connectors.find((c: AppConnector) => c.status === 'active' && c.source_file_id) : null;
         if (active) {
+          console.log('[Trust Assessor] Found saved connector:', active.source_file_name);
           setConnector(active);
           setFileName(active.source_file_name);
+        } else {
+          console.log('[Trust Assessor] No saved connector found');
         }
       } catch {
         // Non-fatal — connector just won't auto-load
@@ -1455,7 +1462,7 @@ export default function TrustAssessorPage() {
     setDfeLoading(true);
     setDfeError(null);
     try {
-      const res = await fetch(`/api/trust-analysis${organizationId ? `?organizationId=${organizationId}` : ''}`, { credentials: "include" });
+      const res = await fetch(`/api/trust-analysis${organizationId ? `?organizationId=${organizationId}` : ''}`, { headers: authHeaders });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Failed to fetch DfE data");
       setDfeData({ ks2Results: json.ks2Results ?? json.data?.ks2Results, census: json.census ?? json.data?.census });
@@ -1464,11 +1471,11 @@ export default function TrustAssessorPage() {
     } finally {
       setDfeLoading(false);
     }
-  }, [organizationId]);
+  }, [organizationId, authHeaders]);
 
   const fetchGroveHouseStats = useCallback(async () => {
     try {
-      const res = await fetch(`/api/trust-analysis/grove-house${organizationId ? `?organizationId=${organizationId}` : ''}`, { credentials: "include" });
+      const res = await fetch(`/api/trust-analysis/grove-house${organizationId ? `?organizationId=${organizationId}` : ''}`, { headers: authHeaders });
       const json = await res.json();
       const summary = json.summary ?? json.data?.summary;
       if (res.ok && summary) {
@@ -1513,7 +1520,7 @@ export default function TrustAssessorPage() {
           fetch(`/api/app-connectors?organizationId=${organizationId}`, {
             method: 'POST',
             credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
+            headers: authHeaders,
             body: JSON.stringify({
               app_id: 'trust-assessor',
               source_type: 'google_drive',
@@ -1525,11 +1532,19 @@ export default function TrustAssessorPage() {
               data_categories: ['school_attainment', 'year_group_data', 'fsm_counts', 'send_counts'],
               processing_purpose: 'Cross-referencing trust self-reported mid-year data against validated DfE outcomes for school improvement analysis',
             }),
-          }).then(res => res.json()).then(json => {
+          }).then(async (res) => {
+            const json = await res.json();
+            if (!res.ok) {
+              console.error('[Trust Assessor] Failed to save connector:', res.status, json);
+              return;
+            }
             const saved = Array.isArray(json) ? json[0] : json.data ?? json;
-            if (saved?.id) setConnector(saved);
-          }).catch(() => {
-            // Non-fatal — connector just won't persist
+            if (saved?.id) {
+              console.log('[Trust Assessor] Connector saved:', saved.id, saved.source_file_name);
+              setConnector(saved);
+            }
+          }).catch((err) => {
+            console.error('[Trust Assessor] Connector save error:', err);
           });
         }
       } catch (err) {
@@ -1602,7 +1617,7 @@ export default function TrustAssessorPage() {
                 <button
                   onClick={async () => {
                     if (connector?.id && organizationId) {
-                      await fetch(`/api/app-connectors?id=${connector.id}&organizationId=${organizationId}`, { method: 'DELETE', credentials: 'include' });
+                      await fetch(`/api/app-connectors?id=${connector.id}&organizationId=${organizationId}`, { method: 'DELETE', credentials: 'include', headers: authHeaders });
                     }
                     setParsed(null); setFileName(null); setConnector(null); setConnectorError(null);
                   }}
