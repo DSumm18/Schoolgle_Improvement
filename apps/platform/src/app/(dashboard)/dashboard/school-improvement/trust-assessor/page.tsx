@@ -8,6 +8,13 @@ import {
   Bar,
   LineChart,
   Line,
+  AreaChart,
+  Area,
+  RadarChart,
+  Radar,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -634,6 +641,462 @@ function SchoolDetailCard({ school, parsed }: { school: string; parsed: ParsedSp
   );
 }
 
+// ─── Phase 1: School Tab ──────────────────────────────────────────────────────
+
+const SUBJECT_COLORS = {
+  reading: "#3B82F6",
+  writing: "#EF4444",
+  maths: "#10B981",
+  combined: "#8B5CF6",
+};
+
+const FIELD_LABELS: Record<string, string> = {
+  r_are: "Reading %",
+  r_gd: "Reading GD",
+  w_are: "Writing %",
+  w_gd: "Writing GD",
+  m_are: "Maths %",
+  m_gd: "Maths GD",
+  c_are: "Combined %",
+  c_gd: "Combined GD",
+};
+
+function SchoolTab({ school, parsed }: { school: string; parsed: ParsedSpreadsheet }) {
+  const schoolData = parsed.data[school] ?? {};
+  const info = TRUST_SCHOOLS[school];
+
+  // ── Section A: Profile stats ──
+  let totalPupils = 0;
+  let totalFsm = 0;
+  let totalSend = 0;
+  let totalEhcp = 0;
+  for (const yg of YEAR_GROUPS) {
+    const d = schoolData[yg];
+    if (!d) continue;
+    if (d.cohort.number_in_cohort !== null) totalPupils += d.cohort.number_in_cohort;
+    if (d.cohort.number_fsm !== null) totalFsm += d.cohort.number_fsm;
+    if (d.cohort.number_send !== null) totalSend += d.cohort.number_send;
+    if (d.cohort.ehcp !== null) totalEhcp += d.cohort.ehcp;
+  }
+  const fsmPct = totalPupils > 0 ? Math.round((totalFsm / totalPupils) * 1000) / 10 : null;
+  const sendPct = totalPupils > 0 ? Math.round((totalSend / totalPupils) * 1000) / 10 : null;
+
+  // Trust averages for comparison
+  let trustTotalPupils = 0;
+  let trustTotalFsm = 0;
+  let trustTotalSend = 0;
+  for (const s of parsed.schools) {
+    for (const yg of YEAR_GROUPS) {
+      const d = parsed.data[s]?.[yg];
+      if (!d) continue;
+      if (d.cohort.number_in_cohort !== null) trustTotalPupils += d.cohort.number_in_cohort;
+      if (d.cohort.number_fsm !== null) trustTotalFsm += d.cohort.number_fsm;
+      if (d.cohort.number_send !== null) trustTotalSend += d.cohort.number_send;
+    }
+  }
+  const trustFsmPct = trustTotalPupils > 0 ? (trustTotalFsm / trustTotalPupils) * 100 : null;
+  const trustSendPct = trustTotalPupils > 0 ? (trustTotalSend / trustTotalPupils) * 100 : null;
+
+  // ── Section B: Radar chart (Y6 data) ──
+  const y6 = schoolData["Year 6"];
+  const radarData = y6
+    ? [
+        { subject: "Reading", school: y6.all_pupils.r_are ?? 0, trust: 0 },
+        { subject: "Writing", school: y6.all_pupils.w_are ?? 0, trust: 0 },
+        { subject: "Maths", school: y6.all_pupils.m_are ?? 0, trust: 0 },
+        { subject: "Combined", school: y6.all_pupils.c_are ?? 0, trust: 0 },
+      ]
+    : [];
+
+  // Compute trust averages for radar
+  if (radarData.length > 0) {
+    const sums = { r: 0, w: 0, m: 0, c: 0 };
+    let counts = { r: 0, w: 0, m: 0, c: 0 };
+    for (const s of parsed.schools) {
+      const sy6 = parsed.data[s]?.["Year 6"];
+      if (!sy6) continue;
+      if (sy6.all_pupils.r_are !== null && sy6.all_pupils.r_are !== undefined) { sums.r += sy6.all_pupils.r_are; counts.r++; }
+      if (sy6.all_pupils.w_are !== null && sy6.all_pupils.w_are !== undefined) { sums.w += sy6.all_pupils.w_are; counts.w++; }
+      if (sy6.all_pupils.m_are !== null && sy6.all_pupils.m_are !== undefined) { sums.m += sy6.all_pupils.m_are; counts.m++; }
+      if (sy6.all_pupils.c_are !== null && sy6.all_pupils.c_are !== undefined) { sums.c += sy6.all_pupils.c_are; counts.c++; }
+    }
+    radarData[0].trust = counts.r > 0 ? Math.round(sums.r / counts.r) : 0;
+    radarData[1].trust = counts.w > 0 ? Math.round(sums.w / counts.w) : 0;
+    radarData[2].trust = counts.m > 0 ? Math.round(sums.m / counts.m) : 0;
+    radarData[3].trust = counts.c > 0 ? Math.round(sums.c / counts.c) : 0;
+  }
+
+  // ── Section C: Year-group progression area chart ──
+  const progressionData = HEATMAP_YEAR_GROUPS.map((yg) => {
+    const d = schoolData[yg];
+    return {
+      yg: yg.replace("Year ", "Y"),
+      reading: d?.all_pupils.r_are ?? null,
+      writing: d?.all_pupils.w_are ?? null,
+      maths: d?.all_pupils.m_are ?? null,
+      combined: d?.all_pupils.c_are ?? null,
+    };
+  });
+
+  // Pipeline jump alerts
+  const pipelineAlerts: string[] = [];
+  for (let i = 1; i < HEATMAP_YEAR_GROUPS.length; i++) {
+    const prev = schoolData[HEATMAP_YEAR_GROUPS[i - 1]]?.all_pupils.c_are ?? null;
+    const curr = schoolData[HEATMAP_YEAR_GROUPS[i]]?.all_pupils.c_are ?? null;
+    if (prev !== null && curr !== null && Math.abs(curr - prev) > 15) {
+      pipelineAlerts.push(
+        `${HEATMAP_YEAR_GROUPS[i - 1].replace("Year ", "Y")} → ${HEATMAP_YEAR_GROUPS[i].replace("Year ", "Y")}: Combined jumps from ${prev}% to ${curr}% (${curr > prev ? "+" : ""}${Math.round(curr - prev)}pp)`
+      );
+    }
+  }
+
+  // ── Section D: Greater Depth bar chart ──
+  const gdData = HEATMAP_YEAR_GROUPS.map((yg) => {
+    const d = schoolData[yg];
+    return {
+      yg: yg.replace("Year ", "Y"),
+      "Reading GD": d?.all_pupils.r_gd ?? null,
+      "Writing GD": d?.all_pupils.w_gd ?? null,
+      "Maths GD": d?.all_pupils.m_gd ?? null,
+    };
+  });
+
+  const zeroGdWritingYgs = HEATMAP_YEAR_GROUPS.filter((yg) => {
+    const d = schoolData[yg];
+    return d && d.all_pupils.w_gd === 0;
+  });
+
+  // ── Section E: FSM gap grouped bar chart ──
+  const hasFsmData = HEATMAP_YEAR_GROUPS.some((yg) => {
+    const d = schoolData[yg];
+    return d && (Object.values(d.fsm6).some((v) => v !== null) || Object.values(d.not_fsm6).some((v) => v !== null));
+  });
+
+  const fsmGapData = HEATMAP_YEAR_GROUPS.map((yg) => {
+    const d = schoolData[yg];
+    return {
+      yg: yg.replace("Year ", "Y"),
+      "FSM6 Combined": d?.fsm6.c_are ?? null,
+      "Non-FSM Combined": d?.not_fsm6.c_are ?? null,
+      gap: d?.fsm6.c_are !== null && d?.fsm6.c_are !== undefined && d?.not_fsm6.c_are !== null && d?.not_fsm6.c_are !== undefined
+        ? Math.round((d.not_fsm6.c_are as number) - (d.fsm6.c_are as number))
+        : null,
+    };
+  });
+
+  // ── Section F: School-specific quality flags ──
+  const schoolFlags = parsed.qualityFlags.filter((f) => f.school === school);
+  // Missing year groups
+  const missingYgs = YEAR_GROUPS.filter((yg) => !schoolData[yg]);
+  // Zero GD across multiple year groups
+  const zeroGdW = HEATMAP_YEAR_GROUPS.filter((yg) => schoolData[yg]?.all_pupils.w_gd === 0);
+
+  // ── Section G: Key questions ──
+  const questions: { q: string; level: "red" | "amber" | "blue" }[] = [];
+
+  if (y6 && y6.all_pupils.c_are !== null && y6.all_pupils.c_are !== undefined && y6.all_pupils.c_are < 50) {
+    questions.push({ q: `Y6 Combined at ${y6.all_pupils.c_are}% — what interventions are in place for this year group?`, level: "red" });
+  }
+  if (zeroGdWritingYgs.length >= 3) {
+    questions.push({ q: `Zero Greater Depth in Writing across ${zeroGdWritingYgs.length} year groups — is challenge sufficient for higher-attaining pupils?`, level: "red" });
+  } else if (zeroGdWritingYgs.length >= 1) {
+    questions.push({ q: `Zero Greater Depth in Writing in ${zeroGdWritingYgs.map((yg) => yg.replace("Year ", "Y")).join(", ")} — what does writing moderation show?`, level: "amber" });
+  }
+  for (const alert of pipelineAlerts) {
+    questions.push({ q: `${alert} — what explains this shift between year groups?`, level: "amber" });
+  }
+  if (fsmPct !== null && trustFsmPct !== null && fsmPct > trustFsmPct + 5) {
+    questions.push({ q: `FSM at ${fsmPct}% (trust average ${Math.round(trustFsmPct)}%) — how is Pupil Premium funding targeted?`, level: "amber" });
+  }
+  const y1 = schoolData["Year 1"];
+  if (y1 && y1.all_pupils.phonics !== null && y1.all_pupils.phonics !== undefined && y1.all_pupils.phonics < 70) {
+    questions.push({ q: `Y1 Phonics at ${y1.all_pupils.phonics}% — below national average (79%). What phonics programme is in use?`, level: "red" });
+  }
+  if (questions.length === 0) {
+    questions.push({ q: "No specific concerns flagged for this school based on the submitted data.", level: "blue" });
+  }
+
+  return (
+    <div className="space-y-8">
+
+      {/* Section A: School Profile Header */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="bg-white border border-gray-200 rounded-xl p-5"
+      >
+        <div className="flex items-start gap-4 mb-4">
+          <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
+            <School size={18} className="text-blue-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-gray-900 text-lg">{school}</h3>
+            {info && <p className="text-sm text-gray-500">{info.name}</p>}
+          </div>
+          {info?.urn && <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded">URN {info.urn}</span>}
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="bg-gray-50 rounded-lg p-3 text-center">
+            <div className="text-2xl font-bold text-gray-900">{totalPupils > 0 ? totalPupils : "—"}</div>
+            <div className="text-xs text-gray-500 mt-0.5">Total Pupils</div>
+          </div>
+          <div className="bg-rose-50 rounded-lg p-3 text-center">
+            <div className="text-2xl font-bold text-rose-700">{fsmPct !== null ? `${fsmPct}%` : "—"}</div>
+            <div className="text-xs text-rose-600 mt-0.5">FSM ({totalFsm} pupils)</div>
+            {trustFsmPct !== null && fsmPct !== null && (
+              <div className={`text-xs mt-1 font-medium ${fsmPct > trustFsmPct ? "text-rose-500" : "text-emerald-600"}`}>
+                {fsmPct > trustFsmPct ? `+${Math.round(fsmPct - trustFsmPct)}pp above` : `${Math.round(trustFsmPct - fsmPct)}pp below`} trust avg
+              </div>
+            )}
+          </div>
+          <div className="bg-purple-50 rounded-lg p-3 text-center">
+            <div className="text-2xl font-bold text-purple-700">{sendPct !== null ? `${sendPct}%` : "—"}</div>
+            <div className="text-xs text-purple-600 mt-0.5">SEND ({totalSend} pupils)</div>
+            {trustSendPct !== null && sendPct !== null && (
+              <div className={`text-xs mt-1 font-medium ${sendPct > trustSendPct ? "text-purple-500" : "text-emerald-600"}`}>
+                {sendPct > trustSendPct ? `+${Math.round(sendPct - trustSendPct)}pp above` : `${Math.round(trustSendPct - sendPct)}pp below`} trust avg
+              </div>
+            )}
+          </div>
+          <div className="bg-indigo-50 rounded-lg p-3 text-center">
+            <div className="text-2xl font-bold text-indigo-700">{totalEhcp > 0 ? totalEhcp : "—"}</div>
+            <div className="text-xs text-indigo-600 mt-0.5">EHCPs</div>
+          </div>
+        </div>
+
+        {/* ARE/GD legend */}
+        <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-400 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2">
+          <span className="font-medium text-gray-500">Glossary:</span>
+          <span><span className="font-medium text-gray-600">ARE</span> = Age Related Expectations (% at expected standard)</span>
+          <span><span className="font-medium text-gray-600">GD</span> = Greater Depth (% exceeding expected standard)</span>
+        </div>
+      </motion.div>
+
+      {/* Section B: Radar Chart */}
+      {radarData.length > 0 && (y6?.all_pupils.r_are !== null || y6?.all_pupils.c_are !== null) && (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.05 }}
+          className="bg-white border border-gray-200 rounded-xl p-5"
+        >
+          <h4 className="text-sm font-semibold text-gray-700 mb-1">Y6 Subject Performance vs Trust Average</h4>
+          <p className="text-xs text-gray-400 mb-4">Blue = this school, grey = trust average (ARE %)</p>
+          <ResponsiveContainer width="100%" height={260}>
+            <RadarChart data={radarData} margin={{ top: 10, right: 30, left: 30, bottom: 10 }}>
+              <PolarGrid stroke="#e5e7eb" />
+              <PolarAngleAxis dataKey="subject" tick={{ fontSize: 12, fill: "#6B7280" }} />
+              <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 10, fill: "#9CA3AF" }} />
+              <Radar name="Trust Avg" dataKey="trust" stroke="#D1D5DB" fill="#D1D5DB" fillOpacity={0.3} strokeWidth={2} />
+              <Radar name={school} dataKey="school" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.25} strokeWidth={2} dot={{ r: 4, fill: "#3B82F6" }} />
+              <Legend wrapperStyle={{ fontSize: "11px" }} />
+              <Tooltip formatter={(val) => [`${val}%`, ""]} />
+            </RadarChart>
+          </ResponsiveContainer>
+        </motion.div>
+      )}
+
+      {/* Section C: Year Group Progression */}
+      {progressionData.some((d) => d.reading !== null || d.writing !== null || d.maths !== null) && (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+          className="bg-white border border-gray-200 rounded-xl p-5"
+        >
+          <h4 className="text-sm font-semibold text-gray-700 mb-1">Year Group Progression (ARE %)</h4>
+          <p className="text-xs text-gray-400 mb-4">Reading, Writing, and Maths across Y1–Y6</p>
+          <ResponsiveContainer width="100%" height={220}>
+            <AreaChart data={progressionData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+              <defs>
+                <linearGradient id={`gradR-${school}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.02} />
+                </linearGradient>
+                <linearGradient id={`gradW-${school}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#EF4444" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#EF4444" stopOpacity={0.02} />
+                </linearGradient>
+                <linearGradient id={`gradM-${school}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#10B981" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#10B981" stopOpacity={0.02} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis dataKey="yg" tick={{ fontSize: 11 }} />
+              <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} />
+              <Tooltip formatter={(val) => [`${val}%`, ""]} />
+              <Legend wrapperStyle={{ fontSize: "11px" }} />
+              <Area type="monotone" dataKey="reading" name="Reading" stroke={SUBJECT_COLORS.reading} fill={`url(#gradR-${school})`} strokeWidth={2} dot={{ r: 3 }} connectNulls />
+              <Area type="monotone" dataKey="writing" name="Writing" stroke={SUBJECT_COLORS.writing} fill={`url(#gradW-${school})`} strokeWidth={2} dot={{ r: 3 }} connectNulls />
+              <Area type="monotone" dataKey="maths" name="Maths" stroke={SUBJECT_COLORS.maths} fill={`url(#gradM-${school})`} strokeWidth={2} dot={{ r: 3 }} connectNulls />
+            </AreaChart>
+          </ResponsiveContainer>
+
+          {/* Pipeline alerts */}
+          {pipelineAlerts.length > 0 && (
+            <div className="mt-3 space-y-1">
+              {pipelineAlerts.map((alert, i) => (
+                <div key={i} className="flex items-start gap-2 text-xs bg-amber-50 border border-amber-200 text-amber-800 rounded-lg px-3 py-2">
+                  <AlertTriangle size={12} className="flex-shrink-0 mt-0.5" />
+                  <span><span className="font-semibold">Pipeline Alert:</span> {alert}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </motion.div>
+      )}
+
+      {/* Section D: Greater Depth Analysis */}
+      {gdData.some((d) => d["Reading GD"] !== null || d["Writing GD"] !== null || d["Maths GD"] !== null) && (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.15 }}
+          className="bg-white border border-gray-200 rounded-xl p-5"
+        >
+          <h4 className="text-sm font-semibold text-gray-700 mb-1">Greater Depth (GD %) by Year Group</h4>
+          <p className="text-xs text-gray-400 mb-4">Percentage of pupils exceeding age-related expectations</p>
+          <ResponsiveContainer width="100%" height={180}>
+            <BarChart data={gdData} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
+              <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10 }} />
+              <YAxis type="category" dataKey="yg" tick={{ fontSize: 11 }} width={28} />
+              <Tooltip formatter={(val) => [`${val}%`, ""]} />
+              <Legend wrapperStyle={{ fontSize: "11px" }} />
+              <Bar dataKey="Reading GD" fill={SUBJECT_COLORS.reading} radius={[0, 3, 3, 0]} />
+              <Bar dataKey="Writing GD" fill={SUBJECT_COLORS.writing} radius={[0, 3, 3, 0]} />
+              <Bar dataKey="Maths GD" fill={SUBJECT_COLORS.maths} radius={[0, 3, 3, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+
+          {zeroGdW.length > 0 && (
+            <div className="mt-3 flex items-start gap-2 text-xs bg-red-50 border border-red-200 text-red-700 rounded-lg px-3 py-2">
+              <AlertCircle size={12} className="flex-shrink-0 mt-0.5" />
+              <span>
+                <span className="font-semibold">{zeroGdW.length} of {HEATMAP_YEAR_GROUPS.length} year groups report zero Greater Depth in Writing</span>
+                {" "}({zeroGdW.map((yg) => yg.replace("Year ", "Y")).join(", ")}).
+                {" "}What is the school&apos;s strategy for extending higher-attaining pupils?
+              </span>
+            </div>
+          )}
+        </motion.div>
+      )}
+
+      {/* Section E: FSM6 vs Non-FSM Gap */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.2 }}
+        className="bg-white border border-gray-200 rounded-xl p-5"
+      >
+        <h4 className="text-sm font-semibold text-gray-700 mb-1">FSM6 vs Non-FSM Gap (Combined ARE %)</h4>
+        <p className="text-xs text-gray-400 mb-4">Pupil Premium gap by year group</p>
+
+        {hasFsmData ? (
+          <>
+            <ResponsiveContainer width="100%" height={180}>
+              <BarChart data={fsmGapData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis dataKey="yg" tick={{ fontSize: 11 }} />
+                <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} />
+                <Tooltip formatter={(val) => [`${val}%`, ""]} />
+                <Legend wrapperStyle={{ fontSize: "11px" }} />
+                <Bar dataKey="FSM6 Combined" fill="#FB7185" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="Non-FSM Combined" fill="#34D399" radius={[3, 3, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {fsmGapData.filter((d) => d.gap !== null).map((d) => (
+                <span
+                  key={d.yg}
+                  className={`text-xs px-2 py-0.5 rounded-full font-medium ${(d.gap as number) > 20 ? "bg-red-100 text-red-700" : (d.gap as number) > 10 ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"}`}
+                >
+                  {d.yg}: {d.gap}pp gap
+                </span>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="flex items-start gap-2 text-xs bg-amber-50 border border-amber-200 text-amber-700 rounded-lg px-3 py-3">
+            <AlertTriangle size={13} className="flex-shrink-0 mt-0.5" />
+            <span>No FSM breakdown submitted for this school. Unable to calculate Pupil Premium gap.</span>
+          </div>
+        )}
+      </motion.div>
+
+      {/* Section F: Data Quality for this school */}
+      {(schoolFlags.length > 0 || missingYgs.length > 0 || zeroGdW.length >= 2) && (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.25 }}
+          className="bg-white border border-gray-200 rounded-xl p-5"
+        >
+          <h4 className="text-sm font-semibold text-gray-700 mb-3">Data Quality Flags for {school}</h4>
+          <div className="space-y-2">
+            {missingYgs.map((yg) => (
+              <div key={yg} className="flex items-start gap-2 text-xs bg-amber-50 border border-amber-100 text-amber-700 rounded-lg px-3 py-2">
+                <AlertTriangle size={12} className="flex-shrink-0 mt-0.5" />
+                <span>No data submitted for {yg}</span>
+              </div>
+            ))}
+            {zeroGdW.length >= 2 && (
+              <div className="flex items-start gap-2 text-xs bg-amber-50 border border-amber-100 text-amber-700 rounded-lg px-3 py-2">
+                <AlertTriangle size={12} className="flex-shrink-0 mt-0.5" />
+                <span>Zero GD in Writing reported for {zeroGdW.length} year groups — check moderation records</span>
+              </div>
+            )}
+            {schoolFlags.map((flag, i) => (
+              <div key={i} className={`flex items-start gap-2 text-xs rounded-lg px-3 py-2 border ${flag.severity === "error" ? "bg-red-50 border-red-200 text-red-700" : "bg-amber-50 border-amber-100 text-amber-700"}`}>
+                {flag.severity === "error" ? <AlertCircle size={12} className="flex-shrink-0 mt-0.5" /> : <AlertTriangle size={12} className="flex-shrink-0 mt-0.5" />}
+                <span>
+                  {flag.yearGroup && <span className="font-medium">{flag.yearGroup} / </span>}
+                  {flag.field && <span className="font-medium">{FIELD_LABELS[flag.field] ?? flag.field}: </span>}
+                  {flag.issue}
+                </span>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Section G: Key Questions */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.3 }}
+        className="bg-white border border-gray-200 rounded-xl p-5"
+      >
+        <h4 className="text-sm font-semibold text-gray-700 mb-3">Key Questions for {school}</h4>
+        <ul className="space-y-2">
+          {questions.map((item, i) => {
+            const colorClass = item.level === "red"
+              ? "bg-red-50 border-red-200 text-red-800"
+              : item.level === "amber"
+              ? "bg-amber-50 border-amber-200 text-amber-800"
+              : "bg-blue-50 border-blue-200 text-blue-700";
+            const iconClass = item.level === "red"
+              ? <AlertCircle size={13} className="flex-shrink-0 mt-0.5 text-red-500" />
+              : item.level === "amber"
+              ? <AlertTriangle size={13} className="flex-shrink-0 mt-0.5 text-amber-500" />
+              : <Info size={13} className="flex-shrink-0 mt-0.5 text-blue-400" />;
+            return (
+              <li key={i} className={`flex items-start gap-2 text-xs px-3 py-2 rounded-lg border ${colorClass}`}>
+                {iconClass}
+                <span>{item.q}</span>
+              </li>
+            );
+          })}
+        </ul>
+      </motion.div>
+
+    </div>
+  );
+}
+
 // ─── Phase 1: Trust Insights ──────────────────────────────────────────────────
 
 function TrustInsights({ parsed }: { parsed: ParsedSpreadsheet }) {
@@ -913,6 +1376,7 @@ export default function TrustAssessorPage() {
   const [dfeLoading, setDfeLoading] = useState(false);
   const [dfeError, setDfeError] = useState<string | null>(null);
   const [showAllFlags, setShowAllFlags] = useState(false);
+  const [activeSchoolTab, setActiveSchoolTab] = useState<string>("overview");
   const [grooveHouseStats, setGrooveHouseStats] = useState<{ totalPupils: number; trackablePupils: number } | null>(null);
   const [showDrivePicker, setShowDrivePicker] = useState(false);
   const [connector, setConnector] = useState<AppConnector | null>(null);
@@ -1277,25 +1741,63 @@ export default function TrustAssessorPage() {
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-sm font-semibold text-gray-700">ARE % — Heatmap by Subject</h3>
-                  <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded">Click a school name to expand its detail card below</span>
+                  <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded">Click a school name to jump to its tab</span>
                 </div>
                 <SubjectHeatmap
                   parsed={parsed}
                   onSchoolClick={(school) => {
-                    const el = document.getElementById(`school-card-${school}`);
+                    setActiveSchoolTab(school);
+                    const el = document.getElementById("school-tabs-section");
                     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
                   }}
                 />
               </div>
 
-              {/* ── 3. Per-School Detail Cards ── */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-700 mb-3">Per-School Detail</h3>
-                <div className="space-y-2">
+              {/* ── 3. School Tabs ── */}
+              <div id="school-tabs-section">
+                {/* Tab bar */}
+                <div className="flex items-center gap-1 overflow-x-auto pb-1 mb-4 border-b border-gray-200">
+                  <button
+                    onClick={() => setActiveSchoolTab("overview")}
+                    className={`flex-shrink-0 px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${activeSchoolTab === "overview" ? "bg-white border border-b-white border-gray-200 -mb-px text-blue-700" : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"}`}
+                  >
+                    Trust Overview
+                  </button>
                   {parsed.schools.map((school) => (
-                    <SchoolDetailCard key={school} school={school} parsed={parsed} />
+                    <button
+                      key={school}
+                      onClick={() => setActiveSchoolTab(school)}
+                      className={`flex-shrink-0 px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${activeSchoolTab === school ? "bg-white border border-b-white border-gray-200 -mb-px text-blue-700" : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"}`}
+                    >
+                      {school}
+                    </button>
                   ))}
                 </div>
+
+                {/* Tab content */}
+                <AnimatePresence mode="wait">
+                  {activeSchoolTab === "overview" ? (
+                    <motion.div
+                      key="overview"
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <TrustInsights parsed={parsed} />
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key={activeSchoolTab}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <SchoolTab school={activeSchoolTab} parsed={parsed} />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
               {/* ── 4. Data Quality Flags ── */}
@@ -1385,9 +1887,6 @@ export default function TrustAssessorPage() {
                   </div>
                 );
               })()}
-
-              {/* ── 5. Trust-Wide Insights & Questions ── */}
-              <TrustInsights parsed={parsed} />
 
               {/* ── 6. Data Source Label ── */}
               <div className="flex items-center gap-2 text-xs text-gray-400 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2">
