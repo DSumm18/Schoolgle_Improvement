@@ -310,6 +310,122 @@ function StatCard({ label, value, sub }: { label: string; value: string | number
   );
 }
 
+// ─── Traffic Light Summary Grid ──────────────────────────────────────────────
+
+function TrafficLightGrid({ parsed, onSchoolClick }: { parsed: ParsedSpreadsheet; onSchoolClick: (school: string) => void }) {
+  // Sort schools worst to best by Y6 Combined
+  const sortedSchools = [...parsed.schools].sort((a, b) => {
+    const pctA = parsed.data[a]?.["Year 6"]?.all_pupils.c_are ?? -1;
+    const pctB = parsed.data[b]?.["Year 6"]?.all_pupils.c_are ?? -1;
+    return pctA - pctB;
+  });
+
+  const getCircleColor = (pct: number | null, thresholdGreen = 70, thresholdAmber = 50): string => {
+    if (pct === null) return "bg-gray-200";
+    if (pct >= thresholdGreen) return "bg-emerald-500";
+    if (pct >= thresholdAmber) return "bg-amber-400";
+    return "bg-red-500";
+  };
+
+  const getGdWritingColor = (school: string): string => {
+    const zeroCount = HEATMAP_YEAR_GROUPS.filter((yg) => parsed.data[school]?.[yg]?.all_pupils.w_gd === 0).length;
+    if (zeroCount >= 3) return "bg-red-500";
+    if (zeroCount >= 1) return "bg-amber-400";
+    return "bg-emerald-500";
+  };
+
+  const getPipelineColor = (school: string): string => {
+    let maxDrop = 0;
+    for (let i = 1; i < HEATMAP_YEAR_GROUPS.length; i++) {
+      const prev = parsed.data[school]?.[HEATMAP_YEAR_GROUPS[i - 1]]?.all_pupils.c_are ?? null;
+      const curr = parsed.data[school]?.[HEATMAP_YEAR_GROUPS[i]]?.all_pupils.c_are ?? null;
+      if (prev !== null && curr !== null) {
+        const drop = prev - curr;
+        if (drop > maxDrop) maxDrop = drop;
+      }
+    }
+    if (maxDrop > 15) return "bg-red-500";
+    if (maxDrop > 10) return "bg-amber-400";
+    return "bg-emerald-500";
+  };
+
+  const cols = [
+    { label: "Y6 Reading", key: "r_are" as keyof SubjectScores },
+    { label: "Y6 Writing", key: "w_are" as keyof SubjectScores },
+    { label: "Y6 Maths", key: "m_are" as keyof SubjectScores },
+    { label: "Y6 Combined", key: "c_are" as keyof SubjectScores },
+  ];
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full border-collapse">
+        <thead>
+          <tr>
+            <th className="text-left py-3 pr-4 text-sm font-semibold text-gray-700 min-w-[120px]">School</th>
+            {cols.map((c) => (
+              <th key={c.key} className="text-center py-3 px-3 text-xs font-semibold text-gray-600 whitespace-nowrap">{c.label}</th>
+            ))}
+            <th className="text-center py-3 px-3 text-xs font-semibold text-gray-600 whitespace-nowrap">GD Writing</th>
+            <th className="text-center py-3 px-3 text-xs font-semibold text-gray-600 whitespace-nowrap">Pipeline</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sortedSchools.map((school) => {
+            const y6 = parsed.data[school]?.["Year 6"]?.all_pupils ?? {};
+            return (
+              <tr key={school} className="border-t border-gray-100 hover:bg-gray-50 transition-colors">
+                <td className="py-3 pr-4">
+                  <button
+                    onClick={() => onSchoolClick(school)}
+                    className="text-sm font-bold text-gray-900 hover:text-blue-600 transition-colors"
+                  >
+                    {school}
+                  </button>
+                  {TRUST_SCHOOLS[school] && (
+                    <div className="text-xs text-gray-400 leading-tight">{TRUST_SCHOOLS[school].name.split(" ").slice(0, 3).join(" ")}</div>
+                  )}
+                </td>
+                {cols.map((c) => {
+                  const pct = (y6[c.key] as number | null | undefined) ?? null;
+                  return (
+                    <td key={c.key} className="text-center py-3 px-3">
+                      <div className="flex flex-col items-center gap-1">
+                        <div className={`w-8 h-8 rounded-full ${getCircleColor(pct)} flex items-center justify-center`} title={pct !== null ? `${pct}%` : "No data"} />
+                        <span className="text-xs font-semibold text-gray-700">{pct !== null ? `${pct}%` : "—"}</span>
+                      </div>
+                    </td>
+                  );
+                })}
+                <td className="text-center py-3 px-3">
+                  <div className="flex flex-col items-center gap-1">
+                    <div className={`w-8 h-8 rounded-full ${getGdWritingColor(school)}`} />
+                    <span className="text-xs text-gray-500">
+                      {HEATMAP_YEAR_GROUPS.filter((yg) => parsed.data[school]?.[yg]?.all_pupils.w_gd === 0).length} zeros
+                    </span>
+                  </div>
+                </td>
+                <td className="text-center py-3 px-3">
+                  <div className="flex flex-col items-center gap-1">
+                    <div className={`w-8 h-8 rounded-full ${getPipelineColor(school)}`} />
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      <div className="flex flex-wrap items-center gap-4 mt-3 text-xs text-gray-500">
+        <span className="font-medium">Key:</span>
+        <span className="flex items-center gap-1.5"><span className="w-3.5 h-3.5 rounded-full bg-emerald-500 inline-block" /> 70%+ (Green)</span>
+        <span className="flex items-center gap-1.5"><span className="w-3.5 h-3.5 rounded-full bg-amber-400 inline-block" /> 50–69% (Amber)</span>
+        <span className="flex items-center gap-1.5"><span className="w-3.5 h-3.5 rounded-full bg-red-500 inline-block" /> Below 50% (Red)</span>
+        <span className="flex items-center gap-1.5"><span className="w-3.5 h-3.5 rounded-full bg-gray-200 inline-block" /> No data</span>
+        <span className="text-gray-400 ml-2">Schools sorted worst to best by Y6 Combined. Click school name to drill down.</span>
+      </div>
+    </div>
+  );
+}
+
 // ─── Phase 1: Subject Heatmap (tabbed) ───────────────────────────────────────
 
 type HeatmapSubject = "combined" | "reading" | "writing" | "maths";
@@ -554,13 +670,13 @@ function SchoolDetailCard({ school, parsed }: { school: string; parsed: ParsedSp
               {/* Bar chart */}
               {barData.length > 0 && (
                 <div>
-                  <div className="text-xs font-semibold text-gray-600 mb-2">Combined ARE % by Year Group</div>
-                  <ResponsiveContainer width="100%" height={130}>
-                    <BarChart data={barData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                  <div className="text-sm font-semibold text-gray-700 mb-2">Combined ARE % by Year Group</div>
+                  <ResponsiveContainer width="100%" height={150}>
+                    <BarChart data={barData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                      <XAxis dataKey="yg" tick={{ fontSize: 10 }} />
-                      <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} />
-                      <Tooltip formatter={(val) => [`${val}%`, ""]} />
+                      <XAxis dataKey="yg" tick={{ fontSize: 12 }} />
+                      <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} />
+                      <Tooltip formatter={(val) => [`${val}%`, ""]} contentStyle={{ fontSize: "13px" }} />
                       <Bar dataKey="combined" name="Combined" fill="#3B82F6" radius={[3, 3, 0, 0]} />
                       <ReferenceLine y={65} stroke="#9CA3AF" strokeDasharray="4 4" />
                     </BarChart>
@@ -1167,40 +1283,23 @@ function SchoolTab({ school, parsed, authToken }: { school: string; parsed: Pars
           transition={{ duration: 0.3, delay: 0.1 }}
           className="bg-white border border-gray-200 rounded-xl p-5"
         >
-          <h4 className="text-sm font-semibold text-gray-700 mb-0.5">Year Group Progression (ARE %)</h4>
-          <p className="text-xs text-gray-400 mb-4">Reading, Writing, and Maths across Y1–Y6 — shows whether attainment is consistent or fluctuating through the school</p>
-          <ResponsiveContainer width="100%" height={240}>
-            <AreaChart data={progressionData} margin={{ top: 10, right: 15, left: -20, bottom: 5 }}>
-              <defs>
-                <linearGradient id={`gradR-${school}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.45} />
-                  <stop offset="60%" stopColor="#3B82F6" stopOpacity={0.12} />
-                  <stop offset="100%" stopColor="#3B82F6" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id={`gradW-${school}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#EF4444" stopOpacity={0.45} />
-                  <stop offset="60%" stopColor="#EF4444" stopOpacity={0.12} />
-                  <stop offset="100%" stopColor="#EF4444" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id={`gradM-${school}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#10B981" stopOpacity={0.45} />
-                  <stop offset="60%" stopColor="#10B981" stopOpacity={0.12} />
-                  <stop offset="100%" stopColor="#10B981" stopOpacity={0} />
-                </linearGradient>
-              </defs>
+          <h4 className="text-base font-semibold text-gray-800 mb-0.5">Year Group Progression (ARE %)</h4>
+          <p className="text-sm text-gray-500 mb-4">Reading, Writing, and Maths across Y1–Y6 — shows whether attainment is consistent or fluctuating through the school</p>
+          <ResponsiveContainer width="100%" height={280}>
+            <LineChart data={progressionData} margin={{ top: 10, right: 30, left: -10, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
-              <XAxis dataKey="yg" tick={{ fontSize: 11, fill: "#6B7280" }} axisLine={false} tickLine={false} />
-              <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: "#9CA3AF" }} axisLine={false} tickLine={false} />
-              <ReferenceLine y={65} stroke="#D1D5DB" strokeDasharray="4 4" label={{ value: "65%", fontSize: 9, fill: "#9CA3AF", position: "right" }} />
+              <XAxis dataKey="yg" tick={{ fontSize: 12, fill: "#4B5563" }} axisLine={false} tickLine={false} />
+              <YAxis domain={[0, 100]} tick={{ fontSize: 12, fill: "#6B7280" }} axisLine={false} tickLine={false} />
+              <ReferenceLine y={65} stroke="#D1D5DB" strokeDasharray="4 4" label={{ value: "National 65%", fontSize: 11, fill: "#9CA3AF", position: "right" }} />
               <Tooltip
                 formatter={(val, name) => [`${val}%`, name]}
-                contentStyle={{ fontSize: "12px", borderRadius: "8px", border: "1px solid #E2E8F0", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}
+                contentStyle={{ fontSize: "13px", borderRadius: "8px", border: "1px solid #E2E8F0", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}
               />
-              <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "8px" }} />
-              <Area type="monotone" dataKey="reading" name="Reading" stroke={SUBJECT_COLORS.reading} fill={`url(#gradR-${school})`} strokeWidth={2.5} dot={{ r: 4, fill: SUBJECT_COLORS.reading, strokeWidth: 0 }} activeDot={{ r: 6 }} connectNulls />
-              <Area type="monotone" dataKey="writing" name="Writing" stroke={SUBJECT_COLORS.writing} fill={`url(#gradW-${school})`} strokeWidth={2.5} dot={{ r: 4, fill: SUBJECT_COLORS.writing, strokeWidth: 0 }} activeDot={{ r: 6 }} connectNulls />
-              <Area type="monotone" dataKey="maths" name="Maths" stroke={SUBJECT_COLORS.maths} fill={`url(#gradM-${school})`} strokeWidth={2.5} dot={{ r: 4, fill: SUBJECT_COLORS.maths, strokeWidth: 0 }} activeDot={{ r: 6 }} connectNulls />
-            </AreaChart>
+              <Legend wrapperStyle={{ fontSize: "13px", paddingTop: "8px" }} />
+              <Line type="monotone" dataKey="reading" name="Reading" stroke={SUBJECT_COLORS.reading} strokeWidth={2.5} dot={{ r: 5, fill: SUBJECT_COLORS.reading, strokeWidth: 0 }} activeDot={{ r: 7 }} connectNulls />
+              <Line type="monotone" dataKey="writing" name="Writing" stroke={SUBJECT_COLORS.writing} strokeWidth={2.5} dot={{ r: 5, fill: SUBJECT_COLORS.writing, strokeWidth: 0 }} activeDot={{ r: 7 }} connectNulls />
+              <Line type="monotone" dataKey="maths" name="Maths" stroke={SUBJECT_COLORS.maths} strokeWidth={2.5} dot={{ r: 5, fill: SUBJECT_COLORS.maths, strokeWidth: 0 }} activeDot={{ r: 7 }} connectNulls />
+            </LineChart>
           </ResponsiveContainer>
 
           {/* Pipeline alerts */}
@@ -1222,7 +1321,7 @@ function SchoolTab({ school, parsed, authToken }: { school: string; parsed: Pars
         </motion.div>
       )}
 
-      {/* Section D: Greater Depth Analysis */}
+      {/* Section D: Greater Depth Analysis — Dot Plot */}
       {gdData.some((d) => d["Reading GD"] !== null || d["Writing GD"] !== null || d["Maths GD"] !== null) && (
         <motion.div
           initial={{ opacity: 0, y: 12 }}
@@ -1230,20 +1329,53 @@ function SchoolTab({ school, parsed, authToken }: { school: string; parsed: Pars
           transition={{ duration: 0.3, delay: 0.15 }}
           className="bg-white border border-gray-200 rounded-xl p-5"
         >
-          <h4 className="text-sm font-semibold text-gray-700 mb-1">Greater Depth (GD %) by Year Group</h4>
-          <p className="text-xs text-gray-400 mb-4">Percentage of pupils exceeding age-related expectations</p>
-          <ResponsiveContainer width="100%" height={180}>
-            <BarChart data={gdData} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
-              <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10 }} />
-              <YAxis type="category" dataKey="yg" tick={{ fontSize: 11 }} width={28} />
-              <Tooltip formatter={(val) => [`${val}%`, ""]} />
-              <Legend wrapperStyle={{ fontSize: "11px" }} />
-              <Bar dataKey="Reading GD" fill={SUBJECT_COLORS.reading} radius={[0, 3, 3, 0]} />
-              <Bar dataKey="Writing GD" fill={SUBJECT_COLORS.writing} radius={[0, 3, 3, 0]} />
-              <Bar dataKey="Maths GD" fill={SUBJECT_COLORS.maths} radius={[0, 3, 3, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          <h4 className="text-base font-semibold text-gray-800 mb-1">Greater Depth (GD %) by Year Group</h4>
+          <p className="text-sm text-gray-500 mb-4">Percentage of pupils exceeding age-related expectations — dots in red indicate 0%</p>
+          {/* Dot plot rendered as a custom table for maximum clarity */}
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr>
+                  <th className="text-left py-2 pr-3 text-xs font-semibold text-gray-500 w-12">Year</th>
+                  <th className="text-center py-2 px-3 text-xs font-semibold text-gray-500" style={{ color: SUBJECT_COLORS.reading }}>Reading GD</th>
+                  <th className="text-center py-2 px-3 text-xs font-semibold text-gray-500" style={{ color: SUBJECT_COLORS.writing }}>Writing GD</th>
+                  <th className="text-center py-2 px-3 text-xs font-semibold text-gray-500" style={{ color: SUBJECT_COLORS.maths }}>Maths GD</th>
+                </tr>
+              </thead>
+              <tbody>
+                {gdData.map((row) => (
+                  <tr key={row.yg} className="border-t border-gray-100">
+                    <td className="py-3 pr-3 text-sm font-semibold text-gray-700">{row.yg}</td>
+                    {(["Reading GD", "Writing GD", "Maths GD"] as const).map((subject) => {
+                      const pct = row[subject] as number | null;
+                      const isZero = pct === 0;
+                      const color = subject === "Reading GD" ? SUBJECT_COLORS.reading : subject === "Writing GD" ? SUBJECT_COLORS.writing : SUBJECT_COLORS.maths;
+                      return (
+                        <td key={subject} className="text-center py-3 px-3">
+                          <div className="flex flex-col items-center gap-1.5">
+                            <div
+                              className="rounded-full border-2 flex items-center justify-center"
+                              style={{
+                                width: pct !== null && pct > 0 ? Math.max(20, Math.min(40, 20 + pct * 0.5)) : 20,
+                                height: pct !== null && pct > 0 ? Math.max(20, Math.min(40, 20 + pct * 0.5)) : 20,
+                                backgroundColor: isZero ? "#EF4444" : pct !== null ? color : "transparent",
+                                borderColor: isZero ? "#EF4444" : pct !== null ? color : "#D1D5DB",
+                                opacity: pct !== null ? 0.85 : 0.3,
+                              }}
+                            />
+                            <span className={`text-xs font-semibold ${isZero ? "text-red-600" : pct !== null ? "text-gray-700" : "text-gray-300"}`}>
+                              {pct !== null ? `${pct}%` : "—"}
+                            </span>
+                          </div>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-xs text-gray-400 mt-2">Dot size scales with percentage. Red = 0% GD — needs attention.</p>
 
           {zeroGdW.length > 0 && (
             <div className="mt-3 flex items-start gap-2 text-xs bg-red-50 border border-red-200 text-red-700 rounded-lg px-3 py-2">
@@ -1263,38 +1395,82 @@ function SchoolTab({ school, parsed, authToken }: { school: string; parsed: Pars
         </motion.div>
       )}
 
-      {/* Section E: FSM6 vs Non-FSM Gap */}
+      {/* Section E: FSM6 vs Non-FSM Gap — Dumbbell Chart */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: 0.2 }}
         className="bg-white border border-gray-200 rounded-xl p-5"
       >
-        <h4 className="text-sm font-semibold text-gray-700 mb-1">FSM6 vs Non-FSM Gap (Combined ARE %)</h4>
-        <p className="text-xs text-gray-400 mb-4">Pupil Premium gap by year group</p>
+        <h4 className="text-base font-semibold text-gray-800 mb-1">FSM6 vs Non-FSM Gap (Combined ARE %)</h4>
+        <p className="text-sm text-gray-500 mb-4">Pupil Premium gap by year group — line length shows the gap in percentage points</p>
 
         {hasFsmData ? (
           <>
-            <ResponsiveContainer width="100%" height={180}>
-              <BarChart data={fsmGapData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="yg" tick={{ fontSize: 11 }} />
-                <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} />
-                <Tooltip formatter={(val) => [`${val}%`, ""]} />
-                <Legend wrapperStyle={{ fontSize: "11px" }} />
-                <Bar dataKey="FSM6 Combined" fill="#FB7185" radius={[3, 3, 0, 0]} />
-                <Bar dataKey="Non-FSM Combined" fill="#34D399" radius={[3, 3, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {fsmGapData.filter((d) => d.gap !== null).map((d) => (
-                <span
-                  key={d.yg}
-                  className={`text-xs px-2 py-0.5 rounded-full font-medium ${(d.gap as number) > 20 ? "bg-red-100 text-red-700" : (d.gap as number) > 10 ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"}`}
-                >
-                  {d.yg}: {d.gap}pp gap
-                </span>
-              ))}
+            {/* Dumbbell chart — custom SVG-style layout */}
+            <div className="space-y-3 mt-2">
+              {fsmGapData.filter((d) => d["FSM6 Combined"] !== null || d["Non-FSM Combined"] !== null).map((d) => {
+                const fsm = d["FSM6 Combined"] as number | null;
+                const nonFsm = d["Non-FSM Combined"] as number | null;
+                const gap = d.gap as number | null;
+                const left = Math.min(fsm ?? 100, nonFsm ?? 100);
+                const right = Math.max(fsm ?? 0, nonFsm ?? 0);
+                const rangeWidth = right - left;
+                return (
+                  <div key={d.yg} className="flex items-center gap-4">
+                    <div className="w-8 text-sm font-semibold text-gray-700 shrink-0 text-right">{d.yg}</div>
+                    <div className="flex-1 relative h-8 flex items-center">
+                      {/* Track */}
+                      <div className="absolute inset-y-0 left-0 right-0 flex items-center">
+                        <div className="w-full h-px bg-gray-100" />
+                      </div>
+                      {/* Connecting line */}
+                      {fsm !== null && nonFsm !== null && (
+                        <div
+                          className="absolute h-1.5 rounded-full"
+                          style={{
+                            left: `${left}%`,
+                            width: `${rangeWidth}%`,
+                            backgroundColor: gap !== null && gap > 20 ? "#FCA5A5" : gap !== null && gap > 10 ? "#FCD34D" : "#6EE7B7",
+                          }}
+                        />
+                      )}
+                      {/* FSM dot (red) */}
+                      {fsm !== null && (
+                        <div
+                          className="absolute w-4 h-4 rounded-full bg-red-500 border-2 border-white shadow-sm"
+                          style={{ left: `calc(${fsm}% - 8px)` }}
+                          title={`FSM6: ${fsm}%`}
+                        />
+                      )}
+                      {/* Non-FSM dot (blue) */}
+                      {nonFsm !== null && (
+                        <div
+                          className="absolute w-4 h-4 rounded-full bg-blue-500 border-2 border-white shadow-sm"
+                          style={{ left: `calc(${nonFsm}% - 8px)` }}
+                          title={`Non-FSM: ${nonFsm}%`}
+                        />
+                      )}
+                    </div>
+                    <div className="w-20 shrink-0 flex items-center gap-1.5 text-xs">
+                      {fsm !== null && <span className="text-red-600 font-semibold">{fsm}%</span>}
+                      {nonFsm !== null && <span className="text-blue-600 font-semibold">{nonFsm}%</span>}
+                    </div>
+                    <div className="w-16 shrink-0">
+                      {gap !== null && (
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${gap > 20 ? "bg-red-100 text-red-700" : gap > 10 ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"}`}>
+                          {gap}pp
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex items-center gap-4 mt-4 text-xs text-gray-500">
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-red-500 inline-block" /> FSM6</span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-blue-500 inline-block" /> Non-FSM</span>
+              <span className="text-gray-400">Line = gap size. pp = percentage points.</span>
             </div>
           </>
         ) : (
@@ -1752,95 +1928,84 @@ function KS2TrackRecordChart({ school, abbrev, ks2Results, selfReport }: {
   const info = TRUST_SCHOOLS[abbrev];
   if (!info) return null;
 
-  const subjects = [
-    { key: "Reading", dfeSubject: "Reading", color: SUBJECT_COLORS.reading },
-    { key: "Writing", dfeSubject: "Writing", color: SUBJECT_COLORS.writing },
-    { key: "Maths", dfeSubject: "Maths", color: SUBJECT_COLORS.maths },
-    { key: "Combined", dfeSubject: "Reading, writing and maths", color: SUBJECT_COLORS.combined },
-  ];
-
   const ks2Years = [2023, 2024, 2025];
 
-  // Build chart data: each row = one year, columns = subjects
-  const chartData = [
-    ...ks2Years.map((year) => {
-      const row: Record<string, number | string | null> = { name: `KS2 ${year}` };
-      for (const subj of subjects) {
-        row[subj.key] = getKs2SubjectForUrn(ks2Results, info.urn, year, subj.dfeSubject);
-      }
-      return row;
-    }),
-    // Add self-report as final group
+  // Compute Combined for each year
+  const ks2Combined = ks2Years.map((year) => getKs2CombinedForUrn(ks2Results, info.urn, year)).filter((v): v is number => v !== null);
+  const bestEverKs2 = ks2Combined.length > 0 ? Math.max(...ks2Combined) : null;
+  const selfCombined = selfReport?.combined ?? null;
+
+  // Flag: self-report Combined > best-ever by >10pp
+  const isSuspect = selfCombined !== null && bestEverKs2 !== null && selfCombined > bestEverKs2 + 10;
+
+  // Horizontal bar data: schools on Y-axis, Combined % on X-axis
+  // Each row = one time period
+  const barData = [
+    ...ks2Years.map((year) => ({
+      name: `KS2 ${year}`,
+      combined: getKs2CombinedForUrn(ks2Results, info.urn, year),
+      isSelfReport: false,
+    })),
     ...(selfReport ? [{
       name: "Mid-Year",
-      Reading: selfReport.reading,
-      Writing: selfReport.writing,
-      Maths: selfReport.maths,
-      Combined: selfReport.combined,
-    } as Record<string, number | string | null>] : []),
-  ];
+      combined: selfReport.combined,
+      isSelfReport: true,
+    }] : []),
+  ].reverse(); // Most recent at top
 
-  // Check for flags: any subject where self-report exceeds best-ever KS2 by >10pp
-  const flags: string[] = [];
-  if (selfReport) {
-    for (const subj of subjects) {
-      const selfVal = selfReport[subj.key.toLowerCase() as keyof typeof selfReport];
-      if (selfVal === null) continue;
-      const historical = ks2Years.map((y) => getKs2SubjectForUrn(ks2Results, info.urn, y, subj.dfeSubject)).filter((v): v is number => v !== null);
-      if (historical.length === 0) continue;
-      const best = Math.max(...historical);
-      if (selfVal > best + 10) {
-        flags.push(`${subj.key}: claims ${selfVal}% — best-ever KS2 was ${best}% (+${Math.round(selfVal - best)}pp)`);
-      }
-    }
-  }
+  // Custom bar fill
+  const CustomBar = (props: {
+    x?: number; y?: number; width?: number; height?: number;
+    combined?: number | null; isSelfReport?: boolean;
+  }) => {
+    const { x = 0, y = 0, width = 0, height = 0, isSelfReport, combined } = props;
+    if (combined === null || combined === undefined) return null;
+    const fill = isSelfReport ? (isSuspect ? "#EF4444" : "#F59E0B") : "#3B82F6";
+    return (
+      <g>
+        <rect x={x} y={y + height * 0.2} width={width} height={height * 0.6} fill={fill} rx={3} opacity={0.85} />
+      </g>
+    );
+  };
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-4">
-      <div className="flex items-start justify-between mb-2 gap-2">
+      <div className="flex items-start justify-between mb-3 gap-2">
         <div>
-          <div className="font-semibold text-gray-800 text-sm">{school}</div>
-          <div className="text-[10px] text-gray-400 mt-0.5">URN {info.urn}</div>
+          <div className="font-bold text-gray-900 text-sm">{abbrev}</div>
+          <div className="text-xs text-gray-500">{school}</div>
+          <div className="text-[10px] text-gray-400">URN {info.urn}</div>
         </div>
-        <div className="flex flex-wrap gap-x-3 gap-y-1 justify-end text-[10px] text-gray-600 shrink-0">
-          {subjects.map((s) => (
-            <span key={s.key} className="flex items-center gap-1 font-medium" style={{ color: s.color }}>
-              <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: s.color }} />
-              {s.key}
-            </span>
-          ))}
-        </div>
+        {selfCombined !== null && (
+          <div className={`text-xs font-semibold px-2 py-1 rounded-lg shrink-0 ${isSuspect ? "bg-red-50 text-red-700 border border-red-200" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
+            Mid-Year: {selfCombined}%
+            {isSuspect && <span className="ml-1">⚠ above track record</span>}
+          </div>
+        )}
       </div>
 
-      {flags.length > 0 && (
-        <div className="mb-2 space-y-1">
-          {flags.map((f, i) => (
-            <div key={i} className="flex items-center gap-1 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-2 py-1">
-              <AlertTriangle size={10} />
-              {f}
-            </div>
-          ))}
+      {isSuspect && (
+        <div className="mb-2 flex items-center gap-1 text-xs text-red-600 bg-red-50 border border-red-200 rounded px-2 py-1">
+          <AlertTriangle size={10} />
+          Self-report ({selfCombined}%) exceeds best-ever KS2 ({bestEverKs2}%) by {selfCombined !== null && bestEverKs2 !== null ? Math.round(selfCombined - bestEverKs2) : 0}pp
         </div>
       )}
 
-      <ResponsiveContainer width="100%" height={190}>
-        <BarChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
-          <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#6B7280" }} axisLine={false} tickLine={false} />
-          <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: "#9CA3AF" }} axisLine={false} tickLine={false} />
-          <Tooltip
-            formatter={(val, name) => [`${val}%`, name]}
-            contentStyle={{ fontSize: "11px", borderRadius: "8px", border: "1px solid #E2E8F0" }}
-          />
-          {subjects.map((subj) => (
-            <Bar key={subj.key} dataKey={subj.key} fill={subj.color} radius={[3, 3, 0, 0]} maxBarSize={20} />
-          ))}
+      <ResponsiveContainer width="100%" height={130}>
+        <BarChart data={barData} layout="vertical" margin={{ top: 4, right: 40, left: 10, bottom: 4 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={true} horizontal={false} />
+          <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11, fill: "#6B7280" }} axisLine={false} tickLine={false} />
+          <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "#374151" }} width={70} axisLine={false} tickLine={false} />
+          <ReferenceLine x={61} stroke="#9CA3AF" strokeDasharray="4 4" label={{ value: "Nat 61%", fontSize: 10, fill: "#9CA3AF", position: "right" }} />
+          <Tooltip formatter={(val) => [`${val}%`, "Combined"]} contentStyle={{ fontSize: "12px" }} />
+          <Bar dataKey="combined" shape={<CustomBar />} label={{ position: "right", fontSize: 11, fill: "#374151", formatter: (v: number | null) => v !== null ? `${v}%` : "" }} />
         </BarChart>
       </ResponsiveContainer>
 
-      <div className="flex items-center gap-1.5 text-[10px] text-gray-400 mt-1">
-        <Info size={9} />
-        <span>KS2 2023–2025: DfE validated SATs results. Mid-Year: self-reported in trust spreadsheet.</span>
+      <div className="flex items-center gap-3 mt-2 text-[10px] text-gray-400">
+        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-blue-500 inline-block" /> KS2 validated</span>
+        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-amber-400 inline-block" /> Mid-year self-report</span>
+        {isSuspect && <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-red-500 inline-block" /> Suspect (10pp+ above track record)</span>}
       </div>
     </div>
   );
@@ -1909,6 +2074,7 @@ export default function TrustAssessorPage() {
   const [dfeLoading, setDfeLoading] = useState(false);
   const [dfeError, setDfeError] = useState<string | null>(null);
   const [showAllFlags, setShowAllFlags] = useState(false);
+  const [showFullHeatmap, setShowFullHeatmap] = useState(false);
   const [activeSchoolTab, setActiveSchoolTab] = useState<string>("overview");
   const [grooveHouseStats, setGrooveHouseStats] = useState<{ totalPupils: number; trackablePupils: number } | null>(null);
   const [showDrivePicker, setShowDrivePicker] = useState(false);
@@ -2350,16 +2516,15 @@ export default function TrustAssessorPage() {
                 );
               })()}
 
-              {/* ── 2. Subject Selector Heatmap ── */}
+              {/* ── 2. Traffic Light Summary Grid ── */}
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <div>
-                    <h3 className="text-sm font-semibold text-gray-700">ARE % — Heatmap by Subject</h3>
-                    <p className="text-xs text-gray-400 mt-0.5">Colour-coded at-a-glance view across all schools and year groups</p>
+                    <h3 className="text-base font-semibold text-gray-800">Y6 Summary — Traffic Light View</h3>
+                    <p className="text-xs text-gray-500 mt-0.5">Schools sorted worst to best by Y6 Combined ARE%. Click a school name to drill into its detail.</p>
                   </div>
-                  <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded shrink-0 ml-3">Click school name to drill down</span>
                 </div>
-                <SubjectHeatmap
+                <TrafficLightGrid
                   parsed={parsed}
                   onSchoolClick={(school) => {
                     setActiveSchoolTab(school);
@@ -2371,6 +2536,39 @@ export default function TrustAssessorPage() {
                   <Info size={10} />
                   Source: Trust mid-year data capture spreadsheet (2025/26). Self-reported — not externally validated.
                 </div>
+              </div>
+
+              {/* ── 2b. Full Year Group Heatmap (collapsed by default) ── */}
+              <div className="border border-gray-200 rounded-xl overflow-hidden">
+                <button
+                  onClick={() => setShowFullHeatmap((o) => !o)}
+                  className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-sm"
+                >
+                  <span className="font-medium text-gray-700">Full Year Group Detail (all subjects, all year groups)</span>
+                  {showFullHeatmap ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
+                </button>
+                <AnimatePresence>
+                  {showFullHeatmap && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="p-4 border-t border-gray-100">
+                        <SubjectHeatmap
+                          parsed={parsed}
+                          onSchoolClick={(school) => {
+                            setActiveSchoolTab(school);
+                            const el = document.getElementById("school-tabs-section");
+                            if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+                          }}
+                        />
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
               {/* ── 3. School Tabs ── */}
@@ -2605,8 +2803,8 @@ export default function TrustAssessorPage() {
                 <>
                   <div className="flex items-start justify-between mb-4">
                     <div>
-                      <h3 className="text-sm font-semibold text-gray-700">KS2 Track Record by Subject (2023–2025 + Mid-Year Self-Report)</h3>
-                      <p className="text-xs text-gray-400 mt-0.5">Reading (blue), Writing (red), Maths (green), Combined (purple) — bars show each year side by side</p>
+                      <h3 className="text-base font-semibold text-gray-800">KS2 Combined % Track Record (2023–2025 + Mid-Year Self-Report)</h3>
+                      <p className="text-sm text-gray-500 mt-0.5">Horizontal bars show Combined % by year. Dashed line = national average (61%). Amber bar = self-reported mid-year. Red = suspect (10pp+ above track record).</p>
                     </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
