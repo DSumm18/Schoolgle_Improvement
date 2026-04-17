@@ -1,7 +1,7 @@
 "use client";
 
 import * as XLSX from "xlsx";
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   BarChart,
@@ -1368,9 +1368,12 @@ interface AppConnector {
 
 export default function TrustAssessorPage() {
   const { organizationId, session } = useAuth();
-  const authHeaders = session?.access_token
-    ? { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' }
-    : { 'Content-Type': 'application/json' };
+  const accessToken = session?.access_token;
+  const authHeaders = useMemo(() => (
+    accessToken
+      ? { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' }
+      : { 'Content-Type': 'application/json' }
+  ), [accessToken]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [parsed, setParsed] = useState<ParsedSpreadsheet | null>(null);
   const [parseError, setParseError] = useState<string | null>(null);
@@ -1457,42 +1460,44 @@ export default function TrustAssessorPage() {
     fetchFromDrive();
   }, [connector, driveConnected, driveToken, parsed]);
 
-  // Fetch DfE data on mount
-  const fetchDfeData = useCallback(async () => {
-    setDfeLoading(true);
-    setDfeError(null);
-    try {
-      const res = await fetch(`/api/trust-analysis${organizationId ? `?organizationId=${organizationId}` : ''}`, { headers: authHeaders });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Failed to fetch DfE data");
-      setDfeData({ ks2Results: json.ks2Results ?? json.data?.ks2Results, census: json.census ?? json.data?.census });
-    } catch (e) {
-      setDfeError(e instanceof Error ? e.message : "Unknown error");
-    } finally {
-      setDfeLoading(false);
-    }
-  }, [organizationId, authHeaders]);
-
-  const fetchGroveHouseStats = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/trust-analysis/grove-house${organizationId ? `?organizationId=${organizationId}` : ''}`, { headers: authHeaders });
-      const json = await res.json();
-      const summary = json.summary ?? json.data?.summary;
-      if (res.ok && summary) {
-        setGrooveHouseStats({
-          totalPupils: summary.totalPupils,
-          trackablePupils: summary.trackablePupils,
-        });
-      }
-    } catch {
-      // non-fatal
-    }
-  }, []);
-
+  // Fetch DfE data once on mount (not on every re-render)
+  const dfeLoadedRef = useRef(false);
   useEffect(() => {
-    fetchDfeData();
-    fetchGroveHouseStats();
-  }, [fetchDfeData, fetchGroveHouseStats]);
+    if (dfeLoadedRef.current || !accessToken) return;
+    dfeLoadedRef.current = true;
+
+    (async () => {
+      setDfeLoading(true);
+      setDfeError(null);
+      try {
+        const res = await fetch(`/api/trust-analysis${organizationId ? `?organizationId=${organizationId}` : ''}`, { headers: authHeaders });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || "Failed to fetch DfE data");
+        setDfeData({ ks2Results: json.ks2Results ?? json.data?.ks2Results, census: json.census ?? json.data?.census });
+      } catch (e) {
+        setDfeError(e instanceof Error ? e.message : "Unknown error");
+      } finally {
+        setDfeLoading(false);
+      }
+    })();
+
+    // Also fetch Grove House stats (non-fatal)
+    (async () => {
+      try {
+        const res = await fetch(`/api/trust-analysis/grove-house${organizationId ? `?organizationId=${organizationId}` : ''}`, { headers: authHeaders });
+        const json = await res.json();
+        const summary = json.summary ?? json.data?.summary;
+        if (res.ok && summary) {
+          setGrooveHouseStats({
+            totalPupils: summary.totalPupils,
+            trackablePupils: summary.trackablePupils,
+          });
+        }
+      } catch {
+        // non-fatal
+      }
+    })();
+  }, [accessToken, organizationId, authHeaders]);
 
   // Process a file (from Drive picker or manual upload). If driveFileId is provided,
   // save the connector to Supabase so it auto-connects on future page loads.
