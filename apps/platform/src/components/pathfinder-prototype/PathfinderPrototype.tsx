@@ -130,6 +130,17 @@ type ControlDeckTab = "tickets" | "layers" | "wayfinding" | "assets" | "edit";
 
 interface PathfinderPrototypeProps {
   estatesMode?: boolean;
+  /**
+   * Pre-hydrated extraction result (e.g. the school's live Pathfinder model).
+   * When provided in estatesMode, the component skips auto-extraction so we
+   * never show prototype Grove House data inside a production school.
+   */
+  initialModel?: PathfinderExtractionResult | null;
+  initialModelId?: string | null;
+  /** When set, this model is a draft revision of the referenced parent. */
+  parentModelId?: string | null;
+  /** Invoked when the user asks to upload a new plan (revision flow). */
+  onUploadNewPlan?: () => void;
 }
 
 interface EstatesAssetSummary {
@@ -1552,11 +1563,17 @@ function findPath(
   };
 }
 
-export default function PathfinderPrototype({ estatesMode = false }: PathfinderPrototypeProps = {}) {
+export default function PathfinderPrototype({
+  estatesMode = false,
+  initialModel = null,
+  initialModelId = null,
+  parentModelId = null,
+  onUploadNewPlan,
+}: PathfinderPrototypeProps = {}) {
   const auth = useContext(AuthContext);
   const organizationId = auth?.organizationId ?? null;
   const session = auth?.session ?? null;
-  const [data, setData] = useState<PathfinderExtractionResult | null>(null);
+  const [data, setData] = useState<PathfinderExtractionResult | null>(initialModel);
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
@@ -1582,7 +1599,7 @@ export default function PathfinderPrototype({ estatesMode = false }: PathfinderP
   const [siteDraftName, setSiteDraftName] = useState("Site boundary");
   const [siteDraftPoints, setSiteDraftPoints] = useState<PathfinderScenePoint[]>([]);
   const [isDrawingSiteFeature, setIsDrawingSiteFeature] = useState(false);
-  const [estatesModelId, setEstatesModelId] = useState<string | null>(null);
+  const [estatesModelId, setEstatesModelId] = useState<string | null>(initialModelId);
   const [estatesAssetSummary, setEstatesAssetSummary] = useState<EstatesAssetSummary | null>(null);
 
   const selectedRoom = useMemo(
@@ -1991,6 +2008,40 @@ export default function PathfinderPrototype({ estatesMode = false }: PathfinderP
     [approvalState, data, estatesModelId, organizationId, session?.access_token],
   );
 
+  const persistAssetPin = useCallback(
+    async (asset: PathfinderAssetDraft) => {
+      if (!estatesMode || !organizationId) return;
+      if (asset.sourceTable !== "estates_assets" || !asset.sourceId) return;
+
+      try {
+        await fetch(`/api/estates/pathfinder/assets/${asset.sourceId}/pin`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            ...(session?.access_token
+              ? { Authorization: `Bearer ${session.access_token}` }
+              : {}),
+          },
+          body: JSON.stringify({
+            modelId: estatesModelId,
+            roomId: asset.linkedRoomId,
+            siteFeatureId: asset.linkedSiteFeatureId,
+            x: asset.x,
+            y: asset.y,
+            wallSide: asset.wallSide,
+            confidence: asset.confidence,
+            locationScope: asset.locationScope,
+          }),
+        });
+        setStatus(`Saved pin for ${asset.label}.`);
+      } catch (error) {
+        console.error("Failed to save asset pin:", error);
+        setStatus("Could not save pin — please try again.");
+      }
+    },
+    [estatesMode, organizationId, session?.access_token, estatesModelId],
+  );
+
   const syncEstatesLocations = useCallback(async () => {
     if (!data || !organizationId) {
       setStatus("Sign in to a school organization before syncing Pathfinder locations.");
@@ -2341,8 +2392,18 @@ export default function PathfinderPrototype({ estatesMode = false }: PathfinderP
   }, [data, siteDraftName, siteDraftPoints, siteDraftType]);
 
   useEffect(() => {
+    // Estates consumers hydrate from their own live model (or the intake flow).
+    // Only the prototype route auto-runs Grove House raster extraction on mount.
+    if (estatesMode) return;
     void runExtraction("raster");
-  }, [runExtraction]);
+  }, [estatesMode, runExtraction]);
+
+  useEffect(() => {
+    if (estatesMode && initialModel) {
+      setData(initialModel);
+      setApprovalState(parentModelId ? "school_review" : "school_review");
+    }
+  }, [estatesMode, initialModel, parentModelId]);
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#f4f6f5] text-[#141414]">
@@ -2362,15 +2423,25 @@ export default function PathfinderPrototype({ estatesMode = false }: PathfinderP
             )}
           </div>
           <div className="flex flex-wrap gap-2">
-            {estatesMode && (
+            {estatesMode ? (
               <>
+                {onUploadNewPlan && (
+                  <button
+                    type="button"
+                    onClick={onUploadNewPlan}
+                    disabled={isLoading}
+                    className="rounded-md border border-[#2f7d6d] bg-[#fbfcfc] px-3 py-2 text-sm font-semibold text-[#216e60] disabled:opacity-50"
+                  >
+                    Upload new plan
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => void saveEstatesModel()}
                   disabled={isLoading || !data}
                   className="rounded-md border border-[#2f7d6d] bg-[#fbfcfc] px-3 py-2 text-sm font-semibold text-[#216e60] disabled:opacity-50"
                 >
-                  Save model
+                  Save draft
                 </button>
                 <button
                   type="button"
@@ -2378,34 +2449,37 @@ export default function PathfinderPrototype({ estatesMode = false }: PathfinderP
                   disabled={isLoading || !data}
                   className="rounded-md bg-[#111827] px-3 py-2 text-sm font-semibold text-[#f8fafc] disabled:opacity-50"
                 >
-                  Publish locations
+                  Approve &amp; publish
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => runExtraction("raster")}
+                  disabled={isLoading}
+                  className="rounded-md bg-[#2f7d6d] px-3 py-2 text-sm font-semibold text-[#f8fafc] disabled:opacity-50"
+                >
+                  Segment walls
+                </button>
+                <button
+                  type="button"
+                  onClick={() => runExtraction("local")}
+                  disabled={isLoading}
+                  className="rounded-md border border-[#1f8a9d] bg-[#fbfcfc] px-3 py-2 text-sm font-semibold text-[#146474] disabled:opacity-50"
+                >
+                  Compare old baseline
+                </button>
+                <button
+                  type="button"
+                  onClick={() => runExtraction("vision")}
+                  disabled={isLoading}
+                  className="rounded-md border border-[#2f7d6d] bg-[#fbfcfc] px-3 py-2 text-sm font-semibold text-[#216e60] disabled:opacity-50"
+                >
+                  Try vision extraction
                 </button>
               </>
             )}
-            <button
-              type="button"
-              onClick={() => runExtraction("raster")}
-              disabled={isLoading}
-              className="rounded-md bg-[#2f7d6d] px-3 py-2 text-sm font-semibold text-[#f8fafc] disabled:opacity-50"
-            >
-              Segment walls
-            </button>
-            <button
-              type="button"
-              onClick={() => runExtraction("local")}
-              disabled={isLoading}
-              className="rounded-md border border-[#1f8a9d] bg-[#fbfcfc] px-3 py-2 text-sm font-semibold text-[#146474] disabled:opacity-50"
-            >
-              Compare old baseline
-            </button>
-            <button
-              type="button"
-              onClick={() => runExtraction("vision")}
-              disabled={isLoading}
-              className="rounded-md border border-[#2f7d6d] bg-[#fbfcfc] px-3 py-2 text-sm font-semibold text-[#216e60] disabled:opacity-50"
-            >
-              Try vision extraction
-            </button>
           </div>
         </div>
         <p className="mt-2 text-sm text-[#4c5854]">{status}</p>
@@ -3291,6 +3365,15 @@ export default function PathfinderPrototype({ estatesMode = false }: PathfinderP
                           <button className="rounded-md bg-[#303a37] px-2 py-1" onClick={() => moveSelectedAsset(-16, 0)}>Left</button>
                           <button className="rounded-md bg-[#303a37] px-2 py-1" onClick={() => moveSelectedAsset(16, 0)}>Right</button>
                         </div>
+                        {estatesMode && selectedAsset.sourceTable === "estates_assets" && (
+                          <button
+                            type="button"
+                            onClick={() => void persistAssetPin(selectedAsset)}
+                            className="md:col-span-2 rounded-md bg-[#2f7d6d] px-3 py-2 text-xs font-semibold text-[#f8fafc]"
+                          >
+                            Save pin to Asset Register
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>

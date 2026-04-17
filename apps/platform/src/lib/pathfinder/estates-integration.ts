@@ -26,6 +26,8 @@ export interface PathfinderModelRow {
   updated_at?: string;
 }
 
+export type PathfinderPinStatus = "mapped" | "needs_position" | "needs_review";
+
 export interface PathfinderAssetPin {
   modelId?: string;
   roomId?: string;
@@ -37,6 +39,7 @@ export interface PathfinderAssetPin {
   wallSide?: PathfinderAssetDraft["wallSide"];
   locationScope?: PathfinderAssetDraft["locationScope"];
   confidence?: number;
+  status?: PathfinderPinStatus;
   updatedAt?: string;
   updatedBy?: string;
 }
@@ -88,6 +91,7 @@ export function getPathfinderPin(locationDetails: Asset["location_details"]): Pa
   const pin = locationDetails.pathfinder;
   if (!isRecord(pin)) return null;
 
+  const status = stringFrom(pin.status);
   return {
     modelId: stringFrom(pin.modelId),
     roomId: stringFrom(pin.roomId),
@@ -99,6 +103,10 @@ export function getPathfinderPin(locationDetails: Asset["location_details"]): Pa
     wallSide: stringFrom(pin.wallSide) as PathfinderAssetPin["wallSide"],
     locationScope: stringFrom(pin.locationScope) as PathfinderAssetPin["locationScope"],
     confidence: numberFrom(pin.confidence),
+    status:
+      status === "mapped" || status === "needs_position" || status === "needs_review"
+        ? status
+        : undefined,
     updatedAt: stringFrom(pin.updatedAt),
     updatedBy: stringFrom(pin.updatedBy),
   };

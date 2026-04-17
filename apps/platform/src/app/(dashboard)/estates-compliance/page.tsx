@@ -476,7 +476,7 @@ export default function EstatesComplianceDashboard() {
               href: "/estates-compliance/pathfinder",
               icon: "🗺️",
               label: "Pathfinder",
-              sub: "Site map",
+              sub: "Site plan & pins",
               bg: "bg-teal-50 text-teal-600",
             },
             {

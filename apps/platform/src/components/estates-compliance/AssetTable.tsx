@@ -8,6 +8,7 @@
 
 import Link from "next/link";
 import { Asset, AssetStatus } from "@/types/estates-compliance";
+import { getPathfinderPin } from "@/lib/pathfinder/estates-integration";
 
 interface AssetTableProps {
   assets: Asset[];
@@ -83,7 +84,29 @@ export function AssetTable({ assets }: AssetTableProps) {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
-                    {asset.location || "-"}
+                    {(() => {
+                      const pin = getPathfinderPin(asset.location_details);
+                      const pinColor = !pin
+                        ? "text-slate-300"
+                        : pin.status === "needs_review"
+                          ? "text-amber-500"
+                          : "text-emerald-500";
+                      const pinTitle = !pin
+                        ? "Not placed on Pathfinder"
+                        : pin.status === "needs_review"
+                          ? "Pin needs review — location changed in a revision"
+                          : "Mapped on Pathfinder";
+                      return (
+                        <span className="inline-flex items-center gap-1.5">
+                          <span
+                            aria-hidden
+                            title={pinTitle}
+                            className={`h-2 w-2 rounded-full ${pin ? "bg-current" : "bg-slate-200"} ${pinColor}`}
+                          />
+                          {asset.location || "-"}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="px-4 py-3">
                     <span
@@ -117,6 +140,13 @@ export function AssetTable({ assets }: AssetTableProps) {
                         className="inline-flex items-center justify-center rounded-md px-2 py-1 text-xs font-medium hover:bg-accent"
                       >
                         View
+                      </Link>
+                      <Link
+                        href={`/estates-compliance/pathfinder?placeAsset=${asset.id}`}
+                        className="inline-flex items-center justify-center rounded-md px-2 py-1 text-xs font-medium hover:bg-accent"
+                        title="Place or review this asset on the Pathfinder site plan"
+                      >
+                        Pathfinder
                       </Link>
                       <Link
                         href={`/estates-compliance/assets/${asset.id}/edit`}
