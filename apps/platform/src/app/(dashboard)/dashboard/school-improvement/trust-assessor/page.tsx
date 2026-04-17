@@ -279,7 +279,7 @@ function getHeatmapColor(pct: number | null): string {
 
 function getKs2CombinedForUrn(ks2Results: KS2Result[], urn: number, year: number): number | null {
   const row = ks2Results.find(
-    (r) => r.urn === urn && r.academicYearEnd === year && r.subject === "KS2" && r.breakdownTopic === "All pupils" && r.breakdown === "All pupils"
+    (r) => r.urn === urn && r.academicYearEnd === year && r.subject === "Reading, writing and maths" && r.breakdownTopic === "All pupils"
   );
   return row?.expectedStandardPct ?? null;
 }
