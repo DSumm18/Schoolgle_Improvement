@@ -820,8 +820,84 @@ function SchoolTab({ school, parsed }: { school: string; parsed: ParsedSpreadshe
     questions.push({ q: "No specific concerns flagged for this school based on the submitted data.", level: "blue" });
   }
 
+  // ── Build narrative summary ──
+  const narrativePoints: string[] = [];
+
+  // FSM context
+  if (fsmPct !== null && trustFsmPct !== null) {
+    if (fsmPct > trustFsmPct + 10) {
+      narrativePoints.push(`${school} has significantly higher disadvantage than the trust average (${fsmPct}% FSM vs ${Math.round(trustFsmPct)}% trust average). This context is critical — national data shows a strong correlation between FSM% and attainment. Any comparison with lower-FSM schools must account for this.`);
+    } else if (fsmPct < trustFsmPct - 10) {
+      narrativePoints.push(`${school} has lower disadvantage than the trust average (${fsmPct}% FSM vs ${Math.round(trustFsmPct)}% trust average). This school should be expected to perform above the trust average given its more favourable intake.`);
+    }
+  }
+
+  // Y6 performance
+  if (y6) {
+    const c = y6.all_pupils.c_are;
+    const r = y6.all_pupils.r_are;
+    const w = y6.all_pupils.w_are;
+    const m = y6.all_pupils.m_are;
+    if (c !== null && c !== undefined) {
+      if (c >= 70) {
+        narrativePoints.push(`Y6 Combined at ${c}% is strong. ${fsmPct !== null && fsmPct > 30 ? `This is particularly notable given ${fsmPct}% of pupils are FSM-eligible — the school appears to be closing the disadvantage gap effectively.` : 'This is above the national average of ~61%.'}`);
+      } else if (c >= 50) {
+        narrativePoints.push(`Y6 Combined at ${c}% is broadly in line with expectations but below the national average (~61%). ${w !== null && w !== undefined && w < (r ?? 100) - 15 ? `Writing at ${w}% is significantly below Reading (${r}%) — this subject gap is dragging Combined down.` : ''}`);
+      } else {
+        narrativePoints.push(`Y6 Combined at ${c}% is well below the national average (~61%). This cohort is at serious risk of underperforming at KS2 SATs. ${w !== null && w !== undefined && m !== null && m !== undefined ? `The weakest subject is ${w < m ? `Writing (${w}%)` : `Maths (${m}%)`}.` : ''} Immediate intervention is needed.`);
+      }
+    }
+  }
+
+  // GD Writing
+  if (zeroGdWritingYgs.length >= 3) {
+    narrativePoints.push(`Greater Depth in Writing is reported as 0% across ${zeroGdWritingYgs.length} year groups. This is unusual and raises questions about either the challenge provided to higher-attaining pupils or the consistency of teacher assessment. If no pupils across multiple year groups are reaching Greater Depth, the school should review its writing curriculum and moderation practices.`);
+  }
+
+  // Pipeline
+  if (pipelineAlerts.length > 0) {
+    narrativePoints.push(`There are ${pipelineAlerts.length} year-group transitions where attainment jumps by more than 15 percentage points. These sudden shifts suggest either inconsistent teacher assessment between year groups, significant cohort composition changes, or data entry errors. Each jump should be investigated: ${pipelineAlerts[0]}.`);
+  }
+
+  // Small cohort
+  if (totalPupils < 100) {
+    narrativePoints.push(`With only ${totalPupils} pupils across all year groups, percentage figures are statistically volatile. Each pupil represents approximately ${(100 / Math.max(totalPupils / 7, 1)).toFixed(0)}pp per year group. Small swings in individual pupil performance will cause large percentage movements — interpret with caution.`);
+  }
+
+  // High SEND
+  if (sendPct !== null && sendPct > 20) {
+    narrativePoints.push(`${sendPct}% of pupils have identified SEND needs. This is above the national average (~12.6%). Attainment data should be interpreted in this context — a school with high SEND may legitimately have lower headline percentages while still providing effective provision for its cohort.`);
+  }
+
+  // FSM high but performing well
+  if (fsmPct !== null && fsmPct > 35 && y6 && y6.all_pupils.c_are !== null && y6.all_pupils.c_are !== undefined && y6.all_pupils.c_are >= 60) {
+    narrativePoints.push(`Despite ${fsmPct}% FSM eligibility, Y6 Combined is at ${y6.all_pupils.c_are}%. This is a positive indicator that the school's Pupil Premium strategy may be effective. This is worth investigating further — what is this school doing that others in the trust could learn from?`);
+  }
+
   return (
     <div className="space-y-8">
+
+      {/* Narrative Summary */}
+      {narrativePoints.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-gradient-to-r from-slate-50 to-blue-50 border border-slate-200 rounded-xl p-6"
+        >
+          <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+            <Info size={16} className="text-blue-500" />
+            Assessment Summary — {school}
+          </h3>
+          <div className="space-y-3">
+            {narrativePoints.map((point, i) => (
+              <p key={i} className="text-sm text-slate-700 leading-relaxed">{point}</p>
+            ))}
+          </div>
+          <p className="text-[10px] text-slate-400 mt-4">
+            Source: Analysis based on trust mid-year spreadsheet data (self-reported). Not externally validated.
+          </p>
+        </motion.div>
+      )}
 
       {/* Section A: School Profile Header */}
       <motion.div
