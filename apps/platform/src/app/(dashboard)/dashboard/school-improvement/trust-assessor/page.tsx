@@ -1411,11 +1411,11 @@ interface AppConnector {
 export default function TrustAssessorPage() {
   const { organizationId, session } = useAuth();
   const accessToken = session?.access_token;
-  const authHeaders = useMemo(() => (
-    accessToken
-      ? { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' }
-      : { 'Content-Type': 'application/json' }
-  ), [accessToken]);
+  const authHeaders = useMemo(() => {
+    const h: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (accessToken) h['Authorization'] = `Bearer ${accessToken}`;
+    return h;
+  }, [accessToken]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [parsed, setParsed] = useState<ParsedSpreadsheet | null>(null);
   const [parseError, setParseError] = useState<string | null>(null);
@@ -1438,7 +1438,7 @@ export default function TrustAssessorPage() {
     if (!organizationId) return;
     (async () => {
       try {
-        const res = await fetch(`/api/app-connectors?app_id=trust-assessor&organizationId=${organizationId}`, { credentials: 'include', headers: authHeaders });
+        const res = await fetch(`/api/app-connectors?app_id=trust-assessor&organizationId=${organizationId}`, { headers: authHeaders });
         const json = await res.json();
         console.log('[Trust Assessor] Connector load:', res.status, json);
         if (!res.ok) { setConnectorLoading(false); return; }
@@ -1707,16 +1707,31 @@ export default function TrustAssessorPage() {
           </div>
         </div>
 
-        {/* Connector error */}
+        {/* Connector error — with clear action buttons */}
         {connectorError && (
-          <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
-            <AlertTriangle size={18} className="flex-shrink-0 mt-0.5 text-amber-500" />
-            <div>
-              <div className="font-semibold mb-1">Spreadsheet Connection Issue</div>
-              <div>{connectorError}</div>
-              <p className="mt-2 text-xs text-amber-600">
-                Please ensure the spreadsheet is shared with your Google account and that Google Drive is connected in your Schoolgle settings.
-              </p>
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 text-sm text-amber-800">
+            <div className="flex items-start gap-3 mb-3">
+              <AlertTriangle size={18} className="flex-shrink-0 mt-0.5 text-amber-500" />
+              <div>
+                <div className="font-semibold mb-1">Could not load your spreadsheet</div>
+                <div className="text-amber-700">{connectorError}</div>
+              </div>
+            </div>
+            <div className="flex gap-3 ml-7">
+              <button
+                onClick={() => setShowDrivePicker(true)}
+                className="inline-flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              >
+                <Cloud size={14} />
+                Reconnect to Google Drive
+              </button>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="inline-flex items-center gap-2 bg-white hover:bg-gray-50 text-amber-700 border border-amber-300 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              >
+                <Upload size={14} />
+                Upload file instead
+              </button>
             </div>
           </div>
         )}
@@ -1735,17 +1750,69 @@ export default function TrustAssessorPage() {
           </div>
         )}
 
-        {/* No data prompt */}
-        {!parsed && !showDrivePicker && !connectorLoading && (
+        {/* No data — step-by-step guide */}
+        {!parsed && !showDrivePicker && !connectorLoading && !connectorError && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="border border-dashed border-gray-200 rounded-lg p-6 text-center"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white border border-gray-200 rounded-xl p-8"
           >
-            <FileSpreadsheet size={24} className="text-gray-300 mx-auto mb-2" />
-            <p className="text-sm text-gray-500">
-              Connect your trust&apos;s mid-year data capture spreadsheet to get started.
-            </p>
+            <h2 className="text-lg font-semibold text-gray-900 mb-1">Get started in 3 steps</h2>
+            <p className="text-sm text-gray-500 mb-6">Connect your trust&apos;s data sources to unlock each layer of analysis.</p>
+
+            <div className="space-y-4">
+              {/* Step 1 */}
+              <div className="flex items-start gap-4 p-4 border border-blue-200 bg-blue-50 rounded-lg">
+                <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-bold shrink-0">1</div>
+                <div className="flex-1">
+                  <div className="font-semibold text-gray-900 mb-1">Connect your mid-year data spreadsheet</div>
+                  <p className="text-sm text-gray-600 mb-3">
+                    The Excel spreadsheet your trust uses to capture mid-year assessment data (EYFS to Year 6).
+                    We&apos;ll analyse it instantly — no changes to your file.
+                  </p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setShowDrivePicker(true)}
+                      className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors"
+                    >
+                      <Cloud size={14} />
+                      Connect from Google Drive
+                    </button>
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="inline-flex items-center gap-2 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors"
+                    >
+                      <Upload size={14} />
+                      Upload file
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 2 — shown but locked */}
+              <div className="flex items-start gap-4 p-4 border border-gray-200 bg-gray-50 rounded-lg opacity-60">
+                <div className="w-8 h-8 rounded-full bg-gray-300 text-white flex items-center justify-center text-sm font-bold shrink-0">2</div>
+                <div>
+                  <div className="font-semibold text-gray-500">DfE Intelligence unlocks automatically</div>
+                  <p className="text-sm text-gray-400">
+                    Once your spreadsheet is connected, we cross-reference it against 3 years of validated KS2 results
+                    and census data from the DfE. {dfeData ? '877 KS2 records ready.' : 'Loading DfE data...'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 3 — shown but locked */}
+              <div className="flex items-start gap-4 p-4 border border-gray-200 bg-gray-50 rounded-lg opacity-60">
+                <div className="w-8 h-8 rounded-full bg-gray-300 text-white flex items-center justify-center text-sm font-bold shrink-0">3</div>
+                <div>
+                  <div className="font-semibold text-gray-500">Per-pupil analytics (optional)</div>
+                  <p className="text-sm text-gray-400">
+                    Connect your CTF assessment files for per-pupil tracking from EYFS to KS2.
+                    Shows individual pupil journeys, SEND overlay, and assessment accuracy validation.
+                  </p>
+                </div>
+              </div>
+            </div>
           </motion.div>
         )}
 
@@ -1981,7 +2048,7 @@ export default function TrustAssessorPage() {
               <div>
                 <div className="font-medium">Could not load DfE data</div>
                 <div className="text-xs mt-0.5">{dfeError}</div>
-                <button onClick={fetchDfeData} className="text-xs underline mt-1">Retry</button>
+                <button onClick={() => window.location.reload()} className="text-xs underline mt-1">Retry</button>
               </div>
             </div>
           )}
