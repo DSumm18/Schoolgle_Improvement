@@ -1261,13 +1261,6 @@ function TrustInsights({ parsed }: { parsed: ParsedSpreadsheet }) {
 
 // ─── Phase 2: KS2 Track Record Chart ─────────────────────────────────────────
 
-const SUBJECT_COLORS: Record<string, string> = {
-  Reading: "#3B82F6",
-  Writing: "#EF4444",
-  Maths: "#10B981",
-  Combined: "#8B5CF6",
-};
-
 function getKs2SubjectForUrn(ks2Results: KS2Result[], urn: number, year: number, subject: string): number | null {
   const r = ks2Results.find(
     (row) => row.urn === urn && row.academicYearEnd === year && row.breakdownTopic === "All pupils" && row.subject === subject && row.expectedStandardPct !== null,
@@ -1285,10 +1278,10 @@ function KS2TrackRecordChart({ school, abbrev, ks2Results, selfReport }: {
   if (!info) return null;
 
   const subjects = [
-    { key: "Reading", dfeSubject: "Reading", color: SUBJECT_COLORS.Reading },
-    { key: "Writing", dfeSubject: "Writing", color: SUBJECT_COLORS.Writing },
-    { key: "Maths", dfeSubject: "Maths", color: SUBJECT_COLORS.Maths },
-    { key: "Combined", dfeSubject: "Reading, writing and maths", color: SUBJECT_COLORS.Combined },
+    { key: "Reading", dfeSubject: "Reading", color: SUBJECT_COLORS.reading },
+    { key: "Writing", dfeSubject: "Writing", color: SUBJECT_COLORS.writing },
+    { key: "Maths", dfeSubject: "Maths", color: SUBJECT_COLORS.maths },
+    { key: "Combined", dfeSubject: "Reading, writing and maths", color: SUBJECT_COLORS.combined },
   ];
 
   const ks2Years = [2023, 2024, 2025];
