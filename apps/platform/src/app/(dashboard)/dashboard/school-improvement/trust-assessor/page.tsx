@@ -1261,60 +1261,109 @@ function TrustInsights({ parsed }: { parsed: ParsedSpreadsheet }) {
 
 // ─── Phase 2: KS2 Track Record Chart ─────────────────────────────────────────
 
-function KS2TrackRecordChart({ school, abbrev, ks2Results, selfReportY6 }: {
+const SUBJECT_COLORS: Record<string, string> = {
+  Reading: "#3B82F6",
+  Writing: "#EF4444",
+  Maths: "#10B981",
+  Combined: "#8B5CF6",
+};
+
+function getKs2SubjectForUrn(ks2Results: KS2Result[], urn: number, year: number, subject: string): number | null {
+  const r = ks2Results.find(
+    (row) => row.urn === urn && row.academicYearEnd === year && row.breakdownTopic === "All pupils" && row.subject === subject && row.expectedStandardPct !== null,
+  );
+  return r?.expectedStandardPct ?? null;
+}
+
+function KS2TrackRecordChart({ school, abbrev, ks2Results, selfReport }: {
   school: string;
   abbrev: string;
   ks2Results: KS2Result[];
-  selfReportY6: number | null;
+  selfReport: { reading: number | null; writing: number | null; maths: number | null; combined: number | null } | null;
 }) {
   const info = TRUST_SCHOOLS[abbrev];
   if (!info) return null;
 
-  const ks2Years = [2023, 2024, 2025];
-  const historicalBars = ks2Years.map((year) => ({
-    name: String(year),
-    value: getKs2CombinedForUrn(ks2Results, info.urn, year),
-  }));
-
-  const chartData = [
-    ...historicalBars.map((b) => ({ name: b.name, ks2: b.value, midYear: null as number | null })),
-    { name: "Mid-Year\nSelf-Report", ks2: null as number | null, midYear: selfReportY6 },
+  const subjects = [
+    { key: "Reading", dfeSubject: "Reading", color: SUBJECT_COLORS.Reading },
+    { key: "Writing", dfeSubject: "Writing", color: SUBJECT_COLORS.Writing },
+    { key: "Maths", dfeSubject: "Maths", color: SUBJECT_COLORS.Maths },
+    { key: "Combined", dfeSubject: "Reading, writing and maths", color: SUBJECT_COLORS.Combined },
   ];
 
-  const allValues = [...historicalBars.map((b) => b.value).filter((v): v is number => v !== null), ...(selfReportY6 !== null ? [selfReportY6] : [])];
-  const bestEver = allValues.length > 0 ? Math.max(...allValues) : null;
+  const ks2Years = [2023, 2024, 2025];
 
-  const flagged = selfReportY6 !== null && bestEver !== null && selfReportY6 > bestEver + 10;
+  // Build chart data: each row = one year, columns = subjects
+  const chartData = [
+    ...ks2Years.map((year) => {
+      const row: Record<string, number | string | null> = { name: `KS2 ${year}` };
+      for (const subj of subjects) {
+        row[subj.key] = getKs2SubjectForUrn(ks2Results, info.urn, year, subj.dfeSubject);
+      }
+      return row;
+    }),
+    // Add self-report as final group
+    ...(selfReport ? [{
+      name: "Mid-Year",
+      Reading: selfReport.reading,
+      Writing: selfReport.writing,
+      Maths: selfReport.maths,
+      Combined: selfReport.combined,
+    } as Record<string, number | string | null>] : []),
+  ];
+
+  // Check for flags: any subject where self-report exceeds best-ever KS2 by >10pp
+  const flags: string[] = [];
+  if (selfReport) {
+    for (const subj of subjects) {
+      const selfVal = selfReport[subj.key.toLowerCase() as keyof typeof selfReport];
+      if (selfVal === null) continue;
+      const historical = ks2Years.map((y) => getKs2SubjectForUrn(ks2Results, info.urn, y, subj.dfeSubject)).filter((v): v is number => v !== null);
+      if (historical.length === 0) continue;
+      const best = Math.max(...historical);
+      if (selfVal > best + 10) {
+        flags.push(`${subj.key}: claims ${selfVal}% — best-ever KS2 was ${best}% (+${Math.round(selfVal - best)}pp)`);
+      }
+    }
+  }
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-4">
-      <div className="flex items-center justify-between mb-3">
-        <div>
-          <div className="font-semibold text-gray-800 text-sm">{school} ({abbrev})</div>
-          {flagged && (
-            <div className="flex items-center gap-1 text-xs text-amber-600 mt-0.5">
-              <AlertTriangle size={12} />
-              Self-report exceeds best-ever KS2 by {Math.round(selfReportY6! - bestEver!)}pp
-            </div>
-          )}
+      <div className="flex items-center justify-between mb-2">
+        <div className="font-semibold text-gray-800 text-sm">{school} ({abbrev})</div>
+        <div className="flex gap-3 text-[10px] text-gray-500">
+          {subjects.map((s) => (
+            <span key={s.key} className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
+              {s.key}
+            </span>
+          ))}
         </div>
-        {selfReportY6 !== null && (
-          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${flagged ? "bg-amber-100 text-amber-700" : "bg-blue-50 text-blue-700"}`}>
-            Mid-year: {selfReportY6}%
-          </span>
-        )}
       </div>
-      <ResponsiveContainer width="100%" height={140}>
+
+      {flags.length > 0 && (
+        <div className="mb-2 space-y-1">
+          {flags.map((f, i) => (
+            <div key={i} className="flex items-center gap-1 text-xs text-amber-600 bg-amber-50 rounded px-2 py-1">
+              <AlertTriangle size={10} />
+              {f}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <ResponsiveContainer width="100%" height={180}>
         <BarChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
           <XAxis dataKey="name" tick={{ fontSize: 10 }} />
           <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} />
           <Tooltip formatter={(val) => [`${val}%`, ""]} />
-          <Bar dataKey="ks2" name="DfE Validated KS2" fill="#3B82F6" radius={[3, 3, 0, 0]} />
-          <Bar dataKey="midYear" name="Mid-Year Self-Report" fill={flagged ? "#F59E0B" : "#10B981"} radius={[3, 3, 0, 0]} />
-          {bestEver !== null && <ReferenceLine y={bestEver} stroke="#6B7280" strokeDasharray="4 4" />}
+          {subjects.map((subj) => (
+            <Bar key={subj.key} dataKey={subj.key} fill={subj.color} radius={[2, 2, 0, 0]} />
+          ))}
         </BarChart>
       </ResponsiveContainer>
+      <p className="text-[10px] text-gray-400 mt-1">KS2 = DfE validated SATs. Mid-Year = trust spreadsheet self-report.</p>
     </div>
   );
 }
@@ -1978,11 +2027,16 @@ export default function TrustAssessorPage() {
               {/* KS2 Track Record — per school */}
               {parsed && (
                 <>
-                  <h3 className="text-sm font-semibold text-gray-700 mb-4">KS2 Combined % Track Record (2023–2025 + Mid-Year)</h3>
+                  <h3 className="text-sm font-semibold text-gray-700 mb-4">KS2 Track Record by Subject (2023–2025 + Mid-Year Self-Report)</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     {parsed.schools.map((abbrev) => {
                       const y6Data = parsed.data[abbrev]?.["Year 6"];
-                      const selfReportY6 = y6Data ? getCombinedARE(y6Data.all_pupils) : null;
+                      const selfReport = y6Data ? {
+                        reading: y6Data.all_pupils.r_are ?? null,
+                        writing: y6Data.all_pupils.w_are ?? null,
+                        maths: y6Data.all_pupils.m_are ?? null,
+                        combined: y6Data.all_pupils.c_are ?? null,
+                      } : null;
                       const info = TRUST_SCHOOLS[abbrev];
                       return (
                         <KS2TrackRecordChart
@@ -1990,7 +2044,7 @@ export default function TrustAssessorPage() {
                           school={info?.name ?? abbrev}
                           abbrev={abbrev}
                           ks2Results={dfeData.ks2Results}
-                          selfReportY6={selfReportY6}
+                          selfReport={selfReport}
                         />
                       );
                     })}
