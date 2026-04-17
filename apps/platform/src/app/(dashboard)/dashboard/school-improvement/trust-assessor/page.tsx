@@ -29,7 +29,11 @@ import {
   Info,
   ChevronDown,
   ChevronUp,
+  Cloud,
+  Database,
+  UserCheck,
 } from "lucide-react";
+import { DriveFilePicker } from "@/components/canvas/DriveFilePicker";
 import type { KS2Result, CensusRecord } from "@/lib/trust-analysis/types";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -445,6 +449,7 @@ export default function TrustAssessorPage() {
   const [dfeError, setDfeError] = useState<string | null>(null);
   const [showAllFlags, setShowAllFlags] = useState(false);
   const [grooveHouseStats, setGrooveHouseStats] = useState<{ totalPupils: number; trackablePupils: number } | null>(null);
+  const [showDrivePicker, setShowDrivePicker] = useState(false);
 
   // Fetch DfE data on mount
   const fetchDfeData = useCallback(async () => {
@@ -482,9 +487,7 @@ export default function TrustAssessorPage() {
     fetchGroveHouseStats();
   }, [fetchDfeData, fetchGroveHouseStats]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const processFile = useCallback((file: File) => {
     setFileName(file.name);
     setParseError(null);
     setParsed(null);
@@ -506,6 +509,12 @@ export default function TrustAssessorPage() {
       }
     };
     reader.readAsArrayBuffer(file);
+  }, []);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    processFile(file);
   };
 
   // Build findings for Phase 2
@@ -555,48 +564,84 @@ export default function TrustAssessorPage() {
 
       <div className="max-w-6xl mx-auto px-6 py-8 space-y-8">
 
-        {/* ─── Upload CTA ────────────────────────────────────────────────── */}
-        {!parsed && (
+        {/* ─── Connector Bar ──────────────────────────────────────────────── */}
+        <div className="bg-white border border-gray-200 rounded-xl px-5 py-3">
+          <div className="flex items-center gap-6">
+            {/* Connector 1: Trust Spreadsheet */}
+            <div className="flex items-center gap-2 group relative">
+              {parsed ? (
+                <>
+                  <Cloud size={16} className="text-emerald-500" />
+                  <span className="text-sm font-medium text-gray-900">{fileName}</span>
+                  <CheckCircle2 size={12} className="text-emerald-500" />
+                </>
+              ) : (
+                <>
+                  <Cloud size={16} className="text-gray-300" />
+                  <button
+                    onClick={() => setShowDrivePicker(true)}
+                    className="text-sm font-medium text-blue-600 hover:text-blue-800"
+                  >
+                    Connect spreadsheet
+                  </button>
+                  <span className="text-gray-300">|</span>
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="text-xs text-gray-400 hover:text-gray-600"
+                  >
+                    or upload
+                  </button>
+                </>
+              )}
+              <input ref={fileInputRef} type="file" accept=".xlsx" className="hidden" onChange={handleFileChange} />
+            </div>
+
+            <div className="w-px h-5 bg-gray-200" />
+
+            {/* Connector 2: DfE Database */}
+            <div className="flex items-center gap-2" title="Schoolgle DfE Database — 241K KS2 records, 3 years, 15,000+ schools">
+              <Database size={16} className={dfeData ? "text-blue-500" : "text-gray-300"} />
+              <span className={`text-xs font-medium ${dfeData ? "text-gray-700" : "text-gray-400"}`}>
+                DfE Data {dfeData ? "✓" : "..."}
+              </span>
+            </div>
+
+            <div className="w-px h-5 bg-gray-200" />
+
+            {/* Connector 3: School Assessment (per-pupil) */}
+            <div className="flex items-center gap-2" title="Per-pupil assessment data — requires CTF/Census upload">
+              <UserCheck size={16} className="text-gray-300" />
+              <span className="text-xs font-medium text-gray-400">Per-Pupil</span>
+              <Lock size={10} className="text-gray-300" />
+            </div>
+          </div>
+        </div>
+
+        {/* Drive picker modal */}
+        {showDrivePicker && (
+          <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center" onClick={() => setShowDrivePicker(false)}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6" onClick={(e) => e.stopPropagation()}>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Connect to Google Drive</h3>
+              <DriveFilePicker onFileSelected={(file) => {
+                processFile(file);
+                setShowDrivePicker(false);
+              }} />
+            </div>
+          </div>
+        )}
+
+        {/* No data prompt */}
+        {!parsed && !showDrivePicker && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white border-2 border-dashed border-gray-200 rounded-2xl p-10 text-center"
+            className="bg-gray-50 border border-gray-100 rounded-xl p-8 text-center"
           >
-            <FileSpreadsheet size={40} className="text-gray-300 mx-auto mb-4" />
-            <h2 className="text-lg font-semibold text-gray-700 mb-2">Upload your trust mid-year data capture</h2>
-            <p className="text-sm text-gray-400 mb-6 max-w-md mx-auto">
-              XLSX spreadsheet with tabs: EYFS, Year 1–6. Each tab should have school rows with abbreviations in column A.
+            <FileSpreadsheet size={32} className="text-gray-300 mx-auto mb-3" />
+            <p className="text-sm text-gray-500">
+              Connect your trust&apos;s mid-year data capture spreadsheet to get started.
             </p>
-            <div className="flex items-center justify-center gap-3">
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-medium text-sm transition-colors"
-              >
-                <Upload size={16} />
-                Upload XLSX
-              </button>
-              <span className="text-sm text-gray-400">or drag and drop</span>
-            </div>
-            <input ref={fileInputRef} type="file" accept=".xlsx" className="hidden" onChange={handleFileChange} />
           </motion.div>
-        )}
-
-        {/* Upload again (after data loaded) */}
-        {parsed && (
-          <div className="flex items-center justify-between bg-white border border-gray-200 rounded-xl px-5 py-3">
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <FileSpreadsheet size={16} className="text-green-600" />
-              <span className="font-medium text-gray-900">{fileName}</span>
-              <span className="text-gray-400">loaded</span>
-            </div>
-            <button
-              onClick={() => { fileInputRef.current?.click(); }}
-              className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-            >
-              Upload different file
-            </button>
-            <input ref={fileInputRef} type="file" accept=".xlsx" className="hidden" onChange={handleFileChange} />
-          </div>
         )}
 
         {/* Parse error */}
