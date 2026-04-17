@@ -313,12 +313,18 @@ function StatCard({ label, value, sub }: { label: string; value: string | number
 // ─── Traffic Light Summary Grid ──────────────────────────────────────────────
 
 function TrafficLightGrid({ parsed, onSchoolClick }: { parsed: ParsedSpreadsheet; onSchoolClick: (school: string) => void }) {
-  // Sort schools worst to best by Y6 Combined
-  const sortedSchools = [...parsed.schools].sort((a, b) => {
-    const pctA = parsed.data[a]?.["Year 6"]?.all_pupils.c_are ?? -1;
-    const pctB = parsed.data[b]?.["Year 6"]?.all_pupils.c_are ?? -1;
-    return pctA - pctB;
-  });
+  // Compute total pupils per school
+  const getTotalPupils = (school: string): number => {
+    let total = 0;
+    for (const yg of YEAR_GROUPS) {
+      const n = parsed.data[school]?.[yg]?.cohort.number_in_cohort;
+      if (n !== null && n !== undefined) total += n;
+    }
+    return total;
+  };
+
+  // Sort schools by total pupils descending (largest first)
+  const sortedSchools = [...parsed.schools].sort((a, b) => getTotalPupils(b) - getTotalPupils(a));
 
   const getCircleColor = (pct: number | null, thresholdGreen = 70, thresholdAmber = 50): string => {
     if (pct === null) return "bg-gray-200";
@@ -334,19 +340,14 @@ function TrafficLightGrid({ parsed, onSchoolClick }: { parsed: ParsedSpreadsheet
     return "bg-emerald-500";
   };
 
-  const getPipelineColor = (school: string): string => {
-    let maxDrop = 0;
+  // Returns true if any adjacent year group has a >15pp jump
+  const hasConsistencyWarning = (school: string): boolean => {
     for (let i = 1; i < HEATMAP_YEAR_GROUPS.length; i++) {
       const prev = parsed.data[school]?.[HEATMAP_YEAR_GROUPS[i - 1]]?.all_pupils.c_are ?? null;
       const curr = parsed.data[school]?.[HEATMAP_YEAR_GROUPS[i]]?.all_pupils.c_are ?? null;
-      if (prev !== null && curr !== null) {
-        const drop = prev - curr;
-        if (drop > maxDrop) maxDrop = drop;
-      }
+      if (prev !== null && curr !== null && Math.abs(curr - prev) > 15) return true;
     }
-    if (maxDrop > 15) return "bg-red-500";
-    if (maxDrop > 10) return "bg-amber-400";
-    return "bg-emerald-500";
+    return false;
   };
 
   const cols = [
@@ -362,16 +363,22 @@ function TrafficLightGrid({ parsed, onSchoolClick }: { parsed: ParsedSpreadsheet
         <thead>
           <tr>
             <th className="text-left py-3 pr-4 text-sm font-semibold text-gray-700 min-w-[120px]">School</th>
+            <th className="text-center py-3 px-3 text-xs font-semibold text-gray-600 whitespace-nowrap">Pupils</th>
             {cols.map((c) => (
               <th key={c.key} className="text-center py-3 px-3 text-xs font-semibold text-gray-600 whitespace-nowrap">{c.label}</th>
             ))}
             <th className="text-center py-3 px-3 text-xs font-semibold text-gray-600 whitespace-nowrap">GD Writing</th>
-            <th className="text-center py-3 px-3 text-xs font-semibold text-gray-600 whitespace-nowrap">Pipeline</th>
+            <th className="text-center py-3 px-3 text-xs font-semibold text-gray-600 whitespace-nowrap" title="Consistency: flags any adjacent year group jump >15pp — may indicate data entry errors or genuine curriculum concern">
+              Consistency <span className="text-gray-400 font-normal">ⓘ</span>
+            </th>
           </tr>
         </thead>
         <tbody>
           {sortedSchools.map((school) => {
             const y6 = parsed.data[school]?.["Year 6"]?.all_pupils ?? {};
+            const totalPupils = getTotalPupils(school);
+            const isSmall = totalPupils > 0 && totalPupils < 100;
+            const hasWarning = hasConsistencyWarning(school);
             return (
               <tr key={school} className="border-t border-gray-100 hover:bg-gray-50 transition-colors">
                 <td className="py-3 pr-4">
@@ -383,6 +390,15 @@ function TrafficLightGrid({ parsed, onSchoolClick }: { parsed: ParsedSpreadsheet
                   </button>
                   {TRUST_SCHOOLS[school] && (
                     <div className="text-xs text-gray-400 leading-tight">{TRUST_SCHOOLS[school].name.split(" ").slice(0, 3).join(" ")}</div>
+                  )}
+                </td>
+                <td className="text-center py-3 px-3">
+                  {totalPupils > 0 ? (
+                    <span className={`text-xs font-medium ${isSmall ? "italic text-gray-400" : "text-gray-700"}`}>
+                      {isSmall ? `${totalPupils}*` : totalPupils}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-gray-300">—</span>
                   )}
                 </td>
                 {cols.map((c) => {
@@ -405,9 +421,13 @@ function TrafficLightGrid({ parsed, onSchoolClick }: { parsed: ParsedSpreadsheet
                   </div>
                 </td>
                 <td className="text-center py-3 px-3">
-                  <div className="flex flex-col items-center gap-1">
-                    <div className={`w-8 h-8 rounded-full ${getPipelineColor(school)}`} />
-                  </div>
+                  {hasWarning ? (
+                    <span title="One or more adjacent year groups differ by >15pp — check data or curriculum consistency">
+                      <AlertTriangle size={16} className="text-amber-500 mx-auto" />
+                    </span>
+                  ) : (
+                    <span className="text-gray-200 text-xs">—</span>
+                  )}
                 </td>
               </tr>
             );
@@ -420,7 +440,7 @@ function TrafficLightGrid({ parsed, onSchoolClick }: { parsed: ParsedSpreadsheet
         <span className="flex items-center gap-1.5"><span className="w-3.5 h-3.5 rounded-full bg-amber-400 inline-block" /> 50–69% (Amber)</span>
         <span className="flex items-center gap-1.5"><span className="w-3.5 h-3.5 rounded-full bg-red-500 inline-block" /> Below 50% (Red)</span>
         <span className="flex items-center gap-1.5"><span className="w-3.5 h-3.5 rounded-full bg-gray-200 inline-block" /> No data</span>
-        <span className="text-gray-400 ml-2">Schools sorted worst to best by Y6 Combined. Click school name to drill down.</span>
+        <span className="text-gray-400 ml-2">Sorted by total pupils (largest first). * = under 100 pupils — interpret percentages with caution. Click school name to drill down.</span>
       </div>
     </div>
   );
@@ -1321,7 +1341,7 @@ function SchoolTab({ school, parsed, authToken }: { school: string; parsed: Pars
         </motion.div>
       )}
 
-      {/* Section D: Greater Depth Analysis — Dot Plot */}
+      {/* Section D: Greater Depth Analysis — Clean Table */}
       {gdData.some((d) => d["Reading GD"] !== null || d["Writing GD"] !== null || d["Maths GD"] !== null) && (
         <motion.div
           initial={{ opacity: 0, y: 12 }}
@@ -1330,43 +1350,45 @@ function SchoolTab({ school, parsed, authToken }: { school: string; parsed: Pars
           className="bg-white border border-gray-200 rounded-xl p-5"
         >
           <h4 className="text-base font-semibold text-gray-800 mb-1">Greater Depth (GD %) by Year Group</h4>
-          <p className="text-sm text-gray-500 mb-4">Percentage of pupils exceeding age-related expectations — dots in red indicate 0%</p>
-          {/* Dot plot rendered as a custom table for maximum clarity */}
+          <p className="text-sm text-gray-500 mb-4">Percentage of pupils exceeding age-related expectations</p>
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
+            <table className="w-full text-sm border-collapse">
               <thead>
-                <tr>
-                  <th className="text-left py-2 pr-3 text-xs font-semibold text-gray-500 w-12">Year</th>
-                  <th className="text-center py-2 px-3 text-xs font-semibold text-gray-500" style={{ color: SUBJECT_COLORS.reading }}>Reading GD</th>
-                  <th className="text-center py-2 px-3 text-xs font-semibold text-gray-500" style={{ color: SUBJECT_COLORS.writing }}>Writing GD</th>
-                  <th className="text-center py-2 px-3 text-xs font-semibold text-gray-500" style={{ color: SUBJECT_COLORS.maths }}>Maths GD</th>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-2 pr-4 text-xs font-semibold text-gray-600">Year Group</th>
+                  <th className="text-center py-2 px-4 text-xs font-semibold text-blue-600">Reading GD</th>
+                  <th className="text-center py-2 px-4 text-xs font-semibold text-red-500">Writing GD</th>
+                  <th className="text-center py-2 px-4 text-xs font-semibold text-emerald-600">Maths GD</th>
                 </tr>
               </thead>
               <tbody>
                 {gdData.map((row) => (
                   <tr key={row.yg} className="border-t border-gray-100">
-                    <td className="py-3 pr-3 text-sm font-semibold text-gray-700">{row.yg}</td>
+                    <td className="py-2 pr-4 text-sm font-semibold text-gray-700">{row.yg}</td>
                     {(["Reading GD", "Writing GD", "Maths GD"] as const).map((subject) => {
                       const pct = row[subject] as number | null;
                       const isZero = pct === 0;
-                      const color = subject === "Reading GD" ? SUBJECT_COLORS.reading : subject === "Writing GD" ? SUBJECT_COLORS.writing : SUBJECT_COLORS.maths;
+                      const isGood = pct !== null && pct > 10;
+                      const isAmber = pct !== null && pct > 0 && pct <= 10;
+                      const cellClass = isZero
+                        ? "text-red-700 font-bold"
+                        : isGood
+                        ? "text-emerald-700 font-semibold"
+                        : isAmber
+                        ? "text-amber-700 font-semibold"
+                        : "text-gray-300";
+                      const bgClass = isZero
+                        ? "bg-red-50"
+                        : isGood
+                        ? "bg-emerald-50"
+                        : isAmber
+                        ? "bg-amber-50"
+                        : "";
                       return (
-                        <td key={subject} className="text-center py-3 px-3">
-                          <div className="flex flex-col items-center gap-1.5">
-                            <div
-                              className="rounded-full border-2 flex items-center justify-center"
-                              style={{
-                                width: pct !== null && pct > 0 ? Math.max(20, Math.min(40, 20 + pct * 0.5)) : 20,
-                                height: pct !== null && pct > 0 ? Math.max(20, Math.min(40, 20 + pct * 0.5)) : 20,
-                                backgroundColor: isZero ? "#EF4444" : pct !== null ? color : "transparent",
-                                borderColor: isZero ? "#EF4444" : pct !== null ? color : "#D1D5DB",
-                                opacity: pct !== null ? 0.85 : 0.3,
-                              }}
-                            />
-                            <span className={`text-xs font-semibold ${isZero ? "text-red-600" : pct !== null ? "text-gray-700" : "text-gray-300"}`}>
-                              {pct !== null ? `${pct}%` : "—"}
-                            </span>
-                          </div>
+                        <td key={subject} className={`py-2 px-4 text-center ${bgClass}`}>
+                          <span className={cellClass}>
+                            {pct !== null ? `${pct}%` : "—"}
+                          </span>
                         </td>
                       );
                     })}
@@ -1375,22 +1397,34 @@ function SchoolTab({ school, parsed, authToken }: { school: string; parsed: Pars
               </tbody>
             </table>
           </div>
-          <p className="text-xs text-gray-400 mt-2">Dot size scales with percentage. Red = 0% GD — needs attention.</p>
 
-          {zeroGdW.length > 0 && (
+          <p className="text-xs text-gray-500 mt-3">
+            National average GD: Reading 29%, Writing 13%, Maths 24% (2024/25)
+          </p>
+
+          {zeroGdW.length >= 3 && (
             <div className="mt-3 flex items-start gap-2 text-xs bg-red-50 border border-red-200 text-red-700 rounded-lg px-3 py-2">
               <AlertCircle size={12} className="flex-shrink-0 mt-0.5" />
               <span>
-                <span className="font-semibold">{zeroGdW.length} of {HEATMAP_YEAR_GROUPS.length} year groups report zero Greater Depth in Writing</span>
-                {" "}({zeroGdW.map((yg) => yg.replace("Year ", "Y")).join(", ")}).
-                {" "}What is the school&apos;s strategy for extending higher-attaining pupils?
+                <span className="font-semibold">Writing Greater Depth is 0% across {zeroGdW.length} year groups</span>
+                {" "}({zeroGdW.map((yg) => yg.replace("Year ", "Y")).join(", ")}) — this requires immediate attention.
+              </span>
+            </div>
+          )}
+
+          {zeroGdW.length > 0 && zeroGdW.length < 3 && (
+            <div className="mt-3 flex items-start gap-2 text-xs bg-amber-50 border border-amber-200 text-amber-700 rounded-lg px-3 py-2">
+              <AlertTriangle size={12} className="flex-shrink-0 mt-0.5" />
+              <span>
+                Zero Writing GD in {zeroGdW.map((yg) => yg.replace("Year ", "Y")).join(", ")}.
+                {" "}What is the school&apos;s strategy for extending higher-attaining writers?
               </span>
             </div>
           )}
 
           <div className="flex items-center gap-1.5 text-[10px] text-gray-400 mt-3">
             <Info size={10} />
-            Source: Trust mid-year data capture spreadsheet (2025/26). GD = Greater Depth (% exceeding age-related expectations).
+            Green = &gt;10% | Amber = 1–10% | Red = 0%. Source: Trust mid-year data capture spreadsheet (2025/26).
           </div>
         </motion.div>
       )}
@@ -1403,7 +1437,8 @@ function SchoolTab({ school, parsed, authToken }: { school: string; parsed: Pars
         className="bg-white border border-gray-200 rounded-xl p-5"
       >
         <h4 className="text-base font-semibold text-gray-800 mb-1">FSM6 vs Non-FSM Gap (Combined ARE %)</h4>
-        <p className="text-sm text-gray-500 mb-4">Pupil Premium gap by year group — line length shows the gap in percentage points</p>
+        <p className="text-sm text-gray-500 mb-1">The gap between FSM-eligible and non-FSM pupils in Combined attainment. A wider gap means disadvantaged pupils are falling further behind.</p>
+        <p className="text-sm text-gray-500 mb-4">Line length shows the gap in percentage points by year group.</p>
 
         {hasFsmData ? (
           <>
@@ -1476,7 +1511,7 @@ function SchoolTab({ school, parsed, authToken }: { school: string; parsed: Pars
         ) : (
           <div className="flex items-start gap-2 text-xs bg-amber-50 border border-amber-200 text-amber-700 rounded-lg px-3 py-3">
             <AlertTriangle size={13} className="flex-shrink-0 mt-0.5" />
-            <span>No FSM breakdown submitted for this school. Unable to calculate Pupil Premium gap.</span>
+            <span>FSM breakdown data was not submitted for this school. The trust spreadsheet does not separate FSM6 and Non-FSM attainment.</span>
           </div>
         )}
 
@@ -1650,30 +1685,38 @@ function TrustInsights({ parsed }: { parsed: ParsedSpreadsheet }) {
     });
   }
 
-  // Implausible pipeline jumps
-  const bigJumps: string[] = [];
+  // Consistency jumps — stored separately for table rendering
+  interface ConsistencyJump {
+    school: string;
+    from: string;
+    to: string;
+    fromPct: number;
+    toPct: number;
+    change: number;
+    cohort: number | null;
+  }
+  const consistencyJumps: ConsistencyJump[] = [];
   for (const school of parsed.schools) {
     for (let i = 1; i < HEATMAP_YEAR_GROUPS.length; i++) {
       const prev = parsed.data[school]?.[HEATMAP_YEAR_GROUPS[i - 1]]?.all_pupils.c_are ?? null;
       const curr = parsed.data[school]?.[HEATMAP_YEAR_GROUPS[i]]?.all_pupils.c_are ?? null;
       if (prev !== null && curr !== null && Math.abs(curr - prev) > 15) {
         const cohort = parsed.data[school]?.[HEATMAP_YEAR_GROUPS[i]]?.cohort.number_in_cohort ?? null;
-        const ppPerPupil = cohort && cohort > 0 ? Math.round(100 / cohort) : null;
-        bigJumps.push(
-          `${school} ${HEATMAP_YEAR_GROUPS[i - 1].replace("Year ", "Y")}→${HEATMAP_YEAR_GROUPS[i].replace("Year ", "Y")}: ${prev}%→${curr}%` +
-          (ppPerPupil ? ` (cohort ${cohort} — each pupil ≈${ppPerPupil}pp)` : "")
-        );
+        consistencyJumps.push({
+          school,
+          from: HEATMAP_YEAR_GROUPS[i - 1].replace("Year ", "Y"),
+          to: HEATMAP_YEAR_GROUPS[i].replace("Year ", "Y"),
+          fromPct: prev,
+          toPct: curr,
+          change: Math.round(curr - prev),
+          cohort,
+        });
       }
     }
   }
-  if (bigJumps.length > 0) {
-    insights.push({
-      text: `Implausible pipeline jumps (>15pp between adjacent year groups): ${bigJumps.join("; ")}.`,
-      severity: "warning",
-    });
-  }
+  const bigJumps = consistencyJumps.map((j) => `${j.school} ${j.from}→${j.to}`); // keep for governor questions
 
-  if (insights.length === 0) return null;
+  if (insights.length === 0 && consistencyJumps.length === 0) return null;
 
   const sevColor = (s: string) =>
     s === "error" ? "bg-red-50 border-red-200 text-red-800" :
@@ -1683,6 +1726,67 @@ function TrustInsights({ parsed }: { parsed: ParsedSpreadsheet }) {
     s === "error" ? <AlertCircle size={13} className="flex-shrink-0 mt-0.5" /> :
     s === "warning" ? <AlertTriangle size={13} className="flex-shrink-0 mt-0.5" /> :
     <Info size={13} className="flex-shrink-0 mt-0.5" />;
+
+  // Build ordered governor questions (max 4)
+  const governorQuestions: { text: React.ReactNode; level: "red" | "amber" | "blue" }[] = [];
+
+  // Q1: trust avg vs national
+  if (trustAvgY6Combined !== null && trustAvgY6Combined < 60) {
+    governorQuestions.push({
+      level: "red",
+      text: <>Trust-wide Y6 Combined is <strong>{trustAvgY6Combined}%</strong> — below the national average of ~60%. What is the trust&apos;s improvement trajectory and how does this compare to last year&apos;s KS2 outcomes?</>,
+    });
+  }
+
+  // Q2: range between best and worst
+  (() => {
+    let best: { school: string; pct: number } | null = null;
+    let worst: { school: string; pct: number } | null = null;
+    for (const school of parsed?.schools ?? []) {
+      const pct = parsed?.data[school]?.["Year 6"]?.all_pupils.c_are ?? null;
+      if (pct === null) continue;
+      if (!best || pct > best.pct) best = { school, pct };
+      if (!worst || pct < worst.pct) worst = { school, pct };
+    }
+    if (best && worst && best.school !== worst.school && best.pct - worst.pct >= 10 && governorQuestions.length < 4) {
+      governorQuestions.push({
+        level: "amber",
+        text: <>Y6 Combined ranges from <strong>{worst.pct}% ({worst.school})</strong> to <strong>{best.pct}% ({best.school})</strong> — a {Math.round(best.pct - worst.pct)}pp gap. What targeted support is in place for {worst.school}?</>,
+      });
+    }
+  })();
+
+  // Q3: weakest subject
+  if (avgW !== null && avgR !== null && avgM !== null && governorQuestions.length < 4) {
+    const weakSubject = avgW <= avgR && avgW <= avgM ? `Writing (${avgW}%)` : avgR <= avgW && avgR <= avgM ? `Reading (${avgR}%)` : `Maths (${avgM}%)`;
+    governorQuestions.push({
+      level: "amber",
+      text: <><strong>{weakSubject}</strong> is the weakest subject trust-wide at Y6. Is there a shared curriculum approach in place, and is it working?</>,
+    });
+  }
+
+  // Q4: consistency jumps or zero GD Writing
+  if (consistencyJumps.length > 0 && governorQuestions.length < 4) {
+    governorQuestions.push({
+      level: "red",
+      text: <>There are {consistencyJumps.length} year group consistency issues (&gt;15pp jump). Can school leaders provide moderation evidence to support these figures?</>,
+    });
+  } else if (zeroGdWriting.length >= 3 && governorQuestions.length < 4) {
+    governorQuestions.push({
+      level: "red",
+      text: <>Zero GD Writing reported in {zeroGdWriting.length} year groups across {[...new Set(zeroGdWriting.map((z) => z.school))].join(", ")}. Is this genuine or does it suggest the GD threshold is not well understood?</>,
+    });
+  } else if (missingEyfs.length > 0 && governorQuestions.length < 4) {
+    governorQuestions.push({
+      level: "amber",
+      text: <>{missingEyfs.length === 1 ? `${missingEyfs[0]} has` : `${missingEyfs.join(", ")} have`} not submitted EYFS data. Without GLD baseline the full progress pipeline cannot be assessed — when will this be available?</>,
+    });
+  } else if (governorQuestions.length < 4) {
+    governorQuestions.push({
+      level: "blue",
+      text: <>Are all {parsed?.schools?.length ?? "all"} schools using the same teacher assessment criteria? Without trust-wide moderation, like-for-like comparisons are unreliable.</>,
+    });
+  }
 
   return (
     <div>
@@ -1696,80 +1800,191 @@ function TrustInsights({ parsed }: { parsed: ParsedSpreadsheet }) {
         ))}
       </div>
 
-      {/* Questions box */}
+      {/* Consistency jumps — clean table */}
+      {consistencyJumps.length > 0 && (
+        <div className="mb-5">
+          <h4 className="text-xs font-semibold text-gray-700 mb-2">Year Group Consistency Issues (&gt;15pp jump between adjacent years)</h4>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left p-2 text-gray-500 font-semibold">School</th>
+                  <th className="text-center p-2 text-gray-500 font-semibold">From</th>
+                  <th className="text-center p-2 text-gray-500 font-semibold">To</th>
+                  <th className="text-center p-2 text-gray-500 font-semibold">Change</th>
+                  <th className="text-center p-2 text-gray-500 font-semibold">FSM Similar?</th>
+                </tr>
+              </thead>
+              <tbody>
+                {consistencyJumps.map((j, i) => {
+                  const fromFsm = (() => {
+                    const ygFull = HEATMAP_YEAR_GROUPS.find((yg) => yg.replace("Year ", "Y") === j.from);
+                    if (!ygFull) return null;
+                    const d = parsed.data[j.school]?.[ygFull];
+                    return d?.cohort.number_fsm !== null && d?.cohort.number_in_cohort !== null && d.cohort.number_in_cohort && d.cohort.number_fsm !== null
+                      ? Math.round(100 * (d.cohort.number_fsm as number) / (d.cohort.number_in_cohort as number))
+                      : null;
+                  })();
+                  const toFsm = (() => {
+                    const ygFull = HEATMAP_YEAR_GROUPS.find((yg) => yg.replace("Year ", "Y") === j.to);
+                    if (!ygFull) return null;
+                    const d = parsed.data[j.school]?.[ygFull];
+                    return d?.cohort.number_fsm !== null && d?.cohort.number_in_cohort !== null && d.cohort.number_in_cohort && d.cohort.number_fsm !== null
+                      ? Math.round(100 * (d.cohort.number_fsm as number) / (d.cohort.number_in_cohort as number))
+                      : null;
+                  })();
+                  const fsmSimilar = fromFsm !== null && toFsm !== null ? Math.abs(fromFsm - toFsm) <= 10 : null;
+                  return (
+                    <tr key={i} className="border-t border-gray-100">
+                      <td className="p-2 font-semibold text-gray-800">{j.school}</td>
+                      <td className="p-2 text-center text-gray-600">{j.from} ({j.fromPct}%)</td>
+                      <td className="p-2 text-center text-gray-600">{j.to} ({j.toPct}%)</td>
+                      <td className={`p-2 text-center font-bold ${j.change > 0 ? "text-emerald-600" : "text-red-600"}`}>
+                        {j.change > 0 ? "+" : ""}{j.change}pp
+                      </td>
+                      <td className="p-2 text-center">
+                        {fsmSimilar === null ? (
+                          <span className="text-gray-300">—</span>
+                        ) : fsmSimilar ? (
+                          <span className="text-amber-600 font-medium">Yes — not FSM</span>
+                        ) : (
+                          <span className="text-blue-600 font-medium">No — FSM differs</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Context: Does Disadvantage Explain Performance? */}
+      {(() => {
+        // Build per-school context row
+        interface ContextRow {
+          school: string;
+          totalPupils: number;
+          fsmPct: number | null;
+          sendPct: number | null;
+          ehcp: number;
+          y6Combined: number | null;
+          y6VsNational: number | null;
+          fsmRaw: number;
+        }
+
+        const rows: ContextRow[] = parsed.schools.map((s) => {
+          let totalP = 0, totalF = 0, totalSe = 0, totalE = 0;
+          for (const yg of YEAR_GROUPS) {
+            const d = parsed.data[s]?.[yg];
+            if (!d) continue;
+            if (d.cohort.number_in_cohort !== null) totalP += d.cohort.number_in_cohort;
+            if (d.cohort.number_fsm !== null) totalF += d.cohort.number_fsm;
+            if (d.cohort.number_send !== null) totalSe += d.cohort.number_send;
+            if (d.cohort.ehcp !== null) totalE += d.cohort.ehcp;
+          }
+          const y6c = parsed.data[s]?.["Year 6"]?.all_pupils.c_are ?? null;
+          return {
+            school: s,
+            totalPupils: totalP,
+            fsmPct: totalP > 0 ? Math.round((totalF / totalP) * 1000) / 10 : null,
+            sendPct: totalP > 0 ? Math.round((totalSe / totalP) * 1000) / 10 : null,
+            ehcp: totalE,
+            y6Combined: y6c,
+            y6VsNational: y6c !== null ? Math.round(y6c - 61) : null,
+            fsmRaw: totalF,
+          };
+        });
+
+        // Sort by Y6 Combined ascending (worst first)
+        const sorted = [...rows].sort((a, b) => {
+          if (a.y6Combined === null) return 1;
+          if (b.y6Combined === null) return -1;
+          return a.y6Combined - b.y6Combined;
+        });
+
+        // Find the school with best Combined relative to FSM% (highest Combined / FSM% ratio)
+        let heroSchool: ContextRow | null = null;
+        let heroRatio = -Infinity;
+        for (const r of rows) {
+          if (r.y6Combined !== null && r.fsmPct !== null && r.fsmPct > 15) {
+            const ratio = r.y6Combined / r.fsmPct;
+            if (ratio > heroRatio) { heroRatio = ratio; heroSchool = r; }
+          }
+        }
+
+        return (
+          <div className="mb-5">
+            <h4 className="text-sm font-semibold text-gray-700 mb-2">Context: Does Disadvantage Explain Performance?</h4>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left p-2 text-gray-500 font-semibold">School</th>
+                    <th className="text-center p-2 text-gray-500 font-semibold">Pupils</th>
+                    <th className="text-center p-2 text-gray-500 font-semibold">FSM%</th>
+                    <th className="text-center p-2 text-gray-500 font-semibold">SEND%</th>
+                    <th className="text-center p-2 text-gray-500 font-semibold">EHCP</th>
+                    <th className="text-center p-2 text-gray-500 font-semibold">Y6 Combined</th>
+                    <th className="text-center p-2 text-gray-500 font-semibold">vs National</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sorted.map((r) => {
+                    const fsmBg = r.fsmPct !== null && r.fsmPct > 45 ? "bg-red-50 text-red-700 font-semibold" : r.fsmPct !== null && r.fsmPct > 35 ? "bg-amber-50 text-amber-700 font-semibold" : "text-gray-700";
+                    const combinedBg = r.y6Combined !== null && r.y6Combined < 50 ? "bg-red-50 text-red-700 font-bold" : r.y6Combined !== null && r.y6Combined < 60 ? "bg-amber-50 text-amber-700 font-semibold" : "text-emerald-700 font-semibold";
+                    const vsNatColor = r.y6VsNational !== null && r.y6VsNational >= 0 ? "text-emerald-600 font-semibold" : "text-red-600 font-semibold";
+                    return (
+                      <tr key={r.school} className="border-t border-gray-100">
+                        <td className="p-2 font-semibold text-gray-800">{r.school}</td>
+                        <td className="p-2 text-center text-gray-600">{r.totalPupils > 0 ? r.totalPupils : "—"}</td>
+                        <td className={`p-2 text-center ${fsmBg}`}>{r.fsmPct !== null ? `${r.fsmPct}%` : "—"}</td>
+                        <td className="p-2 text-center text-gray-600">{r.sendPct !== null ? `${r.sendPct}%` : "—"}</td>
+                        <td className="p-2 text-center text-gray-600">{r.ehcp > 0 ? r.ehcp : "—"}</td>
+                        <td className={`p-2 text-center ${combinedBg}`}>{r.y6Combined !== null ? `${r.y6Combined}%` : "—"}</td>
+                        <td className={`p-2 text-center ${vsNatColor}`}>
+                          {r.y6VsNational !== null ? `${r.y6VsNational >= 0 ? "+" : ""}${r.y6VsNational}pp` : "—"}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex flex-wrap gap-3 mt-2 text-[10px] text-gray-400">
+              <span>FSM% highlight: <span className="text-amber-600">amber &gt;35%</span> / <span className="text-red-600">red &gt;45%</span></span>
+              <span>Y6 Combined: <span className="text-amber-600">amber &lt;60%</span> / <span className="text-red-600">red &lt;50%</span></span>
+              <span>vs National: based on 61% national average (2024/25 KS2)</span>
+            </div>
+            {heroSchool && (
+              <p className="text-xs text-gray-600 mt-3 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+                Schools with higher FSM% tend to have lower attainment, but <strong>{heroSchool.school}</strong> achieves{" "}
+                <strong>{heroSchool.y6Combined}%</strong> Combined despite <strong>{heroSchool.fsmPct}%</strong> FSM — suggesting effective Pupil Premium strategies.
+              </p>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* Governor questions — max 4, concise */}
       <div className="border border-gray-200 rounded-xl p-4 bg-gray-50">
-        <h4 className="text-xs font-semibold text-gray-700 mb-3">Governor Questions — drawn from this data</h4>
+        <h4 className="text-xs font-semibold text-gray-700 mb-3">Smarter Questions — for governors and leaders</h4>
         <ul className="space-y-2 text-xs text-gray-700">
-          {/* Always-on governance questions */}
-          <li className="flex items-start gap-2 bg-white border border-gray-100 rounded-lg px-3 py-2">
-            <span className="text-blue-400 mt-0.5 font-bold shrink-0">Q</span>
-            <span>Are all {parsed?.schools?.length ?? "all"} schools using the same teacher assessment criteria and moderation process? Without trust-wide moderation, like-for-like comparisons are unreliable.</span>
-          </li>
-
-          {/* Data-driven: large gap between strongest and weakest Y6 */}
-          {(() => {
-            let best: { school: string; pct: number } | null = null;
-            let worst: { school: string; pct: number } | null = null;
-            for (const school of parsed?.schools ?? []) {
-              const pct = parsed?.data[school]?.["Year 6"]?.all_pupils.c_are ?? null;
-              if (pct === null) continue;
-              if (!best || pct > best.pct) best = { school, pct };
-              if (!worst || pct < worst.pct) worst = { school, pct };
-            }
-            if (best && worst && best.school !== worst.school && best.pct - worst.pct >= 10) {
-              return (
-                <li className="flex items-start gap-2 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
-                  <span className="text-amber-500 mt-0.5 font-bold shrink-0">Q</span>
-                  <span>Y6 Combined ranges from <strong>{worst.pct}% ({worst.school})</strong> to <strong>{best.pct}% ({best.school})</strong> — a {Math.round(best.pct - worst.pct)}pp gap. What targeted support is in place for {worst.school} and what can be learned from {best.school}?</span>
-                </li>
-              );
-            }
-            return null;
-          })()}
-
-          {/* Data-driven: weakest subject trust-wide */}
-          {avgW !== null && avgR !== null && avgM !== null && (() => {
-            const weakSubject = avgW <= avgR && avgW <= avgM ? `Writing (${avgW}%)` : avgR <= avgW && avgR <= avgM ? `Reading (${avgR}%)` : `Maths (${avgM}%)`;
-            const weakAvg = avgW <= avgR && avgW <= avgM ? avgW : avgR <= avgW && avgR <= avgM ? avgR : avgM;
+          {governorQuestions.map((q, i) => {
+            const colorClass = q.level === "red"
+              ? "bg-red-50 border-red-100"
+              : q.level === "amber"
+              ? "bg-amber-50 border-amber-100"
+              : "bg-white border-gray-100";
+            const qColor = q.level === "red" ? "text-red-500" : q.level === "amber" ? "text-amber-500" : "text-blue-400";
             return (
-              <li className="flex items-start gap-2 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
-                <span className="text-amber-500 mt-0.5 font-bold shrink-0">Q</span>
-                <span><strong>{weakSubject}</strong> is the weakest subject trust-wide at Y6. What is the trust&apos;s plan to close this gap — is there a shared curriculum approach, and is it working?</span>
+              <li key={i} className={`flex items-start gap-2 border rounded-lg px-3 py-2 ${colorClass}`}>
+                <span className={`mt-0.5 font-bold shrink-0 ${qColor}`}>Q</span>
+                <span>{q.text}</span>
               </li>
             );
-          })()}
-
-          {/* Data-driven: missing EYFS */}
-          {missingEyfs.length > 0 && (
-            <li className="flex items-start gap-2 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
-              <span className="text-amber-500 mt-0.5 font-bold shrink-0">Q</span>
-              <span>{missingEyfs.length === 1 ? `${missingEyfs[0]} has` : `${missingEyfs.join(", ")} have`} not submitted EYFS data. Without GLD baseline, we cannot assess the full progress pipeline. When will this be available?</span>
-            </li>
-          )}
-
-          {/* Data-driven: pipeline jumps */}
-          {bigJumps.length > 0 && (
-            <li className="flex items-start gap-2 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
-              <span className="text-red-500 mt-0.5 font-bold shrink-0">Q</span>
-              <span>There are {bigJumps.length} implausible pipeline jumps (&gt;15pp between adjacent year groups). These may indicate data entry errors or genuine concerns. Can school leaders provide lesson observation or moderation evidence to support the figures for these year groups?</span>
-            </li>
-          )}
-
-          {/* Data-driven: zero GD Writing */}
-          {zeroGdWriting.length >= 3 && (
-            <li className="flex items-start gap-2 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
-              <span className="text-red-500 mt-0.5 font-bold shrink-0">Q</span>
-              <span>Zero Greater Depth in Writing is reported across {zeroGdWriting.length} year groups in {[...new Set(zeroGdWriting.map((z) => z.school))].join(", ")}. Is this a genuine reflection of attainment or does it suggest the writing GD threshold is not well understood? What does the writing moderation evidence show?</span>
-            </li>
-          )}
-
-          {/* Data-driven: trustAvgY6Combined vs national */}
-          {trustAvgY6Combined !== null && trustAvgY6Combined < 60 && (
-            <li className="flex items-start gap-2 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
-              <span className="text-red-500 mt-0.5 font-bold shrink-0">Q</span>
-              <span>Trust-wide Y6 Combined is <strong>{trustAvgY6Combined}%</strong> at this mid-year point — significantly below the national KS2 average of ~60%. What is the trust-level improvement trajectory and how does this compare to last year&apos;s validated KS2 outcomes?</span>
-            </li>
-          )}
+          })}
         </ul>
       </div>
     </div>
@@ -2491,18 +2706,31 @@ export default function TrustAssessorPage() {
               {/* ── 1. Trust Summary Bar ── */}
               {(() => {
                 let totalPupils = 0;
-                let totalFsm = 0;
+                let totalFsmRaw = 0;
                 let totalSend = 0;
                 for (const school of parsed.schools) {
                   for (const yg of YEAR_GROUPS) {
                     const d = parsed.data[school]?.[yg];
                     if (!d) continue;
-                    if (d.cohort.number_in_cohort !== null) totalPupils += d.cohort.number_in_cohort;
-                    if (d.cohort.number_fsm !== null) totalFsm += d.cohort.number_fsm;
+                    const cohortN = d.cohort.number_in_cohort;
+                    if (cohortN !== null) totalPupils += cohortN;
+                    if (d.cohort.number_fsm !== null) {
+                      // Guard: if number_fsm > cohort size it was probably stored as a percentage-like number
+                      // Only add if it's a plausible raw count (≤ cohort size or cohort unknown)
+                      const fsm = d.cohort.number_fsm;
+                      const isPlausibleCount = cohortN === null || fsm <= cohortN;
+                      if (isPlausibleCount) {
+                        totalFsmRaw += fsm;
+                      } else {
+                        // Treat as percentage — compute count from cohort
+                        const pct = fsm > 100 ? fsm / 100 : fsm;
+                        totalFsmRaw += Math.round(pct * (cohortN ?? 0) / 100);
+                      }
+                    }
                     if (d.cohort.number_send !== null) totalSend += d.cohort.number_send;
                   }
                 }
-                const fsmPct = totalPupils > 0 ? Math.round((totalFsm / totalPupils) * 1000) / 10 : null;
+                const fsmPct = totalPupils > 0 ? Math.round((totalFsmRaw / totalPupils) * 1000) / 10 : null;
                 const sendPct = totalPupils > 0 ? Math.round((totalSend / totalPupils) * 1000) / 10 : null;
                 return (
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -2510,7 +2738,7 @@ export default function TrustAssessorPage() {
                     <StatCard label="Year groups" value={parsed.yearGroups.length} sub={parsed.yearGroups.join(", ")} />
                     <StatCard label="Data points" value={parsed.totalDataPoints.toLocaleString()} />
                     <StatCard label="Total pupils" value={totalPupils > 0 ? totalPupils.toLocaleString() : "—"} sub="all year groups" />
-                    <StatCard label="FSM pupils" value={totalFsm > 0 ? totalFsm : "—"} sub={fsmPct !== null ? `${fsmPct}% trust-wide` : undefined} />
+                    <StatCard label="FSM pupils" value={totalFsmRaw > 0 ? totalFsmRaw : "—"} sub={fsmPct !== null ? `${fsmPct}% trust-wide` : undefined} />
                     <StatCard label="Quality flags" value={parsed.qualityFlags.length} sub={parsed.qualityFlags.length > 0 ? "See below" : "None"} />
                   </div>
                 );
@@ -2521,7 +2749,7 @@ export default function TrustAssessorPage() {
                 <div className="flex items-center justify-between mb-3">
                   <div>
                     <h3 className="text-base font-semibold text-gray-800">Y6 Summary — Traffic Light View</h3>
-                    <p className="text-xs text-gray-500 mt-0.5">Schools sorted worst to best by Y6 Combined ARE%. Click a school name to drill into its detail.</p>
+                    <p className="text-xs text-gray-500 mt-0.5">Schools sorted by total pupils (largest first). Click a school name to drill into its detail.</p>
                   </div>
                 </div>
                 <TrafficLightGrid
