@@ -854,9 +854,73 @@ function SchoolTab({ school, parsed }: { school: string; parsed: ParsedSpreadshe
     narrativePoints.push(`Greater Depth in Writing is reported as 0% across ${zeroGdWritingYgs.length} year groups. This is unusual and raises questions about either the challenge provided to higher-attaining pupils or the consistency of teacher assessment. If no pupils across multiple year groups are reaching Greater Depth, the school should review its writing curriculum and moderation practices.`);
   }
 
-  // Pipeline
+  // Pipeline — with actual cohort demographic analysis
   if (pipelineAlerts.length > 0) {
-    narrativePoints.push(`There are ${pipelineAlerts.length} year-group transitions where attainment jumps by more than 15 percentage points. These sudden shifts suggest either inconsistent teacher assessment between year groups, significant cohort composition changes, or data entry errors. Each jump should be investigated: ${pipelineAlerts[0]}.`);
+    // For each pipeline alert, check if cohort demographics explain the jump
+    const alertsWithContext: string[] = [];
+    for (const yg of YEAR_GROUPS) {
+      const ygIdx = YEAR_GROUPS.indexOf(yg);
+      if (ygIdx <= 0) continue;
+      const prevYg = YEAR_GROUPS[ygIdx - 1];
+      const curr = schoolData[yg];
+      const prev = schoolData[prevYg];
+      if (!curr || !prev) continue;
+      const currC = curr.all_pupils.c_are;
+      const prevC = prev.all_pupils.c_are;
+      if (currC == null || prevC == null) continue;
+      const jump = currC - prevC;
+      if (Math.abs(jump) < 15) continue;
+
+      // Check cohort demographics
+      const currFsm = curr.cohort.number_fsm;
+      const currN = curr.cohort.number_in_cohort;
+      const prevFsm = prev.cohort.number_fsm;
+      const prevN = prev.cohort.number_in_cohort;
+      const currSend = curr.cohort.number_send;
+      const prevSend = prev.cohort.number_send;
+
+      const currFsmPctYg = currN && currFsm ? Math.round(100 * currFsm / currN) : null;
+      const prevFsmPctYg = prevN && prevFsm ? Math.round(100 * prevFsm / prevN) : null;
+      const currSendPctYg = currN && currSend ? Math.round(100 * currSend / currN) : null;
+      const prevSendPctYg = prevN && prevSend ? Math.round(100 * prevSend / prevN) : null;
+
+      let explanation = `${prevYg.replace("Year ", "Y")} → ${yg.replace("Year ", "Y")}: Combined ${jump > 0 ? 'rises' : 'drops'} from ${prevC}% to ${currC}% (${jump > 0 ? '+' : ''}${jump}pp). `;
+
+      // Check if FSM difference explains it
+      if (currFsmPctYg !== null && prevFsmPctYg !== null) {
+        const fsmDiff = currFsmPctYg - prevFsmPctYg;
+        if (Math.abs(fsmDiff) > 10) {
+          explanation += `FSM changes significantly: ${prevYg.replace("Year ", "Y")} has ${prevFsmPctYg}% FSM vs ${yg.replace("Year ", "Y")} has ${currFsmPctYg}% FSM — this ${fsmDiff > 0 ? 'higher disadvantage' : 'lower disadvantage'} ${jump < 0 ? 'may partly explain the drop' : 'makes the improvement more significant'}. `;
+        } else {
+          explanation += `FSM is similar (${prevFsmPctYg}% vs ${currFsmPctYg}%) — disadvantage does not explain this shift. `;
+        }
+      }
+
+      // Check if SEND difference explains it
+      if (currSendPctYg !== null && prevSendPctYg !== null) {
+        const sendDiff = currSendPctYg - prevSendPctYg;
+        if (Math.abs(sendDiff) > 10) {
+          explanation += `SEND: ${yg.replace("Year ", "Y")} has ${currSendPctYg}% SEND vs ${prevSendPctYg}% in ${prevYg.replace("Year ", "Y")} — this ${sendDiff > 0 ? 'higher SEND proportion may explain weaker outcomes' : 'lower SEND proportion should support better outcomes'}. `;
+        } else {
+          explanation += `SEND is similar (${prevSendPctYg}% vs ${currSendPctYg}%). `;
+        }
+      }
+
+      // If neither explains it
+      if (currFsmPctYg !== null && prevFsmPctYg !== null && currSendPctYg !== null && prevSendPctYg !== null) {
+        const fsmDiff = Math.abs(currFsmPctYg - prevFsmPctYg);
+        const sendDiff = Math.abs(currSendPctYg - prevSendPctYg);
+        if (fsmDiff <= 10 && sendDiff <= 10) {
+          explanation += `Neither FSM nor SEND composition explains this shift — assessment consistency between year groups should be reviewed.`;
+        }
+      }
+
+      alertsWithContext.push(explanation);
+    }
+
+    if (alertsWithContext.length > 0) {
+      narrativePoints.push(...alertsWithContext);
+    }
   }
 
   // Small cohort
