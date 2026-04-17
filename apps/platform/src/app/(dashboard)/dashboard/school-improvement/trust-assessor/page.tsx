@@ -252,6 +252,15 @@ function parseSpreadsheet(workbook: XLSX.WorkBook): ParsedSpreadsheet {
       }
 
       data[schoolRaw][sheetName] = { cohort, all_pupils, fsm6, not_fsm6 };
+
+      // Debug: log parsed data for verification
+      if (schoolRaw === 'CHPS' && sheetName === 'Year 2') {
+        console.log('[Parser Debug] CHPS Year 2:', {
+          cohort,
+          all_pupils: { r: all_pupils.r_are, w: all_pupils.w_are, m: all_pupils.m_are, c: all_pupils.c_are },
+          not_fsm6: { r: not_fsm6.r_are, w: not_fsm6.w_are, m: not_fsm6.m_are, c: not_fsm6.c_are },
+        });
+      }
     }
   }
 
