@@ -890,6 +890,8 @@ function FsmTrendChart({ abbrev, census }: { abbrev: string; census: CensusRecor
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
+const STORAGE_KEY = "trust-assessor-spreadsheet";
+
 export default function TrustAssessorPage() {
   const { organizationId } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -902,6 +904,27 @@ export default function TrustAssessorPage() {
   const [showAllFlags, setShowAllFlags] = useState(false);
   const [grooveHouseStats, setGrooveHouseStats] = useState<{ totalPupils: number; trackablePupils: number } | null>(null);
   const [showDrivePicker, setShowDrivePicker] = useState(false);
+
+  // Restore saved spreadsheet from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const { name, base64 } = JSON.parse(saved);
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        const workbook = XLSX.read(bytes, { type: "array" });
+        const result = parseSpreadsheet(workbook);
+        if (result.schools.length > 0) {
+          setParsed(result);
+          setFileName(name);
+        }
+      }
+    } catch {
+      // Corrupted storage — ignore
+    }
+  }, []);
 
   // Fetch DfE data on mount
   const fetchDfeData = useCallback(async () => {
@@ -957,6 +980,15 @@ export default function TrustAssessorPage() {
           return;
         }
         setParsed(result);
+
+        // Save to localStorage so it persists across refreshes
+        try {
+          let binary = "";
+          for (let i = 0; i < data.length; i++) binary += String.fromCharCode(data[i]);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify({ name: file.name, base64: btoa(binary) }));
+        } catch {
+          // Storage quota exceeded — non-fatal
+        }
       } catch (err) {
         setParseError(`Parse error: ${err instanceof Error ? err.message : String(err)}`);
       }
@@ -1025,6 +1057,13 @@ export default function TrustAssessorPage() {
                   <Cloud size={16} className="text-emerald-500" />
                   <span className="text-sm font-medium text-gray-900">{fileName}</span>
                   <CheckCircle2 size={12} className="text-emerald-500" />
+                  <button
+                    onClick={() => { setParsed(null); setFileName(null); localStorage.removeItem(STORAGE_KEY); }}
+                    className="text-xs text-gray-400 hover:text-red-500 ml-1"
+                    title="Disconnect spreadsheet"
+                  >
+                    ✕
+                  </button>
                 </>
               ) : (
                 <>
