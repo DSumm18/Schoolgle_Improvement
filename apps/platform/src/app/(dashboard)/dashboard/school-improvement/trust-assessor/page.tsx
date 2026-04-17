@@ -1126,85 +1126,58 @@ export default function TrustAssessorPage() {
 
       <div className="max-w-6xl mx-auto px-6 py-8 space-y-8">
 
-        {/* ─── Connector Bar ──────────────────────────────────────────────── */}
-        <div className="bg-white border border-gray-200 rounded-xl px-5 py-3">
-          <div className="flex items-center gap-6">
-            {/* Connector 1: Trust Spreadsheet */}
-            <div className="flex items-center gap-2 group relative">
-              {parsed ? (
-                <>
-                  <Cloud size={16} className="text-emerald-500" />
-                  <span className="text-sm font-medium text-gray-900">{fileName}</span>
-                  <CheckCircle2 size={12} className="text-emerald-500" />
-                  {connector && <span className="text-xs text-emerald-500">Live</span>}
-                  <button
-                    onClick={async () => {
-                      if (connector?.id && organizationId) {
-                        await fetch(`/api/app-connectors?id=${connector.id}&organizationId=${organizationId}`, {
-                          method: 'DELETE', credentials: 'include',
-                        });
-                      }
-                      setParsed(null);
-                      setFileName(null);
-                      setConnector(null);
-                      setConnectorError(null);
-                    }}
-                    className="text-xs text-gray-400 hover:text-red-500 ml-1"
-                    title="Disconnect spreadsheet"
-                  >
-                    ✕
-                  </button>
-                </>
-              ) : connector && !driveConnected ? (
-                <>
-                  <Cloud size={16} className="text-amber-500" />
-                  <span className="text-sm font-medium text-gray-700">{connector.source_file_name}</span>
-                  <span className="text-xs text-amber-600">Drive not connected</span>
-                </>
-              ) : connectorLoading ? (
-                <>
-                  <Cloud size={16} className="text-blue-400 animate-pulse" />
-                  <span className="text-sm text-gray-500">Fetching from Drive...</span>
-                </>
-              ) : (
-                <>
-                  <Cloud size={16} className="text-gray-300" />
-                  <button
-                    onClick={() => setShowDrivePicker(true)}
-                    className="text-sm font-medium text-blue-600 hover:text-blue-800"
-                  >
-                    Connect spreadsheet
-                  </button>
-                  <span className="text-gray-300">|</span>
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="text-xs text-gray-400 hover:text-gray-600"
-                  >
-                    or upload
-                  </button>
-                </>
-              )}
-              <input ref={fileInputRef} type="file" accept=".xlsx" className="hidden" onChange={handleFileChange} />
-            </div>
-
-            <div className="w-px h-5 bg-gray-200" />
-
-            {/* Connector 2: DfE Database */}
-            <div className="flex items-center gap-2" title="Schoolgle DfE Database — 241K KS2 records, 3 years, 15,000+ schools">
-              <Database size={16} className={dfeData ? "text-blue-500" : "text-gray-300"} />
-              <span className={`text-xs font-medium ${dfeData ? "text-gray-700" : "text-gray-400"}`}>
-                DfE Data {dfeData ? "✓" : "..."}
-              </span>
-            </div>
-
-            <div className="w-px h-5 bg-gray-200" />
-
-            {/* Connector 3: School Assessment (per-pupil) */}
-            <div className="flex items-center gap-2" title="Per-pupil assessment data — requires CTF/Census upload">
-              <UserCheck size={16} className="text-gray-300" />
-              <span className="text-xs font-medium text-gray-400">Per-Pupil</span>
-              <Lock size={10} className="text-gray-300" />
-            </div>
+        {/* ─── Connector Strip (minimal) ─────────────────────────────────── */}
+        <div className="flex items-center gap-4 text-xs text-gray-500 px-1">
+          {/* Connector 1: Spreadsheet */}
+          <div className="flex items-center gap-1.5">
+            {parsed ? (
+              <>
+                <Cloud size={12} className="text-emerald-500" />
+                <span className="text-gray-700 font-medium truncate max-w-[200px]">{fileName}</span>
+                {connector && <span className="text-emerald-500">●</span>}
+                <button
+                  onClick={async () => {
+                    if (connector?.id && organizationId) {
+                      await fetch(`/api/app-connectors?id=${connector.id}&organizationId=${organizationId}`, { method: 'DELETE', credentials: 'include' });
+                    }
+                    setParsed(null); setFileName(null); setConnector(null); setConnectorError(null);
+                  }}
+                  className="text-gray-300 hover:text-red-500"
+                  title="Disconnect"
+                >✕</button>
+              </>
+            ) : connector && !driveConnected ? (
+              <>
+                <Cloud size={12} className="text-amber-400" />
+                <span className="text-amber-600 truncate max-w-[200px]">{connector.source_file_name}</span>
+                <span className="text-amber-400">⚠</span>
+              </>
+            ) : connectorLoading ? (
+              <>
+                <Cloud size={12} className="text-blue-400 animate-pulse" />
+                <span className="text-gray-400">Loading...</span>
+              </>
+            ) : (
+              <>
+                <Cloud size={12} className="text-gray-300" />
+                <button onClick={() => setShowDrivePicker(true)} className="text-blue-600 hover:text-blue-800 font-medium">Connect</button>
+                <span className="text-gray-200">|</span>
+                <button onClick={() => fileInputRef.current?.click()} className="text-gray-400 hover:text-gray-600">upload</button>
+              </>
+            )}
+            <input ref={fileInputRef} type="file" accept=".xlsx" className="hidden" onChange={handleFileChange} />
+          </div>
+          <span className="text-gray-200">·</span>
+          {/* Connector 2: DfE */}
+          <div className="flex items-center gap-1" title="Schoolgle DfE Database">
+            <Database size={12} className={dfeData ? "text-blue-500" : "text-gray-300"} />
+            <span className={dfeData ? "text-gray-600" : "text-gray-400"}>DfE {dfeData ? "●" : "○"}</span>
+          </div>
+          <span className="text-gray-200">·</span>
+          {/* Connector 3: Per-pupil */}
+          <div className="flex items-center gap-1" title="Per-pupil assessment data">
+            <UserCheck size={12} className="text-gray-300" />
+            <span className="text-gray-400">Pupil ○</span>
           </div>
         </div>
 
@@ -1239,11 +1212,11 @@ export default function TrustAssessorPage() {
         {/* No data prompt */}
         {!parsed && !showDrivePicker && !connectorLoading && (
           <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-gray-50 border border-gray-100 rounded-xl p-8 text-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="border border-dashed border-gray-200 rounded-lg p-6 text-center"
           >
-            <FileSpreadsheet size={32} className="text-gray-300 mx-auto mb-3" />
+            <FileSpreadsheet size={24} className="text-gray-300 mx-auto mb-2" />
             <p className="text-sm text-gray-500">
               Connect your trust&apos;s mid-year data capture spreadsheet to get started.
             </p>
