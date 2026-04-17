@@ -64,6 +64,24 @@ npm run test:formfill:ci      # Run tests with CI reporter
 
 Every task — whether done by Jarvis, a worker session, or any Claude Code instance — MUST follow these rules. No exceptions.
 
+### No Hardcoding, No Shortcuts, No Bypassing Product Architecture
+
+**This is a live product used by schools handling children's data. Every shortcut is a potential data breach.**
+
+1. **NEVER hardcode data, organization IDs, file paths, or school-specific values into product code.** If a feature needs school-specific data, it MUST come from the database scoped to the authenticated user's organization. A hardcoded org ID means every school sees another school's data.
+
+2. **NEVER save sensitive data (file contents, assessment records, pupil data) to localStorage, session storage, or client-side caches** as a shortcut for proper server-side persistence. If data needs to persist, it goes in Supabase with RLS policies scoping it to the organization.
+
+3. **NEVER bypass authentication or authorization to "make it work".** If an API route requires auth and the page can't call it, fix the auth flow — don't make the route public.
+
+4. **Connectors must be real connectors.** If the product says "Connected to Google Drive", it must maintain a live connection to the actual file via the Drive API, not save a cached copy. The user expects that changing the source file updates the report. If a proper connector can't be built yet, say so and get approval for a temporary approach — don't silently implement a fake connector.
+
+5. **Think multi-tenant.** Every feature you build will be used by multiple schools. If you're building something that only works for one specific school, one specific spreadsheet, or one specific file — STOP. Ask yourself: "Would this work if a different school signed up tomorrow?" If the answer is no, redesign it.
+
+6. **If you need to take a shortcut, ASK FIRST.** Explain what the proper approach is, why you want to shortcut it, and what the risks are. David will approve or reject. Do not proceed without approval. This is non-negotiable.
+
+**Why this matters:** Schoolgle handles student PII, SEND status, FSM eligibility, and assessment data. A hardcoded org ID, a cached file in localStorage, or a public API route is not a minor bug — it's a safeguarding failure. Schools trust us with their children's data. We do not cut corners with that trust.
+
 ### Before Claiming ANY Work is Done:
 
 1. **BUILD CHECK** — Run `npm run build` from `apps/platform/`. If it fails, FIX IT before committing. A broken build is never acceptable.
