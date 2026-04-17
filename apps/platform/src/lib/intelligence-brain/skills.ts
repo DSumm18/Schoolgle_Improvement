@@ -59,35 +59,41 @@ export const SKILLS: Record<string, BrainSkill> = {
     id: 'school-assessment-analyst',
     name: 'School Assessment Analyst',
     description: 'Analyses school mid-year assessment data and writes professional board reports',
-    systemPrompt: `You are a senior School Improvement Partner with 20 years of experience in UK primary education. You write concise, professional board reports for trustees and governors.
+    systemPrompt: `You are a senior School Improvement Partner with 20 years of UK primary education experience. You produce sharp, evidence-based board reports that cut through noise and challenge school leaders constructively.
+
+Your analytical approach — actively look for these patterns:
+- CONTRADICTIONS: If 76% reach expected in Writing but 0% reach Greater Depth, that's virtually impossible in a large cohort. Either GD assessment is too conservative or the 76% is inflated. Call it out.
+- UNEXPLAINED DROPS: When attainment drops >15pp between year groups, check if FSM or SEND composition changes explain it. If demographics are similar, the drop is about assessment consistency, not cohort quality. Say which it is.
+- MISSING DATA: If a year group shows 0 FSM in a school with 30%+ FSM overall, that's a data submission error, not a factual zero. Flag it.
+- SYSTEMIC PATTERNS: If GD Writing is 0% across EVERY year group, that's not bad luck — it's a systemic issue with either curriculum challenge, moderation standards, or data entry.
+- STRENGTHS IN CONTEXT: If a high-FSM school achieves above-average outcomes, that's genuinely impressive and worth investigating — what are they doing?
+- COHORT SIZE: In schools under 100 pupils, percentage swings are statistically meaningless. Say so.
 
 Your writing style:
-- Clear, direct, professional English — no jargon, no data soup
-- Lead with the most important finding
-- Use specific numbers but embed them naturally in sentences
-- Frame concerns as questions for leaders, not accusations
-- Acknowledge context (FSM, SEND, cohort size) before making judgements
-- When data looks positive, say so — celebrate success as well as flagging concerns
-- Be specific about which year groups, which subjects
-- Maximum 4-5 short paragraphs per school, 3-4 for trust overview
+- Professional, direct, evidence-based — every statement backed by a specific number
+- Lead with the single most important finding
+- Write for intelligent non-specialists (governors, trustees, CEOs)
+- Frame challenges as specific questions: "What moderation evidence supports 76% Writing ARE with 0% GD?"
+- 4-5 short paragraphs maximum
+- Do not pad with generic observations. If it's not specific and actionable, don't include it.
 
-You are writing for headteachers, governors, and trust board members who are intelligent but may not be data specialists. They need to understand what the data means and what questions to ask.
+RULES: Only reference data that was provided. Never invent numbers. If data is missing, say "this data was not submitted."`,
+    userPromptTemplate: `Analyse this school's mid-year assessment data for a trust board report.
 
-IMPORTANT: Every claim must be traceable to the data provided. Do not invent statistics. If data is missing, say so.`,
-    userPromptTemplate: `Write a professional assessment summary for inclusion in a trust board report.
+This data is SELF-REPORTED by the school — not externally validated. Your job is to identify what looks right, what doesn't add up, and what questions the board should be asking.
 
-Data provided (from the trust's mid-year data capture spreadsheet — self-reported by schools, not externally validated):
+Data:
 
 {{DATA}}
 
-Write a concise, professional narrative that:
-1. Sets the context (school size, disadvantage, SEND)
-2. Identifies strengths with specific evidence
-3. Flags concerns with specific evidence
-4. Poses 2-3 key questions for school leadership
-5. Notes any data quality issues
+Produce a concise analysis covering:
+1. Context (size, disadvantage, SEND) and what that means for interpreting the numbers
+2. The single biggest strength in this data — be specific
+3. The single biggest concern — explain why it matters and what the likely cause is
+4. Any data contradictions or quality issues (e.g. 0% GD with high ARE%, missing year groups, impossible FSM numbers)
+5. 2-3 sharp questions for the headteacher — questions that can't be answered with "we're working on it"
 
-Be fair but direct. If demographics explain weaker performance, say so. If they don't, say that too.`,
+Cross-reference the per-year-group FSM and SEND counts against attainment when explaining drops or jumps between year groups. State whether demographics explain the pattern or not.`,
     model: 'anthropic/claude-sonnet-4-20250514',
     temperature: 0.3,
     maxTokens: 800,
@@ -237,4 +243,106 @@ export function listSkills(): BrainSkill[] {
  */
 export function getSkill(skillId: string): BrainSkill | undefined {
   return SKILLS[skillId];
+}
+
+// ─── School AI Preferences ───────────────────────────────────────────────────
+
+export interface SchoolAiPreferences {
+  ai_tone?: string;
+  ai_response_style?: string;
+  ai_school_context?: string;
+  ai_priorities?: string;
+  ai_preferred_terminology?: Record<string, string>;
+  ai_temperature_offset?: number;
+}
+
+/**
+ * Execute a brain skill, optionally augmenting the system prompt with
+ * school-specific preferences loaded from school_settings / organizations.settings.
+ *
+ * If preferences are provided, a [SCHOOL-SPECIFIC CONTEXT] block is appended
+ * to the skill's system prompt so every analysis is tailored to the school.
+ *
+ * Falls back to regular executeSkill when no preferences are supplied.
+ */
+export async function executeSkillWithPreferences(
+  skillId: string,
+  data: Record<string, unknown>,
+  preferences?: SchoolAiPreferences,
+): Promise<SkillExecutionResult> {
+  const skill = SKILLS[skillId];
+  if (!skill) {
+    throw new Error(
+      `Unknown skill: ${skillId}. Available skills: ${Object.keys(SKILLS).join(', ')}`,
+    );
+  }
+
+  // No preferences — delegate to the standard executor unchanged
+  if (!preferences || Object.keys(preferences).length === 0) {
+    return executeSkill(skillId, data);
+  }
+
+  // Build the school-specific context block
+  const contextLines: string[] = ['', '[SCHOOL-SPECIFIC CONTEXT]'];
+  if (preferences.ai_tone) {
+    contextLines.push(`Tone: ${preferences.ai_tone}`);
+  }
+  if (preferences.ai_response_style) {
+    contextLines.push(`Response style: ${preferences.ai_response_style}`);
+  }
+  if (preferences.ai_school_context) {
+    contextLines.push(`School context: ${preferences.ai_school_context}`);
+  }
+  if (preferences.ai_priorities) {
+    contextLines.push(`Priorities: ${preferences.ai_priorities}`);
+  }
+  if (
+    preferences.ai_preferred_terminology &&
+    Object.keys(preferences.ai_preferred_terminology).length > 0
+  ) {
+    contextLines.push(
+      `Preferred terminology: ${JSON.stringify(preferences.ai_preferred_terminology)}`,
+    );
+  }
+  contextLines.push(
+    'Apply these preferences consistently throughout your response.',
+  );
+
+  const augmentedSystemPrompt = skill.systemPrompt + contextLines.join('\n');
+
+  // Clamp adjusted temperature to [0, 1]
+  const offset = preferences.ai_temperature_offset ?? 0;
+  const adjustedTemperature = Math.min(1, Math.max(0, skill.temperature + offset));
+
+  const userPrompt = skill.userPromptTemplate.replace(
+    '{{DATA}}',
+    JSON.stringify(data, null, 2),
+  );
+
+  const completion = await openai.chat.completions.create({
+    model: skill.model,
+    messages: [
+      { role: 'system', content: augmentedSystemPrompt },
+      { role: 'user', content: userPrompt },
+    ],
+    max_tokens: skill.maxTokens,
+    temperature: adjustedTemperature,
+  });
+
+  const output =
+    completion.choices[0]?.message?.content ?? 'Unable to generate output.';
+
+  return {
+    output,
+    skillId,
+    model: completion.model ?? skill.model,
+    generatedAt: new Date().toISOString(),
+    tokenUsage: completion.usage
+      ? {
+          prompt: completion.usage.prompt_tokens,
+          completion: completion.usage.completion_tokens,
+          total: completion.usage.total_tokens,
+        }
+      : undefined,
+  };
 }
