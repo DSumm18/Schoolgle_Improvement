@@ -2,6 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { protectedRoute, apiSuccess, apiError } from '@/lib/api-utils';
 import { createServiceRoleClient } from '@/lib/supabase-server';
 
+// Generate a friendly pseudonym from a hash — deterministic so same hash = same name
+const COLOURS = ['Red', 'Blue', 'Green', 'Gold', 'Silver', 'Amber', 'Coral', 'Jade', 'Rose', 'Sage', 'Teal', 'Plum', 'Ruby', 'Onyx', 'Fern', 'Dove', 'Wren', 'Lark', 'Clay', 'Dusk'];
+const ANIMALS = ['Robin', 'Falcon', 'Otter', 'Badger', 'Heron', 'Swift', 'Finch', 'Wren', 'Lark', 'Fox', 'Deer', 'Owl', 'Jay', 'Bear', 'Wolf', 'Hawk', 'Pike', 'Seal', 'Moth', 'Bee'];
+
+function pseudonymFromHash(hash: string): string {
+  const n = parseInt(hash.slice(0, 8), 16);
+  const colour = COLOURS[n % COLOURS.length];
+  const animal = ANIMALS[Math.floor(n / COLOURS.length) % ANIMALS.length];
+  // Append a short numeric suffix from later hash bytes to avoid collisions
+  const suffix = parseInt(hash.slice(8, 12), 16) % 100;
+  return `${colour} ${animal} ${suffix}`;
+}
+
 // Trust spreadsheet figures for Grove House (mid-year / reported)
 const SPREADSHEET_FIGURES: Record<string, { r: number; w: number; m: number; c?: number }> = {
   Y1: { r: 39, w: 54, m: 59, c: 44 },
@@ -217,6 +230,114 @@ export const GET = protectedRoute(async (auth, _req: NextRequest) => {
       }
     }
 
+    // ─── 6b. Cohort Milestones — assessment milestones approach ──────
+    // National benchmarks (approximate, hardcoded)
+    const NATIONAL_BENCHMARKS: Record<string, number> = {
+      'EYFS GLD': 66,
+      'Y1 Phonics': 79,
+      'Y2 KS1 Reading': 67,
+      'Y2 KS1 Writing': 58,
+      'Y2 KS1 Maths': 68,
+    };
+
+    // Find all Reception years (year_group = 0)
+    const receptionYears = [...new Set(records.filter(r => r.year_group === 0).map(r => r.academic_year_start as number))].sort();
+
+    const cohortMilestones: {
+      cohortLabel: string;
+      startYear: number;
+      currentYearGroup: number;
+      milestones: {
+        label: string;
+        yearGroup: number;
+        academicYear: number;
+        percentAt: number | null;
+        pupilCount: number;
+        nationalBenchmark: number | null;
+      }[];
+    }[] = [];
+
+    for (const receptionYear of receptionYears) {
+      // Get pupils in Reception that year
+      const receptionPupils = [...new Set(
+        records.filter(r => r.year_group === 0 && r.academic_year_start === receptionYear)
+          .map(r => r.pupil_hash as string)
+      )];
+      if (receptionPupils.length < 5) continue;
+
+      const milestones: typeof cohortMilestones[number]['milestones'] = [];
+
+      // Milestone 1: EYFS GLD (year_group=0, same year as reception)
+      const eyfsPupilRecords = records.filter(r => r.pupil_hash !== undefined && receptionPupils.includes(r.pupil_hash as string) && r.year_group === 0 && r.academic_year_start === receptionYear);
+      const eyfsUniquePupils = [...new Set(eyfsPupilRecords.map(r => r.pupil_hash as string))];
+      if (eyfsUniquePupils.length >= 5) {
+        // GLD = all areas at level 2
+        const gldCount = eyfsUniquePupils.filter(hash => {
+          const pr = eyfsPupilRecords.filter(r => r.pupil_hash === hash);
+          return pr.length > 0 && pr.every(r => r.attainment_level === '2');
+        }).length;
+        milestones.push({
+          label: 'EYFS GLD',
+          yearGroup: 0,
+          academicYear: receptionYear + 1,
+          percentAt: Math.round(100 * gldCount / eyfsUniquePupils.length),
+          pupilCount: eyfsUniquePupils.length,
+          nationalBenchmark: NATIONAL_BENCHMARKS['EYFS GLD'],
+        });
+      }
+
+      // Milestone 2: Y1 Phonics (year_group=1, one year later)
+      const phonicsYear = receptionYear + 1;
+      const phonicsPupilRecords = records.filter(r => r.pupil_hash !== undefined && receptionPupils.includes(r.pupil_hash as string) && r.year_group === 1 && r.subject === 'phonics' && r.academic_year_start === phonicsYear);
+      const phonicsUniquePupils = [...new Set(phonicsPupilRecords.map(r => r.pupil_hash as string))];
+      if (phonicsUniquePupils.length >= 5) {
+        const phonicsPass = phonicsPupilRecords.filter(r => {
+          const score = Number(r.scaled_score);
+          if (!isNaN(score)) return score >= 32;
+          return r.attainment_level !== 'WT' && r.attainment_level !== 'WTS' && r.attainment_level !== null;
+        }).length;
+        milestones.push({
+          label: 'Y1 Phonics',
+          yearGroup: 1,
+          academicYear: phonicsYear + 1,
+          percentAt: Math.round(100 * phonicsPass / phonicsUniquePupils.length),
+          pupilCount: phonicsUniquePupils.length,
+          nationalBenchmark: NATIONAL_BENCHMARKS['Y1 Phonics'],
+        });
+      }
+
+      // Milestone 3: Y2 KS1 Reading / Writing / Maths (year_group=2, two years later)
+      const ks1Year = receptionYear + 2;
+      for (const [subj, label] of [['reading', 'Y2 KS1 Reading'], ['writing', 'Y2 KS1 Writing'], ['maths', 'Y2 KS1 Maths']] as const) {
+        const ks1Recs = records.filter(r => r.pupil_hash !== undefined && receptionPupils.includes(r.pupil_hash as string) && r.year_group === 2 && r.subject === subj && r.academic_year_start === ks1Year);
+        const ks1Pupils = [...new Set(ks1Recs.map(r => r.pupil_hash as string))];
+        if (ks1Pupils.length >= 5) {
+          const atExpected = ks1Recs.filter(r => ['EXS', 'GDS', '2'].includes(r.attainment_level as string ?? '')).length;
+          milestones.push({
+            label,
+            yearGroup: 2,
+            academicYear: ks1Year + 1,
+            percentAt: Math.round(100 * atExpected / ks1Recs.length),
+            pupilCount: ks1Pupils.length,
+            nationalBenchmark: NATIONAL_BENCHMARKS[label],
+          });
+        }
+      }
+
+      if (milestones.length === 0) continue;
+
+      const currentYearGroup = (2025 - receptionYear);
+      cohortMilestones.push({
+        cohortLabel: `Started Reception ${receptionYear + 1}/${String(receptionYear + 2).slice(2)}`,
+        startYear: receptionYear + 1,
+        currentYearGroup,
+        milestones,
+      });
+    }
+
+    // Sort cohorts by start year
+    cohortMilestones.sort((a, b) => a.startYear - b.startYear);
+
     const cohortJourneys: {
       pupilId: string;
       demographics: { isFsm: boolean; isSend: boolean; isEal: boolean; gender: string };
@@ -238,7 +359,7 @@ export const GET = protectedRoute(async (auth, _req: NextRequest) => {
 
       if (journey.length > 0) {
         cohortJourneys.push({
-          pupilId: hash.slice(0, 8) + '...',
+          pupilId: pseudonymFromHash(hash),
           journey,
           demographics: {
             isFsm: records.some(r => r.pupil_hash === hash && r.is_fsm === true),
@@ -264,7 +385,7 @@ export const GET = protectedRoute(async (auth, _req: NextRequest) => {
       const [hash] = trackableEntries[idx];
       const pupilRecords = records.filter(r => r.pupil_hash === hash);
       spotlightPupil = {
-        pupilId: hash.slice(0, 8) + '...',
+        pupilId: pseudonymFromHash(hash),
         demographics: {
           isFsm: records.some(r => r.pupil_hash === hash && r.is_fsm === true),
           isSend: records.some(r => r.pupil_hash === hash && r.is_send === true),
@@ -283,10 +404,50 @@ export const GET = protectedRoute(async (auth, _req: NextRequest) => {
       };
     }
 
+    // Compute latestYear once — used by sections 8, 9, 10
+    const latestYear = Math.max(...records.map(r => r.academic_year_start as number));
+
+    // ─── 9. Cohort Tracking — legacy (kept for backward compat, now empty) ───
+    // Replaced by cohortMilestones above. Return empty array.
+    const cohortTracking: {
+      cohortLabel: string;
+      startYear: number;
+      startYearGroup: number;
+      dataPoints: { yearGroup: number; year: number; reading: number | null; writing: number | null; maths: number | null; pupils: number }[];
+    }[] = [];
+
+    // ─── 10. Demographic Disaggregation — "what if we remove group X" ──
+    // For most recent year, compute attainment with/without each demographic group
+    const latestRecords = records.filter(r => r.academic_year_start === latestYear);
+    const latestPupilHashes = [...new Set(latestRecords.map(r => r.pupil_hash as string))];
+
+    const computeAttainment = (pupilHashes: string[]) => {
+      const result: Record<string, { atExpected: number; total: number; pct: number }> = {};
+      for (const subj of ['reading', 'writing', 'maths']) {
+        const subjRecords = latestRecords.filter(r => pupilHashes.includes(r.pupil_hash as string) && r.subject === subj);
+        const atExpected = subjRecords.filter(r => ['EXS', 'GDS', '2'].includes(r.attainment_level as string ?? '')).length;
+        result[subj] = { atExpected, total: subjRecords.length, pct: subjRecords.length > 0 ? Math.round(100 * atExpected / subjRecords.length) : 0 };
+      }
+      return result;
+    };
+
+    const fsmHashes = latestPupilHashes.filter(h => latestRecords.some(r => r.pupil_hash === h && r.is_fsm === true));
+    const sendHashes = latestPupilHashes.filter(h => latestRecords.some(r => r.pupil_hash === h && r.is_send === true));
+    const ealHashes = latestPupilHashes.filter(h => latestRecords.some(r => r.pupil_hash === h && r.is_eal === true));
+
+    const demographicDisaggregation = {
+      all: { count: latestPupilHashes.length, attainment: computeAttainment(latestPupilHashes) },
+      withoutFsm: { removed: fsmHashes.length, remaining: latestPupilHashes.length - fsmHashes.length, attainment: computeAttainment(latestPupilHashes.filter(h => !fsmHashes.includes(h))) },
+      withoutSend: { removed: sendHashes.length, remaining: latestPupilHashes.length - sendHashes.length, attainment: computeAttainment(latestPupilHashes.filter(h => !sendHashes.includes(h))) },
+      withoutEal: { removed: ealHashes.length, remaining: latestPupilHashes.length - ealHashes.length, attainment: computeAttainment(latestPupilHashes.filter(h => !ealHashes.includes(h))) },
+      fsmOnly: { count: fsmHashes.length, attainment: computeAttainment(fsmHashes) },
+      sendOnly: { count: sendHashes.length, attainment: computeAttainment(sendHashes) },
+      ealOnly: { count: ealHashes.length, attainment: computeAttainment(ealHashes) },
+    };
+
     // ─── 8. CTF vs Spreadsheet comparison ───────────────────────────
     // Build CTF percentages for Y1 (year_group=1), Y2 (year_group=2), Y6 (year_group=6)
-    // Use most recent year for each
-    const latestYear = Math.max(...records.map(r => r.academic_year_start as number));
+    // Use most recent year for each (latestYear computed above)
 
     const buildCtfPct = (yearGroup: number) => {
       const result: Record<string, number | null> = { r: null, w: null, m: null };
@@ -341,6 +502,9 @@ export const GET = protectedRoute(async (auth, _req: NextRequest) => {
       cohortJourneys: cohortJourneys.slice(0, 50),
       spotlightPupil,
       spreadsheetComparison,
+      cohortTracking,
+      cohortMilestones,
+      demographicDisaggregation,
     });
   } catch (err) {
     return apiError(err instanceof Error ? err.message : 'Internal server error', 500);

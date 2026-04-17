@@ -1619,32 +1619,24 @@ function SchoolTab({ school, parsed, dfeData, authToken }: { school: string; par
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="bg-gray-50 rounded-lg p-3 text-center">
-            <div className="text-2xl font-bold text-gray-900">{totalPupils > 0 ? totalPupils : "—"}</div>
-            <div className="text-xs text-gray-500 mt-0.5">Total Pupils</div>
-          </div>
-          <div className="bg-rose-50 rounded-lg p-3 text-center">
-            <div className="text-2xl font-bold text-rose-700">{fsmPct !== null ? `${fsmPct}%` : "—"}</div>
-            <div className="text-xs text-rose-600 mt-0.5">FSM ({totalFsm} pupils)</div>
-            {trustFsmPct !== null && fsmPct !== null && (
-              <div className={`text-xs mt-1 font-medium ${fsmPct > trustFsmPct ? "text-rose-500" : "text-emerald-600"}`}>
-                {fsmPct > trustFsmPct ? `+${Math.round(fsmPct - trustFsmPct)}pp above` : `${Math.round(trustFsmPct - fsmPct)}pp below`} trust avg
-              </div>
-            )}
-          </div>
-          <div className="bg-purple-50 rounded-lg p-3 text-center">
-            <div className="text-2xl font-bold text-purple-700">{sendPct !== null ? `${sendPct}%` : "—"}</div>
-            <div className="text-xs text-purple-600 mt-0.5">SEND ({totalSend} pupils)</div>
-            {trustSendPct !== null && sendPct !== null && (
-              <div className={`text-xs mt-1 font-medium ${sendPct > trustSendPct ? "text-purple-500" : "text-emerald-600"}`}>
-                {sendPct > trustSendPct ? `+${Math.round(sendPct - trustSendPct)}pp above` : `${Math.round(trustSendPct - sendPct)}pp below`} trust avg
-              </div>
-            )}
-          </div>
-          <div className="bg-indigo-50 rounded-lg p-3 text-center">
-            <div className="text-2xl font-bold text-indigo-700">{totalEhcp > 0 ? totalEhcp : "—"}</div>
-            <div className="text-xs text-indigo-600 mt-0.5">EHCPs</div>
-          </div>
+          {[
+            { bg: "bg-gray-50", valueCls: "text-gray-900", value: totalPupils > 0 ? String(totalPupils) : "—", label: "Total Pupils", sub: null },
+            { bg: "bg-rose-50", valueCls: "text-rose-700", value: fsmPct !== null ? `${fsmPct}%` : "—", label: `FSM (${totalFsm} pupils)`, sub: trustFsmPct !== null && fsmPct !== null ? `${fsmPct > trustFsmPct ? `+${Math.round(fsmPct - trustFsmPct)}pp above` : `${Math.round(trustFsmPct - fsmPct)}pp below`} trust avg` : null },
+            { bg: "bg-purple-50", valueCls: "text-purple-700", value: sendPct !== null ? `${sendPct}%` : "—", label: `SEND (${totalSend} pupils)`, sub: trustSendPct !== null && sendPct !== null ? `${sendPct > trustSendPct ? `+${Math.round(sendPct - trustSendPct)}pp above` : `${Math.round(trustSendPct - sendPct)}pp below`} trust avg` : null },
+            { bg: "bg-indigo-50", valueCls: "text-indigo-700", value: totalEhcp > 0 ? String(totalEhcp) : "—", label: "EHCPs", sub: null },
+          ].map((card, idx) => (
+            <motion.div
+              key={idx}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.08 * idx }}
+              className={`${card.bg} rounded-lg p-3 text-center`}
+            >
+              <div className={`text-2xl font-bold ${card.valueCls}`}>{card.value}</div>
+              <div className="text-xs text-gray-500 mt-0.5">{card.label}</div>
+              {card.sub && <div className="text-xs mt-1 font-medium text-gray-500">{card.sub}</div>}
+            </motion.div>
+          ))}
         </div>
 
         {/* ARE/GD legend */}
@@ -1685,14 +1677,25 @@ function SchoolTab({ school, parsed, dfeData, authToken }: { school: string; par
                   National Percentile Rank
                   <span className="text-xs text-gray-400 font-normal ml-auto">KS2 Combined 2024/25</span>
                 </h4>
-                <div className={`text-5xl font-extrabold mb-1 ${
-                  nationalPercentile.percentile > 75 ? "text-emerald-600" :
-                  nationalPercentile.percentile > 50 ? "text-blue-600" :
-                  nationalPercentile.percentile > 25 ? "text-amber-600" :
-                  "text-red-600"
-                }`}>
-                  {ordinal(nationalPercentile.percentile)}
-                </div>
+                {(() => {
+                  // eslint-disable-next-line react-hooks/rules-of-hooks
+                  const animatedPct = useCountUp(nationalPercentile.percentile, 1400);
+                  const isUrgent = nationalPercentile.percentile <= 25;
+                  return (
+                    <motion.div
+                      animate={isUrgent ? { scale: [1, 1.04, 1] } : {}}
+                      transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                      className={`text-5xl font-extrabold mb-1 ${
+                        nationalPercentile.percentile > 75 ? "text-emerald-600" :
+                        nationalPercentile.percentile > 50 ? "text-blue-600" :
+                        nationalPercentile.percentile > 25 ? "text-amber-600" :
+                        "text-red-600"
+                      }`}
+                    >
+                      {ordinal(animatedPct)}
+                    </motion.div>
+                  );
+                })()}
                 <div className={`text-sm font-semibold mb-3 ${
                   nationalPercentile.percentile > 50 ? "text-emerald-700" : "text-red-700"
                 }`}>
@@ -2158,85 +2161,55 @@ function SchoolTab({ school, parsed, dfeData, authToken }: { school: string; par
   );
 }
 
-// ─── Phase 1: Trust Insights ──────────────────────────────────────────────────
+// ─── Count-up animation hook ──────────────────────────────────────────────────
 
-function TrustInsights({ parsed }: { parsed: ParsedSpreadsheet }) {
-  const insights: { text: string; severity: "info" | "warning" | "error" }[] = [];
+function useCountUp(target: number, duration = 1200) {
+  const [value, setValue] = useState(0);
+  useEffect(() => {
+    let start: number | undefined;
+    let raf: number;
+    const step = (now: number) => {
+      if (!start) start = now;
+      const progress = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setValue(Math.round(target * eased));
+      if (progress < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [target, duration]);
+  return value;
+}
 
-  // Subject weakness analysis across Y6
-  const subjectTotals: Record<"reading" | "writing" | "maths", { sum: number; count: number }> = {
-    reading: { sum: 0, count: 0 },
-    writing: { sum: 0, count: 0 },
-    maths:   { sum: 0, count: 0 },
-  };
-  const weakWritingY6: string[] = [];
+// ─── Phase 1: Trust Insights (clean 3-zone layout) ───────────────────────────
+
+function TrustInsights({ parsed, onSchoolClick }: { parsed: ParsedSpreadsheet; onSchoolClick?: (school: string) => void }) {
+  // ── Compute trust-wide metrics ──
+  let totalTrustPupils = 0;
   let totalY6Combined = 0;
   let y6CombinedCount = 0;
+  let weakestY6School = "";
+  let weakestY6Pct: number | null = null;
 
   for (const school of parsed.schools) {
-    const y6 = parsed.data[school]?.["Year 6"];
-    if (!y6) continue;
-    const ap = y6.all_pupils;
-    if (ap.r_are !== null && ap.r_are !== undefined) { subjectTotals.reading.sum += ap.r_are; subjectTotals.reading.count++; }
-    if (ap.w_are !== null && ap.w_are !== undefined) {
-      subjectTotals.writing.sum += ap.w_are; subjectTotals.writing.count++;
-      if (ap.w_are < 60) weakWritingY6.push(school);
+    for (const yg of YEAR_GROUPS) {
+      const d = parsed.data[school]?.[yg];
+      if (d?.cohort.number_in_cohort) totalTrustPupils += d.cohort.number_in_cohort;
     }
-    if (ap.m_are !== null && ap.m_are !== undefined) { subjectTotals.maths.sum += ap.m_are; subjectTotals.maths.count++; }
-    if (ap.c_are !== null && ap.c_are !== undefined) { totalY6Combined += ap.c_are; y6CombinedCount++; }
+    const y6c = parsed.data[school]?.["Year 6"]?.all_pupils.c_are ?? null;
+    if (y6c !== null) {
+      totalY6Combined += y6c;
+      y6CombinedCount++;
+      if (weakestY6Pct === null || y6c < weakestY6Pct) { weakestY6Pct = y6c; weakestY6School = school; }
+    }
   }
-
-  const avgR = subjectTotals.reading.count > 0 ? Math.round(subjectTotals.reading.sum / subjectTotals.reading.count) : null;
-  const avgW = subjectTotals.writing.count > 0 ? Math.round(subjectTotals.writing.sum / subjectTotals.writing.count) : null;
-  const avgM = subjectTotals.maths.count > 0 ? Math.round(subjectTotals.maths.sum / subjectTotals.maths.count) : null;
   const trustAvgY6Combined = y6CombinedCount > 0 ? Math.round(totalY6Combined / y6CombinedCount) : null;
+  const schoolsNeedingAttention = parsed.schools.filter(s => {
+    const pct = parsed.data[s]?.["Year 6"]?.all_pupils.c_are ?? null;
+    return pct !== null && pct < 55;
+  }).length;
 
-  const weakestSubject =
-    avgR !== null && avgW !== null && avgM !== null
-      ? (avgW <= avgR && avgW <= avgM ? "Writing" : avgR <= avgW && avgR <= avgM ? "Reading" : "Maths")
-      : null;
-
-  if (weakestSubject && weakWritingY6.length > 0) {
-    insights.push({
-      text: `Writing is the weakest subject trust-wide (avg ${avgW}%). ${weakWritingY6.length} school${weakWritingY6.length > 1 ? "s" : ""} have Y6 Writing below 60%: ${weakWritingY6.join(", ")}.`,
-      severity: weakWritingY6.length >= 3 ? "error" : "warning",
-    });
-  } else if (weakestSubject) {
-    const avg = weakestSubject === "Writing" ? avgW : weakestSubject === "Reading" ? avgR : avgM;
-    insights.push({
-      text: `${weakestSubject} is the weakest subject trust-wide (avg ${avg}% in Y6).`,
-      severity: "warning",
-    });
-  }
-
-  if (trustAvgY6Combined !== null) {
-    insights.push({
-      text: `Trust-wide average Y6 Combined ARE is ${trustAvgY6Combined}%.`,
-      severity: "info",
-    });
-  }
-
-  // Best Y6 performer
-  let bestSchool = "";
-  let bestPct = 0;
-  for (const school of parsed.schools) {
-    const pct = parsed.data[school]?.["Year 6"]?.all_pupils.c_are ?? 0;
-    if (pct > bestPct) { bestPct = pct; bestSchool = school; }
-  }
-  if (bestSchool && bestPct > 0) {
-    insights.push({ text: `${bestSchool} Y6 Combined at ${bestPct}% is the strongest in the trust.`, severity: "info" });
-  }
-
-  // EYFS missing
-  const missingEyfs = parsed.schools.filter((s) => !parsed.data[s]?.["EYFS"]);
-  if (missingEyfs.length > 0) {
-    insights.push({
-      text: `${missingEyfs.join(", ")} ${missingEyfs.length === 1 ? "has" : "have"} not submitted EYFS data — GLD baseline is unknown.`,
-      severity: "warning",
-    });
-  }
-
-  // Zero GD Writing
+  // ── Zero GD Writing for narrative ──
   const zeroGdWriting: { school: string; yg: string }[] = [];
   for (const school of parsed.schools) {
     for (const yg of HEATMAP_YEAR_GROUPS) {
@@ -2244,316 +2217,177 @@ function TrustInsights({ parsed }: { parsed: ParsedSpreadsheet }) {
       if (d && d.all_pupils.w_gd === 0) zeroGdWriting.push({ school, yg });
     }
   }
-  if (zeroGdWriting.length >= 3) {
-    const schoolsAffected = [...new Set(zeroGdWriting.map((z) => z.school))];
-    insights.push({
-      text: `Zero Greater Depth in Writing reported in ${zeroGdWriting.length} year groups across ${schoolsAffected.length} schools (${schoolsAffected.join(", ")}).`,
-      severity: "error",
-    });
-  }
 
-  // Consistency jumps — stored separately for table rendering
-  interface ConsistencyJump {
-    school: string;
-    from: string;
-    to: string;
-    fromPct: number;
-    toPct: number;
-    change: number;
-    cohort: number | null;
-  }
+  // ── Consistency jumps ──
+  interface ConsistencyJump { school: string; from: string; to: string; fromPct: number; toPct: number; change: number; cohort: number | null; }
   const consistencyJumps: ConsistencyJump[] = [];
   for (const school of parsed.schools) {
     for (let i = 1; i < HEATMAP_YEAR_GROUPS.length; i++) {
       const prev = parsed.data[school]?.[HEATMAP_YEAR_GROUPS[i - 1]]?.all_pupils.c_are ?? null;
       const curr = parsed.data[school]?.[HEATMAP_YEAR_GROUPS[i]]?.all_pupils.c_are ?? null;
       if (prev !== null && curr !== null && Math.abs(curr - prev) > 15) {
-        const cohort = parsed.data[school]?.[HEATMAP_YEAR_GROUPS[i]]?.cohort.number_in_cohort ?? null;
         consistencyJumps.push({
           school,
           from: HEATMAP_YEAR_GROUPS[i - 1].replace("Year ", "Y"),
           to: HEATMAP_YEAR_GROUPS[i].replace("Year ", "Y"),
-          fromPct: prev,
-          toPct: curr,
+          fromPct: prev, toPct: curr,
           change: Math.round(curr - prev),
-          cohort,
+          cohort: parsed.data[school]?.[HEATMAP_YEAR_GROUPS[i]]?.cohort.number_in_cohort ?? null,
         });
       }
     }
   }
-  const bigJumps = consistencyJumps.map((j) => `${j.school} ${j.from}→${j.to}`); // keep for governor questions
 
-  if (insights.length === 0 && consistencyJumps.length === 0) return null;
-
-  const sevColor = (s: string) =>
-    s === "error" ? "bg-red-50 border-red-200 text-red-800" :
-    s === "warning" ? "bg-amber-50 border-amber-200 text-amber-800" :
-    "bg-blue-50 border-blue-200 text-blue-700";
-  const sevIcon = (s: string) =>
-    s === "error" ? <AlertCircle size={13} className="flex-shrink-0 mt-0.5" /> :
-    s === "warning" ? <AlertTriangle size={13} className="flex-shrink-0 mt-0.5" /> :
-    <Info size={13} className="flex-shrink-0 mt-0.5" />;
-
-  // Build ordered governor questions (max 4)
-  const governorQuestions: { text: React.ReactNode; level: "red" | "amber" | "blue" }[] = [];
-
-  // Q1: trust avg vs national
-  if (trustAvgY6Combined !== null && trustAvgY6Combined < 60) {
-    governorQuestions.push({
-      level: "red",
-      text: <>Trust-wide Y6 Combined is <strong>{trustAvgY6Combined}%</strong> — below the national average of ~60%. What is the trust&apos;s improvement trajectory and how does this compare to last year&apos;s KS2 outcomes?</>,
-    });
+  // ── AI narrative ──
+  const subjectTotals: Record<"reading" | "writing" | "maths", { sum: number; count: number }> = {
+    reading: { sum: 0, count: 0 }, writing: { sum: 0, count: 0 }, maths: { sum: 0, count: 0 },
+  };
+  for (const school of parsed.schools) {
+    const y6 = parsed.data[school]?.["Year 6"];
+    if (!y6) continue;
+    const ap = y6.all_pupils;
+    if (ap.r_are !== null && ap.r_are !== undefined) { subjectTotals.reading.sum += ap.r_are; subjectTotals.reading.count++; }
+    if (ap.w_are !== null && ap.w_are !== undefined) { subjectTotals.writing.sum += ap.w_are; subjectTotals.writing.count++; }
+    if (ap.m_are !== null && ap.m_are !== undefined) { subjectTotals.maths.sum += ap.m_are; subjectTotals.maths.count++; }
   }
+  const avgR = subjectTotals.reading.count > 0 ? Math.round(subjectTotals.reading.sum / subjectTotals.reading.count) : null;
+  const avgW = subjectTotals.writing.count > 0 ? Math.round(subjectTotals.writing.sum / subjectTotals.writing.count) : null;
+  const avgM = subjectTotals.maths.count > 0 ? Math.round(subjectTotals.maths.sum / subjectTotals.maths.count) : null;
+  const weakestSubjectLabel = avgR !== null && avgW !== null && avgM !== null
+    ? (avgW <= avgR && avgW <= avgM ? `Writing (${avgW}%)` : avgR <= avgW && avgR <= avgM ? `Reading (${avgR}%)` : `Maths (${avgM}%)`)
+    : null;
 
-  // Q2: range between best and worst
-  (() => {
-    let best: { school: string; pct: number } | null = null;
-    let worst: { school: string; pct: number } | null = null;
-    for (const school of parsed?.schools ?? []) {
-      const pct = parsed?.data[school]?.["Year 6"]?.all_pupils.c_are ?? null;
-      if (pct === null) continue;
-      if (!best || pct > best.pct) best = { school, pct };
-      if (!worst || pct < worst.pct) worst = { school, pct };
-    }
-    if (best && worst && best.school !== worst.school && best.pct - worst.pct >= 10 && governorQuestions.length < 4) {
-      governorQuestions.push({
-        level: "amber",
-        text: <>Y6 Combined ranges from <strong>{worst.pct}% ({worst.school})</strong> to <strong>{best.pct}% ({best.school})</strong> — a {Math.round(best.pct - worst.pct)}pp gap. What targeted support is in place for {worst.school}?</>,
-      });
-    }
-  })();
-
-  // Q3: weakest subject
-  if (avgW !== null && avgR !== null && avgM !== null && governorQuestions.length < 4) {
-    const weakSubject = avgW <= avgR && avgW <= avgM ? `Writing (${avgW}%)` : avgR <= avgW && avgR <= avgM ? `Reading (${avgR}%)` : `Maths (${avgM}%)`;
-    governorQuestions.push({
-      level: "amber",
-      text: <><strong>{weakSubject}</strong> is the weakest subject trust-wide at Y6. Is there a shared curriculum approach in place, and is it working?</>,
-    });
+  // ── Build narrative text ──
+  const narrativeParts: string[] = [];
+  if (trustAvgY6Combined !== null) {
+    const vs = trustAvgY6Combined - 61;
+    narrativeParts.push(`Trust Y6 Combined average is ${trustAvgY6Combined}% — ${Math.abs(vs)}pp ${vs >= 0 ? 'above' : 'below'} the national average of 61%.`);
   }
-
-  // Q4: consistency jumps or zero GD Writing
-  if (consistencyJumps.length > 0 && governorQuestions.length < 4) {
-    governorQuestions.push({
-      level: "red",
-      text: <>There are {consistencyJumps.length} year group consistency issues (&gt;15pp jump). Can school leaders provide moderation evidence to support these figures?</>,
-    });
-  } else if (zeroGdWriting.length >= 3 && governorQuestions.length < 4) {
-    governorQuestions.push({
-      level: "red",
-      text: <>Zero GD Writing reported in {zeroGdWriting.length} year groups across {[...new Set(zeroGdWriting.map((z) => z.school))].join(", ")}. Is this genuine or does it suggest the GD threshold is not well understood?</>,
-    });
-  } else if (missingEyfs.length > 0 && governorQuestions.length < 4) {
-    governorQuestions.push({
-      level: "amber",
-      text: <>{missingEyfs.length === 1 ? `${missingEyfs[0]} has` : `${missingEyfs.join(", ")} have`} not submitted EYFS data. Without GLD baseline the full progress pipeline cannot be assessed — when will this be available?</>,
-    });
-  } else if (governorQuestions.length < 4) {
-    governorQuestions.push({
-      level: "blue",
-      text: <>Are all {parsed?.schools?.length ?? "all"} schools using the same teacher assessment criteria? Without trust-wide moderation, like-for-like comparisons are unreliable.</>,
-    });
+  if (weakestSubjectLabel) {
+    narrativeParts.push(`${weakestSubjectLabel} is the weakest subject trust-wide.`);
+  }
+  if (zeroGdWriting.length >= 3) {
+    const schoolsAffected = [...new Set(zeroGdWriting.map(z => z.school))];
+    narrativeParts.push(`Zero Greater Depth in Writing reported across ${zeroGdWriting.length} year groups in ${schoolsAffected.join(', ')} — this is a trust-wide concern requiring moderation review.`);
+  }
+  if (consistencyJumps.length > 0) {
+    narrativeParts.push(`${consistencyJumps.length} year group consistency issue${consistencyJumps.length > 1 ? 's' : ''} detected (>15pp jump between adjacent year groups). School leaders should provide moderation evidence.`);
+  }
+  if (weakestY6School && weakestY6Pct !== null && weakestY6Pct < 55) {
+    narrativeParts.push(`${weakestY6School} needs most urgent support with Y6 Combined at ${weakestY6Pct}%. Click the school tab for a full deep dive.`);
   }
 
   return (
-    <div>
-      <h3 className="text-sm font-semibold text-gray-700 mb-3">Trust-Wide Insights</h3>
-      <div className="space-y-2 mb-5">
-        {insights.map((ins, i) => (
-          <div key={i} className={`flex items-start gap-2 text-xs px-3 py-2 rounded-lg border ${sevColor(ins.severity)}`}>
-            {sevIcon(ins.severity)}
-            <span>{ins.text}</span>
+    <div className="space-y-6">
+
+      {/* Zone 1 — Hero Strip */}
+      <div className="grid grid-cols-3 gap-4">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0 }}
+          className="bg-white border border-gray-200 rounded-xl p-5 text-center"
+        >
+          <div className="text-4xl font-extrabold text-gray-900">{totalTrustPupils > 0 ? totalTrustPupils.toLocaleString() : "—"}</div>
+          <div className="text-sm font-medium text-gray-500 mt-1">Total pupils</div>
+          <div className="text-xs text-gray-400 mt-0.5">{parsed.schools.length} schools</div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+          className={`rounded-xl p-5 text-center border ${
+            trustAvgY6Combined !== null && trustAvgY6Combined >= 65 ? 'bg-emerald-50 border-emerald-200' :
+            trustAvgY6Combined !== null && trustAvgY6Combined >= 50 ? 'bg-amber-50 border-amber-200' :
+            'bg-red-50 border-red-200'
+          }`}
+        >
+          <div className={`text-4xl font-extrabold ${
+            trustAvgY6Combined !== null && trustAvgY6Combined >= 65 ? 'text-emerald-700' :
+            trustAvgY6Combined !== null && trustAvgY6Combined >= 50 ? 'text-amber-700' :
+            'text-red-700'
+          }`}>
+            {trustAvgY6Combined !== null ? `${trustAvgY6Combined}%` : "—"}
           </div>
-        ))}
+          <div className="text-sm font-medium text-gray-600 mt-1">Trust Y6 Combined</div>
+          {trustAvgY6Combined !== null && (
+            <div className={`text-xs font-semibold mt-0.5 flex items-center justify-center gap-1 ${trustAvgY6Combined >= 61 ? 'text-emerald-600' : 'text-red-600'}`}>
+              {trustAvgY6Combined >= 61 ? <TrendingUp size={11} /> : <AlertTriangle size={11} />}
+              {trustAvgY6Combined >= 61 ? `+${trustAvgY6Combined - 61}pp` : `${trustAvgY6Combined - 61}pp`} vs national
+            </div>
+          )}
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.2 }}
+          className={`rounded-xl p-5 text-center border ${schoolsNeedingAttention > 0 ? 'bg-red-50 border-red-200' : 'bg-emerald-50 border-emerald-200'}`}
+        >
+          <motion.div
+            animate={schoolsNeedingAttention > 0 ? { scale: [1, 1.04, 1] } : {}}
+            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            className={`text-4xl font-extrabold ${schoolsNeedingAttention > 0 ? 'text-red-700' : 'text-emerald-700'}`}
+          >
+            {schoolsNeedingAttention}
+          </motion.div>
+          <div className="text-sm font-medium text-gray-600 mt-1">Schools needing attention</div>
+          <div className="text-xs text-gray-400 mt-0.5">Y6 Combined below 55%</div>
+        </motion.div>
       </div>
 
-      {/* Consistency jumps — clean table */}
-      {consistencyJumps.length > 0 && (
-        <div className="mb-5">
-          <h4 className="text-xs font-semibold text-gray-700 mb-2">Year Group Consistency Issues (&gt;15pp jump between adjacent years)</h4>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs border-collapse">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left p-2 text-gray-500 font-semibold">School</th>
-                  <th className="text-center p-2 text-gray-500 font-semibold">From</th>
-                  <th className="text-center p-2 text-gray-500 font-semibold">To</th>
-                  <th className="text-center p-2 text-gray-500 font-semibold">Change</th>
-                  <th className="text-center p-2 text-gray-500 font-semibold">FSM Similar?</th>
-                </tr>
-              </thead>
-              <tbody>
-                {consistencyJumps.map((j, i) => {
-                  const fromFsm = (() => {
-                    const ygFull = HEATMAP_YEAR_GROUPS.find((yg) => yg.replace("Year ", "Y") === j.from);
-                    if (!ygFull) return null;
-                    const d = parsed.data[j.school]?.[ygFull];
-                    return d?.cohort.number_fsm !== null && d?.cohort.number_in_cohort !== null && d.cohort.number_in_cohort && d.cohort.number_fsm !== null
-                      ? Math.round(100 * (d.cohort.number_fsm as number) / (d.cohort.number_in_cohort as number))
-                      : null;
-                  })();
-                  const toFsm = (() => {
-                    const ygFull = HEATMAP_YEAR_GROUPS.find((yg) => yg.replace("Year ", "Y") === j.to);
-                    if (!ygFull) return null;
-                    const d = parsed.data[j.school]?.[ygFull];
-                    return d?.cohort.number_fsm !== null && d?.cohort.number_in_cohort !== null && d.cohort.number_in_cohort && d.cohort.number_fsm !== null
-                      ? Math.round(100 * (d.cohort.number_fsm as number) / (d.cohort.number_in_cohort as number))
-                      : null;
-                  })();
-                  const fsmSimilar = fromFsm !== null && toFsm !== null ? Math.abs(fromFsm - toFsm) <= 10 : null;
-                  return (
-                    <tr key={i} className="border-t border-gray-100">
-                      <td className="p-2 font-semibold text-gray-800">{j.school}</td>
-                      <td className="p-2 text-center text-gray-600">{j.from} ({j.fromPct}%)</td>
-                      <td className="p-2 text-center text-gray-600">{j.to} ({j.toPct}%)</td>
-                      <td className={`p-2 text-center font-bold ${j.change > 0 ? "text-emerald-600" : "text-red-600"}`}>
-                        {j.change > 0 ? "+" : ""}{j.change}pp
-                      </td>
-                      <td className="p-2 text-center">
-                        {fsmSimilar === null ? (
-                          <span className="text-gray-300">—</span>
-                        ) : fsmSimilar ? (
-                          <span className="text-amber-600 font-medium">Yes — not FSM</span>
-                        ) : (
-                          <span className="text-blue-600 font-medium">No — FSM differs</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+      {/* Zone 2 — Heatmap */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.25 }}
+        className="bg-white border border-gray-200 rounded-xl p-5"
+      >
+        <div className="flex items-center gap-2 mb-4">
+          <BarChart3 size={15} className="text-gray-500" />
+          <span className="text-sm font-semibold text-gray-800">Trust Attainment Heatmap</span>
+          <span className="text-xs text-gray-400 ml-1">click a school name to drill in</span>
         </div>
-      )}
+        <SubjectHeatmap parsed={parsed} onSchoolClick={onSchoolClick ?? (() => {})} />
+      </motion.div>
 
-      {/* Context: Does Disadvantage Explain Performance? */}
-      {(() => {
-        // Build per-school context row
-        interface ContextRow {
-          school: string;
-          totalPupils: number;
-          fsmPct: number | null;
-          sendPct: number | null;
-          ehcp: number;
-          y6Combined: number | null;
-          y6VsNational: number | null;
-          fsmRaw: number;
-        }
-
-        const rows: ContextRow[] = parsed.schools.map((s) => {
-          let totalP = 0, totalF = 0, totalSe = 0, totalE = 0;
-          for (const yg of YEAR_GROUPS) {
-            const d = parsed.data[s]?.[yg];
-            if (!d) continue;
-            if (d.cohort.number_in_cohort !== null) totalP += d.cohort.number_in_cohort;
-            if (d.cohort.number_fsm !== null) totalF += d.cohort.number_fsm;
-            if (d.cohort.number_send !== null) totalSe += d.cohort.number_send;
-            if (d.cohort.ehcp !== null) totalE += d.cohort.ehcp;
-          }
-          const y6c = parsed.data[s]?.["Year 6"]?.all_pupils.c_are ?? null;
-          return {
-            school: s,
-            totalPupils: totalP,
-            fsmPct: totalP > 0 ? Math.round((totalF / totalP) * 1000) / 10 : null,
-            sendPct: totalP > 0 ? Math.round((totalSe / totalP) * 1000) / 10 : null,
-            ehcp: totalE,
-            y6Combined: y6c,
-            y6VsNational: y6c !== null ? Math.round(y6c - 61) : null,
-            fsmRaw: totalF,
-          };
-        });
-
-        // Sort by Y6 Combined ascending (worst first)
-        const sorted = [...rows].sort((a, b) => {
-          if (a.y6Combined === null) return 1;
-          if (b.y6Combined === null) return -1;
-          return a.y6Combined - b.y6Combined;
-        });
-
-        // Find the school with best Combined relative to FSM% (highest Combined / FSM% ratio)
-        let heroSchool: ContextRow | null = null;
-        let heroRatio = -Infinity;
-        for (const r of rows) {
-          if (r.y6Combined !== null && r.fsmPct !== null && r.fsmPct > 15) {
-            const ratio = r.y6Combined / r.fsmPct;
-            if (ratio > heroRatio) { heroRatio = ratio; heroSchool = r; }
-          }
-        }
-
-        return (
-          <div className="mb-5">
-            <h4 className="text-sm font-semibold text-gray-700 mb-2">Context: Does Disadvantage Explain Performance?</h4>
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs border-collapse">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left p-2 text-gray-500 font-semibold">School</th>
-                    <th className="text-center p-2 text-gray-500 font-semibold">Pupils</th>
-                    <th className="text-center p-2 text-gray-500 font-semibold">FSM%</th>
-                    <th className="text-center p-2 text-gray-500 font-semibold">SEND%</th>
-                    <th className="text-center p-2 text-gray-500 font-semibold">EHCP</th>
-                    <th className="text-center p-2 text-gray-500 font-semibold">Y6 Combined</th>
-                    <th className="text-center p-2 text-gray-500 font-semibold">vs National</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sorted.map((r) => {
-                    const fsmBg = r.fsmPct !== null && r.fsmPct > 45 ? "bg-red-50 text-red-700 font-semibold" : r.fsmPct !== null && r.fsmPct > 35 ? "bg-amber-50 text-amber-700 font-semibold" : "text-gray-700";
-                    const combinedBg = r.y6Combined !== null && r.y6Combined < 50 ? "bg-red-50 text-red-700 font-bold" : r.y6Combined !== null && r.y6Combined < 60 ? "bg-amber-50 text-amber-700 font-semibold" : "text-emerald-700 font-semibold";
-                    const vsNatColor = r.y6VsNational !== null && r.y6VsNational >= 0 ? "text-emerald-600 font-semibold" : "text-red-600 font-semibold";
-                    return (
-                      <tr key={r.school} className="border-t border-gray-100">
-                        <td className="p-2 font-semibold text-gray-800">{r.school}</td>
-                        <td className="p-2 text-center text-gray-600">{r.totalPupils > 0 ? r.totalPupils : "—"}</td>
-                        <td className={`p-2 text-center ${fsmBg}`}>{r.fsmPct !== null ? `${r.fsmPct}%` : "—"}</td>
-                        <td className="p-2 text-center text-gray-600">{r.sendPct !== null ? `${r.sendPct}%` : "—"}</td>
-                        <td className="p-2 text-center text-gray-600">{r.ehcp > 0 ? r.ehcp : "—"}</td>
-                        <td className={`p-2 text-center ${combinedBg}`}>{r.y6Combined !== null ? `${r.y6Combined}%` : "—"}</td>
-                        <td className={`p-2 text-center ${vsNatColor}`}>
-                          {r.y6VsNational !== null ? `${r.y6VsNational >= 0 ? "+" : ""}${r.y6VsNational}pp` : "—"}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-            <div className="flex flex-wrap gap-3 mt-2 text-[10px] text-gray-400">
-              <span>FSM% highlight: <span className="text-amber-600">amber &gt;35%</span> / <span className="text-red-600">red &gt;45%</span></span>
-              <span>Y6 Combined: <span className="text-amber-600">amber &lt;60%</span> / <span className="text-red-600">red &lt;50%</span></span>
-              <span>vs National: based on 61% national average (2024/25 KS2)</span>
-            </div>
-            {heroSchool && (
-              <p className="text-xs text-gray-600 mt-3 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
-                Schools with higher FSM% tend to have lower attainment, but <strong>{heroSchool.school}</strong> achieves{" "}
-                <strong>{heroSchool.y6Combined}%</strong> Combined despite <strong>{heroSchool.fsmPct}%</strong> FSM — suggesting effective Pupil Premium strategies.
-              </p>
-            )}
+      {/* Zone 3 — AI Callout */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.35 }}
+        className="bg-blue-50 border border-blue-200 rounded-xl p-5"
+      >
+        <div className="flex items-center gap-2 mb-3">
+          <Info size={15} className="text-blue-500" />
+          <span className="text-sm font-semibold text-blue-800">Trust Overview</span>
+        </div>
+        <div className="space-y-2">
+          {narrativeParts.map((p, i) => (
+            <p key={i} className="text-sm text-blue-800 leading-relaxed">{p}</p>
+          ))}
+          {narrativeParts.length === 0 && (
+            <p className="text-sm text-blue-700">Upload a spreadsheet to generate trust-wide insights.</p>
+          )}
+        </div>
+        {onSchoolClick && parsed.schools.length > 0 && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {parsed.schools.map(school => (
+              <motion.button
+                key={school}
+                whileHover={{ scale: 1.04 }}
+                onClick={() => onSchoolClick(school)}
+                className="text-xs px-3 py-1.5 bg-white border border-blue-200 text-blue-700 rounded-lg font-medium hover:bg-blue-100 transition-colors"
+              >
+                View {school}
+              </motion.button>
+            ))}
           </div>
-        );
-      })()}
+        )}
+        <p className="text-[10px] text-blue-400 mt-3">Source: Trust mid-year data capture spreadsheet. Self-reported.</p>
+      </motion.div>
 
-      {/* Governor questions — max 4, concise */}
-      <div className="border border-gray-200 rounded-xl p-4 bg-gray-50">
-        <h4 className="text-xs font-semibold text-gray-700 mb-3">Smarter Questions — for governors and leaders</h4>
-        <ul className="space-y-2 text-xs text-gray-700">
-          {governorQuestions.map((q, i) => {
-            const colorClass = q.level === "red"
-              ? "bg-red-50 border-red-100"
-              : q.level === "amber"
-              ? "bg-amber-50 border-amber-100"
-              : "bg-white border-gray-100";
-            const qColor = q.level === "red" ? "text-red-500" : q.level === "amber" ? "text-amber-500" : "text-blue-400";
-            return (
-              <li key={i} className={`flex items-start gap-2 border rounded-lg px-3 py-2 ${colorClass}`}>
-                <span className={`mt-0.5 font-bold shrink-0 ${qColor}`}>Q</span>
-                <span>{q.text}</span>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
     </div>
   );
 }
@@ -2884,6 +2718,19 @@ export default function TrustAssessorPage() {
       startYearGroup: number;
       dataPoints: { yearGroup: number; year: number; reading: number | null; writing: number | null; maths: number | null; pupils: number }[];
     }[];
+    cohortMilestones: {
+      cohortLabel: string;
+      startYear: number;
+      currentYearGroup: number;
+      milestones: {
+        label: string;
+        yearGroup: number;
+        academicYear: number;
+        percentAt: number | null;
+        pupilCount: number;
+        nationalBenchmark: number | null;
+      }[];
+    }[];
     demographicDisaggregation: {
       all: { count: number; attainment: Record<string, { atExpected: number; total: number; pct: number }> };
       withoutFsm: { removed: number; remaining: number; attainment: Record<string, { atExpected: number; total: number; pct: number }> };
@@ -3008,6 +2855,7 @@ export default function TrustAssessorPage() {
             cohortJourneys: payload.cohortJourneys ?? [],
             spotlightPupil: payload.spotlightPupil ?? null,
             cohortTracking: payload.cohortTracking ?? [],
+            cohortMilestones: payload.cohortMilestones ?? [],
             demographicDisaggregation: payload.demographicDisaggregation ?? null,
           });
         }
@@ -3424,13 +3272,14 @@ export default function TrustAssessorPage() {
                     Trust Overview
                   </button>
                   {parsed.schools.map((school) => (
-                    <button
+                    <motion.button
                       key={school}
                       onClick={() => setActiveSchoolTab(school)}
+                      whileHover={activeSchoolTab !== school ? { scale: 1.04 } : {}}
                       className={`flex-shrink-0 px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${activeSchoolTab === school ? "bg-white border border-b-white border-gray-200 -mb-px text-blue-700" : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"}`}
                     >
                       {school}
-                    </button>
+                    </motion.button>
                   ))}
                 </div>
 
@@ -3444,7 +3293,11 @@ export default function TrustAssessorPage() {
                       exit={{ opacity: 0, y: -8 }}
                       transition={{ duration: 0.2 }}
                     >
-                      <TrustInsights parsed={parsed} />
+                      <TrustInsights parsed={parsed} onSchoolClick={(school) => {
+                        setActiveSchoolTab(school);
+                        const el = document.getElementById("school-tabs-section");
+                        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+                      }} />
                     </motion.div>
                   ) : (
                     <motion.div
@@ -4255,84 +4108,139 @@ export default function TrustAssessorPage() {
                 )}
               </div>
 
-              {/* ── Section 7: Cohort Journey Chart ── */}
-              {groveHouseData.cohortTracking.length > 0 && (
-                <div className="border-t border-gray-100 pt-6">
-                  <h4 className="text-sm font-semibold text-gray-800 mb-1">Cohort Journey — Tracking Groups Through School</h4>
-                  <p className="text-xs text-gray-500 mb-4">Each row follows a group of pupils from their entry point, showing how their assessed levels changed year-on-year. Values show % of expected standard (100% = all at EXS, 150% = all at GDS).</p>
+              {/* ── Section 7: Cohort Journey — Milestone Track ── */}
+              <div className="border-t border-gray-100 pt-6">
+                <h4 className="text-sm font-semibold text-gray-800 mb-1">Cohort Milestone Journey</h4>
+                <p className="text-xs text-gray-500 mb-4">
+                  Each card follows a Reception cohort through their key assessment milestones — EYFS GLD, Y1 Phonics, and KS1 subject attainment.
+                  Dots are colour-coded green (at/above national), amber (within 5pp), or red (more than 5pp below).
+                </p>
 
-                  <div className="space-y-6">
-                    {groveHouseData.cohortTracking.map((cohort) => (
-                      <div key={cohort.cohortLabel} className="bg-gray-50 border border-gray-200 rounded-xl p-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <div>
-                            <div className="text-sm font-semibold text-gray-800">{cohort.cohortLabel}</div>
-                            <div className="text-xs text-gray-500">{cohort.dataPoints[0]?.pupils ?? 0} pupils tracked</div>
+                {groveHouseData.cohortMilestones && groveHouseData.cohortMilestones.length > 0 ? (
+                  <div className="space-y-5">
+                    {groveHouseData.cohortMilestones.map((cohort) => {
+                      // Build summary sentence
+                      const eyfsMilestone = cohort.milestones.find(m => m.label === 'EYFS GLD');
+                      const phonicsMilestone = cohort.milestones.find(m => m.label === 'Y1 Phonics');
+                      const ks1Milestones = cohort.milestones.filter(m => m.label.startsWith('Y2 KS1'));
+
+                      const deltaLabel = (m: typeof cohort.milestones[number]) => {
+                        if (m.percentAt === null || m.nationalBenchmark === null) return null;
+                        return m.percentAt - m.nationalBenchmark;
+                      };
+
+                      const allDeltas = cohort.milestones
+                        .map(m => ({ label: m.label, delta: deltaLabel(m) }))
+                        .filter((x): x is { label: string; delta: number } => x.delta !== null);
+                      const bestMilestone = allDeltas.reduce((a, b) => (a.delta > b.delta ? a : b), allDeltas[0]);
+                      const worstMilestone = allDeltas.reduce((a, b) => (a.delta < b.delta ? a : b), allDeltas[0]);
+
+                      const summaryParts: string[] = [];
+                      if (eyfsMilestone?.percentAt !== null && eyfsMilestone?.nationalBenchmark !== null && eyfsMilestone) {
+                        summaryParts.push(`EYFS GLD at ${eyfsMilestone.percentAt}% vs national ${eyfsMilestone.nationalBenchmark}%.`);
+                      }
+                      if (ks1Milestones.length > 0) {
+                        const ks1Summary = ks1Milestones.map(m => `${m.label.replace('Y2 KS1 ', '')} ${m.percentAt}%`).join(', ');
+                        summaryParts.push(`At KS1: ${ks1Summary}.`);
+                      }
+                      if (bestMilestone && worstMilestone && bestMilestone.label !== worstMilestone.label) {
+                        const strongWord = bestMilestone.delta >= 0 ? 'strongest' : 'least weak';
+                        summaryParts.push(`The ${strongWord} milestone was ${bestMilestone.label} (${bestMilestone.delta > 0 ? '+' : ''}${bestMilestone.delta}pp vs national).`);
+                      }
+
+                      return (
+                        <motion.div
+                          key={cohort.cohortLabel}
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.4 }}
+                          className="bg-gray-50 border border-gray-200 rounded-xl p-5"
+                        >
+                          {/* Header */}
+                          <div className="flex items-start justify-between mb-4">
+                            <div>
+                              <div className="text-sm font-semibold text-gray-900">{cohort.cohortLabel}</div>
+                              <div className="text-xs text-gray-500 mt-0.5">Now approx Y{Math.max(0, cohort.currentYearGroup)} · {cohort.milestones[0]?.pupilCount ?? 0} pupils tracked</div>
+                            </div>
+                            <div className="text-xs text-gray-400 bg-white border border-gray-200 rounded-lg px-2 py-1">
+                              {cohort.milestones.length} milestone{cohort.milestones.length !== 1 ? 's' : ''} recorded
+                            </div>
                           </div>
-                        </div>
 
-                        {/* Visual journey — Reading, Writing, Maths lines */}
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-sm border-collapse">
-                            <thead>
-                              <tr className="border-b border-gray-200">
-                                <th className="text-left py-2 pr-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Subject</th>
-                                {cohort.dataPoints.map(dp => (
-                                  <th key={dp.year} className="py-2 px-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                                    Y{dp.yearGroup}<br/><span className="font-normal text-gray-400">{dp.year}</span>
-                                  </th>
-                                ))}
-                                <th className="py-2 px-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wide">Trend</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {['reading', 'writing', 'maths'].map(subj => {
-                                const values = cohort.dataPoints.map(dp => (dp as Record<string, unknown>)[subj] as number | null);
-                                const validValues = values.filter((v): v is number => v !== null);
-                                const trend = validValues.length >= 2
-                                  ? validValues[validValues.length - 1] - validValues[0]
-                                  : null;
+                          {/* Milestone track */}
+                          <div className="relative">
+                            {/* Connecting line */}
+                            <div className="absolute top-8 left-0 right-0 h-px bg-gray-200 z-0" />
+
+                            <div className="relative z-10 flex items-start gap-0 overflow-x-auto pb-2">
+                              {cohort.milestones.map((m, i) => {
+                                const delta = m.percentAt !== null && m.nationalBenchmark !== null ? m.percentAt - m.nationalBenchmark : null;
+                                const dotColor = delta === null ? 'bg-gray-300' : delta >= 0 ? 'bg-emerald-500' : delta >= -5 ? 'bg-amber-400' : 'bg-red-500';
+                                const textColor = delta === null ? 'text-gray-400' : delta >= 0 ? 'text-emerald-700' : delta >= -5 ? 'text-amber-700' : 'text-red-700';
+
                                 return (
-                                  <tr key={subj} className="border-b border-gray-100">
-                                    <td className="py-2 pr-4 text-gray-700 font-medium capitalize">{subj}</td>
-                                    {values.map((v, i) => {
-                                      const prev = i > 0 ? values[i - 1] : null;
-                                      const change = v !== null && prev !== null ? v - prev : null;
-                                      return (
-                                        <td key={i} className="py-2 px-3 text-center">
-                                          {v !== null ? (
-                                            <div>
-                                              <span className={`font-semibold ${v >= 100 ? 'text-green-700' : v >= 75 ? 'text-amber-600' : 'text-red-600'}`}>{v}%</span>
-                                              {change !== null && (
-                                                <div className={`text-xs ${change > 0 ? 'text-green-600' : change < 0 ? 'text-red-600' : 'text-gray-400'}`}>
-                                                  {change > 0 ? '+' : ''}{change}
-                                                </div>
-                                              )}
-                                            </div>
-                                          ) : (
-                                            <span className="text-gray-300">—</span>
-                                          )}
-                                        </td>
-                                      );
-                                    })}
-                                    <td className="py-2 px-3 text-center">
-                                      {trend !== null ? (
-                                        <span className={`text-xs font-bold px-2 py-0.5 rounded ${trend > 5 ? 'bg-green-100 text-green-700' : trend < -5 ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}`}>
-                                          {trend > 0 ? '+' : ''}{trend}pp
-                                        </span>
-                                      ) : '—'}
-                                    </td>
-                                  </tr>
+                                  <div key={m.label} className="flex-1 flex flex-col items-center min-w-[90px] px-2">
+                                    {/* % label above dot */}
+                                    <div className={`text-sm font-bold mb-1.5 ${textColor}`}>
+                                      {m.percentAt !== null ? `${m.percentAt}%` : '—'}
+                                    </div>
+
+                                    {/* Dot */}
+                                    <motion.div
+                                      initial={{ opacity: 0, scale: 0 }}
+                                      animate={{ opacity: 1, scale: 1 }}
+                                      transition={{ delay: 0.15 * i, duration: 0.4, type: "spring" }}
+                                      className={`w-5 h-5 rounded-full ${dotColor} border-2 border-white shadow-md z-10`}
+                                      title={m.nationalBenchmark !== null ? `National: ${m.nationalBenchmark}%` : ''}
+                                    />
+
+                                    {/* Delta badge */}
+                                    {delta !== null && (
+                                      <div className={`text-[10px] font-semibold mt-1 ${textColor}`}>
+                                        {delta > 0 ? '+' : ''}{delta}pp
+                                      </div>
+                                    )}
+
+                                    {/* Milestone label below */}
+                                    <div className="text-[10px] text-gray-500 mt-1 text-center leading-tight">{m.label}</div>
+                                    <div className="text-[10px] text-gray-400">{m.academicYear}/{String(m.academicYear + 1).slice(2)}</div>
+                                  </div>
                                 );
                               })}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    ))}
+                            </div>
+                          </div>
+
+                          {/* National reference key */}
+                          <div className="flex items-center gap-3 mt-3 text-[10px] text-gray-400">
+                            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" /> At/above national</span>
+                            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block" /> Within 5pp</span>
+                            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" /> More than 5pp below</span>
+                            <span className="text-gray-300 ml-1">Delta = vs national average</span>
+                          </div>
+
+                          {/* Summary sentence */}
+                          {summaryParts.length > 0 && (
+                            <p className="text-xs text-gray-600 mt-3 bg-white border border-gray-100 rounded-lg px-3 py-2 leading-relaxed">
+                              {summaryParts.join(' ')}
+                            </p>
+                          )}
+                        </motion.div>
+                      );
+                    })}
                   </div>
-                </div>
-              )}
+                ) : (
+                  /* Fallback — no cohort milestone data (pre-Reception cohorts or empty CTF) */
+                  <div className="bg-gray-50 border border-dashed border-gray-300 rounded-xl p-6 text-center">
+                    <div className="text-sm text-gray-500 mb-1">No complete cohort milestones found in the CTF data.</div>
+                    <p className="text-xs text-gray-400">
+                      Milestones require Reception (EYFS) entry data with at least 5 pupils. Cohorts that started before Reception, or have fewer than 5 pupils at each milestone, are excluded.
+                      {groveHouseData.cohortTracking && groveHouseData.cohortTracking.length > 0 && (
+                        <span> The data does include {groveHouseData.cohortTracking.length} tracked cohort(s) — milestone mapping may be limited by the subjects available in the CTF files.</span>
+                      )}
+                    </p>
+                  </div>
+                )}
+              </div>
 
               {/* ── Section 8: Demographic Disaggregation — Defend Your Numbers ── */}
               {groveHouseData.demographicDisaggregation && (
