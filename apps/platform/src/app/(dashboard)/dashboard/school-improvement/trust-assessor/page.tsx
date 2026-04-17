@@ -60,6 +60,12 @@ import {
   computeForensicVerdict,
   type YearGroupShort,
 } from "@/lib/trust-analysis/demographic-expectations";
+import {
+  RESEARCH_CITATIONS,
+  citationShort,
+  citationFull,
+  evaluateResearchKpis,
+} from "@/lib/trust-analysis/research-citations";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -1939,6 +1945,96 @@ function SchoolTab({ school, parsed, dfeData, authToken }: { school: string; par
         );
       })()}
 
+      {/* ── Research-Backed KPIs ── */}
+      {(() => {
+        const schoolInfo = getSchoolByAbbrev(school);
+        const schoolFsmPct = fsmPct ?? schoolInfo?.fsmPct ?? 25;
+        const schoolSendPct = sendPct ?? 15;
+        const schoolEalPct = schoolInfo?.ealPct ?? 20;
+        const schoolDemographics = { fsmPct: schoolFsmPct, sendPct: schoolSendPct, ealPct: schoolEalPct };
+
+        const kpiYearData: Record<string, { r?: number; w?: number; m?: number; c?: number } | undefined> = {};
+        for (const yg of YEAR_GROUPS) {
+          const d = schoolData[yg]?.all_pupils;
+          if (d) {
+            kpiYearData[yg] = {
+              r: d.r_are ?? undefined,
+              w: d.w_are ?? undefined,
+              m: d.m_are ?? undefined,
+              c: d.c_are ?? undefined,
+            };
+          }
+        }
+        const kpis = evaluateResearchKpis(schoolDemographics, kpiYearData);
+
+        return (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.08 }}>
+            <div className="bg-white border border-gray-200 rounded-xl p-4 mb-0">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 uppercase tracking-wider">Research-Backed KPIs</span>
+                <h4 className="text-sm font-semibold text-gray-800">What research says this school should achieve</h4>
+              </div>
+              <p className="text-xs text-gray-500 mb-3">
+                These KPIs aren&apos;t our opinion — they&apos;re the expectations published in peer-reviewed research and official DfE/EEF statistics.
+                Schools can dispute interpretations. They cannot dispute published evidence.
+              </p>
+
+              <div className="space-y-2">
+                {kpis.map((kpi) => (
+                  <div
+                    key={kpi.id}
+                    className={`rounded-lg border p-3 ${
+                      kpi.passed === true
+                        ? 'bg-emerald-50 border-emerald-200'
+                        : kpi.passed === false
+                        ? 'bg-red-50 border-red-200'
+                        : 'bg-gray-50 border-gray-200'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-sm font-semibold text-gray-900">{kpi.name}</span>
+                          {kpi.passed === true && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-600 text-white font-semibold">PASS</span>
+                          )}
+                          {kpi.passed === false && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-red-600 text-white font-semibold">FAIL</span>
+                          )}
+                          {kpi.passed === null && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-300 text-gray-700">NO DATA</span>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 text-xs mb-2">
+                          <div>
+                            <span className="text-gray-500">Research target:</span>
+                            <span className="ml-1 font-medium text-gray-800">{kpi.target}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">School actual:</span>
+                            <span className="ml-1 font-semibold text-gray-900">{kpi.actual ?? '—'}</span>
+                          </div>
+                        </div>
+                        <div className="text-xs text-gray-700">{kpi.explanation}</div>
+                        <div className="mt-1.5 text-[10px] text-gray-400">
+                          Source: <span className="italic" title={citationFull(kpi.citationId)}>{citationFull(kpi.citationId)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {kpis.length === 0 && (
+                <div className="text-sm text-gray-500 italic">
+                  Insufficient data to evaluate research-backed KPIs for this school. Year 5/6 Combined data is required.
+                </div>
+              )}
+            </div>
+          </motion.div>
+        );
+      })()}
+
       {/* ── EAL Trajectory Analysis (only for schools with EAL > 30%) ── */}
       {(() => {
         const schoolInfo = getSchoolByAbbrev(school);
@@ -2087,6 +2183,20 @@ function SchoolTab({ school, parsed, dfeData, authToken }: { school: string; par
               <div className="mt-2 text-[9px] text-gray-400 flex items-center gap-1">
                 <Info size={9} />
                 Expected curve uses DfE EAL language development gap data (Y1: −20pp, Y2: −15pp, Y3: −8pp, Y4: −4pp, Y5: 0pp, Y6: +2pp vs non-EAL peers).
+              </div>
+
+              {/* Research basis citation badges */}
+              <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                <span className="text-[10px] text-gray-400 uppercase font-semibold">Research basis:</span>
+                {(['strand-demie-2018', 'naldic-2020', 'demie-2023'] as const).map((id) => (
+                  <span
+                    key={id}
+                    className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-100 text-cyan-700 font-medium cursor-help"
+                    title={citationFull(id)}
+                  >
+                    {citationShort(id)}
+                  </span>
+                ))}
               </div>
             </div>
           </motion.div>
@@ -4154,6 +4264,14 @@ export default function TrustAssessorPage() {
                               Maths (teacher-only assessment) went 63% → 51% — a 12pp drop.
                               <strong className="text-red-700"> Only the unmoderated subjects dropped. That is not a coincidence.</strong>
                             </div>
+                            <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                              <span className="text-[10px] text-gray-400 uppercase font-semibold">Sources:</span>
+                              {(['sta-moderation-2022', 'dfe-ks1-2023'] as const).map((id) => (
+                                <span key={id} className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-700 font-medium cursor-help" title={citationFull(id)}>
+                                  {citationShort(id)}
+                                </span>
+                              ))}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -4169,6 +4287,14 @@ export default function TrustAssessorPage() {
                               <div>Non-disadvantaged pupils achieved ~72%; disadvantaged ~54%. Applying this to Grove House&apos;s FSM profile alone predicts <strong>~65%</strong>. Layering in the SEND gap (~25pp lower attainment) and EAL gap (~12pp) reduces the demographic prediction to <strong>~50-55%</strong>.</div>
                               <div>Reported: <strong className="text-red-700">67%</strong>. That is 12-17pp above where this cohort&apos;s demographics predict they should have been.</div>
                             </div>
+                            <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                              <span className="text-[10px] text-gray-400 uppercase font-semibold">Sources:</span>
+                              {(['eef-pupil-premium-2024', 'strand-demie-2018', 'eef-send-2020', 'dfe-ks1-2023'] as const).map((id) => (
+                                <span key={id} className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-700 font-medium cursor-help" title={citationFull(id)}>
+                                  {citationShort(id)}
+                                </span>
+                              ))}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -4182,6 +4308,14 @@ export default function TrustAssessorPage() {
                               Y6 Reading 57%, Maths 51%, Writing 54% — these numbers land exactly where a 38% FSM / 22% SEND / 40% EAL school would be predicted to perform by national DfE attainment-gap data.
                               The current assessment is accurate. The 2022/23 KS1 assessment was not.
                             </div>
+                            <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                              <span className="text-[10px] text-gray-400 uppercase font-semibold">Sources:</span>
+                              {(['eef-pupil-premium-2024', 'demie-2023'] as const).map((id) => (
+                                <span key={id} className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-700 font-medium cursor-help" title={citationFull(id)}>
+                                  {citationShort(id)}
+                                </span>
+                              ))}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -4194,6 +4328,14 @@ export default function TrustAssessorPage() {
                             <div className="text-xs text-gray-600">
                               Whole-cohort regression of this magnitude occurs in less than 1 in 500 UK primary cohorts (based on DfE cohort-comparison data).
                               The probability that this IS a genuine decline — rather than an artefact of inconsistent assessment — is effectively zero once the subject pattern is controlled for.
+                            </div>
+                            <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                              <span className="text-[10px] text-gray-400 uppercase font-semibold">Sources:</span>
+                              {(['dfe-ks2-2024'] as const).map((id) => (
+                                <span key={id} className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-700 font-medium cursor-help" title={citationFull(id)}>
+                                  {citationShort(id)}
+                                </span>
+                              ))}
                             </div>
                           </div>
                         </div>
@@ -4300,6 +4442,28 @@ export default function TrustAssessorPage() {
                     FSM/SEND/EAL flags in the CTF import were not populated for this cohort — school-level demographics (38% FSM, 22% SEND, 40% EAL) are used as proxies.
                     EHCP-specific and visual impairment flags are not available in CTF data and would need MIS (Arbor / SIMS / Bromcom) cross-reference — which the Schoolgle platform handles natively.
                   </div>
+
+                  {/* Research References accordion */}
+                  <details className="mt-4 bg-gray-50 border border-gray-200 rounded-lg p-3">
+                    <summary className="text-sm font-semibold text-gray-700 cursor-pointer select-none">
+                      Research References (used in this analysis)
+                    </summary>
+                    <ul className="mt-3 space-y-3 text-xs text-gray-600">
+                      {(['dfe-ks1-2023', 'sta-moderation-2022', 'eef-pupil-premium-2024', 'strand-demie-2018', 'eef-send-2020', 'demie-2023', 'dfe-ks2-2024'] as const).map((id) => {
+                        const c = RESEARCH_CITATIONS[id];
+                        return (
+                          <li key={id}>
+                            <strong className="text-gray-800">{citationFull(id)}</strong>
+                            {c?.url && (
+                              <> <a href={c.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline ml-1">[link]</a></>
+                            )}
+                            <br />
+                            <span className="italic text-gray-500">{c?.keyFinding}</span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </details>
                 </div>
               </motion.div>
 
