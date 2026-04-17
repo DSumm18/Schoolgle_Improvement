@@ -1998,7 +1998,7 @@ function KS2TrackRecordChart({ school, abbrev, ks2Results, selfReport }: {
           <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "#374151" }} width={70} axisLine={false} tickLine={false} />
           <ReferenceLine x={61} stroke="#9CA3AF" strokeDasharray="4 4" label={{ value: "Nat 61%", fontSize: 10, fill: "#9CA3AF", position: "right" }} />
           <Tooltip formatter={(val) => [`${val}%`, "Combined"]} contentStyle={{ fontSize: "12px" }} />
-          <Bar dataKey="combined" shape={<CustomBar />} label={{ position: "right", fontSize: 11, fill: "#374151", formatter: (v: number | null) => v !== null ? `${v}%` : "" }} />
+          <Bar dataKey="combined" shape={<CustomBar />} label={{ position: "right", fontSize: 11, fill: "#374151" }} />
         </BarChart>
       </ResponsiveContainer>
 
