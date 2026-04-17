@@ -219,6 +219,7 @@ export const GET = protectedRoute(async (auth, _req: NextRequest) => {
 
     const cohortJourneys: {
       pupilId: string;
+      demographics: { isFsm: boolean; isSend: boolean; isEal: boolean; gender: string };
       journey: { year: number; yearGroup: number; subject: string; level: string }[];
     }[] = [];
 
@@ -236,13 +237,26 @@ export const GET = protectedRoute(async (auth, _req: NextRequest) => {
         .sort((a, b) => a.year - b.year || a.yearGroup - b.yearGroup);
 
       if (journey.length > 0) {
-        cohortJourneys.push({ pupilId: hash.slice(0, 8) + '...', journey });
+        cohortJourneys.push({
+          pupilId: hash.slice(0, 8) + '...',
+          journey,
+          demographics: {
+            isFsm: records.some(r => r.pupil_hash === hash && r.is_fsm === true),
+            isSend: records.some(r => r.pupil_hash === hash && r.is_send === true),
+            isEal: records.some(r => r.pupil_hash === hash && r.is_eal === true),
+            gender: (records.find(r => r.pupil_hash === hash && r.gender)?.gender as string) ?? 'unknown',
+          },
+        });
       }
     }
 
     // ─── 7. Pupil Spotlight — random trackable pupil ─────────────────
     const trackableEntries = [...pupilYears.entries()].filter(([, v]) => v.years.length >= 2);
-    let spotlightPupil: { pupilId: string; journey: { year: number; yearGroup: number; subject: string; level: string; scaledScore?: number }[] } | null = null;
+    let spotlightPupil: {
+      pupilId: string;
+      demographics: { isFsm: boolean; isSend: boolean; isEal: boolean; gender: string };
+      journey: { year: number; yearGroup: number; subject: string; level: string; scaledScore?: number }[];
+    } | null = null;
 
     if (trackableEntries.length > 0) {
       // Pick a deterministic "random" pupil — use index based on total count to avoid re-randomising each request
@@ -251,6 +265,12 @@ export const GET = protectedRoute(async (auth, _req: NextRequest) => {
       const pupilRecords = records.filter(r => r.pupil_hash === hash);
       spotlightPupil = {
         pupilId: hash.slice(0, 8) + '...',
+        demographics: {
+          isFsm: records.some(r => r.pupil_hash === hash && r.is_fsm === true),
+          isSend: records.some(r => r.pupil_hash === hash && r.is_send === true),
+          isEal: records.some(r => r.pupil_hash === hash && r.is_eal === true),
+          gender: (records.find(r => r.pupil_hash === hash && r.gender)?.gender as string) ?? 'unknown',
+        },
         journey: pupilRecords
           .map(r => ({
             year: (r.academic_year_start as number) + 1,
@@ -318,7 +338,7 @@ export const GET = protectedRoute(async (auth, _req: NextRequest) => {
       ks1Data,
       ks1Movement,
       phonicsData,
-      cohortJourneys: cohortJourneys.slice(0, 30),
+      cohortJourneys: cohortJourneys.slice(0, 50),
       spotlightPupil,
       spreadsheetComparison,
     });

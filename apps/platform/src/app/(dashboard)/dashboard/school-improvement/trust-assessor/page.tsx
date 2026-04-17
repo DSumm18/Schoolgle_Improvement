@@ -2301,6 +2301,16 @@ export default function TrustAssessorPage() {
       latestYear: number;
       rows: { yearGroup: string; ctf: Record<string, number | null>; spreadsheet: Record<string, number> }[];
     };
+    cohortJourneys: {
+      pupilId: string;
+      demographics: { isFsm: boolean; isSend: boolean; isEal: boolean; gender: string };
+      journey: { year: number; yearGroup: number; subject: string; level: string }[];
+    }[];
+    spotlightPupil: {
+      pupilId: string;
+      demographics: { isFsm: boolean; isSend: boolean; isEal: boolean; gender: string };
+      journey: { year: number; yearGroup: number; subject: string; level: string; scaledScore?: number }[];
+    } | null;
   } | null>(null);
   const [showDrivePicker, setShowDrivePicker] = useState(false);
   const [connector, setConnector] = useState<AppConnector | null>(null);
@@ -2413,6 +2423,8 @@ export default function TrustAssessorPage() {
             ks1Data: payload.ks1Data ?? [],
             phonicsData: payload.phonicsData ?? [],
             spreadsheetComparison: payload.spreadsheetComparison ?? { latestYear: 0, rows: [] },
+            cohortJourneys: payload.cohortJourneys ?? [],
+            spotlightPupil: payload.spotlightPupil ?? null,
           });
         }
       } catch {
@@ -3419,6 +3431,244 @@ export default function TrustAssessorPage() {
                 <div className="mt-3 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-blue-800">
                   Y5 at 71% Combined suggests next year&apos;s KS2 cohort could be significantly stronger. But Y1 and Y3 at 44% are concerning for the 4-year pipeline. This is the data an Ofsted inspector would want to see before judging the direction of travel.
                 </div>
+              </div>
+
+              {/* ── Section 6: Per-Pupil Journey Cards ── */}
+              <div className="border-t border-gray-100 pt-6">
+                <h4 className="text-sm font-semibold text-gray-800 mb-1">Per-Pupil Journey Tracking</h4>
+                <p className="text-xs text-gray-500 mb-4">Pseudonymised pupil journeys from CTF data. Each card shows one child&apos;s assessment path from EYFS through KS1, with demographic context and support recommendations.</p>
+
+                {/* Spotlight pupil first — full featured card */}
+                {groveHouseData.spotlightPupil && (() => {
+                  const sp = groveHouseData.spotlightPupil!;
+                  const demo = sp.demographics;
+                  const flags = [demo.isFsm && 'FSM', demo.isSend && 'SEND', demo.isEal && 'EAL'].filter(Boolean) as string[];
+
+                  const levelValue = (l: string) => l === 'GDS' ? 3 : l === 'EXS' || l === '2' ? 2 : 1;
+                  const trajectory = (levels: string[]) => {
+                    if (levels.length < 2) return 'insufficient';
+                    const first = levelValue(levels[0]);
+                    const last = levelValue(levels[levels.length - 1]);
+                    if (last > first) return 'improving';
+                    if (last < first) return 'declining';
+                    return 'stable';
+                  };
+
+                  return (
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-5 mb-6">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-blue-100 border border-blue-300 flex items-center justify-center text-sm font-bold text-blue-700">
+                            {sp.pupilId.slice(0, 2).toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="font-semibold text-gray-900 text-sm">Pupil {sp.pupilId}</div>
+                            <div className="text-xs text-gray-500">{sp.journey.length} assessment records across {[...new Set(sp.journey.map(j => j.year))].length} years</div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          {flags.map(f => (
+                            <span key={f} className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                              f === 'FSM' ? 'bg-amber-100 text-amber-700 border border-amber-200' :
+                              f === 'SEND' ? 'bg-purple-100 text-purple-700 border border-purple-200' :
+                              'bg-cyan-100 text-cyan-700 border border-cyan-200'
+                            }`}>{f}</span>
+                          ))}
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${demo.gender === 'M' ? 'bg-blue-100 text-blue-600' : demo.gender === 'F' ? 'bg-pink-100 text-pink-600' : 'bg-gray-100 text-gray-500'}`}>
+                            {demo.gender === 'M' ? 'Male' : demo.gender === 'F' ? 'Female' : demo.gender}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Journey timeline */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+                        {['reading', 'writing', 'maths'].map(subj => {
+                          const entries = sp.journey.filter(j => j.subject === subj);
+                          const traj = trajectory(entries.map(e => e.level));
+                          return (
+                            <div key={subj} className="bg-white rounded-lg border border-gray-200 p-3">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-xs font-semibold text-gray-600 uppercase">{subj}</span>
+                                <span className={`text-xs px-1.5 py-0.5 rounded ${
+                                  traj === 'improving' ? 'bg-green-100 text-green-700' :
+                                  traj === 'declining' ? 'bg-red-100 text-red-700' :
+                                  traj === 'stable' ? 'bg-gray-100 text-gray-600' :
+                                  'bg-gray-50 text-gray-400'
+                                }`}>
+                                  {traj === 'improving' ? '↑ Improving' : traj === 'declining' ? '↓ Declining' : traj === 'stable' ? '→ Stable' : '—'}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                {entries.map((e, i) => (
+                                  <div key={i} className="flex items-center gap-1">
+                                    {i > 0 && <span className="text-gray-300 text-xs">→</span>}
+                                    <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${
+                                      e.level === 'GDS' ? 'bg-green-100 text-green-700' :
+                                      e.level === 'EXS' || e.level === '2' ? 'bg-blue-100 text-blue-700' :
+                                      'bg-red-100 text-red-700'
+                                    }`} title={`Y${e.yearGroup} (${e.year})`}>
+                                      {e.level}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                              <div className="text-xs text-gray-400 mt-1">
+                                {entries.map(e => `Y${e.yearGroup}`).join(' → ')}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Support recommendation based on demographics + trajectory */}
+                      <div className="bg-white rounded-lg border border-gray-200 p-3 text-xs text-gray-600">
+                        <span className="font-semibold text-gray-700">Support recommendation: </span>
+                        {demo.isFsm && demo.isSend ?
+                          'Dual-disadvantaged pupil (FSM + SEND). EEF evidence shows these pupils benefit most from structured 1:1 tuition and metacognition strategies. Priority for Pupil Premium intervention funding.' :
+                         demo.isFsm ?
+                          'Pupil Premium eligible. Monitor attainment gaps against non-FSM peers. EEF Toolkit recommends feedback, metacognition, and reading comprehension strategies (5+ months impact).' :
+                         demo.isSend ?
+                          'SEND registered. Review whether current provision (EHCP/SEN Support) is accelerating progress. Check graduated approach evidence is being maintained.' :
+                         demo.isEal ?
+                          'EAL learner. If new to English, expect rapid progress in Years 2-3 of immersion. If long-term EAL with persistent gaps, investigate whether language or curriculum knowledge is the barrier.' :
+                          'No additional vulnerability flags. Monitor progress against year group expectations and investigate any subject-specific decline.'
+                        }
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Grid of remaining pupil journey cards */}
+                {groveHouseData.cohortJourneys.length > 0 && (
+                  <>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-xs text-gray-500">{groveHouseData.cohortJourneys.length} trackable pupils with multi-year data</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[600px] overflow-y-auto">
+                      {groveHouseData.cohortJourneys.map((pupil) => {
+                        const demo = pupil.demographics;
+                        const flags = [demo.isFsm && 'FSM', demo.isSend && 'SEND', demo.isEal && 'EAL'].filter(Boolean) as string[];
+                        const yearGroups = [...new Set(pupil.journey.map(j => j.yearGroup))].sort((a, b) => a - b);
+
+                        const levelValue = (l: string) => l === 'GDS' ? 3 : l === 'EXS' || l === '2' ? 2 : 1;
+                        const allLevels = pupil.journey.map(j => levelValue(j.level));
+                        const avgFirst = allLevels.length > 0 ? allLevels[0] : 0;
+                        const avgLast = allLevels.length > 0 ? allLevels[allLevels.length - 1] : 0;
+                        const overallTrend = avgLast > avgFirst ? 'improving' : avgLast < avgFirst ? 'declining' : 'stable';
+
+                        const latestEntries = pupil.journey.filter(j => j.year === Math.max(...pupil.journey.map(jj => jj.year)));
+                        const atExpected = latestEntries.filter(j => ['EXS', 'GDS', '2'].includes(j.level)).length;
+                        const totalSubjects = latestEntries.length;
+
+                        return (
+                          <div key={pupil.pupilId} className={`border rounded-lg p-3 text-xs ${
+                            overallTrend === 'declining' ? 'border-red-200 bg-red-50/30' :
+                            overallTrend === 'improving' ? 'border-green-200 bg-green-50/30' :
+                            'border-gray-200 bg-white'
+                          }`}>
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                                  overallTrend === 'declining' ? 'bg-red-100 text-red-700' :
+                                  overallTrend === 'improving' ? 'bg-green-100 text-green-700' :
+                                  'bg-gray-100 text-gray-600'
+                                }`}>
+                                  {pupil.pupilId.slice(0, 2).toUpperCase()}
+                                </div>
+                                <div>
+                                  <div className="font-semibold text-gray-700">{pupil.pupilId}</div>
+                                  <div className="text-gray-400">Y{yearGroups.join('→Y')}</div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                {flags.map(f => (
+                                  <span key={f} className={`px-1.5 py-0.5 rounded-full text-[10px] font-medium ${
+                                    f === 'FSM' ? 'bg-amber-100 text-amber-700' :
+                                    f === 'SEND' ? 'bg-purple-100 text-purple-700' :
+                                    'bg-cyan-100 text-cyan-700'
+                                  }`}>{f}</span>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Subject levels at latest assessment */}
+                            <div className="flex items-center gap-1.5 mb-2">
+                              {latestEntries.map((e, i) => (
+                                <span key={i} className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                  e.level === 'GDS' ? 'bg-green-100 text-green-700' :
+                                  e.level === 'EXS' || e.level === '2' ? 'bg-blue-100 text-blue-700' :
+                                  'bg-red-100 text-red-700'
+                                }`} title={e.subject}>
+                                  {e.subject.slice(0, 1).toUpperCase()}: {e.level}
+                                </span>
+                              ))}
+                            </div>
+
+                            {/* Summary line */}
+                            <div className="flex items-center justify-between text-gray-500">
+                              <span>{atExpected}/{totalSubjects} at expected+</span>
+                              <span className={`font-semibold ${
+                                overallTrend === 'improving' ? 'text-green-600' :
+                                overallTrend === 'declining' ? 'text-red-600' :
+                                'text-gray-500'
+                              }`}>
+                                {overallTrend === 'improving' ? '↑ Improving' : overallTrend === 'declining' ? '↓ Declining' : '→ Stable'}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Demographic summary */}
+                    {(() => {
+                      const total = groveHouseData.cohortJourneys.length;
+                      const fsmCount = groveHouseData.cohortJourneys.filter(p => p.demographics.isFsm).length;
+                      const sendCount = groveHouseData.cohortJourneys.filter(p => p.demographics.isSend).length;
+                      const ealCount = groveHouseData.cohortJourneys.filter(p => p.demographics.isEal).length;
+                      const levelValue = (l: string) => l === 'GDS' ? 3 : l === 'EXS' || l === '2' ? 2 : 1;
+                      const decliningCount = groveHouseData.cohortJourneys.filter(p => {
+                        const levels = p.journey.map(j => levelValue(j.level));
+                        return levels.length >= 2 && levels[levels.length - 1] < levels[0];
+                      }).length;
+
+                      return (
+                        <div className="mt-4 bg-gray-50 border border-gray-200 rounded-lg p-4 text-sm text-gray-700">
+                          <div className="font-semibold text-gray-800 mb-2">Demographic Impact Summary</div>
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            <div>
+                              <div className="text-lg font-bold text-amber-600">{fsmCount}</div>
+                              <div className="text-xs text-gray-500">FSM pupils ({total > 0 ? Math.round(100 * fsmCount / total) : 0}%)</div>
+                            </div>
+                            <div>
+                              <div className="text-lg font-bold text-purple-600">{sendCount}</div>
+                              <div className="text-xs text-gray-500">SEND pupils ({total > 0 ? Math.round(100 * sendCount / total) : 0}%)</div>
+                            </div>
+                            <div>
+                              <div className="text-lg font-bold text-cyan-600">{ealCount}</div>
+                              <div className="text-xs text-gray-500">EAL pupils ({total > 0 ? Math.round(100 * ealCount / total) : 0}%)</div>
+                            </div>
+                            <div>
+                              <div className="text-lg font-bold text-red-600">{decliningCount}</div>
+                              <div className="text-xs text-gray-500">Declining trajectory ({total > 0 ? Math.round(100 * decliningCount / total) : 0}%)</div>
+                            </div>
+                          </div>
+                          {fsmCount > 0 && decliningCount > 0 && (
+                            <div className="mt-3 text-xs text-gray-600 bg-white rounded-lg border border-gray-200 p-3">
+                              <span className="font-semibold">Ofsted focus area:</span> {(() => {
+                                const fsmDeclining = groveHouseData.cohortJourneys.filter(p => {
+                                  const levels = p.journey.map(j => levelValue(j.level));
+                                  return p.demographics.isFsm && levels.length >= 2 && levels[levels.length - 1] < levels[0];
+                                }).length;
+                                return `${fsmDeclining} of ${fsmCount} FSM pupils show declining trajectories. An inspector would ask: "What is the school's Pupil Premium strategy for these specific children, and what evidence is there that current interventions are working?"`;
+                              })()}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </>
+                )}
               </div>
 
             </div>
