@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { Brain, Sparkles, LayoutDashboard } from 'lucide-react';
+import { Brain, Sparkles, LayoutDashboard, Activity } from 'lucide-react';
 import Link from 'next/link';
 import { DocumentTemplateCard, type DocumentTemplate } from '@/components/data-connectors/DocumentTemplateCard';
 import { supabase } from '@/lib/supabase';
@@ -115,10 +115,17 @@ export default function SchoolIntelligencePage() {
         </div>
         <Link
           href="/dashboard/school-intelligence/canvas"
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-500 text-white text-sm font-bold hover:from-purple-600 hover:to-indigo-600 shadow-lg shadow-purple-500/20 transition-all"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-500 text-foreground text-sm font-bold hover:from-purple-600 hover:to-indigo-600 shadow-lg shadow-purple-500/20 transition-all"
         >
           <LayoutDashboard className="w-4 h-4" />
           Open Canvas →
+        </Link>
+        <Link
+          href="/dashboard/school-intelligence/shadow-diffs"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-purple-500/40 bg-purple-500/10 text-purple-200 text-sm font-semibold hover:bg-purple-500/20 transition-all"
+        >
+          <Activity className="w-4 h-4" />
+          Shadow Monitor
         </Link>
       </div>
 

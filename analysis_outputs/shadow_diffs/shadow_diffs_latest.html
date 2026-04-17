@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Shadow Diffs Live Snapshot</title>
+  <style>
+    body{font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;background:#0b1220;color:#e5e7eb;margin:0;padding:24px}
+    .wrap{max-width:1100px;margin:0 auto}
+    .card{background:#111a2e;border:1px solid #24314f;border-radius:12px;padding:16px;margin-bottom:16px}
+    h1{margin:0 0 6px 0;font-size:26px}
+    h2{margin:0 0 12px 0;font-size:18px;color:#c7d2fe}
+    .muted{color:#93a4c3;font-size:13px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+    .kpi{background:#0f1a33;border:1px solid #203154;border-radius:10px;padding:12px}
+    .kpi .label{font-size:12px;color:#9fb3d7}
+    .kpi .val{font-size:24px;font-weight:700;margin-top:4px}
+    table{width:100%;border-collapse:collapse;font-size:14px}
+    th,td{border-bottom:1px solid #253453;padding:10px 8px;text-align:left;vertical-align:top}
+    th{color:#bfcced;font-weight:600}
+    .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600}
+    .ok{background:#10341f;color:#86efac}
+    .warn{background:#3a2a10;color:#fcd34d}
+    .issue{color:#fca5a5}
+    code{color:#c4b5fd}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Intelligence Brain — Shadow Diffs</h1>
+      <div class="muted">Live snapshot generated from the running local app on 16 April 2026.</div>
+    </div>
+
+    <div class="card">
+      <h2>Summary</h2>
+      <div class="grid" id="summaryGrid"></div>
+    </div>
+
+    <div class="card">
+      <h2>By Route</h2>
+      <table id="routeTable">
+        <thead>
+          <tr><th>Route</th><th>Comparisons</th><th>Divergence Rate</th><th>Latest Compared</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>Recent Runs</h2>
+      <table id="runsTable">
+        <thead>
+          <tr>
+            <th>Route</th><th>Mode</th><th>Candidate</th><th>Divergence</th><th>Compared</th><th>Issues</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const data = {
+  "filters": {
+    "organizationId": "c64ed86b-9eab-49ee-9829-0706ff371083",
+    "route": null,
+    "hours": 720,
+    "limit": 20,
+    "includeMetrics": true
+  },
+  "summary": {
+    "comparisons": 2,
+    "generatedAt": "2026-04-16T12:55:40.787Z",
+    "byRoute": [
+      {
+        "route": "school-intelligence",
+        "comparisons": 1,
+        "divergenceRate": 0.333,
+        "latestComparedAt": "2026-04-16T12:54:54.371+00:00"
+      },
+      {
+        "route": "trust-analysis",
+        "comparisons": 1,
+        "divergenceRate": 0,
+        "latestComparedAt": "2026-04-16T12:53:53.817+00:00"
+      }
+    ]
+  },
+  "runs": [
+    {
+      "id": "f2054bbb-04cc-4c31-8fd6-5a1637f9a0fc",
+      "routeKey": "school-intelligence",
+      "mode": "shadow",
+      "candidateVersion": "signals-v1",
+      "comparedAt": "2026-04-16T12:54:54.371+00:00",
+      "totals": {
+        "totalMetrics": 3,
+        "matchCount": 2,
+        "deltaCount": 1,
+        "mismatchCount": 0,
+        "missingCount": 0,
+        "divergenceCount": 1,
+        "divergenceRate": 0.333
+      },
+      "issues": [
+        "cross_module_alerts: delta (+1)"
+      ]
+    },
+    {
+      "id": "36300b5b-d984-404c-9708-77510c373a00",
+      "routeKey": "trust-analysis",
+      "mode": "shadow",
+      "candidateVersion": "current-urn-scope-v1",
+      "comparedAt": "2026-04-16T12:53:53.817+00:00",
+      "totals": {
+        "totalMetrics": 4,
+        "matchCount": 4,
+        "deltaCount": 0,
+        "mismatchCount": 0,
+        "missingCount": 0,
+        "divergenceCount": 0,
+        "divergenceRate": 0
+      },
+      "issues": []
+    }
+  ]
+};
+
+    const summaryGrid = document.getElementById('summaryGrid');
+    const cards = [
+      ['Comparisons', data.summary.comparisons],
+      ['Generated', new Date(data.summary.generatedAt).toLocaleString()],
+      ['Window (hours)', data.filters.hours],
+      ['Org ID', data.filters.organizationId]
+    ];
+    cards.forEach(([label,val])=>{
+      const div=document.createElement('div');
+      div.className='kpi';
+      div.innerHTML=`<div class="label">${label}</div><div class="val">${val}</div>`;
+      summaryGrid.appendChild(div);
+    });
+
+    const routeBody = document.querySelector('#routeTable tbody');
+    data.summary.byRoute.forEach(r=>{
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td><code>${r.route}</code></td><td>${r.comparisons}</td><td>${(r.divergenceRate*100).toFixed(1)}%</td><td>${new Date(r.latestComparedAt).toLocaleString()}</td>`;
+      routeBody.appendChild(tr);
+    });
+
+    const runsBody = document.querySelector('#runsTable tbody');
+    data.runs.forEach(run=>{
+      const rate = run.totals.divergenceRate;
+      const cls = rate === 0 ? 'ok' : 'warn';
+      const issues = (run.issues||[]).map(i=>`<div class="issue">• ${i}</div>`).join('') || '<span class="muted">none</span>';
+      const tr=document.createElement('tr');
+      tr.innerHTML=`
+        <td><code>${run.routeKey}</code></td>
+        <td><span class="pill ${cls}">${run.mode}</span></td>
+        <td>${run.candidateVersion}</td>
+        <td>${(rate*100).toFixed(1)}% (${run.totals.divergenceCount}/${run.totals.totalMetrics})</td>
+        <td>${new Date(run.comparedAt).toLocaleString()}</td>
+        <td>${issues}</td>
+      `;
+      runsBody.appendChild(tr);
+    });
+  </script>
+</body>
+</html>

@@ -143,9 +143,9 @@ export function DriveFilePicker({ onFileSelected }: DriveFilePickerProps) {
       let blob: Blob;
 
       if (file.mimeType === "application/vnd.google-apps.spreadsheet") {
-        // Google Sheets — export as xlsx
+        // Google Sheets — export as CSV so PapaParse can read it
         const res = await fetch(
-          `https://www.googleapis.com/drive/v3/files/${file.id}/export?mimeType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`,
+          `https://www.googleapis.com/drive/v3/files/${file.id}/export?mimeType=text/csv`,
           { headers: { Authorization: `Bearer ${accessToken}` } },
         );
         if (!res.ok) throw new Error("Failed to export spreadsheet");
@@ -161,10 +161,10 @@ export function DriveFilePicker({ onFileSelected }: DriveFilePickerProps) {
       }
 
       // Convert to File object for the ingest pipeline
-      const ext =
-        file.mimeType === "application/vnd.google-apps.spreadsheet"
-          ? ".xlsx"
-          : "";
+      let ext = "";
+      if (file.mimeType === "application/vnd.google-apps.spreadsheet") ext = ".csv";
+      else if (file.mimeType === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") ext = ".xlsx";
+      
       const fileName = file.name.includes(".")
         ? file.name
         : `${file.name}${ext}`;

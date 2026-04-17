@@ -1,0 +1,65 @@
+{
+  "filters": {
+    "organizationId": "c64ed86b-9eab-49ee-9829-0706ff371083",
+    "route": null,
+    "hours": 720,
+    "limit": 20,
+    "includeMetrics": true
+  },
+  "summary": {
+    "comparisons": 2,
+    "generatedAt": "2026-04-16T12:55:40.787Z",
+    "byRoute": [
+      {
+        "route": "school-intelligence",
+        "comparisons": 1,
+        "divergenceRate": 0.333,
+        "latestComparedAt": "2026-04-16T12:54:54.371+00:00"
+      },
+      {
+        "route": "trust-analysis",
+        "comparisons": 1,
+        "divergenceRate": 0,
+        "latestComparedAt": "2026-04-16T12:53:53.817+00:00"
+      }
+    ]
+  },
+  "runs": [
+    {
+      "id": "f2054bbb-04cc-4c31-8fd6-5a1637f9a0fc",
+      "routeKey": "school-intelligence",
+      "mode": "shadow",
+      "candidateVersion": "signals-v1",
+      "comparedAt": "2026-04-16T12:54:54.371+00:00",
+      "totals": {
+        "totalMetrics": 3,
+        "matchCount": 2,
+        "deltaCount": 1,
+        "mismatchCount": 0,
+        "missingCount": 0,
+        "divergenceCount": 1,
+        "divergenceRate": 0.333
+      },
+      "issues": [
+        "cross_module_alerts: delta (+1)"
+      ]
+    },
+    {
+      "id": "36300b5b-d984-404c-9708-77510c373a00",
+      "routeKey": "trust-analysis",
+      "mode": "shadow",
+      "candidateVersion": "current-urn-scope-v1",
+      "comparedAt": "2026-04-16T12:53:53.817+00:00",
+      "totals": {
+        "totalMetrics": 4,
+        "matchCount": 4,
+        "deltaCount": 0,
+        "mismatchCount": 0,
+        "missingCount": 0,
+        "divergenceCount": 0,
+        "divergenceRate": 0
+      },
+      "issues": []
+    }
+  ]
+}

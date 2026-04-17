@@ -2,6 +2,12 @@ import { NextRequest } from 'next/server';
 import { protectedRoute, apiSuccess, apiError } from '@/lib/api-utils';
 import { createServiceRoleClient } from '@/lib/supabase-server';
 import {
+  buildShadowComparison,
+  getIntelligenceBrainMode,
+  isDebugBrainRequest,
+  persistShadowComparison,
+} from '@/lib/intelligence-brain/orchestrator';
+import {
   ALL_PENNINE_URNS, URN_PREDECESSORS, PENNINE_URNS,
   KS2Result, CensusRecord, DfEData,
 } from '@/lib/trust-analysis/types';
@@ -11,7 +17,11 @@ import {
  * Authenticated route — fetches DfE KS2 results and census data for trust schools.
  * Includes predecessor URN data (pre-academy conversion) mapped to current URNs.
  */
-export const GET = protectedRoute(async (_auth, _req: NextRequest) => {
+export const GET = protectedRoute(async (auth, req: NextRequest) => {
+  const brainMode = getIntelligenceBrainMode('trust-analysis');
+  const debugBrain =
+    isDebugBrainRequest(req.nextUrl.searchParams.get('debug_brain')) ||
+    isDebugBrainRequest(req.headers.get('x-schoolgle-debug-brain'));
   const supabase = createServiceRoleClient();
 
   // Fetch for ALL URNs (current + predecessor)
@@ -78,5 +88,65 @@ export const GET = protectedRoute(async (_auth, _req: NextRequest) => {
   });
 
   const result: DfEData = { ks2Results, census };
+
+  let shadowComparison:
+    | ReturnType<typeof buildShadowComparison>
+    | null = null;
+
+  if (brainMode === 'shadow' || brainMode === 'primary') {
+    const latestYear = Math.max(
+      ...ks2Results.map((row) => row.academicYearEnd),
+      ...census.map((row) => row.academicYearEnd),
+      0,
+    );
+
+    const currentUrnSet = new Set(PENNINE_URNS);
+    const ks2Current = ks2Results.filter((row) => currentUrnSet.has(row.urn));
+    const censusCurrent = census.filter((row) => currentUrnSet.has(row.urn));
+
+    const currentLatestYear = Math.max(
+      ...ks2Current.map((row) => row.academicYearEnd),
+      ...censusCurrent.map((row) => row.academicYearEnd),
+      0,
+    );
+
+    shadowComparison = buildShadowComparison({
+      route: 'trust-analysis',
+      mode: brainMode,
+      organizationId: auth.organizationId ?? 'trust-level-aggregate',
+      candidateVersion: 'current-urn-scope-v1',
+      baseline: {
+        ks2_rows: ks2Results.length,
+        census_rows: census.length,
+        unique_schools: new Set([
+          ...ks2Results.map((row) => row.urn),
+          ...census.map((row) => row.urn),
+        ]).size,
+        latest_year: latestYear,
+      },
+      candidate: {
+        ks2_rows: ks2Current.length,
+        census_rows: censusCurrent.length,
+        unique_schools: new Set([
+          ...ks2Current.map((row) => row.urn),
+          ...censusCurrent.map((row) => row.urn),
+        ]).size,
+        latest_year: currentLatestYear,
+      },
+    });
+
+    await persistShadowComparison(supabase, shadowComparison);
+  }
+
+  if (debugBrain) {
+    return apiSuccess({
+      ...result,
+      _brainShadow: {
+        mode: brainMode,
+        comparison: shadowComparison,
+      },
+    });
+  }
+
   return apiSuccess(result);
 });

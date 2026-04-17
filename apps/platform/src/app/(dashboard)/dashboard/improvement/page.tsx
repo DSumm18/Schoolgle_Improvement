@@ -7,6 +7,7 @@ import {
   TrendingUp,
   Target,
   Sparkles,
+  BarChart3,
 } from "lucide-react";
 import {
   ModulePageHeader,
@@ -59,6 +60,15 @@ const tools = [
     icon: Target,
     href: "/dashboard/action-plan",
     status: "Live",
+  },
+  {
+    id: "trust-analysis",
+    title: "Trust Analysis",
+    description:
+      "Cross-reference trust data against DfE validated results.",
+    icon: BarChart3,
+    href: "/dashboard/school-improvement/trust-analysis",
+    status: "Beta",
   },
 ];
 

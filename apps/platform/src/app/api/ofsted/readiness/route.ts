@@ -1,19 +1,22 @@
-import { NextRequest } from "next/server";
 import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
 import type {
-  OfstedAssessment,
   OfstedCategoryId,
   OfstedRating,
-  GetOfstedReadinessRequest,
   GetOfstedReadinessResponse,
   OfstedOverallReadiness,
   OfstedCategorySummary,
   OfstedGapsAnalysis,
   OfstedReadinessSnapshot,
-  OfstedGapDetail,
 } from "@/lib/ofsted";
 import { OFSTED_JUDGEMENTS, OFSTED_SUBCATEGORIES } from "@/lib/ofsted";
+import {
+  buildShadowComparison,
+  getIntelligenceBrainMode,
+  isDebugBrainRequest,
+  persistShadowComparison,
+} from "@/lib/intelligence-brain/orchestrator";
+import { buildOfstedShadowCandidate } from "@/lib/intelligence-brain/ofsted-shadow-candidate";
 
 /**
  * Helper: Calculate readiness score from rating
@@ -40,6 +43,10 @@ export const GET = protectedRoute(async (auth, req) => {
   const organizationId = auth.organizationId;
   const includeGaps = searchParams.get("include_gaps") === "true";
   const includeHistory = searchParams.get("include_history") === "true";
+  const debugBrain =
+    isDebugBrainRequest(searchParams.get("debug_brain")) ||
+    isDebugBrainRequest(req.headers.get("x-schoolgle-debug-brain"));
+  const brainMode = getIntelligenceBrainMode("ofsted-readiness");
 
   if (!organizationId) {
     return apiError("Missing organizationId from session", 400);
@@ -270,6 +277,46 @@ export const GET = protectedRoute(async (auth, req) => {
     trends,
   };
 
+  let shadowComparison:
+    | ReturnType<typeof buildShadowComparison>
+    | null = null;
+
+  if (brainMode === "shadow" || brainMode === "primary") {
+    const candidate = await buildOfstedShadowCandidate(supabase, organizationId);
+
+    if (candidate) {
+      shadowComparison = buildShadowComparison({
+        route: "ofsted-readiness",
+        mode: brainMode,
+        organizationId,
+        candidateVersion: candidate.candidateVersion,
+        baseline: {
+          overall_score: overall.overall_score,
+          critical_gaps: overall.critical_gaps,
+          total_evidence: overall.total_evidence,
+          areas_analyzed: Object.keys(overall.category_scores).length,
+        },
+        candidate: candidate.baselineComparable,
+      });
+
+      await persistShadowComparison(supabase, shadowComparison);
+    } else {
+      console.info(
+        "[IntelligenceBrain] Ofsted shadow candidate unavailable (no gap cache rows).",
+      );
+    }
+  }
+
+  if (debugBrain) {
+    return apiSuccess({
+      ...response,
+      _brainShadow: {
+        mode: brainMode,
+        comparison: shadowComparison,
+      },
+    });
+  }
+
   return apiSuccess(response);
 });
 
@@ -277,7 +324,7 @@ export const GET = protectedRoute(async (auth, req) => {
  * POST /api/ofsted/readiness
  * Create a readiness snapshot
  */
-export const POST = protectedRoute(async (auth, req) => {
+export const POST = protectedRoute(async (auth) => {
   // orgId MUST come from authenticated session — never from caller
   const orgId = auth.organizationId;
 

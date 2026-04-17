@@ -83,25 +83,42 @@ export function SchemeManager({ classId, yearGroup, onSchemeConnected }: SchemeM
   // ---------------------------------------------------------------------------
 
   const fetchSchemes = useCallback(async () => {
-    if (!classId) return;
+    if (!classId || !yearGroup) return;
     try {
-      const { data, error } = await supabase
+      // 1. Fetch the mappings for this class
+      const { data: mappingsData, error } = await supabase
         .from("ls_scheme_mappings")
-        .select("*, progressions:ls_scheme_progressions(*)")
+        .select("*")
         .eq("class_id", classId)
         .order("created_at", { ascending: false });
 
       if (error) {
         console.error("Schemes fetch error:", error.message);
-      } else {
-        setSchemes(data ?? []);
+        return;
       }
-    } catch {
-      // silent
+
+      // 2. For each mapping, fetch the matching progressions from the shared global table
+      const fullSchemes = await Promise.all(
+        (mappingsData ?? []).map(async (mapping) => {
+          const { data: progressionsData } = await supabase
+            .from("ls_scheme_progressions")
+            .select("*")
+            .eq("scheme_name", mapping.scheme_name)
+            .eq("subject", mapping.subject)
+            .eq("year_group", yearGroup)
+            .order("unit_order", { ascending: true });
+
+          return { ...mapping, progressions: progressionsData ?? [] };
+        })
+      );
+
+      setSchemes(fullSchemes);
+    } catch (err) {
+      console.error("Schemes fetch unexpected error:", err);
     } finally {
       setLoading(false);
     }
-  }, [classId]);
+  }, [classId, yearGroup]);
 
   useEffect(() => {
     fetchSchemes();

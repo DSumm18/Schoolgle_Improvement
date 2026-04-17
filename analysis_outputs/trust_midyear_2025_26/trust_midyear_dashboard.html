@@ -1,0 +1,951 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Trust Mid-Year Insights Dashboard</title>
+  <style>
+    :root {
+      --bg: #070f1d;
+      --bg2: #0f223b;
+      --panel: rgba(14, 31, 57, 0.86);
+      --panel-soft: rgba(23, 49, 86, 0.72);
+      --border: rgba(148, 189, 255, 0.28);
+      --text: #edf5ff;
+      --muted: #a2bee3;
+      --accent: #2dd4bf;
+      --accent2: #60a5fa;
+      --warn: #fbbf24;
+      --bad: #fb7185;
+      --good: #4ade80;
+      --ink: #031024;
+      --bar-bg: rgba(255, 255, 255, 0.11);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(1000px 500px at 8% -10%, rgba(56, 189, 248, 0.33), transparent 65%),
+        radial-gradient(900px 420px at 88% -10%, rgba(99, 102, 241, 0.29), transparent 65%),
+        linear-gradient(165deg, var(--bg), var(--bg2));
+      min-height: 100vh;
+    }
+    .wrap {
+      width: min(1400px, 95vw);
+      margin: 22px auto 44px;
+    }
+    .hero {
+      background: linear-gradient(140deg, rgba(30, 78, 145, 0.5), rgba(18, 56, 109, 0.42));
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 22px 24px;
+      box-shadow: 0 22px 60px rgba(0, 0, 0, 0.35);
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: -140px -120px auto auto;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle at center, rgba(45, 212, 191, 0.35), transparent 70%);
+      pointer-events: none;
+    }
+    h1 {
+      margin: 0;
+      font-size: 31px;
+      letter-spacing: 0.2px;
+    }
+    .subtitle {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      max-width: 1000px;
+    }
+    .kpis {
+      margin-top: 16px;
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .kpi {
+      background: var(--panel-soft);
+      border: 1px solid var(--border);
+      border-radius: 13px;
+      padding: 11px 12px;
+      min-height: 86px;
+      transition: transform 0.28s ease;
+    }
+    .kpi:hover {
+      transform: translateY(-2px);
+    }
+    .kpi .label {
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .kpi .value {
+      margin-top: 6px;
+      font-size: 24px;
+      font-weight: 700;
+      line-height: 1.1;
+    }
+    .kpi .sub {
+      margin-top: 6px;
+      color: #c2d8f5;
+      font-size: 12px;
+    }
+
+    .layout {
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 12px;
+    }
+    .stack {
+      display: grid;
+      gap: 12px;
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      box-shadow: 0 16px 44px rgba(0, 0, 0, 0.22);
+    }
+    .panel h2 {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: 0.1px;
+    }
+    .panel p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .panel-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .control {
+      border: 1px solid var(--border);
+      background: rgba(13, 32, 60, 0.78);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 5px 9px;
+      font-size: 12px;
+    }
+    .chart {
+      width: 100%;
+      height: 250px;
+      background: linear-gradient(180deg, rgba(12, 26, 50, 0.6), rgba(9, 22, 42, 0.45));
+      border: 1px solid rgba(148, 189, 255, 0.16);
+      border-radius: 10px;
+    }
+    .mini {
+      margin-top: 10px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .mini .chip {
+      background: rgba(9, 26, 49, 0.8);
+      border: 1px solid rgba(148, 189, 255, 0.2);
+      border-radius: 9px;
+      padding: 9px;
+      font-size: 12px;
+    }
+    .chip strong {
+      display: block;
+      margin-top: 4px;
+      font-size: 16px;
+      color: #e6f1ff;
+    }
+
+    .bar-list {
+      display: grid;
+      gap: 7px;
+      margin-top: 8px;
+    }
+    .bar-row {
+      display: grid;
+      grid-template-columns: 84px 1fr 62px;
+      gap: 8px;
+      align-items: center;
+      font-size: 12px;
+    }
+    .bar-track {
+      height: 13px;
+      background: var(--bar-bg);
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.09);
+    }
+    .bar-fill {
+      width: 0;
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      transition: width 0.9s cubic-bezier(0.18, 0.8, 0.24, 1);
+    }
+    .bar-fill.alert {
+      background: linear-gradient(90deg, #fb7185, #f97316);
+    }
+    .bar-fill.good {
+      background: linear-gradient(90deg, #22c55e, #2dd4bf);
+    }
+
+    .heatmap-wrap {
+      overflow: auto;
+      border: 1px solid rgba(148, 189, 255, 0.16);
+      border-radius: 10px;
+      margin-top: 8px;
+      max-height: 290px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      min-width: 540px;
+    }
+    th, td {
+      padding: 8px 7px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      text-align: center;
+    }
+    th:first-child, td:first-child {
+      text-align: left;
+      position: sticky;
+      left: 0;
+      background: #0d274a;
+    }
+    th {
+      color: #b9d1ed;
+      position: sticky;
+      top: 0;
+      background: #13345f;
+      z-index: 2;
+    }
+    .heat-cell {
+      border-radius: 7px;
+      cursor: pointer;
+      font-variant-numeric: tabular-nums;
+      transition: transform 0.2s ease;
+    }
+    .heat-cell:hover {
+      transform: translateY(-1px);
+      outline: 1px solid rgba(255, 255, 255, 0.35);
+    }
+
+    .questions {
+      margin: 0;
+      padding-left: 18px;
+      display: grid;
+      gap: 8px;
+    }
+    .questions li {
+      line-height: 1.45;
+      color: #dce9fb;
+      font-size: 13px;
+    }
+    .questions .priority {
+      color: #ffe7af;
+    }
+
+    .issue-table-wrap {
+      overflow: auto;
+      border: 1px solid rgba(148, 189, 255, 0.16);
+      border-radius: 10px;
+      margin-top: 8px;
+      max-height: 300px;
+    }
+    .issue-table td, .issue-table th {
+      text-align: left;
+      white-space: nowrap;
+    }
+    .issue-table td.msg {
+      white-space: normal;
+      min-width: 420px;
+    }
+    .badge {
+      display: inline-block;
+      border-radius: 999px;
+      padding: 2px 7px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+    }
+    .badge.critical {
+      color: #ffd0d7;
+      background: rgba(251, 113, 133, 0.21);
+    }
+    .badge.warning {
+      color: #ffe4a7;
+      background: rgba(251, 191, 36, 0.23);
+    }
+    .badge.info {
+      color: #bde7ff;
+      background: rgba(96, 165, 250, 0.23);
+    }
+
+    .confidence {
+      margin-top: 8px;
+      border: 1px solid rgba(148, 189, 255, 0.2);
+      border-radius: 11px;
+      background: rgba(8, 23, 44, 0.65);
+      padding: 10px;
+    }
+    .meter {
+      margin-top: 8px;
+      height: 14px;
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .meter > div {
+      height: 100%;
+      width: 0;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #fb7185, #fbbf24, #4ade80);
+      transition: width 1s ease;
+    }
+    .confidence .meta {
+      margin-top: 8px;
+      color: #cde0f8;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .future-note {
+      margin-top: 10px;
+      border: 1px dashed rgba(148, 189, 255, 0.34);
+      border-radius: 10px;
+      padding: 10px;
+      color: #d7e7fb;
+      font-size: 12px;
+      line-height: 1.45;
+      background: rgba(13, 31, 57, 0.5);
+    }
+    .footer {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    @media (max-width: 1240px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+    @media (max-width: 980px) {
+      .kpis {
+        grid-template-columns: 1fr 1fr;
+      }
+      .mini {
+        grid-template-columns: 1fr;
+      }
+      .bar-row {
+        grid-template-columns: 70px 1fr 58px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <h1>Trust Mid-Year Intelligence Board (Superpowered View)</h1>
+      <p class="subtitle">This version is designed for trust/school leaders: animated trends, school-to-school comparisons, year-group diagnostics, and automatically generated challenge questions based on dips, jumps, and data quality risk.</p>
+      <div class="kpis" id="kpiStrip"></div>
+    </section>
+
+    <div class="layout">
+      <div class="stack">
+        <section class="panel">
+          <div class="panel-top">
+            <div>
+              <h2>Trust Trend Over Time</h2>
+              <p>EYFS uses GLD. Years 1-6 use Combined ARE. Use this to spot trust-wide inflection points quickly.</p>
+            </div>
+          </div>
+          <canvas id="trustTrendChart" class="chart"></canvas>
+          <div class="mini" id="trustTrendInsights"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-top">
+            <div>
+              <h2>Year Group Comparison Across Schools</h2>
+              <p>Choose a year to compare schools side-by-side and identify outliers for immediate support/challenge.</p>
+            </div>
+            <select id="yearPicker" class="control"></select>
+          </div>
+          <div id="yearBars" class="bar-list"></div>
+          <div class="footer" id="yearSummary"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-top">
+            <div>
+              <h2>School Journey Explorer</h2>
+              <p>Track each school's profile across EYFS to Year 6 and surface questions linked to dips and accelerations.</p>
+            </div>
+            <select id="schoolPicker" class="control"></select>
+          </div>
+          <canvas id="schoolTrendChart" class="chart"></canvas>
+          <ul id="schoolQuestions" class="questions"></ul>
+        </section>
+      </div>
+
+      <div class="stack">
+        <section class="panel">
+          <div class="panel-top">
+            <div>
+              <h2>Core Outcome Heatmap (School x Year)</h2>
+              <p>Click any cell to pivot school/year context in the explorer.</p>
+            </div>
+          </div>
+          <div class="heatmap-wrap">
+            <table id="heatmapTable"></table>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>What To Ask Schools Next</h2>
+          <p>Auto-generated from trend breaks + integrity checks, prioritised for leadership conversations now.</p>
+          <ol id="globalQuestions" class="questions"></ol>
+          <div class="future-note">
+            <strong>Cohort Tracking Extension:</strong> this file is a snapshot by year group, not pupil-level longitudinal records. If connected to historic DfE/MIS pupil-level data, this panel can switch to true cohort progression, moderation confidence checks, and intervention attribution by cohort.
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Data Confidence & Risk Signals</h2>
+          <p>Performance insight confidence should be interpreted alongside data reliability.</p>
+          <div class="confidence">
+            <div id="confidenceHeadline"></div>
+            <div class="meter"><div id="confidenceBar"></div></div>
+            <div class="meta" id="confidenceMeta"></div>
+          </div>
+          <div id="riskBreakdown" class="bar-list"></div>
+        </section>
+
+        <section class="panel">
+          <h2>Priority Data Flags</h2>
+          <p>These are likely to distort interpretation if unresolved.</p>
+          <div class="issue-table-wrap">
+            <table class="issue-table">
+              <thead>
+                <tr><th>Severity</th><th>Year</th><th>School</th><th>Issue</th></tr>
+              </thead>
+              <tbody id="issueRows"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const data = {"trustOutcome": [{"year": "EYFS", "value": 0.584, "metric": "GLD"}, {"year": "Year 1", "value": 0.474, "metric": "Combined ARE"}, {"year": "Year 2", "value": 0.513, "metric": "Combined ARE"}, {"year": "Year 3", "value": 0.516, "metric": "Combined ARE"}, {"year": "Year 4", "value": 0.421, "metric": "Combined ARE"}, {"year": "Year 5", "value": 0.464, "metric": "Combined ARE"}, {"year": "Year 6", "value": 0.576, "metric": "Combined ARE"}], "trustGap": [{"year": "EYFS", "value": 0.045, "metric": "GLD"}, {"year": "Year 1", "value": 0.082, "metric": "Combined ARE"}, {"year": "Year 2", "value": 0.156, "metric": "Combined ARE"}, {"year": "Year 3", "value": 0.212, "metric": "Combined ARE"}, {"year": "Year 4", "value": 0.204, "metric": "Combined ARE"}, {"year": "Year 5", "value": 0.123, "metric": "Combined ARE"}, {"year": "Year 6", "value": 0.129, "metric": "Combined ARE"}], "schoolScores": [{"school": "LPS", "value": 0.583}, {"school": "CVPS", "value": 0.562}, {"school": "FPS", "value": 0.531}, {"school": "HPS", "value": 0.511}, {"school": "GHPS", "value": 0.501}, {"school": "CHPS", "value": 0.479}, {"school": "LGPS", "value": 0.451}], "heatmap": [{"school": "CVPS", "EYFS": 0.52, "Year 1": 0.48, "Year 2": 0.63, "Year 3": 0.6, "Year 4": 0.46, "Year 5": 0.63, "Year 6": 0.6}, {"school": "CHPS", "EYFS": null, "Year 1": 0.43, "Year 2": 0.44, "Year 3": 0.55, "Year 4": 0.38, "Year 5": 0.54, "Year 6": 0.51}, {"school": "FPS", "EYFS": 0.57, "Year 1": 0.49, "Year 2": 0.43, "Year 3": 0.56, "Year 4": 0.51, "Year 5": 0.52, "Year 6": 0.64}, {"school": "GHPS", "EYFS": null, "Year 1": 0.4, "Year 2": 0.58, "Year 3": 0.4, "Year 4": 0.53, "Year 5": 0.59, "Year 6": 0.48}, {"school": "HPS", "EYFS": 0.63, "Year 1": 0.47, "Year 2": 0.56, "Year 3": 0.54, "Year 4": 0.31, "Year 5": 0.38, "Year 6": 0.71}, {"school": "LPS", "EYFS": 1.0, "Year 1": 0.5, "Year 2": 0.54, "Year 3": 0.77, "Year 4": 0.54, "Year 5": 0.4, "Year 6": 0.5}, {"school": "LGPS", "EYFS": 0.53, "Year 1": 0.567, "Year 2": 0.52, "Year 3": 0.393, "Year 4": 0.38, "Year 5": 0.25, "Year 6": 0.56}], "issues": [{"severity": "critical", "year": "EYFS", "school": "CHPS", "check": "missing_core_metric", "message": "All-pupil GLD is missing."}, {"severity": "critical", "year": "EYFS", "school": "CVPS", "check": "weighted_mismatch", "message": "GLD all-pupil value (52.0%) differs from weighted subgroup expectation (63.0%) by -11.0pp."}, {"severity": "critical", "year": "EYFS", "school": "GHPS", "check": "missing_core_metric", "message": "All-pupil GLD is missing."}, {"severity": "critical", "year": "EYFS", "school": "LGPS", "check": "weighted_mismatch", "message": "GLD all-pupil value (53.0%) differs from weighted subgroup expectation (42.1%) by +10.9pp."}, {"severity": "critical", "year": "Year 1", "school": "HPS", "check": "non_integer_count", "message": "FSM is non-integer (0.14)."}, {"severity": "critical", "year": "Year 2", "school": "HPS", "check": "ehcp_gt_send", "message": "EHCP (5.0) is greater than SEND (3.0)."}, {"severity": "critical", "year": "Year 2", "school": "LPS", "check": "weighted_mismatch", "message": "PHONICS all-pupil value (77.0%) differs from weighted subgroup expectation (53.8%) by +23.2pp."}, {"severity": "critical", "year": "Year 4", "school": "GHPS", "check": "gd_gt_are", "message": "FSM W_GD (56.0%) exceeds W_ARE (6.0%)."}, {"severity": "critical", "year": "Year 4", "school": "GHPS", "check": "gd_gt_are", "message": "FSM M_GD (75.0%) exceeds M_ARE (6.0%)."}, {"severity": "critical", "year": "Year 4", "school": "GHPS", "check": "gd_gt_are", "message": "FSM C_GD (50.0%) exceeds C_ARE (12.0%)."}, {"severity": "critical", "year": "Year 4", "school": "GHPS", "check": "weighted_mismatch", "message": "R_GD all-pupil value (6.0%) differs from weighted subgroup expectation (24.3%) by -18.3pp."}, {"severity": "critical", "year": "Year 4", "school": "GHPS", "check": "weighted_mismatch", "message": "W_ARE all-pupil value (62.0%) differs from weighted subgroup expectation (47.2%) by +14.8pp."}, {"severity": "critical", "year": "Year 4", "school": "GHPS", "check": "weighted_mismatch", "message": "W_GD all-pupil value (13.0%) differs from weighted subgroup expectation (28.1%) by -15.1pp."}, {"severity": "critical", "year": "Year 4", "school": "GHPS", "check": "weighted_mismatch", "message": "M_ARE all-pupil value (68.0%) differs from weighted subgroup expectation (47.2%) by +20.8pp."}, {"severity": "critical", "year": "Year 4", "school": "GHPS", "check": "weighted_mismatch", "message": "M_GD all-pupil value (13.0%) differs from weighted subgroup expectation (32.4%) by -19.4pp."}, {"severity": "critical", "year": "Year 4", "school": "GHPS", "check": "weighted_mismatch", "message": "C_ARE all-pupil value (53.0%) differs from weighted subgroup expectation (39.2%) by +13.8pp."}, {"severity": "critical", "year": "Year 4", "school": "GHPS", "check": "weighted_mismatch", "message": "C_GD all-pupil value (4.0%) differs from weighted subgroup expectation (17.2%) by -13.2pp."}, {"severity": "critical", "year": "Year 4", "school": "LPS", "check": "weighted_mismatch", "message": "M_GD all-pupil value (8.0%) differs from weighted subgroup expectation (20.3%) by -12.3pp."}, {"severity": "critical", "year": "Year 6", "school": "LPS", "check": "weighted_mismatch", "message": "W_ARE all-pupil value (59.0%) differs from weighted subgroup expectation (41.7%) by +17.3pp."}, {"severity": "critical", "year": "Year 6", "school": "LPS", "check": "weighted_mismatch", "message": "M_GD all-pupil value (25.0%) differs from weighted subgroup expectation (41.7%) by -16.7pp."}, {"severity": "critical", "year": "Year 6", "school": "LPS", "check": "weighted_mismatch", "message": "C_ARE all-pupil value (50.0%) differs from weighted subgroup expectation (36.3%) by +13.7pp."}, {"severity": "warning", "year": "EYFS", "school": "HPS", "check": "missing_fsm_subgroup", "message": "FSM subgroup GLD missing despite FSM count 12."}, {"severity": "warning", "year": "EYFS", "school": "HPS", "check": "missing_nonfsm_subgroup", "message": "Non-FSM subgroup GLD missing despite non-FSM count 42."}, {"severity": "warning", "year": "Year 1", "school": "FPS", "check": "weighted_mismatch", "message": "PHONICS all-pupil value (75.0%) differs from weighted subgroup expectation (65.5%) by +9.5pp."}, {"severity": "warning", "year": "Year 1", "school": "GHPS", "check": "combined_gt_component", "message": "NON_FSM C_ARE (44.0%) exceeds min(R/W/M ARE 39.0%)."}, {"severity": "warning", "year": "Year 1", "school": "GHPS", "check": "weighted_mismatch", "message": "PHONICS all-pupil value (64.0%) differs from weighted subgroup expectation (56.3%) by +7.7pp."}, {"severity": "warning", "year": "Year 1", "school": "HPS", "check": "weighted_mismatch", "message": "R_ARE all-pupil value (55.0%) differs from weighted subgroup expectation (50.0%) by +5.0pp."}, {"severity": "warning", "year": "Year 1", "school": "HPS", "check": "weighted_mismatch", "message": "M_ARE all-pupil value (55.0%) differs from weighted subgroup expectation (60.9%) by -5.9pp."}, {"severity": "warning", "year": "Year 1", "school": "LGPS", "check": "weighted_mismatch", "message": "PHONICS all-pupil value (58.0%) differs from weighted subgroup expectation (49.8%) by +8.2pp."}, {"severity": "warning", "year": "Year 1", "school": "LPS", "check": "weighted_mismatch", "message": "W_ARE all-pupil value (50.0%) differs from weighted subgroup expectation (41.9%) by +8.1pp."}, {"severity": "warning", "year": "Year 1", "school": "LPS", "check": "weighted_mismatch", "message": "C_ARE all-pupil value (50.0%) differs from weighted subgroup expectation (41.9%) by +8.1pp."}, {"severity": "warning", "year": "Year 2", "school": "FPS", "check": "weighted_mismatch", "message": "R_ARE all-pupil value (57.0%) differs from weighted subgroup expectation (62.5%) by -5.5pp."}, {"severity": "warning", "year": "Year 2", "school": "LPS", "check": "weighted_mismatch", "message": "W_ARE all-pupil value (54.0%) differs from weighted subgroup expectation (61.1%) by -7.1pp."}, {"severity": "warning", "year": "Year 2", "school": "LPS", "check": "weighted_mismatch", "message": "C_ARE all-pupil value (54.0%) differs from weighted subgroup expectation (61.1%) by -7.1pp."}, {"severity": "warning", "year": "Year 3", "school": "ALL", "check": "benchmark_missing", "message": "No national benchmark row present for Year 3."}, {"severity": "warning", "year": "Year 3", "school": "GHPS", "check": "weighted_mismatch", "message": "W_GD all-pupil value (9.0%) differs from weighted subgroup expectation (3.2%) by +5.8pp."}, {"severity": "warning", "year": "Year 3", "school": "LPS", "check": "weighted_mismatch", "message": "W_ARE all-pupil value (77.0%) differs from weighted subgroup expectation (85.5%) by -8.5pp."}, {"severity": "warning", "year": "Year 3", "school": "LPS", "check": "weighted_mismatch", "message": "M_ARE all-pupil value (77.0%) differs from weighted subgroup expectation (85.5%) by -8.5pp."}, {"severity": "warning", "year": "Year 4", "school": "ALL", "check": "benchmark_missing", "message": "No national benchmark row present for Year 4."}, {"severity": "warning", "year": "Year 4", "school": "GHPS", "check": "combined_gt_component", "message": "FSM C_ARE (12.0%) exceeds min(R/W/M ARE 6.0%)."}, {"severity": "warning", "year": "Year 4", "school": "LGPS", "check": "weighted_mismatch", "message": "M_ARE all-pupil value (48.0%) differs from weighted subgroup expectation (55.8%) by -7.8pp."}, {"severity": "warning", "year": "Year 5", "school": "ALL", "check": "benchmark_missing", "message": "No national benchmark row present for Year 5."}, {"severity": "warning", "year": "Year 6", "school": "ALL", "check": "benchmark_format", "message": "Year 6 national Not-FSM comparators appear in whole percentages while other benchmark fields use decimals.", "details": [["V", 81], ["X", 78], ["Z", 81]]}, {"severity": "warning", "year": "Year 6", "school": "LPS", "check": "weighted_mismatch", "message": "R_ARE all-pupil value (100.0%) differs from weighted subgroup expectation (91.7%) by +8.3pp."}, {"severity": "warning", "year": "Year 6", "school": "LPS", "check": "weighted_mismatch", "message": "W_GD all-pupil value (8.0%) differs from weighted subgroup expectation (0.0%) by +8.0pp."}, {"severity": "info", "year": "EYFS", "school": "CVPS", "check": "small_fsm", "message": "FSM subgroup very small (n=2); subgroup percentages may be volatile."}, {"severity": "info", "year": "EYFS", "school": "LPS", "check": "small_fsm", "message": "FSM subgroup very small (n=1); subgroup percentages may be volatile."}, {"severity": "info", "year": "EYFS", "school": "LPS", "check": "small_nonfsm", "message": "Non-FSM subgroup very small (n=5); subgroup percentages may be volatile."}, {"severity": "info", "year": "Year 1", "school": "CVPS", "check": "text_entry", "message": "Non-standard text entry in all_PHONICS (N): '(25+)59%'."}, {"severity": "info", "year": "Year 1", "school": "GHPS", "check": "text_entry", "message": "Non-standard text entry in all_PHONICS (N): 'Above 25 \\n64%'."}, {"severity": "info", "year": "Year 1", "school": "HPS", "check": "small_fsm", "message": "FSM subgroup very small (n=0); subgroup percentages may be volatile."}, {"severity": "info", "year": "Year 1", "school": "HPS", "check": "text_entry", "message": "Non-standard text entry in all_R_GD (G): '0%%'."}, {"severity": "info", "year": "Year 1", "school": "HPS", "check": "text_entry", "message": "Non-standard text entry in all_W_GD (I): '0%%'."}, {"severity": "info", "year": "Year 1", "school": "HPS", "check": "text_entry", "message": "Non-standard text entry in all_C_GD (M): '0%%'."}, {"severity": "info", "year": "Year 1", "school": "HPS", "check": "text_entry", "message": "Non-standard text entry in fsm_R_GD (P): '0%%'."}, {"severity": "info", "year": "Year 1", "school": "HPS", "check": "text_entry", "message": "Non-standard text entry in fsm_W_GD (R): '0%%'."}, {"severity": "info", "year": "Year 1", "school": "HPS", "check": "text_entry", "message": "Non-standard text entry in fsm_M_GD (T): '0%%'."}, {"severity": "info", "year": "Year 1", "school": "HPS", "check": "text_entry", "message": "Non-standard text entry in fsm_C_GD (V): '0%%'."}, {"severity": "info", "year": "Year 1", "school": "LPS", "check": "small_nonfsm", "message": "Non-FSM subgroup very small (n=5); subgroup percentages may be volatile."}, {"severity": "info", "year": "Year 2", "school": "LPS", "check": "small_nonfsm", "message": "Non-FSM subgroup very small (n=8); subgroup percentages may be volatile."}, {"severity": "info", "year": "Year 3", "school": "LPS", "check": "small_fsm", "message": "FSM subgroup very small (n=4); subgroup percentages may be volatile."}, {"severity": "info", "year": "Year 3", "school": "LPS", "check": "small_nonfsm", "message": "Non-FSM subgroup very small (n=9); subgroup percentages may be volatile."}, {"severity": "info", "year": "Year 4", "school": "GHPS", "check": "text_entry", "message": "Non-standard text entry in all_MTC (N): '65%\\nscore 23+'."}, {"severity": "info", "year": "Year 4", "school": "LPS", "check": "small_nonfsm", "message": "Non-FSM subgroup very small (n=2); subgroup percentages may be volatile."}, {"severity": "info", "year": "Year 5", "school": "LPS", "check": "small_nonfsm", "message": "Non-FSM subgroup very small (n=4); subgroup percentages may be volatile."}, {"severity": "info", "year": "Year 6", "school": "LPS", "check": "small_fsm", "message": "FSM subgroup very small (n=4); subgroup percentages may be volatile."}, {"severity": "info", "year": "Year 6", "school": "LPS", "check": "small_nonfsm", "message": "Non-FSM subgroup very small (n=8); subgroup percentages may be volatile."}], "topIssues": [{"severity": "critical", "year": "EYFS", "school": "CHPS", "check": "missing_core_metric", "message": "All-pupil GLD is missing."}, {"severity": "critical", "year": "EYFS", "school": "CVPS", "check": "weighted_mismatch", "message": "GLD all-pupil value (52.0%) differs from weighted subgroup expectation (63.0%) by -11.0pp."}, {"severity": "critical", "year": "EYFS", "school": "GHPS", "check": "missing_core_metric", "message": "All-pupil GLD is missing."}, {"severity": "critical", "year": "EYFS", "school": "LGPS", "check": "weighted_mismatch", "message": "GLD all-pupil value (53.0%) differs from weighted subgroup expectation (42.1%) by +10.9pp."}, {"severity": "critical", "year": "Year 1", "school": "HPS", "check": "non_integer_count", "message": "FSM is non-integer (0.14)."}, {"severity": "critical", "year": "Year 2", "school": "HPS", "check": "ehcp_gt_send", "message": "EHCP (5.0) is greater than SEND (3.0)."}, {"severity": "critical", "year": "Year 2", "school": "LPS", "check": "weighted_mismatch", "message": "PHONICS all-pupil value (77.0%) differs from weighted subgroup expectation (53.8%) by +23.2pp."}, {"severity": "critical", "year": "Year 4", "school": "GHPS", "check": "gd_gt_are", "message": "FSM W_GD (56.0%) exceeds W_ARE (6.0%)."}, {"severity": "critical", "year": "Year 4", "school": "GHPS", "check": "gd_gt_are", "message": "FSM M_GD (75.0%) exceeds M_ARE (6.0%)."}, {"severity": "critical", "year": "Year 4", "school": "GHPS", "check": "gd_gt_are", "message": "FSM C_GD (50.0%) exceeds C_ARE (12.0%)."}, {"severity": "critical", "year": "Year 4", "school": "GHPS", "check": "weighted_mismatch", "message": "R_GD all-pupil value (6.0%) differs from weighted subgroup expectation (24.3%) by -18.3pp."}, {"severity": "critical", "year": "Year 4", "school": "GHPS", "check": "weighted_mismatch", "message": "W_ARE all-pupil value (62.0%) differs from weighted subgroup expectation (47.2%) by +14.8pp."}, {"severity": "critical", "year": "Year 4", "school": "GHPS", "check": "weighted_mismatch", "message": "W_GD all-pupil value (13.0%) differs from weighted subgroup expectation (28.1%) by -15.1pp."}, {"severity": "critical", "year": "Year 4", "school": "GHPS", "check": "weighted_mismatch", "message": "M_ARE all-pupil value (68.0%) differs from weighted subgroup expectation (47.2%) by +20.8pp."}, {"severity": "critical", "year": "Year 4", "school": "GHPS", "check": "weighted_mismatch", "message": "M_GD all-pupil value (13.0%) differs from weighted subgroup expectation (32.4%) by -19.4pp."}, {"severity": "critical", "year": "Year 4", "school": "GHPS", "check": "weighted_mismatch", "message": "C_ARE all-pupil value (53.0%) differs from weighted subgroup expectation (39.2%) by +13.8pp."}, {"severity": "critical", "year": "Year 4", "school": "GHPS", "check": "weighted_mismatch", "message": "C_GD all-pupil value (4.0%) differs from weighted subgroup expectation (17.2%) by -13.2pp."}, {"severity": "critical", "year": "Year 4", "school": "LPS", "check": "weighted_mismatch", "message": "M_GD all-pupil value (8.0%) differs from weighted subgroup expectation (20.3%) by -12.3pp."}, {"severity": "critical", "year": "Year 6", "school": "LPS", "check": "weighted_mismatch", "message": "W_ARE all-pupil value (59.0%) differs from weighted subgroup expectation (41.7%) by +17.3pp."}, {"severity": "critical", "year": "Year 6", "school": "LPS", "check": "weighted_mismatch", "message": "M_GD all-pupil value (25.0%) differs from weighted subgroup expectation (41.7%) by -16.7pp."}, {"severity": "critical", "year": "Year 6", "school": "LPS", "check": "weighted_mismatch", "message": "C_ARE all-pupil value (50.0%) differs from weighted subgroup expectation (36.3%) by +13.7pp."}, {"severity": "warning", "year": "EYFS", "school": "HPS", "check": "missing_fsm_subgroup", "message": "FSM subgroup GLD missing despite FSM count 12."}, {"severity": "warning", "year": "EYFS", "school": "HPS", "check": "missing_nonfsm_subgroup", "message": "Non-FSM subgroup GLD missing despite non-FSM count 42."}, {"severity": "warning", "year": "Year 1", "school": "FPS", "check": "weighted_mismatch", "message": "PHONICS all-pupil value (75.0%) differs from weighted subgroup expectation (65.5%) by +9.5pp."}, {"severity": "warning", "year": "Year 1", "school": "GHPS", "check": "combined_gt_component", "message": "NON_FSM C_ARE (44.0%) exceeds min(R/W/M ARE 39.0%)."}, {"severity": "warning", "year": "Year 1", "school": "GHPS", "check": "weighted_mismatch", "message": "PHONICS all-pupil value (64.0%) differs from weighted subgroup expectation (56.3%) by +7.7pp."}, {"severity": "warning", "year": "Year 1", "school": "HPS", "check": "weighted_mismatch", "message": "R_ARE all-pupil value (55.0%) differs from weighted subgroup expectation (50.0%) by +5.0pp."}, {"severity": "warning", "year": "Year 1", "school": "HPS", "check": "weighted_mismatch", "message": "M_ARE all-pupil value (55.0%) differs from weighted subgroup expectation (60.9%) by -5.9pp."}], "issueCounts": {"critical": 21, "warning": 24, "info": 22}, "strongestYear": {"year": "EYFS", "value": 0.584, "metric": "GLD"}, "weakestYear": {"year": "Year 4", "value": 0.421, "metric": "Combined ARE"}, "widestGap": {"year": "Year 3", "value": 0.212, "metric": "Combined ARE"}};
+
+  const years = data.trustOutcome.map(item => item.year);
+  const yearLabels = years.map(year => year.replace("Year ", "Y"));
+  const schools = data.heatmap.map(item => item.school);
+
+  function pct(value) {
+    if (value === null || value === undefined || Number.isNaN(value)) return "-";
+    return `${(value * 100).toFixed(1)}%`;
+  }
+  function pp(value) {
+    if (value === null || value === undefined || Number.isNaN(value)) return "-";
+    return `${(value * 100).toFixed(1)}pp`;
+  }
+  function bySchool(school) {
+    return data.heatmap.find(item => item.school === school) || null;
+  }
+  function coreLabel(year) {
+    return year === "EYFS" ? "GLD" : "Combined ARE";
+  }
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
+  function makeCanvasHiDpi(canvas, widthPx, heightPx) {
+    const ratio = window.devicePixelRatio || 1;
+    canvas.width = Math.floor(widthPx * ratio);
+    canvas.height = Math.floor(heightPx * ratio);
+    canvas.style.width = `${widthPx}px`;
+    canvas.style.height = `${heightPx}px`;
+    const context = canvas.getContext("2d");
+    context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    return context;
+  }
+  function drawAnimatedLineChart(canvasId, labels, values, options = {}) {
+    const canvas = document.getElementById(canvasId);
+    const width = canvas.clientWidth || 800;
+    const height = canvas.clientHeight || 250;
+    const context = makeCanvasHiDpi(canvas, width, height);
+
+    const points = values
+      .map((value, index) => ({ index, value, label: labels[index] }))
+      .filter(point => point.value !== null && point.value !== undefined);
+    if (!points.length) return;
+
+    const minY = options.minY ?? Math.max(0, Math.min(...points.map(p => p.value)) - 0.05);
+    const maxY = options.maxY ?? Math.min(1, Math.max(...points.map(p => p.value)) + 0.05);
+    const left = 54;
+    const right = 18;
+    const top = 18;
+    const bottom = 36;
+
+    const mapX = idx => {
+      if (labels.length <= 1) return left;
+      return left + (idx * ((width - left - right) / (labels.length - 1)));
+    };
+    const mapY = value => top + (1 - ((value - minY) / (maxY - minY || 1))) * (height - top - bottom);
+
+    const renderedPoints = points.map(point => ({ ...point, x: mapX(point.index), y: mapY(point.value) }));
+
+    let startTime = null;
+    const duration = 880;
+
+    function frame(timestamp) {
+      if (!startTime) startTime = timestamp;
+      const t = clamp((timestamp - startTime) / duration, 0, 1);
+
+      context.clearRect(0, 0, width, height);
+
+      context.fillStyle = "rgba(10, 26, 49, 0.45)";
+      context.fillRect(left, top, width - left - right, height - top - bottom);
+
+      context.strokeStyle = "rgba(161, 193, 237, 0.2)";
+      context.lineWidth = 1;
+      [0.4, 0.5, 0.6, 0.7].forEach(tick => {
+        const y = mapY(tick);
+        context.beginPath();
+        context.moveTo(left, y);
+        context.lineTo(width - right, y);
+        context.stroke();
+        context.fillStyle = "#9fc0e6";
+        context.font = "11px Avenir Next, Segoe UI, sans-serif";
+        context.textAlign = "right";
+        context.fillText(`${Math.round(tick * 100)}%`, left - 8, y + 4);
+      });
+
+      context.strokeStyle = "rgba(195, 220, 255, 0.45)";
+      context.lineWidth = 1.2;
+      context.beginPath();
+      context.moveTo(left, top);
+      context.lineTo(left, height - bottom);
+      context.lineTo(width - right, height - bottom);
+      context.stroke();
+
+      const visibleCount = Math.max(1, Math.floor(renderedPoints.length * t));
+      const visiblePoints = renderedPoints.slice(0, visibleCount);
+      if (visiblePoints.length > 1) {
+        context.strokeStyle = options.lineColor || "#2dd4bf";
+        context.lineWidth = 3;
+        context.beginPath();
+        context.moveTo(visiblePoints[0].x, visiblePoints[0].y);
+        for (let i = 1; i < visiblePoints.length; i += 1) {
+          context.lineTo(visiblePoints[i].x, visiblePoints[i].y);
+        }
+        context.stroke();
+      }
+
+      renderedPoints.forEach(point => {
+        context.fillStyle = "#eaf5ff";
+        context.font = "11px Avenir Next, Segoe UI, sans-serif";
+        context.textAlign = "center";
+        context.fillText(point.label, point.x, height - 12);
+      });
+
+      visiblePoints.forEach(point => {
+        context.fillStyle = options.dotColor || "#60a5fa";
+        context.beginPath();
+        context.arc(point.x, point.y, 4.2, 0, Math.PI * 2);
+        context.fill();
+        context.strokeStyle = "#f6fbff";
+        context.lineWidth = 1;
+        context.stroke();
+
+        context.fillStyle = "#ebf6ff";
+        context.font = "600 11px Avenir Next, Segoe UI, sans-serif";
+        context.fillText(`${(point.value * 100).toFixed(1)}%`, point.x, point.y - 11);
+      });
+
+      if (t < 1) requestAnimationFrame(frame);
+    }
+
+    requestAnimationFrame(frame);
+  }
+
+  function buildKpis() {
+    const strongest = data.strongestYear;
+    const weakest = data.weakestYear;
+    const widestGap = data.widestGap;
+    const scoreTop = data.schoolScores[0];
+    const scoreBottom = data.schoolScores[data.schoolScores.length - 1];
+
+    const strip = document.getElementById("kpiStrip");
+    const items = [
+      {
+        label: "Strongest Trust Year",
+        value: strongest ? `${strongest.year}` : "-",
+        sub: strongest ? `${pct(strongest.value)} (${coreLabel(strongest.year)})` : "-",
+      },
+      {
+        label: "Weakest Trust Year",
+        value: weakest ? `${weakest.year}` : "-",
+        sub: weakest ? `${pct(weakest.value)} (${coreLabel(weakest.year)})` : "-",
+      },
+      {
+        label: "Widest Deprivation Gap",
+        value: widestGap ? widestGap.year : "-",
+        sub: widestGap ? `${pp(widestGap.value)} (Non-FSM minus FSM)` : "-",
+      },
+      {
+        label: "School Spread",
+        value: `${scoreTop.school} to ${scoreBottom.school}`,
+        sub: `${pct(scoreTop.value)} vs ${pct(scoreBottom.value)}`,
+      },
+      {
+        label: "Data Risk Status",
+        value: `${data.issueCounts.critical} critical`,
+        sub: `${data.issueCounts.warning} warning / ${data.issueCounts.info} info`,
+      },
+    ];
+
+    strip.innerHTML = items.map(item => `
+      <article class="kpi">
+        <div class="label">${item.label}</div>
+        <div class="value">${item.value}</div>
+        <div class="sub">${item.sub}</div>
+      </article>
+    `).join("");
+  }
+
+  function buildTrustTrend() {
+    const values = data.trustOutcome.map(item => item.value);
+    drawAnimatedLineChart("trustTrendChart", yearLabels, values, {
+      minY: 0.35,
+      maxY: 0.70,
+      lineColor: "#2dd4bf",
+      dotColor: "#60a5fa",
+    });
+
+    const deltas = [];
+    for (let i = 1; i < data.trustOutcome.length; i += 1) {
+      const previous = data.trustOutcome[i - 1];
+      const current = data.trustOutcome[i];
+      if (previous.value === null || current.value === null) continue;
+      deltas.push({
+        from: previous.year,
+        to: current.year,
+        delta: current.value - previous.value,
+      });
+    }
+    const best = deltas.length ? deltas.reduce((a, b) => (b.delta > a.delta ? b : a)) : null;
+    const worst = deltas.length ? deltas.reduce((a, b) => (b.delta < a.delta ? b : a)) : null;
+    const gapValid = data.trustGap.filter(item => item.value !== null);
+    const meanGap = gapValid.length
+      ? gapValid.reduce((sum, item) => sum + item.value, 0) / gapValid.length
+      : null;
+
+    const insight = document.getElementById("trustTrendInsights");
+    insight.innerHTML = `
+      <div class="chip">Biggest rise<strong>${best ? `${best.from} -> ${best.to}: ${pp(best.delta)}` : "-"}</strong></div>
+      <div class="chip">Biggest dip<strong>${worst ? `${worst.from} -> ${worst.to}: ${pp(worst.delta)}` : "-"}</strong></div>
+      <div class="chip">Average deprivation gap<strong>${meanGap === null ? "-" : pp(meanGap)}</strong></div>
+    `;
+  }
+
+  function animateBars(node) {
+    const fills = node.querySelectorAll(".bar-fill");
+    requestAnimationFrame(() => {
+      fills.forEach(fill => {
+        fill.style.width = fill.dataset.width || "0%";
+      });
+    });
+  }
+
+  function buildYearPicker() {
+    const picker = document.getElementById("yearPicker");
+    picker.innerHTML = years.map(year => `<option value="${year}">${year}</option>`).join("");
+    picker.value = "Year 4";
+    picker.addEventListener("change", renderYearComparison);
+  }
+
+  function renderYearComparison() {
+    const year = document.getElementById("yearPicker").value;
+    const rows = data.heatmap
+      .map(item => ({ school: item.school, value: item[year] }))
+      .filter(item => item.value !== null)
+      .sort((a, b) => b.value - a.value);
+
+    const trustAverage = rows.length
+      ? rows.reduce((sum, item) => sum + item.value, 0) / rows.length
+      : null;
+    const maxValue = Math.max(...rows.map(item => item.value), 0.0001);
+
+    const bars = document.getElementById("yearBars");
+    bars.innerHTML = rows.map(item => `
+      <div class="bar-row">
+        <div>${item.school}</div>
+        <div class="bar-track">
+          <div class="bar-fill good" data-width="${(item.value / maxValue) * 100}%"></div>
+        </div>
+        <div style="text-align:right; font-variant-numeric: tabular-nums;">${pct(item.value)}</div>
+      </div>
+    `).join("");
+    animateBars(bars);
+
+    const best = rows[0];
+    const worst = rows[rows.length - 1];
+    const spread = best && worst ? best.value - worst.value : null;
+
+    document.getElementById("yearSummary").textContent = trustAverage === null
+      ? "No valid values for this year."
+      : `Trust average ${pct(trustAverage)} (${coreLabel(year)}). Highest ${best.school} ${pct(best.value)}; lowest ${worst.school} ${pct(worst.value)}; spread ${pp(spread)}.`;
+  }
+
+  function buildSchoolPicker() {
+    const picker = document.getElementById("schoolPicker");
+    picker.innerHTML = schools.map(school => `<option value="${school}">${school}</option>`).join("");
+    picker.value = data.schoolScores[0].school;
+    picker.addEventListener("change", renderSchoolJourney);
+  }
+
+  function renderSchoolJourney() {
+    const school = document.getElementById("schoolPicker").value;
+    const record = bySchool(school);
+    if (!record) return;
+
+    const values = years.map(year => record[year]);
+    drawAnimatedLineChart("schoolTrendChart", yearLabels, values, {
+      minY: 0.28,
+      maxY: 0.75,
+      lineColor: "#60a5fa",
+      dotColor: "#2dd4bf",
+    });
+
+    const transitions = [];
+    for (let i = 1; i < years.length; i += 1) {
+      const before = values[i - 1];
+      const after = values[i];
+      if (before === null || after === null) continue;
+      transitions.push({ from: years[i - 1], to: years[i], delta: after - before });
+    }
+    const rise = transitions.length ? transitions.reduce((a, b) => (b.delta > a.delta ? b : a)) : null;
+    const dip = transitions.length ? transitions.reduce((a, b) => (b.delta < a.delta ? b : a)) : null;
+    const validValues = values.filter(v => v !== null);
+    const variation = validValues.length ? Math.max(...validValues) - Math.min(...validValues) : null;
+
+    const severeForSchool = data.issues.filter(issue =>
+      issue.school === school && (issue.severity === "critical" || issue.severity === "warning")
+    );
+
+    const prompts = [];
+    if (dip && dip.delta < -0.05) {
+      prompts.push(
+        `<span class="priority">Priority:</span> ${school} drops ${pp(dip.delta)} from ${dip.from} to ${dip.to}. What changed in cohort profile, staffing, curriculum sequence, or moderation approach during this transition?`
+      );
+    }
+    if (rise && rise.delta > 0.06) {
+      prompts.push(
+        `${school} improves ${pp(rise.delta)} from ${rise.from} to ${rise.to}. Which specific strategies drove this, and how can they be codified for transfer into weaker year groups?`
+      );
+    }
+    if (variation !== null && variation > 0.16) {
+      prompts.push(
+        `${school} shows a high internal spread (${pp(variation)}). Is curriculum and assessment implementation consistent across year teams?`
+      );
+    }
+    if (severeForSchool.length >= 3) {
+      prompts.push(
+        `${school} has ${severeForSchool.length} serious data flags. Before acting on attainment narrative, should this school's returns be verified with phase leaders and trust assessment leads?`
+      );
+    }
+    if (!prompts.length) {
+      prompts.push(`No sharp volatility detected for ${school}. Next question: can this stable profile be used as a moderation benchmark for peer schools?`);
+    }
+
+    document.getElementById("schoolQuestions").innerHTML = prompts.map(item => `<li>${item}</li>`).join("");
+  }
+
+  function heatColor(value) {
+    if (value === null || value === undefined) return "rgba(255,255,255,0.08)";
+    const normal = clamp((value - 0.25) / 0.55, 0, 1);
+    const red = Math.round(200 - normal * 125);
+    const green = Math.round(48 + normal * 165);
+    const blue = Math.round(60 + normal * 40);
+    return `rgba(${red}, ${green}, ${blue}, 0.78)`;
+  }
+
+  function buildHeatmap() {
+    const table = document.getElementById("heatmapTable");
+    const head = `<thead><tr><th>School</th>${years.map(year => `<th>${year.replace("Year ", "Y")}</th>`).join("")}</tr></thead>`;
+    const body = `<tbody>${data.heatmap.map(row => {
+      const cells = years.map(year => {
+        const value = row[year];
+        const label = value === null ? "-" : `${(value * 100).toFixed(1)}%`;
+        return `<td><span class="heat-cell" data-school="${row.school}" data-year="${year}" style="display:inline-block; min-width:66px; background:${heatColor(value)}">${label}</span></td>`;
+      }).join("");
+      return `<tr><td>${row.school}</td>${cells}</tr>`;
+    }).join("")}</tbody>`;
+
+    table.innerHTML = head + body;
+    table.querySelectorAll(".heat-cell").forEach(cell => {
+      cell.addEventListener("click", () => {
+        const school = cell.getAttribute("data-school");
+        const year = cell.getAttribute("data-year");
+        document.getElementById("schoolPicker").value = school;
+        renderSchoolJourney();
+        document.getElementById("yearPicker").value = year;
+        renderYearComparison();
+      });
+    });
+  }
+
+  function buildGlobalQuestions() {
+    const questions = [];
+
+    const trustTransitions = [];
+    for (let i = 1; i < data.trustOutcome.length; i += 1) {
+      const prev = data.trustOutcome[i - 1];
+      const next = data.trustOutcome[i];
+      if (prev.value === null || next.value === null) continue;
+      trustTransitions.push({ from: prev.year, to: next.year, delta: next.value - prev.value });
+    }
+    const sharpestTrustDip = trustTransitions.length
+      ? trustTransitions.reduce((a, b) => (b.delta < a.delta ? b : a))
+      : null;
+    if (sharpestTrustDip && sharpestTrustDip.delta < -0.04) {
+      questions.push(
+        `<span class="priority">Priority:</span> Trust-level dip of ${pp(sharpestTrustDip.delta)} from ${sharpestTrustDip.from} to ${sharpestTrustDip.to}. Which schools and subjects account for most of that movement?`
+      );
+    }
+
+    const widestGap = data.widestGap;
+    if (widestGap && widestGap.value > 0.15) {
+      questions.push(
+        `<span class="priority">Priority:</span> Deprivation gap peaks in ${widestGap.year} at ${pp(widestGap.value)}. What is your immediate disadvantaged pupil recovery plan in that phase?`
+      );
+    }
+
+    const highRiskSchools = schools
+      .map(school => ({
+        school,
+        count: data.issues.filter(issue =>
+          issue.school === school && (issue.severity === "critical" || issue.severity === "warning")
+        ).length,
+      }))
+      .filter(item => item.count > 0)
+      .sort((a, b) => b.count - a.count);
+    if (highRiskSchools.length) {
+      const top = highRiskSchools[0];
+      questions.push(
+        `${top.school} has the highest volume of serious data flags (${top.count}). Should this school's submission be revalidated before strategic decisions are made?`
+      );
+    }
+
+    const weightedIssues = data.issues.filter(issue => issue.check === "weighted_mismatch").length;
+    if (weightedIssues > 0) {
+      questions.push(
+        `${weightedIssues} subgroup-weighted mismatches detected. Are subgroup definitions and all-pupil totals being entered consistently across schools?`
+      );
+    }
+
+    const missingCore = data.issues.filter(issue => issue.check === "missing_core_metric").length;
+    if (missingCore > 0) {
+      questions.push(
+        `${missingCore} missing core metric returns found. Can missing values be resolved this week so trust comparisons are complete?`
+      );
+    }
+
+    if (!questions.length) {
+      questions.push("No major trust-level alarm detected from this snapshot. Next step: compare these patterns against prior captures to test stability.");
+    }
+    document.getElementById("globalQuestions").innerHTML = questions.slice(0, 8).map(item => `<li>${item}</li>`).join("");
+  }
+
+  function buildConfidencePanel() {
+    const critical = data.issueCounts.critical || 0;
+    const warning = data.issueCounts.warning || 0;
+    const info = data.issueCounts.info || 0;
+    const confidence = clamp(100 - (critical * 3.8) - (warning * 1.5) - (info * 0.45), 8, 100);
+
+    const headline = confidence >= 75
+      ? "High confidence with targeted caveats"
+      : confidence >= 55
+        ? "Medium confidence; resolve key anomalies"
+        : "Low confidence; verify data before action";
+
+    document.getElementById("confidenceHeadline").innerHTML = `<strong>${headline}</strong> (${confidence.toFixed(0)}/100)`;
+    document.getElementById("confidenceBar").style.width = `${confidence}%`;
+    document.getElementById("confidenceMeta").innerHTML = `
+      Critical issues: <strong>${critical}</strong><br/>
+      Warning issues: <strong>${warning}</strong><br/>
+      Informational issues: <strong>${info}</strong><br/>
+      Recommendation: use confidence level alongside attainment trends in leadership discussions.
+    `;
+
+    const checkCounts = {};
+    data.issues.forEach(issue => {
+      const key = issue.check || "other";
+      checkCounts[key] = (checkCounts[key] || 0) + 1;
+    });
+    const topChecks = Object.entries(checkCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6);
+
+    const max = Math.max(...topChecks.map(item => item[1]), 1);
+    const list = document.getElementById("riskBreakdown");
+    list.innerHTML = topChecks.map(([check, count]) => `
+      <div class="bar-row">
+        <div>${check}</div>
+        <div class="bar-track"><div class="bar-fill alert" data-width="${(count / max) * 100}%"></div></div>
+        <div style="text-align:right">${count}</div>
+      </div>
+    `).join("");
+    animateBars(list);
+  }
+
+  function buildIssuesTable() {
+    const rows = data.topIssues.map(issue => `
+      <tr>
+        <td><span class="badge ${issue.severity}">${issue.severity}</span></td>
+        <td>${issue.year}</td>
+        <td>${issue.school}</td>
+        <td class="msg">${issue.message}</td>
+      </tr>
+    `).join("");
+    document.getElementById("issueRows").innerHTML = rows;
+  }
+
+  function init() {
+    buildKpis();
+    buildTrustTrend();
+    buildYearPicker();
+    buildSchoolPicker();
+    buildHeatmap();
+    renderYearComparison();
+    renderSchoolJourney();
+    buildGlobalQuestions();
+    buildConfidencePanel();
+    buildIssuesTable();
+  }
+
+  window.addEventListener("resize", () => {
+    buildTrustTrend();
+    renderSchoolJourney();
+  });
+  init();
+</script>
+</body>
+</html>
