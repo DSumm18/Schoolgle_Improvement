@@ -26,7 +26,7 @@ interface DriveFile {
 
 interface DriveFilePickerProps {
   /** Called when user picks a file — passes the file content as Buffer for ingest */
-  onFileSelected: (file: File) => void;
+  onFileSelected: (file: File, driveFileId?: string, driveFilePath?: string) => void;
 }
 
 export function DriveFilePicker({ onFileSelected }: DriveFilePickerProps) {
@@ -172,7 +172,9 @@ export function DriveFilePicker({ onFileSelected }: DriveFilePickerProps) {
         type: blob.type,
       });
 
-      onFileSelected(fileObj);
+      // Pass the Drive file ID and folder path so callers can save the connector
+      const pathStr = folderStack.map(f => f.name).join(' / ');
+      onFileSelected(fileObj, file.id, pathStr);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to download file");
     } finally {

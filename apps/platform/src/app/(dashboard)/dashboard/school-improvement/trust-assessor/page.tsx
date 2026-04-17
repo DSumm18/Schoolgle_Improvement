@@ -891,17 +891,17 @@ function FsmTrendChart({ abbrev, census }: { abbrev: string; census: CensusRecor
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
-// Connector config stored in Supabase per org. For now we use a lightweight
-// approach: save only the Drive file ID + name via an API, then re-fetch the
-// file from Drive on every page load so it's always live.
-// TODO: Move connector config to school_data_connections table in Supabase.
-interface ConnectorConfig {
-  driveFileId: string;
-  driveFileName: string;
-  connectedAt: string;
+// Connector stored in Supabase `app_connectors` table per organization.
+// On page load, we fetch the connector config from the API, then fetch
+// the file live from Google Drive. No file content stored anywhere.
+interface AppConnector {
+  id: string;
+  source_file_id: string;
+  source_file_name: string;
+  source_path?: string;
+  status: string;
+  last_sync_at?: string;
 }
-
-const CONNECTOR_KEY = "trust-assessor-connector"; // Only stores {driveFileId, driveFileName} — NOT file content
 
 export default function TrustAssessorPage() {
   const { organizationId } = useAuth();
@@ -915,43 +915,51 @@ export default function TrustAssessorPage() {
   const [showAllFlags, setShowAllFlags] = useState(false);
   const [grooveHouseStats, setGrooveHouseStats] = useState<{ totalPupils: number; trackablePupils: number } | null>(null);
   const [showDrivePicker, setShowDrivePicker] = useState(false);
-  const [connectorConfig, setConnectorConfig] = useState<ConnectorConfig | null>(null);
-  const [connectorLoading, setConnectorLoading] = useState(false);
+  const [connector, setConnector] = useState<AppConnector | null>(null);
+  const [connectorLoading, setConnectorLoading] = useState(true);
   const [connectorError, setConnectorError] = useState<string | null>(null);
 
   const { isConnected: driveConnected, accessToken: driveToken } = useGoogleDriveAccess();
 
-  // On mount: check if we have a saved connector (Drive file ID only — no file content)
+  // On mount: fetch saved connector from Supabase (not localStorage)
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(CONNECTOR_KEY);
-      if (saved) {
-        const config: ConnectorConfig = JSON.parse(saved);
-        setConnectorConfig(config);
-        setFileName(config.driveFileName);
+    if (!organizationId) return;
+    (async () => {
+      try {
+        const res = await fetch(`/api/app-connectors?app_id=trust-assessor&organizationId=${organizationId}`, { credentials: 'include' });
+        if (!res.ok) { setConnectorLoading(false); return; }
+        const json = await res.json();
+        const connectors = Array.isArray(json) ? json : json.data ?? json;
+        const active = connectors.find((c: AppConnector) => c.status === 'active' && c.source_file_id);
+        if (active) {
+          setConnector(active);
+          setFileName(active.source_file_name);
+        }
+      } catch {
+        // Non-fatal — connector just won't auto-load
+      } finally {
+        setConnectorLoading(false);
       }
-    } catch {
-      // Corrupted — ignore
-    }
-  }, []);
+    })();
+  }, [organizationId]);
 
-  // When we have a connector config AND Drive is connected, fetch the file live
+  // When we have a connector AND Drive is connected, fetch the file live
   useEffect(() => {
-    if (!connectorConfig || !driveConnected || !driveToken || parsed) return;
+    if (!connector || !driveConnected || !driveToken || parsed) return;
 
     const fetchFromDrive = async () => {
       setConnectorLoading(true);
       setConnectorError(null);
       try {
         const res = await fetch(
-          `https://www.googleapis.com/drive/v3/files/${connectorConfig.driveFileId}?alt=media`,
+          `https://www.googleapis.com/drive/v3/files/${connector.source_file_id}?alt=media`,
           { headers: { Authorization: `Bearer ${driveToken}` } },
         );
         if (!res.ok) {
           if (res.status === 404) {
-            setConnectorError("The connected spreadsheet could not be found in Google Drive. It may have been moved or deleted.");
+            setConnectorError("The connected spreadsheet could not be found in Google Drive. It may have been moved or deleted. Please check the file location or reconnect.");
           } else if (res.status === 403) {
-            setConnectorError("Access denied to the connected spreadsheet. Please check sharing permissions in Google Drive.");
+            setConnectorError("Access denied to the connected spreadsheet. Please ensure the file is shared with your Google account and that Google Drive access is authorised.");
           } else {
             setConnectorError(`Could not fetch spreadsheet from Drive (${res.status}).`);
           }
@@ -963,11 +971,11 @@ export default function TrustAssessorPage() {
         const workbook = XLSX.read(data, { type: "array" });
         const result = parseSpreadsheet(workbook);
         if (result.schools.length === 0) {
-          setConnectorError("Spreadsheet was fetched but no school data found. Check the file format.");
+          setConnectorError("Spreadsheet was fetched from Drive but no school data found. Check the file format.");
           return;
         }
         setParsed(result);
-        setFileName(connectorConfig.driveFileName);
+        setFileName(connector.source_file_name);
       } catch (err) {
         setConnectorError(`Failed to connect: ${err instanceof Error ? err.message : String(err)}`);
       } finally {
@@ -976,7 +984,7 @@ export default function TrustAssessorPage() {
     };
 
     fetchFromDrive();
-  }, [connectorConfig, driveConnected, driveToken, parsed]);
+  }, [connector, driveConnected, driveToken, parsed]);
 
   // Fetch DfE data on mount
   const fetchDfeData = useCallback(async () => {
@@ -1016,8 +1024,8 @@ export default function TrustAssessorPage() {
   }, [fetchDfeData, fetchGroveHouseStats]);
 
   // Process a file (from Drive picker or manual upload). If driveFileId is provided,
-  // save it as the connector so it auto-connects on future page loads.
-  const processFile = useCallback((file: File, driveFileId?: string) => {
+  // save the connector to Supabase so it auto-connects on future page loads.
+  const processFile = useCallback((file: File, driveFileId?: string, drivePath?: string) => {
     setFileName(file.name);
     setParseError(null);
     setConnectorError(null);
@@ -1036,22 +1044,36 @@ export default function TrustAssessorPage() {
         }
         setParsed(result);
 
-        // If this came from Drive, save the connector config (file ID only, NOT content)
-        if (driveFileId) {
-          const config: ConnectorConfig = {
-            driveFileId,
-            driveFileName: file.name,
-            connectedAt: new Date().toISOString(),
-          };
-          setConnectorConfig(config);
-          localStorage.setItem(CONNECTOR_KEY, JSON.stringify(config));
+        // If this came from Drive, save the connector to Supabase (NOT localStorage)
+        if (driveFileId && organizationId) {
+          fetch(`/api/app-connectors?organizationId=${organizationId}`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              app_id: 'trust-assessor',
+              source_type: 'google_drive',
+              source_file_id: driveFileId,
+              source_file_name: file.name,
+              source_path: drivePath,
+              source_mime_type: file.type,
+              connector_name: file.name,
+              data_categories: ['school_attainment', 'year_group_data', 'fsm_counts', 'send_counts'],
+              processing_purpose: 'Cross-referencing trust self-reported mid-year data against validated DfE outcomes for school improvement analysis',
+            }),
+          }).then(res => res.json()).then(json => {
+            const saved = Array.isArray(json) ? json[0] : json.data ?? json;
+            if (saved?.id) setConnector(saved);
+          }).catch(() => {
+            // Non-fatal — connector just won't persist
+          });
         }
       } catch (err) {
         setParseError(`Parse error: ${err instanceof Error ? err.message : String(err)}`);
       }
     };
     reader.readAsArrayBuffer(file);
-  }, []);
+  }, [organizationId]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1114,14 +1136,18 @@ export default function TrustAssessorPage() {
                   <Cloud size={16} className="text-emerald-500" />
                   <span className="text-sm font-medium text-gray-900">{fileName}</span>
                   <CheckCircle2 size={12} className="text-emerald-500" />
-                  {connectorConfig && <span className="text-xs text-emerald-500">Live</span>}
+                  {connector && <span className="text-xs text-emerald-500">Live</span>}
                   <button
-                    onClick={() => {
+                    onClick={async () => {
+                      if (connector?.id && organizationId) {
+                        await fetch(`/api/app-connectors?id=${connector.id}&organizationId=${organizationId}`, {
+                          method: 'DELETE', credentials: 'include',
+                        });
+                      }
                       setParsed(null);
                       setFileName(null);
-                      setConnectorConfig(null);
+                      setConnector(null);
                       setConnectorError(null);
-                      localStorage.removeItem(CONNECTOR_KEY);
                     }}
                     className="text-xs text-gray-400 hover:text-red-500 ml-1"
                     title="Disconnect spreadsheet"
@@ -1129,21 +1155,11 @@ export default function TrustAssessorPage() {
                     ✕
                   </button>
                 </>
-              ) : connectorConfig && !driveConnected ? (
+              ) : connector && !driveConnected ? (
                 <>
                   <Cloud size={16} className="text-amber-500" />
-                  <span className="text-sm font-medium text-gray-700">{connectorConfig.driveFileName}</span>
+                  <span className="text-sm font-medium text-gray-700">{connector.source_file_name}</span>
                   <span className="text-xs text-amber-600">Drive not connected</span>
-                  <button
-                    onClick={() => {
-                      setConnectorConfig(null);
-                      localStorage.removeItem(CONNECTOR_KEY);
-                    }}
-                    className="text-xs text-gray-400 hover:text-red-500 ml-1"
-                    title="Remove connector"
-                  >
-                    ✕
-                  </button>
                 </>
               ) : connectorLoading ? (
                 <>
@@ -1212,11 +1228,8 @@ export default function TrustAssessorPage() {
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6" onClick={(e) => e.stopPropagation()}>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Connect to Google Drive</h3>
               <p className="text-sm text-gray-500 mb-4">Select your trust&apos;s mid-year data capture spreadsheet. This connection will be saved — the report will always use the latest version of this file.</p>
-              <DriveFilePicker onFileSelected={(file) => {
-                // Note: DriveFilePicker doesn't expose the file ID.
-                // For now, process as manual upload. The proper Drive connector
-                // requires updating DriveFilePicker to return the file ID.
-                processFile(file);
+              <DriveFilePicker onFileSelected={(file, driveFileId, drivePath) => {
+                processFile(file, driveFileId, drivePath);
                 setShowDrivePicker(false);
               }} />
             </div>
