@@ -39,6 +39,10 @@ import {
   Cloud,
   Database,
   UserCheck,
+  Trophy,
+  XCircle,
+  BarChart3,
+  Layers,
 } from "lucide-react";
 import { DriveFilePicker } from "@/components/canvas/DriveFilePicker";
 import { useAuth } from "@/context/SupabaseAuthContext";
@@ -880,21 +884,55 @@ function SchoolTab({ school, parsed }: { school: string; parsed: ParsedSpreadshe
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.05 }}
-          className="bg-white border border-gray-200 rounded-xl p-5"
+          className="bg-gradient-to-br from-blue-50 to-white border border-blue-100 rounded-xl p-5 shadow-sm"
         >
-          <h4 className="text-sm font-semibold text-gray-700 mb-1">Y6 Subject Performance vs Trust Average</h4>
-          <p className="text-xs text-gray-400 mb-4">Blue = this school, grey = trust average (ARE %)</p>
-          <ResponsiveContainer width="100%" height={260}>
-            <RadarChart data={radarData} margin={{ top: 10, right: 30, left: 30, bottom: 10 }}>
-              <PolarGrid stroke="#e5e7eb" />
-              <PolarAngleAxis dataKey="subject" tick={{ fontSize: 12, fill: "#6B7280" }} />
-              <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 10, fill: "#9CA3AF" }} />
-              <Radar name="Trust Avg" dataKey="trust" stroke="#D1D5DB" fill="#D1D5DB" fillOpacity={0.3} strokeWidth={2} />
-              <Radar name={school} dataKey="school" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.25} strokeWidth={2} dot={{ r: 4, fill: "#3B82F6" }} />
-              <Legend wrapperStyle={{ fontSize: "11px" }} />
-              <Tooltip formatter={(val) => [`${val}%`, ""]} />
+          <div className="flex items-start justify-between mb-1">
+            <div>
+              <h4 className="text-sm font-semibold text-gray-800">Y6 Subject Profile vs Trust Average</h4>
+              <p className="text-xs text-gray-500 mt-0.5">How this school compares on every subject at Year 6</p>
+            </div>
+            <div className="flex items-center gap-3 text-[11px] text-gray-500 shrink-0 ml-4">
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block w-3 h-3 rounded-full bg-blue-500 opacity-80" />
+                {school}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block w-3 h-3 rounded-full bg-gray-300" />
+                Trust avg
+              </span>
+            </div>
+          </div>
+
+          {/* Quick score pills */}
+          <div className="flex flex-wrap gap-2 mb-3">
+            {radarData.map((d) => {
+              const diff = d.school - d.trust;
+              return (
+                <span key={d.subject} className={`text-xs px-2.5 py-1 rounded-full font-semibold border ${diff >= 0 ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-red-50 text-red-700 border-red-200"}`}>
+                  {d.subject}: {d.school}% {d.trust > 0 && <span className="font-normal opacity-70">({diff >= 0 ? "+" : ""}{diff}pp)</span>}
+                </span>
+              );
+            })}
+          </div>
+
+          <ResponsiveContainer width="100%" height={280}>
+            <RadarChart data={radarData} margin={{ top: 15, right: 40, left: 40, bottom: 15 }}>
+              <PolarGrid stroke="#CBD5E1" gridType="polygon" />
+              <PolarAngleAxis dataKey="subject" tick={{ fontSize: 13, fill: "#374151", fontWeight: 600 }} />
+              <PolarRadiusAxis angle={90} domain={[0, 100]} tickCount={5} tick={{ fontSize: 10, fill: "#9CA3AF" }} />
+              <Radar name="Trust Avg" dataKey="trust" stroke="#94A3B8" fill="#CBD5E1" fillOpacity={0.4} strokeWidth={2} strokeDasharray="5 3" />
+              <Radar name={school} dataKey="school" stroke="#2563EB" fill="#3B82F6" fillOpacity={0.3} strokeWidth={2.5} dot={{ r: 5, fill: "#2563EB", strokeWidth: 0 }} />
+              <Tooltip
+                formatter={(val, name) => [`${val}%`, name]}
+                contentStyle={{ fontSize: "12px", borderRadius: "8px", border: "1px solid #E2E8F0" }}
+              />
             </RadarChart>
           </ResponsiveContainer>
+
+          <div className="flex items-center gap-1.5 text-[10px] text-gray-400 mt-1">
+            <Info size={10} />
+            Source: Trust mid-year data capture spreadsheet (2025/26), Year 6 ARE %.
+          </div>
         </motion.div>
       )}
 
@@ -906,32 +944,39 @@ function SchoolTab({ school, parsed }: { school: string; parsed: ParsedSpreadshe
           transition={{ duration: 0.3, delay: 0.1 }}
           className="bg-white border border-gray-200 rounded-xl p-5"
         >
-          <h4 className="text-sm font-semibold text-gray-700 mb-1">Year Group Progression (ARE %)</h4>
-          <p className="text-xs text-gray-400 mb-4">Reading, Writing, and Maths across Y1–Y6</p>
-          <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={progressionData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+          <h4 className="text-sm font-semibold text-gray-700 mb-0.5">Year Group Progression (ARE %)</h4>
+          <p className="text-xs text-gray-400 mb-4">Reading, Writing, and Maths across Y1–Y6 — shows whether attainment is consistent or fluctuating through the school</p>
+          <ResponsiveContainer width="100%" height={240}>
+            <AreaChart data={progressionData} margin={{ top: 10, right: 15, left: -20, bottom: 5 }}>
               <defs>
                 <linearGradient id={`gradR-${school}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.02} />
+                  <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.45} />
+                  <stop offset="60%" stopColor="#3B82F6" stopOpacity={0.12} />
+                  <stop offset="100%" stopColor="#3B82F6" stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id={`gradW-${school}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#EF4444" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#EF4444" stopOpacity={0.02} />
+                  <stop offset="0%" stopColor="#EF4444" stopOpacity={0.45} />
+                  <stop offset="60%" stopColor="#EF4444" stopOpacity={0.12} />
+                  <stop offset="100%" stopColor="#EF4444" stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id={`gradM-${school}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10B981" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#10B981" stopOpacity={0.02} />
+                  <stop offset="0%" stopColor="#10B981" stopOpacity={0.45} />
+                  <stop offset="60%" stopColor="#10B981" stopOpacity={0.12} />
+                  <stop offset="100%" stopColor="#10B981" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="yg" tick={{ fontSize: 11 }} />
-              <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} />
-              <Tooltip formatter={(val) => [`${val}%`, ""]} />
-              <Legend wrapperStyle={{ fontSize: "11px" }} />
-              <Area type="monotone" dataKey="reading" name="Reading" stroke={SUBJECT_COLORS.reading} fill={`url(#gradR-${school})`} strokeWidth={2} dot={{ r: 3 }} connectNulls />
-              <Area type="monotone" dataKey="writing" name="Writing" stroke={SUBJECT_COLORS.writing} fill={`url(#gradW-${school})`} strokeWidth={2} dot={{ r: 3 }} connectNulls />
-              <Area type="monotone" dataKey="maths" name="Maths" stroke={SUBJECT_COLORS.maths} fill={`url(#gradM-${school})`} strokeWidth={2} dot={{ r: 3 }} connectNulls />
+              <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
+              <XAxis dataKey="yg" tick={{ fontSize: 11, fill: "#6B7280" }} axisLine={false} tickLine={false} />
+              <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: "#9CA3AF" }} axisLine={false} tickLine={false} />
+              <ReferenceLine y={65} stroke="#D1D5DB" strokeDasharray="4 4" label={{ value: "65%", fontSize: 9, fill: "#9CA3AF", position: "right" }} />
+              <Tooltip
+                formatter={(val, name) => [`${val}%`, name]}
+                contentStyle={{ fontSize: "12px", borderRadius: "8px", border: "1px solid #E2E8F0", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}
+              />
+              <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "8px" }} />
+              <Area type="monotone" dataKey="reading" name="Reading" stroke={SUBJECT_COLORS.reading} fill={`url(#gradR-${school})`} strokeWidth={2.5} dot={{ r: 4, fill: SUBJECT_COLORS.reading, strokeWidth: 0 }} activeDot={{ r: 6 }} connectNulls />
+              <Area type="monotone" dataKey="writing" name="Writing" stroke={SUBJECT_COLORS.writing} fill={`url(#gradW-${school})`} strokeWidth={2.5} dot={{ r: 4, fill: SUBJECT_COLORS.writing, strokeWidth: 0 }} activeDot={{ r: 6 }} connectNulls />
+              <Area type="monotone" dataKey="maths" name="Maths" stroke={SUBJECT_COLORS.maths} fill={`url(#gradM-${school})`} strokeWidth={2.5} dot={{ r: 4, fill: SUBJECT_COLORS.maths, strokeWidth: 0 }} activeDot={{ r: 6 }} connectNulls />
             </AreaChart>
           </ResponsiveContainer>
 
@@ -946,6 +991,11 @@ function SchoolTab({ school, parsed }: { school: string; parsed: ParsedSpreadshe
               ))}
             </div>
           )}
+
+          <div className="flex items-center gap-1.5 text-[10px] text-gray-400 mt-3">
+            <Info size={10} />
+            Source: Trust mid-year data capture spreadsheet (2025/26). Dashed line = 65% reference.
+          </div>
         </motion.div>
       )}
 
@@ -982,6 +1032,11 @@ function SchoolTab({ school, parsed }: { school: string; parsed: ParsedSpreadshe
               </span>
             </div>
           )}
+
+          <div className="flex items-center gap-1.5 text-[10px] text-gray-400 mt-3">
+            <Info size={10} />
+            Source: Trust mid-year data capture spreadsheet (2025/26). GD = Greater Depth (% exceeding age-related expectations).
+          </div>
         </motion.div>
       )}
 
@@ -1025,6 +1080,11 @@ function SchoolTab({ school, parsed }: { school: string; parsed: ParsedSpreadshe
             <span>No FSM breakdown submitted for this school. Unable to calculate Pupil Premium gap.</span>
           </div>
         )}
+
+        <div className="flex items-center gap-1.5 text-[10px] text-gray-400 mt-3">
+          <Info size={10} />
+          Source: Trust mid-year data capture spreadsheet (2025/26). FSM6 = Free School Meals (Ever 6). Combined ARE = all three subjects at expected standard.
+        </div>
       </motion.div>
 
       {/* Section F: Data Quality for this school */}
@@ -1239,23 +1299,215 @@ function TrustInsights({ parsed }: { parsed: ParsedSpreadsheet }) {
 
       {/* Questions box */}
       <div className="border border-gray-200 rounded-xl p-4 bg-gray-50">
-        <h4 className="text-xs font-semibold text-gray-700 mb-2">Questions for the Trust</h4>
-        <ul className="space-y-1.5 text-xs text-gray-600">
-          <li className="flex items-start gap-2"><span className="text-gray-400 mt-0.5">Q</span> How long did each school spend compiling this spreadsheet?</li>
-          <li className="flex items-start gap-2"><span className="text-gray-400 mt-0.5">Q</span> Are all schools using the same assessment criteria for levelling?</li>
+        <h4 className="text-xs font-semibold text-gray-700 mb-3">Governor Questions — drawn from this data</h4>
+        <ul className="space-y-2 text-xs text-gray-700">
+          {/* Always-on governance questions */}
+          <li className="flex items-start gap-2 bg-white border border-gray-100 rounded-lg px-3 py-2">
+            <span className="text-blue-400 mt-0.5 font-bold shrink-0">Q</span>
+            <span>Are all {parsed?.schools?.length ?? "all"} schools using the same teacher assessment criteria and moderation process? Without trust-wide moderation, like-for-like comparisons are unreliable.</span>
+          </li>
+
+          {/* Data-driven: large gap between strongest and weakest Y6 */}
+          {(() => {
+            let best: { school: string; pct: number } | null = null;
+            let worst: { school: string; pct: number } | null = null;
+            for (const school of parsed?.schools ?? []) {
+              const pct = parsed?.data[school]?.["Year 6"]?.all_pupils.c_are ?? null;
+              if (pct === null) continue;
+              if (!best || pct > best.pct) best = { school, pct };
+              if (!worst || pct < worst.pct) worst = { school, pct };
+            }
+            if (best && worst && best.school !== worst.school && best.pct - worst.pct >= 10) {
+              return (
+                <li className="flex items-start gap-2 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+                  <span className="text-amber-500 mt-0.5 font-bold shrink-0">Q</span>
+                  <span>Y6 Combined ranges from <strong>{worst.pct}% ({worst.school})</strong> to <strong>{best.pct}% ({best.school})</strong> — a {Math.round(best.pct - worst.pct)}pp gap. What targeted support is in place for {worst.school} and what can be learned from {best.school}?</span>
+                </li>
+              );
+            }
+            return null;
+          })()}
+
+          {/* Data-driven: weakest subject trust-wide */}
+          {avgW !== null && avgR !== null && avgM !== null && (() => {
+            const weakSubject = avgW <= avgR && avgW <= avgM ? `Writing (${avgW}%)` : avgR <= avgW && avgR <= avgM ? `Reading (${avgR}%)` : `Maths (${avgM}%)`;
+            const weakAvg = avgW <= avgR && avgW <= avgM ? avgW : avgR <= avgW && avgR <= avgM ? avgR : avgM;
+            return (
+              <li className="flex items-start gap-2 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+                <span className="text-amber-500 mt-0.5 font-bold shrink-0">Q</span>
+                <span><strong>{weakSubject}</strong> is the weakest subject trust-wide at Y6. What is the trust&apos;s plan to close this gap — is there a shared curriculum approach, and is it working?</span>
+              </li>
+            );
+          })()}
+
+          {/* Data-driven: missing EYFS */}
           {missingEyfs.length > 0 && (
-            <li className="flex items-start gap-2"><span className="text-amber-500 mt-0.5">Q</span> Why {missingEyfs.length === 1 ? `has ${missingEyfs[0]}` : `have ${missingEyfs.join(", ")}`} not submitted EYFS data?</li>
+            <li className="flex items-start gap-2 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+              <span className="text-amber-500 mt-0.5 font-bold shrink-0">Q</span>
+              <span>{missingEyfs.length === 1 ? `${missingEyfs[0]} has` : `${missingEyfs.join(", ")} have`} not submitted EYFS data. Without GLD baseline, we cannot assess the full progress pipeline. When will this be available?</span>
+            </li>
           )}
+
+          {/* Data-driven: pipeline jumps */}
           {bigJumps.length > 0 && (
-            <li className="flex items-start gap-2"><span className="text-amber-500 mt-0.5">Q</span> What evidence supports the large year-group jumps flagged above?</li>
+            <li className="flex items-start gap-2 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+              <span className="text-red-500 mt-0.5 font-bold shrink-0">Q</span>
+              <span>There are {bigJumps.length} implausible pipeline jumps (&gt;15pp between adjacent year groups). These may indicate data entry errors or genuine concerns. Can school leaders provide lesson observation or moderation evidence to support the figures for these year groups?</span>
+            </li>
           )}
+
+          {/* Data-driven: zero GD Writing */}
           {zeroGdWriting.length >= 3 && (
-            <li className="flex items-start gap-2"><span className="text-red-400 mt-0.5">Q</span> Why is Greater Depth in Writing reporting zero across multiple year groups?</li>
+            <li className="flex items-start gap-2 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+              <span className="text-red-500 mt-0.5 font-bold shrink-0">Q</span>
+              <span>Zero Greater Depth in Writing is reported across {zeroGdWriting.length} year groups in {[...new Set(zeroGdWriting.map((z) => z.school))].join(", ")}. Is this a genuine reflection of attainment or does it suggest the writing GD threshold is not well understood? What does the writing moderation evidence show?</span>
+            </li>
           )}
-          <li className="flex items-start gap-2"><span className="text-gray-400 mt-0.5">Q</span> Is the data entry in this spreadsheet quality-checked before submission?</li>
+
+          {/* Data-driven: trustAvgY6Combined vs national */}
+          {trustAvgY6Combined !== null && trustAvgY6Combined < 60 && (
+            <li className="flex items-start gap-2 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+              <span className="text-red-500 mt-0.5 font-bold shrink-0">Q</span>
+              <span>Trust-wide Y6 Combined is <strong>{trustAvgY6Combined}%</strong> at this mid-year point — significantly below the national KS2 average of ~60%. What is the trust-level improvement trajectory and how does this compare to last year&apos;s validated KS2 outcomes?</span>
+            </li>
+          )}
         </ul>
       </div>
     </div>
+  );
+}
+
+// ─── Key Findings Banner ──────────────────────────────────────────────────────
+
+function KeyFindingsBanner({ parsed }: { parsed: ParsedSpreadsheet }) {
+  // Finding 1: How many schools have Y6 Combined below 50%
+  const schoolsBelow50 = parsed.schools.filter((s) => {
+    const pct = parsed.data[s]?.["Year 6"]?.all_pupils.c_are ?? null;
+    return pct !== null && pct < 50;
+  });
+
+  // Finding 2: Schools with zero GD in Writing across 3+ year groups
+  const schoolsZeroGdW3plus = parsed.schools.filter((s) => {
+    const count = HEATMAP_YEAR_GROUPS.filter((yg) => parsed.data[s]?.[yg]?.all_pupils.w_gd === 0).length;
+    return count >= 3;
+  });
+
+  // Finding 3: Strongest and weakest school by Y6 Combined
+  let strongestSchool = "";
+  let strongestPct: number | null = null;
+  let weakestSchool = "";
+  let weakestPct: number | null = null;
+  for (const s of parsed.schools) {
+    const pct = parsed.data[s]?.["Year 6"]?.all_pupils.c_are ?? null;
+    if (pct === null) continue;
+    if (strongestPct === null || pct > strongestPct) { strongestPct = pct; strongestSchool = s; }
+    if (weakestPct === null || pct < weakestPct) { weakestPct = pct; weakestSchool = s; }
+  }
+
+  // Finding 4: Trust-wide Y6 Combined average
+  let y6Sum = 0;
+  let y6Count = 0;
+  for (const s of parsed.schools) {
+    const pct = parsed.data[s]?.["Year 6"]?.all_pupils.c_are ?? null;
+    if (pct !== null) { y6Sum += pct; y6Count++; }
+  }
+  const trustAvg = y6Count > 0 ? Math.round(y6Sum / y6Count) : null;
+
+  const findings: {
+    icon: React.ReactNode;
+    label: string;
+    value: string;
+    sub?: string;
+    color: string;
+    bg: string;
+    border: string;
+  }[] = [];
+
+  if (trustAvg !== null) {
+    findings.push({
+      icon: <BarChart3 size={18} />,
+      label: "Trust Y6 Combined",
+      value: `${trustAvg}%`,
+      sub: `${y6Count} schools reporting`,
+      color: trustAvg >= 65 ? "text-emerald-700" : trustAvg >= 50 ? "text-amber-700" : "text-red-700",
+      bg: trustAvg >= 65 ? "bg-emerald-50" : trustAvg >= 50 ? "bg-amber-50" : "bg-red-50",
+      border: trustAvg >= 65 ? "border-emerald-200" : trustAvg >= 50 ? "border-amber-200" : "border-red-200",
+    });
+  }
+
+  if (strongestSchool && strongestPct !== null) {
+    findings.push({
+      icon: <Trophy size={18} />,
+      label: "Strongest school",
+      value: `${strongestSchool} — ${strongestPct}%`,
+      sub: "Highest Y6 Combined ARE",
+      color: "text-emerald-700",
+      bg: "bg-emerald-50",
+      border: "border-emerald-200",
+    });
+  }
+
+  if (weakestSchool && weakestPct !== null && weakestSchool !== strongestSchool) {
+    findings.push({
+      icon: <AlertCircle size={18} />,
+      label: "Needs attention",
+      value: `${weakestSchool} — ${weakestPct}%`,
+      sub: "Lowest Y6 Combined ARE",
+      color: weakestPct < 50 ? "text-red-700" : "text-amber-700",
+      bg: weakestPct < 50 ? "bg-red-50" : "bg-amber-50",
+      border: weakestPct < 50 ? "border-red-200" : "border-amber-200",
+    });
+  }
+
+  if (schoolsBelow50.length > 0) {
+    findings.push({
+      icon: <XCircle size={18} />,
+      label: "Below 50% Y6 Combined",
+      value: `${schoolsBelow50.length} ${schoolsBelow50.length === 1 ? "school" : "schools"}`,
+      sub: schoolsBelow50.join(", "),
+      color: "text-red-700",
+      bg: "bg-red-50",
+      border: "border-red-200",
+    });
+  }
+
+  if (schoolsZeroGdW3plus.length > 0) {
+    findings.push({
+      icon: <AlertTriangle size={18} />,
+      label: "Zero GD Writing (3+ yr groups)",
+      value: `${schoolsZeroGdW3plus.length} ${schoolsZeroGdW3plus.length === 1 ? "school" : "schools"}`,
+      sub: schoolsZeroGdW3plus.join(", "),
+      color: "text-amber-700",
+      bg: "bg-amber-50",
+      border: "border-amber-200",
+    });
+  }
+
+  if (findings.length === 0) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35 }}
+      className="bg-white border border-gray-200 rounded-2xl p-5"
+    >
+      <div className="flex items-center gap-2 mb-3">
+        <Layers size={15} className="text-gray-500" />
+        <span className="text-sm font-semibold text-gray-800">Key Findings</span>
+        <span className="text-xs text-gray-400 ml-1">from your mid-year data</span>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        {findings.map((f, i) => (
+          <div key={i} className={`rounded-xl border px-4 py-3 ${f.bg} ${f.border}`}>
+            <div className={`${f.color} mb-1.5`}>{f.icon}</div>
+            <div className={`text-base font-bold ${f.color} leading-tight`}>{f.value}</div>
+            <div className={`text-xs font-semibold mt-0.5 ${f.color} opacity-80`}>{f.label}</div>
+            {f.sub && <div className={`text-[10px] mt-0.5 ${f.color} opacity-60 truncate`}>{f.sub}</div>}
+          </div>
+        ))}
+      </div>
+    </motion.div>
   );
 }
 
@@ -1322,12 +1574,15 @@ function KS2TrackRecordChart({ school, abbrev, ks2Results, selfReport }: {
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-4">
-      <div className="flex items-center justify-between mb-2">
-        <div className="font-semibold text-gray-800 text-sm">{school} ({abbrev})</div>
-        <div className="flex gap-3 text-[10px] text-gray-500">
+      <div className="flex items-start justify-between mb-2 gap-2">
+        <div>
+          <div className="font-semibold text-gray-800 text-sm">{school}</div>
+          <div className="text-[10px] text-gray-400 mt-0.5">URN {info.urn}</div>
+        </div>
+        <div className="flex flex-wrap gap-x-3 gap-y-1 justify-end text-[10px] text-gray-600 shrink-0">
           {subjects.map((s) => (
-            <span key={s.key} className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
+            <span key={s.key} className="flex items-center gap-1 font-medium" style={{ color: s.color }}>
+              <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: s.color }} />
               {s.key}
             </span>
           ))}
@@ -1337,7 +1592,7 @@ function KS2TrackRecordChart({ school, abbrev, ks2Results, selfReport }: {
       {flags.length > 0 && (
         <div className="mb-2 space-y-1">
           {flags.map((f, i) => (
-            <div key={i} className="flex items-center gap-1 text-xs text-amber-600 bg-amber-50 rounded px-2 py-1">
+            <div key={i} className="flex items-center gap-1 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-2 py-1">
               <AlertTriangle size={10} />
               {f}
             </div>
@@ -1345,18 +1600,25 @@ function KS2TrackRecordChart({ school, abbrev, ks2Results, selfReport }: {
         </div>
       )}
 
-      <ResponsiveContainer width="100%" height={180}>
+      <ResponsiveContainer width="100%" height={190}>
         <BarChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-          <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-          <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} />
-          <Tooltip formatter={(val) => [`${val}%`, ""]} />
+          <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
+          <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#6B7280" }} axisLine={false} tickLine={false} />
+          <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: "#9CA3AF" }} axisLine={false} tickLine={false} />
+          <Tooltip
+            formatter={(val, name) => [`${val}%`, name]}
+            contentStyle={{ fontSize: "11px", borderRadius: "8px", border: "1px solid #E2E8F0" }}
+          />
           {subjects.map((subj) => (
-            <Bar key={subj.key} dataKey={subj.key} fill={subj.color} radius={[2, 2, 0, 0]} />
+            <Bar key={subj.key} dataKey={subj.key} fill={subj.color} radius={[3, 3, 0, 0]} maxBarSize={20} />
           ))}
         </BarChart>
       </ResponsiveContainer>
-      <p className="text-[10px] text-gray-400 mt-1">KS2 = DfE validated SATs. Mid-Year = trust spreadsheet self-report.</p>
+
+      <div className="flex items-center gap-1.5 text-[10px] text-gray-400 mt-1">
+        <Info size={9} />
+        <span>KS2 2023–2025: DfE validated SATs results. Mid-Year: self-reported in trust spreadsheet.</span>
+      </div>
     </div>
   );
 }
@@ -1746,6 +2008,9 @@ export default function TrustAssessorPage() {
           </div>
         )}
 
+        {/* Key Findings — visible once data is loaded */}
+        {parsed && <KeyFindingsBanner parsed={parsed} />}
+
         {/* No data — step-by-step guide */}
         {!parsed && !showDrivePicker && !connectorLoading && !connectorError && (
           <motion.div
@@ -1865,8 +2130,11 @@ export default function TrustAssessorPage() {
               {/* ── 2. Subject Selector Heatmap ── */}
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-gray-700">ARE % — Heatmap by Subject</h3>
-                  <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded">Click a school name to jump to its tab</span>
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-700">ARE % — Heatmap by Subject</h3>
+                    <p className="text-xs text-gray-400 mt-0.5">Colour-coded at-a-glance view across all schools and year groups</p>
+                  </div>
+                  <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded shrink-0 ml-3">Click school name to drill down</span>
                 </div>
                 <SubjectHeatmap
                   parsed={parsed}
@@ -1876,6 +2144,10 @@ export default function TrustAssessorPage() {
                     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
                   }}
                 />
+                <div className="flex items-center gap-1.5 text-[10px] text-gray-400 mt-2">
+                  <Info size={10} />
+                  Source: Trust mid-year data capture spreadsheet (2025/26). Self-reported — not externally validated.
+                </div>
               </div>
 
               {/* ── 3. School Tabs ── */}
@@ -2022,6 +2294,31 @@ export default function TrustAssessorPage() {
           )}
         </AnimatePresence>
 
+        {/* ─── Phase 1 → Phase 2 Divider ──────────────────────────────────── */}
+        <div className="flex items-center gap-4 py-2">
+          <div className="flex-1 h-px bg-gray-200" />
+          <div className="flex items-center gap-3 text-xs text-gray-500">
+            {/* Connector 1 status */}
+            <span className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border font-medium ${parsed ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-gray-100 border-gray-200 text-gray-400"}`}>
+              <FileSpreadsheet size={11} />
+              Spreadsheet {parsed ? "connected" : "not connected"}
+            </span>
+            <span className="text-gray-300">→</span>
+            {/* Connector 2 status */}
+            <span className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border font-medium ${dfeData ? "bg-blue-50 border-blue-200 text-blue-700" : "bg-gray-100 border-gray-200 text-gray-400"}`}>
+              <Database size={11} />
+              DfE {dfeData ? "live" : dfeLoading ? "loading..." : "unavailable"}
+            </span>
+            <span className="text-gray-300">→</span>
+            {/* Connector 3 status */}
+            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border bg-gray-100 border-gray-200 text-gray-400 font-medium">
+              <Lock size={11} />
+              Per-pupil locked
+            </span>
+          </div>
+          <div className="flex-1 h-px bg-gray-200" />
+        </div>
+
         {/* ─── Phase 2: DfE Intelligence ──────────────────────────────────── */}
         <section className="bg-white border border-gray-200 rounded-2xl p-6">
           <SectionHeader
@@ -2083,7 +2380,12 @@ export default function TrustAssessorPage() {
               {/* KS2 Track Record — per school */}
               {parsed && (
                 <>
-                  <h3 className="text-sm font-semibold text-gray-700 mb-4">KS2 Track Record by Subject (2023–2025 + Mid-Year Self-Report)</h3>
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-700">KS2 Track Record by Subject (2023–2025 + Mid-Year Self-Report)</h3>
+                      <p className="text-xs text-gray-400 mt-0.5">Reading (blue), Writing (red), Maths (green), Combined (purple) — bars show each year side by side</p>
+                    </div>
+                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     {parsed.schools.map((abbrev) => {
                       const y6Data = parsed.data[abbrev]?.["Year 6"];
@@ -2107,7 +2409,13 @@ export default function TrustAssessorPage() {
                   </div>
 
                   {/* FSM Trends */}
-                  <h3 className="text-sm font-semibold text-gray-700 mb-4">FSM % Trend (DfE Census)</h3>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-sm font-semibold text-gray-700">FSM % Trend (DfE Annual School Census)</h3>
+                    <span className="text-[10px] text-gray-400 flex items-center gap-1">
+                      <Info size={10} />
+                      Source: DfE Annual School Census. Validated — not self-reported.
+                    </span>
+                  </div>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     {parsed.schools.map((abbrev) => (
                       <FsmTrendChart key={abbrev} abbrev={abbrev} census={dfeData.census} />
