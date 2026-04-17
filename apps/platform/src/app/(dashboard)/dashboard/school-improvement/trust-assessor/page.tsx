@@ -665,7 +665,7 @@ const FIELD_LABELS: Record<string, string> = {
   c_gd: "Combined GD",
 };
 
-function SchoolTab({ school, parsed }: { school: string; parsed: ParsedSpreadsheet }) {
+function SchoolTab({ school, parsed, authToken }: { school: string; parsed: ParsedSpreadsheet; authToken?: string }) {
   const schoolData = parsed.data[school] ?? {};
   const info = TRUST_SCHOOLS[school];
 
@@ -820,7 +820,76 @@ function SchoolTab({ school, parsed }: { school: string; parsed: ParsedSpreadshe
     questions.push({ q: "No specific concerns flagged for this school based on the submitted data.", level: "blue" });
   }
 
-  // ── Build narrative summary ──
+  // ── AI Narrative ──
+  const [aiNarrative, setAiNarrative] = useState<string | null>(null);
+  const [narrativeLoading, setNarrativeLoading] = useState(false);
+  const narrativeRequestedRef = useRef(false);
+
+  // Generate AI narrative once when component mounts with data
+  useEffect(() => {
+    if (narrativeRequestedRef.current || !school) return;
+    narrativeRequestedRef.current = true;
+
+    const generateNarrative = async () => {
+      setNarrativeLoading(true);
+      try {
+        // Build the data payload for the AI
+        const schoolMetrics: Record<string, unknown> = {
+          school,
+          totalPupils,
+          fsmPct,
+          sendPct,
+          ehcpCount: totalEhcp,
+          trustFsmAvg: trustFsmPct ? Math.round(trustFsmPct) : null,
+          yearGroups: {} as Record<string, unknown>,
+        };
+
+        for (const yg of YEAR_GROUPS) {
+          const d = schoolData[yg];
+          if (!d) continue;
+          (schoolMetrics.yearGroups as Record<string, unknown>)[yg] = {
+            cohort: d.cohort.number_in_cohort,
+            fsm: d.cohort.number_fsm,
+            send: d.cohort.number_send,
+            reading: d.all_pupils.r_are,
+            writing: d.all_pupils.w_are,
+            maths: d.all_pupils.m_are,
+            combined: d.all_pupils.c_are,
+            gd_reading: d.all_pupils.r_gd,
+            gd_writing: d.all_pupils.w_gd,
+            gd_maths: d.all_pupils.m_gd,
+            phonics: d.all_pupils.phonics,
+            mtc: d.all_pupils.mtc,
+            gld: d.all_pupils.gld,
+          };
+        }
+
+        const res = await fetch('/api/trust-assessor/narrative', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}) },
+          body: JSON.stringify({
+            type: 'school',
+            schoolAbbrev: school,
+            data: schoolMetrics,
+          }),
+        });
+
+        if (res.ok) {
+          const json = await res.json();
+          const text = json.narrative ?? json.data?.narrative;
+          if (text) setAiNarrative(text);
+        }
+      } catch {
+        // Non-fatal — fall back to deterministic narrative
+      } finally {
+        setNarrativeLoading(false);
+      }
+    };
+
+    generateNarrative();
+  }, [school]);
+
+  // ── Deterministic narrative fallback ──
   const narrativePoints: string[] = [];
 
   // FSM context
@@ -941,27 +1010,41 @@ function SchoolTab({ school, parsed }: { school: string; parsed: ParsedSpreadshe
   return (
     <div className="space-y-8">
 
-      {/* Narrative Summary */}
-      {narrativePoints.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-gradient-to-r from-slate-50 to-blue-50 border border-slate-200 rounded-xl p-6"
-        >
-          <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-            <Info size={16} className="text-blue-500" />
-            Assessment Summary — {school}
-          </h3>
+      {/* AI Narrative Summary */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-gradient-to-r from-slate-50 to-blue-50 border border-slate-200 rounded-xl p-6"
+      >
+        <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+          <Info size={16} className="text-blue-500" />
+          Assessment Summary — {school}
+        </h3>
+
+        {narrativeLoading ? (
+          <div className="flex items-center gap-3 py-4">
+            <div className="w-4 h-4 rounded-full border-2 border-blue-200 border-t-blue-600 animate-spin" />
+            <span className="text-sm text-slate-500">Generating analysis...</span>
+          </div>
+        ) : aiNarrative ? (
+          <div className="prose prose-sm prose-slate max-w-none">
+            {aiNarrative.split('\n\n').map((para, i) => (
+              <p key={i} className="text-sm text-slate-700 leading-relaxed mb-3">{para}</p>
+            ))}
+          </div>
+        ) : narrativePoints.length > 0 ? (
           <div className="space-y-3">
             {narrativePoints.map((point, i) => (
               <p key={i} className="text-sm text-slate-700 leading-relaxed">{point}</p>
             ))}
           </div>
-          <p className="text-[10px] text-slate-400 mt-4">
-            Source: Analysis based on trust mid-year spreadsheet data (self-reported). Not externally validated.
-          </p>
-        </motion.div>
-      )}
+        ) : null}
+
+        <p className="text-[10px] text-slate-400 mt-4">
+          Source: Analysis based on trust mid-year spreadsheet data (self-reported). Not externally validated.
+          {aiNarrative && ' Narrative generated by AI from the computed metrics.'}
+        </p>
+      </motion.div>
 
       {/* Section A: School Profile Header */}
       <motion.div
@@ -2331,7 +2414,7 @@ export default function TrustAssessorPage() {
                       exit={{ opacity: 0, y: -8 }}
                       transition={{ duration: 0.2 }}
                     >
-                      <SchoolTab school={activeSchoolTab} parsed={parsed} />
+                      <SchoolTab school={activeSchoolTab} parsed={parsed} authToken={accessToken ?? undefined} />
                     </motion.div>
                   )}
                 </AnimatePresence>
