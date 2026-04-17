@@ -1459,26 +1459,22 @@ export default function TrustAssessorPage() {
     })();
   }, [organizationId]);
 
-  // When we have a connector AND Drive is connected, fetch the file live
+  // When we have a saved connector, fetch the file via server-side route
+  // (uses Google API key, not browser token — works across sessions)
   useEffect(() => {
-    if (!connector || !driveConnected || !driveToken || parsed) return;
+    if (!connector || parsed) return;
 
-    const fetchFromDrive = async () => {
+    const fetchViaServer = async () => {
       setConnectorLoading(true);
       setConnectorError(null);
       try {
         const res = await fetch(
-          `https://www.googleapis.com/drive/v3/files/${connector.source_file_id}?alt=media`,
-          { headers: { Authorization: `Bearer ${driveToken}` } },
+          `/api/app-connectors/fetch-file?connector_id=${connector.id}&organizationId=${organizationId}`,
+          { headers: authHeaders },
         );
         if (!res.ok) {
-          if (res.status === 404) {
-            setConnectorError("The connected spreadsheet could not be found in Google Drive. It may have been moved or deleted. Please check the file location or reconnect.");
-          } else if (res.status === 403) {
-            setConnectorError("Access denied to the connected spreadsheet. Please ensure the file is shared with your Google account and that Google Drive access is authorised.");
-          } else {
-            setConnectorError(`Could not fetch spreadsheet from Drive (${res.status}).`);
-          }
+          const errJson = await res.json().catch(() => ({}));
+          setConnectorError(errJson.error || `Could not fetch spreadsheet (${res.status}). Please reconnect.`);
           return;
         }
         const blob = await res.blob();
@@ -1487,7 +1483,7 @@ export default function TrustAssessorPage() {
         const workbook = XLSX.read(data, { type: "array" });
         const result = parseSpreadsheet(workbook);
         if (result.schools.length === 0) {
-          setConnectorError("Spreadsheet was fetched from Drive but no school data found. Check the file format.");
+          setConnectorError("Spreadsheet was fetched but no school data found. Check the file format.");
           return;
         }
         setParsed(result);
@@ -1499,8 +1495,8 @@ export default function TrustAssessorPage() {
       }
     };
 
-    fetchFromDrive();
-  }, [connector, driveConnected, driveToken, parsed]);
+    fetchViaServer();
+  }, [connector, parsed, organizationId, authHeaders]);
 
   // Fetch DfE data once on mount (not on every re-render)
   const dfeLoadedRef = useRef(false);
