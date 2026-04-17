@@ -149,4 +149,4 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
   }
 
   return apiSuccess(result);
-});
+}, { orgOptional: true });

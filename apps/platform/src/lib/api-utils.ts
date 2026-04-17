@@ -87,6 +87,8 @@ interface ProtectedRouteOptions {
   rateLimit?: RateLimitConfig | false;
   /** Rate limit key prefix */
   rateLimitPrefix?: string;
+  /** If true, organizationId is optional (for routes that don't need org scoping) */
+  orgOptional?: boolean;
 }
 
 /**
@@ -122,7 +124,7 @@ export function protectedRoute(
 
           return handler(auth, req);
         },
-        { requiredRole: options.requiredRole },
+        { requiredRole: options.requiredRole, orgOptional: options.orgOptional },
       );
     }, `Protected Route: ${request.nextUrl.pathname}`);
   };

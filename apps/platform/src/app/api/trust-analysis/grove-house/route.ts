@@ -325,4 +325,4 @@ export const GET = protectedRoute(async (auth, _req: NextRequest) => {
   } catch (err) {
     return apiError(err instanceof Error ? err.message : 'Internal server error', 500);
   }
-});
+}, { orgOptional: true });

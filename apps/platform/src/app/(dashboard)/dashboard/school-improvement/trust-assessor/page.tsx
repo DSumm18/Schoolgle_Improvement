@@ -34,6 +34,7 @@ import {
   UserCheck,
 } from "lucide-react";
 import { DriveFilePicker } from "@/components/canvas/DriveFilePicker";
+import { useAuth } from "@/context/SupabaseAuthContext";
 import type { KS2Result, CensusRecord } from "@/lib/trust-analysis/types";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -890,6 +891,7 @@ function FsmTrendChart({ abbrev, census }: { abbrev: string; census: CensusRecor
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function TrustAssessorPage() {
+  const { organizationId } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [parsed, setParsed] = useState<ParsedSpreadsheet | null>(null);
   const [parseError, setParseError] = useState<string | null>(null);
@@ -906,25 +908,26 @@ export default function TrustAssessorPage() {
     setDfeLoading(true);
     setDfeError(null);
     try {
-      const res = await fetch("/api/trust-analysis");
+      const res = await fetch(`/api/trust-analysis${organizationId ? `?organizationId=${organizationId}` : ''}`, { credentials: "include" });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Failed to fetch DfE data");
-      setDfeData({ ks2Results: json.data.ks2Results, census: json.data.census });
+      setDfeData({ ks2Results: json.ks2Results ?? json.data?.ks2Results, census: json.census ?? json.data?.census });
     } catch (e) {
       setDfeError(e instanceof Error ? e.message : "Unknown error");
     } finally {
       setDfeLoading(false);
     }
-  }, []);
+  }, [organizationId]);
 
   const fetchGroveHouseStats = useCallback(async () => {
     try {
-      const res = await fetch("/api/trust-analysis/grove-house");
+      const res = await fetch(`/api/trust-analysis/grove-house${organizationId ? `?organizationId=${organizationId}` : ''}`, { credentials: "include" });
       const json = await res.json();
-      if (res.ok && json.data?.summary) {
+      const summary = json.summary ?? json.data?.summary;
+      if (res.ok && summary) {
         setGrooveHouseStats({
-          totalPupils: json.data.summary.totalPupils,
-          trackablePupils: json.data.summary.trackablePupils,
+          totalPupils: summary.totalPupils,
+          trackablePupils: summary.trackablePupils,
         });
       }
     } catch {
