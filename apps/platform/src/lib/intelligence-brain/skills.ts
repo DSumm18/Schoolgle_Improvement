@@ -94,7 +94,7 @@ Produce a concise analysis covering:
 5. 2-3 sharp questions for the headteacher — questions that can't be answered with "we're working on it"
 
 Cross-reference the per-year-group FSM and SEND counts against attainment when explaining drops or jumps between year groups. State whether demographics explain the pattern or not.`,
-    model: 'anthropic/claude-sonnet-4-20250514',
+    model: 'anthropic/claude-sonnet-4',
     temperature: 0.3,
     maxTokens: 800,
     usedBy: ['trust-assessor', 'school-intelligence'],
@@ -127,7 +127,7 @@ Provide:
 2. Key patterns across schools (strengths and concerns)
 3. Schools that stand out (positively or negatively) with specific reasons
 4. 2-3 strategic questions for the board`,
-    model: 'anthropic/claude-sonnet-4-20250514',
+    model: 'anthropic/claude-sonnet-4',
     temperature: 0.3,
     maxTokens: 600,
     usedBy: ['trust-assessor'],
@@ -154,7 +154,7 @@ Data:
 {{DATA}}
 
 What would the lead inspector focus on? What questions would be asked in the first meeting with the headteacher? Where does the data suggest the school may not have a secure understanding of its own performance?`,
-    model: 'anthropic/claude-sonnet-4-20250514',
+    model: 'anthropic/claude-sonnet-4',
     temperature: 0.3,
     maxTokens: 600,
     usedBy: ['ofsted-readiness', 'trust-assessor'],
@@ -182,7 +182,7 @@ Data:
 {{DATA}}
 
 List specific data quality concerns, ordered by severity. For each, state what the issue is, where it is, and what the likely cause might be.`,
-    model: 'anthropic/claude-sonnet-4-20250514',
+    model: 'anthropic/claude-sonnet-4',
     temperature: 0.1,
     maxTokens: 500,
     usedBy: ['trust-assessor', 'school-intelligence', 'data-validation'],
