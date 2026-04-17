@@ -43,11 +43,12 @@ import {
   XCircle,
   BarChart3,
   Layers,
+  Target,
 } from "lucide-react";
 import { DriveFilePicker } from "@/components/canvas/DriveFilePicker";
 import { useAuth } from "@/context/SupabaseAuthContext";
 import { useGoogleDriveAccess } from "@/hooks/useGoogleDriveAccess";
-import type { KS2Result, CensusRecord } from "@/lib/trust-analysis/types";
+import type { KS2Result, CensusRecord, NationalPercentile, ThreeYearAverage } from "@/lib/trust-analysis/types";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -113,6 +114,8 @@ interface QualityFlag {
 interface DfEData {
   ks2Results: KS2Result[];
   census: CensusRecord[];
+  nationalPercentiles?: Record<number, NationalPercentile>;
+  threeYearAverages?: Record<number, ThreeYearAverage>;
 }
 
 // ─── XLSX Parsing Logic ───────────────────────────────────────────────────────
@@ -801,7 +804,158 @@ const FIELD_LABELS: Record<string, string> = {
   c_gd: "Combined GD",
 };
 
-function SchoolTab({ school, parsed, authToken }: { school: string; parsed: ParsedSpreadsheet; authToken?: string }) {
+// ─── Statistical Impossibility Detection ─────────────────────────────────────
+
+interface StatAlert {
+  severity: "low" | "medium" | "high";
+  title: string;
+  explanation: string;
+  probability: string;
+}
+
+function detectStatisticalImpossibilities(school: string, schoolData: Record<string, SchoolYearData>): StatAlert[] {
+  const alerts: StatAlert[] = [];
+
+  // Rule 1: 0% GD with high ARE
+  const zeroGdHighAre: { yg: string; subject: "reading" | "writing" | "maths"; are: number }[] = [];
+  for (const yg of HEATMAP_YEAR_GROUPS) {
+    const d = schoolData[yg];
+    if (!d) continue;
+    const ap = d.all_pupils;
+    if (ap.r_are !== null && ap.r_are !== undefined && ap.r_are >= 60 && ap.r_gd === 0) {
+      zeroGdHighAre.push({ yg: yg.replace("Year ", "Y"), subject: "reading", are: ap.r_are });
+    }
+    if (ap.w_are !== null && ap.w_are !== undefined && ap.w_are >= 60 && ap.w_gd === 0) {
+      zeroGdHighAre.push({ yg: yg.replace("Year ", "Y"), subject: "writing", are: ap.w_are });
+    }
+    if (ap.m_are !== null && ap.m_are !== undefined && ap.m_are >= 60 && ap.m_gd === 0) {
+      zeroGdHighAre.push({ yg: yg.replace("Year ", "Y"), subject: "maths", are: ap.m_are });
+    }
+  }
+  if (zeroGdHighAre.length >= 3) {
+    const bySubject: Record<string, string[]> = {};
+    for (const item of zeroGdHighAre) {
+      if (!bySubject[item.subject]) bySubject[item.subject] = [];
+      bySubject[item.subject].push(`${item.yg} (${item.are}% ARE)`);
+    }
+    const subjectSummary = Object.entries(bySubject)
+      .map(([sub, ygs]) => `${sub}: ${ygs.join(", ")}`)
+      .join("; ");
+    alerts.push({
+      severity: zeroGdHighAre.length >= 5 ? "high" : zeroGdHighAre.length >= 3 ? "medium" : "low",
+      title: `0% Greater Depth reported with 60%+ ARE across ${zeroGdHighAre.length} year group/subject combinations`,
+      explanation: `${subjectSummary}. With 60%+ reaching Expected Standard, the statistically expected GD rate is 8–15%. 0% across multiple year groups suggests systemic moderation bias, over-cautious teacher assessment, or data entry error.`,
+      probability: zeroGdHighAre.length >= 5 ? "This pattern occurs in <0.1% of UK primary schools." : "This pattern occurs in <2% of UK primary schools.",
+    });
+  } else if (zeroGdHighAre.length > 0) {
+    alerts.push({
+      severity: "low",
+      title: `0% Greater Depth reported with 60%+ ARE in ${zeroGdHighAre.length} year group/subject combination${zeroGdHighAre.length > 1 ? "s" : ""}`,
+      explanation: `${zeroGdHighAre.map(item => `${item.yg} ${item.subject}: ${item.are}% ARE`).join(", ")}. With high ARE, some GD is typically expected.`,
+      probability: "Can occur naturally in smaller cohorts but warrants review.",
+    });
+  }
+
+  // Rule 2: Impossible cohort deltas (>30pp swing in Combined between adjacent year groups)
+  const bigSwings: { from: string; to: string; fromPct: number; toPct: number; delta: number }[] = [];
+  for (let i = 1; i < HEATMAP_YEAR_GROUPS.length; i++) {
+    const prevYg = HEATMAP_YEAR_GROUPS[i - 1];
+    const currYg = HEATMAP_YEAR_GROUPS[i];
+    const prev = schoolData[prevYg]?.all_pupils.c_are ?? null;
+    const curr = schoolData[currYg]?.all_pupils.c_are ?? null;
+    if (prev !== null && curr !== null && Math.abs(curr - prev) >= 30) {
+      bigSwings.push({
+        from: prevYg.replace("Year ", "Y"),
+        to: currYg.replace("Year ", "Y"),
+        fromPct: prev,
+        toPct: curr,
+        delta: Math.round(curr - prev),
+      });
+    }
+  }
+  if (bigSwings.length > 0) {
+    alerts.push({
+      severity: "high",
+      title: `Extreme year group delta (30pp+): ${bigSwings.map(s => `${s.from}→${s.to}: ${s.fromPct}%→${s.toPct}%`).join(", ")}`,
+      explanation: "A 30+ percentage point swing between adjacent year groups is extremely rare. Different cohorts will have different compositions, but swings of this magnitude almost always indicate data entry errors, moderation inconsistency, or an unusual cohort event.",
+      probability: "This pattern occurs in <2% of UK primary schools.",
+    });
+  }
+
+  // Rule 3: Exact 100% or 0% in cohorts >10
+  const suspectExtremes: string[] = [];
+  for (const yg of HEATMAP_YEAR_GROUPS) {
+    const d = schoolData[yg];
+    if (!d) continue;
+    const cohort = d.cohort.number_in_cohort;
+    if (cohort === null || cohort < 10) continue;
+    const ap = d.all_pupils;
+    const checks: [string, number | null | undefined][] = [
+      [`${yg.replace("Year ", "Y")} Reading ARE`, ap.r_are],
+      [`${yg.replace("Year ", "Y")} Writing ARE`, ap.w_are],
+      [`${yg.replace("Year ", "Y")} Maths ARE`, ap.m_are],
+      [`${yg.replace("Year ", "Y")} Combined ARE`, ap.c_are],
+    ];
+    for (const [label, val] of checks) {
+      if (val === 100 || val === 0) {
+        suspectExtremes.push(`${label} = ${val}% (cohort: ${cohort})`);
+      }
+    }
+  }
+  if (suspectExtremes.length >= 3) {
+    alerts.push({
+      severity: "medium",
+      title: `Multiple exact 0% or 100% values across cohorts of 10+ pupils`,
+      explanation: `${suspectExtremes.slice(0, 5).join("; ")}${suspectExtremes.length > 5 ? ` and ${suspectExtremes.length - 5} more` : ""}. Exact extremes in larger cohorts are statistically unusual and may indicate rounding from a very small numerator, data copy errors, or moderation shortcuts.`,
+      probability: "Exact extremes in cohorts >10 occur in <5% of year groups nationally.",
+    });
+  }
+
+  // Rule 4: Writing dramatically lower than Reading in Y6 (>25pp gap)
+  const y6 = schoolData["Year 6"];
+  if (y6) {
+    const r = y6.all_pupils.r_are;
+    const w = y6.all_pupils.w_are;
+    if (r !== null && r !== undefined && w !== null && w !== undefined && r - w > 25) {
+      alerts.push({
+        severity: "medium",
+        title: `Y6 Writing (${w}%) is ${Math.round(r - w)}pp below Y6 Reading (${r}%)`,
+        explanation: "A gap of >25pp between Reading and Writing in Y6 is unusual. National data shows an average gap of ~8pp. This could reflect genuine cohort weakness in writing, inconsistent moderation of writing vs reading, or a curriculum imbalance. Worth investigating whether teacher moderation of writing meets national standards.",
+        probability: "A Reading-Writing gap >25pp in Y6 occurs in <10% of UK primary schools.",
+      });
+    }
+  }
+
+  // Rule 5: Missing FSM data when school-level FSM appears high (computed from spreadsheet)
+  {
+    let totalP = 0, totalF = 0;
+    for (const yg of YEAR_GROUPS) {
+      const d = schoolData[yg];
+      if (!d) continue;
+      if (d.cohort.number_in_cohort !== null) totalP += d.cohort.number_in_cohort;
+      if (d.cohort.number_fsm !== null) totalF += d.cohort.number_fsm;
+    }
+    const derivedFsmPct = totalP > 0 ? (totalF / totalP) * 100 : null;
+    if (derivedFsmPct !== null && derivedFsmPct >= 30) {
+      const missingFsmYgs = HEATMAP_YEAR_GROUPS.filter(yg => {
+        const d = schoolData[yg];
+        return d && d.cohort.number_fsm === null && d.cohort.number_in_cohort !== null && d.cohort.number_in_cohort > 5;
+      });
+      if (missingFsmYgs.length >= 3) {
+        alerts.push({
+          severity: "low",
+          title: `FSM pupil counts missing in ${missingFsmYgs.length} year groups despite ~${Math.round(derivedFsmPct)}% school-level FSM`,
+          explanation: `${missingFsmYgs.map(yg => yg.replace("Year ", "Y")).join(", ")} have no FSM pupil count in the spreadsheet. With ~${Math.round(derivedFsmPct)}% FSM eligibility, most year groups should show FSM pupils. This may be a data submission gap.`,
+          probability: "Not statistically impossible but suggests incomplete data submission.",
+        });
+      }
+    }
+  }
+
+  return alerts;
+}
+
+function SchoolTab({ school, parsed, dfeData, authToken }: { school: string; parsed: ParsedSpreadsheet; dfeData?: DfEData | null; authToken?: string }) {
   const schoolData = parsed.data[school] ?? {};
   const info = TRUST_SCHOOLS[school];
 
@@ -836,6 +990,20 @@ function SchoolTab({ school, parsed, authToken }: { school: string; parsed: Pars
   }
   const trustFsmPct = trustTotalPupils > 0 ? (trustTotalFsm / trustTotalPupils) * 100 : null;
   const trustSendPct = trustTotalPupils > 0 ? (trustTotalSend / trustTotalPupils) * 100 : null;
+
+  // ── Insight computations ──
+  const schoolUrn = TRUST_SCHOOLS[school]?.urn ?? null;
+  const nationalPercentile = schoolUrn !== null ? (dfeData?.nationalPercentiles?.[schoolUrn] ?? null) : null;
+  const threeYearAvg = schoolUrn !== null ? (dfeData?.threeYearAverages?.[schoolUrn] ?? null) : null;
+  const y6Combined = schoolData["Year 6"]?.all_pupils.c_are ?? null;
+  const statAlerts = detectStatisticalImpossibilities(school, schoolData);
+
+  // Ordinal suffix helper
+  const ordinal = (n: number): string => {
+    const s = ["th", "st", "nd", "rd"];
+    const v = n % 100;
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+  };
 
   // ── Section B: Radar chart (Y6 data) ──
   const y6 = schoolData["Year 6"];
@@ -1163,10 +1331,25 @@ function SchoolTab({ school, parsed, authToken }: { school: string; parsed: Pars
             <span className="text-sm text-slate-500">Generating analysis...</span>
           </div>
         ) : aiNarrative ? (
-          <div className="prose prose-sm prose-slate max-w-none">
-            {aiNarrative.split('\n\n').map((para, i) => (
-              <p key={i} className="text-sm text-slate-700 leading-relaxed mb-3">{para}</p>
-            ))}
+          <div className="max-w-none space-y-3">
+            {aiNarrative
+              // Strip markdown headers
+              .replace(/^#{1,4}\s+/gm, '')
+              // Strip bold/italic markers
+              .replace(/\*{1,3}([^*]+)\*{1,3}/g, '$1')
+              .replace(/_{1,2}([^_]+)_{1,2}/g, '$1')
+              // Convert bullet lines into flowing text
+              .replace(/^[-•]\s+/gm, '')
+              .replace(/^\d+\.\s+/gm, '')
+              // Clean up excess whitespace
+              .replace(/\n{3,}/g, '\n\n')
+              .trim()
+              .split('\n\n')
+              .filter(p => p.trim().length > 0)
+              .map((para, i) => (
+                <p key={i} className="text-sm text-slate-700 leading-relaxed">{para.replace(/\n/g, ' ').trim()}</p>
+              ))
+            }
           </div>
         ) : narrativePoints.length > 0 ? (
           <div className="space-y-3">
@@ -1236,6 +1419,155 @@ function SchoolTab({ school, parsed, authToken }: { school: string; parsed: Pars
           <span><span className="font-medium text-gray-600">GD</span> = Greater Depth (% exceeding expected standard)</span>
         </div>
       </motion.div>
+
+      {/* ── Validation & Credibility Section ── */}
+      {(nationalPercentile !== null || threeYearAvg !== null || statAlerts.length > 0) && (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.04 }}
+          className="space-y-3"
+        >
+          <div className="flex items-center gap-2">
+            <TrendingUp size={15} className="text-gray-500" />
+            <span className="text-sm font-semibold text-gray-800">Validation &amp; Credibility</span>
+            <span className="text-xs text-gray-400">DfE validated data vs self-reported figures</span>
+          </div>
+
+          {/* Row 1: National Percentile + Predictive Accuracy */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+            {/* Insight 1: National Percentile */}
+            {nationalPercentile !== null && (
+              <div className="bg-white border border-gray-200 rounded-xl p-4">
+                <h4 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                  <Trophy size={15} className={
+                    nationalPercentile.percentile > 75 ? "text-emerald-500" :
+                    nationalPercentile.percentile > 50 ? "text-blue-500" :
+                    nationalPercentile.percentile > 25 ? "text-amber-500" :
+                    "text-red-500"
+                  } />
+                  National Percentile Rank
+                  <span className="text-xs text-gray-400 font-normal ml-auto">KS2 Combined 2023/24</span>
+                </h4>
+                <div className={`text-5xl font-extrabold mb-1 ${
+                  nationalPercentile.percentile > 75 ? "text-emerald-600" :
+                  nationalPercentile.percentile > 50 ? "text-blue-600" :
+                  nationalPercentile.percentile > 25 ? "text-amber-600" :
+                  "text-red-600"
+                }`}>
+                  {ordinal(nationalPercentile.percentile)}
+                </div>
+                <div className={`text-sm font-semibold mb-3 ${
+                  nationalPercentile.percentile > 50 ? "text-emerald-700" : "text-red-700"
+                }`}>
+                  {nationalPercentile.percentile > 50
+                    ? `Better than ${nationalPercentile.percentile}% of England schools`
+                    : `Worse than ${100 - nationalPercentile.percentile}% of England schools`
+                  }
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="bg-gray-50 rounded-lg p-2 text-center">
+                    <div className="font-bold text-gray-900 text-base">{nationalPercentile.pct}%</div>
+                    <div className="text-gray-500 mt-0.5">KS2 Combined</div>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-2 text-center">
+                    <div className="font-bold text-gray-900 text-base">
+                      {nationalPercentile.rank.toLocaleString()} / {nationalPercentile.totalSchools.toLocaleString()}
+                    </div>
+                    <div className="text-gray-500 mt-0.5">National rank</div>
+                  </div>
+                </div>
+                <div className="mt-2 text-[10px] text-gray-400 flex items-center gap-1">
+                  <Info size={9} />
+                  Source: DfE KS2 2023/24 national dataset ({nationalPercentile.totalSchools.toLocaleString()} schools)
+                </div>
+              </div>
+            )}
+
+            {/* Insight 2: Predictive Accuracy Check */}
+            {threeYearAvg !== null && y6Combined !== null && (
+              <div className="bg-white border border-gray-200 rounded-xl p-4">
+                <h4 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                  <Target size={15} className="text-blue-500" />
+                  Predictive Accuracy Check
+                </h4>
+                <div className="grid grid-cols-3 gap-2 mb-3">
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">Mid-year Y6 prediction</div>
+                    <div className="text-2xl font-bold text-gray-900">{y6Combined}%</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">3-yr DfE validated avg</div>
+                    <div className="text-2xl font-bold text-gray-900">{threeYearAvg.averagePct}%</div>
+                    <div className="text-[10px] text-gray-400">{threeYearAvg.yearsUsed} yr{threeYearAvg.yearsUsed !== 1 ? "s" : ""} of data</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">Gap</div>
+                    <div className={`text-2xl font-bold ${
+                      Math.abs(y6Combined - threeYearAvg.averagePct) <= 5 ? "text-green-600" :
+                      Math.abs(y6Combined - threeYearAvg.averagePct) <= 10 ? "text-amber-600" : "text-red-600"
+                    }`}>
+                      {y6Combined > threeYearAvg.averagePct ? "+" : ""}{y6Combined - threeYearAvg.averagePct}pp
+                    </div>
+                  </div>
+                </div>
+                <div className={`text-xs p-2 rounded-lg ${
+                  y6Combined > threeYearAvg.averagePct + 10 ? "bg-amber-50 text-amber-800 border border-amber-200" :
+                  y6Combined < threeYearAvg.averagePct - 10 ? "bg-amber-50 text-amber-800 border border-amber-200" :
+                  "bg-green-50 text-green-800 border border-green-200"
+                }`}>
+                  {y6Combined > threeYearAvg.averagePct + 10
+                    ? `Prediction is ${y6Combined - threeYearAvg.averagePct}pp above the 3-year KS2 average. Historically optimistic — what evidence supports this cohort outperforming past results?`
+                    : y6Combined < threeYearAvg.averagePct - 10
+                    ? `Prediction is ${threeYearAvg.averagePct - y6Combined}pp below the 3-year KS2 average. Either this cohort is genuinely weaker or the mid-year assessment is overly pessimistic.`
+                    : `Within normal range of the 3-year KS2 average. Broadly consistent with historical performance.`
+                  }
+                </div>
+                <div className="mt-2 text-[10px] text-gray-400 flex items-center gap-1">
+                  <Info size={9} />
+                  3-yr avg uses DfE validated KS2 data. Mid-year is self-reported.
+                </div>
+              </div>
+            )}
+
+            {/* If only one insight available, show both in full-width fallback */}
+            {nationalPercentile === null && threeYearAvg === null && null}
+
+          </div>
+
+          {/* Row 2: Data Quality Alerts — full width */}
+          <div className="bg-white border border-gray-200 rounded-xl p-4">
+            <h4 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
+              <AlertTriangle size={16} className="text-amber-500" />
+              Data Quality Alerts
+              <span className="text-xs text-gray-400 font-normal ml-auto">statistical plausibility checks</span>
+            </h4>
+            {statAlerts.length === 0 ? (
+              <div className="text-sm text-gray-500 flex items-center gap-2">
+                <CheckCircle2 size={14} className="text-emerald-500 flex-shrink-0" />
+                No statistical impossibilities detected. Data appears internally consistent.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {statAlerts.map((alert, i) => (
+                  <div key={i} className={`p-3 rounded-lg border text-sm ${
+                    alert.severity === "high" ? "bg-red-50 border-red-200 text-red-800" :
+                    alert.severity === "medium" ? "bg-amber-50 border-amber-200 text-amber-800" :
+                    "bg-gray-50 border-gray-200 text-gray-700"
+                  }`}>
+                    <div className="font-semibold text-xs uppercase mb-1 opacity-60">{alert.severity} severity</div>
+                    <div className="font-medium">{alert.title}</div>
+                    <div className="text-xs mt-1 opacity-80">{alert.explanation}</div>
+                    <div className="text-xs mt-1 italic opacity-70">{alert.probability}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+        </motion.div>
+      )}
 
       {/* Section B: Radar Chart */}
       {radarData.length > 0 && (y6?.all_pupils.r_are !== null || y6?.all_pupils.c_are !== null) && (
@@ -2311,6 +2643,21 @@ export default function TrustAssessorPage() {
       demographics: { isFsm: boolean; isSend: boolean; isEal: boolean; gender: string };
       journey: { year: number; yearGroup: number; subject: string; level: string; scaledScore?: number }[];
     } | null;
+    cohortTracking: {
+      cohortLabel: string;
+      startYear: number;
+      startYearGroup: number;
+      dataPoints: { yearGroup: number; year: number; reading: number | null; writing: number | null; maths: number | null; pupils: number }[];
+    }[];
+    demographicDisaggregation: {
+      all: { count: number; attainment: Record<string, { atExpected: number; total: number; pct: number }> };
+      withoutFsm: { removed: number; remaining: number; attainment: Record<string, { atExpected: number; total: number; pct: number }> };
+      withoutSend: { removed: number; remaining: number; attainment: Record<string, { atExpected: number; total: number; pct: number }> };
+      withoutEal: { removed: number; remaining: number; attainment: Record<string, { atExpected: number; total: number; pct: number }> };
+      fsmOnly: { count: number; attainment: Record<string, { atExpected: number; total: number; pct: number }> };
+      sendOnly: { count: number; attainment: Record<string, { atExpected: number; total: number; pct: number }> };
+      ealOnly: { count: number; attainment: Record<string, { atExpected: number; total: number; pct: number }> };
+    } | null;
   } | null>(null);
   const [showDrivePicker, setShowDrivePicker] = useState(false);
   const [connector, setConnector] = useState<AppConnector | null>(null);
@@ -2425,6 +2772,8 @@ export default function TrustAssessorPage() {
             spreadsheetComparison: payload.spreadsheetComparison ?? { latestYear: 0, rows: [] },
             cohortJourneys: payload.cohortJourneys ?? [],
             spotlightPupil: payload.spotlightPupil ?? null,
+            cohortTracking: payload.cohortTracking ?? [],
+            demographicDisaggregation: payload.demographicDisaggregation ?? null,
           });
         }
       } catch {
@@ -2870,7 +3219,7 @@ export default function TrustAssessorPage() {
                       exit={{ opacity: 0, y: -8 }}
                       transition={{ duration: 0.2 }}
                     >
-                      <SchoolTab school={activeSchoolTab} parsed={parsed} authToken={accessToken ?? undefined} />
+                      <SchoolTab school={activeSchoolTab} parsed={parsed} dfeData={dfeData} authToken={accessToken ?? undefined} />
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -3162,12 +3511,12 @@ export default function TrustAssessorPage() {
                 <div className="mb-1">
                   <h3 className="text-base font-semibold text-gray-900">Grove House Primary School — Per-Pupil Deep Dive</h3>
                   <p className="text-sm text-gray-500 mt-0.5">
-                    Data source: CTF assessment files (EYFS, KS1, Phonics). {groveHouseData.summary.totalPupils} pseudonymised pupils, {groveHouseData.summary.yearsSpan.length} years of data.
+                    Data source: CTF assessment files (EYFS, KS1, Phonics). {groveHouseData.summary.totalPupils} unique pupils across {groveHouseData.summary.yearsSpan.length} years (includes leavers — not current roll).
                   </p>
                 </div>
                 <div className="grid grid-cols-4 gap-4 mt-4">
                   {[
-                    { label: "Total pupils", value: groveHouseData.summary.totalPupils },
+                    { label: "Unique pupils (all years)", value: groveHouseData.summary.totalPupils },
                     { label: "Trackable across years", value: groveHouseData.summary.trackablePupils },
                     { label: "Years of data", value: groveHouseData.summary.yearsSpan.length },
                     { label: "Assessment records", value: groveHouseData.summary.totalRecords.toLocaleString() },
@@ -3459,7 +3808,7 @@ export default function TrustAssessorPage() {
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-blue-100 border border-blue-300 flex items-center justify-center text-sm font-bold text-blue-700">
-                            {sp.pupilId.slice(0, 2).toUpperCase()}
+                            {sp.pupilId.split(' ').map(w => w[0]).join('')}
                           </div>
                           <div>
                             <div className="font-semibold text-gray-900 text-sm">Pupil {sp.pupilId}</div>
@@ -3545,7 +3894,7 @@ export default function TrustAssessorPage() {
                       <span className="text-xs text-gray-500">{groveHouseData.cohortJourneys.length} trackable pupils with multi-year data</span>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[600px] overflow-y-auto">
-                      {groveHouseData.cohortJourneys.map((pupil) => {
+                      {groveHouseData.cohortJourneys.map((pupil, pidx) => {
                         const demo = pupil.demographics;
                         const flags = [demo.isFsm && 'FSM', demo.isSend && 'SEND', demo.isEal && 'EAL'].filter(Boolean) as string[];
                         const yearGroups = [...new Set(pupil.journey.map(j => j.yearGroup))].sort((a, b) => a - b);
@@ -3561,7 +3910,7 @@ export default function TrustAssessorPage() {
                         const totalSubjects = latestEntries.length;
 
                         return (
-                          <div key={pupil.pupilId} className={`border rounded-lg p-3 text-xs ${
+                          <div key={`${pupil.pupilId}-${pidx}`} className={`border rounded-lg p-3 text-xs ${
                             overallTrend === 'declining' ? 'border-red-200 bg-red-50/30' :
                             overallTrend === 'improving' ? 'border-green-200 bg-green-50/30' :
                             'border-gray-200 bg-white'
@@ -3573,7 +3922,7 @@ export default function TrustAssessorPage() {
                                   overallTrend === 'improving' ? 'bg-green-100 text-green-700' :
                                   'bg-gray-100 text-gray-600'
                                 }`}>
-                                  {pupil.pupilId.slice(0, 2).toUpperCase()}
+                                  {pupil.pupilId.split(' ').map(w => w[0]).join('')}
                                 </div>
                                 <div>
                                   <div className="font-semibold text-gray-700">{pupil.pupilId}</div>
@@ -3670,6 +4019,169 @@ export default function TrustAssessorPage() {
                   </>
                 )}
               </div>
+
+              {/* ── Section 7: Cohort Journey Chart ── */}
+              {groveHouseData.cohortTracking.length > 0 && (
+                <div className="border-t border-gray-100 pt-6">
+                  <h4 className="text-sm font-semibold text-gray-800 mb-1">Cohort Journey — Tracking Groups Through School</h4>
+                  <p className="text-xs text-gray-500 mb-4">Each row follows a group of pupils from their entry point, showing how their assessed levels changed year-on-year. Values show % of expected standard (100% = all at EXS, 150% = all at GDS).</p>
+
+                  <div className="space-y-6">
+                    {groveHouseData.cohortTracking.map((cohort) => (
+                      <div key={cohort.cohortLabel} className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <div>
+                            <div className="text-sm font-semibold text-gray-800">{cohort.cohortLabel}</div>
+                            <div className="text-xs text-gray-500">{cohort.dataPoints[0]?.pupils ?? 0} pupils tracked</div>
+                          </div>
+                        </div>
+
+                        {/* Visual journey — Reading, Writing, Maths lines */}
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm border-collapse">
+                            <thead>
+                              <tr className="border-b border-gray-200">
+                                <th className="text-left py-2 pr-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Subject</th>
+                                {cohort.dataPoints.map(dp => (
+                                  <th key={dp.year} className="py-2 px-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                                    Y{dp.yearGroup}<br/><span className="font-normal text-gray-400">{dp.year}</span>
+                                  </th>
+                                ))}
+                                <th className="py-2 px-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wide">Trend</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {['reading', 'writing', 'maths'].map(subj => {
+                                const values = cohort.dataPoints.map(dp => (dp as Record<string, unknown>)[subj] as number | null);
+                                const validValues = values.filter((v): v is number => v !== null);
+                                const trend = validValues.length >= 2
+                                  ? validValues[validValues.length - 1] - validValues[0]
+                                  : null;
+                                return (
+                                  <tr key={subj} className="border-b border-gray-100">
+                                    <td className="py-2 pr-4 text-gray-700 font-medium capitalize">{subj}</td>
+                                    {values.map((v, i) => {
+                                      const prev = i > 0 ? values[i - 1] : null;
+                                      const change = v !== null && prev !== null ? v - prev : null;
+                                      return (
+                                        <td key={i} className="py-2 px-3 text-center">
+                                          {v !== null ? (
+                                            <div>
+                                              <span className={`font-semibold ${v >= 100 ? 'text-green-700' : v >= 75 ? 'text-amber-600' : 'text-red-600'}`}>{v}%</span>
+                                              {change !== null && (
+                                                <div className={`text-xs ${change > 0 ? 'text-green-600' : change < 0 ? 'text-red-600' : 'text-gray-400'}`}>
+                                                  {change > 0 ? '+' : ''}{change}
+                                                </div>
+                                              )}
+                                            </div>
+                                          ) : (
+                                            <span className="text-gray-300">—</span>
+                                          )}
+                                        </td>
+                                      );
+                                    })}
+                                    <td className="py-2 px-3 text-center">
+                                      {trend !== null ? (
+                                        <span className={`text-xs font-bold px-2 py-0.5 rounded ${trend > 5 ? 'bg-green-100 text-green-700' : trend < -5 ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}`}>
+                                          {trend > 0 ? '+' : ''}{trend}pp
+                                        </span>
+                                      ) : '—'}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Section 8: Demographic Disaggregation — Defend Your Numbers ── */}
+              {groveHouseData.demographicDisaggregation && (
+                <div className="border-t border-gray-100 pt-6">
+                  <h4 className="text-sm font-semibold text-gray-800 mb-1">Defend Your Numbers — Demographic Impact Analysis</h4>
+                  <p className="text-xs text-gray-500 mb-4">
+                    What happens to attainment when you isolate specific pupil groups? This shows exactly which demographics are driving the headline figures up or down.
+                  </p>
+
+                  {(() => {
+                    const dd = groveHouseData.demographicDisaggregation!;
+                    const groups = [
+                      { key: 'all', label: 'All pupils', data: dd.all.attainment, count: dd.all.count, highlight: false },
+                      { key: 'withoutSend', label: `Remove SEND (${dd.withoutSend.removed} pupils)`, data: dd.withoutSend.attainment, count: dd.withoutSend.remaining, highlight: true },
+                      { key: 'withoutFsm', label: `Remove FSM (${dd.withoutFsm.removed} pupils)`, data: dd.withoutFsm.attainment, count: dd.withoutFsm.remaining, highlight: true },
+                      { key: 'withoutEal', label: `Remove EAL (${dd.withoutEal.removed} pupils)`, data: dd.withoutEal.attainment, count: dd.withoutEal.remaining, highlight: true },
+                      { key: 'sendOnly', label: `SEND only (${dd.sendOnly.count} pupils)`, data: dd.sendOnly.attainment, count: dd.sendOnly.count, highlight: false },
+                      { key: 'fsmOnly', label: `FSM only (${dd.fsmOnly.count} pupils)`, data: dd.fsmOnly.attainment, count: dd.fsmOnly.count, highlight: false },
+                    ];
+
+                    return (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm border-collapse">
+                          <thead>
+                            <tr className="border-b border-gray-200">
+                              <th className="text-left py-2 pr-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Group</th>
+                              <th className="text-right py-2 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Pupils</th>
+                              <th className="text-right py-2 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Reading</th>
+                              <th className="text-right py-2 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Writing</th>
+                              <th className="text-right py-2 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Maths</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {groups.map(({ key, label, data, count, highlight }) => {
+                              const allBaseline = dd.all.attainment;
+                              return (
+                                <tr key={key} className={`border-b border-gray-100 ${highlight ? 'bg-green-50/50' : key.endsWith('Only') ? 'bg-amber-50/50' : ''}`}>
+                                  <td className={`py-2 pr-4 ${highlight ? 'font-semibold text-green-800' : key.endsWith('Only') ? 'font-medium text-amber-800' : 'text-gray-700 font-medium'}`}>{label}</td>
+                                  <td className="py-2 px-4 text-right text-gray-600">{count}</td>
+                                  {['reading', 'writing', 'maths'].map(subj => {
+                                    const pct = data[subj]?.pct ?? 0;
+                                    const baseline = allBaseline[subj]?.pct ?? 0;
+                                    const diff = pct - baseline;
+                                    return (
+                                      <td key={subj} className="py-2 px-4 text-right">
+                                        <span className={`font-semibold ${pct >= 65 ? 'text-green-700' : pct >= 50 ? 'text-amber-600' : 'text-red-600'}`}>{pct}%</span>
+                                        {key !== 'all' && diff !== 0 && (
+                                          <span className={`text-xs ml-1 ${diff > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                            ({diff > 0 ? '+' : ''}{diff})
+                                          </span>
+                                        )}
+                                      </td>
+                                    );
+                                  })}
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Ofsted defence narrative */}
+                  {(() => {
+                    const dd = groveHouseData.demographicDisaggregation!;
+                    const sendImpact = (dd.all.attainment.reading?.pct ?? 0) - (dd.withoutSend.attainment.reading?.pct ?? 0);
+                    const fsmImpact = (dd.all.attainment.reading?.pct ?? 0) - (dd.withoutFsm.attainment.reading?.pct ?? 0);
+                    const biggestImpact = Math.abs(sendImpact) > Math.abs(fsmImpact) ? 'SEND' : 'FSM';
+                    const impactPp = Math.abs(biggestImpact === 'SEND' ? sendImpact : fsmImpact);
+
+                    return (
+                      <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-blue-800">
+                        <div className="font-semibold mb-1">How to defend these numbers to an inspector:</div>
+                        <p>
+                          Removing {biggestImpact} pupils shifts Reading by {impactPp}pp.
+                          {dd.sendOnly.count > 0 && ` The ${dd.sendOnly.count} SEND pupils have specific barriers (visual impairment, SEMH, cognition & learning) that directly impact standardised assessment performance.`}
+                          {' '}The school should prepare evidence showing: (1) individual progress trajectories for these pupils against their own baselines, not national expectations; (2) the graduated approach documentation for each SEND pupil; (3) Pupil Premium strategy impact evidence for FSM pupils. An inspector wants to see that the school knows these children and can explain their specific journeys.
+                        </p>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
 
             </div>
           )}

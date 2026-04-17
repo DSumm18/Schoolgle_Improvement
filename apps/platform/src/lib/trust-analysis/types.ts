@@ -200,3 +200,34 @@ export interface PipelinePrediction {
   lastKs2Year: number | null;
   narrative: string;
 }
+
+// ─── Insight Types ────────────────────────────────────────────────────────────
+
+/** National percentile rank for a school's most recent KS2 Combined score */
+export interface NationalPercentile {
+  urn: number;
+  /** School's KS2 Combined expected standard % */
+  pct: number;
+  /** Percentile rank (0–100): 8 = worse than 92% of England schools */
+  percentile: number;
+  /** How many schools this school beats */
+  betterThan: number;
+  /** Rank from top (1 = best) */
+  rank: number;
+  /** Total schools in national dataset */
+  totalSchools: number;
+}
+
+/** Three-year DfE validated KS2 Combined average for a school */
+export interface ThreeYearAverage {
+  urn: number;
+  /** Average of all available KS2 Combined years */
+  averagePct: number;
+  /** Number of years used in the average */
+  yearsUsed: number;
+}
+
+export interface DfEDataWithInsights extends DfEData {
+  nationalPercentiles: Record<number, NationalPercentile>;
+  threeYearAverages: Record<number, ThreeYearAverage>;
+}

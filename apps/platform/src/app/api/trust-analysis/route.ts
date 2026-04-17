@@ -9,7 +9,7 @@ import {
 } from '@/lib/intelligence-brain/orchestrator';
 import {
   ALL_PENNINE_URNS, URN_PREDECESSORS, PENNINE_URNS,
-  KS2Result, CensusRecord, DfEData,
+  KS2Result, CensusRecord, DfEData, NationalPercentile, ThreeYearAverage,
 } from '@/lib/trust-analysis/types';
 
 /**
@@ -87,6 +87,63 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
     };
   });
 
+  // ── Insight 1: National Percentile Rankings ──────────────────────────────
+  // Use academicYearEnd=2024 (the 2023/24 academic year — most recent validated data)
+  const { data: nationalKs2Raw } = await supabase
+    .from('ks2_results')
+    .select('urn, expected_standard_pct')
+    .eq('subject', 'Reading, writing and maths')
+    .eq('breakdown_topic', 'All pupils')
+    .eq('breakdown', 'All pupils')
+    .eq('academic_year_end', 2024)
+    .eq('is_suppressed', false)
+    .not('expected_standard_pct', 'is', null);
+
+  const sortedPcts = ((nationalKs2Raw ?? []) as { urn: number; expected_standard_pct: number | string }[])
+    .map(r => Number(r.expected_standard_pct))
+    .filter(n => !isNaN(n) && isFinite(n))
+    .sort((a, b) => a - b);
+
+  const totalSchools = sortedPcts.length;
+
+  const nationalPercentiles: Record<number, NationalPercentile> = {};
+  for (const urn of PENNINE_URNS) {
+    const schoolRecord = ((nationalKs2Raw ?? []) as { urn: number; expected_standard_pct: number | string }[])
+      .find(r => Number(r.urn) === urn);
+    if (!schoolRecord) continue;
+    const pct = Number(schoolRecord.expected_standard_pct);
+    if (isNaN(pct)) continue;
+    const betterThan = sortedPcts.filter(p => p < pct).length;
+    const percentile = totalSchools > 0 ? Math.round(100 * betterThan / totalSchools) : 0;
+    nationalPercentiles[urn] = {
+      urn,
+      pct,
+      percentile,
+      betterThan,
+      rank: totalSchools - betterThan,
+      totalSchools,
+    };
+  }
+
+  // ── Insight 2: Three-Year KS2 Averages ───────────────────────────────────
+  const threeYearAverages: Record<number, ThreeYearAverage> = {};
+  for (const urn of PENNINE_URNS) {
+    const schoolKs2 = ks2Results.filter(r =>
+      r.urn === urn &&
+      r.subject === 'Reading, writing and maths' &&
+      r.breakdownTopic === 'All pupils' &&
+      r.breakdown === 'All pupils' &&
+      r.expectedStandardPct !== null,
+    );
+    if (schoolKs2.length === 0) continue;
+    const avg = schoolKs2.reduce((sum, r) => sum + (r.expectedStandardPct as number), 0) / schoolKs2.length;
+    threeYearAverages[urn] = {
+      urn,
+      averagePct: Math.round(avg),
+      yearsUsed: schoolKs2.length,
+    };
+  }
+
   const result: DfEData = { ks2Results, census };
 
   let shadowComparison:
@@ -141,6 +198,8 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
   if (debugBrain) {
     return apiSuccess({
       ...result,
+      nationalPercentiles,
+      threeYearAverages,
       _brainShadow: {
         mode: brainMode,
         comparison: shadowComparison,
@@ -148,5 +207,5 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
     });
   }
 
-  return apiSuccess(result);
+  return apiSuccess({ ...result, nationalPercentiles, threeYearAverages });
 }, { orgOptional: true });
