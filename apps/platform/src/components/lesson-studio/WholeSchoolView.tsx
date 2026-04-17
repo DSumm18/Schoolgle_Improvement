@@ -45,6 +45,21 @@ interface WholeSchoolViewProps {
 
 // ─── Lunch stagger defaults ───────────────────────────────────────────────────
 
+const CONNECTOR_BADGES: Record<string, { icon: string; label: string; bg: string }> = {
+  "dsl": { icon: "🛡️", label: "DSL", bg: "bg-purple-100 text-purple-700" },
+  "deputy-dsl": { icon: "🛡️", label: "Deputy DSL", bg: "bg-purple-50 text-purple-600" },
+  "senco": { icon: "🧩", label: "SENCO", bg: "bg-blue-100 text-blue-700" },
+  "first-aider": { icon: "🩹", label: "First Aider", bg: "bg-green-100 text-green-700" },
+  "paediatric-first-aider": { icon: "👶🩹", label: "Paediatric FA", bg: "bg-green-100 text-green-700" },
+  "fire-marshal": { icon: "🔥", label: "Fire Marshal", bg: "bg-orange-100 text-orange-700" },
+  "dpo": { icon: "🔒", label: "DPO", bg: "bg-slate-100 text-slate-700" },
+  "mental-health-lead": { icon: "💚", label: "MH Lead", bg: "bg-emerald-100 text-emerald-700" },
+  "eyfs-lead": { icon: "🌱", label: "EYFS Lead", bg: "bg-teal-100 text-teal-700" },
+  "online-safety-lead": { icon: "🌐", label: "Online Safety", bg: "bg-cyan-100 text-cyan-700" },
+  "prevent-lead": { icon: "⚠️", label: "Prevent", bg: "bg-amber-100 text-amber-700" },
+  "h-and-s-lead": { icon: "🦺", label: "H&S Lead", bg: "bg-yellow-100 text-yellow-700" },
+};
+
 const LUNCH_STAGGER: Record<string, { start: string; end: string }> = {
   Nursery:   { start: "11:30", end: "12:00" },
   Reception: { start: "11:45", end: "12:15" },
@@ -216,6 +231,7 @@ export function WholeSchoolView({
   const { session } = useAuth();
   const [classes, setClasses] = useState<ClassRow[]>([]);
   const [schoolEvents, setSchoolEvents] = useState<SchoolCalendarEvent[]>([]);
+  const [connectors, setConnectors] = useState<Record<string, Array<{ type: string; area?: string; expiring?: boolean }>>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -273,6 +289,28 @@ export function WholeSchoolView({
 
     // Fetch calendar events for current selected day
     fetchEvents(selectedDay);
+
+    // Fetch staff connectors for badge display
+    supabase
+      .from("staff_connectors")
+      .select("staff_name, connector_type_id, status, training_expires_at, coverage_area")
+      .eq("organization_id", organizationId)
+      .eq("status", "active")
+      .then(({ data }) => {
+        const byName: Record<string, Array<{ type: string; area?: string; expiring?: boolean }>> = {};
+        for (const c of data || []) {
+          if (!byName[c.staff_name]) byName[c.staff_name] = [];
+          const expiresAt = c.training_expires_at ? new Date(c.training_expires_at) : null;
+          const isExpiring = expiresAt ? (expiresAt.getTime() - Date.now()) < 90 * 24 * 60 * 60 * 1000 : false;
+          byName[c.staff_name].push({
+            type: c.connector_type_id,
+            area: c.coverage_area || undefined,
+            expiring: isExpiring,
+          });
+        }
+        setConnectors(byName);
+      })
+      .catch(() => setConnectors({}));
   }, [organizationId, weekCommencing, session, fetchEvents, selectedDay]);
 
   if (loading) {
@@ -491,10 +529,24 @@ export function WholeSchoolView({
                       {cls.teacher_name || cls.year_group}
                     </div>
                     {/* TA placeholder — wired when staff_connectors table is populated */}
-                    {/* Staff connector icons — placeholder for future wiring */}
-                    <div className="flex gap-0.5 mt-0.5">
-                      {/* e.g. first aider, fire marshal, DSL badges will appear here */}
-                    </div>
+                    {/* Staff connector badges */}
+                    {cls.teacher_name && connectors[cls.teacher_name] && (
+                      <div className="flex gap-0.5 mt-0.5 flex-wrap">
+                        {connectors[cls.teacher_name].map((c, ci) => {
+                          const badge = CONNECTOR_BADGES[c.type];
+                          if (!badge) return null;
+                          return (
+                            <span
+                              key={ci}
+                              className={`text-[8px] px-1 py-0.5 rounded ${c.expiring ? "bg-red-100 text-red-700" : badge.bg} cursor-default`}
+                              title={`${badge.label}${c.area ? ` (${c.area})` : ""}${c.expiring ? " ⚠ Training expiring soon" : ""}`}
+                            >
+                              {badge.icon}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
                   </td>
 
                   {/* No timetable message */}
