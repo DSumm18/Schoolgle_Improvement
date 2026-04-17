@@ -77,6 +77,12 @@ Your writing style:
 - 4-5 short paragraphs maximum
 - Do not pad with generic observations. If it's not specific and actionable, don't include it.
 
+FORMAT RULES:
+- Write in flowing prose paragraphs. NO markdown formatting whatsoever.
+- No bullet points, no numbered lists, no headers, no bold/italic markers.
+- Separate paragraphs with a blank line.
+- This text will appear in a professional board report — it must read like a written briefing, not a slide deck.
+
 RULES: Only reference data that was provided. Never invent numbers. If data is missing, say "this data was not submitted."`,
     userPromptTemplate: `Analyse this school's mid-year assessment data for a trust board report.
 
@@ -115,6 +121,8 @@ Your writing style:
 - End with 2-3 strategic questions for the trust board
 - Maximum 4 paragraphs
 
+Write in flowing prose paragraphs only. No markdown, no bullet points, no headers, no bold/italic markers. This appears in a professional board report.
+
 Write for a trust CEO and board of trustees who oversee 7+ schools.`,
     userPromptTemplate: `Write a trust-wide overview for a board meeting.
 
@@ -146,7 +154,9 @@ Your approach:
 - Note where the school's own data contradicts itself
 - Identify areas where the school appears to lack self-awareness
 - Be professional and constructive, not adversarial
-- Maximum 3-4 paragraphs`,
+- Maximum 3-4 paragraphs
+
+Write in flowing prose paragraphs only. No markdown, no bullet points, no headers, no bold/italic markers. This appears in a professional board report.`,
     userPromptTemplate: `Review this school's assessment data from an Ofsted inspection perspective.
 
 Data:
@@ -158,6 +168,52 @@ What would the lead inspector focus on? What questions would be asked in the fir
     temperature: 0.3,
     maxTokens: 600,
     usedBy: ['ofsted-readiness', 'trust-assessor'],
+  },
+
+  // ── Governor Assessment Report Writer ──
+  'governor-assessment-report-writer': {
+    id: 'governor-assessment-report-writer',
+    name: 'Governor Assessment Report Writer',
+    description: 'Produces board-ready assessment analysis reports for governors',
+    systemPrompt: `You are a senior School Improvement Partner producing a formal governor board report. Output must be usable in a school governor meeting — polished, professional, specific, and defensible.
+
+Your output structure (you MUST produce these sections):
+1. VERDICT (one sentence stating overall position — "secure", "needs attention", "urgent improvement")
+2. HEADLINE (2 sentences summarising the single most important finding)
+3. KEY FINDINGS (exactly 3, each with a number and a short title)
+4. CONTEXT & DEFENCE (1 paragraph — explains the numbers in demographic/context terms)
+5. RECOMMENDATIONS (exactly 3 specific actions, each with EEF strategy name if applicable)
+6. QUESTIONS FOR HEADTEACHER (exactly 5 sharp questions governors should ask)
+
+Writing style:
+- Professional, direct, evidence-based — every claim backed by a specific number
+- Never vague ("progress is good") — always specific ("Y5 Combined at 71% is 10pp above national")
+- Frame concerns as questions, not accusations
+- Write for governors who are intelligent non-specialists
+- No jargon without brief explanation
+- Flow prose paragraphs — NO markdown, NO bullet markers, NO headers in your output (the system will format structure)
+
+Output each section as a JSON object with these exact keys:
+{
+  "verdict": "string — single sentence with severity word",
+  "severity": "strong" | "secure" | "attention" | "urgent",
+  "headline": "string — 2 sentences",
+  "keyFindings": [{"number": "string (e.g. '48%' or '+12pp')", "title": "string — short", "detail": "string — 1-2 sentences"}],
+  "contextDefence": "string — 1 flowing paragraph",
+  "recommendations": [{"action": "string", "eefStrategy": "string or null", "impact": "string", "cost": "string"}],
+  "questionsForHeadteacher": ["string", "string", "string", "string", "string"]
+}`,
+    userPromptTemplate: `Generate a governor board report for this school based on the assessment data provided.
+
+School context and computed metrics:
+
+{{DATA}}
+
+Produce the structured JSON report. Rules: only reference data that was provided. Never invent numbers. If any section cannot be produced from the data, state so explicitly.`,
+    model: 'anthropic/claude-sonnet-4',
+    temperature: 0.3,
+    maxTokens: 1500,
+    usedBy: ['trust-assessor', 'governance'],
   },
 
   // ── Data Quality Auditor ──
@@ -173,8 +229,8 @@ Focus on:
 - Missing data that should be present
 - Patterns that suggest data entry errors
 - Year-group-to-year-group jumps that seem implausible
-- Write as bullet points, clear and specific
-- Maximum 5-8 bullet points`,
+- Maximum 5-8 findings
+- Write in flowing prose paragraphs. No markdown, no bullet points, no headers, no bold/italic markers. Number each finding inline (e.g. "First, ... Second, ...").`,
     userPromptTemplate: `Review this school data for quality issues.
 
 Data:
@@ -243,6 +299,40 @@ export function listSkills(): BrainSkill[] {
  */
 export function getSkill(skillId: string): BrainSkill | undefined {
   return SKILLS[skillId];
+}
+
+// ─── Governor Assessment Report Helper ──────────────────────────────────────
+
+export interface GovernorReportNarrative {
+  verdict: string;
+  severity: 'strong' | 'secure' | 'attention' | 'urgent';
+  headline: string;
+  keyFindings: { number: string; title: string; detail: string }[];
+  contextDefence: string;
+  recommendations: { action: string; eefStrategy: string | null; impact: string; cost: string }[];
+  questionsForHeadteacher: string[];
+}
+
+/**
+ * Execute the governor assessment report skill and parse the structured JSON response.
+ * Strips markdown fences if the model wraps the output.
+ */
+export async function executeGovernorReportSkill(
+  data: Record<string, unknown>,
+): Promise<GovernorReportNarrative> {
+  const result = await executeSkill('governor-assessment-report-writer', data);
+  // Parse the JSON from output (model sometimes wraps in markdown fences)
+  const cleaned = result.output
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```$/, '')
+    .trim();
+  try {
+    return JSON.parse(cleaned) as GovernorReportNarrative;
+  } catch (err) {
+    throw new Error(
+      `Failed to parse governor report output as JSON: ${err instanceof Error ? err.message : err}. Raw output: ${result.output.slice(0, 200)}`,
+    );
+  }
 }
 
 // ─── School AI Preferences ───────────────────────────────────────────────────

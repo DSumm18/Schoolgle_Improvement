@@ -44,6 +44,9 @@ import {
   BarChart3,
   Layers,
   Target,
+  FileText,
+  X,
+  Download,
 } from "lucide-react";
 import { DriveFilePicker } from "@/components/canvas/DriveFilePicker";
 import { useAuth } from "@/context/SupabaseAuthContext";
@@ -1124,6 +1127,118 @@ function SchoolTab({ school, parsed, dfeData, authToken }: { school: string; par
     questions.push({ q: "No specific concerns flagged for this school based on the submitted data.", level: "blue" });
   }
 
+  // ── Generate Report Modal ──
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportIncludeAppendix, setReportIncludeAppendix] = useState(false);
+  const [reportConfidential, setReportConfidential] = useState(false);
+  const [reportGenerating, setReportGenerating] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
+  const [reportShareToken, setReportShareToken] = useState<string | null>(null);
+
+  const handleGenerateReport = async () => {
+    setReportGenerating(true);
+    setReportError(null);
+    setReportShareToken(null);
+
+    // Build context data for the AI
+    let trustTotalP = 0, trustTotalF = 0;
+    for (const s of parsed.schools) {
+      for (const yg of YEAR_GROUPS) {
+        const d = parsed.data[s]?.[yg];
+        if (!d) continue;
+        if (d.cohort.number_in_cohort !== null) trustTotalP += d.cohort.number_in_cohort;
+        if (d.cohort.number_fsm !== null) trustTotalF += d.cohort.number_fsm;
+      }
+    }
+    const trustFsmPctForReport = trustTotalP > 0 ? Math.round((trustTotalF / trustTotalP) * 1000) / 10 : null;
+
+    const reportPayload = {
+      schoolAbbrev: school,
+      schoolData: {
+        schoolName: TRUST_SCHOOLS[school]?.name ?? school,
+        y6Combined: schoolData["Year 6"]?.all_pupils.c_are ?? null,
+        nationalPercentile: null,
+        nationalRank: null,
+        threeYearAverage: null,
+        fsmPct,
+        sendPct,
+        trustFsmPct: trustFsmPctForReport,
+        totalPupils,
+        dataQualityAlerts: statAlerts.map((a) => ({
+          severity: a.severity,
+          title: a.title,
+          explanation: a.explanation,
+        })),
+        academicYear: "2025/26",
+        // Include year-group-level summary for AI context
+        yearGroups: Object.fromEntries(
+          YEAR_GROUPS.map((yg) => {
+            const d = schoolData[yg];
+            if (!d) return [yg, null];
+            return [yg, {
+              cohort: d.cohort.number_in_cohort,
+              fsm: d.cohort.number_fsm,
+              send: d.cohort.number_send,
+              reading: d.all_pupils.r_are,
+              writing: d.all_pupils.w_are,
+              maths: d.all_pupils.m_are,
+              combined: d.all_pupils.c_are,
+              gd_reading: d.all_pupils.r_gd,
+              gd_writing: d.all_pupils.w_gd,
+              gd_maths: d.all_pupils.m_gd,
+            }];
+          }).filter(([, v]) => v !== null)
+        ),
+      },
+      format: 'html',
+      options: {
+        includeDataAppendix: reportIncludeAppendix,
+        confidential: reportConfidential,
+      },
+    };
+
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+
+      const res = await fetch('/api/trust-assessor/generate-report', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(reportPayload),
+      });
+
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error ?? `Server error ${res.status}`);
+      }
+
+      const html: string = json.html ?? json.data?.html;
+      const token: string = json.shareToken ?? json.data?.shareToken;
+
+      if (!html) throw new Error('No HTML returned from server');
+
+      setReportShareToken(token ?? null);
+
+      // Open in new tab
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+
+      // Also set up download
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${school}-governor-report-${new Date().toISOString().slice(0, 10)}.html`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+
+      setShowReportModal(false);
+    } catch (err) {
+      setReportError(err instanceof Error ? err.message : 'Unknown error generating report');
+    } finally {
+      setReportGenerating(false);
+    }
+  };
+
   // ── AI Narrative ──
   const [aiNarrative, setAiNarrative] = useState<string | null>(null);
   const [narrativeLoading, setNarrativeLoading] = useState(false);
@@ -1314,6 +1429,126 @@ function SchoolTab({ school, parsed, dfeData, authToken }: { school: string; par
   return (
     <div className="space-y-8">
 
+      {/* Generate Governor Report button — top right */}
+      <div className="flex justify-end">
+        <button
+          onClick={() => { setShowReportModal(true); setReportError(null); setReportShareToken(null); }}
+          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm"
+        >
+          <FileText size={16} />
+          Generate Governor Report
+        </button>
+      </div>
+
+      {/* Generate Governor Report Modal */}
+      {showReportModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowReportModal(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+            {/* Modal header */}
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center">
+                  <FileText size={18} className="text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-base font-semibold text-gray-900">Generate Governor Report</h3>
+                  <p className="text-xs text-gray-500">{school} &mdash; {TRUST_SCHOOLS[school]?.name ?? school}</p>
+                </div>
+              </div>
+              <button onClick={() => setShowReportModal(false)} className="text-gray-400 hover:text-gray-600 transition-colors" aria-label="Close">
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Template selector */}
+            <div className="space-y-4 mb-5">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="report-template">Template</label>
+                <select
+                  id="report-template"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  defaultValue="governor-board"
+                >
+                  <option value="governor-board">Governor Board Report</option>
+                </select>
+                <p className="text-xs text-gray-400 mt-1">4-page A4 report with executive summary, cohort chart, recommendations, and governor questions.</p>
+              </div>
+
+              {/* Options */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="report-appendix"
+                    checked={reportIncludeAppendix}
+                    onChange={(e) => setReportIncludeAppendix(e.target.checked)}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <label htmlFor="report-appendix" className="text-sm text-gray-700">Include data appendix</label>
+                </div>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="report-confidential"
+                    checked={reportConfidential}
+                    onChange={(e) => setReportConfidential(e.target.checked)}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <label htmlFor="report-confidential" className="text-sm text-gray-700">Add confidentiality watermark</label>
+                </div>
+              </div>
+            </div>
+
+            {/* Error state */}
+            {reportError && (
+              <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4 text-xs text-red-700">
+                <AlertCircle size={14} className="flex-shrink-0 mt-0.5" />
+                <span>{reportError}</span>
+              </div>
+            )}
+
+            {/* Share token success */}
+            {reportShareToken && (
+              <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 mb-4 text-xs text-emerald-700">
+                <CheckCircle2 size={14} />
+                <span>Report generated. Share token: <span className="font-mono font-semibold">{reportShareToken}</span></span>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowReportModal(false)}
+                className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                disabled={reportGenerating}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleGenerateReport}
+                disabled={reportGenerating}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {reportGenerating ? (
+                  <>
+                    <div className="w-4 h-4 rounded-full border-2 border-blue-200 border-t-white animate-spin" />
+                    Generating... (~15s)
+                  </>
+                ) : (
+                  <>
+                    <Download size={16} />
+                    Generate Report
+                  </>
+                )}
+              </button>
+            </div>
+            <p className="text-[10px] text-gray-400 mt-3 text-center">
+              Report opens in a new tab and downloads as an HTML file. Print to PDF from your browser.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* AI Narrative Summary */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
@@ -1448,7 +1683,7 @@ function SchoolTab({ school, parsed, dfeData, authToken }: { school: string; par
                     "text-red-500"
                   } />
                   National Percentile Rank
-                  <span className="text-xs text-gray-400 font-normal ml-auto">KS2 Combined 2023/24</span>
+                  <span className="text-xs text-gray-400 font-normal ml-auto">KS2 Combined 2024/25</span>
                 </h4>
                 <div className={`text-5xl font-extrabold mb-1 ${
                   nationalPercentile.percentile > 75 ? "text-emerald-600" :
