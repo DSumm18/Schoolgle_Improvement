@@ -390,7 +390,7 @@ function KS2TrackRecordChart({ school, abbrev, ks2Results, selfReportY6 }: {
           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
           <XAxis dataKey="name" tick={{ fontSize: 10 }} />
           <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} />
-          <Tooltip formatter={(val: number) => [`${val}%`, ""]} />
+          <Tooltip formatter={(val) => [`${val}%`, ""]} />
           <Bar dataKey="ks2" name="DfE Validated KS2" fill="#3B82F6" radius={[3, 3, 0, 0]} />
           <Bar dataKey="midYear" name="Mid-Year Self-Report" fill={flagged ? "#F59E0B" : "#10B981"} radius={[3, 3, 0, 0]} />
           {bestEver !== null && <ReferenceLine y={bestEver} stroke="#6B7280" strokeDasharray="4 4" />}
@@ -425,7 +425,7 @@ function FsmTrendChart({ abbrev, census }: { abbrev: string; census: CensusRecor
           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
           <XAxis dataKey="year" tick={{ fontSize: 9 }} />
           <YAxis domain={[0, 60]} tick={{ fontSize: 9 }} />
-          <Tooltip formatter={(val: number) => [`${val}%`, "FSM"]} />
+          <Tooltip formatter={(val) => [`${val}%`, "FSM"]} />
           <Line type="monotone" dataKey="fsm" stroke="#9F1239" strokeWidth={2} dot={{ r: 2 }} />
         </LineChart>
       </ResponsiveContainer>

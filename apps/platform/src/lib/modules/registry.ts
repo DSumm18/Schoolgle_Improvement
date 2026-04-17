@@ -374,7 +374,16 @@ export const APPS: AppDefinition[] = [
     name: "Trust Analysis",
     route: "/dashboard/school-improvement/trust-analysis",
     icon: BarChart3,
-    shortDescription: "Cross-reference trust data against DfE validated results.",
+    shortDescription: "AI-powered generative analysis from uploaded spreadsheets.",
+    requiredPermissions: ["admin", "headteacher", "slt"],
+  },
+  {
+    id: "trust-assessor",
+    moduleId: "improvement",
+    name: "Trust Assessor",
+    route: "/dashboard/school-improvement/trust-assessor",
+    icon: TrendingUp,
+    shortDescription: "Structured trust dashboard with DfE cross-referencing.",
     requiredPermissions: ["admin", "headteacher", "slt"],
   },
 
