@@ -297,48 +297,498 @@ function StatCard({ label, value, sub }: { label: string; value: string | number
   );
 }
 
-// ─── Phase 1: Heatmap ────────────────────────────────────────────────────────
+// ─── Phase 1: Subject Heatmap (tabbed) ───────────────────────────────────────
 
-function HeatmapGrid({ parsed }: { parsed: ParsedSpreadsheet }) {
+type HeatmapSubject = "combined" | "reading" | "writing" | "maths";
+
+function getSubjectARE(data: Partial<SubjectScores>, subject: HeatmapSubject): number | null {
+  switch (subject) {
+    case "combined": return data.c_are ?? null;
+    case "reading":  return data.r_are ?? null;
+    case "writing":  return data.w_are ?? null;
+    case "maths":    return data.m_are ?? null;
+  }
+}
+
+function SubjectHeatmap({ parsed, onSchoolClick }: { parsed: ParsedSpreadsheet; onSchoolClick: (school: string) => void }) {
+  const [subject, setSubject] = useState<HeatmapSubject>("combined");
+
+  const tabs: { key: HeatmapSubject; label: string }[] = [
+    { key: "combined", label: "Combined" },
+    { key: "reading",  label: "Reading" },
+    { key: "writing",  label: "Writing" },
+    { key: "maths",    label: "Maths" },
+  ];
+
+  const allYearGroups: YearGroup[] = ["EYFS", ...HEATMAP_YEAR_GROUPS];
+
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm border-collapse">
-        <thead>
-          <tr>
-            <th className="text-left p-2 text-gray-500 font-medium w-24">School</th>
-            {HEATMAP_YEAR_GROUPS.map((yg) => (
-              <th key={yg} className="p-2 text-center text-gray-500 font-medium text-xs whitespace-nowrap">
-                {yg.replace("Year ", "Y")}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {parsed.schools.map((school) => (
-            <tr key={school} className="border-t border-gray-100">
-              <td className="p-2 font-medium text-gray-700 text-xs">{school}</td>
-              {HEATMAP_YEAR_GROUPS.map((yg) => {
-                const yearData = parsed.data[school]?.[yg];
-                const pct = yearData ? getCombinedARE(yearData.all_pupils) : null;
-                const colorClass = getHeatmapColor(pct);
-                return (
-                  <td key={yg} className="p-1 text-center">
-                    <span className={`inline-block rounded px-2 py-1 text-xs font-semibold ${colorClass} min-w-[42px]`}>
-                      {pct !== null ? `${pct}%` : "—"}
-                    </span>
-                  </td>
-                );
-              })}
+    <div>
+      {/* Tabs */}
+      <div className="flex items-center gap-1 mb-3">
+        {tabs.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setSubject(t.key)}
+            className={`text-xs px-3 py-1.5 rounded-full font-medium transition-colors ${subject === t.key ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm border-collapse">
+          <thead>
+            <tr>
+              <th className="text-left p-2 text-gray-500 font-medium w-24">School</th>
+              {allYearGroups.map((yg) => (
+                <th key={yg} className="p-2 text-center text-gray-500 font-medium text-xs whitespace-nowrap">
+                  {yg === "EYFS" ? "EYFS" : yg.replace("Year ", "Y")}
+                </th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
-      <div className="flex items-center gap-4 mt-3 text-xs text-gray-500">
-        <span>Combined ARE %:</span>
+          </thead>
+          <tbody>
+            {parsed.schools.map((school) => (
+              <tr key={school} className="border-t border-gray-100">
+                <td className="p-2">
+                  <button
+                    onClick={() => onSchoolClick(school)}
+                    className="text-xs font-semibold text-blue-600 hover:underline"
+                  >
+                    {school}
+                  </button>
+                </td>
+                {allYearGroups.map((yg) => {
+                  const yearData = parsed.data[school]?.[yg];
+                  let pct: number | null = null;
+                  if (yearData) {
+                    if (yg === "EYFS") {
+                      pct = yearData.all_pupils.gld ?? null;
+                    } else {
+                      pct = getSubjectARE(yearData.all_pupils, subject);
+                    }
+                  }
+                  const cohort = yearData?.cohort.number_in_cohort ?? null;
+                  const small = cohort !== null && cohort < 15;
+                  const colorClass = getHeatmapColor(pct);
+                  return (
+                    <td key={yg} className={`p-1 text-center ${small ? "opacity-60" : ""}`}>
+                      <span
+                        className={`inline-block rounded px-2 py-1 text-xs font-semibold ${colorClass} min-w-[42px]`}
+                        title={small ? `Cohort: ${cohort} (small — treat with caution)` : undefined}
+                      >
+                        {pct !== null ? `${pct}%` : "—"}
+                        {small && pct !== null ? "*" : ""}
+                      </span>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-4 mt-3 text-xs text-gray-500">
+        <span>{subject === "combined" ? "Combined ARE %" : `${subject.charAt(0).toUpperCase() + subject.slice(1)} ARE %`}  (EYFS = GLD %):</span>
         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-emerald-100 inline-block" /> 70%+</span>
         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-amber-100 inline-block" /> 50–69%</span>
         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-100 inline-block" /> Below 50%</span>
         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-gray-100 inline-block" /> No data</span>
+        <span className="text-gray-400">* Cohort &lt;15 — treat with caution</span>
+      </div>
+    </div>
+  );
+}
+
+// ─── Phase 1: Per-School Detail Card ─────────────────────────────────────────
+
+function SchoolDetailCard({ school, parsed }: { school: string; parsed: ParsedSpreadsheet }) {
+  const [open, setOpen] = useState(false);
+
+  const schoolData = parsed.data[school] ?? {};
+  const info = TRUST_SCHOOLS[school];
+
+  // Compute totals across all year groups
+  let totalPupils = 0;
+  let totalFsm = 0;
+  let totalSend = 0;
+  let totalEhcp = 0;
+  let cohortCount = 0;
+  for (const yg of YEAR_GROUPS) {
+    const d = schoolData[yg];
+    if (!d) continue;
+    if (d.cohort.number_in_cohort !== null) { totalPupils += d.cohort.number_in_cohort; cohortCount++; }
+    if (d.cohort.number_fsm !== null) totalFsm += d.cohort.number_fsm;
+    if (d.cohort.number_send !== null) totalSend += d.cohort.number_send;
+    if (d.cohort.ehcp !== null) totalEhcp += d.cohort.ehcp;
+  }
+
+  const fsmPct = totalPupils > 0 ? Math.round((totalFsm / totalPupils) * 1000) / 10 : null;
+  const sendPct = totalPupils > 0 ? Math.round((totalSend / totalPupils) * 1000) / 10 : null;
+
+  // Bar chart: Combined ARE by year group (Y1–Y6)
+  const barData = HEATMAP_YEAR_GROUPS.map((yg) => {
+    const d = schoolData[yg];
+    return {
+      yg: yg.replace("Year ", "Y"),
+      combined: d?.all_pupils.c_are ?? null,
+      reading:  d?.all_pupils.r_are ?? null,
+      writing:  d?.all_pupils.w_are ?? null,
+      maths:    d?.all_pupils.m_are ?? null,
+    };
+  }).filter((d) => d.combined !== null || d.reading !== null);
+
+  // Pipeline jump flags
+  const pipelineJumps: string[] = [];
+  for (let i = 1; i < HEATMAP_YEAR_GROUPS.length; i++) {
+    const prev = schoolData[HEATMAP_YEAR_GROUPS[i - 1]]?.all_pupils.c_are ?? null;
+    const curr = schoolData[HEATMAP_YEAR_GROUPS[i]]?.all_pupils.c_are ?? null;
+    if (prev !== null && curr !== null && Math.abs(curr - prev) > 15) {
+      pipelineJumps.push(`${HEATMAP_YEAR_GROUPS[i - 1].replace("Year ", "Y")} → ${HEATMAP_YEAR_GROUPS[i].replace("Year ", "Y")}: ${prev}% → ${curr}% (${curr > prev ? "+" : ""}${Math.round(curr - prev)}pp)`);
+    }
+  }
+
+  // Subject table rows
+  const subjectRows = YEAR_GROUPS.map((yg) => {
+    const d = schoolData[yg];
+    if (!d) return null;
+    const ap = d.all_pupils;
+    const hasSomething = Object.values(ap).some((v) => v !== null && v !== undefined);
+    if (!hasSomething) return null;
+    return { yg, d, ap };
+  }).filter(Boolean) as { yg: string; d: SchoolYearData; ap: Partial<SubjectScores> }[];
+
+  return (
+    <div id={`school-card-${school}`} className="border border-gray-200 rounded-xl overflow-hidden">
+      {/* Header row */}
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between px-5 py-4 bg-white hover:bg-gray-50 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center">
+            <School size={16} className="text-blue-600" />
+          </div>
+          <div className="text-left">
+            <div className="font-semibold text-gray-900">{school}</div>
+            {info && <div className="text-xs text-gray-400">{info.name}</div>}
+          </div>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="hidden sm:flex items-center gap-3 text-xs text-gray-500">
+            {totalPupils > 0 && <span className="font-medium text-gray-700">{totalPupils} pupils</span>}
+            {fsmPct !== null && <span className="bg-rose-50 text-rose-700 px-2 py-0.5 rounded-full">FSM {fsmPct}%</span>}
+            {sendPct !== null && <span className="bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full">SEND {sendPct}%</span>}
+            {pipelineJumps.length > 0 && (
+              <span className="bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full flex items-center gap-1">
+                <AlertTriangle size={10} /> {pipelineJumps.length} jump{pipelineJumps.length > 1 ? "s" : ""}
+              </span>
+            )}
+          </div>
+          {open ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
+        </div>
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="px-5 pb-5 pt-2 bg-gray-50 border-t border-gray-100 space-y-5">
+
+              {/* Quick stats row */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="bg-white border border-gray-200 rounded-lg p-3 text-center">
+                  <div className="text-xl font-bold text-gray-900">{totalPupils > 0 ? totalPupils : "—"}</div>
+                  <div className="text-xs text-gray-500 mt-0.5">Total Pupils</div>
+                  <div className="text-xs text-gray-400">{cohortCount} year groups</div>
+                </div>
+                <div className="bg-white border border-gray-200 rounded-lg p-3 text-center">
+                  <div className="text-xl font-bold text-rose-600">{fsmPct !== null ? `${fsmPct}%` : "—"}</div>
+                  <div className="text-xs text-gray-500 mt-0.5">FSM %</div>
+                  <div className="text-xs text-gray-400">{totalFsm > 0 ? `${totalFsm} pupils` : ""}</div>
+                </div>
+                <div className="bg-white border border-gray-200 rounded-lg p-3 text-center">
+                  <div className="text-xl font-bold text-purple-600">{sendPct !== null ? `${sendPct}%` : "—"}</div>
+                  <div className="text-xs text-gray-500 mt-0.5">SEND %</div>
+                  <div className="text-xs text-gray-400">{totalSend > 0 ? `${totalSend} pupils` : ""}</div>
+                </div>
+                <div className="bg-white border border-gray-200 rounded-lg p-3 text-center">
+                  <div className="text-xl font-bold text-indigo-600">{totalEhcp > 0 ? totalEhcp : "—"}</div>
+                  <div className="text-xs text-gray-500 mt-0.5">EHCPs</div>
+                </div>
+              </div>
+
+              {/* Pipeline jump alerts */}
+              {pipelineJumps.length > 0 && (
+                <div className="space-y-1">
+                  {pipelineJumps.map((j, i) => (
+                    <div key={i} className="flex items-center gap-2 text-xs bg-amber-50 border border-amber-200 text-amber-800 rounded-lg px-3 py-2">
+                      <AlertTriangle size={12} className="flex-shrink-0" />
+                      <span><span className="font-semibold">Pipeline jump:</span> {j}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Bar chart */}
+              {barData.length > 0 && (
+                <div>
+                  <div className="text-xs font-semibold text-gray-600 mb-2">Combined ARE % by Year Group</div>
+                  <ResponsiveContainer width="100%" height={130}>
+                    <BarChart data={barData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis dataKey="yg" tick={{ fontSize: 10 }} />
+                      <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} />
+                      <Tooltip formatter={(val) => [`${val}%`, ""]} />
+                      <Bar dataKey="combined" name="Combined" fill="#3B82F6" radius={[3, 3, 0, 0]} />
+                      <ReferenceLine y={65} stroke="#9CA3AF" strokeDasharray="4 4" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+
+              {/* Subject detail table */}
+              {subjectRows.length > 0 && (
+                <div>
+                  <div className="text-xs font-semibold text-gray-600 mb-2">Subject Detail (ARE %)</div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs border-collapse">
+                      <thead>
+                        <tr className="border-b border-gray-200">
+                          <th className="text-left p-2 text-gray-500 font-medium">Year</th>
+                          <th className="text-center p-2 text-gray-500 font-medium">Cohort</th>
+                          <th className="text-center p-2 text-gray-500 font-medium">Reading</th>
+                          <th className="text-center p-2 text-gray-500 font-medium">Writing</th>
+                          <th className="text-center p-2 text-gray-500 font-medium">Maths</th>
+                          <th className="text-center p-2 text-gray-500 font-medium">Combined</th>
+                          <th className="text-center p-2 text-gray-500 font-medium">GD R</th>
+                          <th className="text-center p-2 text-gray-500 font-medium">GD W</th>
+                          <th className="text-center p-2 text-gray-500 font-medium">GD M</th>
+                          <th className="text-center p-2 text-gray-500 font-medium">Extra</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {subjectRows.map(({ yg, d, ap }) => {
+                          const extra =
+                            yg === "EYFS" ? (ap.gld !== null && ap.gld !== undefined ? `GLD ${ap.gld}%` : null) :
+                            (yg === "Year 1" || yg === "Year 2") && ap.phonics !== null && ap.phonics !== undefined ? `Ph ${ap.phonics}%` :
+                            yg === "Year 4" && ap.mtc !== null && ap.mtc !== undefined ? `MTC ${ap.mtc}%` : null;
+                          const small = d.cohort.number_in_cohort !== null && d.cohort.number_in_cohort < 15;
+                          return (
+                            <tr key={yg} className={`border-t border-gray-100 ${small ? "opacity-70" : ""}`}>
+                              <td className="p-2 font-medium text-gray-700">{yg.replace("Year ", "Y")}{small ? "*" : ""}</td>
+                              <td className="p-2 text-center text-gray-500">{d.cohort.number_in_cohort ?? "—"}</td>
+                              <td className={`p-2 text-center font-medium ${ap.r_are !== null && ap.r_are !== undefined && ap.r_are < 50 ? "text-red-600" : "text-gray-700"}`}>{ap.r_are !== null && ap.r_are !== undefined ? `${ap.r_are}%` : "—"}</td>
+                              <td className={`p-2 text-center font-medium ${ap.w_are !== null && ap.w_are !== undefined && ap.w_are < 50 ? "text-red-600" : "text-gray-700"}`}>{ap.w_are !== null && ap.w_are !== undefined ? `${ap.w_are}%` : "—"}</td>
+                              <td className={`p-2 text-center font-medium ${ap.m_are !== null && ap.m_are !== undefined && ap.m_are < 50 ? "text-red-600" : "text-gray-700"}`}>{ap.m_are !== null && ap.m_are !== undefined ? `${ap.m_are}%` : "—"}</td>
+                              <td className={`p-2 text-center font-semibold ${ap.c_are !== null && ap.c_are !== undefined ? getHeatmapColor(ap.c_are).split(" ")[0] + " rounded" : ""}`}>{ap.c_are !== null && ap.c_are !== undefined ? `${ap.c_are}%` : "—"}</td>
+                              <td className="p-2 text-center text-gray-500">{ap.r_gd !== null && ap.r_gd !== undefined ? `${ap.r_gd}%` : "—"}</td>
+                              <td className={`p-2 text-center ${ap.w_gd !== null && ap.w_gd !== undefined && ap.w_gd === 0 ? "text-red-600 font-semibold" : "text-gray-500"}`}>{ap.w_gd !== null && ap.w_gd !== undefined ? `${ap.w_gd}%` : "—"}</td>
+                              <td className="p-2 text-center text-gray-500">{ap.m_gd !== null && ap.m_gd !== undefined ? `${ap.m_gd}%` : "—"}</td>
+                              <td className="p-2 text-center text-gray-400">{extra ?? "—"}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* FSM vs non-FSM comparison */}
+                  {(() => {
+                    const y6 = schoolData["Year 6"];
+                    if (!y6) return null;
+                    const fsmY6 = y6.fsm6.c_are ?? null;
+                    const notFsmY6 = y6.not_fsm6.c_are ?? null;
+                    if (fsmY6 === null && notFsmY6 === null) return null;
+                    const gap = fsmY6 !== null && notFsmY6 !== null ? Math.round(notFsmY6 - fsmY6) : null;
+                    return (
+                      <div className="mt-3 flex items-center gap-4 text-xs text-gray-600 bg-white border border-gray-200 rounded-lg px-3 py-2">
+                        <span className="font-semibold text-gray-700">Y6 FSM gap:</span>
+                        {fsmY6 !== null && <span>FSM6 <span className="font-medium text-rose-600">{fsmY6}%</span></span>}
+                        {notFsmY6 !== null && <span>Non-FSM <span className="font-medium text-emerald-600">{notFsmY6}%</span></span>}
+                        {gap !== null && (
+                          <span className={`px-2 py-0.5 rounded-full font-semibold ${gap > 20 ? "bg-red-50 text-red-700" : gap > 10 ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>
+                            {gap}pp gap
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ─── Phase 1: Trust Insights ──────────────────────────────────────────────────
+
+function TrustInsights({ parsed }: { parsed: ParsedSpreadsheet }) {
+  const insights: { text: string; severity: "info" | "warning" | "error" }[] = [];
+
+  // Subject weakness analysis across Y6
+  const subjectTotals: Record<"reading" | "writing" | "maths", { sum: number; count: number }> = {
+    reading: { sum: 0, count: 0 },
+    writing: { sum: 0, count: 0 },
+    maths:   { sum: 0, count: 0 },
+  };
+  const weakWritingY6: string[] = [];
+  let totalY6Combined = 0;
+  let y6CombinedCount = 0;
+
+  for (const school of parsed.schools) {
+    const y6 = parsed.data[school]?.["Year 6"];
+    if (!y6) continue;
+    const ap = y6.all_pupils;
+    if (ap.r_are !== null && ap.r_are !== undefined) { subjectTotals.reading.sum += ap.r_are; subjectTotals.reading.count++; }
+    if (ap.w_are !== null && ap.w_are !== undefined) {
+      subjectTotals.writing.sum += ap.w_are; subjectTotals.writing.count++;
+      if (ap.w_are < 60) weakWritingY6.push(school);
+    }
+    if (ap.m_are !== null && ap.m_are !== undefined) { subjectTotals.maths.sum += ap.m_are; subjectTotals.maths.count++; }
+    if (ap.c_are !== null && ap.c_are !== undefined) { totalY6Combined += ap.c_are; y6CombinedCount++; }
+  }
+
+  const avgR = subjectTotals.reading.count > 0 ? Math.round(subjectTotals.reading.sum / subjectTotals.reading.count) : null;
+  const avgW = subjectTotals.writing.count > 0 ? Math.round(subjectTotals.writing.sum / subjectTotals.writing.count) : null;
+  const avgM = subjectTotals.maths.count > 0 ? Math.round(subjectTotals.maths.sum / subjectTotals.maths.count) : null;
+  const trustAvgY6Combined = y6CombinedCount > 0 ? Math.round(totalY6Combined / y6CombinedCount) : null;
+
+  const weakestSubject =
+    avgR !== null && avgW !== null && avgM !== null
+      ? (avgW <= avgR && avgW <= avgM ? "Writing" : avgR <= avgW && avgR <= avgM ? "Reading" : "Maths")
+      : null;
+
+  if (weakestSubject && weakWritingY6.length > 0) {
+    insights.push({
+      text: `Writing is the weakest subject trust-wide (avg ${avgW}%). ${weakWritingY6.length} school${weakWritingY6.length > 1 ? "s" : ""} have Y6 Writing below 60%: ${weakWritingY6.join(", ")}.`,
+      severity: weakWritingY6.length >= 3 ? "error" : "warning",
+    });
+  } else if (weakestSubject) {
+    const avg = weakestSubject === "Writing" ? avgW : weakestSubject === "Reading" ? avgR : avgM;
+    insights.push({
+      text: `${weakestSubject} is the weakest subject trust-wide (avg ${avg}% in Y6).`,
+      severity: "warning",
+    });
+  }
+
+  if (trustAvgY6Combined !== null) {
+    insights.push({
+      text: `Trust-wide average Y6 Combined ARE is ${trustAvgY6Combined}%.`,
+      severity: "info",
+    });
+  }
+
+  // Best Y6 performer
+  let bestSchool = "";
+  let bestPct = 0;
+  for (const school of parsed.schools) {
+    const pct = parsed.data[school]?.["Year 6"]?.all_pupils.c_are ?? 0;
+    if (pct > bestPct) { bestPct = pct; bestSchool = school; }
+  }
+  if (bestSchool && bestPct > 0) {
+    insights.push({ text: `${bestSchool} Y6 Combined at ${bestPct}% is the strongest in the trust.`, severity: "info" });
+  }
+
+  // EYFS missing
+  const missingEyfs = parsed.schools.filter((s) => !parsed.data[s]?.["EYFS"]);
+  if (missingEyfs.length > 0) {
+    insights.push({
+      text: `${missingEyfs.join(", ")} ${missingEyfs.length === 1 ? "has" : "have"} not submitted EYFS data — GLD baseline is unknown.`,
+      severity: "warning",
+    });
+  }
+
+  // Zero GD Writing
+  const zeroGdWriting: { school: string; yg: string }[] = [];
+  for (const school of parsed.schools) {
+    for (const yg of HEATMAP_YEAR_GROUPS) {
+      const d = parsed.data[school]?.[yg];
+      if (d && d.all_pupils.w_gd === 0) zeroGdWriting.push({ school, yg });
+    }
+  }
+  if (zeroGdWriting.length >= 3) {
+    const schoolsAffected = [...new Set(zeroGdWriting.map((z) => z.school))];
+    insights.push({
+      text: `Zero Greater Depth in Writing reported in ${zeroGdWriting.length} year groups across ${schoolsAffected.length} schools (${schoolsAffected.join(", ")}).`,
+      severity: "error",
+    });
+  }
+
+  // Implausible pipeline jumps
+  const bigJumps: string[] = [];
+  for (const school of parsed.schools) {
+    for (let i = 1; i < HEATMAP_YEAR_GROUPS.length; i++) {
+      const prev = parsed.data[school]?.[HEATMAP_YEAR_GROUPS[i - 1]]?.all_pupils.c_are ?? null;
+      const curr = parsed.data[school]?.[HEATMAP_YEAR_GROUPS[i]]?.all_pupils.c_are ?? null;
+      if (prev !== null && curr !== null && Math.abs(curr - prev) > 15) {
+        const cohort = parsed.data[school]?.[HEATMAP_YEAR_GROUPS[i]]?.cohort.number_in_cohort ?? null;
+        const ppPerPupil = cohort && cohort > 0 ? Math.round(100 / cohort) : null;
+        bigJumps.push(
+          `${school} ${HEATMAP_YEAR_GROUPS[i - 1].replace("Year ", "Y")}→${HEATMAP_YEAR_GROUPS[i].replace("Year ", "Y")}: ${prev}%→${curr}%` +
+          (ppPerPupil ? ` (cohort ${cohort} — each pupil ≈${ppPerPupil}pp)` : "")
+        );
+      }
+    }
+  }
+  if (bigJumps.length > 0) {
+    insights.push({
+      text: `Implausible pipeline jumps (>15pp between adjacent year groups): ${bigJumps.join("; ")}.`,
+      severity: "warning",
+    });
+  }
+
+  if (insights.length === 0) return null;
+
+  const sevColor = (s: string) =>
+    s === "error" ? "bg-red-50 border-red-200 text-red-800" :
+    s === "warning" ? "bg-amber-50 border-amber-200 text-amber-800" :
+    "bg-blue-50 border-blue-200 text-blue-700";
+  const sevIcon = (s: string) =>
+    s === "error" ? <AlertCircle size={13} className="flex-shrink-0 mt-0.5" /> :
+    s === "warning" ? <AlertTriangle size={13} className="flex-shrink-0 mt-0.5" /> :
+    <Info size={13} className="flex-shrink-0 mt-0.5" />;
+
+  return (
+    <div>
+      <h3 className="text-sm font-semibold text-gray-700 mb-3">Trust-Wide Insights</h3>
+      <div className="space-y-2 mb-5">
+        {insights.map((ins, i) => (
+          <div key={i} className={`flex items-start gap-2 text-xs px-3 py-2 rounded-lg border ${sevColor(ins.severity)}`}>
+            {sevIcon(ins.severity)}
+            <span>{ins.text}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Questions box */}
+      <div className="border border-gray-200 rounded-xl p-4 bg-gray-50">
+        <h4 className="text-xs font-semibold text-gray-700 mb-2">Questions for the Trust</h4>
+        <ul className="space-y-1.5 text-xs text-gray-600">
+          <li className="flex items-start gap-2"><span className="text-gray-400 mt-0.5">Q</span> How long did each school spend compiling this spreadsheet?</li>
+          <li className="flex items-start gap-2"><span className="text-gray-400 mt-0.5">Q</span> Are all schools using the same assessment criteria for levelling?</li>
+          {missingEyfs.length > 0 && (
+            <li className="flex items-start gap-2"><span className="text-amber-500 mt-0.5">Q</span> Why {missingEyfs.length === 1 ? `has ${missingEyfs[0]}` : `have ${missingEyfs.join(", ")}`} not submitted EYFS data?</li>
+          )}
+          {bigJumps.length > 0 && (
+            <li className="flex items-start gap-2"><span className="text-amber-500 mt-0.5">Q</span> What evidence supports the large year-group jumps flagged above?</li>
+          )}
+          {zeroGdWriting.length >= 3 && (
+            <li className="flex items-start gap-2"><span className="text-red-400 mt-0.5">Q</span> Why is Greater Depth in Writing reporting zero across multiple year groups?</li>
+          )}
+          <li className="flex items-start gap-2"><span className="text-gray-400 mt-0.5">Q</span> Is the data entry in this spreadsheet quality-checked before submission?</li>
+        </ul>
       </div>
     </div>
   );
@@ -543,8 +993,6 @@ export default function TrustAssessorPage() {
     }
   }
 
-  const visibleFlags = showAllFlags ? parsed?.qualityFlags ?? [] : (parsed?.qualityFlags ?? []).slice(0, 5);
-
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -662,84 +1110,159 @@ export default function TrustAssessorPage() {
               key="phase1"
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white border border-gray-200 rounded-2xl p-6"
+              className="bg-white border border-gray-200 rounded-2xl p-6 space-y-8"
             >
               <SectionHeader number={1} title="Your Data" subtitle="What the spreadsheet contains — parsed deterministically, no AI." complete />
 
-              {/* Summary stats */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-                <StatCard label="Schools found" value={parsed.schools.length} sub={parsed.schools.join(", ")} />
-                <StatCard label="Year groups" value={parsed.yearGroups.length} sub={parsed.yearGroups.join(", ")} />
-                <StatCard label="Data points" value={parsed.totalDataPoints.toLocaleString()} />
-                <StatCard label="Quality flags" value={parsed.qualityFlags.length} sub={parsed.qualityFlags.length > 0 ? "See below" : "None"} />
-              </div>
-
-              {/* Heatmap */}
-              <div className="mb-6">
-                <div className="flex items-center gap-2 mb-3">
-                  <h3 className="text-sm font-semibold text-gray-700">Combined ARE % — Heatmap</h3>
-                  <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded">All Pupils</span>
-                </div>
-                <HeatmapGrid parsed={parsed} />
-              </div>
-
-              {/* FSM from spreadsheet */}
-              <div className="mb-6">
-                <h3 className="text-sm font-semibold text-gray-700 mb-3">Cohort info from spreadsheet (Year 6)</h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-gray-100">
-                        <th className="text-left p-2 text-gray-500 font-medium">School</th>
-                        <th className="text-center p-2 text-gray-500 font-medium">Cohort</th>
-                        <th className="text-center p-2 text-gray-500 font-medium">SEND</th>
-                        <th className="text-center p-2 text-gray-500 font-medium">EHCP</th>
-                        <th className="text-center p-2 text-gray-500 font-medium">FSM</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {parsed.schools.map((school) => {
-                        const y6 = parsed.data[school]?.["Year 6"];
-                        return (
-                          <tr key={school} className="border-t border-gray-50">
-                            <td className="p-2 font-medium text-gray-700">{school}</td>
-                            <td className="p-2 text-center text-gray-600">{y6?.cohort.number_in_cohort ?? "—"}</td>
-                            <td className="p-2 text-center text-gray-600">{y6?.cohort.number_send ?? "—"}</td>
-                            <td className="p-2 text-center text-gray-600">{y6?.cohort.ehcp ?? "—"}</td>
-                            <td className="p-2 text-center text-gray-600">{y6?.cohort.number_fsm ?? "—"}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Quality flags */}
-              {parsed.qualityFlags.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-700 mb-3">
-                    Data quality flags ({parsed.qualityFlags.length})
-                  </h3>
-                  <div className="space-y-2">
-                    {visibleFlags.map((flag, i) => (
-                      <div key={i} className={`flex items-start gap-2 text-xs px-3 py-2 rounded-lg ${flag.severity === "error" ? "bg-red-50 text-red-700" : "bg-amber-50 text-amber-700"}`}>
-                        {flag.severity === "error" ? <AlertCircle size={13} className="flex-shrink-0 mt-0.5" /> : <AlertTriangle size={13} className="flex-shrink-0 mt-0.5" />}
-                        <span><span className="font-semibold">{flag.school} / {flag.yearGroup} / {flag.field}:</span> {flag.issue}</span>
-                      </div>
-                    ))}
+              {/* ── 1. Trust Summary Bar ── */}
+              {(() => {
+                let totalPupils = 0;
+                let totalFsm = 0;
+                let totalSend = 0;
+                for (const school of parsed.schools) {
+                  for (const yg of YEAR_GROUPS) {
+                    const d = parsed.data[school]?.[yg];
+                    if (!d) continue;
+                    if (d.cohort.number_in_cohort !== null) totalPupils += d.cohort.number_in_cohort;
+                    if (d.cohort.number_fsm !== null) totalFsm += d.cohort.number_fsm;
+                    if (d.cohort.number_send !== null) totalSend += d.cohort.number_send;
+                  }
+                }
+                const fsmPct = totalPupils > 0 ? Math.round((totalFsm / totalPupils) * 1000) / 10 : null;
+                const sendPct = totalPupils > 0 ? Math.round((totalSend / totalPupils) * 1000) / 10 : null;
+                return (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                    <StatCard label="Schools" value={parsed.schools.length} sub={parsed.schools.join(", ")} />
+                    <StatCard label="Year groups" value={parsed.yearGroups.length} sub={parsed.yearGroups.join(", ")} />
+                    <StatCard label="Data points" value={parsed.totalDataPoints.toLocaleString()} />
+                    <StatCard label="Total pupils" value={totalPupils > 0 ? totalPupils.toLocaleString() : "—"} sub="all year groups" />
+                    <StatCard label="FSM pupils" value={totalFsm > 0 ? totalFsm : "—"} sub={fsmPct !== null ? `${fsmPct}% trust-wide` : undefined} />
+                    <StatCard label="Quality flags" value={parsed.qualityFlags.length} sub={parsed.qualityFlags.length > 0 ? "See below" : "None"} />
                   </div>
-                  {parsed.qualityFlags.length > 5 && (
-                    <button
-                      onClick={() => setShowAllFlags(!showAllFlags)}
-                      className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 mt-2"
-                    >
-                      {showAllFlags ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                      {showAllFlags ? "Show fewer" : `Show all ${parsed.qualityFlags.length} flags`}
-                    </button>
-                  )}
+                );
+              })()}
+
+              {/* ── 2. Subject Selector Heatmap ── */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-gray-700">ARE % — Heatmap by Subject</h3>
+                  <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded">Click a school name to expand its detail card below</span>
                 </div>
-              )}
+                <SubjectHeatmap
+                  parsed={parsed}
+                  onSchoolClick={(school) => {
+                    const el = document.getElementById(`school-card-${school}`);
+                    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }}
+                />
+              </div>
+
+              {/* ── 3. Per-School Detail Cards ── */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">Per-School Detail</h3>
+                <div className="space-y-2">
+                  {parsed.schools.map((school) => (
+                    <SchoolDetailCard key={school} school={school} parsed={parsed} />
+                  ))}
+                </div>
+              </div>
+
+              {/* ── 4. Data Quality Flags ── */}
+              {(() => {
+                // Compute additional quality flags from parsed data
+                const extraFlags: QualityFlag[] = [];
+
+                // Missing EYFS
+                for (const school of parsed.schools) {
+                  if (!parsed.data[school]?.["EYFS"]) {
+                    extraFlags.push({ school, yearGroup: "EYFS", field: "gld", issue: `${school} has not submitted EYFS data`, severity: "warning" });
+                  }
+                }
+
+                // Zero GD Writing across multiple year groups
+                for (const school of parsed.schools) {
+                  const zeroYgs: string[] = [];
+                  for (const yg of HEATMAP_YEAR_GROUPS) {
+                    const d = parsed.data[school]?.[yg];
+                    if (d && d.all_pupils.w_gd === 0) zeroYgs.push(yg.replace("Year ", "Y"));
+                  }
+                  if (zeroYgs.length >= 2) {
+                    extraFlags.push({ school, yearGroup: zeroYgs.join(", "), field: "w_gd", issue: `Zero Greater Depth in Writing across ${zeroYgs.join(", ")}`, severity: "warning" });
+                  }
+                }
+
+                // Implausible pipeline jumps
+                for (const school of parsed.schools) {
+                  for (let i = 1; i < HEATMAP_YEAR_GROUPS.length; i++) {
+                    const prev = parsed.data[school]?.[HEATMAP_YEAR_GROUPS[i - 1]]?.all_pupils.c_are ?? null;
+                    const curr = parsed.data[school]?.[HEATMAP_YEAR_GROUPS[i]]?.all_pupils.c_are ?? null;
+                    if (prev !== null && curr !== null && Math.abs(curr - prev) > 15) {
+                      extraFlags.push({
+                        school,
+                        yearGroup: `${HEATMAP_YEAR_GROUPS[i - 1].replace("Year ", "Y")}→${HEATMAP_YEAR_GROUPS[i].replace("Year ", "Y")}`,
+                        field: "c_are",
+                        issue: `Implausible pipeline jump: ${prev}% → ${curr}% (${curr > prev ? "+" : ""}${Math.round(curr - prev)}pp)`,
+                        severity: "warning",
+                      });
+                    }
+                  }
+                }
+
+                const allFlags = [...parsed.qualityFlags, ...extraFlags];
+                if (allFlags.length === 0) return null;
+
+                const errors = allFlags.filter((f) => f.severity === "error");
+                const warnings = allFlags.filter((f) => f.severity === "warning");
+                const visibleAll = showAllFlags ? allFlags : allFlags.slice(0, 6);
+
+                return (
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-semibold text-gray-700">Data Quality</h3>
+                      <div className="flex items-center gap-2">
+                        {errors.length > 0 && (
+                          <span className="text-xs bg-red-50 text-red-700 border border-red-200 px-2 py-0.5 rounded-full">{errors.length} error{errors.length > 1 ? "s" : ""}</span>
+                        )}
+                        {warnings.length > 0 && (
+                          <span className="text-xs bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full">{warnings.length} warning{warnings.length > 1 ? "s" : ""}</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      {visibleAll.map((flag, i) => (
+                        <div key={i} className={`flex items-start gap-2 text-xs px-3 py-2 rounded-lg border ${flag.severity === "error" ? "bg-red-50 border-red-200 text-red-700" : "bg-amber-50 border-amber-100 text-amber-700"}`}>
+                          {flag.severity === "error" ? <AlertCircle size={13} className="flex-shrink-0 mt-0.5" /> : <AlertTriangle size={13} className="flex-shrink-0 mt-0.5" />}
+                          <span>
+                            <span className="font-semibold">{flag.school}</span>
+                            {flag.yearGroup ? ` / ${flag.yearGroup}` : ""}
+                            {flag.field ? ` / ${flag.field}` : ""}
+                            {": "}
+                            {flag.issue}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    {allFlags.length > 6 && (
+                      <button
+                        onClick={() => setShowAllFlags(!showAllFlags)}
+                        className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 mt-2"
+                      >
+                        {showAllFlags ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                        {showAllFlags ? "Show fewer" : `Show all ${allFlags.length} flags`}
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* ── 5. Trust-Wide Insights & Questions ── */}
+              <TrustInsights parsed={parsed} />
+
+              {/* ── 6. Data Source Label ── */}
+              <div className="flex items-center gap-2 text-xs text-gray-400 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2">
+                <Info size={12} />
+                Source: Trust mid-year data capture spreadsheet (2025/26). Self-reported by each school — not externally validated.
+              </div>
             </motion.section>
           )}
         </AnimatePresence>
