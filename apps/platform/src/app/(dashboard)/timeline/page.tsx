@@ -1,267 +1,159 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  History,
-  Search,
-  Filter,
-  User,
-  ArrowRight,
-  Eye,
-  Tag,
-  Calendar,
-  ChevronDown,
-  ChevronUp,
-  Shield,
-  Database,
-  Clock,
-  CheckCircle2,
-  AlertCircle,
-  FileText,
-} from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { motion } from "framer-motion";
+import { History, Clock } from "lucide-react";
 import { useAuth } from "@/context/SupabaseAuthContext";
-import { supabase } from "@/lib/supabase";
+import { Timeline } from "@/components/school-events/Timeline";
+import type { SchoolEvent } from "@/lib/school-events/types";
+import type { TimelineFilters } from "@/components/school-events/Timeline";
 
-interface AuditEntry {
-  id: string;
-  event_type: string;
-  event_category: string;
-  actor_email: string;
-  resource_type: string;
-  action: string;
-  before_state: any;
-  after_state: any;
-  metadata: any;
-  created_at: string;
-}
+// School name lookup from URN
+const URN_NAMES: Record<string, string> = {
+  '148869': 'Clayton Village Primary School',
+  '146581': 'Crossley Hall Primary School',
+  '144862': 'Farnham Primary School',
+  '148201': 'Grove House Primary School',
+  '144860': 'Hollingwood Primary School',
+  '144861': 'Laycock Primary School',
+  '150016': 'Lidget Green Primary School',
+};
 
-export default function AuditLogPage() {
+const SPRING = { type: 'spring' as const, damping: 30, stiffness: 250 };
+
+export default function TimelinePage() {
   const { organization } = useAuth();
-  const [logs, setLogs] = useState<AuditEntry[]>([]);
+
+  // Read ?school=URN from URL
+  const [schoolUrn, setSchoolUrn] = useState<string | null>(null);
+  const [events, setEvents] = useState<SchoolEvent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [filterCategory, setFilterCategory] = useState<string>("all");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [hasMore, setHasMore] = useState(false);
+  const [offset, setOffset] = useState(0);
+  const [activeFilters, setActiveFilters] = useState<TimelineFilters>({});
+
+  const LIMIT = 50;
 
   useEffect(() => {
-    if (organization?.id) {
-      fetchLogs();
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const urn = params.get('school');
+      setSchoolUrn(urn);
     }
-  }, [organization?.id, filterCategory]);
+  }, []);
 
-  const fetchLogs = async () => {
+  const fetchEvents = useCallback(async (filters: TimelineFilters, offsetVal: number, append = false) => {
+    if (!organization?.id) return;
     setLoading(true);
     try {
-      let query = supabase
-        .from("audit_log")
-        .select("*")
-        .eq("organization_id", organization?.id)
-        .order("created_at", { ascending: false });
+      const params = new URLSearchParams();
+      params.set('limit', String(LIMIT));
+      params.set('offset', String(offsetVal));
+      if (filters.category) params.set('category', filters.category);
+      if (filters.severity) params.set('severity', filters.severity);
+      if (filters.source_app) params.set('source_app', filters.source_app);
+      if (filters.from) params.set('from', filters.from);
+      if (filters.to) params.set('to', filters.to);
+      if (schoolUrn) params.set('school_urn', schoolUrn);
 
-      if (filterCategory !== "all") {
-        query = query.eq("event_category", filterCategory);
-      }
+      const res = await fetch(`/api/events?${params.toString()}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const newEvents: SchoolEvent[] = data.events ?? [];
 
-      const { data, error } = await query.limit(100);
-
-      if (error) throw error;
-      setLogs(data || []);
+      setEvents((prev) => append ? [...prev, ...newEvents] : newEvents);
+      setHasMore(newEvents.length === LIMIT);
+      setOffset(offsetVal + newEvents.length);
     } catch (err) {
-      console.error("Error fetching logs:", err);
+      console.error('[TimelinePage] fetch error:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [organization?.id, schoolUrn]);
 
-  const getEventIcon = (category: string) => {
-    switch (category) {
-      case "auth":
-        return <Shield className="text-rose-500" size={18} />;
-      case "action":
-        return <CheckCircle2 className="text-blue-500" size={18} />;
-      case "evidence":
-        return <FileText className="text-emerald-500" size={18} />;
-      case "sef":
-        return <Eye className="text-violet-500" size={18} />;
-      default:
-        return <Database className="text-slate-500" size={18} />;
+  // Initial load
+  useEffect(() => {
+    if (organization?.id !== undefined) {
+      fetchEvents(activeFilters, 0, false);
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [organization?.id, schoolUrn]);
 
-  const filteredLogs = logs.filter(
-    (log) =>
-      log.actor_email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      log.action?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      log.resource_type?.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+  const handleFilter = useCallback((filters: TimelineFilters) => {
+    setActiveFilters(filters);
+    setOffset(0);
+    fetchEvents(filters, 0, false);
+  }, [fetchEvents]);
+
+  const handleLoadMore = useCallback(() => {
+    fetchEvents(activeFilters, offset, true);
+  }, [fetchEvents, activeFilters, offset]);
+
+  const schoolName = schoolUrn ? (URN_NAMES[schoolUrn] ?? `URN ${schoolUrn}`) : null;
 
   return (
-    <div className="p-8 max-w-[1400px] mx-auto space-y-8 min-h-screen">
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-        <div>
-          <div className="flex items-center gap-3 text-emerald-500 font-black text-[10px] uppercase tracking-[0.2em] mb-3 bg-emerald-50 dark:bg-emerald-950/40 w-fit px-4 py-1.5 rounded-full border border-emerald-100 dark:border-emerald-900/50">
-            <Shield size={14} className="animate-pulse" />
-            System Integrity Audit
-          </div>
-          <h1 className="text-5xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-4">
-            <History className="text-blue-600" size={48} />
-            Audit Timeline
-          </h1>
+    <div className="p-6 md:p-8 max-w-4xl mx-auto space-y-8 min-h-screen">
+
+      {/* ── Header ─────────────────────────────────────────────────────── */}
+      <motion.header
+        initial={{ opacity: 0, y: -12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={SPRING}
+        className="space-y-2"
+      >
+        <div className="flex items-center gap-2 text-sky-500 font-semibold text-[10px] uppercase tracking-[0.2em] bg-sky-500/10 w-fit px-3 py-1.5 rounded-full border border-sky-500/30">
+          <Clock size={12} />
+          School Intelligence
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="relative">
-            <Search
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-              size={18}
-            />
-            <input
-              type="text"
-              placeholder="Search by user or action..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-12 pr-6 py-3.5 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl text-sm font-bold w-72 focus:ring-2 ring-blue-500 outline-none transition-all shadow-sm"
-            />
-          </div>
-          <select
-            value={filterCategory}
-            onChange={(e) => setFilterCategory(e.target.value)}
-            className="px-6 py-3.5 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl text-sm font-black text-slate-700 dark:text-slate-300 outline-none cursor-pointer focus:ring-2 ring-blue-500 transition-all shadow-sm"
-          >
-            <option value="all">All Activities</option>
-            <option value="auth">Security & Auth</option>
-            <option value="action">Strategic Actions</option>
-            <option value="evidence">Evidence Vault</option>
-            <option value="sef">SEF Generation</option>
-          </select>
-        </div>
-      </header>
-
-      <div className="bg-white dark:bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-200/60 dark:border-slate-700/50 shadow-md overflow-hidden">
-        {loading ? (
-          <div className="p-20 flex flex-col items-center gap-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600" />
-            <p className="text-slate-500 font-black text-xs uppercase tracking-widest">
-              Reconstructing timeline...
-            </p>
-          </div>
-        ) : filteredLogs.length === 0 ? (
-          <div className="p-20 text-center space-y-4">
-            <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 rounded-2xl flex items-center justify-center mx-auto text-slate-300">
-              <AlertCircle size={40} />
-            </div>
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white">
-              No entries found
-            </h3>
-            <p className="text-slate-500 text-sm max-w-xs mx-auto">
-              Try adjusting your filters or search query to find specific
-              events.
-            </p>
-          </div>
-        ) : (
-          <div className="divide-y divide-slate-50 dark:divide-slate-800">
-            {filteredLogs.map((log) => (
-              <div key={log.id} className="group">
-                <div
-                  className={`p-6 flex items-center gap-6 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all ${expandedId === log.id ? "bg-blue-50/30 dark:bg-blue-900/10" : ""}`}
-                  onClick={() =>
-                    setExpandedId(expandedId === log.id ? null : log.id)
-                  }
-                >
-                  <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 flex items-center justify-center shadow-sm border border-slate-100 dark:border-slate-700 shrink-0">
-                    {getEventIcon(log.event_category)}
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 mb-1">
-                      <span className="font-black text-slate-900 dark:text-white text-sm truncate">
-                        {log.action}
-                      </span>
-                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
-                        {log.resource_type}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-4 text-xs font-bold text-slate-500 min-w-0">
-                      <span className="flex items-center gap-1.5 shrink-0">
-                        <User size={12} className="text-blue-500" />
-                        {log.actor_email}
-                      </span>
-                      <span className="flex items-center gap-1.5 shrink-0">
-                        <Clock size={12} className="text-slate-400" />
-                        {new Date(log.created_at).toLocaleString("en-GB", {
-                          day: "2-digit",
-                          month: "short",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 text-slate-300 group-hover:text-blue-500 transition-colors">
-                    {expandedId === log.id ? (
-                      <ChevronUp size={20} />
-                    ) : (
-                      <ChevronDown size={20} />
-                    )}
-                  </div>
-                </div>
-
-                <AnimatePresence>
-                  {expandedId === log.id && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      className="overflow-hidden bg-slate-50/50 dark:bg-slate-950/20 border-t border-slate-100 dark:border-slate-800"
-                    >
-                      <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className="space-y-4">
-                          <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-rose-500" />
-                            Previous State
-                          </h5>
-                          <pre className="p-6 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 text-[10px] font-mono overflow-auto max-h-[300px] shadow-inner text-slate-600 dark:text-slate-400 leading-relaxed">
-                            {JSON.stringify(
-                              log.before_state || "No previous state recorded",
-                              null,
-                              2,
-                            )}
-                          </pre>
-                        </div>
-                        <div className="space-y-4">
-                          <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-500 flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                            Resulting State
-                          </h5>
-                          <pre className="p-6 bg-white dark:bg-slate-900 rounded-2xl border border-emerald-100 dark:border-emerald-900/30 text-[10px] font-mono overflow-auto max-h-[300px] shadow-inner text-slate-600 dark:text-slate-400 leading-relaxed ring-4 ring-emerald-50/30 dark:ring-emerald-900/10">
-                            {JSON.stringify(
-                              log.after_state ||
-                                log.metadata ||
-                                "No detailed state recorded",
-                              null,
-                              2,
-                            )}
-                          </pre>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-3xl font-black text-foreground tracking-tight flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center">
+                <History className="text-sky-500" size={20} />
               </div>
-            ))}
+              Events Timeline
+            </h1>
+            {schoolName && (
+              <p className="text-sm text-muted-foreground mt-1 ml-[52px]">
+                Filtered to: <span className="font-medium text-foreground">{schoolName}</span>
+              </p>
+            )}
+            {!schoolName && (
+              <p className="text-sm text-muted-foreground mt-1 ml-[52px]">
+                All schools in your organisation
+              </p>
+            )}
           </div>
-        )}
-      </div>
 
-      <footer className="flex items-center justify-between text-slate-400 px-4">
-        <p className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
-          <Shield size={12} className="text-emerald-500" />
-          Immutable Audit Trail Locked & Verified
-        </p>
-        <p className="text-[10px] font-bold">Showing last 100 entries</p>
-      </footer>
+          {events.length > 0 && (
+            <div className="flex items-center gap-2 bg-card border border-border rounded-xl px-3 py-1.5">
+              <div className="w-2 h-2 rounded-full bg-sky-500 animate-pulse" />
+              <span className="text-xs text-muted-foreground">
+                {events.length} event{events.length !== 1 ? 's' : ''}
+                {hasMore ? '+' : ''}
+              </span>
+            </div>
+          )}
+        </div>
+      </motion.header>
+
+      {/* ── Timeline ────────────────────────────────────────────────────── */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ ...SPRING, delay: 0.1 }}
+      >
+        <Timeline
+          events={events}
+          loading={loading}
+          onFilter={handleFilter}
+          onLoadMore={handleLoadMore}
+          hasMore={hasMore}
+          variant="full-page"
+        />
+      </motion.div>
+
     </div>
   );
 }

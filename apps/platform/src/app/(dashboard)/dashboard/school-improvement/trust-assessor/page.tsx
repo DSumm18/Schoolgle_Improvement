@@ -66,6 +66,9 @@ import {
   citationFull,
   evaluateResearchKpis,
 } from "@/lib/trust-analysis/research-citations";
+import { emitTrustAssessorEvents } from "@/lib/school-events/emit-trust-assessor";
+import { Timeline } from "@/components/school-events/Timeline";
+import type { SchoolEvent } from "@/lib/school-events/types";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -1273,6 +1276,128 @@ function SchoolTab({ school, parsed, dfeData, authToken }: { school: string; par
   const [narrativeLoading, setNarrativeLoading] = useState(false);
   const narrativeRequestedRef = useRef(false);
 
+  // ── Timeline state ──
+  const [timelineEvents, setTimelineEvents] = useState<SchoolEvent[]>([]);
+  const [timelineLoading, setTimelineLoading] = useState(false);
+  const eventsEmittedRef = useRef(false);
+
+  // Emit Trust Assessor events and fetch timeline on mount
+  useEffect(() => {
+    if (eventsEmittedRef.current || !school || !info) return;
+    eventsEmittedRef.current = true;
+
+    const run = async () => {
+      // Compute forensic verdict for event emission
+      const schoolInfoLocal = getSchoolByAbbrev(school);
+      const schoolFsmPctLocal = fsmPct ?? schoolInfoLocal?.fsmPct ?? 25;
+      const schoolSendPctLocal = sendPct ?? 15;
+      const schoolEalPctLocal = schoolInfoLocal?.ealPct ?? 20;
+      const schoolDemographicsLocal = {
+        fsmPct: schoolFsmPctLocal,
+        sendPct: schoolSendPctLocal,
+        ealPct: schoolEalPctLocal,
+      };
+
+      const ygMap: Record<string, YearGroupShort> = {
+        'Year 1': 'Y1', 'Year 2': 'Y2', 'Year 3': 'Y3',
+        'Year 4': 'Y4', 'Year 5': 'Y5', 'Year 6': 'Y6',
+      };
+      const yearAnalysisForEmit = HEATMAP_YEAR_GROUPS.map((yg) => {
+        const reported = schoolData[yg]?.all_pupils.c_are ?? null;
+        const ygShort = ygMap[yg];
+        if (!ygShort) return null;
+        const expected = demographicExpectation(schoolDemographicsLocal, ygShort, 'combined');
+        const classification = classifyAttainment(reported, expected);
+        return { classification };
+      }).filter(Boolean) as { classification: { verdict: 'accurate' | 'over-reported' | 'under-reported' | 'no-data'; severity: 'low' | 'medium' | 'high'; gap: number } }[];
+
+      const rawVerdict = computeForensicVerdict(yearAnalysisForEmit.map((y) => y.classification));
+      const severityFromColor: Record<string, 'strong' | 'secure' | 'attention' | 'urgent'> = {
+        green: 'strong', blue: 'secure', amber: 'attention', red: 'urgent',
+      };
+
+      // Compute KPIs for emit
+      const kpiYearDataLocal: Record<string, { r?: number; w?: number; m?: number; c?: number } | undefined> = {};
+      for (const yg of YEAR_GROUPS) {
+        const d = schoolData[yg]?.all_pupils;
+        if (d) {
+          kpiYearDataLocal[yg] = {
+            r: d.r_are ?? undefined,
+            w: d.w_are ?? undefined,
+            m: d.m_are ?? undefined,
+            c: d.c_are ?? undefined,
+          };
+        }
+      }
+      const kpisForEmit = evaluateResearchKpis(schoolDemographicsLocal, kpiYearDataLocal);
+
+      // EAL trajectory concern
+      const ealConcern = (schoolInfoLocal?.ealPct ?? 0) > 30 && (() => {
+        const trajectory = getEalTrajectory(schoolEalPctLocal, schoolFsmPctLocal, schoolSendPctLocal, 'combined');
+        const y1Rep = schoolData['Year 1']?.all_pupils.c_are ?? null;
+        const y6Rep = schoolData['Year 6']?.all_pupils.c_are ?? null;
+        const slope = y6Rep !== null && y1Rep !== null ? y6Rep - y1Rep : null;
+        return slope !== null && slope < -5;
+      })();
+
+      // Cohort mismatch: check for large jumps in cohort sizes
+      const cohortSizes = HEATMAP_YEAR_GROUPS.map((yg) => schoolData[yg]?.cohort.number_in_cohort ?? null).filter((v): v is number => v !== null);
+      const cohortMismatch = cohortSizes.length >= 3 && cohortSizes.some((v, i) => {
+        if (i === 0) return false;
+        const prev = cohortSizes[i - 1];
+        return Math.abs(v - prev) > 10;
+      });
+
+      await emitTrustAssessorEvents({
+        organizationId: '', // will be filled by API from session
+        school,
+        schoolName: info.name,
+        schoolUrn: info.urn,
+        nationalPercentile: nationalPercentile
+          ? { pct: nationalPercentile.pct, percentile: nationalPercentile.percentile, rank: nationalPercentile.rank, totalSchools: nationalPercentile.totalSchools }
+          : null,
+        threeYearAverage: threeYearAvg
+          ? { averagePct: threeYearAvg.averagePct, yearsUsed: threeYearAvg.yearsUsed }
+          : null,
+        y6Combined: y6Combined,
+        statAlerts,
+        forensicVerdict: { severity: severityFromColor[rawVerdict.color] ?? 'secure', summary: rawVerdict.interpretation },
+        researchKpis: kpisForEmit.map((k) => ({
+          id: k.id,
+          name: k.name,
+          passed: k.passed,
+          actual: k.actual,
+          target: k.target,
+          explanation: k.explanation,
+          citationId: k.citationId,
+        })),
+        ealTrajectoryConcern: ealConcern,
+        cohortMismatchDetected: cohortMismatch,
+        authToken,
+      });
+
+      // Fetch timeline events for this school
+      setTimelineLoading(true);
+      try {
+        const res = await fetch(
+          `/api/events?source_app=trust-assessor&school_urn=${info.urn}&limit=20`,
+          authToken ? { headers: { Authorization: `Bearer ${authToken}` } } : {}
+        );
+        if (res.ok) {
+          const data = await res.json();
+          setTimelineEvents(data.events ?? []);
+        }
+      } catch {
+        // non-fatal
+      } finally {
+        setTimelineLoading(false);
+      }
+    };
+
+    run();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [school]);
+
   // Generate AI narrative once when component mounts with data
   useEffect(() => {
     if (narrativeRequestedRef.current || !school) return;
@@ -1586,6 +1711,32 @@ function SchoolTab({ school, parsed, dfeData, authToken }: { school: string; par
           <span className="font-semibold">What to do next: </span>
           {whatToDoNext}
         </div>
+      </motion.div>
+
+      {/* ── School Events Timeline ── */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.1 }}
+        className="bg-card border border-border rounded-2xl p-6"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">Events Timeline</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">Findings logged by Trust Assessor for {info?.name ?? school}</p>
+          </div>
+          <a
+            href={`/timeline?school=${info?.urn ?? school}`}
+            className="text-xs text-primary hover:underline flex items-center gap-1"
+          >
+            View full timeline →
+          </a>
+        </div>
+        <Timeline
+          events={timelineEvents}
+          loading={timelineLoading}
+          variant="embedded"
+        />
       </motion.div>
 
       {/* Generate Governor Report button — top right */}
