@@ -928,3 +928,57 @@ When using `pupil_assessments_pseudo`, the `academic_year_start` maps to cohort 
 - Y2 phonics: `academic_year_start = receptionYear + 2`
 - KS1 (Y2): `academic_year_start = receptionYear + 2`
 - KS2 (Y6): `academic_year_end = receptionYear + 7` (in `dfe_data.ks2_results`)
+
+---
+
+## 20. Monday polish — headteacher-safe framing + design cleanup (2026-04-18)
+
+### Customer sensitivity principle
+
+Headteachers are Schoolgle's paying customers. The Trust Assessor must be evidence-based and specific about numbers, but the **voice** must be that of an inquiry partner, not an auditor. Findings should be framed as "questions to explore" not "failures to call out."
+
+### Voice guidelines for future AI narratives
+
+**Replace:**
+- "over-levelled" / "over-reported" / "inflated" → "higher than demographic prediction suggests"
+- "the headteacher should explain" → "questions a governor might reasonably explore"
+- "failure" → "area for investigation"
+- "the school is gaming" → "the data warrants moderation review"
+- "this can only be explained by" → "one possible explanation is"
+- "This is not a hypothesis. The statistics rule out genuine decline." → "The following data points are presented for governor discussion"
+
+**The Cohort Forensics conclusion was rewritten to:**
+> "The 2022/23 KS1 results sit 12-17pp higher than this cohort's demographic profile predicts. The current Y6 figures align closely with that prediction. This pattern — common in schools where KS1 moderation was not externally verified — suggests the Y6 'decline' is more likely an assessment realignment than a genuine regression. Governors may want to ask about 2022/23 moderation practices."
+
+### PupilCardGrid architecture
+
+- New component: `apps/platform/src/components/trust-assessor/PupilCardGrid.tsx`
+- Year-group filter chips at top (calculates max year group per pupil)
+- Grid shows 3 columns responsive, max-height 620px with overflow-y-auto
+- Context panels auto-generated per demographic flags — always constructive
+- Radix Dialog detail drawer (slide-in from right) for full journey view
+- Spring hover animations: `whileHover={{ y: -2 }}` with `{ type: "spring", damping: 30, stiffness: 250 }`
+- Spotlight pupil excluded from grid by pupilId prop
+
+### Design cleanup
+
+- Replaced `bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700` (two instances) with clean bordered `bg-card border border-border rounded-2xl overflow-hidden` + 4px `h-1 bg-sky-500` accent strip
+- Evidence card containers changed from red to amber
+- Evidence "four pieces" renamed to "four data points for discussion"
+- Hover animations added: KPI stat tiles, research factor cards, forensic alert cards
+- Recharts tooltip: `borderRadius: '12px'`, `boxShadow: '0 4px 12px rgba(0,0,0,0.08)'`, `padding: '8px 12px'`
+- activeDot: `{ r: 6, strokeWidth: 2, stroke: '#fff' }` across all Line charts
+
+### Governor report changes
+
+- **Timeline removed from report** — it is a live tool, not a static report artifact
+- Page 4 title changed to "Five Questions for the Board to Explore"
+- Chart block: gracefully handles missing CTF data — shows SVG placeholder with "No cohort journey data available" and a note about connecting CTF
+- Hero stat boxes: null values filtered out (no empty N/A blocks for Crossley Hall)
+- All 29 existing tests pass after changes
+
+### Test evidence
+
+- PupilCardGrid: 21 new tests covering levelValue, weakestSubject, overallTrend, contextPanel framing (verifies no accusatory language)
+- Governor report: 29/29 pass
+- Build: clean `✓ Compiled successfully`
