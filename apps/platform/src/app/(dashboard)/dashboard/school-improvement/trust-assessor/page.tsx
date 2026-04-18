@@ -51,6 +51,7 @@ import {
 import { DriveFilePicker } from "@/components/canvas/DriveFilePicker";
 import { CohortPassport } from "@/components/trust-assessor/CohortPassport";
 import type { CohortPassportData } from "@/components/trust-assessor/CohortPassport";
+import { PupilCardGrid } from "@/components/trust-assessor/PupilCardGrid";
 import { useAuth } from "@/context/SupabaseAuthContext";
 import { useGoogleDriveAccess } from "@/hooks/useGoogleDriveAccess";
 import type { KS2Result, CensusRecord, NationalPercentile, ThreeYearAverage } from "@/lib/trust-analysis/types";
@@ -1964,8 +1965,9 @@ function SchoolTab({ school, parsed, dfeData, authToken, organizationId }: { sch
               key={idx}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
+              whileHover={{ y: -2, scale: 1.01, transition: { type: "spring", damping: 30, stiffness: 250 } }}
               transition={{ duration: 0.3, delay: 0.08 * idx }}
-              className={`${card.bg} rounded-lg p-3 text-center`}
+              className={`${card.bg} rounded-lg p-3 text-center cursor-default`}
             >
               <div className={`text-2xl font-bold ${card.valueCls}`}>{card.value}</div>
               <div className="text-xs text-gray-500 mt-0.5">{card.label}</div>
@@ -2124,7 +2126,10 @@ function SchoolTab({ school, parsed, dfeData, authToken, organizationId }: { sch
             ) : (
               <div className="space-y-2">
                 {statAlerts.map((alert, i) => (
-                  <div key={i} className={`p-3 rounded-lg border text-sm ${
+                  <motion.div
+                    key={i}
+                    whileHover={{ y: -1, transition: { type: "spring", damping: 30, stiffness: 250 } }}
+                    className={`p-3 rounded-lg border text-sm ${
                     alert.severity === "high" ? "bg-red-50 border-red-200 text-red-800" :
                     alert.severity === "medium" ? "bg-amber-50 border-amber-200 text-amber-800" :
                     "bg-gray-50 border-gray-200 text-gray-700"
@@ -2133,7 +2138,7 @@ function SchoolTab({ school, parsed, dfeData, authToken, organizationId }: { sch
                     <div className="font-medium">{alert.title}</div>
                     <div className="text-xs mt-1 opacity-80">{alert.explanation}</div>
                     <div className="text-xs mt-1 italic opacity-70">{alert.probability}</div>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             )}
@@ -2519,10 +2524,10 @@ function SchoolTab({ school, parsed, dfeData, authToken, organizationId }: { sch
             finding: isImprovement
               ? `${school} improved from ${m.ofsted_prev} to ${m.ofsted_last} in ${m.ofsted_last_year}. EEF research shows schools achieving this turnaround sustain an average 6–8pp attainment gain over 3 years when improvement is embedded.`
               : isDecline
-              ? `${school}'s most recent inspection (${m.ofsted_last_year}) recorded ${m.ofsted_last}, down from ${m.ofsted_prev}. EEF research emphasises that sustained decline is associated with leadership instability — the improvement trajectory must be closely monitored.`
+              ? `${school}'s most recent inspection (${m.ofsted_last_year}) recorded ${m.ofsted_last}, down from ${m.ofsted_prev}. EEF research highlights that schools navigating this pattern benefit from a clear improvement plan with governor oversight. Governors may want to ask: what does the improvement plan show, and what progress has been made since inspection?`
               : isOutstandingToGood
               ? `${school} moved from Outstanding to Good in ${m.ofsted_last_year}. While Good remains a strong judgement, the direction of travel requires governor scrutiny to understand what changed.`
-              : `${school}'s most recent inspection (${m.ofsted_last_year}) confirmed ${m.ofsted_last}. ${m.ofsted_last === 'Requires Improvement' ? 'RI status indicates the school is not yet meeting acceptable standards across all areas. Sustained improvement requires a rigorous action plan.' : 'Good judgement validates quality of education provided.'}`,
+              : `${school}'s most recent inspection (${m.ofsted_last_year}) confirmed ${m.ofsted_last}. ${m.ofsted_last === 'Requires Improvement' ? 'RI status indicates areas requiring development. Governors will want to understand the improvement plan and the evidence of progress since inspection.' : 'Good judgement reflects the quality of education provided.'}`,
             citation: 'EEF School Improvement Evidence Review 2023',
             citationShortLabel: 'EEF 2023',
             status: m.ofsted_last === 'Good' || m.ofsted_last === 'Outstanding' ? 'ok' : 'concern',
@@ -2554,14 +2559,17 @@ function SchoolTab({ school, parsed, dfeData, authToken, organizationId }: { sch
               </h4>
               <p className="text-sm text-muted-foreground mb-4">
                 Each factor below cross-references this school&apos;s data against peer-reviewed research.
-                Findings are evidential, not opinion — a school would be disputing the DfE&apos;s own statistics to reject them.
+                Findings are evidence-based and grounded in DfE published statistics — they are presented as context for governor discussion, not as conclusions.
               </p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {factors.map((factor) => {
                   const cfg = statusConfig[factor.status];
                   return (
-                    <div key={factor.id} className={`rounded-xl border p-4 ${factor.status === 'concern' ? 'bg-amber-50/50 border-amber-200' : factor.status === 'pending' ? 'bg-gray-50 border-gray-200' : 'bg-emerald-50/40 border-emerald-200'}`}>
+                    <motion.div
+                      key={factor.id}
+                      whileHover={{ y: -2, transition: { type: "spring", damping: 30, stiffness: 250 } }}
+                      className={`rounded-xl border p-4 ${factor.status === 'concern' ? 'bg-amber-50/50 border-amber-200' : factor.status === 'pending' ? 'bg-gray-50 border-gray-200' : 'bg-emerald-50/40 border-emerald-200'}`}>
                       <div className="flex items-start gap-2 mb-2">
                         <span className={`mt-1.5 flex-shrink-0 w-2 h-2 rounded-full ${cfg.dot}`} />
                         <div className="flex-1">
@@ -2581,7 +2589,7 @@ function SchoolTab({ school, parsed, dfeData, authToken, organizationId }: { sch
                           </div>
                         </div>
                       </div>
-                    </div>
+                    </motion.div>
                   );
                 })}
               </div>
@@ -2689,7 +2697,7 @@ function SchoolTab({ school, parsed, dfeData, authToken, organizationId }: { sch
                   <YAxis domain={[0, 100]} tick={{ fontSize: 12, fill: '#6B7280' }} axisLine={false} tickLine={false} />
                   <Tooltip
                     formatter={(val, name) => [`${val}%`, name === 'expected' ? 'Expected (demographic)' : 'Reported']}
-                    contentStyle={{ fontSize: '12px', borderRadius: '8px', border: '1px solid #E2E8F0' }}
+                    contentStyle={{ fontSize: '12px', borderRadius: '12px', border: '1px solid #e5e7eb', background: 'white', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', padding: '8px 12px' }}
                   />
                   <Legend
                     wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }}
@@ -2703,7 +2711,7 @@ function SchoolTab({ school, parsed, dfeData, authToken, organizationId }: { sch
                     strokeWidth={2}
                     strokeDasharray="5 5"
                     dot={{ r: 4, fill: '#06b6d4', strokeWidth: 0 }}
-                    activeDot={{ r: 6 }}
+                    activeDot={{ r: 6, strokeWidth: 2, stroke: '#fff' }}
                   />
                   <Line
                     type="monotone"
@@ -2712,7 +2720,7 @@ function SchoolTab({ school, parsed, dfeData, authToken, organizationId }: { sch
                     stroke="#6366f1"
                     strokeWidth={3}
                     dot={{ r: 5, fill: '#6366f1', strokeWidth: 0 }}
-                    activeDot={{ r: 7 }}
+                    activeDot={{ r: 7, strokeWidth: 2, stroke: '#fff' }}
                     connectNulls
                   />
                   <ReferenceLine y={65} stroke="#D1D5DB" strokeDasharray="4 4" />
@@ -2844,12 +2852,12 @@ function SchoolTab({ school, parsed, dfeData, authToken, organizationId }: { sch
               <ReferenceLine y={65} stroke="#D1D5DB" strokeDasharray="4 4" label={{ value: "National 65%", fontSize: 11, fill: "#9CA3AF", position: "right" }} />
               <Tooltip
                 formatter={(val, name) => [`${val}%`, name]}
-                contentStyle={{ fontSize: "13px", borderRadius: "8px", border: "1px solid #E2E8F0", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}
+                contentStyle={{ fontSize: "13px", borderRadius: "12px", border: "1px solid #e5e7eb", boxShadow: "0 4px 12px rgba(0,0,0,0.08)", background: "white", padding: "8px 12px" }}
               />
               <Legend wrapperStyle={{ fontSize: "13px", paddingTop: "8px" }} />
-              <Line type="monotone" dataKey="reading" name="Reading" stroke={SUBJECT_COLORS.reading} strokeWidth={2.5} dot={{ r: 5, fill: SUBJECT_COLORS.reading, strokeWidth: 0 }} activeDot={{ r: 7 }} connectNulls />
-              <Line type="monotone" dataKey="writing" name="Writing" stroke={SUBJECT_COLORS.writing} strokeWidth={2.5} dot={{ r: 5, fill: SUBJECT_COLORS.writing, strokeWidth: 0 }} activeDot={{ r: 7 }} connectNulls />
-              <Line type="monotone" dataKey="maths" name="Maths" stroke={SUBJECT_COLORS.maths} strokeWidth={2.5} dot={{ r: 5, fill: SUBJECT_COLORS.maths, strokeWidth: 0 }} activeDot={{ r: 7 }} connectNulls />
+              <Line type="monotone" dataKey="reading" name="Reading" stroke={SUBJECT_COLORS.reading} strokeWidth={2.5} dot={{ r: 5, fill: SUBJECT_COLORS.reading, strokeWidth: 0 }} activeDot={{ r: 6, strokeWidth: 2, stroke: "#fff" }} connectNulls />
+              <Line type="monotone" dataKey="writing" name="Writing" stroke={SUBJECT_COLORS.writing} strokeWidth={2.5} dot={{ r: 5, fill: SUBJECT_COLORS.writing, strokeWidth: 0 }} activeDot={{ r: 6, strokeWidth: 2, stroke: "#fff" }} connectNulls />
+              <Line type="monotone" dataKey="maths" name="Maths" stroke={SUBJECT_COLORS.maths} strokeWidth={2.5} dot={{ r: 5, fill: SUBJECT_COLORS.maths, strokeWidth: 0 }} activeDot={{ r: 6, strokeWidth: 2, stroke: "#fff" }} connectNulls />
             </LineChart>
           </ResponsiveContainer>
 
@@ -4278,35 +4286,38 @@ export default function TrustAssessorPage() {
                           transition={{ duration: 0.3 }}
                           className="mt-6"
                         >
-                          <div className="bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 rounded-2xl p-6 text-white shadow-xl mb-6">
-                            <div className="flex items-center gap-2 mb-3">
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/20 backdrop-blur uppercase tracking-wider">Tier 3 — Per-Pupil Analysis</span>
-                            </div>
-                            <h3 className="text-xl font-bold mb-2">Unlock the full picture for {TRUST_SCHOOLS[activeSchoolTab]?.name ?? activeSchoolTab}</h3>
-                            <p className="text-sm text-white/90 mb-4 max-w-2xl">
-                              You&apos;re seeing the spreadsheet + DfE forensic layer. The per-pupil analysis — tracking every child&apos;s journey from EYFS through KS1, identifying incorrect assessments, and generating named intervention plans — activates when you connect CTF files.
-                            </p>
+                          <div className="bg-card border border-border rounded-2xl mb-6 overflow-hidden">
+                            <div className="h-1 bg-sky-500" />
+                            <div className="p-6">
+                              <div className="flex items-center gap-2 mb-3">
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 uppercase tracking-wider">Tier 3 — Per-Pupil Analysis</span>
+                              </div>
+                              <h3 className="text-lg font-semibold text-foreground mb-2">Connect CTF data for {TRUST_SCHOOLS[activeSchoolTab]?.name ?? activeSchoolTab}</h3>
+                              <p className="text-sm text-muted-foreground mb-4 max-w-2xl">
+                                You&apos;re seeing the spreadsheet + DfE forensic layer. The per-pupil analysis — tracking every child&apos;s journey from EYFS through KS1 and generating named intervention plans — activates when CTF files are connected.
+                              </p>
 
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-                              <div className="bg-white/10 backdrop-blur rounded-lg p-3">
-                                <div className="text-xs font-semibold uppercase tracking-wider mb-1 text-white/70">Individual Child Tracking</div>
-                                <div className="text-sm text-white/95">See every pupil&apos;s journey from Reception to Y6. Identify who is at risk and why.</div>
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                                <div className="bg-muted/50 rounded-lg p-3 border border-border">
+                                  <div className="text-xs font-semibold uppercase tracking-wider mb-1 text-muted-foreground">Individual Child Tracking</div>
+                                  <div className="text-sm text-foreground">See every pupil&apos;s journey from Reception to Y6. Identify who may need support and why.</div>
+                                </div>
+                                <div className="bg-muted/50 rounded-lg p-3 border border-border">
+                                  <div className="text-xs font-semibold uppercase tracking-wider mb-1 text-muted-foreground">Cohort Analysis</div>
+                                  <div className="text-sm text-foreground">Cross-reference cohort trends with research-backed demographic benchmarks.</div>
+                                </div>
+                                <div className="bg-muted/50 rounded-lg p-3 border border-border">
+                                  <div className="text-xs font-semibold uppercase tracking-wider mb-1 text-muted-foreground">Ed Intervention Plans</div>
+                                  <div className="text-sm text-foreground">AI-generated 6-week plans for named pupils. EEF-evidenced strategies.</div>
+                                </div>
                               </div>
-                              <div className="bg-white/10 backdrop-blur rounded-lg p-3">
-                                <div className="text-xs font-semibold uppercase tracking-wider mb-1 text-white/70">Cohort Forensics</div>
-                                <div className="text-sm text-white/95">Prove or disprove &quot;declines&quot; with research-backed statistical analysis.</div>
-                              </div>
-                              <div className="bg-white/10 backdrop-blur rounded-lg p-3">
-                                <div className="text-xs font-semibold uppercase tracking-wider mb-1 text-white/70">Ed Intervention Plans</div>
-                                <div className="text-sm text-white/95">AI-generated 6-week plans for named pupils. EEF-evidenced strategies.</div>
-                              </div>
-                            </div>
 
-                            <div className="flex items-center gap-2 text-sm">
-                              <span className="bg-white/20 rounded px-3 py-1.5 font-semibold cursor-pointer hover:bg-white/30 transition-colors">
-                                Book CTF upload session &rarr;
-                              </span>
-                              <span className="text-white/70 text-xs">Takes ~15 minutes to connect</span>
+                              <div className="flex items-center gap-2 text-sm">
+                                <span className="bg-sky-600 text-white rounded px-3 py-1.5 font-semibold cursor-pointer hover:bg-sky-700 transition-colors">
+                                  Book CTF upload session &rarr;
+                                </span>
+                                <span className="text-muted-foreground text-xs">Takes ~15 minutes to connect</span>
+                              </div>
                             </div>
                           </div>
                         </motion.div>
@@ -4831,7 +4842,7 @@ export default function TrustAssessorPage() {
                       "If these pupils were at 67% Reading at KS1, why are they at 57% four years later? What happened in Years 3, 4, and 5?"
                     </p>
                     <div className="mt-2 text-xs text-amber-700">
-                      This pattern suggests: (1) KS1 assessments were inflated, or (2) progress has stalled in KS2, or (3) the mid-year Y6 snapshot is conservative. The school needs a clear narrative for whichever explanation is true.
+                      The data raises three possible questions: (1) whether the KS1 baseline sat above demographic prediction, (2) whether progress across Y3-Y5 slowed and if so why, or (3) whether this mid-year Y6 snapshot is conservative. School leadership will have context on which of these explanations best fits the picture.
                     </div>
                   </div>
                 </div>
@@ -4846,22 +4857,22 @@ export default function TrustAssessorPage() {
                 <div className="border-t border-gray-100 pt-6">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700 uppercase tracking-wider">Forensic Finding</span>
-                    <h4 className="text-sm font-semibold text-gray-800">This Y6 cohort was over-levelled at KS1 — the current figures are the reality, not a decline</h4>
+                    <h4 className="text-sm font-semibold text-gray-800">The Y6 figures align with demographic prediction — the data raises questions about the 2022/23 KS1 baseline</h4>
                   </div>
                   <p className="text-xs text-gray-500 mb-4">
-                    This is not a hypothesis. The statistics rule out genuine decline. Here is the proof.
+                    The following evidence points are presented for governors to explore with school leadership. The pattern is statistically notable and warrants discussion.
                   </p>
 
-                  {/* THE PROOF — four pieces of evidence that together eliminate "genuine decline" */}
-                  <div className="bg-red-50 border-2 border-red-300 rounded-xl p-5 mb-4">
+                  {/* EVIDENCE — four data points for governor discussion */}
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 mb-4">
                     <div className="flex items-center gap-2 mb-3">
-                      <span className="text-xs font-bold text-red-800 uppercase tracking-wide">The four pieces of evidence</span>
+                      <span className="text-xs font-bold text-amber-800 uppercase tracking-wide">Four data points for discussion</span>
                     </div>
 
                     <div className="space-y-3">
-                      <div className="bg-white rounded-lg border border-red-200 p-3">
+                      <div className="bg-white rounded-lg border border-amber-200 p-3">
                         <div className="flex items-start gap-3">
-                          <div className="flex-shrink-0 w-7 h-7 rounded-full bg-red-600 text-white text-xs font-bold flex items-center justify-center">1</div>
+                          <div className="flex-shrink-0 w-7 h-7 rounded-full bg-amber-600 text-white text-xs font-bold flex items-center justify-center">1</div>
                           <div className="flex-1">
                             <div className="text-sm font-semibold text-gray-900 mb-1">Writing followed statutory moderation rules — it shows normal progression.</div>
                             <div className="text-xs text-gray-600">
@@ -4869,7 +4880,7 @@ export default function TrustAssessorPage() {
                               This cohort&apos;s Writing went 46% → 54% — a realistic +8pp improvement over four years.
                               Reading (externally moderated far less consistently) went 67% → 57% — a 10pp drop.
                               Maths (teacher-only assessment) went 63% → 51% — a 12pp drop.
-                              <strong className="text-red-700"> Only the unmoderated subjects dropped. That is not a coincidence.</strong>
+                              <strong className="text-amber-700"> The pattern — only externally unmoderated subjects showing a drop — is a common signal in assessment alignment reviews and worth exploring.</strong>
                             </div>
                             <div className="mt-2 flex items-center gap-1.5 flex-wrap">
                               <span className="text-[10px] text-gray-400 uppercase font-semibold">Sources:</span>
@@ -4883,16 +4894,16 @@ export default function TrustAssessorPage() {
                         </div>
                       </div>
 
-                      <div className="bg-white rounded-lg border border-red-200 p-3">
+                      <div className="bg-white rounded-lg border border-amber-200 p-3">
                         <div className="flex items-start gap-3">
-                          <div className="flex-shrink-0 w-7 h-7 rounded-full bg-red-600 text-white text-xs font-bold flex items-center justify-center">2</div>
+                          <div className="flex-shrink-0 w-7 h-7 rounded-full bg-amber-600 text-white text-xs font-bold flex items-center justify-center">2</div>
                           <div className="flex-1">
                             <div className="text-sm font-semibold text-gray-900 mb-1">The KS1 Reading figure is statistically incompatible with this school&apos;s demographics.</div>
                             <div className="text-xs text-gray-600 space-y-1">
                               <div>School composition: <strong>38% FSM, 22% SEND, 40% EAL</strong> — all well above national.</div>
                               <div>National KS1 Reading EXS+ (2022/23): <strong>68%</strong></div>
                               <div>Non-disadvantaged pupils achieved ~72%; disadvantaged ~54%. Applying this to Grove House&apos;s FSM profile alone predicts <strong>~65%</strong>. Layering in the SEND gap (~25pp lower attainment) and EAL gap (~12pp) reduces the demographic prediction to <strong>~50-55%</strong>.</div>
-                              <div>Reported: <strong className="text-red-700">67%</strong>. That is 12-17pp above where this cohort&apos;s demographics predict they should have been.</div>
+                              <div>Reported: <strong className="text-amber-700">67%</strong>. That is 12-17pp above where this cohort&apos;s demographic profile would predict. This raises a question worth governors exploring with leadership.</div>
                             </div>
                             <div className="mt-2 flex items-center gap-1.5 flex-wrap">
                               <span className="text-[10px] text-gray-400 uppercase font-semibold">Sources:</span>
@@ -4906,14 +4917,14 @@ export default function TrustAssessorPage() {
                         </div>
                       </div>
 
-                      <div className="bg-white rounded-lg border border-red-200 p-3">
+                      <div className="bg-white rounded-lg border border-amber-200 p-3">
                         <div className="flex items-start gap-3">
-                          <div className="flex-shrink-0 w-7 h-7 rounded-full bg-red-600 text-white text-xs font-bold flex items-center justify-center">3</div>
+                          <div className="flex-shrink-0 w-7 h-7 rounded-full bg-amber-600 text-white text-xs font-bold flex items-center justify-center">3</div>
                           <div className="flex-1">
                             <div className="text-sm font-semibold text-gray-900 mb-1">Current Y6 attainment IS consistent with this cohort&apos;s demographics.</div>
                             <div className="text-xs text-gray-600">
-                              Y6 Reading 57%, Maths 51%, Writing 54% — these numbers land exactly where a 38% FSM / 22% SEND / 40% EAL school would be predicted to perform by national DfE attainment-gap data.
-                              The current assessment is accurate. The 2022/23 KS1 assessment was not.
+                              Y6 Reading 57%, Maths 51%, Writing 54% — these numbers align closely with where a 38% FSM / 22% SEND / 40% EAL school would be predicted to perform by national DfE attainment-gap data.
+                              One possible explanation is that the Y6 figures represent a more accurate picture of this cohort&apos;s attainment, and the 2022/23 KS1 baseline sat above what demographic expectations would predict.
                             </div>
                             <div className="mt-2 flex items-center gap-1.5 flex-wrap">
                               <span className="text-[10px] text-gray-400 uppercase font-semibold">Sources:</span>
@@ -4927,14 +4938,13 @@ export default function TrustAssessorPage() {
                         </div>
                       </div>
 
-                      <div className="bg-white rounded-lg border border-red-200 p-3">
+                      <div className="bg-white rounded-lg border border-amber-200 p-3">
                         <div className="flex items-start gap-3">
-                          <div className="flex-shrink-0 w-7 h-7 rounded-full bg-red-600 text-white text-xs font-bold flex items-center justify-center">4</div>
+                          <div className="flex-shrink-0 w-7 h-7 rounded-full bg-amber-600 text-white text-xs font-bold flex items-center justify-center">4</div>
                           <div className="flex-1">
-                            <div className="text-sm font-semibold text-gray-900 mb-1">A genuine 4-year regression across 52 pupils in 2 of 3 subjects is statistically almost impossible.</div>
+                            <div className="text-sm font-semibold text-gray-900 mb-1">A whole-cohort regression of this magnitude across 2 of 3 subjects is statistically uncommon.</div>
                             <div className="text-xs text-gray-600">
-                              Whole-cohort regression of this magnitude occurs in less than 1 in 500 UK primary cohorts (based on DfE cohort-comparison data).
-                              The probability that this IS a genuine decline — rather than an artefact of inconsistent assessment — is effectively zero once the subject pattern is controlled for.
+                              Whole-cohort drops of this scale occur in a small proportion of UK primary cohorts (DfE cohort-comparison data). When the subject pattern — only unmoderated subjects declining — is also present, assessment alignment is a more likely explanation than genuine regression. This does not rule out other factors, which leadership will be best placed to address.
                             </div>
                             <div className="mt-2 flex items-center gap-1.5 flex-wrap">
                               <span className="text-[10px] text-gray-400 uppercase font-semibold">Sources:</span>
@@ -4949,9 +4959,8 @@ export default function TrustAssessorPage() {
                       </div>
                     </div>
 
-                    <div className="mt-4 bg-red-100 border border-red-300 rounded-lg p-3 text-sm text-red-900">
-                      <strong>Conclusion:</strong> This Y6 cohort was over-levelled at KS1 in 2022/23. The current &quot;decline&quot; is the correction, not a regression.
-                      Hundreds of schools nationally have the same issue — teacher assessment drift went undetected because KS1 moderation became non-statutory.
+                    <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-900">
+                      <strong>Summary:</strong> The 2022/23 KS1 results sit 12-17pp higher than this cohort&apos;s demographic profile predicts. The current Y6 figures align closely with that prediction. This pattern — common in schools where KS1 moderation was not externally verified — suggests the Y6 &quot;decline&quot; is more likely an assessment realignment than a genuine regression. Governors may want to ask about 2022/23 moderation practices.
                     </div>
                   </div>
 
@@ -4982,52 +4991,55 @@ export default function TrustAssessorPage() {
                   </div>
 
                   {/* THE PRODUCT — how Schoolgle prevents this */}
-                  <div className="bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 rounded-xl p-5 mb-4 text-white shadow-xl">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/20 backdrop-blur uppercase tracking-wider">How Schoolgle prevents this</span>
-                    </div>
-                    <h5 className="text-lg font-bold mb-3">This cohort would not be in this position if Schoolgle had been running in 2022/23.</h5>
-                    <p className="text-sm text-white/90 mb-4 leading-relaxed">
-                      Schools currently discover assessment drift at KS2 — four years too late to correct it for the affected children.
-                      Schoolgle&apos;s continuous assessment layer catches it in term 2 of Y2, when there is still time to recalibrate and intervene.
-                    </p>
+                  <div className="bg-card border border-border rounded-2xl mb-4 overflow-hidden">
+                    <div className="h-1 bg-sky-500" />
+                    <div className="p-5">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 uppercase tracking-wider">How Schoolgle supports this</span>
+                      </div>
+                      <h5 className="text-base font-semibold text-foreground mb-2">Earlier detection means more time to act</h5>
+                      <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
+                        Assessment alignment questions often surface at KS2 — four years after the original assessment.
+                        Schoolgle&apos;s continuous assessment layer is designed to surface these signals in term 2 of Y2, when there is still time to investigate and recalibrate.
+                      </p>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-                      <div className="bg-white/10 backdrop-blur rounded-lg p-3">
-                        <div className="text-xs font-semibold uppercase tracking-wider mb-1 text-white/70">Continuous Assessment Tracker</div>
-                        <div className="text-sm text-white/95">
-                          Half-termly checkpoints against standardised benchmarks. Every pupil, every term, every subject.
-                          AI flags teacher assessments that diverge more than 1.5 standard deviations from the pupil&apos;s own prior trajectory OR from statistically similar pupils nationally.
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                        <div className="bg-muted/50 rounded-lg p-3 border border-border">
+                          <div className="text-xs font-semibold uppercase tracking-wider mb-1 text-muted-foreground">Continuous Assessment Tracker</div>
+                          <div className="text-sm text-foreground">
+                            Half-termly checkpoints against standardised benchmarks. Every pupil, every term, every subject.
+                            AI flags teacher assessments that diverge more than 1.5 standard deviations from the pupil&apos;s own prior trajectory OR from statistically similar pupils nationally.
+                          </div>
+                        </div>
+
+                        <div className="bg-muted/50 rounded-lg p-3 border border-border">
+                          <div className="text-xs font-semibold uppercase tracking-wider mb-1 text-muted-foreground">AI Moderation Support</div>
+                          <div className="text-sm text-foreground">
+                            Cross-validates teacher judgement against pupil&apos;s phonics screening, EYFS profile, reading age, Accelerated Reader, and historical cohort benchmarks.
+                            Flags statistical outliers — not to overrule the teacher, but to prompt triangulation.
+                          </div>
+                        </div>
+
+                        <div className="bg-muted/50 rounded-lg p-3 border border-border">
+                          <div className="text-xs font-semibold uppercase tracking-wider mb-1 text-muted-foreground">Demographic-Aware Benchmarks</div>
+                          <div className="text-sm text-foreground">
+                            Every cohort measured against the statistical expectation for schools with matching FSM/SEND/EAL/mobility profiles.
+                            A result that sits 12-17pp above demographic prediction would have been flagged in Term 2 of Y2 — not Term 5 of Y6.
+                          </div>
+                        </div>
+
+                        <div className="bg-muted/50 rounded-lg p-3 border border-border">
+                          <div className="text-xs font-semibold uppercase tracking-wider mb-1 text-muted-foreground">Governor-Ready Audit Trail</div>
+                          <div className="text-sm text-foreground">
+                            Every assessment logged with evidence, moderator name, and AI validation status.
+                            When Ofsted asks &quot;how do you know?&quot;, the answer is a one-click download of the full audit trail.
+                          </div>
                         </div>
                       </div>
 
-                      <div className="bg-white/10 backdrop-blur rounded-lg p-3">
-                        <div className="text-xs font-semibold uppercase tracking-wider mb-1 text-white/70">AI Moderation Layer</div>
-                        <div className="text-sm text-white/95">
-                          Cross-validates teacher judgement against pupil&apos;s phonics screening, EYFS profile, reading age, Accelerated Reader, and historical cohort benchmarks.
-                          Flags statistical outliers — not to overrule the teacher, but to prompt triangulation.
-                        </div>
+                      <div className="bg-muted/50 rounded-lg p-3 text-sm text-foreground border border-border">
+                        <strong>With earlier detection:</strong> Assessment alignment question surfaced in Term 2 Y2 (Nov 2022) → discussed with phase leader → external moderation considered → assessment reviewed by Feb 2023 → Y3-Y6 teachers inherit a more reliable baseline → the pattern seen at Y6 becomes a known question, not a surprise.
                       </div>
-
-                      <div className="bg-white/10 backdrop-blur rounded-lg p-3">
-                        <div className="text-xs font-semibold uppercase tracking-wider mb-1 text-white/70">Demographic-Aware Benchmarks</div>
-                        <div className="text-sm text-white/95">
-                          Every cohort measured against the actual statistical expectation for schools with matching FSM/SEND/EAL/mobility profiles.
-                          &quot;67% Reading for a 38% FSM school&quot; would have been flagged in Term 2 of Y2 — not Term 5 of Y6.
-                        </div>
-                      </div>
-
-                      <div className="bg-white/10 backdrop-blur rounded-lg p-3">
-                        <div className="text-xs font-semibold uppercase tracking-wider mb-1 text-white/70">Governor-Ready Audit Trail</div>
-                        <div className="text-sm text-white/95">
-                          Every assessment logged with evidence, moderator name, and AI validation status.
-                          When Ofsted asks &quot;how do you know?&quot;, the answer is a one-click download of the full audit trail — not a staff member&apos;s memory of a 2022 moderation meeting.
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="bg-white/15 backdrop-blur rounded-lg p-3 text-sm text-white">
-                      <strong>The timeline with Schoolgle:</strong> Over-moderation detected in Term 2 Y2 (Nov 2022) → flagged to HT + phase leader → external moderation triggered → assessment recalibrated by Feb 2023 → Y3-Y6 teachers inherit accurate baseline data → no &quot;phantom decline&quot; four years later.
                     </div>
                   </div>
 
@@ -5277,121 +5289,16 @@ export default function TrustAssessorPage() {
                   );
                 })()}
 
-                {/* Grid of remaining pupil journey cards */}
+                {/* Grid of pupil journey cards — year-group filtered */}
                 {groveHouseData.cohortJourneys.length > 0 && (
                   <>
                     <div className="flex items-center justify-between mb-3">
                       <span className="text-xs text-gray-500">{groveHouseData.cohortJourneys.length} trackable pupils with multi-year data</span>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[600px] overflow-y-auto">
-                      {groveHouseData.cohortJourneys.map((pupil, pidx) => {
-                        const demo = pupil.demographics;
-                        const flags = [demo.isFsm && 'FSM', demo.isSend && 'SEND', demo.isEal && 'EAL'].filter(Boolean) as string[];
-                        const yearGroups = [...new Set(pupil.journey.map(j => j.yearGroup))].sort((a, b) => a - b);
-
-                        const levelValue = (l: string) => l === 'GDS' ? 3 : l === 'EXS' || l === '2' ? 2 : 1;
-                        const allLevels = pupil.journey.map(j => levelValue(j.level));
-                        const avgFirst = allLevels.length > 0 ? allLevels[0] : 0;
-                        const avgLast = allLevels.length > 0 ? allLevels[allLevels.length - 1] : 0;
-                        const overallTrend = avgLast > avgFirst ? 'improving' : avgLast < avgFirst ? 'declining' : 'stable';
-
-                        const latestEntries = pupil.journey.filter(j => j.year === Math.max(...pupil.journey.map(jj => jj.year)));
-                        const atExpected = latestEntries.filter(j => ['EXS', 'GDS', '2'].includes(j.level)).length;
-                        const totalSubjects = latestEntries.length;
-
-                        return (
-                          <div key={`${pupil.pupilId}-${pidx}`} className={`border rounded-lg p-3 text-xs ${
-                            overallTrend === 'declining' ? 'border-red-200 bg-red-50/30' :
-                            overallTrend === 'improving' ? 'border-green-200 bg-green-50/30' :
-                            'border-gray-200 bg-white'
-                          }`}>
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-2">
-                                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
-                                  overallTrend === 'declining' ? 'bg-red-100 text-red-700' :
-                                  overallTrend === 'improving' ? 'bg-green-100 text-green-700' :
-                                  'bg-gray-100 text-gray-600'
-                                }`}>
-                                  {pupil.pupilId.split(' ').map(w => w[0]).join('')}
-                                </div>
-                                <div>
-                                  <div className="font-semibold text-gray-700">{pupil.pupilId}</div>
-                                  <div className="text-gray-400">Y{yearGroups.join('→Y')}</div>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                {flags.map(f => (
-                                  <span key={f} className={`px-1.5 py-0.5 rounded-full text-[10px] font-medium ${
-                                    f === 'FSM' ? 'bg-amber-100 text-amber-700' :
-                                    f === 'SEND' ? 'bg-purple-100 text-purple-700' :
-                                    'bg-cyan-100 text-cyan-700'
-                                  }`}>{f}</span>
-                                ))}
-                              </div>
-                            </div>
-
-                            {/* Subject levels at latest assessment */}
-                            <div className="flex items-center gap-1.5 mb-2">
-                              {latestEntries.map((e, i) => (
-                                <span key={i} className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                                  e.level === 'GDS' ? 'bg-green-100 text-green-700' :
-                                  e.level === 'EXS' || e.level === '2' ? 'bg-blue-100 text-blue-700' :
-                                  'bg-red-100 text-red-700'
-                                }`} title={e.subject}>
-                                  {e.subject.slice(0, 1).toUpperCase()}: {e.level}
-                                </span>
-                              ))}
-                            </div>
-
-                            {/* Summary line */}
-                            <div className="flex items-center justify-between text-gray-500">
-                              <span>{atExpected}/{totalSubjects} at expected+</span>
-                              <span className={`font-semibold ${
-                                overallTrend === 'improving' ? 'text-green-600' :
-                                overallTrend === 'declining' ? 'text-red-600' :
-                                'text-gray-500'
-                              }`}>
-                                {overallTrend === 'improving' ? '↑ Improving' : overallTrend === 'declining' ? '↓ Declining' : '→ Stable'}
-                              </span>
-                            </div>
-
-                            {/* BUILD 2: Weakest subject + Plan with Ed */}
-                            {(() => {
-                              const weak = weakestSubject(pupil.journey);
-                              if (!weak) return null;
-                              return (
-                                <div className="mt-2 flex items-center justify-between gap-2">
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="text-[10px] text-gray-500">Focus:</span>
-                                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
-                                      weak.avgLevel < 1.5 ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
-                                    }`}>
-                                      {weak.subject.charAt(0).toUpperCase() + weak.subject.slice(1)}
-                                    </span>
-                                  </div>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      const demo = pupil.demographics;
-                                      const edPrompt = `Create an intervention plan for pupil ${pupil.pupilId} who needs focus on ${weak.subject}. ` +
-                                        `Demographics: ${[demo.isFsm && 'FSM', demo.isSend && 'SEND', demo.isEal && 'EAL'].filter(Boolean).join(', ') || 'no additional flags'}. ` +
-                                        `Year groups in journey: ${[...new Set(pupil.journey.map(j => 'Y' + j.yearGroup))].join(', ')}. ` +
-                                        `Use EEF-evidenced strategies and produce a 6-week plan with weekly check-ins.`;
-                                      const url = `/dashboard/ed?prompt=${encodeURIComponent(edPrompt)}`;
-                                      window.open(url, '_blank');
-                                    }}
-                                    className="text-[10px] px-2 py-0.5 rounded bg-indigo-600 text-white hover:bg-indigo-700 transition-colors font-medium flex items-center gap-1"
-                                    title="Open Ed AI assistant to generate a tailored intervention plan"
-                                  >
-                                    Plan with Ed &rarr;
-                                  </button>
-                                </div>
-                              );
-                            })()}
-                          </div>
-                        );
-                      })}
-                    </div>
+                    <PupilCardGrid
+                      pupils={groveHouseData.cohortJourneys}
+                      spotlightPupilId={groveHouseData.spotlightPupil?.pupilId ?? null}
+                    />
 
                     {/* Demographic summary */}
                     {(() => {
@@ -5433,7 +5340,7 @@ export default function TrustAssessorPage() {
                                   const levels = p.journey.map(j => levelValue(j.level));
                                   return p.demographics.isFsm && levels.length >= 2 && levels[levels.length - 1] < levels[0];
                                 }).length;
-                                return `${fsmDeclining} of ${fsmCount} FSM pupils show declining trajectories. An inspector would ask: "What is the school's Pupil Premium strategy for these specific children, and what evidence is there that current interventions are working?"`;
+                                return `${fsmDeclining} of ${fsmCount} FSM pupils show declining trajectories. A governor might reasonably explore: "Does the Pupil Premium strategy address these specific pupils, and what evidence is there of impact from current interventions?"`;
                               })()}
                             </div>
                           )}

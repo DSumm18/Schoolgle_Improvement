@@ -187,10 +187,25 @@ export function generateGovernorReportHtml(data: GovernorReportData): string {
   const nextReviewDate = new Date(data.generatedAt.getTime() + 28 * 24 * 60 * 60 * 1000)
     .toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 
-  // Chart SVG
-  const chartSvg = data.cohortJourney
-    ? generateCohortChartSvg(data.cohortJourney.dataPoints)
+  // Chart SVG — gracefully skip if no cohort data, but always render container
+  const hasCohortData = data.cohortJourney && data.cohortJourney.dataPoints.length >= 2;
+  const cohortSvg = hasCohortData
+    ? generateCohortChartSvg(data.cohortJourney!.dataPoints)
     : generateCohortChartSvg([]);
+  const chartBlock = hasCohortData
+    ? `<div style="border:1px solid #e5e7eb;border-radius:10px;padding:16px;margin-bottom:24px;background:#fafafa;">
+    ${cohortSvg}
+    <div style="display:flex;gap:24px;justify-content:center;margin-top:10px;font-size:10pt;color:#6b7280;">
+      <span style="display:flex;align-items:center;gap:6px;"><span style="width:20px;height:3px;background:#3b82f6;display:inline-block;border-radius:2px;"></span>Reading</span>
+      <span style="display:flex;align-items:center;gap:6px;"><span style="width:20px;height:3px;background:#f59e0b;display:inline-block;border-radius:2px;"></span>Writing</span>
+      <span style="display:flex;align-items:center;gap:6px;"><span style="width:20px;height:3px;background:#10b981;display:inline-block;border-radius:2px;"></span>Maths</span>
+      <span style="display:flex;align-items:center;gap:6px;"><span style="width:20px;height:1px;background:#6b7280;display:inline-block;"></span>National avg (~60%)</span>
+    </div>
+  </div>`
+    : `<div style="border:1px solid #e5e7eb;border-radius:10px;padding:16px;margin-bottom:24px;background:#fafafa;">
+    ${cohortSvg}
+    <div style="font-size:10pt;color:#d1d5db;text-align:center;margin-top:8px;">Connect CTF assessment data to unlock per-cohort journey tracking</div>
+  </div>`;
 
   // Build key findings cards
   const findingCards = (data.narrative.keyFindings ?? []).slice(0, 3).map((f, i) => `
@@ -250,12 +265,13 @@ export function generateGovernorReportHtml(data: GovernorReportData): string {
       <div style="font-size:11px;color:#6b7280;margin-top:2px;">${esc(s.label)}</div>
     </div>`).join('');
 
-  // At-a-glance stat boxes (Page 1 hero row)
-  const heroStats = [
-    { label: 'Y6 Combined', value: data.y6Combined !== null ? `${data.y6Combined}%` : 'N/A', sub: 'All Pupils ARE' },
-    { label: 'FSM Eligible', value: data.fsmPct !== null ? `${data.fsmPct}%` : 'N/A', sub: 'of all pupils' },
-    { label: 'Total Pupils', value: data.totalPupils !== null ? String(data.totalPupils) : 'N/A', sub: 'on roll' },
-  ].map(s => `
+  // At-a-glance stat boxes (Page 1 hero row) — only render if data exists
+  const heroStatItems = [
+    data.y6Combined !== null ? { label: 'Y6 Combined', value: `${data.y6Combined}%`, sub: 'All Pupils ARE' } : null,
+    data.fsmPct !== null ? { label: 'FSM Eligible', value: `${data.fsmPct}%`, sub: 'of all pupils' } : null,
+    data.totalPupils !== null ? { label: 'Total Pupils', value: String(data.totalPupils), sub: 'on roll' } : null,
+  ].filter(Boolean) as { label: string; value: string; sub: string }[];
+  const heroStats = heroStatItems.map(s => `
     <div style="background:white;border:1px solid #e5e7eb;border-radius:10px;padding:16px 20px;text-align:center;flex:1;">
       <div style="font-size:24px;font-weight:800;color:#111827;">${esc(s.value)}</div>
       <div style="font-size:13px;font-weight:600;color:#374151;margin-top:4px;">${esc(s.label)}</div>
@@ -459,16 +475,8 @@ ${confWatermark}
 
   <div class="section-title">Cohort Performance</div>
 
-  <!-- Chart -->
-  <div style="border:1px solid #e5e7eb;border-radius:10px;padding:16px;margin-bottom:24px;background:#fafafa;">
-    ${chartSvg}
-    <div style="display:flex;gap:24px;justify-content:center;margin-top:10px;font-size:10pt;color:#6b7280;">
-      <span style="display:flex;align-items:center;gap:6px;"><span style="width:20px;height:3px;background:#3b82f6;display:inline-block;border-radius:2px;"></span>Reading</span>
-      <span style="display:flex;align-items:center;gap:6px;"><span style="width:20px;height:3px;background:#f59e0b;display:inline-block;border-radius:2px;"></span>Writing</span>
-      <span style="display:flex;align-items:center;gap:6px;"><span style="width:20px;height:3px;background:#10b981;display:inline-block;border-radius:2px;"></span>Maths</span>
-      <span style="display:flex;align-items:center;gap:6px;"><span style="width:20px;height:1px;background:#6b7280;display:inline-block;"></span>National avg (~60%)</span>
-    </div>
-  </div>
+  <!-- Chart (gracefully skipped if no cohort data) -->
+  ${chartBlock}
 
   <!-- Context & Defence narrative -->
   <div style="margin-bottom:24px;">
@@ -530,7 +538,7 @@ ${confWatermark}
 ═══════════════════════════════════════════════════════════════════ -->
 <div class="page page-break">
 
-  <div class="section-title">Five Questions for the Headteacher</div>
+  <div class="section-title">Five Questions for the Board to Explore</div>
 
   ${questionItems}
 
