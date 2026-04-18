@@ -49,6 +49,8 @@ import {
   Download,
 } from "lucide-react";
 import { DriveFilePicker } from "@/components/canvas/DriveFilePicker";
+import { CohortPassport } from "@/components/trust-assessor/CohortPassport";
+import type { CohortPassportData } from "@/components/trust-assessor/CohortPassport";
 import { useAuth } from "@/context/SupabaseAuthContext";
 import { useGoogleDriveAccess } from "@/hooks/useGoogleDriveAccess";
 import type { KS2Result, CensusRecord, NationalPercentile, ThreeYearAverage } from "@/lib/trust-analysis/types";
@@ -1275,6 +1277,27 @@ function SchoolTab({ school, parsed, dfeData, authToken, organizationId }: { sch
   const [aiNarrative, setAiNarrative] = useState<string | null>(null);
   const [narrativeLoading, setNarrativeLoading] = useState(false);
   const narrativeRequestedRef = useRef(false);
+
+  // ── Cohort Passport state ──
+  const [cohortPassport, setCohortPassport] = useState<CohortPassportData | null>(null);
+  const [cohortPassportLoading, setCohortPassportLoading] = useState(false);
+  const cohortPassportFetchedRef = useRef(false);
+
+  useEffect(() => {
+    if (cohortPassportFetchedRef.current || !info?.urn) return;
+    cohortPassportFetchedRef.current = true;
+    setCohortPassportLoading(true);
+    fetch(
+      `/api/trust-analysis/cohort-passport?urn=${info.urn}`,
+      authToken ? { headers: { Authorization: `Bearer ${authToken}` } } : {}
+    )
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.cohorts) setCohortPassport(data as CohortPassportData);
+      })
+      .catch(() => {})
+      .finally(() => setCohortPassportLoading(false));
+  }, [info?.urn, authToken]);
 
   // ── Timeline state ──
   const [timelineEvents, setTimelineEvents] = useState<SchoolEvent[]>([]);
@@ -2566,6 +2589,15 @@ function SchoolTab({ school, parsed, dfeData, authToken, organizationId }: { sch
           </motion.div>
         );
       })()}
+
+      {/* ── Cohort Validation Passport ── */}
+      <CohortPassport
+        cohorts={cohortPassport?.cohorts ?? []}
+        loading={cohortPassportLoading}
+        phonicsAvailable={cohortPassport?.phonicsAvailable ?? false}
+        mtcAvailable={cohortPassport?.mtcAvailable ?? false}
+        schoolName={info?.name ?? school}
+      />
 
       {/* ── EAL Trajectory Analysis (only for schools with EAL > 30%) ── */}
       {(() => {
