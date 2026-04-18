@@ -52,6 +52,10 @@ import { DriveFilePicker } from "@/components/canvas/DriveFilePicker";
 import { CohortPassport } from "@/components/trust-assessor/CohortPassport";
 import type { CohortPassportData } from "@/components/trust-assessor/CohortPassport";
 import { PupilCardGrid } from "@/components/trust-assessor/PupilCardGrid";
+import { SchoolTabTabs } from "@/components/trust-assessor/SchoolTabTabs";
+import type { SchoolTabId } from "@/components/trust-assessor/SchoolTabTabs";
+import { EditModeProvider, EditableText } from "@/components/trust-assessor/EditableText";
+import { HideableCard } from "@/components/trust-assessor/HideableCard";
 import { useAuth } from "@/context/SupabaseAuthContext";
 import { useGoogleDriveAccess } from "@/hooks/useGoogleDriveAccess";
 import type { KS2Result, CensusRecord, NationalPercentile, ThreeYearAverage } from "@/lib/trust-analysis/types";
@@ -1663,124 +1667,286 @@ function SchoolTab({ school, parsed, dfeData, authToken, organizationId }: { sch
     ? 'Sustain current practice. Use the pupil-level data to identify pupils still below expected standard and deploy targeted support.'
     : 'Share the findings as good practice across the trust. Investigate what this school is doing differently that others can learn from.';
 
-  return (
-    <div className="space-y-8">
+  // ── URN for edit storage ──
+  const editStorageUrn = info?.urn ?? school;
 
-      {/* ── BUILD 1: At-a-glance Summary ── */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="bg-gradient-to-br from-white to-gray-50 border-2 border-gray-200 rounded-2xl p-6 shadow-md"
-      >
-        {/* Header row: school name + severity badge */}
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-xs font-bold px-2 py-0.5 rounded bg-gray-100 text-gray-600 uppercase tracking-wider">{school}</span>
-              <span className="text-xs text-gray-400">• {schoolInfo?.nor ?? totalPupils} pupils • {fsmPct !== null ? `${fsmPct}%` : (schoolInfo?.fsmPct !== undefined ? `${schoolInfo.fsmPct}%` : '—')} FSM • {schoolInfo?.ealPct !== undefined ? `${schoolInfo.ealPct}%` : '—'} EAL</span>
-            </div>
-            <h2 className="text-xl font-bold text-gray-900">{TRUST_SCHOOLS[school]?.name ?? school}</h2>
-          </div>
-          <div className="text-right">
-            <div className={`inline-flex px-3 py-1 rounded-full text-sm font-bold uppercase ${
-              severityVerdict === 'strong' ? 'bg-emerald-100 text-emerald-800' :
-              severityVerdict === 'secure' ? 'bg-blue-100 text-blue-800' :
-              severityVerdict === 'attention' ? 'bg-amber-100 text-amber-800' :
-              'bg-red-100 text-red-800'
-            }`}>
-              {severityVerdict}
-            </div>
-            <div className="text-xs text-gray-500 mt-1">Overall assessment</div>
-          </div>
+  // ── Forensic verdict render helper ──
+  const renderForensicVerdict = () => {
+    const schoolInfoLocal = getSchoolByAbbrev(school);
+    const schoolFsmPct = fsmPct ?? schoolInfoLocal?.fsmPct ?? 25;
+    const schoolSendPct = sendPct ?? 15;
+    const schoolEalPct = schoolInfoLocal?.ealPct ?? 20;
+    const schoolDemographics = { fsmPct: schoolFsmPct, sendPct: schoolSendPct, ealPct: schoolEalPct };
+
+    const ygMap: Record<string, YearGroupShort> = {
+      'Year 1': 'Y1', 'Year 2': 'Y2', 'Year 3': 'Y3',
+      'Year 4': 'Y4', 'Year 5': 'Y5', 'Year 6': 'Y6',
+    };
+
+    const yearAnalysis = HEATMAP_YEAR_GROUPS.map((yg) => {
+      const reported = schoolData[yg]?.all_pupils.c_are ?? null;
+      const ygShort = ygMap[yg];
+      if (!ygShort) return null;
+      const expected = demographicExpectation(schoolDemographics, ygShort, 'combined');
+      const classification = classifyAttainment(reported, expected);
+      return { yearGroup: yg, ygShort, reported, expected, classification };
+    }).filter(Boolean) as {
+      yearGroup: string;
+      ygShort: YearGroupShort;
+      reported: number | null;
+      expected: { expected: number; low: number; high: number; baseline: number; adjustments: { factor: string; pp: number }[] };
+      classification: { verdict: 'accurate' | 'over-reported' | 'under-reported' | 'no-data'; severity: 'low' | 'medium' | 'high'; gap: number };
+    }[];
+
+    const verdict = computeForensicVerdict(yearAnalysis.map((y) => y.classification));
+    const verdictBorderCls = verdict.color === 'red' ? 'border-l-red-500' : verdict.color === 'amber' ? 'border-l-amber-500' : verdict.color === 'green' ? 'border-l-emerald-500' : 'border-l-sky-500';
+    const verdictBgCls = verdict.color === 'red' ? 'bg-red-50/50' : verdict.color === 'amber' ? 'bg-amber-50/50' : verdict.color === 'green' ? 'bg-emerald-50/50' : 'bg-sky-50/50';
+    const verdictTextCls = verdict.color === 'red' ? 'text-red-800' : verdict.color === 'amber' ? 'text-amber-800' : verdict.color === 'green' ? 'text-emerald-800' : 'text-sky-800';
+    const verdictBadgeCls = verdict.color === 'red' ? 'bg-red-100 text-red-700 border-red-300' : verdict.color === 'amber' ? 'bg-amber-100 text-amber-700 border-amber-300' : verdict.color === 'green' ? 'bg-emerald-100 text-emerald-700 border-emerald-300' : 'bg-sky-100 text-sky-700 border-sky-300';
+
+    const gapBadgeCls = (gap: number, v: string) => {
+      if (v === 'accurate') return 'bg-emerald-100 text-emerald-700';
+      if (v === 'over-reported') return gap > 10 ? 'bg-red-200 text-red-800 font-bold' : 'bg-amber-100 text-amber-700';
+      if (v === 'under-reported') return gap < -10 ? 'bg-red-200 text-red-800 font-bold' : 'bg-sky-100 text-sky-700';
+      return 'bg-muted text-muted-foreground';
+    };
+
+    const gapIcon = (v: string) => v === 'accurate' ? '✓' : v === 'over-reported' ? '↑' : v === 'under-reported' ? '↓' : '—';
+
+    const y6Pred = demographicExpectation(schoolDemographics, 'Y6', 'combined');
+    const y6Reported = schoolData['Year 6']?.all_pupils.c_are ?? null;
+    let demographicSentence = `Given this school's ${schoolEalPct.toFixed(0)}% EAL, ${schoolFsmPct.toFixed(0)}% FSM, ${schoolSendPct.toFixed(0)}% SEND profile, national data predicts Y6 Combined around ${y6Pred.low}–${y6Pred.high}%.`;
+    if (y6Reported !== null) {
+      if (y6Reported > y6Pred.high + 10) demographicSentence += ` The school reports ${y6Reported}% — significantly above prediction, suggesting possible over-assessment.`;
+      else if (y6Reported < y6Pred.low - 10) demographicSentence += ` The school reports ${y6Reported}% — dramatically below prediction, possibly indicating genuine struggle beyond demographics.`;
+      else if (y6Reported >= y6Pred.low && y6Reported <= y6Pred.high) demographicSentence += ` The school reports ${y6Reported}% — within the expected range. Assessment appears proportionate.`;
+      else if (y6Reported > y6Pred.high) demographicSentence += ` The school reports ${y6Reported}% — slightly above prediction, consistent with mild over-reporting or genuine improvement.`;
+      else demographicSentence += ` The school reports ${y6Reported}% — slightly below prediction, consistent with cautious assessment.`;
+    }
+
+    return (
+      <div className={`bg-card border border-border rounded-2xl p-8 border-l-4 ${verdictBorderCls}`}>
+        <div className="flex items-center gap-3 mb-4">
+          <span className={`text-xs font-bold px-2.5 py-1 rounded-full border uppercase tracking-wider ${verdictBadgeCls}`}>{verdict.label}</span>
+          <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Demographic forensic verdict</span>
         </div>
-
-        {/* Top findings */}
-        <div className="bg-white border border-gray-200 rounded-xl p-4 mb-4">
-          <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Three things governors should know</div>
-          <ol className="space-y-2 text-sm text-gray-800">
-            {topFindings.slice(0, 3).map((f, i) => (
-              <li key={i} className="flex gap-2">
-                <span className={`flex-shrink-0 w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center ${
-                  f.severity === 'high' ? 'bg-red-100 text-red-700' : f.severity === 'medium' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
-                }`}>{i + 1}</span>
-                <span>{f.text}</span>
-              </li>
+        <h3 className="text-xl font-semibold text-foreground mb-2">Forensic review</h3>
+        <p className={`text-sm leading-relaxed mb-6 ${verdictTextCls}`}>{verdict.interpretation}</p>
+        {yearAnalysis.length > 0 && (
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-6">
+            {yearAnalysis.map((ya) => (
+              <div key={ya.yearGroup} className={`rounded-xl border p-3 text-center ${verdictBgCls}`}>
+                <div className="text-[10px] font-bold text-muted-foreground mb-1">{ya.ygShort}</div>
+                <div className="text-sm font-bold text-foreground">{ya.reported !== null ? `${ya.reported}%` : '—'}</div>
+                <div className="text-[9px] text-muted-foreground/60 mb-1">exp {ya.expected.low}–{ya.expected.high}%</div>
+                <div className={`inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${gapBadgeCls(ya.classification.gap, ya.classification.verdict)}`}>
+                  {gapIcon(ya.classification.verdict)}{' '}
+                  {ya.classification.verdict !== 'no-data' ? `${ya.classification.gap > 0 ? '+' : ''}${ya.classification.gap}pp` : '—'}
+                </div>
+              </div>
             ))}
-          </ol>
-        </div>
-
-        {/* Stat row */}
-        <div className="grid grid-cols-3 gap-3 mb-4">
-          <div className="bg-white rounded-lg border border-gray-200 p-3 text-center">
-            <div className="text-2xl font-bold text-gray-900">{y6Combined !== null && y6Combined !== undefined ? `${y6Combined}%` : '—'}</div>
-            <div className="text-xs text-gray-500 mt-1">Y6 Combined (mid-year)</div>
           </div>
-          <div className="bg-white rounded-lg border border-gray-200 p-3 text-center">
-            <div className={`text-2xl font-bold ${nationalPercentile && nationalPercentile.percentile < 25 ? 'text-red-600' : 'text-gray-900'}`}>
-              {nationalPercentile ? ordinal(nationalPercentile.percentile) : '—'}
-            </div>
-            <div className="text-xs text-gray-500 mt-1">National percentile</div>
-          </div>
-          <div className="bg-white rounded-lg border border-gray-200 p-3 text-center">
-            <div className="text-2xl font-bold text-gray-900">{threeYearAvg?.averagePct !== undefined && threeYearAvg?.averagePct !== null ? `${threeYearAvg.averagePct}%` : '—'}</div>
-            <div className="text-xs text-gray-500 mt-1">3-year DfE average</div>
-          </div>
-        </div>
-
-        {/* What to do next */}
-        <div className={`rounded-lg p-3 text-sm ${
-          severityVerdict === 'urgent' ? 'bg-red-50 border border-red-200 text-red-900' :
-          severityVerdict === 'attention' ? 'bg-amber-50 border border-amber-200 text-amber-900' :
-          'bg-emerald-50 border border-emerald-200 text-emerald-900'
-        }`}>
-          <span className="font-semibold">What to do next: </span>
-          {whatToDoNext}
-        </div>
-      </motion.div>
-
-      {/* ── School Events Timeline ── */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.1 }}
-        className="bg-card border border-border rounded-2xl p-6"
-      >
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-sm font-semibold text-foreground">Events Timeline</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">DfE inspection history, attendance trends, workforce changes and forensic findings for {info?.name ?? school}</p>
-          </div>
-          <a
-            href={`/timeline?school=${info?.urn ?? school}`}
-            className="text-xs text-primary hover:underline flex items-center gap-1"
-          >
-            View full timeline →
-          </a>
-        </div>
-        <Timeline
-          events={timelineEvents}
-          loading={timelineLoading}
-          variant="embedded"
-        />
-      </motion.div>
-
-      {/* Generate Governor Report button — top right */}
-      <div className="flex justify-end">
-        <button
-          onClick={() => { setShowReportModal(true); setReportError(null); setReportShareToken(null); }}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm"
-        >
-          <FileText size={16} />
-          Generate Governor Report
-        </button>
+        )}
+        <div className={`text-sm p-4 rounded-xl border leading-relaxed ${verdictBgCls} ${verdictTextCls}`}>{demographicSentence}</div>
+        <p className="mt-3 text-xs text-muted-foreground/60">Expected range based on DfE 2022/23 national statistics + EEF disadvantage gap data. ±5pp confidence band. ↑ = over-reported. ↓ = under-reported. ✓ = within expected range.</p>
       </div>
+    );
+  };
 
-      {/* Generate Governor Report Modal */}
+  // ── Research KPIs render helper ──
+  const renderResearchKpis = () => {
+    const schoolInfoLocal = getSchoolByAbbrev(school);
+    const schoolFsmPct = fsmPct ?? schoolInfoLocal?.fsmPct ?? 25;
+    const schoolSendPct = sendPct ?? 15;
+    const schoolEalPct = schoolInfoLocal?.ealPct ?? 20;
+    const schoolDemographics = { fsmPct: schoolFsmPct, sendPct: schoolSendPct, ealPct: schoolEalPct };
+    const kpiYearData: Record<string, { r?: number; w?: number; m?: number; c?: number } | undefined> = {};
+    for (const yg of YEAR_GROUPS) {
+      const d = schoolData[yg]?.all_pupils;
+      if (d) kpiYearData[yg] = { r: d.r_are ?? undefined, w: d.w_are ?? undefined, m: d.m_are ?? undefined, c: d.c_are ?? undefined };
+    }
+    const kpis = evaluateResearchKpis(schoolDemographics, kpiYearData);
+
+    return (
+      <div className="bg-card border border-border rounded-2xl p-8">
+        <h3 className="text-xl font-semibold text-foreground mb-1">Research-backed KPIs</h3>
+        <p className="text-sm text-muted-foreground mb-6">Expectations published in peer-reviewed research and official DfE/EEF statistics — not our opinion.</p>
+        {kpis.length === 0 ? (
+          <p className="text-sm text-muted-foreground italic">Insufficient data. Year 5/6 Combined data required.</p>
+        ) : (
+          <div className="space-y-3">
+            {kpis.map((kpi) => (
+              <div key={kpi.id} className={`rounded-xl border-l-4 p-4 ${kpi.passed === true ? 'border-l-emerald-500 bg-emerald-50/40' : kpi.passed === false ? 'border-l-red-500 bg-red-50/40' : 'border-l-border bg-muted/20'}`}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="text-sm font-semibold text-foreground">{kpi.name}</span>
+                      {kpi.passed === true && <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-600 text-white font-semibold">PASS</span>}
+                      {kpi.passed === false && <span className="text-xs px-2 py-0.5 rounded-full bg-red-600 text-white font-semibold">FAIL</span>}
+                      {kpi.passed === null && <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">NO DATA</span>}
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 text-xs mb-2">
+                      <div><span className="text-muted-foreground">Research target:</span><span className="ml-1 font-medium text-foreground">{kpi.target}</span></div>
+                      <div><span className="text-muted-foreground">School actual:</span><span className="ml-1 font-semibold text-foreground">{kpi.actual ?? '—'}</span></div>
+                    </div>
+                    <div className="text-xs text-foreground/70">{kpi.explanation}</div>
+                    <div className="mt-1.5 text-[10px] text-muted-foreground/60 italic" title={citationFull(kpi.citationId)}>{citationFull(kpi.citationId)}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // ── Research factors render helper ──
+  const renderResearchFactors = () => {
+    const schoolInfoLocal = getSchoolByAbbrev(school);
+    const fsmPctForFactors = fsmPct ?? schoolInfoLocal?.fsmPct ?? 25;
+    const ealPctForFactors = schoolInfoLocal?.ealPct ?? 20;
+    const sendPctForFactors = sendPct ?? 15;
+
+    const SCHOOL_DFE_METRICS: Record<string, { pa_pct: number | null; pa_year: number | null; wf_current_fte: number | null; wf_prev_fte: number | null; wf_year: number | null; ks2_2023: number | null; ks2_2024: number | null; ks2_2025: number | null; ofsted_last: string | null; ofsted_prev: string | null; ofsted_last_year: number | null }> = {
+      CVPS: { pa_pct: 22.65, pa_year: 2024, wf_current_fte: 11.6, wf_prev_fte: 9.47, wf_year: 2025, ks2_2023: 42, ks2_2024: 55, ks2_2025: 56, ofsted_last: 'Good', ofsted_prev: 'Good', ofsted_last_year: 2023 },
+      CHPS: { pa_pct: 18.98, pa_year: 2024, wf_current_fte: 35.8, wf_prev_fte: 28.99, wf_year: 2025, ks2_2023: 33, ks2_2024: 56, ks2_2025: 33, ofsted_last: 'Requires Improvement', ofsted_prev: 'Requires Improvement', ofsted_last_year: 2022 },
+      FPS:  { pa_pct: 19.68, pa_year: 2024, wf_current_fte: 19.56, wf_prev_fte: 20.62, wf_year: 2025, ks2_2023: 75, ks2_2024: 25, ks2_2025: 69, ofsted_last: 'Good', ofsted_prev: 'Good', ofsted_last_year: 2022 },
+      GHPS: { pa_pct: 24.65, pa_year: 2024, wf_current_fte: 19.2, wf_prev_fte: 21.39, wf_year: 2025, ks2_2023: 55, ks2_2024: 50, ks2_2025: 67, ofsted_last: 'Good', ofsted_prev: 'Requires Improvement', ofsted_last_year: 2023 },
+      HPS:  { pa_pct: 27.47, pa_year: 2024, wf_current_fte: 17.0, wf_prev_fte: 17.8, wf_year: 2025, ks2_2023: 75, ks2_2024: 74, ks2_2025: 80, ofsted_last: 'Requires Improvement', ofsted_prev: 'Good', ofsted_last_year: 2023 },
+      LPS:  { pa_pct: 6.02, pa_year: 2024, wf_current_fte: 5.0, wf_prev_fte: 5.02, wf_year: 2025, ks2_2023: 60, ks2_2024: 36, ks2_2025: 64, ofsted_last: 'Good', ofsted_prev: 'Good', ofsted_last_year: 2023 },
+      LGPS: { pa_pct: 12.05, pa_year: 2024, wf_current_fte: 22.4, wf_prev_fte: 25.14, wf_year: 2025, ks2_2023: 80, ks2_2024: 57, ks2_2025: 41, ofsted_last: 'Requires Improvement', ofsted_prev: 'Outstanding', ofsted_last_year: 2024 },
+    };
+
+    const m = SCHOOL_DFE_METRICS[school];
+    const latestKs2 = m?.ks2_2025 ?? m?.ks2_2024 ?? m?.ks2_2023 ?? y6Combined;
+    const demographicPredicted = Math.round(60 - (fsmPctForFactors / 100) * 20 - (sendPctForFactors / 100) * 30 - (ealPctForFactors / 100) * -2);
+
+    interface ResearchFactor { id: string; name: string; finding: string; citation: string; status: 'ok' | 'concern' | 'pending'; statusLabel: string }
+    const factors: ResearchFactor[] = [];
+
+    factors.push({ id: 'fsm-gap', name: 'FSM attainment gap', finding: latestKs2 !== null ? `${school} has ${fsmPctForFactors.toFixed(0)}% FSM. Research predicts ~${demographicPredicted}% KS2 Combined; school achieved ${latestKs2}% — ${latestKs2 >= demographicPredicted ? `${latestKs2 - demographicPredicted}pp above` : `${demographicPredicted - latestKs2}pp below`} expectation.` : `${school} has ${fsmPctForFactors.toFixed(0)}% FSM. Research predicts ~${demographicPredicted}% KS2 Combined for this demographic.`, citation: 'EEF Pupil Premium Guide 2024', status: latestKs2 === null ? 'pending' : latestKs2 >= demographicPredicted - 5 ? 'ok' : 'concern', statusLabel: latestKs2 === null ? 'Pending data' : latestKs2 >= demographicPredicted - 5 ? 'Accounted for' : 'Below expectation' });
+    factors.push({ id: 'send-gap', name: 'SEND attainment gap', finding: `${school} has ${sendPctForFactors.toFixed(0)}% SEND on roll. EEF research shows SEND pupils at SEN Support achieve ~30pp below non-SEND peers at KS2.`, citation: 'EEF SEND Guidance Report 2020', status: 'ok', statusLabel: 'Accounted for' });
+
+    if (ealPctForFactors > 30) {
+      const y1c = schoolData['Year 1']?.all_pupils.c_are ?? null;
+      const y6c = schoolData['Year 6']?.all_pupils.c_are ?? null;
+      const gain = y6c !== null && y1c !== null ? y6c - y1c : null;
+      factors.push({ id: 'eal-trajectory', name: 'EAL language trajectory', finding: gain !== null ? `With ${ealPctForFactors.toFixed(0)}% EAL, research expects ≥15pp Y1→Y6 gain. This school shows ${gain >= 0 ? '+' : ''}${gain}pp — ${gain >= 15 ? 'on track' : `${15 - gain}pp short of research expectation`}.` : `${school} has ${ealPctForFactors.toFixed(0)}% EAL. Research expects attainment to rise year-on-year as language proficiency develops.`, citation: 'Strand, Demie & Lindorff 2018; NALDIC 2020', status: gain === null ? 'pending' : gain >= 10 ? 'ok' : 'concern', statusLabel: gain === null ? 'Pending data' : gain >= 10 ? 'On trajectory' : 'Trajectory concern' });
+    }
+
+    if (m?.pa_pct !== null && m?.pa_pct !== undefined) {
+      const pa = m.pa_pct;
+      factors.push({ id: 'persistent-absence', name: 'Persistent absence impact', finding: `${school} recorded ${pa.toFixed(1)}% persistent absence (${(m.pa_year ?? 0) - 1}/${String(m.pa_year ?? 0).slice(2)}). ${pa >= 20 ? 'Above the critical 20% threshold — DfE research links this to 10–15pp lower KS2 outcomes.' : pa >= 10 ? 'Above the 10% national target. Research links this level to measurable attainment gaps.' : 'Below the 10% national target — a positive context factor.'}`, citation: 'DfE Pupil Absence Statistics 2024', status: pa >= 10 ? 'concern' : 'ok', statusLabel: pa >= 20 ? 'High concern' : pa >= 10 ? 'Elevated' : 'Within target' });
+    }
+
+    if (m?.wf_current_fte !== null && m?.wf_prev_fte !== null && m?.wf_current_fte !== undefined && m?.wf_prev_fte !== undefined) {
+      const delta = m.wf_current_fte - m.wf_prev_fte;
+      const turnoverPct = m.wf_prev_fte > 0 ? Math.abs(delta / m.wf_prev_fte) * 100 : 0;
+      factors.push({ id: 'teacher-turnover', name: 'Teacher turnover impact', finding: `${school} employed ${m.wf_current_fte.toFixed(1)} FTE teachers, ${delta >= 0 ? `up ${delta.toFixed(1)} FTE` : `down ${Math.abs(delta).toFixed(1)} FTE`} (${turnoverPct.toFixed(0)}% change). ${Math.abs(delta) >= 1.5 ? 'IFS research shows changes of this scale can affect attainment over a 2-year period.' : 'Stable workforce — positive context factor.'}`, citation: 'Sibieta, IFS 2022', status: Math.abs(delta) >= 1.5 ? 'concern' : 'ok', statusLabel: Math.abs(delta) >= 3 ? 'Significant change' : Math.abs(delta) >= 1.5 ? 'Notable change' : 'Stable' });
+    }
+
+    if (m?.ofsted_last) {
+      const isImprovement = m.ofsted_prev === 'Requires Improvement' && m.ofsted_last === 'Good';
+      const isDecline = (m.ofsted_prev === 'Good' || m.ofsted_prev === 'Outstanding') && m.ofsted_last === 'Requires Improvement';
+      factors.push({ id: 'ofsted-trajectory', name: 'Ofsted inspection trajectory', finding: isImprovement ? `${school} improved from ${m.ofsted_prev} to ${m.ofsted_last} in ${m.ofsted_last_year}.` : isDecline ? `${school}'s most recent inspection (${m.ofsted_last_year}) recorded ${m.ofsted_last}, down from ${m.ofsted_prev}. Governors may want to ask: what progress has been made since inspection?` : `${school}'s most recent inspection (${m.ofsted_last_year}) confirmed ${m.ofsted_last}.`, citation: 'EEF School Improvement Evidence Review 2023', status: m.ofsted_last === 'Good' || m.ofsted_last === 'Outstanding' ? 'ok' : 'concern', statusLabel: isImprovement ? 'Positive trajectory' : isDecline ? 'Declining trajectory' : m.ofsted_last === 'Requires Improvement' ? 'RI — monitor closely' : 'Good standing' });
+    }
+
+    const statusConfig = { ok: { dot: 'bg-emerald-500', label: 'bg-emerald-50 text-emerald-700 border-emerald-200' }, concern: { dot: 'bg-amber-500', label: 'bg-amber-50 text-amber-700 border-amber-200' }, pending: { dot: 'bg-muted-foreground/30', label: 'bg-muted text-muted-foreground border-border' } };
+
+    return (
+      <div className="bg-card border border-border rounded-2xl p-8">
+        <h3 className="text-xl font-semibold text-foreground mb-1">Research factors checked</h3>
+        <p className="text-sm text-muted-foreground mb-6">Each factor cross-references this school&apos;s data against peer-reviewed research. Presented as context for governor discussion, not as conclusions.</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {factors.map((factor) => {
+            const cfg = statusConfig[factor.status];
+            return (
+              <div key={factor.id} className={`rounded-xl border p-4 ${factor.status === 'concern' ? 'bg-amber-50/30 border-amber-200' : factor.status === 'pending' ? 'bg-muted/20 border-border' : 'bg-emerald-50/30 border-emerald-200'}`}>
+                <div className="flex items-start gap-2 mb-2">
+                  <span className={`mt-1.5 flex-shrink-0 w-2 h-2 rounded-full ${cfg.dot}`} />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-semibold text-foreground">{factor.name}</span>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-medium ${cfg.label}`}>{factor.statusLabel}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{factor.finding}</p>
+                    <p className="mt-1.5 text-[10px] text-muted-foreground/60 italic">Source: {factor.citation}</p>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  // ── EAL Trajectory render helper ──
+  const renderEalTrajectory = () => {
+    const schoolInfoLocal = getSchoolByAbbrev(school);
+    if (!schoolInfoLocal || schoolInfoLocal.ealPct <= 30) return null;
+
+    const schoolFsmPctLocal = fsmPct ?? schoolInfoLocal.fsmPct;
+    const schoolSendPctLocal = sendPct ?? 15;
+    const schoolEalPctLocal = schoolInfoLocal.ealPct;
+
+    const trajectory = getEalTrajectory(schoolEalPctLocal, schoolFsmPctLocal, schoolSendPctLocal, 'combined');
+    const chartData = trajectory.map((t, idx) => {
+      const spreadsheetYg = HEATMAP_YEAR_GROUPS[idx];
+      const reported = spreadsheetYg ? (schoolData[spreadsheetYg]?.all_pupils.c_are ?? null) : null;
+      return { yearGroup: t.yearGroup, expected: t.expected, expectedLow: t.low, expectedHigh: t.high, reported };
+    });
+
+    const reportedValues = chartData.map((d) => d.reported).filter((v): v is number => v !== null);
+    const y1Rep = chartData[0]?.reported;
+    const y6Rep = chartData[5]?.reported;
+    let diagnostic = '';
+    let diagnosticCls = 'border-l-sky-400 bg-sky-50/40 text-sky-800';
+
+    if (reportedValues.length >= 4) {
+      const slope = y6Rep !== null && y1Rep !== null ? y6Rep - y1Rep : null;
+      if (slope !== null && slope < -5) { diagnostic = 'Significant concern: Attainment is falling across year groups in a high-EAL school. This is opposite to the expected pattern — suggests over-assessment at Y1 OR cumulative curriculum gaps.'; diagnosticCls = 'border-l-red-500 bg-red-50/40 text-red-800'; }
+      else if (slope !== null && Math.abs(slope) <= 5) { diagnostic = 'Warning: Attainment is not rising despite high EAL. Either language support is insufficient OR assessment is not recognising improving proficiency.'; diagnosticCls = 'border-l-amber-500 bg-amber-50/40 text-amber-800'; }
+      else { diagnostic = "This school's cohorts are tracking to the expected EAL language development curve — a sign of effective EAL support."; diagnosticCls = 'border-l-sky-400 bg-sky-50/40 text-sky-800'; }
+    } else {
+      diagnostic = 'Not enough year group data to determine EAL trajectory pattern. Upload a complete spreadsheet for full analysis.';
+      diagnosticCls = 'border-l-border bg-muted/20 text-muted-foreground';
+    }
+
+    return (
+      <div className="bg-card border border-border rounded-2xl p-8">
+        <h3 className="text-xl font-semibold text-foreground mb-1">EAL language trajectory — {schoolEalPctLocal.toFixed(0)}% EAL</h3>
+        <p className="text-sm text-muted-foreground mb-6">EAL pupils typically start with a 15–20pp attainment gap at Y1, closing to parity by Y5 as English proficiency develops. This school&apos;s cohorts should follow an upward curve.</p>
+        <ResponsiveContainer width="100%" height={260}>
+          <LineChart data={chartData} margin={{ top: 10, right: 20, left: -10, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+            <XAxis dataKey="yearGroup" tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+            <YAxis domain={[0, 100]} tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+            <Tooltip formatter={(val, name) => [`${val}%`, name === 'expected' ? 'Expected (demographic)' : 'Reported']} contentStyle={{ fontSize: '12px', borderRadius: '12px', border: '1px solid hsl(var(--border))', background: 'hsl(var(--card))', padding: '8px 12px' }} />
+            <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }} formatter={(value) => value === 'expected' ? 'Expected (demographic model)' : 'Reported (mid-year)'} />
+            <Line type="monotone" dataKey="expected" name="expected" stroke="#0891b2" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 4, fill: '#0891b2', strokeWidth: 0 }} activeDot={{ r: 6, strokeWidth: 2, stroke: '#fff' }} />
+            <Line type="monotone" dataKey="reported" name="reported" stroke="#6366f1" strokeWidth={3} dot={{ r: 5, fill: '#6366f1', strokeWidth: 0 }} activeDot={{ r: 7, strokeWidth: 2, stroke: '#fff' }} connectNulls />
+            <ReferenceLine y={65} stroke="#D1D5DB" strokeDasharray="4 4" />
+          </LineChart>
+        </ResponsiveContainer>
+        <div className={`mt-4 border-l-4 px-4 py-3 rounded-r-xl text-sm ${diagnosticCls}`}>{diagnostic}</div>
+        <div className="mt-3 flex items-center gap-1.5 flex-wrap">
+          <span className="text-[10px] text-muted-foreground uppercase font-semibold">Research basis:</span>
+          {(['strand-demie-2018', 'naldic-2020', 'demie-2023'] as const).map((id) => (
+            <span key={id} className="text-[10px] px-1.5 py-0.5 rounded bg-sky-100 text-sky-700 font-medium cursor-help" title={citationFull(id)}>{citationShort(id)}</span>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <EditModeProvider orgId={organizationId ?? "local"} urn={editStorageUrn}>
+      {/* Generate Governor Report Modal — rendered at top level so it's always accessible */}
       {showReportModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowReportModal(false)}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
-            {/* Modal header */}
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center">
@@ -1795,1337 +1961,699 @@ function SchoolTab({ school, parsed, dfeData, authToken, organizationId }: { sch
                 <X size={18} />
               </button>
             </div>
-
-            {/* Template selector */}
             <div className="space-y-4 mb-5">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="report-template">Template</label>
-                <select
-                  id="report-template"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  defaultValue="governor-board"
-                >
+                <select id="report-template" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500" defaultValue="governor-board">
                   <option value="governor-board">Governor Board Report</option>
                 </select>
                 <p className="text-xs text-gray-400 mt-1">4-page A4 report with executive summary, cohort chart, recommendations, and governor questions.</p>
               </div>
-
-              {/* Options */}
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    id="report-appendix"
-                    checked={reportIncludeAppendix}
-                    onChange={(e) => setReportIncludeAppendix(e.target.checked)}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                  />
+                  <input type="checkbox" id="report-appendix" checked={reportIncludeAppendix} onChange={(e) => setReportIncludeAppendix(e.target.checked)} className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
                   <label htmlFor="report-appendix" className="text-sm text-gray-700">Include data appendix</label>
                 </div>
                 <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    id="report-confidential"
-                    checked={reportConfidential}
-                    onChange={(e) => setReportConfidential(e.target.checked)}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                  />
+                  <input type="checkbox" id="report-confidential" checked={reportConfidential} onChange={(e) => setReportConfidential(e.target.checked)} className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
                   <label htmlFor="report-confidential" className="text-sm text-gray-700">Add confidentiality watermark</label>
                 </div>
               </div>
             </div>
-
-            {/* Error state */}
             {reportError && (
               <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4 text-xs text-red-700">
                 <AlertCircle size={14} className="flex-shrink-0 mt-0.5" />
                 <span>{reportError}</span>
               </div>
             )}
-
-            {/* Share token success */}
             {reportShareToken && (
               <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 mb-4 text-xs text-emerald-700">
                 <CheckCircle2 size={14} />
                 <span>Report generated. Share token: <span className="font-mono font-semibold">{reportShareToken}</span></span>
               </div>
             )}
-
-            {/* Actions */}
             <div className="flex gap-3">
-              <button
-                onClick={() => setShowReportModal(false)}
-                className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-                disabled={reportGenerating}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleGenerateReport}
-                disabled={reportGenerating}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-              >
+              <button onClick={() => setShowReportModal(false)} className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors" disabled={reportGenerating}>Cancel</button>
+              <button onClick={handleGenerateReport} disabled={reportGenerating} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
                 {reportGenerating ? (
-                  <>
-                    <div className="w-4 h-4 rounded-full border-2 border-blue-200 border-t-white animate-spin" />
-                    Generating... (~15s)
-                  </>
+                  <><div className="w-4 h-4 rounded-full border-2 border-blue-200 border-t-white animate-spin" />Generating... (~15s)</>
                 ) : (
-                  <>
-                    <Download size={16} />
-                    Generate Report
-                  </>
+                  <><Download size={16} />Generate Report</>
                 )}
               </button>
             </div>
-            <p className="text-[10px] text-gray-400 mt-3 text-center">
-              Report opens in a new tab and downloads as an HTML file. Print to PDF from your browser.
-            </p>
+            <p className="text-[10px] text-gray-400 mt-3 text-center">Report opens in a new tab and downloads as an HTML file. Print to PDF from your browser.</p>
           </div>
         </div>
       )}
 
-      {/* AI Narrative Summary */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-r from-slate-50 to-blue-50 border border-slate-200 rounded-xl p-6"
-      >
-        <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-          <Info size={16} className="text-blue-500" />
-          Assessment Summary — {school}
-        </h3>
+      <SchoolTabTabs school={school}>
+        {(activeTab: SchoolTabId) => (
+          <div className="px-0">
 
-        {narrativeLoading ? (
-          <div className="flex items-center gap-3 py-4">
-            <div className="w-4 h-4 rounded-full border-2 border-blue-200 border-t-blue-600 animate-spin" />
-            <span className="text-sm text-slate-500">Generating analysis...</span>
-          </div>
-        ) : aiNarrative ? (
-          <div className="max-w-none space-y-3">
-            {aiNarrative
-              // Strip markdown headers
-              .replace(/^#{1,4}\s+/gm, '')
-              // Strip bold/italic markers
-              .replace(/\*{1,3}([^*]+)\*{1,3}/g, '$1')
-              .replace(/_{1,2}([^_]+)_{1,2}/g, '$1')
-              // Convert bullet lines into flowing text
-              .replace(/^[-•]\s+/gm, '')
-              .replace(/^\d+\.\s+/gm, '')
-              // Clean up excess whitespace
-              .replace(/\n{3,}/g, '\n\n')
-              .trim()
-              .split('\n\n')
-              .filter(p => p.trim().length > 0)
-              .map((para, i) => (
-                <p key={i} className="text-sm text-slate-700 leading-relaxed">{para.replace(/\n/g, ' ').trim()}</p>
-              ))
-            }
-          </div>
-        ) : narrativePoints.length > 0 ? (
-          <div className="space-y-3">
-            {narrativePoints.map((point, i) => (
-              <p key={i} className="text-sm text-slate-700 leading-relaxed">{point}</p>
-            ))}
-          </div>
-        ) : null}
+            {/* ─────────────────────────────────────────────────────────────────────
+                TAB 1: OVERVIEW — governor-ready, minimal, one dominant visual
+            ───────────────────────────────────────────────────────────────────── */}
+            {activeTab === "overview" && (
+              <div className="space-y-10 py-8 px-6">
 
-        <p className="text-[10px] text-slate-400 mt-4">
-          Source: Analysis based on trust mid-year spreadsheet data (self-reported). Not externally validated.
-          {aiNarrative && ' Narrative generated by AI from the computed metrics.'}
-        </p>
-      </motion.div>
+                {/* Hero row: school identity + verdict + 3 KPIs + Generate Report */}
+                <HideableCard componentId="overview-hero">
+                  <div className="bg-card border border-border rounded-2xl p-8">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-8">
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-muted text-muted-foreground uppercase tracking-wider">{school}</span>
+                          <span className="text-xs text-muted-foreground">{schoolInfo?.nor ?? totalPupils} pupils &middot; {fsmPct !== null ? `${fsmPct}%` : '—'} FSM &middot; {schoolInfo?.ealPct !== undefined ? `${schoolInfo.ealPct}%` : '—'} EAL</span>
+                        </div>
+                        <h2 className="text-2xl font-semibold text-foreground">{TRUST_SCHOOLS[school]?.name ?? school}</h2>
+                        {info?.urn && <p className="text-sm text-muted-foreground mt-0.5">URN {info.urn}</p>}
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <div className={`inline-flex px-3 py-1.5 rounded-full text-sm font-semibold border-l-4 ${
+                          severityVerdict === 'strong' ? 'bg-emerald-50 text-emerald-800 border-l-emerald-500' :
+                          severityVerdict === 'secure' ? 'bg-sky-50 text-sky-800 border-l-sky-500' :
+                          severityVerdict === 'attention' ? 'bg-amber-50 text-amber-800 border-l-amber-500' :
+                          'bg-red-50 text-red-800 border-l-red-500'
+                        }`}>
+                          {severityVerdict === 'strong' ? 'Strong' : severityVerdict === 'secure' ? 'Secure' : severityVerdict === 'attention' ? 'Needs attention' : 'Urgent review'}
+                        </div>
+                        <button
+                          onClick={() => { setShowReportModal(true); setReportError(null); setReportShareToken(null); }}
+                          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-sky-500 hover:bg-sky-600 rounded-xl transition-colors"
+                        >
+                          <FileText size={15} />
+                          Generate Governor Report
+                        </button>
+                      </div>
+                    </div>
 
-      {/* Section A: School Profile Header */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-        className="bg-white border border-gray-200 rounded-xl p-5"
-      >
-        <div className="flex items-start gap-4 mb-4">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
-            <School size={18} className="text-blue-600" />
+                    {/* 3 KPIs */}
+                    <div className="grid grid-cols-3 gap-4 mb-8">
+                      <div className="text-center">
+                        <div className="text-4xl font-bold text-foreground tabular-nums">{y6Combined !== null ? `${y6Combined}%` : '—'}</div>
+                        <div className="text-sm text-muted-foreground mt-1">Y6 Combined</div>
+                        <div className="text-xs text-muted-foreground/60 mt-0.5">mid-year 2025/26</div>
+                      </div>
+                      <div className="text-center">
+                        <div className={`text-4xl font-bold tabular-nums ${nationalPercentile && nationalPercentile.percentile < 25 ? 'text-red-600' : 'text-foreground'}`}>
+                          {nationalPercentile ? ordinal(nationalPercentile.percentile) : '—'}
+                        </div>
+                        <div className="text-sm text-muted-foreground mt-1">National rank</div>
+                        <div className="text-xs text-muted-foreground/60 mt-0.5">percentile KS2 2024</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-4xl font-bold text-foreground tabular-nums">{threeYearAvg?.averagePct !== undefined && threeYearAvg?.averagePct !== null ? `${threeYearAvg.averagePct}%` : '—'}</div>
+                        <div className="text-sm text-muted-foreground mt-1">3-year average</div>
+                        <div className="text-xs text-muted-foreground/60 mt-0.5">DfE validated KS2</div>
+                      </div>
+                    </div>
+
+                    {/* Key takeaways */}
+                    <div>
+                      <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Three things governors should know</div>
+                      <ol className="space-y-2.5">
+                        {topFindings.slice(0, 3).map((f, i) => (
+                          <li key={i} className="flex gap-3 items-start">
+                            <span className={`flex-shrink-0 w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center ${
+                              f.severity === 'high' ? 'bg-red-100 text-red-700' : f.severity === 'medium' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
+                            }`}>{i + 1}</span>
+                            <span className="text-sm text-foreground leading-relaxed pt-0.5">{f.text}</span>
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+
+                    {/* What to do next */}
+                    <div className={`mt-6 rounded-xl p-4 text-sm border-l-4 ${
+                      severityVerdict === 'urgent' ? 'bg-red-50 border-l-red-500 text-red-900' :
+                      severityVerdict === 'attention' ? 'bg-amber-50 border-l-amber-500 text-amber-900' :
+                      'bg-emerald-50 border-l-emerald-500 text-emerald-900'
+                    }`}>
+                      <span className="font-semibold">Recommended next step: </span>
+                      {whatToDoNext}
+                    </div>
+                  </div>
+                </HideableCard>
+
+                {/* Single dominant chart: cohort line chart Y1–Y6 */}
+                {progressionData.some((d) => d.reading !== null || d.writing !== null || d.maths !== null) && (
+                  <HideableCard componentId="overview-progression-chart">
+                    <div className="bg-card border border-border rounded-2xl p-8">
+                      <h3 className="text-xl font-semibold text-foreground mb-1">Attainment across the school</h3>
+                      <p className="text-sm text-muted-foreground mb-6">Reading, Writing, and Maths ARE % from Y1 to Y6 — shows whether attainment is consistent or fluctuating as pupils progress</p>
+                      <ResponsiveContainer width="100%" height={300}>
+                        <LineChart data={progressionData} margin={{ top: 10, right: 30, left: -10, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                          <XAxis dataKey="yg" tick={{ fontSize: 13, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                          <YAxis domain={[0, 100]} tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                          <ReferenceLine y={65} stroke="#D1D5DB" strokeDasharray="4 4" label={{ value: "National 65%", fontSize: 11, fill: "#9CA3AF", position: "right" }} />
+                          <Tooltip formatter={(val, name) => [`${val}%`, name]} contentStyle={{ fontSize: "13px", borderRadius: "12px", border: "1px solid hsl(var(--border))", background: "hsl(var(--card))", padding: "8px 12px" }} />
+                          <Legend wrapperStyle={{ fontSize: "13px", paddingTop: "12px" }} />
+                          <Line type="monotone" dataKey="reading" name="Reading" stroke={SUBJECT_COLORS.reading} strokeWidth={2.5} dot={{ r: 5, fill: SUBJECT_COLORS.reading, strokeWidth: 0 }} activeDot={{ r: 7, strokeWidth: 2, stroke: "#fff" }} connectNulls />
+                          <Line type="monotone" dataKey="writing" name="Writing" stroke={SUBJECT_COLORS.writing} strokeWidth={2.5} dot={{ r: 5, fill: SUBJECT_COLORS.writing, strokeWidth: 0 }} activeDot={{ r: 7, strokeWidth: 2, stroke: "#fff" }} connectNulls />
+                          <Line type="monotone" dataKey="maths" name="Maths" stroke={SUBJECT_COLORS.maths} strokeWidth={2.5} dot={{ r: 5, fill: SUBJECT_COLORS.maths, strokeWidth: 0 }} activeDot={{ r: 7, strokeWidth: 2, stroke: "#fff" }} connectNulls />
+                        </LineChart>
+                      </ResponsiveContainer>
+                      {pipelineAlerts.length > 0 && (
+                        <div className="mt-4 space-y-1">
+                          {pipelineAlerts.map((alert, i) => (
+                            <div key={i} className="flex items-start gap-2 text-xs border-l-4 border-l-amber-500 bg-amber-50/50 text-amber-800 px-3 py-2 rounded-r-lg">
+                              <AlertTriangle size={12} className="flex-shrink-0 mt-0.5" />
+                              <span><span className="font-semibold">Pipeline alert:</span> {alert}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </HideableCard>
+                )}
+
+                {/* AI Narrative — collapsed by default, reveal via toggle */}
+                <HideableCard componentId="overview-ai-narrative">
+                  <OverviewNarrativeCard
+                    school={school}
+                    aiNarrative={aiNarrative}
+                    narrativeLoading={narrativeLoading}
+                    narrativePoints={narrativePoints}
+                  />
+                </HideableCard>
+
+              </div>
+            )}
+
+            {/* ─────────────────────────────────────────────────────────────────────
+                TAB 2: FORENSIC REVIEW — research verdict + evidence cards
+            ───────────────────────────────────────────────────────────────────── */}
+            {activeTab === "forensic" && (
+              <div className="space-y-10 py-8 px-6">
+
+                {/* Forensic Verdict — hero of this tab */}
+                <HideableCard componentId="forensic-verdict">
+                  {renderForensicVerdict()}
+                </HideableCard>
+
+                {/* Validation & Credibility — accordion */}
+                {(nationalPercentile !== null || threeYearAvg !== null || statAlerts.length > 0) && (
+                  <HideableCard componentId="forensic-validation">
+                    <ValidationCredibilityCard
+                      nationalPercentile={nationalPercentile}
+                      threeYearAvg={threeYearAvg}
+                      y6Combined={y6Combined}
+                      statAlerts={statAlerts}
+                      ordinal={ordinal}
+                    />
+                  </HideableCard>
+                )}
+
+                {/* Research-Backed KPIs */}
+                <HideableCard componentId="forensic-kpis">
+                  {renderResearchKpis()}
+                </HideableCard>
+
+                {/* Research Factors Checked */}
+                <HideableCard componentId="forensic-research-factors">
+                  {renderResearchFactors()}
+                </HideableCard>
+
+                {/* Key governor questions */}
+                <HideableCard componentId="forensic-questions">
+                  <div className="bg-card border border-border rounded-2xl p-8">
+                    <h3 className="text-xl font-semibold text-foreground mb-1">Governor questions</h3>
+                    <p className="text-sm text-muted-foreground mb-6">Research-grounded questions for the governing board to explore at the next FGB meeting</p>
+                    <ul className="space-y-3">
+                      {questions.map((item, i) => (
+                        <li key={i} className={`flex items-start gap-3 text-sm px-4 py-3 rounded-xl border-l-4 ${
+                          item.level === "red" ? "bg-red-50/50 border-l-red-500 text-red-800" :
+                          item.level === "amber" ? "bg-amber-50/50 border-l-amber-500 text-amber-800" :
+                          "bg-sky-50/50 border-l-sky-400 text-sky-800"
+                        }`}>
+                          <span className="flex-shrink-0 font-bold text-xs mt-0.5 opacity-60">Q{i + 1}</span>
+                          <span className="leading-relaxed">{item.q}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </HideableCard>
+
+                {/* Data quality flags */}
+                {(schoolFlags.length > 0 || missingYgs.length > 0 || zeroGdW.length >= 2) && (
+                  <HideableCard componentId="forensic-data-quality">
+                    <div className="bg-card border border-border rounded-2xl p-8">
+                      <h3 className="text-xl font-semibold text-foreground mb-6">Data quality flags</h3>
+                      <div className="space-y-2">
+                        {missingYgs.map((yg) => (
+                          <div key={yg} className="flex items-start gap-2 text-sm border-l-4 border-l-amber-400 bg-amber-50/40 text-amber-800 px-4 py-2.5 rounded-r-xl">
+                            <AlertTriangle size={14} className="flex-shrink-0 mt-0.5" />
+                            <span>No data submitted for {yg}</span>
+                          </div>
+                        ))}
+                        {zeroGdW.length >= 2 && (
+                          <div className="flex items-start gap-2 text-sm border-l-4 border-l-amber-400 bg-amber-50/40 text-amber-800 px-4 py-2.5 rounded-r-xl">
+                            <AlertTriangle size={14} className="flex-shrink-0 mt-0.5" />
+                            <span>Zero GD in Writing across {zeroGdW.length} year groups — check moderation records</span>
+                          </div>
+                        )}
+                        {schoolFlags.map((flag, i) => (
+                          <div key={i} className={`flex items-start gap-2 text-sm rounded-r-xl px-4 py-2.5 border-l-4 ${flag.severity === "error" ? "bg-red-50/40 border-l-red-500 text-red-800" : "bg-amber-50/40 border-l-amber-400 text-amber-800"}`}>
+                            {flag.severity === "error" ? <AlertCircle size={14} className="flex-shrink-0 mt-0.5" /> : <AlertTriangle size={14} className="flex-shrink-0 mt-0.5" />}
+                            <span>
+                              {flag.yearGroup && <span className="font-medium">{flag.yearGroup} / </span>}
+                              {flag.field && <span className="font-medium">{FIELD_LABELS[flag.field] ?? flag.field}: </span>}
+                              {flag.issue}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </HideableCard>
+                )}
+
+              </div>
+            )}
+
+            {/* ─────────────────────────────────────────────────────────────────────
+                TAB 3: COHORT PATHWAY — passport + EAL + GD + FSM gap + pipeline
+            ───────────────────────────────────────────────────────────────────── */}
+            {activeTab === "cohort" && (
+              <div className="space-y-10 py-8 px-6">
+
+                {/* School profile header — compact */}
+                <HideableCard componentId="cohort-profile">
+                  <div className="bg-card border border-border rounded-2xl p-6">
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="w-10 h-10 rounded-xl bg-sky-50 flex items-center justify-center flex-shrink-0">
+                        <School size={18} className="text-sky-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-foreground">{school} — {info?.name ?? school}</h3>
+                        {info?.urn && <p className="text-xs text-muted-foreground">URN {info.urn}</p>}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div className="text-center p-3 rounded-xl bg-muted/30">
+                        <div className="text-2xl font-bold text-foreground">{totalPupils > 0 ? String(totalPupils) : '—'}</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">Total Pupils</div>
+                      </div>
+                      <div className="text-center p-3 rounded-xl bg-rose-50">
+                        <div className="text-2xl font-bold text-rose-700">{fsmPct !== null ? `${fsmPct}%` : '—'}</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">FSM ({totalFsm})</div>
+                        {trustFsmPct !== null && fsmPct !== null && <div className="text-xs text-muted-foreground/60 mt-0.5">{fsmPct > trustFsmPct ? `+${Math.round(fsmPct - trustFsmPct)}pp` : `${Math.round(trustFsmPct - fsmPct)}pp below`} trust</div>}
+                      </div>
+                      <div className="text-center p-3 rounded-xl bg-purple-50">
+                        <div className="text-2xl font-bold text-purple-700">{sendPct !== null ? `${sendPct}%` : '—'}</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">SEND ({totalSend})</div>
+                      </div>
+                      <div className="text-center p-3 rounded-xl bg-indigo-50">
+                        <div className="text-2xl font-bold text-indigo-700">{totalEhcp > 0 ? String(totalEhcp) : '—'}</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">EHCPs</div>
+                      </div>
+                    </div>
+                  </div>
+                </HideableCard>
+
+                {/* Y6 Radar — compact, single chart */}
+                {radarData.length > 0 && (
+                  <HideableCard componentId="cohort-radar">
+                    <div className="bg-card border border-border rounded-2xl p-8">
+                      <h3 className="text-xl font-semibold text-foreground mb-1">Y6 subject profile vs trust average</h3>
+                      <p className="text-sm text-muted-foreground mb-2">How this school compares on every subject at Year 6</p>
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        {radarData.map((d) => {
+                          const diff = d.school - d.trust;
+                          return (
+                            <span key={d.subject} className={`text-xs px-2.5 py-1 rounded-full font-semibold border ${diff >= 0 ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-red-50 text-red-700 border-red-200"}`}>
+                              {d.subject}: {d.school}% {d.trust > 0 && <span className="font-normal opacity-70">({diff >= 0 ? "+" : ""}{diff}pp)</span>}
+                            </span>
+                          );
+                        })}
+                      </div>
+                      <ResponsiveContainer width="100%" height={280}>
+                        <RadarChart data={radarData} margin={{ top: 15, right: 40, left: 40, bottom: 15 }}>
+                          <PolarGrid stroke="hsl(var(--border))" gridType="polygon" />
+                          <PolarAngleAxis dataKey="subject" tick={{ fontSize: 13, fill: "hsl(var(--foreground))", fontWeight: 600 }} />
+                          <PolarRadiusAxis angle={90} domain={[0, 100]} tickCount={5} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+                          <Radar name="Trust Avg" dataKey="trust" stroke="#94A3B8" fill="#CBD5E1" fillOpacity={0.4} strokeWidth={2} strokeDasharray="5 3" />
+                          <Radar name={school} dataKey="school" stroke="#0ea5e9" fill="#38bdf8" fillOpacity={0.3} strokeWidth={2.5} dot={{ r: 5, fill: "#0ea5e9", strokeWidth: 0 }} />
+                          <Tooltip formatter={(val, name) => [`${val}%`, name]} contentStyle={{ fontSize: "12px", borderRadius: "8px", border: "1px solid hsl(var(--border))" }} />
+                        </RadarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </HideableCard>
+                )}
+
+                {/* Cohort Passport */}
+                <HideableCard componentId="cohort-passport">
+                  <CohortPassport
+                    cohorts={cohortPassport?.cohorts ?? []}
+                    loading={cohortPassportLoading}
+                    phonicsAvailable={cohortPassport?.phonicsAvailable ?? false}
+                    mtcAvailable={cohortPassport?.mtcAvailable ?? false}
+                    hasCTF={cohortPassport?.hasCTF ?? false}
+                    schoolName={info?.name ?? school}
+                  />
+                </HideableCard>
+
+                {/* EAL Trajectory — only for high-EAL schools */}
+                <HideableCard componentId="cohort-eal">
+                  {renderEalTrajectory()}
+                </HideableCard>
+
+                {/* Greater Depth table */}
+                {gdData.some((d) => d["Reading GD"] !== null || d["Writing GD"] !== null || d["Maths GD"] !== null) && (
+                  <HideableCard componentId="cohort-gd">
+                    <div className="bg-card border border-border rounded-2xl p-8">
+                      <h3 className="text-xl font-semibold text-foreground mb-1">Greater Depth (GD %) by year group</h3>
+                      <p className="text-sm text-muted-foreground mb-6">Percentage of pupils exceeding age-related expectations. National: Reading 29%, Writing 13%, Maths 24%</p>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm border-collapse">
+                          <thead>
+                            <tr className="border-b border-border">
+                              <th className="text-left py-2 pr-4 text-xs font-semibold text-muted-foreground">Year Group</th>
+                              <th className="text-center py-2 px-4 text-xs font-semibold text-sky-600">Reading GD</th>
+                              <th className="text-center py-2 px-4 text-xs font-semibold text-red-500">Writing GD</th>
+                              <th className="text-center py-2 px-4 text-xs font-semibold text-emerald-600">Maths GD</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {gdData.map((row) => (
+                              <tr key={row.yg} className="border-t border-border/50">
+                                <td className="py-2.5 pr-4 text-sm font-semibold text-foreground">{row.yg}</td>
+                                {(["Reading GD", "Writing GD", "Maths GD"] as const).map((subject) => {
+                                  const pct = row[subject] as number | null;
+                                  const cellClass = pct === 0 ? "text-red-700 font-bold" : pct !== null && pct > 10 ? "text-emerald-700 font-semibold" : pct !== null && pct > 0 ? "text-amber-700 font-semibold" : "text-muted-foreground/40";
+                                  return (
+                                    <td key={subject} className="py-2.5 px-4 text-center">
+                                      <span className={cellClass}>{pct !== null ? `${pct}%` : "—"}</span>
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      {zeroGdW.length >= 3 && (
+                        <div className="mt-4 flex items-start gap-2 text-sm border-l-4 border-l-red-500 bg-red-50/40 text-red-800 px-4 py-2.5 rounded-r-xl">
+                          <AlertCircle size={14} className="flex-shrink-0 mt-0.5" />
+                          <span><span className="font-semibold">Writing Greater Depth is 0% across {zeroGdW.length} year groups</span> — requires immediate attention.</span>
+                        </div>
+                      )}
+                    </div>
+                  </HideableCard>
+                )}
+
+                {/* FSM Dumbbell chart */}
+                <HideableCard componentId="cohort-fsm-gap">
+                  <div className="bg-card border border-border rounded-2xl p-8">
+                    <h3 className="text-xl font-semibold text-foreground mb-1">Disadvantage gap (FSM6 vs non-FSM)</h3>
+                    <p className="text-sm text-muted-foreground mb-6">Combined ARE % for FSM-eligible vs non-FSM pupils. Line length shows gap in percentage points.</p>
+                    {hasFsmData ? (
+                      <>
+                        <div className="space-y-4 mt-2">
+                          {fsmGapData.filter((d) => d["FSM6 Combined"] !== null || d["Non-FSM Combined"] !== null).map((d) => {
+                            const fsm = d["FSM6 Combined"] as number | null;
+                            const nonFsm = d["Non-FSM Combined"] as number | null;
+                            const gap = d.gap as number | null;
+                            const left = Math.min(fsm ?? 100, nonFsm ?? 100);
+                            const right = Math.max(fsm ?? 0, nonFsm ?? 0);
+                            const rangeWidth = right - left;
+                            return (
+                              <div key={d.yg} className="flex items-center gap-4">
+                                <div className="w-8 text-sm font-semibold text-foreground shrink-0 text-right">{d.yg}</div>
+                                <div className="flex-1 relative h-8 flex items-center">
+                                  <div className="absolute inset-y-0 left-0 right-0 flex items-center"><div className="w-full h-px bg-border" /></div>
+                                  {fsm !== null && nonFsm !== null && (
+                                    <div className="absolute h-1.5 rounded-full" style={{ left: `${left}%`, width: `${rangeWidth}%`, backgroundColor: gap !== null && gap > 20 ? "#FCA5A5" : gap !== null && gap > 10 ? "#FCD34D" : "#6EE7B7" }} />
+                                  )}
+                                  {fsm !== null && <div className="absolute w-4 h-4 rounded-full bg-red-500 border-2 border-white shadow-sm" style={{ left: `calc(${fsm}% - 8px)` }} title={`FSM6: ${fsm}%`} />}
+                                  {nonFsm !== null && <div className="absolute w-4 h-4 rounded-full bg-sky-500 border-2 border-white shadow-sm" style={{ left: `calc(${nonFsm}% - 8px)` }} title={`Non-FSM: ${nonFsm}%`} />}
+                                </div>
+                                <div className="w-20 shrink-0 flex items-center gap-1.5 text-xs">
+                                  {fsm !== null && <span className="text-red-600 font-semibold">{fsm}%</span>}
+                                  {nonFsm !== null && <span className="text-sky-600 font-semibold">{nonFsm}%</span>}
+                                </div>
+                                <div className="w-16 shrink-0">
+                                  {gap !== null && (
+                                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${gap > 20 ? "bg-red-100 text-red-700" : gap > 10 ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"}`}>{gap}pp</span>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <div className="flex items-center gap-4 mt-6 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-red-500 inline-block" /> FSM6</span>
+                          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-sky-500 inline-block" /> Non-FSM</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex items-start gap-2 text-sm border-l-4 border-l-amber-400 bg-amber-50/40 text-amber-800 px-4 py-3 rounded-r-xl">
+                        <AlertTriangle size={14} className="flex-shrink-0 mt-0.5" />
+                        <span>FSM breakdown data was not submitted for this school.</span>
+                      </div>
+                    )}
+                  </div>
+                </HideableCard>
+
+              </div>
+            )}
+
+            {/* ─────────────────────────────────────────────────────────────────────
+                TAB 4: PUPIL LEVEL — pupil card grid (requires CTF connection)
+            ───────────────────────────────────────────────────────────────────── */}
+            {activeTab === "pupil" && (
+              <div className="py-8 px-6">
+                {cohortPassport?.hasCTF ? (
+                  <HideableCard componentId="pupil-grid">
+                    <div className="bg-card border border-border rounded-2xl p-8">
+                      <h3 className="text-xl font-semibold text-foreground mb-1">Pupil-level data</h3>
+                      <p className="text-sm text-muted-foreground mb-6">Individual pupil attainment from connected CTF. All pupil names are pseudonymised — only cohort patterns are surfaced.</p>
+                      <PupilCardGrid urn={info?.urn ?? 0} authToken={authToken} />
+                    </div>
+                  </HideableCard>
+                ) : (
+                  <div className="bg-card border border-border rounded-2xl p-12 text-center">
+                    <div className="w-12 h-12 rounded-xl bg-sky-50 flex items-center justify-center mx-auto mb-4">
+                      <Lock size={20} className="text-sky-500" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-foreground mb-2">Pupil-level data requires a CTF connection</h3>
+                    <p className="text-sm text-muted-foreground max-w-sm mx-auto mb-6">
+                      Connect this school&apos;s CTF export from your MIS to unlock per-pupil attainment tracking, SEND/FSM breakdown, and individual gap analysis.
+                    </p>
+                    <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-sky-500 text-white text-sm font-medium rounded-xl cursor-pointer hover:bg-sky-600 transition-colors">
+                      <Database size={15} />
+                      Connect CTF — Tier 3
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-3">Pupil data is HMAC-SHA256 pseudonymised. No names are stored on Schoolgle servers.</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ─────────────────────────────────────────────────────────────────────
+                TAB 5: EVIDENCE — timeline + data sources
+            ───────────────────────────────────────────────────────────────────── */}
+            {activeTab === "evidence" && (
+              <div className="space-y-10 py-8 px-6">
+
+                {/* School Events Timeline */}
+                <HideableCard componentId="evidence-timeline">
+                  <div className="bg-card border border-border rounded-2xl p-8">
+                    <div className="flex items-center justify-between mb-6">
+                      <div>
+                        <h3 className="text-xl font-semibold text-foreground">Events timeline</h3>
+                        <p className="text-sm text-muted-foreground mt-0.5">DfE inspection history, attendance trends, workforce changes and forensic findings for {info?.name ?? school}</p>
+                      </div>
+                      <a href={`/timeline?school=${info?.urn ?? school}`} className="text-sm text-sky-500 hover:underline flex items-center gap-1">
+                        View full timeline →
+                      </a>
+                    </div>
+                    <Timeline events={timelineEvents} loading={timelineLoading} variant="embedded" />
+                  </div>
+                </HideableCard>
+
+                {/* KS2 Track Record — 3-year DfE history */}
+                {info?.urn && (
+                  <HideableCard componentId="evidence-ks2-track">
+                    <div className="bg-card border border-border rounded-2xl p-8">
+                      <h3 className="text-xl font-semibold text-foreground mb-1">KS2 track record</h3>
+                      <p className="text-sm text-muted-foreground mb-6">DfE validated KS2 results 2022–2024 vs current mid-year self-report</p>
+                      <KS2TrackRecordChart
+                        school={TRUST_SCHOOLS[school]?.name ?? school}
+                        abbrev={school}
+                        ks2Results={dfeData?.ks2Results ?? []}
+                        selfReport={y6Combined}
+                      />
+                    </div>
+                  </HideableCard>
+                )}
+
+                {/* Research citations */}
+                <HideableCard componentId="evidence-citations">
+                  <div className="bg-card border border-border rounded-2xl p-8">
+                    <h3 className="text-xl font-semibold text-foreground mb-6">Research citations</h3>
+                    <div className="space-y-3">
+                      {Object.values(RESEARCH_CITATIONS).map((citation) => (
+                        <div key={citation.id} className="flex items-start gap-3 text-sm">
+                          <span className="w-2 h-2 rounded-full bg-sky-500 mt-1.5 flex-shrink-0" />
+                          <div>
+                            <span className="font-medium text-foreground">{citation.authors} ({citation.year})</span>
+                            <span className="text-muted-foreground ml-2 italic">{citation.title}</span>
+                            <span className="text-muted-foreground/60 ml-2">— {citation.publisher}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground/60 mt-6">
+                      All analysis cross-references official DfE statistics and peer-reviewed research. Mid-year data is self-reported by the school; findings are presented as context for professional discussion.
+                    </p>
+                  </div>
+                </HideableCard>
+
+              </div>
+            )}
+
           </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-gray-900 text-lg">{school}</h3>
-            {info && <p className="text-sm text-gray-500">{info.name}</p>}
-          </div>
-          {info?.urn && <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded">URN {info.urn}</span>}
+        )}
+      </SchoolTabTabs>
+    </EditModeProvider>
+  );
+}
+
+// ─── Sub-render helpers extracted from SchoolTab to keep function readable ────
+
+function OverviewNarrativeCard({ school, aiNarrative, narrativeLoading, narrativePoints }: {
+  school: string;
+  aiNarrative: string | null;
+  narrativeLoading: boolean;
+  narrativePoints: string[];
+}) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <div className="bg-card border border-border rounded-2xl p-8">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h3 className="text-xl font-semibold text-foreground">Assessment summary</h3>
+          <p className="text-sm text-muted-foreground mt-0.5">AI-generated narrative from submitted data</p>
         </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { bg: "bg-gray-50", valueCls: "text-gray-900", value: totalPupils > 0 ? String(totalPupils) : "—", label: "Total Pupils", sub: null },
-            { bg: "bg-rose-50", valueCls: "text-rose-700", value: fsmPct !== null ? `${fsmPct}%` : "—", label: `FSM (${totalFsm} pupils)`, sub: trustFsmPct !== null && fsmPct !== null ? `${fsmPct > trustFsmPct ? `+${Math.round(fsmPct - trustFsmPct)}pp above` : `${Math.round(trustFsmPct - fsmPct)}pp below`} trust avg` : null },
-            { bg: "bg-purple-50", valueCls: "text-purple-700", value: sendPct !== null ? `${sendPct}%` : "—", label: `SEND (${totalSend} pupils)`, sub: trustSendPct !== null && sendPct !== null ? `${sendPct > trustSendPct ? `+${Math.round(sendPct - trustSendPct)}pp above` : `${Math.round(trustSendPct - sendPct)}pp below`} trust avg` : null },
-            { bg: "bg-indigo-50", valueCls: "text-indigo-700", value: totalEhcp > 0 ? String(totalEhcp) : "—", label: "EHCPs", sub: null },
-          ].map((card, idx) => (
-            <motion.div
-              key={idx}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              whileHover={{ y: -2, scale: 1.01, transition: { type: "spring", damping: 30, stiffness: 250 } }}
-              transition={{ duration: 0.3, delay: 0.08 * idx }}
-              className={`${card.bg} rounded-lg p-3 text-center cursor-default`}
-            >
-              <div className={`text-2xl font-bold ${card.valueCls}`}>{card.value}</div>
-              <div className="text-xs text-gray-500 mt-0.5">{card.label}</div>
-              {card.sub && <div className="text-xs mt-1 font-medium text-gray-500">{card.sub}</div>}
-            </motion.div>
-          ))}
-        </div>
-
-        {/* ARE/GD legend */}
-        <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-400 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2">
-          <span className="font-medium text-gray-500">Glossary:</span>
-          <span><span className="font-medium text-gray-600">ARE</span> = Age Related Expectations (% at expected standard)</span>
-          <span><span className="font-medium text-gray-600">GD</span> = Greater Depth (% exceeding expected standard)</span>
-        </div>
-      </motion.div>
-
-      {/* ── Validation & Credibility Section ── */}
-      {(nationalPercentile !== null || threeYearAvg !== null || statAlerts.length > 0) && (
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.04 }}
-          className="space-y-3"
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          className="flex items-center gap-1 text-sm text-sky-500 hover:underline"
         >
-          <div className="flex items-center gap-2">
-            <TrendingUp size={15} className="text-gray-500" />
-            <span className="text-sm font-semibold text-gray-800">Validation &amp; Credibility</span>
-            <span className="text-xs text-gray-400">DfE validated data vs self-reported figures</span>
-          </div>
+          {expanded ? "Hide" : "Show narrative"} <ChevronDown size={14} className={`transition-transform ${expanded ? "rotate-180" : ""}`} />
+        </button>
+      </div>
+      {expanded && (
+        <div className="mt-2">
+          {narrativeLoading ? (
+            <div className="flex items-center gap-3 py-4">
+              <div className="w-4 h-4 rounded-full border-2 border-sky-200 border-t-sky-600 animate-spin" />
+              <span className="text-sm text-muted-foreground">Generating analysis...</span>
+            </div>
+          ) : aiNarrative ? (
+            <div className="space-y-3">
+              {aiNarrative.replace(/^#{1,4}\s+/gm, '').replace(/\*{1,3}([^*]+)\*{1,3}/g, '$1').replace(/_{1,2}([^_]+)_{1,2}/g, '$1').replace(/^[-•]\s+/gm, '').replace(/^\d+\.\s+/gm, '').replace(/\n{3,}/g, '\n\n').trim().split('\n\n').filter(p => p.trim().length > 0).map((para, i) => (
+                <p key={i} className="text-sm text-foreground/80 leading-relaxed">{para.replace(/\n/g, ' ').trim()}</p>
+              ))}
+            </div>
+          ) : narrativePoints.length > 0 ? (
+            <div className="space-y-3">
+              {narrativePoints.map((point, i) => (
+                <p key={i} className="text-sm text-foreground/80 leading-relaxed">{point}</p>
+              ))}
+            </div>
+          ) : null}
+          <p className="text-xs text-muted-foreground/60 mt-4">Source: Analysis based on trust mid-year spreadsheet data (self-reported). Not externally validated.{aiNarrative && ' Narrative generated by AI from the computed metrics.'}</p>
+        </div>
+      )}
+    </div>
+  );
+}
 
-          {/* Row 1: National Percentile + Predictive Accuracy */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+// ─── Validation & Credibility card (used in Forensic tab) ────────────────────
 
-            {/* Insight 1: National Percentile */}
+function ValidationCredibilityCard({ nationalPercentile, threeYearAvg, y6Combined, statAlerts, ordinal }: {
+  nationalPercentile: { pct: number; percentile: number; rank: number; totalSchools: number } | null;
+  threeYearAvg: { averagePct: number; yearsUsed: number } | null;
+  y6Combined: number | null;
+  statAlerts: StatAlert[];
+  ordinal: (n: number) => string;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="bg-card border border-border rounded-2xl p-8">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between"
+      >
+        <div className="text-left">
+          <h3 className="text-xl font-semibold text-foreground">Validation &amp; credibility</h3>
+          <p className="text-sm text-muted-foreground mt-0.5">DfE validated data vs self-reported figures</p>
+        </div>
+        <ChevronDown size={18} className={`text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div className="mt-6 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {nationalPercentile !== null && (
-              <div className="bg-white border border-gray-200 rounded-xl p-4">
-                <h4 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                  <Trophy size={15} className={
-                    nationalPercentile.percentile > 75 ? "text-emerald-500" :
-                    nationalPercentile.percentile > 50 ? "text-blue-500" :
-                    nationalPercentile.percentile > 25 ? "text-amber-500" :
-                    "text-red-500"
-                  } />
-                  National Percentile Rank
-                  <span className="text-xs text-gray-400 font-normal ml-auto">KS2 Combined 2024/25</span>
-                </h4>
-                {(() => {
-                  // eslint-disable-next-line react-hooks/rules-of-hooks
-                  const animatedPct = useCountUp(nationalPercentile.percentile, 1400);
-                  const isUrgent = nationalPercentile.percentile <= 25;
-                  return (
-                    <motion.div
-                      animate={isUrgent ? { scale: [1, 1.04, 1] } : {}}
-                      transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                      className={`text-5xl font-extrabold mb-1 ${
-                        nationalPercentile.percentile > 75 ? "text-emerald-600" :
-                        nationalPercentile.percentile > 50 ? "text-blue-600" :
-                        nationalPercentile.percentile > 25 ? "text-amber-600" :
-                        "text-red-600"
-                      }`}
-                    >
-                      {ordinal(animatedPct)}
-                    </motion.div>
-                  );
-                })()}
-                <div className={`text-sm font-semibold mb-3 ${
-                  nationalPercentile.percentile > 50 ? "text-emerald-700" : "text-red-700"
-                }`}>
-                  {nationalPercentile.percentile > 50
-                    ? `Better than ${nationalPercentile.percentile}% of England schools`
-                    : `Worse than ${100 - nationalPercentile.percentile}% of England schools`
-                  }
+              <div className="bg-muted/20 rounded-xl p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <Trophy size={15} className={nationalPercentile.percentile > 75 ? "text-emerald-500" : nationalPercentile.percentile > 50 ? "text-sky-500" : nationalPercentile.percentile > 25 ? "text-amber-500" : "text-red-500"} />
+                  <span className="text-sm font-semibold text-foreground">National Percentile Rank</span>
+                  <span className="text-xs text-muted-foreground ml-auto">KS2 2024</span>
+                </div>
+                <div className={`text-5xl font-extrabold mb-1 ${nationalPercentile.percentile > 75 ? "text-emerald-600" : nationalPercentile.percentile > 50 ? "text-sky-600" : nationalPercentile.percentile > 25 ? "text-amber-600" : "text-red-600"}`}>
+                  {ordinal(nationalPercentile.percentile)}
+                </div>
+                <div className="text-sm font-medium text-muted-foreground mb-3">
+                  {nationalPercentile.percentile > 50 ? `Better than ${nationalPercentile.percentile}% of England schools` : `Worse than ${100 - nationalPercentile.percentile}% of England schools`}
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="bg-gray-50 rounded-lg p-2 text-center">
-                    <div className="font-bold text-gray-900 text-base">{nationalPercentile.pct}%</div>
-                    <div className="text-gray-500 mt-0.5">KS2 Combined</div>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-2 text-center">
-                    <div className="font-bold text-gray-900 text-base">
-                      {nationalPercentile.rank.toLocaleString()} / {nationalPercentile.totalSchools.toLocaleString()}
-                    </div>
-                    <div className="text-gray-500 mt-0.5">National rank</div>
-                  </div>
-                </div>
-                <div className="mt-2 text-[10px] text-gray-400 flex items-center gap-1">
-                  <Info size={9} />
-                  Source: DfE KS2 2023/24 national dataset ({nationalPercentile.totalSchools.toLocaleString()} schools)
+                  <div className="bg-card rounded-lg p-2 text-center"><div className="font-bold text-foreground text-base">{nationalPercentile.pct}%</div><div className="text-muted-foreground">KS2 Combined</div></div>
+                  <div className="bg-card rounded-lg p-2 text-center"><div className="font-bold text-foreground text-base">{nationalPercentile.rank.toLocaleString()} / {nationalPercentile.totalSchools.toLocaleString()}</div><div className="text-muted-foreground">National rank</div></div>
                 </div>
               </div>
             )}
-
-            {/* Insight 2: Predictive Accuracy Check */}
             {threeYearAvg !== null && y6Combined !== null && (
-              <div className="bg-white border border-gray-200 rounded-xl p-4">
-                <h4 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                  <Target size={15} className="text-blue-500" />
-                  Predictive Accuracy Check
-                </h4>
+              <div className="bg-muted/20 rounded-xl p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <Target size={15} className="text-sky-500" />
+                  <span className="text-sm font-semibold text-foreground">Predictive Accuracy</span>
+                </div>
                 <div className="grid grid-cols-3 gap-2 mb-3">
-                  <div>
-                    <div className="text-xs text-gray-500 mb-1">Mid-year Y6 prediction</div>
-                    <div className="text-2xl font-bold text-gray-900">{y6Combined}%</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-500 mb-1">3-yr DfE validated avg</div>
-                    <div className="text-2xl font-bold text-gray-900">{threeYearAvg.averagePct}%</div>
-                    <div className="text-[10px] text-gray-400">{threeYearAvg.yearsUsed} yr{threeYearAvg.yearsUsed !== 1 ? "s" : ""} of data</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-500 mb-1">Gap</div>
-                    <div className={`text-2xl font-bold ${
-                      Math.abs(y6Combined - threeYearAvg.averagePct) <= 5 ? "text-green-600" :
-                      Math.abs(y6Combined - threeYearAvg.averagePct) <= 10 ? "text-amber-600" : "text-red-600"
-                    }`}>
-                      {y6Combined > threeYearAvg.averagePct ? "+" : ""}{y6Combined - threeYearAvg.averagePct}pp
-                    </div>
-                  </div>
+                  <div><div className="text-xs text-muted-foreground mb-1">Mid-year Y6</div><div className="text-2xl font-bold text-foreground">{y6Combined}%</div></div>
+                  <div><div className="text-xs text-muted-foreground mb-1">3-yr DfE avg</div><div className="text-2xl font-bold text-foreground">{threeYearAvg.averagePct}%</div><div className="text-[10px] text-muted-foreground/60">{threeYearAvg.yearsUsed} yr avg</div></div>
+                  <div><div className="text-xs text-muted-foreground mb-1">Gap</div><div className={`text-2xl font-bold ${Math.abs(y6Combined - threeYearAvg.averagePct) <= 5 ? "text-emerald-600" : Math.abs(y6Combined - threeYearAvg.averagePct) <= 10 ? "text-amber-600" : "text-red-600"}`}>{y6Combined > threeYearAvg.averagePct ? "+" : ""}{y6Combined - threeYearAvg.averagePct}pp</div></div>
                 </div>
-                <div className={`text-xs p-2 rounded-lg ${
-                  y6Combined > threeYearAvg.averagePct + 10 ? "bg-amber-50 text-amber-800 border border-amber-200" :
-                  y6Combined < threeYearAvg.averagePct - 10 ? "bg-amber-50 text-amber-800 border border-amber-200" :
-                  "bg-green-50 text-green-800 border border-green-200"
-                }`}>
-                  {y6Combined > threeYearAvg.averagePct + 10
-                    ? `Prediction is ${y6Combined - threeYearAvg.averagePct}pp above the 3-year KS2 average. Historically optimistic — what evidence supports this cohort outperforming past results?`
-                    : y6Combined < threeYearAvg.averagePct - 10
-                    ? `Prediction is ${threeYearAvg.averagePct - y6Combined}pp below the 3-year KS2 average. Either this cohort is genuinely weaker or the mid-year assessment is overly pessimistic.`
-                    : `Within normal range of the 3-year KS2 average. Broadly consistent with historical performance.`
-                  }
-                </div>
-                <div className="mt-2 text-[10px] text-gray-400 flex items-center gap-1">
-                  <Info size={9} />
-                  3-yr avg uses DfE validated KS2 data. Mid-year is self-reported.
+                <div className={`text-xs p-2.5 rounded-lg ${y6Combined > threeYearAvg.averagePct + 10 || y6Combined < threeYearAvg.averagePct - 10 ? "bg-amber-50 text-amber-800 border border-amber-200" : "bg-emerald-50 text-emerald-800 border border-emerald-200"}`}>
+                  {y6Combined > threeYearAvg.averagePct + 10 ? `Prediction is ${y6Combined - threeYearAvg.averagePct}pp above 3-year average — historically optimistic.` : y6Combined < threeYearAvg.averagePct - 10 ? `Prediction is ${threeYearAvg.averagePct - y6Combined}pp below 3-year average — possibly conservative.` : `Within normal range of the 3-year KS2 average.`}
                 </div>
               </div>
             )}
-
-            {/* If only one insight available, show both in full-width fallback */}
-            {nationalPercentile === null && threeYearAvg === null && null}
-
           </div>
-
-          {/* Row 2: Data Quality Alerts — full width */}
-          <div className="bg-white border border-gray-200 rounded-xl p-4">
-            <h4 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
-              <AlertTriangle size={16} className="text-amber-500" />
-              Data Quality Alerts
-              <span className="text-xs text-gray-400 font-normal ml-auto">statistical plausibility checks</span>
-            </h4>
+          {/* Stat alerts */}
+          <div className="rounded-xl bg-muted/20 p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <AlertTriangle size={15} className="text-amber-500" />
+              <span className="text-sm font-semibold text-foreground">Data quality alerts</span>
+              <span className="text-xs text-muted-foreground ml-auto">statistical plausibility</span>
+            </div>
             {statAlerts.length === 0 ? (
-              <div className="text-sm text-gray-500 flex items-center gap-2">
-                <CheckCircle2 size={14} className="text-emerald-500 flex-shrink-0" />
-                No statistical impossibilities detected. Data appears internally consistent.
-              </div>
+              <div className="text-sm text-muted-foreground flex items-center gap-2"><CheckCircle2 size={14} className="text-emerald-500 flex-shrink-0" />No statistical impossibilities detected.</div>
             ) : (
               <div className="space-y-2">
                 {statAlerts.map((alert, i) => (
-                  <motion.div
-                    key={i}
-                    whileHover={{ y: -1, transition: { type: "spring", damping: 30, stiffness: 250 } }}
-                    className={`p-3 rounded-lg border text-sm ${
-                    alert.severity === "high" ? "bg-red-50 border-red-200 text-red-800" :
-                    alert.severity === "medium" ? "bg-amber-50 border-amber-200 text-amber-800" :
-                    "bg-gray-50 border-gray-200 text-gray-700"
-                  }`}>
-                    <div className="font-semibold text-xs uppercase mb-1 opacity-60">{alert.severity} severity</div>
+                  <div key={i} className={`p-3 rounded-xl border-l-4 text-sm ${alert.severity === "high" ? "bg-red-50/50 border-l-red-500 text-red-800" : alert.severity === "medium" ? "bg-amber-50/50 border-l-amber-500 text-amber-800" : "bg-muted/30 border-l-border text-foreground"}`}>
                     <div className="font-medium">{alert.title}</div>
                     <div className="text-xs mt-1 opacity-80">{alert.explanation}</div>
-                    <div className="text-xs mt-1 italic opacity-70">{alert.probability}</div>
-                  </motion.div>
+                  </div>
                 ))}
               </div>
             )}
           </div>
-
-        </motion.div>
-      )}
-
-      {/* ── Forensic Verdict Section ── */}
-      {(() => {
-        const schoolInfo = getSchoolByAbbrev(school);
-        // Use spreadsheet-derived FSM/SEND pct; fall back to types.ts static values
-        const schoolFsmPct = fsmPct ?? schoolInfo?.fsmPct ?? 25;
-        const schoolSendPct = sendPct ?? 15;
-        const schoolEalPct = schoolInfo?.ealPct ?? 20;
-        const schoolDemographics = { fsmPct: schoolFsmPct, sendPct: schoolSendPct, ealPct: schoolEalPct };
-
-        const ygMap: Record<string, YearGroupShort> = {
-          'Year 1': 'Y1', 'Year 2': 'Y2', 'Year 3': 'Y3',
-          'Year 4': 'Y4', 'Year 5': 'Y5', 'Year 6': 'Y6',
-        };
-
-        const yearAnalysis = HEATMAP_YEAR_GROUPS.map((yg) => {
-          const reported = schoolData[yg]?.all_pupils.c_are ?? null;
-          const ygShort = ygMap[yg];
-          if (!ygShort) return null;
-          const expected = demographicExpectation(schoolDemographics, ygShort, 'combined');
-          const classification = classifyAttainment(reported, expected);
-          return { yearGroup: yg, ygShort, reported, expected, classification };
-        }).filter(Boolean) as {
-          yearGroup: string;
-          ygShort: YearGroupShort;
-          reported: number | null;
-          expected: { expected: number; low: number; high: number; baseline: number; adjustments: { factor: string; pp: number }[] };
-          classification: { verdict: 'accurate' | 'over-reported' | 'under-reported' | 'no-data'; severity: 'low' | 'medium' | 'high'; gap: number };
-        }[];
-
-        const verdict = computeForensicVerdict(yearAnalysis.map((y) => y.classification));
-
-        const verdictBg = verdict.color === 'red' ? 'bg-red-50 border-red-300' :
-          verdict.color === 'amber' ? 'bg-amber-50 border-amber-300' :
-          verdict.color === 'green' ? 'bg-emerald-50 border-emerald-300' :
-          'bg-blue-50 border-blue-300';
-        const verdictTextCls = verdict.color === 'red' ? 'text-red-800' :
-          verdict.color === 'amber' ? 'text-amber-800' :
-          verdict.color === 'green' ? 'text-emerald-800' :
-          'text-blue-800';
-        const verdictBadgeCls = verdict.color === 'red' ? 'bg-red-100 text-red-700 border-red-300' :
-          verdict.color === 'amber' ? 'bg-amber-100 text-amber-700 border-amber-300' :
-          verdict.color === 'green' ? 'bg-emerald-100 text-emerald-700 border-emerald-300' :
-          'bg-blue-100 text-blue-700 border-blue-300';
-
-        const gapBadgeCls = (gap: number, verdict: string) => {
-          if (verdict === 'accurate') return 'bg-emerald-100 text-emerald-700';
-          if (verdict === 'over-reported') return gap > 10 ? 'bg-red-200 text-red-800 font-bold' : 'bg-amber-100 text-amber-700';
-          if (verdict === 'under-reported') return gap < -10 ? 'bg-red-200 text-red-800 font-bold' : 'bg-blue-100 text-blue-700';
-          return 'bg-gray-100 text-gray-500';
-        };
-
-        const gapIcon = (v: string) =>
-          v === 'accurate' ? '✓' : v === 'over-reported' ? '↑' : v === 'under-reported' ? '↓' : '—';
-
-        // Plain-English demographic explanation
-        const y6Pred = demographicExpectation(schoolDemographics, 'Y6', 'combined');
-        const y6Reported = schoolData['Year 6']?.all_pupils.c_are ?? null;
-        let demographicSentence = `Given this school's ${schoolEalPct.toFixed(0)}% EAL, ${schoolFsmPct.toFixed(0)}% FSM, ${schoolSendPct.toFixed(0)}% SEND profile, national data predicts Y6 Combined around ${y6Pred.low}–${y6Pred.high}%.`;
-        if (y6Reported !== null) {
-          if (y6Reported > y6Pred.high + 10) {
-            demographicSentence += ` The school reports ${y6Reported}% — significantly above prediction, suggesting possible over-assessment.`;
-          } else if (y6Reported < y6Pred.low - 10) {
-            demographicSentence += ` The school reports ${y6Reported}% — which is dramatically BELOW prediction, possibly indicating genuine struggle beyond demographics alone OR a cohort-specific event.`;
-          } else if (y6Reported >= y6Pred.low && y6Reported <= y6Pred.high) {
-            demographicSentence += ` The school reports ${y6Reported}% — within the expected range. Assessment appears proportionate.`;
-          } else if (y6Reported > y6Pred.high) {
-            demographicSentence += ` The school reports ${y6Reported}% — slightly above prediction, consistent with mild over-reporting or genuine improvement.`;
-          } else {
-            demographicSentence += ` The school reports ${y6Reported}% — slightly below prediction, consistent with cautious assessment or additional contextual pressures.`;
-          }
-        }
-
-        return (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.05 }}
-          >
-            <div className={`border rounded-xl p-4 mb-0 ${verdictBg}`}>
-              {/* A) Verdict badge */}
-              <div className="flex items-center gap-2 mb-2">
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider ${verdictBadgeCls}`}>
-                  {verdict.label}
-                </span>
-                <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">Demographic Forensic Verdict</span>
-              </div>
-              <p className={`text-xs leading-relaxed mb-3 ${verdictTextCls}`}>{verdict.interpretation}</p>
-
-              {/* B) Year-group grid */}
-              {yearAnalysis.length > 0 && (
-                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-3">
-                  {yearAnalysis.map((ya) => (
-                    <div key={ya.yearGroup} className="bg-white border border-gray-200 rounded-lg p-2 text-center shadow-sm">
-                      <div className="text-[10px] font-bold text-gray-500 mb-1">{ya.ygShort}</div>
-                      <div className="text-sm font-bold text-gray-900">
-                        {ya.reported !== null ? `${ya.reported}%` : '—'}
-                      </div>
-                      <div className="text-[9px] text-gray-400 mb-1">
-                        exp {ya.expected.low}–{ya.expected.high}%
-                      </div>
-                      <div className={`inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${gapBadgeCls(ya.classification.gap, ya.classification.verdict)}`}>
-                        {gapIcon(ya.classification.verdict)}{' '}
-                        {ya.classification.verdict !== 'no-data'
-                          ? `${ya.classification.gap > 0 ? '+' : ''}${ya.classification.gap}pp`
-                          : '—'}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* C) Demographic explanation */}
-              <div className={`text-xs p-2 rounded-lg bg-white/60 border border-white/80 leading-relaxed ${verdictTextCls}`}>
-                {demographicSentence}
-              </div>
-              <div className="mt-2 text-[9px] text-gray-400 flex items-center gap-1">
-                <Info size={9} />
-                Expected range based on DfE 2022/23 national statistics + EEF disadvantage gap data. ±5pp confidence band. ↑ = over-reported vs demographic expectation. ↓ = under-reported. ✓ = within expected range.
-              </div>
-            </div>
-          </motion.div>
-        );
-      })()}
-
-      {/* ── Research-Backed KPIs ── */}
-      {(() => {
-        const schoolInfo = getSchoolByAbbrev(school);
-        const schoolFsmPct = fsmPct ?? schoolInfo?.fsmPct ?? 25;
-        const schoolSendPct = sendPct ?? 15;
-        const schoolEalPct = schoolInfo?.ealPct ?? 20;
-        const schoolDemographics = { fsmPct: schoolFsmPct, sendPct: schoolSendPct, ealPct: schoolEalPct };
-
-        const kpiYearData: Record<string, { r?: number; w?: number; m?: number; c?: number } | undefined> = {};
-        for (const yg of YEAR_GROUPS) {
-          const d = schoolData[yg]?.all_pupils;
-          if (d) {
-            kpiYearData[yg] = {
-              r: d.r_are ?? undefined,
-              w: d.w_are ?? undefined,
-              m: d.m_are ?? undefined,
-              c: d.c_are ?? undefined,
-            };
-          }
-        }
-        const kpis = evaluateResearchKpis(schoolDemographics, kpiYearData);
-
-        return (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.08 }}>
-            <div className="bg-white border border-gray-200 rounded-xl p-4 mb-0">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 uppercase tracking-wider">Research-Backed KPIs</span>
-                <h4 className="text-sm font-semibold text-gray-800">What research says this school should achieve</h4>
-              </div>
-              <p className="text-xs text-gray-500 mb-3">
-                These KPIs aren&apos;t our opinion — they&apos;re the expectations published in peer-reviewed research and official DfE/EEF statistics.
-                Schools can dispute interpretations. They cannot dispute published evidence.
-              </p>
-
-              <div className="space-y-2">
-                {kpis.map((kpi) => (
-                  <div
-                    key={kpi.id}
-                    className={`rounded-lg border p-3 ${
-                      kpi.passed === true
-                        ? 'bg-emerald-50 border-emerald-200'
-                        : kpi.passed === false
-                        ? 'bg-red-50 border-red-200'
-                        : 'bg-gray-50 border-gray-200'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-sm font-semibold text-gray-900">{kpi.name}</span>
-                          {kpi.passed === true && (
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-600 text-white font-semibold">PASS</span>
-                          )}
-                          {kpi.passed === false && (
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-red-600 text-white font-semibold">FAIL</span>
-                          )}
-                          {kpi.passed === null && (
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-300 text-gray-700">NO DATA</span>
-                          )}
-                        </div>
-                        <div className="grid grid-cols-2 gap-4 text-xs mb-2">
-                          <div>
-                            <span className="text-gray-500">Research target:</span>
-                            <span className="ml-1 font-medium text-gray-800">{kpi.target}</span>
-                          </div>
-                          <div>
-                            <span className="text-gray-500">School actual:</span>
-                            <span className="ml-1 font-semibold text-gray-900">{kpi.actual ?? '—'}</span>
-                          </div>
-                        </div>
-                        <div className="text-xs text-gray-700">{kpi.explanation}</div>
-                        <div className="mt-1.5 text-[10px] text-gray-400">
-                          Source: <span className="italic" title={citationFull(kpi.citationId)}>{citationFull(kpi.citationId)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {kpis.length === 0 && (
-                <div className="text-sm text-gray-500 italic">
-                  Insufficient data to evaluate research-backed KPIs for this school. Year 5/6 Combined data is required.
-                </div>
-              )}
-            </div>
-          </motion.div>
-        );
-      })()}
-
-      {/* ── Research Factors Checked ── */}
-      {(() => {
-        const schoolInfo = getSchoolByAbbrev(school);
-        const schoolUrn = TRUST_SCHOOLS[school]?.urn ?? null;
-
-        // Static DfE-sourced metrics per school (from public.attendance + public.workforce, queried 2026-04-17)
-        // PA = persistent absence % for most recent year with data; WF = latest FTE teacher change
-        const SCHOOL_DFE_METRICS: Record<string, {
-          pa_pct: number | null;       // Latest persistent absence %
-          pa_year: number | null;      // Year for PA
-          wf_current_fte: number | null;  // Most recent FTE teachers
-          wf_prev_fte: number | null;     // Previous year FTE
-          wf_year: number | null;
-          ks2_2023: number | null;
-          ks2_2024: number | null;
-          ks2_2025: number | null;
-          // Ofsted trajectory: last two inspection outcomes
-          ofsted_last: string | null;
-          ofsted_prev: string | null;
-          ofsted_last_year: number | null;
-        }> = {
-          CVPS: { pa_pct: 22.65, pa_year: 2024, wf_current_fte: 11.6, wf_prev_fte: 9.47, wf_year: 2025, ks2_2023: 42, ks2_2024: 55, ks2_2025: 56, ofsted_last: 'Good', ofsted_prev: 'Good', ofsted_last_year: 2023 },
-          CHPS: { pa_pct: 18.98, pa_year: 2024, wf_current_fte: 35.8, wf_prev_fte: 28.99, wf_year: 2025, ks2_2023: 33, ks2_2024: 56, ks2_2025: 33, ofsted_last: 'Requires Improvement', ofsted_prev: 'Requires Improvement', ofsted_last_year: 2022 },
-          FPS:  { pa_pct: 19.68, pa_year: 2024, wf_current_fte: 19.56, wf_prev_fte: 20.62, wf_year: 2025, ks2_2023: 75, ks2_2024: 25, ks2_2025: 69, ofsted_last: 'Good', ofsted_prev: 'Good', ofsted_last_year: 2022 },
-          GHPS: { pa_pct: 24.65, pa_year: 2024, wf_current_fte: 19.2, wf_prev_fte: 21.39, wf_year: 2025, ks2_2023: 55, ks2_2024: 50, ks2_2025: 67, ofsted_last: 'Good', ofsted_prev: 'Requires Improvement', ofsted_last_year: 2023 },
-          HPS:  { pa_pct: 27.47, pa_year: 2024, wf_current_fte: 17.0, wf_prev_fte: 17.8, wf_year: 2025, ks2_2023: 75, ks2_2024: 74, ks2_2025: 80, ofsted_last: 'Requires Improvement', ofsted_prev: 'Good', ofsted_last_year: 2023 },
-          LPS:  { pa_pct: 6.02, pa_year: 2024, wf_current_fte: 5.0, wf_prev_fte: 5.02, wf_year: 2025, ks2_2023: 60, ks2_2024: 36, ks2_2025: 64, ofsted_last: 'Good', ofsted_prev: 'Good', ofsted_last_year: 2023 },
-          LGPS: { pa_pct: 12.05, pa_year: 2024, wf_current_fte: 22.4, wf_prev_fte: 25.14, wf_year: 2025, ks2_2023: 80, ks2_2024: 57, ks2_2025: 41, ofsted_last: 'Requires Improvement', ofsted_prev: 'Outstanding', ofsted_last_year: 2024 },
-        };
-
-        const m = SCHOOL_DFE_METRICS[school];
-        const fsmPctForFactors = fsmPct ?? schoolInfo?.fsmPct ?? 25;
-        const ealPctForFactors = schoolInfo?.ealPct ?? 20;
-        const sendPctForFactors = sendPct ?? 15;
-        const latestKs2 = m?.ks2_2025 ?? m?.ks2_2024 ?? m?.ks2_2023 ?? y6Combined;
-
-        // Predicted KS2 from demographic model
-        const demographicPredicted = Math.round(
-          60
-          - (fsmPctForFactors / 100) * 20
-          - (sendPctForFactors / 100) * 30
-          - (ealPctForFactors / 100) * -2
-        );
-
-        interface ResearchFactor {
-          id: string;
-          name: string;
-          finding: string;
-          citation: string;
-          citationShortLabel: string;
-          status: 'ok' | 'concern' | 'pending';
-          statusLabel: string;
-        }
-
-        const factors: ResearchFactor[] = [];
-
-        // 1. FSM attainment gap
-        factors.push({
-          id: 'fsm-gap',
-          name: 'FSM attainment gap',
-          finding: latestKs2 !== null
-            ? `${school} has ${fsmPctForFactors.toFixed(0)}% FSM. Research predicts ~${demographicPredicted}% KS2 Combined for this demographic; school achieved ${latestKs2}% — ${latestKs2 >= demographicPredicted ? `${latestKs2 - demographicPredicted}pp above` : `${demographicPredicted - latestKs2}pp below`} expectation.`
-            : `${school} has ${fsmPctForFactors.toFixed(0)}% FSM. Research predicts ~${demographicPredicted}% KS2 Combined for this demographic profile.`,
-          citation: 'EEF Pupil Premium Guide 2024',
-          citationShortLabel: 'EEF 2024',
-          status: latestKs2 === null ? 'pending' : latestKs2 >= demographicPredicted - 5 ? 'ok' : 'concern',
-          statusLabel: latestKs2 === null ? 'Pending data' : latestKs2 >= demographicPredicted - 5 ? 'Accounted for' : 'Below expectation',
-        });
-
-        // 2. SEND attainment gap
-        factors.push({
-          id: 'send-gap',
-          name: 'SEND attainment gap',
-          finding: `${school} has ${sendPctForFactors.toFixed(0)}% SEND on roll. EEF research shows SEND pupils at SEN Support achieve ~30pp below non-SEND peers at KS2. This is factored into the demographic prediction model.`,
-          citation: 'EEF SEND Guidance Report 2020',
-          citationShortLabel: 'EEF 2020',
-          status: 'ok',
-          statusLabel: 'Accounted for',
-        });
-
-        // 3. EAL language trajectory
-        if (ealPctForFactors > 30) {
-          const ealFinding = (() => {
-            const y1c = schoolData['Year 1']?.all_pupils.c_are ?? null;
-            const y6c = schoolData['Year 6']?.all_pupils.c_are ?? null;
-            if (y1c !== null && y6c !== null) {
-              const gain = y6c - y1c;
-              return `With ${ealPctForFactors.toFixed(0)}% EAL, research expects Y1→Y6 combined gain of ≥15pp as English develops. This school shows ${gain >= 0 ? '+' : ''}${gain}pp Y1→Y6 — ${gain >= 15 ? 'on track with language development research' : gain >= 0 ? `${15 - gain}pp short of research expectation` : 'falling — opposite to expected EAL trajectory'}.`;
-            }
-            return `${school} has ${ealPctForFactors.toFixed(0)}% EAL pupils. Research expects attainment to rise year-on-year as language proficiency develops, matching non-EAL peers by Y5–Y6.`;
-          })();
-          factors.push({
-            id: 'eal-trajectory',
-            name: 'EAL language trajectory',
-            finding: ealFinding,
-            citation: 'Strand, Demie & Lindorff 2018; NALDIC 2020',
-            citationShortLabel: 'Strand 2018 / NALDIC 2020',
-            status: (() => {
-              const y1c = schoolData['Year 1']?.all_pupils.c_are ?? null;
-              const y6c = schoolData['Year 6']?.all_pupils.c_are ?? null;
-              if (y1c === null || y6c === null) return 'pending' as const;
-              return (y6c - y1c) >= 10 ? 'ok' as const : 'concern' as const;
-            })(),
-            statusLabel: (() => {
-              const y1c = schoolData['Year 1']?.all_pupils.c_are ?? null;
-              const y6c = schoolData['Year 6']?.all_pupils.c_are ?? null;
-              if (y1c === null || y6c === null) return 'Pending data';
-              return (y6c - y1c) >= 10 ? 'On trajectory' : 'Trajectory concern';
-            })(),
-          });
-        }
-
-        // 4. Persistent absence impact
-        if (m?.pa_pct !== null && m?.pa_pct !== undefined) {
-          const pa = m.pa_pct;
-          factors.push({
-            id: 'persistent-absence',
-            name: 'Persistent absence impact',
-            finding: `${school} recorded ${pa.toFixed(1)}% persistent absence (${(m.pa_year ?? 0) - 1}/${String(m.pa_year ?? 0).slice(2)}). ${pa >= 20 ? `Above the critical 20% threshold — DfE research links this to 10–15pp lower KS2 outcomes. This is a significant context factor for this school's results.` : pa >= 10 ? `Above the 10% national target. Research links persistent absence at this level to measurable attainment gaps, particularly for disadvantaged pupils.` : `Below the 10% national target — a positive context factor supporting attainment.`}`,
-            citation: 'DfE Pupil Absence Statistics 2024',
-            citationShortLabel: 'DfE 2024',
-            status: pa >= 20 ? 'concern' : pa >= 10 ? 'concern' : 'ok',
-            statusLabel: pa >= 20 ? 'High concern' : pa >= 10 ? 'Elevated' : 'Within target',
-          });
-        }
-
-        // 5. Teacher turnover impact
-        if (m?.wf_current_fte !== null && m?.wf_prev_fte !== null && m?.wf_current_fte !== undefined && m?.wf_prev_fte !== undefined) {
-          const delta = m.wf_current_fte - m.wf_prev_fte;
-          const turnoverPct = m.wf_prev_fte > 0 ? Math.abs(delta / m.wf_prev_fte) * 100 : 0;
-          factors.push({
-            id: 'teacher-turnover',
-            name: 'Teacher turnover impact',
-            finding: `${school} employed ${m.wf_current_fte.toFixed(1)} FTE teachers in ${(m.wf_year ?? 2025) - 1}/${String(m.wf_year ?? 2025).slice(2)}, ${delta >= 0 ? `up ${delta.toFixed(1)} FTE` : `down ${Math.abs(delta).toFixed(1)} FTE`} from the previous year (${turnoverPct.toFixed(0)}% change). ${Math.abs(delta) >= 1.5 ? `IFS research shows changes of this scale can affect attainment over a 2-year period, especially for disadvantaged pupils.` : `Stable workforce — positive context factor for pupil outcomes.`}`,
-            citation: 'Sibieta, IFS 2022',
-            citationShortLabel: 'IFS 2022',
-            status: Math.abs(delta) >= 3 ? 'concern' : Math.abs(delta) >= 1.5 ? 'concern' : 'ok',
-            statusLabel: Math.abs(delta) >= 3 ? 'Significant change' : Math.abs(delta) >= 1.5 ? 'Notable change' : 'Stable',
-          });
-        }
-
-        // 6. Distance to school / catchment stability
-        factors.push({
-          id: 'catchment-stability',
-          name: 'Distance to school / catchment stability',
-          finding: `Research links longer commutes for disadvantaged pupils to higher persistent absence rates. Catchment analysis for ${school} is a Schoolgle Premium feature — integration with DfE travel time data pending.`,
-          citation: 'DfE / ONS School Travel Analysis 2022',
-          citationShortLabel: 'DfE 2022',
-          status: 'pending',
-          statusLabel: 'Premium feature',
-        });
-
-        // 7. Ofsted trajectory
-        if (m?.ofsted_last) {
-          const isImprovement = m.ofsted_prev === 'Requires Improvement' && m.ofsted_last === 'Good';
-          const isDecline = (m.ofsted_prev === 'Good' || m.ofsted_prev === 'Outstanding') && m.ofsted_last === 'Requires Improvement';
-          const isOutstandingToGood = m.ofsted_prev === 'Outstanding' && m.ofsted_last === 'Good';
-          factors.push({
-            id: 'ofsted-trajectory',
-            name: 'Ofsted inspection trajectory',
-            finding: isImprovement
-              ? `${school} improved from ${m.ofsted_prev} to ${m.ofsted_last} in ${m.ofsted_last_year}. EEF research shows schools achieving this turnaround sustain an average 6–8pp attainment gain over 3 years when improvement is embedded.`
-              : isDecline
-              ? `${school}'s most recent inspection (${m.ofsted_last_year}) recorded ${m.ofsted_last}, down from ${m.ofsted_prev}. EEF research highlights that schools navigating this pattern benefit from a clear improvement plan with governor oversight. Governors may want to ask: what does the improvement plan show, and what progress has been made since inspection?`
-              : isOutstandingToGood
-              ? `${school} moved from Outstanding to Good in ${m.ofsted_last_year}. While Good remains a strong judgement, the direction of travel requires governor scrutiny to understand what changed.`
-              : `${school}'s most recent inspection (${m.ofsted_last_year}) confirmed ${m.ofsted_last}. ${m.ofsted_last === 'Requires Improvement' ? 'RI status indicates areas requiring development. Governors will want to understand the improvement plan and the evidence of progress since inspection.' : 'Good judgement reflects the quality of education provided.'}`,
-            citation: 'EEF School Improvement Evidence Review 2023',
-            citationShortLabel: 'EEF 2023',
-            status: m.ofsted_last === 'Good' || m.ofsted_last === 'Outstanding' ? 'ok' : 'concern',
-            statusLabel: isImprovement ? 'Positive trajectory' : isDecline ? 'Declining trajectory' : m.ofsted_last === 'Requires Improvement' ? 'RI — monitor closely' : 'Good standing',
-          });
-        }
-
-        const statusConfig = {
-          ok:      { dot: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-          concern: { dot: 'bg-amber-500',   badge: 'bg-amber-50 text-amber-700 border-amber-200' },
-          pending: { dot: 'bg-gray-300',    badge: 'bg-gray-50 text-gray-500 border-gray-200' },
-        };
-
-        return (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.3 }}
-            transition={{ type: 'spring', damping: 30, stiffness: 250 }}
-          >
-            <div className="bg-card border border-border rounded-2xl p-6">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-500 uppercase tracking-wider">
-                  Research factors checked
-                </span>
-              </div>
-              <h4 className="text-base font-semibold text-foreground mb-1">
-                The performance context we&apos;ve evidenced against published research
-              </h4>
-              <p className="text-sm text-muted-foreground mb-4">
-                Each factor below cross-references this school&apos;s data against peer-reviewed research.
-                Findings are evidence-based and grounded in DfE published statistics — they are presented as context for governor discussion, not as conclusions.
-              </p>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {factors.map((factor) => {
-                  const cfg = statusConfig[factor.status];
-                  return (
-                    <motion.div
-                      key={factor.id}
-                      whileHover={{ y: -2, transition: { type: "spring", damping: 30, stiffness: 250 } }}
-                      className={`rounded-xl border p-4 ${factor.status === 'concern' ? 'bg-amber-50/50 border-amber-200' : factor.status === 'pending' ? 'bg-gray-50 border-gray-200' : 'bg-emerald-50/40 border-emerald-200'}`}>
-                      <div className="flex items-start gap-2 mb-2">
-                        <span className={`mt-1.5 flex-shrink-0 w-2 h-2 rounded-full ${cfg.dot}`} />
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm font-semibold text-foreground">{factor.name}</span>
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-medium ${cfg.badge}`}>
-                              {factor.statusLabel}
-                            </span>
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                            {factor.finding}
-                          </p>
-                          <div className="mt-2 text-[10px] text-muted-foreground/60 flex items-center gap-1">
-                            <span className="inline-block w-1 h-1 rounded-full bg-muted-foreground/30" />
-                            <span className="font-medium">Source:</span>
-                            <span className="italic">{factor.citation}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            </div>
-          </motion.div>
-        );
-      })()}
-
-      {/* ── Cohort Validation Passport ── */}
-      <CohortPassport
-        cohorts={cohortPassport?.cohorts ?? []}
-        loading={cohortPassportLoading}
-        phonicsAvailable={cohortPassport?.phonicsAvailable ?? false}
-        mtcAvailable={cohortPassport?.mtcAvailable ?? false}
-        hasCTF={cohortPassport?.hasCTF ?? false}
-        schoolName={info?.name ?? school}
-      />
-
-      {/* ── EAL Trajectory Analysis (only for schools with EAL > 30%) ── */}
-      {(() => {
-        const schoolInfo = getSchoolByAbbrev(school);
-        if (!schoolInfo || schoolInfo.ealPct <= 30) return null;
-
-        const schoolFsmPct = fsmPct ?? schoolInfo.fsmPct;
-        const schoolSendPct = sendPct ?? 15;
-        const schoolEalPct = schoolInfo.ealPct;
-
-        const trajectory = getEalTrajectory(schoolEalPct, schoolFsmPct, schoolSendPct, 'combined');
-
-        const chartData = trajectory.map((t, idx) => {
-          const spreadsheetYg = HEATMAP_YEAR_GROUPS[idx];
-          const reported = spreadsheetYg ? (schoolData[spreadsheetYg]?.all_pupils.c_are ?? null) : null;
-          return {
-            yearGroup: t.yearGroup,
-            expected: t.expected,
-            expectedLow: t.low,
-            expectedHigh: t.high,
-            reported,
-          };
-        });
-
-        // Auto-generate diagnostic
-        const reportedValues = chartData.map((d) => d.reported).filter((v): v is number => v !== null);
-        const y1Rep = chartData[0]?.reported;
-        const y6Rep = chartData[5]?.reported;
-        let diagnostic = '';
-        let diagnosticCls = 'bg-cyan-50 border-cyan-200 text-cyan-900';
-
-        if (reportedValues.length >= 4) {
-          const slope = y6Rep !== null && y1Rep !== null ? y6Rep - y1Rep : null;
-          const deviations = chartData.filter((d) => d.reported !== null).map((d) => (d.reported as number) - d.expected);
-          const avgDeviation = deviations.length > 0 ? deviations.reduce((s, v) => s + v, 0) / deviations.length : 0;
-
-          if (slope !== null && slope < -5) {
-            diagnostic = 'Significant concern: Attainment is falling across year groups in a high-EAL school. This is opposite to the expected pattern and suggests either over-assessment at Y1 OR cumulative curriculum gaps.';
-            diagnosticCls = 'bg-red-50 border-red-200 text-red-900';
-          } else if (slope !== null && Math.abs(slope) <= 5 && reportedValues.length >= 4) {
-            diagnostic = 'Warning: Attainment is not rising across year groups despite high EAL. Either language support is insufficient OR assessment is not recognising improving proficiency. Investigate EAL intervention provision.';
-            diagnosticCls = 'bg-amber-50 border-amber-200 text-amber-900';
-          } else if (avgDeviation > 8) {
-            diagnostic = 'Attainment is above EAL prediction from early year groups. Either the EAL pupils joined with a strong English foundation OR initial assessments are overstated.';
-            diagnosticCls = 'bg-purple-50 border-purple-200 text-purple-900';
-          } else {
-            diagnostic = "This school's cohorts are tracking to the expected EAL language development curve. Attainment is rising as language proficiency develops — a sign of effective EAL support.";
-            diagnosticCls = 'bg-cyan-50 border-cyan-200 text-cyan-900';
-          }
-        } else {
-          diagnostic = 'Not enough year group data to determine EAL trajectory pattern. Upload a complete spreadsheet for full analysis.';
-          diagnosticCls = 'bg-gray-50 border-gray-200 text-gray-600';
-        }
-
-        // Forward-looking predictions from current cohort data
-        const y1Combined = chartData[0]?.reported;
-        const y3Combined = chartData[2]?.reported;
-        const y5Combined = chartData[4]?.reported;
-        const schoolDemographics = { fsmPct: schoolFsmPct, sendPct: schoolSendPct, ealPct: schoolEalPct };
-        const y1Y6Pred = demographicExpectation(schoolDemographics, 'Y6', 'combined');
-        const y3Y6Pred = demographicExpectation(schoolDemographics, 'Y6', 'combined');
-        const y5Y6Pred = demographicExpectation(schoolDemographics, 'Y6', 'combined');
-
-        return (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.15 }}
-          >
-            <div className="bg-white border border-gray-200 rounded-xl p-4 mb-0">
-              {/* Header */}
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-100 text-cyan-700 uppercase tracking-wider">EAL Trajectory Analysis</span>
-              </div>
-              <h5 className="text-sm font-semibold text-gray-900 mb-1">
-                Expected language development curve — {school} has {schoolEalPct.toFixed(0)}% EAL
-              </h5>
-              <p className="text-xs text-gray-500 mb-3">
-                EAL pupils typically start with a 15–20pp attainment gap at Y1 due to language barriers, closing to parity by Y5 as English proficiency develops.
-                This school&apos;s cohorts should follow an UPWARD curve — if they don&apos;t, something is limiting language development.
-              </p>
-
-              {/* Line chart: predicted vs reported */}
-              <ResponsiveContainer width="100%" height={260}>
-                <LineChart data={chartData} margin={{ top: 10, right: 20, left: -10, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
-                  <XAxis dataKey="yearGroup" tick={{ fontSize: 12, fill: '#4B5563' }} axisLine={false} tickLine={false} />
-                  <YAxis domain={[0, 100]} tick={{ fontSize: 12, fill: '#6B7280' }} axisLine={false} tickLine={false} />
-                  <Tooltip
-                    formatter={(val, name) => [`${val}%`, name === 'expected' ? 'Expected (demographic)' : 'Reported']}
-                    contentStyle={{ fontSize: '12px', borderRadius: '12px', border: '1px solid #e5e7eb', background: 'white', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', padding: '8px 12px' }}
-                  />
-                  <Legend
-                    wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }}
-                    formatter={(value) => value === 'expected' ? 'Expected (demographic model)' : 'Reported (mid-year)'}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="expected"
-                    name="expected"
-                    stroke="#06b6d4"
-                    strokeWidth={2}
-                    strokeDasharray="5 5"
-                    dot={{ r: 4, fill: '#06b6d4', strokeWidth: 0 }}
-                    activeDot={{ r: 6, strokeWidth: 2, stroke: '#fff' }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="reported"
-                    name="reported"
-                    stroke="#6366f1"
-                    strokeWidth={3}
-                    dot={{ r: 5, fill: '#6366f1', strokeWidth: 0 }}
-                    activeDot={{ r: 7, strokeWidth: 2, stroke: '#fff' }}
-                    connectNulls
-                  />
-                  <ReferenceLine y={65} stroke="#D1D5DB" strokeDasharray="4 4" />
-                </LineChart>
-              </ResponsiveContainer>
-
-              {/* Diagnostic callout */}
-              <div className={`mt-3 border rounded-lg p-3 text-sm ${diagnosticCls}`}>
-                {diagnostic}
-              </div>
-
-              {/* Forward-looking predictions */}
-              {(y1Combined !== null || y3Combined !== null || y5Combined !== null) && (
-                <div className="mt-3 bg-indigo-50 border border-indigo-200 rounded-lg p-3 text-sm text-indigo-900">
-                  <div className="font-semibold mb-1 text-xs uppercase tracking-wide">Predicted trajectory for current cohorts</div>
-                  <div className="text-xs space-y-1">
-                    {y1Combined !== null && (
-                      <div>Current Y1 (at {y1Combined}%): predicted Y6 Combined = <span className="font-semibold">{y1Y6Pred.expected}%</span> (range {y1Y6Pred.low}–{y1Y6Pred.high}%) based on language development curve.</div>
-                    )}
-                    {y3Combined !== null && (
-                      <div>Current Y3 (at {y3Combined}%): predicted Y6 Combined = <span className="font-semibold">{y3Y6Pred.expected}%</span> (range {y3Y6Pred.low}–{y3Y6Pred.high}%).</div>
-                    )}
-                    {y5Combined !== null && (
-                      <div>Current Y5 (at {y5Combined}%): predicted Y6 Combined = <span className="font-semibold">{y5Y6Pred.expected}%</span> (range {y5Y6Pred.low}–{y5Y6Pred.high}%).</div>
-                    )}
-                  </div>
-                  <div className="mt-2 text-xs italic text-indigo-600">
-                    Schoolgle&apos;s AI-powered Assessment Tracker updates these predictions weekly based on incoming pupil data, flagging cohorts deviating from trajectory.
-                  </div>
-                </div>
-              )}
-
-              <div className="mt-2 text-[9px] text-gray-400 flex items-center gap-1">
-                <Info size={9} />
-                Expected curve uses DfE EAL language development gap data (Y1: −20pp, Y2: −15pp, Y3: −8pp, Y4: −4pp, Y5: 0pp, Y6: +2pp vs non-EAL peers).
-              </div>
-
-              {/* Research basis citation badges */}
-              <div className="mt-2 flex items-center gap-1.5 flex-wrap">
-                <span className="text-[10px] text-gray-400 uppercase font-semibold">Research basis:</span>
-                {(['strand-demie-2018', 'naldic-2020', 'demie-2023'] as const).map((id) => (
-                  <span
-                    key={id}
-                    className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-100 text-cyan-700 font-medium cursor-help"
-                    title={citationFull(id)}
-                  >
-                    {citationShort(id)}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </motion.div>
-        );
-      })()}
-
-      {/* Section B: Radar Chart */}
-      {radarData.length > 0 && (y6?.all_pupils.r_are !== null || y6?.all_pupils.c_are !== null) && (
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.05 }}
-          className="bg-gradient-to-br from-blue-50 to-white border border-blue-100 rounded-xl p-5 shadow-sm"
-        >
-          <div className="flex items-start justify-between mb-1">
-            <div>
-              <h4 className="text-sm font-semibold text-gray-800">Y6 Subject Profile vs Trust Average</h4>
-              <p className="text-xs text-gray-500 mt-0.5">How this school compares on every subject at Year 6</p>
-            </div>
-            <div className="flex items-center gap-3 text-[11px] text-gray-500 shrink-0 ml-4">
-              <span className="flex items-center gap-1.5">
-                <span className="inline-block w-3 h-3 rounded-full bg-blue-500 opacity-80" />
-                {school}
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="inline-block w-3 h-3 rounded-full bg-gray-300" />
-                Trust avg
-              </span>
-            </div>
-          </div>
-
-          {/* Quick score pills */}
-          <div className="flex flex-wrap gap-2 mb-3">
-            {radarData.map((d) => {
-              const diff = d.school - d.trust;
-              return (
-                <span key={d.subject} className={`text-xs px-2.5 py-1 rounded-full font-semibold border ${diff >= 0 ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-red-50 text-red-700 border-red-200"}`}>
-                  {d.subject}: {d.school}% {d.trust > 0 && <span className="font-normal opacity-70">({diff >= 0 ? "+" : ""}{diff}pp)</span>}
-                </span>
-              );
-            })}
-          </div>
-
-          <ResponsiveContainer width="100%" height={280}>
-            <RadarChart data={radarData} margin={{ top: 15, right: 40, left: 40, bottom: 15 }}>
-              <PolarGrid stroke="#CBD5E1" gridType="polygon" />
-              <PolarAngleAxis dataKey="subject" tick={{ fontSize: 13, fill: "#374151", fontWeight: 600 }} />
-              <PolarRadiusAxis angle={90} domain={[0, 100]} tickCount={5} tick={{ fontSize: 10, fill: "#9CA3AF" }} />
-              <Radar name="Trust Avg" dataKey="trust" stroke="#94A3B8" fill="#CBD5E1" fillOpacity={0.4} strokeWidth={2} strokeDasharray="5 3" />
-              <Radar name={school} dataKey="school" stroke="#2563EB" fill="#3B82F6" fillOpacity={0.3} strokeWidth={2.5} dot={{ r: 5, fill: "#2563EB", strokeWidth: 0 }} />
-              <Tooltip
-                formatter={(val, name) => [`${val}%`, name]}
-                contentStyle={{ fontSize: "12px", borderRadius: "8px", border: "1px solid #E2E8F0" }}
-              />
-            </RadarChart>
-          </ResponsiveContainer>
-
-          <div className="flex items-center gap-1.5 text-[10px] text-gray-400 mt-1">
-            <Info size={10} />
-            Source: Trust mid-year data capture spreadsheet (2025/26), Year 6 ARE %.
-          </div>
-        </motion.div>
-      )}
-
-      {/* Section C: Year Group Progression */}
-      {progressionData.some((d) => d.reading !== null || d.writing !== null || d.maths !== null) && (
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.1 }}
-          className="bg-white border border-gray-200 rounded-xl p-5"
-        >
-          <h4 className="text-base font-semibold text-gray-800 mb-0.5">Year Group Progression (ARE %)</h4>
-          <p className="text-sm text-gray-500 mb-4">Reading, Writing, and Maths across Y1–Y6 — shows whether attainment is consistent or fluctuating through the school</p>
-          <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={progressionData} margin={{ top: 10, right: 30, left: -10, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
-              <XAxis dataKey="yg" tick={{ fontSize: 12, fill: "#4B5563" }} axisLine={false} tickLine={false} />
-              <YAxis domain={[0, 100]} tick={{ fontSize: 12, fill: "#6B7280" }} axisLine={false} tickLine={false} />
-              <ReferenceLine y={65} stroke="#D1D5DB" strokeDasharray="4 4" label={{ value: "National 65%", fontSize: 11, fill: "#9CA3AF", position: "right" }} />
-              <Tooltip
-                formatter={(val, name) => [`${val}%`, name]}
-                contentStyle={{ fontSize: "13px", borderRadius: "12px", border: "1px solid #e5e7eb", boxShadow: "0 4px 12px rgba(0,0,0,0.08)", background: "white", padding: "8px 12px" }}
-              />
-              <Legend wrapperStyle={{ fontSize: "13px", paddingTop: "8px" }} />
-              <Line type="monotone" dataKey="reading" name="Reading" stroke={SUBJECT_COLORS.reading} strokeWidth={2.5} dot={{ r: 5, fill: SUBJECT_COLORS.reading, strokeWidth: 0 }} activeDot={{ r: 6, strokeWidth: 2, stroke: "#fff" }} connectNulls />
-              <Line type="monotone" dataKey="writing" name="Writing" stroke={SUBJECT_COLORS.writing} strokeWidth={2.5} dot={{ r: 5, fill: SUBJECT_COLORS.writing, strokeWidth: 0 }} activeDot={{ r: 6, strokeWidth: 2, stroke: "#fff" }} connectNulls />
-              <Line type="monotone" dataKey="maths" name="Maths" stroke={SUBJECT_COLORS.maths} strokeWidth={2.5} dot={{ r: 5, fill: SUBJECT_COLORS.maths, strokeWidth: 0 }} activeDot={{ r: 6, strokeWidth: 2, stroke: "#fff" }} connectNulls />
-            </LineChart>
-          </ResponsiveContainer>
-
-          {/* Pipeline alerts */}
-          {pipelineAlerts.length > 0 && (
-            <div className="mt-3 space-y-1">
-              {pipelineAlerts.map((alert, i) => (
-                <div key={i} className="flex items-start gap-2 text-xs bg-amber-50 border border-amber-200 text-amber-800 rounded-lg px-3 py-2">
-                  <AlertTriangle size={12} className="flex-shrink-0 mt-0.5" />
-                  <span><span className="font-semibold">Pipeline Alert:</span> {alert}</span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="flex items-center gap-1.5 text-[10px] text-gray-400 mt-3">
-            <Info size={10} />
-            Source: Trust mid-year data capture spreadsheet (2025/26). Dashed line = 65% reference.
-          </div>
-        </motion.div>
-      )}
-
-      {/* Section D: Greater Depth Analysis — Clean Table */}
-      {gdData.some((d) => d["Reading GD"] !== null || d["Writing GD"] !== null || d["Maths GD"] !== null) && (
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.15 }}
-          className="bg-white border border-gray-200 rounded-xl p-5"
-        >
-          <h4 className="text-base font-semibold text-gray-800 mb-1">Greater Depth (GD %) by Year Group</h4>
-          <p className="text-sm text-gray-500 mb-4">Percentage of pupils exceeding age-related expectations</p>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm border-collapse">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-2 pr-4 text-xs font-semibold text-gray-600">Year Group</th>
-                  <th className="text-center py-2 px-4 text-xs font-semibold text-blue-600">Reading GD</th>
-                  <th className="text-center py-2 px-4 text-xs font-semibold text-red-500">Writing GD</th>
-                  <th className="text-center py-2 px-4 text-xs font-semibold text-emerald-600">Maths GD</th>
-                </tr>
-              </thead>
-              <tbody>
-                {gdData.map((row) => (
-                  <tr key={row.yg} className="border-t border-gray-100">
-                    <td className="py-2 pr-4 text-sm font-semibold text-gray-700">{row.yg}</td>
-                    {(["Reading GD", "Writing GD", "Maths GD"] as const).map((subject) => {
-                      const pct = row[subject] as number | null;
-                      const isZero = pct === 0;
-                      const isGood = pct !== null && pct > 10;
-                      const isAmber = pct !== null && pct > 0 && pct <= 10;
-                      const cellClass = isZero
-                        ? "text-red-700 font-bold"
-                        : isGood
-                        ? "text-emerald-700 font-semibold"
-                        : isAmber
-                        ? "text-amber-700 font-semibold"
-                        : "text-gray-300";
-                      const bgClass = isZero
-                        ? "bg-red-50"
-                        : isGood
-                        ? "bg-emerald-50"
-                        : isAmber
-                        ? "bg-amber-50"
-                        : "";
-                      return (
-                        <td key={subject} className={`py-2 px-4 text-center ${bgClass}`}>
-                          <span className={cellClass}>
-                            {pct !== null ? `${pct}%` : "—"}
-                          </span>
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <p className="text-xs text-gray-500 mt-3">
-            National average GD: Reading 29%, Writing 13%, Maths 24% (2024/25)
-          </p>
-
-          {zeroGdW.length >= 3 && (
-            <div className="mt-3 flex items-start gap-2 text-xs bg-red-50 border border-red-200 text-red-700 rounded-lg px-3 py-2">
-              <AlertCircle size={12} className="flex-shrink-0 mt-0.5" />
-              <span>
-                <span className="font-semibold">Writing Greater Depth is 0% across {zeroGdW.length} year groups</span>
-                {" "}({zeroGdW.map((yg) => yg.replace("Year ", "Y")).join(", ")}) — this requires immediate attention.
-              </span>
-            </div>
-          )}
-
-          {zeroGdW.length > 0 && zeroGdW.length < 3 && (
-            <div className="mt-3 flex items-start gap-2 text-xs bg-amber-50 border border-amber-200 text-amber-700 rounded-lg px-3 py-2">
-              <AlertTriangle size={12} className="flex-shrink-0 mt-0.5" />
-              <span>
-                Zero Writing GD in {zeroGdW.map((yg) => yg.replace("Year ", "Y")).join(", ")}.
-                {" "}What is the school&apos;s strategy for extending higher-attaining writers?
-              </span>
-            </div>
-          )}
-
-          <div className="flex items-center gap-1.5 text-[10px] text-gray-400 mt-3">
-            <Info size={10} />
-            Green = &gt;10% | Amber = 1–10% | Red = 0%. Source: Trust mid-year data capture spreadsheet (2025/26).
-          </div>
-        </motion.div>
-      )}
-
-      {/* Section E: FSM6 vs Non-FSM Gap — Dumbbell Chart */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, delay: 0.2 }}
-        className="bg-white border border-gray-200 rounded-xl p-5"
-      >
-        <h4 className="text-base font-semibold text-gray-800 mb-1">FSM6 vs Non-FSM Gap (Combined ARE %)</h4>
-        <p className="text-sm text-gray-500 mb-1">The gap between FSM-eligible and non-FSM pupils in Combined attainment. A wider gap means disadvantaged pupils are falling further behind.</p>
-        <p className="text-sm text-gray-500 mb-4">Line length shows the gap in percentage points by year group.</p>
-
-        {hasFsmData ? (
-          <>
-            {/* Dumbbell chart — custom SVG-style layout */}
-            <div className="space-y-3 mt-2">
-              {fsmGapData.filter((d) => d["FSM6 Combined"] !== null || d["Non-FSM Combined"] !== null).map((d) => {
-                const fsm = d["FSM6 Combined"] as number | null;
-                const nonFsm = d["Non-FSM Combined"] as number | null;
-                const gap = d.gap as number | null;
-                const left = Math.min(fsm ?? 100, nonFsm ?? 100);
-                const right = Math.max(fsm ?? 0, nonFsm ?? 0);
-                const rangeWidth = right - left;
-                return (
-                  <div key={d.yg} className="flex items-center gap-4">
-                    <div className="w-8 text-sm font-semibold text-gray-700 shrink-0 text-right">{d.yg}</div>
-                    <div className="flex-1 relative h-8 flex items-center">
-                      {/* Track */}
-                      <div className="absolute inset-y-0 left-0 right-0 flex items-center">
-                        <div className="w-full h-px bg-gray-100" />
-                      </div>
-                      {/* Connecting line */}
-                      {fsm !== null && nonFsm !== null && (
-                        <div
-                          className="absolute h-1.5 rounded-full"
-                          style={{
-                            left: `${left}%`,
-                            width: `${rangeWidth}%`,
-                            backgroundColor: gap !== null && gap > 20 ? "#FCA5A5" : gap !== null && gap > 10 ? "#FCD34D" : "#6EE7B7",
-                          }}
-                        />
-                      )}
-                      {/* FSM dot (red) */}
-                      {fsm !== null && (
-                        <div
-                          className="absolute w-4 h-4 rounded-full bg-red-500 border-2 border-white shadow-sm"
-                          style={{ left: `calc(${fsm}% - 8px)` }}
-                          title={`FSM6: ${fsm}%`}
-                        />
-                      )}
-                      {/* Non-FSM dot (blue) */}
-                      {nonFsm !== null && (
-                        <div
-                          className="absolute w-4 h-4 rounded-full bg-blue-500 border-2 border-white shadow-sm"
-                          style={{ left: `calc(${nonFsm}% - 8px)` }}
-                          title={`Non-FSM: ${nonFsm}%`}
-                        />
-                      )}
-                    </div>
-                    <div className="w-20 shrink-0 flex items-center gap-1.5 text-xs">
-                      {fsm !== null && <span className="text-red-600 font-semibold">{fsm}%</span>}
-                      {nonFsm !== null && <span className="text-blue-600 font-semibold">{nonFsm}%</span>}
-                    </div>
-                    <div className="w-16 shrink-0">
-                      {gap !== null && (
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${gap > 20 ? "bg-red-100 text-red-700" : gap > 10 ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"}`}>
-                          {gap}pp
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="flex items-center gap-4 mt-4 text-xs text-gray-500">
-              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-red-500 inline-block" /> FSM6</span>
-              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-blue-500 inline-block" /> Non-FSM</span>
-              <span className="text-gray-400">Line = gap size. pp = percentage points.</span>
-            </div>
-          </>
-        ) : (
-          <div className="flex items-start gap-2 text-xs bg-amber-50 border border-amber-200 text-amber-700 rounded-lg px-3 py-3">
-            <AlertTriangle size={13} className="flex-shrink-0 mt-0.5" />
-            <span>FSM breakdown data was not submitted for this school. The trust spreadsheet does not separate FSM6 and Non-FSM attainment.</span>
-          </div>
-        )}
-
-        <div className="flex items-center gap-1.5 text-[10px] text-gray-400 mt-3">
-          <Info size={10} />
-          Source: Trust mid-year data capture spreadsheet (2025/26). FSM6 = Free School Meals (Ever 6). Combined ARE = all three subjects at expected standard.
         </div>
-      </motion.div>
-
-      {/* Section F: Data Quality for this school */}
-      {(schoolFlags.length > 0 || missingYgs.length > 0 || zeroGdW.length >= 2) && (
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.25 }}
-          className="bg-white border border-gray-200 rounded-xl p-5"
-        >
-          <h4 className="text-sm font-semibold text-gray-700 mb-3">Data Quality Flags for {school}</h4>
-          <div className="space-y-2">
-            {missingYgs.map((yg) => (
-              <div key={yg} className="flex items-start gap-2 text-xs bg-amber-50 border border-amber-100 text-amber-700 rounded-lg px-3 py-2">
-                <AlertTriangle size={12} className="flex-shrink-0 mt-0.5" />
-                <span>No data submitted for {yg}</span>
-              </div>
-            ))}
-            {zeroGdW.length >= 2 && (
-              <div className="flex items-start gap-2 text-xs bg-amber-50 border border-amber-100 text-amber-700 rounded-lg px-3 py-2">
-                <AlertTriangle size={12} className="flex-shrink-0 mt-0.5" />
-                <span>Zero GD in Writing reported for {zeroGdW.length} year groups — check moderation records</span>
-              </div>
-            )}
-            {schoolFlags.map((flag, i) => (
-              <div key={i} className={`flex items-start gap-2 text-xs rounded-lg px-3 py-2 border ${flag.severity === "error" ? "bg-red-50 border-red-200 text-red-700" : "bg-amber-50 border-amber-100 text-amber-700"}`}>
-                {flag.severity === "error" ? <AlertCircle size={12} className="flex-shrink-0 mt-0.5" /> : <AlertTriangle size={12} className="flex-shrink-0 mt-0.5" />}
-                <span>
-                  {flag.yearGroup && <span className="font-medium">{flag.yearGroup} / </span>}
-                  {flag.field && <span className="font-medium">{FIELD_LABELS[flag.field] ?? flag.field}: </span>}
-                  {flag.issue}
-                </span>
-              </div>
-            ))}
-          </div>
-        </motion.div>
       )}
-
-      {/* Section G: Key Questions */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, delay: 0.3 }}
-        className="bg-white border border-gray-200 rounded-xl p-5"
-      >
-        <h4 className="text-sm font-semibold text-gray-700 mb-3">Key Questions for {school}</h4>
-        <ul className="space-y-2">
-          {questions.map((item, i) => {
-            const colorClass = item.level === "red"
-              ? "bg-red-50 border-red-200 text-red-800"
-              : item.level === "amber"
-              ? "bg-amber-50 border-amber-200 text-amber-800"
-              : "bg-blue-50 border-blue-200 text-blue-700";
-            const iconClass = item.level === "red"
-              ? <AlertCircle size={13} className="flex-shrink-0 mt-0.5 text-red-500" />
-              : item.level === "amber"
-              ? <AlertTriangle size={13} className="flex-shrink-0 mt-0.5 text-amber-500" />
-              : <Info size={13} className="flex-shrink-0 mt-0.5 text-blue-400" />;
-            return (
-              <li key={i} className={`flex items-start gap-2 text-xs px-3 py-2 rounded-lg border ${colorClass}`}>
-                {iconClass}
-                <span>{item.q}</span>
-              </li>
-            );
-          })}
-        </ul>
-      </motion.div>
-
     </div>
   );
 }

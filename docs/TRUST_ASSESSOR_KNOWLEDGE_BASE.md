@@ -1074,3 +1074,107 @@ For a demo bundle, generate all 7 HTML files and zip them — each is ~57KB, ful
 - All 29 existing governor assessment tests pass (including the new `<path d=` attribute ordering for animated SVG)
 - Build: `✓ Compiled successfully in 19.1s`
 - 36/36 feature checks pass on generated HTML (verified via Python script against `/tmp/grove-house-interactive.html`)
+
+---
+
+## 22. Visual restructure + track-changes editing — 2026-04-18
+
+### The problem that was solved
+
+The SchoolTab populated-state was a 17-section vertical scroll (~1500 lines of JSX) with competing visuals, rainbow callout cards, stacked borders, and no clear information hierarchy. The CEO described it as "AI-blob, busy, unstructured."
+
+### Design principles committed (non-negotiable)
+
+1. **One hero per section, not five.** Each section has ONE dominant visual. Supporting detail lives behind accordion or reveal-on-click.
+2. **Typography does the hierarchy.** Large heading + muted subtitle + body text. No stacked coloured callout cards.
+3. **Whitespace as a design element.** `space-y-10` between major blocks, `py-8 px-6` per tab.
+4. **Restraint with colour.** Sky-500 as primary accent, amber for attention, red only for critical. Left-border (`border-l-4`) replaces full-background coloured cards.
+5. **Progressive disclosure.** Summary visible by default, detail behind "Show evidence" or accordion toggle.
+6. **Consistent card style.** All cards: `bg-card border border-border rounded-2xl`, no shadows unless hover, no gradients, no nested borders.
+
+### 5-tab architecture
+
+| Tab ID | Label | Contents |
+|--------|-------|----------|
+| `overview` | Overview | Hero row (school name, verdict pill, 3 KPIs), Key takeaways, Cohort line chart, AI narrative (collapsed) |
+| `forensic` | Forensic Review | Forensic verdict, Validation & credibility (accordion), Research KPIs, Research factors, Governor questions, Data quality flags |
+| `cohort` | Cohort Pathway | School profile stats, Y6 Radar chart, Cohort Passport, EAL Trajectory (if relevant), GD table, FSM dumbbell |
+| `pupil` | Pupil Level | PupilCardGrid (if CTF connected), or Tier 3 upsell card |
+| `evidence` | Evidence | School timeline, KS2 track record, Research citations |
+
+Active tab persisted to `localStorage` key `ta-active-tab-{school}`.
+
+### New components
+
+| File | Purpose |
+|------|---------|
+| `src/components/trust-assessor/SchoolTabTabs.tsx` | 5-tab navigation shell with animated indicator and localStorage persistence |
+| `src/components/trust-assessor/EditableText.tsx` | Inline track-changes text editing; `EditModeProvider` context; localStorage storage |
+| `src/components/trust-assessor/HideableCard.tsx` | Per-card hide/show in edit mode; hidden cards greyed with "Hidden from final" badge |
+
+### Edit mode storage schema (v1: localStorage)
+
+Key: `report-edits-{orgId}-{urn}`
+
+```json
+{
+  "hiddenComponents": ["overview-hero", "forensic-kpis"],
+  "textEdits": {
+    "verdict-paragraph": "Edited text...",
+    "finding-1-detail": "Edited text..."
+  },
+  "toneOverrides": {},
+  "lastEditedAt": "2026-04-18T19:30:00Z",
+  "version": 3
+}
+```
+
+**TODO v2:** Persist to Supabase `report_edits` table (orgId + urn + editorId + version). `saveEdits()` in `EditableText.tsx` is the single function to update.
+
+### Component IDs for hide/edit tracking
+
+| componentId | Location |
+|-------------|----------|
+| `overview-hero` | Overview tab — hero row with KPIs |
+| `overview-progression-chart` | Overview tab — cohort line chart |
+| `overview-ai-narrative` | Overview tab — AI narrative card |
+| `forensic-verdict` | Forensic tab — demographic verdict |
+| `forensic-validation` | Forensic tab — validation & credibility accordion |
+| `forensic-kpis` | Forensic tab — research-backed KPIs |
+| `forensic-research-factors` | Forensic tab — research factors |
+| `forensic-questions` | Forensic tab — governor questions |
+| `forensic-data-quality` | Forensic tab — data quality flags |
+| `cohort-profile` | Cohort tab — school demographics header |
+| `cohort-radar` | Cohort tab — Y6 radar chart |
+| `cohort-passport` | Cohort tab — cohort passport |
+| `cohort-eal` | Cohort tab — EAL trajectory (if applicable) |
+| `cohort-gd` | Cohort tab — Greater Depth table |
+| `cohort-fsm-gap` | Cohort tab — FSM dumbbell |
+| `pupil-grid` | Pupil Level tab — pupil card grid |
+| `evidence-timeline` | Evidence tab — school events timeline |
+| `evidence-ks2-track` | Evidence tab — KS2 track record |
+| `evidence-citations` | Evidence tab — research citations |
+
+### What's v1 (localStorage) vs v2 (Supabase)
+
+| Feature | v1 (today) | v2 (post-Monday) |
+|---------|-----------|-----------------|
+| Edit storage | localStorage per browser | Supabase `report_edits` table, per org |
+| Sync across devices | No | Yes |
+| Audit trail | No | Version history with timestamps |
+| Governor-ready export | Read from localStorage | Read from Supabase |
+
+### Visual polish summary
+
+- All cards: `bg-card border border-border rounded-2xl p-8` — no shadows, no gradients
+- Section gaps: `space-y-10` between major blocks
+- Alert cards: left border only (`border-l-4 border-l-{color}-500`) rather than full background
+- Verdict pill on hero: `border-l-4` with one line, no uppercase rainbow pill
+- Charts: CSS variables for colours (`hsl(var(--border))`, `hsl(var(--card))`) — dark mode compatible
+- Removed: `bg-gradient-to-br`, `shadow-md`, `border-2`, rainbow `bg-{colour}-50 border-{colour}-200` stacked callout cards
+
+### Build status
+
+- Build: passes (verified 2026-04-18)
+- Tests: 33/33 trust-assessor component tests pass; 3799 total passing tests (97 pre-existing failures in `node_modules/tsconfig-paths`)
+- Populated view: not visually verifiable without a parsed spreadsheet, but code is clean and data flow is intact
