@@ -2596,6 +2596,7 @@ function SchoolTab({ school, parsed, dfeData, authToken, organizationId }: { sch
         loading={cohortPassportLoading}
         phonicsAvailable={cohortPassport?.phonicsAvailable ?? false}
         mtcAvailable={cohortPassport?.mtcAvailable ?? false}
+        hasCTF={cohortPassport?.hasCTF ?? false}
         schoolName={info?.name ?? school}
       />
 

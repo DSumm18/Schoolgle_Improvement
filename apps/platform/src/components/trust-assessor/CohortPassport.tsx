@@ -1,11 +1,11 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { CheckCircle2, AlertTriangle, Clock, XCircle, ExternalLink } from "lucide-react";
+import { CheckCircle2, AlertTriangle, Clock, XCircle, Lock } from "lucide-react";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type CheckpointStatus = "external" | "self-reported" | "mixed" | "future" | "no-data" | "loading";
+export type CheckpointStatus = "external" | "self-reported" | "mixed" | "future" | "no-data" | "loading" | "locked";
 
 export interface Checkpoint {
   id: string;
@@ -29,6 +29,7 @@ export interface CohortPassportData {
   cohorts: CohortPathway[];
   phonicsAvailable: boolean;
   mtcAvailable: boolean;
+  hasCTF?: boolean;
 }
 
 // ─── Status config ───────────────────────────────────────────────────────────
@@ -85,6 +86,14 @@ const STATUS_CONFIG: Record<
     badgeBg: "bg-muted text-muted-foreground border-border",
     iconClass: "text-muted-foreground/40",
   },
+  locked: {
+    icon: Lock,
+    label: "Connect CTF",
+    cellBg: "bg-violet-500/5",
+    cellBorder: "border-violet-500/20",
+    badgeBg: "bg-violet-500/10 text-violet-600 border-violet-500/20",
+    iconClass: "text-violet-400",
+  },
 };
 
 // ─── Checkpoint header config ─────────────────────────────────────────────────
@@ -122,6 +131,8 @@ function PassportCell({ checkpoint }: { checkpoint: Checkpoint }) {
         <span className="text-xs text-muted-foreground/50">—</span>
       ) : checkpoint.validation === "loading" ? (
         <span className="text-xs text-muted-foreground/50 italic">coming soon</span>
+      ) : checkpoint.validation === "locked" ? (
+        <span className="text-xs text-violet-500/70 italic">data privately held</span>
       ) : (
         <span className="text-xs text-muted-foreground/60 italic">no data</span>
       )}
@@ -139,6 +150,7 @@ interface CohortPassportProps {
   loading?: boolean;
   phonicsAvailable?: boolean;
   mtcAvailable?: boolean;
+  hasCTF?: boolean;
   schoolName: string;
 }
 
@@ -146,7 +158,7 @@ export function CohortPassport({
   cohorts,
   loading = false,
   phonicsAvailable = false,
-  mtcAvailable = false,
+  hasCTF = false,
   schoolName,
 }: CohortPassportProps) {
   return (
@@ -164,41 +176,33 @@ export function CohortPassport({
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-500 uppercase tracking-wider">
                 Cohort Validation Passport
               </span>
+              {phonicsAvailable && (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 uppercase tracking-wider">
+                  CTF Connected
+                </span>
+              )}
             </div>
             <h4 className="text-base font-semibold text-foreground leading-tight">
               Trust the external — scrutinise the self-reported
             </h4>
             <p className="text-sm text-muted-foreground mt-1">
-              Every external checkpoint {schoolName}&apos;s cohorts have been through, mapped against teacher-assessed judgements. Green is verified. Amber is trust.
+              Every external checkpoint {schoolName}&apos;s cohorts have been through, mapped against teacher-assessed judgements. Green is verified by an external body. Amber is trust. Locked cells are data the school holds privately — not available from DfE.
             </p>
           </div>
         </div>
 
-        {/* Callout above: the gap */}
+        {/* Callout above: DfE data moat */}
         <div className="rounded-xl border border-sky-500/20 bg-sky-500/8 px-4 py-3.5 space-y-1">
           <p className="text-sm font-semibold text-sky-600">
-            Four years of teacher-assessed judgement with no external check
+            DfE doesn&apos;t publish Phonics or MTC results per school
           </p>
           <p className="text-sm text-foreground/80 leading-relaxed">
-            Between Y2 KS1 (externally moderated until 2022/23) and Y6 KS2 (externally marked), there are{" "}
-            <span className="font-semibold">four years of teacher-assessed judgement</span> with no external verification. This is where assessment drift happens unnoticed — and where a surprise at KS2 becomes a crisis rather than a data point. Schoolgle&apos;s continuous assessment layer closes this gap.
+            Schools hold their Phonics Screening Check results privately via the{" "}
+            <span className="font-semibold">MTC Service</span> and{" "}
+            <span className="font-semibold">Primary Assessment Gateway</span>. DfE publishes only national and LA-level figures. Schoolgle is the only platform that surfaces these externally-validated checkpoints{" "}
+            <span className="font-semibold">when a school connects their CTF files</span> — creating a complete, independently-validated journey from Reception to KS2 that no other platform can show.
           </p>
         </div>
-
-        {/* Data availability notice */}
-        {(!phonicsAvailable || !mtcAvailable) && (
-          <div className="rounded-lg border border-amber-500/20 bg-amber-500/8 px-4 py-2.5 flex items-start gap-2">
-            <AlertTriangle size={14} className="text-amber-500 mt-0.5 flex-shrink-0" />
-            <p className="text-xs text-amber-700">
-              {!phonicsAvailable && !mtcAvailable
-                ? "Phonics Screening and MTC data imports are still loading from DfE sources. Cells will update automatically when complete."
-                : !phonicsAvailable
-                ? "Phonics Screening data is still loading from DfE sources."
-                : "Multiplication Tables Check (MTC) data is still loading from DfE sources."}
-              {" "}KS2 data (fully external) is available now.
-            </p>
-          </div>
-        )}
 
         {/* Table */}
         <div className="overflow-x-auto -mx-1 px-1">
@@ -285,7 +289,7 @@ export function CohortPassport({
         {/* Legend */}
         <div className="flex items-center gap-4 flex-wrap pt-1 border-t border-border">
           <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Legend:</span>
-          {(["external", "self-reported", "future", "no-data"] as CheckpointStatus[]).map((status) => {
+          {(["external", "self-reported", "locked", "future", "no-data"] as CheckpointStatus[]).map((status) => {
             const cfg = STATUS_CONFIG[status];
             const Icon = cfg.icon;
             return (
@@ -297,11 +301,18 @@ export function CohortPassport({
           })}
         </div>
 
-        {/* Callout below: the insight */}
-        <div className="rounded-xl border border-border bg-muted/30 px-4 py-3.5">
+        {/* Callout below: Tier 3 upsell */}
+        <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 px-4 py-3.5 space-y-1">
+          <p className="text-sm font-semibold text-violet-600">
+            Green cells = externally validated. Amber = teacher self-reported. Locked = data the school has but hasn&apos;t connected yet.
+          </p>
           <p className="text-sm text-foreground/80 leading-relaxed">
-            <span className="font-semibold text-foreground">Every ✅ is checked externally. Every ⚠ is trust.</span>{" "}
-            When you see a cohort with multiple amber cells between external checkpoints and then a surprise at KS2, the question isn&apos;t &ldquo;why did they decline&rdquo; — it&apos;s &ldquo;why weren&apos;t they checked sooner.&rdquo; The passport shows you where your trust&apos;s blind spots are, before Ofsted finds them.
+            Every locked cell is a validation layer the trust could unlock in weeks by connecting CTF files to Schoolgle. When connected, Schoolgle builds a complete externally-validated pathway from Reception to KS2 — including Phonics pass rates, KS1 R/W/M, and MTC — that no competitor can replicate from public DfE data alone.{" "}
+            <span className="font-semibold text-foreground">
+              {hasCTF
+                ? `${schoolName} has CTF connected — ${CHECKPOINT_HEADERS.filter(h => h.id.includes('phonics')).length > 0 ? 'phonics data visible above' : 'checkpoints unlocked'}.`
+                : `Ask ${schoolName} to share their CTF files to unlock the locked cells above.`}
+            </span>
           </p>
         </div>
       </div>

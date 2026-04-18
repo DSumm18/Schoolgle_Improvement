@@ -843,3 +843,88 @@ The "Events Timeline" panel inside each SchoolTab now fetches all events for tha
 - Some predecessor URNs have DfE data attributed to post-conversion years (e.g. URN 107242 showing 2023 attendance). This is a DfE statistical artefact — the school converted November 2020 but the dataset has historical rows. Events from these rows are still accurate values; just the year attribution may be slightly off.
 - CVPS/HPS show duplicate PA events for 2023/2024 because the DfE table has the same value for both years. Both are real DfE records.
 - Ofsted inspection history is from a verified constant (not yet in the DB) — sourced from published Ofsted reports at reports.ofsted.gov.uk.
+
+---
+
+## 19. External validation architecture — 2026-04-18
+
+### The validation tiers table
+
+| Validation status | What it means | Source | Visual |
+|---|---|---|---|
+| `external` | Data comes from an externally-administered assessment, now wired into Schoolgle via CTF | `pupil_assessments_pseudo` (CTF ingestion) or DfE KS2 | Green ✅ |
+| `self-reported` | Teacher assessment — no external moderation requirement | MIS/teacher records | Amber ⚠ |
+| `locked` | School HAS this data (held via MTC Service / PAG) but hasn't connected CTF to Schoolgle | N/A — Tier 3 upsell | Violet 🔒 |
+| `future` | Cohort hasn't reached this checkpoint yet | — | Grey — |
+| `no-data` | Data should exist but isn't in the system for other reasons | — | Red ✗ |
+
+### What DfE publishes vs what only schools have
+
+| Checkpoint | DfE publishes? | Who has it | Schoolgle source |
+|---|---|---|---|
+| KS2 SATs | YES — per school, public | Everyone | `dfe_data.ks2_results` |
+| Phonics Screening (Y1+Y2) | NO — LA/national only | School via Primary Assessment Gateway | `pupil_assessments_pseudo` (CTF) |
+| MTC Y4 | NO — DfE explicitly states no per-school publication | School via MTC Service | CTF or MTC export (not yet parsed) |
+| KS1 SATs | NO — was on performance tables (retired). Non-statutory from 2023/24. | School's own MIS | `pupil_assessments_pseudo` (CTF) |
+| EYFS GLD | NO — LA level only | School's own records / EYFSP | Not in CTF — teacher assessment |
+
+**DO NOT** attempt to scrape or API-call DfE for phonics, MTC, or KS1 school-level data. It doesn't exist publicly. This has been verified multiple times. See `docs/DFE_DATA_DEFINITIVE_GUIDE.md` Section 9.
+
+### Why Schoolgle's CTF connector is the moat
+
+No competitor can surface a complete externally-validated cohort pathway because:
+1. DfE only publishes KS2 per school
+2. Phonics, MTC, and KS1 require the school to share their CTF/MIS exports
+3. Schoolgle ingests CTF files and pseudonymises per-pupil data (HMAC-SHA256)
+4. The Cohort Validation Passport then maps the validated checkpoints across all 6 cohort rows
+
+This means a trust that connects CTF for all schools gets a validation layer that their own data team can't build without per-school CTF access — and neither can any competitor working from public DfE data alone.
+
+### The Cohort Passport component as the visual pitch
+
+File: `apps/platform/src/components/trust-assessor/CohortPassport.tsx`
+
+Key visual narrative:
+- **Green cells** = externally validated (CTF phonics, DfE KS2)
+- **Amber cells** = teacher self-reported (EYFS GLD, mid-year, KS1 post-2023)
+- **Violet locked cells** = data the school HAS but hasn't connected to Schoolgle yet — this is the Tier 3 CTA
+- **Grey cells** = future (cohort hasn't reached this checkpoint)
+
+For Grove House (CTF connected): phonics cells are GREEN with real pass rates.
+For other schools (no CTF): phonics cells are VIOLET/locked with "Connect CTF" prompt.
+
+### Grove House phonics data in pupil_assessments_pseudo (confirmed 2026-04-18)
+
+Organization: `d9d1ac2c-5eff-4043-98f4-e1c43f616fd3` (Grove House, URN 148201)
+
+**749 phonics records total.** Pass mark: 32/40.
+
+| academic_year_start | year_group | pupils | pass_pct | avg_score |
+|---------------------|------------|--------|----------|-----------|
+| 2020 | 2 (retake) | 56 | 77% | 32.4 |
+| 2021 | 2 (retake) | 241 | 89% | 34.6 |
+| 2022 | 1 | 159 | 47% | 24.6 |
+| 2022 | 2 (retake) | 24 | 75% | 26.8 |
+| 2023 | 1 | 58 | 81% | 31.7 |
+| 2023 | 2 (retake) | 31 | 68% | 30.7 |
+| 2024 | 1 | 94 | 87% | 32.6 |
+| 2024 | 2 (retake) | 20 | 50% | 20.6 |
+| 2025 | 1 | 58 | 74% | 30.4 |
+| 2025 | 2 (retake) | 8 | 25% | 17.3 |
+
+Note: 2022 Y1 cohort had only 47% pass — significantly below national average (~82%). This is a compelling data point for the demo: "Look what the external test revealed that internal assessment might have masked."
+
+**KS1 data also in pupil_assessments_pseudo** (year_group=2, subjects reading/writing/maths):
+
+| academic_year_start | Reading | Writing | Maths | Pupils |
+|---------------------|---------|---------|-------|--------|
+| 2022 | 67% | 46% | 63% | 52 |
+| 2023 | 63% | 54% | 64% | 59 |
+
+### Cohort-to-year mapping
+
+When using `pupil_assessments_pseudo`, the `academic_year_start` maps to cohort year as:
+- Y1 phonics: `academic_year_start = receptionYear + 1`
+- Y2 phonics: `academic_year_start = receptionYear + 2`
+- KS1 (Y2): `academic_year_start = receptionYear + 2`
+- KS2 (Y6): `academic_year_end = receptionYear + 7` (in `dfe_data.ks2_results`)

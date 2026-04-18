@@ -1,6 +1,6 @@
 # DfE Data — Definitive Reference Guide
 
-**Last updated:** 2026-04-15
+**Last updated:** 2026-04-18
 **Purpose:** Single source of truth for what DfE data exists, where it comes from, what's in our database, and what schools need to provide. NEVER DO THIS RESEARCH AGAIN — consult this document.
 
 ---
@@ -150,6 +150,51 @@ Some schools changed URN when they became academies:
 - Project: `ygquvauptwyvlhkyxkwy`
 - Public views expose `dfe_data.*` tables via REST API
 - Direct connection: `postgresql://postgres.ygquvauptwyvlhkyxkwy:...@aws-1-eu-west-2.pooler.supabase.com:5432/postgres`
+
+---
+
+## 9. CRITICAL: What DfE Does NOT Publish Per School (STOP — Do Not Search Again)
+
+**This has been verified multiple times. The following data is PRIVATE to schools:**
+
+| Data | Why private | Where schools get it | Schoolgle's angle |
+|------|-------------|---------------------|-------------------|
+| **Phonics Screening Check** | DfE publishes national + LA only | Primary Assessment Gateway (PAG) | CTF ingestion → `pupil_assessments_pseudo` |
+| **Multiplication Tables Check (MTC)** | DfE explicitly states no per-school publication | MTC Service online portal | CTF or MTC export — currently no CTF data for MTC |
+| **KS1 SATs** | Was on old performance tables (retired). Became non-statutory 2023/24. | School's own records / MIS | CTF ingestion → `pupil_assessments_pseudo` (year_group=2) |
+| **EYFS GLD** | LA level only on Explore Education Statistics | School's own records / EYFSP online | Not in CTF — teacher assessment only |
+
+**DO NOT** try to scrape DfE for these. **DO NOT** call the DfE Statistics API for phonics/MTC/KS1 school-level data. It does not exist publicly. This has been checked multiple times.
+
+### Schoolgle's Unique Moat
+
+Schoolgle is the only platform that can surface a **complete externally-validated cohort pathway** from Reception to KS2 — because we ingest CTF files. Competitors showing only KS2 are missing:
+- Phonics Y1 pass rate (e.g., Grove House 47%–87% depending on cohort)  
+- Phonics Y2 retake (e.g., Grove House 25%–89%)
+- KS1 R/W/M (e.g., Grove House Reading 63-67%, Writing 46-54%, Maths 63-64%)
+- MTC Y4 (connectable via CTF if MTC export included)
+
+### Grove House CTF Data Confirmed (2026-04-18)
+
+`pupil_assessments_pseudo` for org `d9d1ac2c-5eff-4043-98f4-e1c43f616fd3` (Grove House URN 148201):
+- **749 phonics records** (year_group 1 and 2, academic_year_start 2020–2025)
+- **222 KS1 records** (reading/writing/maths, year_group 2, academic_year_start 2022–2023)
+- Pass mark for phonics: 32/40
+
+| academic_year_start | year_group | pupils | pass_pct | avg_score |
+|---------------------|------------|--------|----------|-----------|
+| 2020 | 2 | 56 | 77% | 32.4 |
+| 2021 | 2 | 241 | 89% | 34.6 |
+| 2022 | 1 | 159 | 47% | 24.6 |
+| 2022 | 2 | 24 | 75% | 26.8 |
+| 2023 | 1 | 58 | 81% | 31.7 |
+| 2023 | 2 | 31 | 68% | 30.7 |
+| 2024 | 1 | 94 | 87% | 32.6 |
+| 2024 | 2 | 20 | 50% | 20.6 |
+| 2025 | 1 | 58 | 74% | 30.4 |
+| 2025 | 2 | 8 | 25% | 17.3 |
+
+This data sits in Supabase **now** and is wired into the Cohort Validation Passport via the CTF pathway.
 
 ---
 
