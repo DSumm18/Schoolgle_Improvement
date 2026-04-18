@@ -972,6 +972,21 @@ function detectStatisticalImpossibilities(school: string, schoolData: Record<str
   return alerts;
 }
 
+// ── BUILD 2: Weakest subject helper ──────────────────────────────────────────
+
+function weakestSubject(journey: { subject: string; level: string }[]): { subject: string; avgLevel: number } | null {
+  const levelValue = (l: string) => l === 'GDS' ? 3 : l === 'EXS' || l === '2' ? 2 : l === 'WTS' || l === 'WT' || l === '1' ? 1 : 0;
+  const subjects = [...new Set(journey.map(j => j.subject).filter(s => ['reading', 'writing', 'maths'].includes(s)))];
+  if (subjects.length === 0) return null;
+  const scored = subjects.map(s => {
+    const levels = journey.filter(j => j.subject === s).map(j => levelValue(j.level));
+    const avg = levels.length > 0 ? levels.reduce((a, b) => a + b, 0) / levels.length : 0;
+    return { subject: s, avgLevel: avg };
+  });
+  scored.sort((a, b) => a.avgLevel - b.avgLevel);
+  return scored[0];
+}
+
 function SchoolTab({ school, parsed, dfeData, authToken }: { school: string; parsed: ParsedSpreadsheet; dfeData?: DfEData | null; authToken?: string }) {
   const schoolData = parsed.data[school] ?? {};
   const info = TRUST_SCHOOLS[school];
@@ -1440,8 +1455,138 @@ function SchoolTab({ school, parsed, dfeData, authToken }: { school: string; par
     narrativePoints.push(`Despite ${fsmPct}% FSM eligibility, Y6 Combined is at ${y6.all_pupils.c_are}%. This is a positive indicator that the school's Pupil Premium strategy may be effective. This is worth investigating further — what is this school doing that others in the trust could learn from?`);
   }
 
+  // ── BUILD 1: At-a-glance summary computations ──
+  const schoolInfo = getSchoolByAbbrev(school);
+
+  const severityVerdict: 'strong' | 'secure' | 'attention' | 'urgent' =
+    nationalPercentile && nationalPercentile.percentile > 75 ? 'strong' :
+    nationalPercentile && nationalPercentile.percentile > 50 ? 'secure' :
+    nationalPercentile && nationalPercentile.percentile > 25 ? 'attention' :
+    'urgent';
+
+  const topFindings: { text: string; severity: 'high' | 'medium' | 'low' }[] = [];
+
+  if (nationalPercentile) {
+    if (nationalPercentile.percentile < 25) {
+      topFindings.push({
+        text: `Ranked ${ordinal(nationalPercentile.percentile)} nationally — below ${100 - nationalPercentile.percentile}% of England schools.`,
+        severity: 'high',
+      });
+    } else if (nationalPercentile.percentile > 75) {
+      topFindings.push({
+        text: `Ranked ${ordinal(nationalPercentile.percentile)} nationally — above ${nationalPercentile.percentile}% of England schools.`,
+        severity: 'low',
+      });
+    }
+  }
+  if (statAlerts.length > 0) {
+    topFindings.push({
+      text: `${statAlerts.length} data quality alert${statAlerts.length === 1 ? '' : 's'} detected: ${statAlerts[0].title}.`,
+      severity: 'high',
+    });
+  }
+  if (threeYearAvg && y6Combined !== null && y6Combined !== undefined) {
+    const gap = y6Combined - threeYearAvg.averagePct;
+    if (Math.abs(gap) > 10) {
+      topFindings.push({
+        text: `Y6 mid-year prediction is ${gap > 0 ? '+' : ''}${gap}pp vs 3-year DfE average — ${gap > 0 ? 'optimistic, needs moderation evidence' : 'pessimistic, possibly conservative assessment'}.`,
+        severity: 'medium',
+      });
+    }
+  }
+  if (fsmPct !== null && fsmPct > 40) {
+    topFindings.push({
+      text: `High disadvantage cohort (${fsmPct}% FSM) — context must be factored into all attainment comparisons.`,
+      severity: 'low',
+    });
+  }
+  while (topFindings.length < 3) {
+    topFindings.push({ text: 'Further analysis available in sections below.', severity: 'low' });
+  }
+
+  const whatToDoNext = severityVerdict === 'urgent'
+    ? 'Review the forensic findings below with governors. Challenge each data point with research citations. Commission an external moderation review of KS1 assessments.'
+    : severityVerdict === 'attention'
+    ? 'Walk through the findings with your leadership team. Target the specific year groups flagged. Use Schoolgle continuous assessment to prevent drift.'
+    : severityVerdict === 'secure'
+    ? 'Sustain current practice. Use the pupil-level data to identify pupils still below expected standard and deploy targeted support.'
+    : 'Share the findings as good practice across the trust. Investigate what this school is doing differently that others can learn from.';
+
   return (
     <div className="space-y-8">
+
+      {/* ── BUILD 1: At-a-glance Summary ── */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="bg-gradient-to-br from-white to-gray-50 border-2 border-gray-200 rounded-2xl p-6 shadow-md"
+      >
+        {/* Header row: school name + severity badge */}
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xs font-bold px-2 py-0.5 rounded bg-gray-100 text-gray-600 uppercase tracking-wider">{school}</span>
+              <span className="text-xs text-gray-400">• {schoolInfo?.nor ?? totalPupils} pupils • {fsmPct !== null ? `${fsmPct}%` : (schoolInfo?.fsmPct !== undefined ? `${schoolInfo.fsmPct}%` : '—')} FSM • {schoolInfo?.ealPct !== undefined ? `${schoolInfo.ealPct}%` : '—'} EAL</span>
+            </div>
+            <h2 className="text-xl font-bold text-gray-900">{TRUST_SCHOOLS[school]?.name ?? school}</h2>
+          </div>
+          <div className="text-right">
+            <div className={`inline-flex px-3 py-1 rounded-full text-sm font-bold uppercase ${
+              severityVerdict === 'strong' ? 'bg-emerald-100 text-emerald-800' :
+              severityVerdict === 'secure' ? 'bg-blue-100 text-blue-800' :
+              severityVerdict === 'attention' ? 'bg-amber-100 text-amber-800' :
+              'bg-red-100 text-red-800'
+            }`}>
+              {severityVerdict}
+            </div>
+            <div className="text-xs text-gray-500 mt-1">Overall assessment</div>
+          </div>
+        </div>
+
+        {/* Top findings */}
+        <div className="bg-white border border-gray-200 rounded-xl p-4 mb-4">
+          <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Three things governors should know</div>
+          <ol className="space-y-2 text-sm text-gray-800">
+            {topFindings.slice(0, 3).map((f, i) => (
+              <li key={i} className="flex gap-2">
+                <span className={`flex-shrink-0 w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center ${
+                  f.severity === 'high' ? 'bg-red-100 text-red-700' : f.severity === 'medium' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
+                }`}>{i + 1}</span>
+                <span>{f.text}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+
+        {/* Stat row */}
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          <div className="bg-white rounded-lg border border-gray-200 p-3 text-center">
+            <div className="text-2xl font-bold text-gray-900">{y6Combined !== null && y6Combined !== undefined ? `${y6Combined}%` : '—'}</div>
+            <div className="text-xs text-gray-500 mt-1">Y6 Combined (mid-year)</div>
+          </div>
+          <div className="bg-white rounded-lg border border-gray-200 p-3 text-center">
+            <div className={`text-2xl font-bold ${nationalPercentile && nationalPercentile.percentile < 25 ? 'text-red-600' : 'text-gray-900'}`}>
+              {nationalPercentile ? ordinal(nationalPercentile.percentile) : '—'}
+            </div>
+            <div className="text-xs text-gray-500 mt-1">National percentile</div>
+          </div>
+          <div className="bg-white rounded-lg border border-gray-200 p-3 text-center">
+            <div className="text-2xl font-bold text-gray-900">{threeYearAvg?.averagePct !== undefined && threeYearAvg?.averagePct !== null ? `${threeYearAvg.averagePct}%` : '—'}</div>
+            <div className="text-xs text-gray-500 mt-1">3-year DfE average</div>
+          </div>
+        </div>
+
+        {/* What to do next */}
+        <div className={`rounded-lg p-3 text-sm ${
+          severityVerdict === 'urgent' ? 'bg-red-50 border border-red-200 text-red-900' :
+          severityVerdict === 'attention' ? 'bg-amber-50 border border-amber-200 text-amber-900' :
+          'bg-emerald-50 border border-emerald-200 text-emerald-900'
+        }`}>
+          <span className="font-semibold">What to do next: </span>
+          {whatToDoNext}
+        </div>
+      </motion.div>
 
       {/* Generate Governor Report button — top right */}
       <div className="flex justify-end">
@@ -3704,6 +3849,48 @@ export default function TrustAssessorPage() {
                       transition={{ duration: 0.2 }}
                     >
                       <SchoolTab school={activeSchoolTab} parsed={parsed} dfeData={dfeData} authToken={accessToken ?? undefined} />
+
+                      {/* BUILD 4: No-CTF upsell for non-GHPS schools */}
+                      {!groveHouseData && activeSchoolTab !== 'GHPS' && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.3 }}
+                          className="mt-6"
+                        >
+                          <div className="bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 rounded-2xl p-6 text-white shadow-xl mb-6">
+                            <div className="flex items-center gap-2 mb-3">
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/20 backdrop-blur uppercase tracking-wider">Tier 3 — Per-Pupil Analysis</span>
+                            </div>
+                            <h3 className="text-xl font-bold mb-2">Unlock the full picture for {TRUST_SCHOOLS[activeSchoolTab]?.name ?? activeSchoolTab}</h3>
+                            <p className="text-sm text-white/90 mb-4 max-w-2xl">
+                              You&apos;re seeing the spreadsheet + DfE forensic layer. The per-pupil analysis — tracking every child&apos;s journey from EYFS through KS1, identifying incorrect assessments, and generating named intervention plans — activates when you connect CTF files.
+                            </p>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                              <div className="bg-white/10 backdrop-blur rounded-lg p-3">
+                                <div className="text-xs font-semibold uppercase tracking-wider mb-1 text-white/70">Individual Child Tracking</div>
+                                <div className="text-sm text-white/95">See every pupil&apos;s journey from Reception to Y6. Identify who is at risk and why.</div>
+                              </div>
+                              <div className="bg-white/10 backdrop-blur rounded-lg p-3">
+                                <div className="text-xs font-semibold uppercase tracking-wider mb-1 text-white/70">Cohort Forensics</div>
+                                <div className="text-sm text-white/95">Prove or disprove &quot;declines&quot; with research-backed statistical analysis.</div>
+                              </div>
+                              <div className="bg-white/10 backdrop-blur rounded-lg p-3">
+                                <div className="text-xs font-semibold uppercase tracking-wider mb-1 text-white/70">Ed Intervention Plans</div>
+                                <div className="text-sm text-white/95">AI-generated 6-week plans for named pupils. EEF-evidenced strategies.</div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 text-sm">
+                              <span className="bg-white/20 rounded px-3 py-1.5 font-semibold cursor-pointer hover:bg-white/30 transition-colors">
+                                Book CTF upload session &rarr;
+                              </span>
+                              <span className="text-white/70 text-xs">Takes ~15 minutes to connect</span>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -4604,6 +4791,68 @@ export default function TrustAssessorPage() {
                           'No additional vulnerability flags. Monitor progress against year group expectations and investigate any subject-specific decline.'
                         }
                       </div>
+
+                      {/* BUILD 2: Weakest subject + Plan with Ed */}
+                      {(() => {
+                        const weak = weakestSubject(sp.journey);
+                        if (!weak) return null;
+                        return (
+                          <div className="mt-2 flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[10px] text-gray-500">Focus subject:</span>
+                              <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
+                                weak.avgLevel < 1.5 ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
+                              }`}>
+                                {weak.subject.charAt(0).toUpperCase() + weak.subject.slice(1)}
+                              </span>
+                            </div>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const edPrompt = `Create an intervention plan for pupil ${sp.pupilId} who needs focus on ${weak.subject}. ` +
+                                  `Demographics: ${[demo.isFsm && 'FSM', demo.isSend && 'SEND', demo.isEal && 'EAL'].filter(Boolean).join(', ') || 'no additional flags'}. ` +
+                                  `Year groups in journey: ${[...new Set(sp.journey.map(j => 'Y' + j.yearGroup))].join(', ')}. ` +
+                                  `Use EEF-evidenced strategies and produce a 6-week plan with weekly check-ins.`;
+                                const url = `/dashboard/ed?prompt=${encodeURIComponent(edPrompt)}`;
+                                window.open(url, '_blank');
+                              }}
+                              className="text-[10px] px-2 py-0.5 rounded bg-indigo-600 text-white hover:bg-indigo-700 transition-colors font-medium flex items-center gap-1"
+                              title="Open Ed AI assistant to generate a tailored intervention plan"
+                            >
+                              Plan with Ed &rarr;
+                            </button>
+                          </div>
+                        );
+                      })()}
+
+                      {/* BUILD 2b: Top 3 patterns across cohort — which subject is weakest for most pupils */}
+                      {groveHouseData && groveHouseData.cohortJourneys.length > 0 && (() => {
+                        const subjectCounts: Record<string, number> = { reading: 0, writing: 0, maths: 0 };
+                        for (const p of groveHouseData.cohortJourneys) {
+                          const w = weakestSubject(p.journey);
+                          if (w && w.subject in subjectCounts) subjectCounts[w.subject]++;
+                        }
+                        const total = groveHouseData.cohortJourneys.length;
+                        if (total === 0) return null;
+                        const sorted = Object.entries(subjectCounts).sort(([, a], [, b]) => b - a);
+                        return (
+                          <div className="mt-3 bg-gray-50 border border-gray-200 rounded-lg p-3">
+                            <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Cohort pattern — weakest subject per pupil</div>
+                            <div className="flex items-center gap-3">
+                              {sorted.map(([subj, count]) => (
+                                <div key={subj} className="flex-1 text-center">
+                                  <div className={`text-sm font-bold ${count === sorted[0][1] ? 'text-red-600' : 'text-gray-600'}`}>{count}</div>
+                                  <div className="text-[10px] text-gray-500 mt-0.5">{subj.charAt(0).toUpperCase() + subj.slice(1)}</div>
+                                  <div className={`text-[10px] mt-0.5 ${count === sorted[0][1] ? 'text-red-500' : 'text-gray-400'}`}>
+                                    {total > 0 ? Math.round(100 * count / total) : 0}%
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="text-[10px] text-gray-400 mt-2">Across {total} tracked pupils. Highest = most common focus area for Ed plans.</div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   );
                 })()}
@@ -4685,6 +4934,40 @@ export default function TrustAssessorPage() {
                                 {overallTrend === 'improving' ? '↑ Improving' : overallTrend === 'declining' ? '↓ Declining' : '→ Stable'}
                               </span>
                             </div>
+
+                            {/* BUILD 2: Weakest subject + Plan with Ed */}
+                            {(() => {
+                              const weak = weakestSubject(pupil.journey);
+                              if (!weak) return null;
+                              return (
+                                <div className="mt-2 flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-[10px] text-gray-500">Focus:</span>
+                                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
+                                      weak.avgLevel < 1.5 ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
+                                    }`}>
+                                      {weak.subject.charAt(0).toUpperCase() + weak.subject.slice(1)}
+                                    </span>
+                                  </div>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const demo = pupil.demographics;
+                                      const edPrompt = `Create an intervention plan for pupil ${pupil.pupilId} who needs focus on ${weak.subject}. ` +
+                                        `Demographics: ${[demo.isFsm && 'FSM', demo.isSend && 'SEND', demo.isEal && 'EAL'].filter(Boolean).join(', ') || 'no additional flags'}. ` +
+                                        `Year groups in journey: ${[...new Set(pupil.journey.map(j => 'Y' + j.yearGroup))].join(', ')}. ` +
+                                        `Use EEF-evidenced strategies and produce a 6-week plan with weekly check-ins.`;
+                                      const url = `/dashboard/ed?prompt=${encodeURIComponent(edPrompt)}`;
+                                      window.open(url, '_blank');
+                                    }}
+                                    className="text-[10px] px-2 py-0.5 rounded bg-indigo-600 text-white hover:bg-indigo-700 transition-colors font-medium flex items-center gap-1"
+                                    title="Open Ed AI assistant to generate a tailored intervention plan"
+                                  >
+                                    Plan with Ed &rarr;
+                                  </button>
+                                </div>
+                              );
+                            })()}
                           </div>
                         );
                       })}
@@ -4740,6 +5023,55 @@ export default function TrustAssessorPage() {
                   </>
                 )}
               </div>
+
+              {/* ── BUILD 3: Data Enrichment Opportunities ── */}
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <div className="bg-gradient-to-br from-violet-50 to-indigo-50 border border-violet-200 rounded-xl p-5 mb-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-200 text-violet-900 uppercase tracking-wider">Data Enrichment</span>
+                  </div>
+                  <h5 className="text-sm font-semibold text-violet-900 mb-2">These fields are in your CTF files but not currently imported</h5>
+                  <p className="text-xs text-violet-800 mb-3">
+                    Schoolgle can extract deeper analysis from CTF imports when these fields are populated. Each one unlocks a specific layer of insight governors and inspectors value.
+                  </p>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">
+                    <div className="bg-white rounded-lg border border-violet-200 p-3 text-xs">
+                      <div className="font-semibold text-violet-900">SEND category (VI, HI, ASD, SEMH, SLCN, MLD)</div>
+                      <div className="text-violet-700 mt-0.5">Unlocks: &quot;3 pupils in VI resource unit — their Reading scores reflect visual access, not literacy&quot;</div>
+                    </div>
+                    <div className="bg-white rounded-lg border border-violet-200 p-3 text-xs">
+                      <div className="font-semibold text-violet-900">EHCP status (separate from SEN Support)</div>
+                      <div className="text-violet-700 mt-0.5">Unlocks: Progress against individual EHCP outcomes, not age-related expectations</div>
+                    </div>
+                    <div className="bg-white rounded-lg border border-violet-200 p-3 text-xs">
+                      <div className="font-semibold text-violet-900">FSM6 (ever-eligible in last 6 years)</div>
+                      <div className="text-violet-700 mt-0.5">Unlocks: True disadvantage analysis — FSM6 is the DfE statutory measure, not current FSM</div>
+                    </div>
+                    <div className="bg-white rounded-lg border border-violet-200 p-3 text-xs">
+                      <div className="font-semibold text-violet-900">Prior attainment band</div>
+                      <div className="text-violet-700 mt-0.5">Unlocks: Progress measure per pupil — are low prior attainers catching up?</div>
+                    </div>
+                    <div className="bg-white rounded-lg border border-violet-200 p-3 text-xs">
+                      <div className="font-semibold text-violet-900">Date of arrival in UK (EAL pupils)</div>
+                      <div className="text-violet-700 mt-0.5">Unlocks: Language exposure vs attainment — have they had enough time?</div>
+                    </div>
+                    <div className="bg-white rounded-lg border border-violet-200 p-3 text-xs">
+                      <div className="font-semibold text-violet-900">Mobility / admission date</div>
+                      <div className="text-violet-700 mt-0.5">Unlocks: Separating stable cohort from churn — fairer comparison</div>
+                    </div>
+                  </div>
+
+                  <div className="text-xs text-violet-800 bg-white rounded-lg border border-violet-200 p-3">
+                    <span className="font-semibold">These aren&apos;t missing from your school&apos;s MIS</span> — they&apos;re in Arbor, SIMS, Bromcom, and CTF files by default.
+                    Schoolgle&apos;s enhanced CTF import will surface them. Ask your admin or book a data enrichment session.
+                  </div>
+                </div>
+              </motion.div>
 
               {/* ── Section 7: Cohort Journey — Milestone Track ── */}
               <div className="border-t border-gray-100 pt-6">
