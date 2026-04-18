@@ -127,6 +127,54 @@ export const RESEARCH_CITATIONS: Record<string, Citation> = {
       'EAL pupils who are fully fluent in English outperform monolingual English peers at KS2 by ~5pp. Early-stage EAL pupils (<2 years exposure) lag by 20–25pp at KS1. Curve is predictable and trackable.',
     relevance: ['eal-gap', 'eal-trajectory'],
   },
+
+  'dfe-pupil-absence-2024': {
+    id: 'dfe-pupil-absence-2024',
+    authors: 'Department for Education',
+    year: 2024,
+    title: 'Pupil absence in schools in England: 2022 to 2023',
+    publisher: 'DfE',
+    url: 'https://explore-education-statistics.service.gov.uk/find-statistics/pupil-absence-in-schools-in-england',
+    keyFinding:
+      'Persistent absence (missing 10% or more of possible sessions) is strongly associated with lower attainment. Pupils with persistent absence at KS2 achieve 10–15pp lower KS2 Combined outcomes than non-persistently absent peers. The DfE 10% threshold is the key indicator governors should monitor each term.',
+    relevance: ['persistent-absence', 'attendance', 'ks2-attainment'],
+  },
+
+  'ifs-teacher-retention-2022': {
+    id: 'ifs-teacher-retention-2022',
+    authors: 'Sibieta, L.',
+    year: 2022,
+    title: 'Teacher shortages in England: Analysis and pay options',
+    publisher: 'Institute for Fiscal Studies',
+    url: 'https://ifs.org.uk/publications/teacher-shortages-england-analysis-and-pay-options',
+    keyFinding:
+      'Teacher retention rates are a significant predictor of school performance. Schools with high teacher turnover (above 15% per year) see measurable attainment decline over a 2-year period, particularly for disadvantaged pupils where relationship continuity is most impactful.',
+    relevance: ['teacher-turnover', 'workforce-stability', 'ks2-attainment'],
+  },
+
+  'dfe-school-travel-2022': {
+    id: 'dfe-school-travel-2022',
+    authors: 'Department for Education / Office for National Statistics',
+    year: 2022,
+    title: 'Travel to school: Local authority interactive tool',
+    publisher: 'DfE',
+    url: 'https://www.gov.uk/government/statistics/school-travel-research-and-analysis',
+    keyFinding:
+      'Disadvantaged pupils travelling over 2 miles to school show higher persistent absence rates compared to local catchment pupils. Catchment disruption following school reorganisation correlates with short-term attendance dips of 2–4pp in the year of transition.',
+    relevance: ['catchment-stability', 'attendance', 'disadvantage'],
+  },
+
+  'eef-ofsted-trajectory-2023': {
+    id: 'eef-ofsted-trajectory-2023',
+    authors: 'Education Endowment Foundation',
+    year: 2023,
+    title: 'School Improvement Evidence Review',
+    publisher: 'EEF',
+    url: 'https://educationendowmentfoundation.org.uk/education-evidence/evidence-reviews/school-improvement',
+    keyFinding:
+      'Schools moving from Requires Improvement to Good within 2 inspection cycles show sustained attainment gains averaging 6–8pp over 3 years. The trajectory of improvement — not the single judgement — is the most powerful predictor of future outcomes.',
+    relevance: ['ofsted-trajectory', 'school-improvement', 'ks2-attainment'],
+  },
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

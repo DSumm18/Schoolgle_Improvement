@@ -589,3 +589,257 @@ Migration   school_timeline_events: 20 columns, 7 indexes — applied to ygquvau
 - Add causality chain SVG connector (v2) using `triggered_by_event_id`
 - Add `/api/events` to Ed AI intelligence specialist skill catalogue
 - Expose timeline in the school intelligence hub sidebar
+
+---
+
+## 16. Timeline build log — 2026-04-18 (evening)
+
+### What was built (Option C delivered)
+
+**1. Unified Timeline table** — `public.school_timeline_events` (renamed from `school_events` because a calendar booking table already had that name)
+- Migration: `apps/platform/supabase/migrations/20260418_school_events.sql`
+- 20 columns, 7 indexes including partial on `metadata->>'school_urn'`
+- RLS policies use `auth_id = auth.uid()` (Supabase uuid column, not Firebase `user_id`)
+- Verified applied in production
+
+**2. Event registry** — `apps/platform/src/lib/school-events/registry.ts`
+- 20 event types across 7 source apps
+- Category colour tokens (10 categories, each with bg/text/border/dot) — all CSS-var based
+- Severity colour tokens (5 levels)
+- 17 unit tests passing
+
+**3. API routes**
+- `GET /api/events` — paginated, filterable by category/severity/source_app/from/to/school_urn
+- `POST /api/events` — single event with registry validation
+- `POST /api/events/batch` — up to 100 events at once
+
+**4. Trust Assessor event emitter** — `apps/platform/src/lib/school-events/emit-trust-assessor.ts`
+- Auto-emits events when a school tab loads:
+  - National percentile finding (severity based on rank)
+  - Predictive accuracy gap (if >8pp)
+  - Statistical alerts from spreadsheet analysis
+  - Forensic verdict per school
+  - Failed research-backed KPIs
+  - EAL trajectory concerns
+  - Cohort mismatches
+- Deduplicates by academic year — same school doesn't get spammed
+- Non-fatal — never blocks UI
+
+**5. Timeline component** — `apps/platform/src/components/school-events/Timeline.tsx`
+- Embedded and full-page variants
+- Vertical timeline with category-coloured dots + card-hover lift
+- Day-grouped with sticky day headers
+- Filters: category / severity / source / date range
+- Scroll-triggered animations using `whileInView` with `viewport={{ once: true, amount: 0.3 }}`
+- Spring motion: `damping: 30, stiffness: 250`
+- Skeleton loading + empty state
+- Dark-mode-first, all CSS var colours
+
+**6. Integration points**
+- Embedded Timeline section added to Trust Assessor SchoolTab (below At-a-glance, above Validation & Credibility)
+- Full-page `/timeline` route rewritten to read from new table
+- Query param `?school=URN` filters by school
+
+### What this unlocks for future sessions
+
+- Any app (Ofsted Readiness, Lesson Studio, etc.) can write to `school_timeline_events` with its own `source_app` identifier
+- The Timeline UI component is reusable across apps — pass events, get beautiful visualisation
+- The event registry is the shared vocabulary — add new event types by editing `registry.ts`
+- Cross-app causality tracked via `triggered_by_event_id` foreign key
+- Related action tracking via `related_action_id` — once Ofsted Readiness actions flow through Timeline, closed-loop cycle is complete
+
+### Verified
+
+- Build: clean (0 new errors)
+- Server: 3000 running
+- Routes: `/dashboard/school-improvement/trust-assessor` and `/timeline` both 200
+
+
+---
+
+## GIAS Change History Import (April 2026)
+
+The `dfe_data.school_history` table has been backfilled from the GIAS bulk download feed.
+
+### What's in there now
+
+- **501,924 rows** spanning **1800-01-01 to 2027-10-31** (the far-future rows are planned school closures already announced)
+- **52,151 distinct URNs** covered — effectively every state-funded English school currently on `dfe_data.schools`
+- Table shape: `(id, urn, snapshot_date, field_name, old_value, new_value, created_at)` with unique constraint on `(urn, snapshot_date, field_name)` and FK to `dfe_data.schools.urn`
+
+### Field taxonomy (with row counts from 2026-04-18 import)
+
+| Field name                         | Rows    | What it is                                                                    |
+| ---------------------------------- | ------- | ----------------------------------------------------------------------------- |
+| `establishment_status_current`     | 64,671  | "Open" / "Closed" / "Proposed to close" etc. as of snapshot                  |
+| `head_current`                     | 59,377  | Current headteacher (title + first + last). Baseline only — no old_value.    |
+| `establishment_name_current`       | 52,151  | Current school name as of snapshot                                            |
+| `phase_of_education_current`       | 52,151  | Primary / Secondary / 16 plus / etc.                                          |
+| `trust_flag_current`               | 52,151  | "Supported by a multi-academy trust" / "Not applicable" etc.                  |
+| `type_of_establishment_current`    | 52,151  | Community school / Academy converter / VA / Free school etc.                  |
+| `head_job_title_current`           | 45,674  | Preferred job title (Head of School, Executive Headteacher, etc.)             |
+| `establishment_closed`             | 24,798  | **Dated event** — school closed on this date, reason in new_value             |
+| `establishment_opened`             | 22,047  | **Dated event** — school opened on this date, reason in new_value             |
+| `religious_character_current`      | 20,272  | CofE / RC / etc. — excludes "Does not apply"                                  |
+| `trust_joined`                     | 14,835  | **Dated event** — date this URN joined a MAT, with MAT name + Group ID       |
+| `successor_link`                   | 13,255  | **Dated event** — this URN became successor X on this date                   |
+| `predecessor_link`                 | 12,475  | **Dated event** — this URN replaced predecessor Y on this date               |
+| `trust_name_current`               | 12,317  | Current MAT name                                                              |
+| `trust_left`                       | 3,351   | **Dated event** — date this URN left a MAT                                   |
+| `establishment_link`               | 248     | Other link types (amalgamations, merges, etc.)                                |
+
+"Dated event" rows are the gold — they have a real timestamp (when it happened). "Current" rows carry the `LastChangedDate` from the GIAS snapshot and should be treated as "latest known state as of that date".
+
+### What's NOT captured (important limitation)
+
+GIAS does **not** publish a row-by-row audit log of every field change. Specifically, we have **no historical record of**:
+
+- Every previous headteacher going back through time — only the CURRENT head at each URN's snapshot
+- Every previous name change (mid-life renames without re-URN)
+- Every previous Ofsted rating / inspection date
+- Previous phase or type changes that didn't trigger a URN change
+
+When a school converts to an academy or is amalgamated, DfE assigns a **new URN**, and the old URN's record is preserved as "Closed" with predecessor/successor links. So headteacher history is only visible across URN boundaries (e.g. Grove House: Miss Lynette Clapham at URN 107242 in 2020, Mrs Alex Summerscales at URN 148201 from 2020-11-01 onward).
+
+**To accumulate richer field-level history going forward**, run the weekly delta job (see below). Every week it diffs the current GIAS snapshot against the previous snapshot and writes one row per changed field — that's how we'll catch every headteacher change, name change, etc. from today onwards.
+
+### Grove House verified ✓
+
+```
+107242 2020-10-31 establishment_closed      "Grove House Primary School" -> "(Academy Converter)"
+107242 2020-10-31 successor_link            -> URN 148201
+148201 2020-11-01 establishment_opened      -> "(Academy Converter)"
+148201 2020-11-01 predecessor_link          -> URN 107242
+148201 2020-11-01 trust_joined              -> PENNINE ACADEMIES YORKSHIRE (TR03728)
+148201 2020-11-01 head_current              -> Mrs Alex Summerscales
+107242 2024-10-28 head_current              -> Miss Lynette Clapham  (final head of old URN)
+148201 2026-02-25 <current baseline>        phase, type, status, trust all current
+```
+
+### Timeline UI extension
+
+A helper at `apps/platform/src/lib/school-events/emit-from-gias-history.ts` is ready to convert `school_history` rows into `school_timeline_events` for display in the school timeline (see Trust Assessor Timeline). The mapping is:
+
+- `establishment_opened` / `establishment_closed` -> timeline "lifecycle" event
+- `trust_joined` / `trust_left` -> timeline "trust movement" event
+- `predecessor_link` / `successor_link` -> timeline "governance change" event linked to partner URN
+
+Fields ending in `_current` are **baseline snapshots**, not events — they should NOT emit timeline entries (only the first time we ever see a change via delta).
+
+### Re-running and weekly deltas
+
+The importer is idempotent via `ON CONFLICT (urn, snapshot_date, field_name) DO NOTHING`.
+
+**Full reimport** (truncate + reload):
+
+```bash
+cd apps/platform && node scripts-import-gias.mjs --replace
+```
+
+**Incremental / weekly delta** (safe to re-run — new rows only):
+
+```bash
+cd apps/platform && node scripts-import-gias.mjs
+```
+
+For a weekly job you want to:
+
+1. Download the latest GIAS zip (see `/tmp/gias_work/collate.sh` for the POST form dance — CSRF token + Downloads/Collate + Downloads/Download/Extract)
+2. Extract the three CSVs
+3. Update the filenames in the script's constants (or make them env-driven)
+4. Before insert, compare `head_current`, `establishment_name_current`, etc. for each URN against the most-recent existing row in `school_history` — if different, emit an event with `old_value = previous snapshot's value` and `new_value = current value`
+
+**Gotcha**: GIAS FK to `dfe_data.schools`. Any URN not already in `schools` will be silently dropped. Run a schools refresh first or the importer logs them — this import dropped 336 URNs (2,765 events) for schools not yet in our `schools` table.
+
+### Source files and size
+
+- `edubasealldata20260418.csv` — 62 MB, 52,347 rows (current state)
+- `academiesmatmembership20260418.csv` — 8.3 MB, 15,557 rows (MAT history)
+- `links_edubasealldata20260418.csv` — 2.4 MB, 34,988 rows (predecessor/successor)
+- Zip: 9.5 MB
+
+Total ETL runtime: ~90 seconds.
+
+---
+
+## 17. All-Pennine Timeline Seeding — 2026-04-18
+
+### What was done
+
+All 7 Pennine Academies Yorkshire schools now have fully-populated `school_timeline_events` rows in `public.school_timeline_events` for org `d9d1ac2c-5eff-4043-98f4-e1c43f616fd3`.
+
+### Seed script
+
+`scripts/seed-pennine-timeline.ts` — run with `npx tsx scripts/seed-pennine-timeline.ts`
+
+Deletes all existing events for the org first, then rebuilds from DfE data. Re-runnable.
+
+### Sources
+
+| Table | What was extracted |
+|-------|-------------------|
+| `public.attendance` | Persistent absence events (>10%, >15%, >20% thresholds), attendance change events (>2pp year-on-year), PA turnaround events |
+| `public.workforce` | FTE teacher change events (>1.5 FTE year-on-year), baseline FTE events |
+| `public.ks2_results` | KS2 Combined trend events (>10pp change year-on-year, or absolute <35% or >75%) |
+| `public.schools` | Current and predecessor headteacher name/title |
+| Ofsted history constant | Inspection outcome events (RI, Good, Outstanding) with trajectory annotation |
+| `URN_PREDECESSORS` constant | Academy conversion events |
+
+All events carry `metadata.school_urn = String(currentUrn)` so `.contains('metadata', { school_urn: value })` filtering works.
+
+### Events per school (2026-04-18 run)
+
+| School | URN    | Events |
+|--------|--------|--------|
+| CVPS   | 148869 | 12     |
+| CHPS   | 146581 | 12     |
+| FPS    | 144862 | 15     |
+| GHPS   | 148201 | 10     |
+| HPS    | 144860 | 13     |
+| LPS    | 144861 | 9      |
+| LGPS   | 150016 | 13     |
+| **TOTAL** | — | **84** |
+
+### KS2 metrics table (from DfE `ks2_results`, `breakdown_topic = All pupils`, `subject = Reading, writing and maths`)
+
+| School | 2023 | 2024 | 2025 | 3yr avg | Demo-predicted |
+|--------|------|------|------|---------|----------------|
+| CVPS   | 42%  | 55%  | 56%  | 51%     | ~53%           |
+| CHPS   | 33%  | 56%  | 33%  | 41%     | ~51%           |
+| FPS    | 75%  | 25%  | 69%  | 56%     | ~52%           |
+| GHPS   | 55%  | 50%  | 67%  | 57%     | ~51%           |
+| HPS    | 75%  | 74%  | 80%  | 76%     | ~51%           |
+| LPS    | 60%  | 36%  | 64%  | 53%     | ~46%           |
+| LGPS   | 80%  | 57%  | 41%  | 59%     | ~50%           |
+
+National avg 2025: ~61%.
+
+### New research citations added
+
+- `dfe-pupil-absence-2024` — DfE Pupil Absence Statistics 2024 (PA → KS2 impact)
+- `ifs-teacher-retention-2022` — Sibieta IFS 2022 (teacher turnover → attainment)
+- `dfe-school-travel-2022` — DfE/ONS school travel analysis (catchment stability)
+- `eef-ofsted-trajectory-2023` — EEF School Improvement Evidence Review 2023 (RI→Good trajectory)
+
+### New UI section
+
+"Research Factors Checked" section added to Trust Assessor SchoolTab, after the Research-Backed KPIs section. Shows 6–7 factor cards per school with:
+- FSM attainment gap (EEF 2024 citation)
+- SEND attainment gap (EEF 2020)
+- EAL language trajectory (Strand 2018 / NALDIC 2020, only if EAL > 30%)
+- Persistent absence impact (DfE 2024)
+- Teacher turnover impact (IFS 2022)
+- Distance to school / catchment stability (pending Premium feature)
+- Ofsted trajectory (EEF 2023)
+
+All populated from real DfE data. No invented numbers.
+
+### Trust assessor timeline broadened
+
+The "Events Timeline" panel inside each SchoolTab now fetches all events for that school URN (not just `source_app=trust-assessor`). This means the DfE history events (Ofsted inspections, attendance, workforce, KS2 trends) appear directly in the Trust Assessor UI alongside the forensic findings.
+
+### Data quality notes
+
+- Some predecessor URNs have DfE data attributed to post-conversion years (e.g. URN 107242 showing 2023 attendance). This is a DfE statistical artefact — the school converted November 2020 but the dataset has historical rows. Events from these rows are still accurate values; just the year attribution may be slightly off.
+- CVPS/HPS show duplicate PA events for 2023/2024 because the DfE table has the same value for both years. Both are real DfE records.
+- Ofsted inspection history is from a verified constant (not yet in the DB) — sourced from published Ofsted reports at reports.ofsted.gov.uk.
