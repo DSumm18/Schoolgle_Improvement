@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { Loader2, GraduationCap, Printer, Calendar } from "lucide-react";
+import { Loader2, GraduationCap, Printer, Calendar, Settings } from "lucide-react";
 import { useAuth } from "@/context/SupabaseAuthContext";
 import { supabase } from "@/lib/supabase";
 import { SUBJECT_COLORS, DAY_NAMES } from "@/types/lesson-studio";
-import type { LessonStatus } from "@/types/lesson-studio";
+import type { LessonStatus, LSClass } from "@/types/lesson-studio";
+import { SchoolTimetableBuilder } from "./SchoolTimetableBuilder";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -234,6 +235,9 @@ export function WholeSchoolView({
   const [connectors, setConnectors] = useState<Record<string, Array<{ type: string; area?: string; expiring?: boolean }>>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showBuilder, setShowBuilder] = useState(false);
+  // LSClass-shaped classes for the builder
+  const [lsClasses, setLsClasses] = useState<LSClass[]>([]);
 
   // Today's day of week (1=Mon…5=Fri), default to Monday if weekend
   const todayDow = (() => {
@@ -289,6 +293,14 @@ export function WholeSchoolView({
 
     // Fetch calendar events for current selected day
     fetchEvents(selectedDay);
+
+    // Fetch LSClass records for the timetable builder
+    supabase
+      .from("ls_classes")
+      .select("*")
+      .eq("organization_id", organizationId)
+      .then(({ data }) => setLsClasses((data as LSClass[]) || []))
+      .catch(() => setLsClasses([]));
 
     // Fetch staff connectors for badge display
     supabase
@@ -361,14 +373,23 @@ export function WholeSchoolView({
             </div>
           </div>
         </div>
-        <button
-          onClick={() => window.print()}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors print:hidden"
-          title="Print daily overview"
-        >
-          <Printer className="w-3.5 h-3.5" />
-          Print
-        </button>
+        <div className="flex items-center gap-2 print:hidden">
+          <button
+            onClick={() => setShowBuilder(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-600 text-white text-xs font-medium rounded-lg hover:bg-teal-700 transition-colors"
+          >
+            <Settings className="w-3.5 h-3.5" />
+            Set Up Timetable
+          </button>
+          <button
+            onClick={() => window.print()}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+            title="Print daily overview"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            Print
+          </button>
+        </div>
       </div>
 
       {/* ── Day selector + legend ──────────────────────────────────────────── */}
@@ -643,6 +664,38 @@ export function WholeSchoolView({
         <span>Lunch times are staggered by year group.</span>
         <span className="ml-auto">Coverage column will show curriculum % when data is available.</span>
       </div>
+
+      {/* ── Timetable Builder overlay ──────────────────────────────────────── */}
+      {showBuilder && (
+        <SchoolTimetableBuilder
+          classes={lsClasses}
+          organizationId={organizationId}
+          onComplete={() => {
+            setShowBuilder(false);
+            // Trigger data reload by re-running the effect
+            setLoading(true);
+            fetch(
+              `/api/lesson-studio/whole-school?weekCommencing=${weekCommencing}&organizationId=${organizationId}`,
+              session?.access_token
+                ? { headers: { Authorization: `Bearer ${session.access_token}` } }
+                : {},
+            )
+              .then((r) => r.json())
+              .then((json) => {
+                const data: ClassRow[] = json?.data?.classes ?? json?.classes ?? [];
+                data.sort((a, b) => {
+                  const ks = yearSortKey(a.year_group) - yearSortKey(b.year_group);
+                  if (ks !== 0) return ks;
+                  return a.class_name.localeCompare(b.class_name);
+                });
+                setClasses(data);
+                setLoading(false);
+              })
+              .catch(() => setLoading(false));
+          }}
+          onCancel={() => setShowBuilder(false)}
+        />
+      )}
     </div>
   );
 }
