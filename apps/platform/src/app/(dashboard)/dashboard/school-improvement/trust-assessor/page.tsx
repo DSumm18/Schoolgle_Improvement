@@ -317,17 +317,26 @@ function parseSpreadsheet(workbook: XLSX.WorkBook): ParsedSpreadsheet {
     const worksheet = workbook.Sheets[sheetName];
     const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" }) as unknown[][];
 
+    // Detect school-code column: some exports have a blank leading column A,
+    // so everything is shifted right by 1. Count /^[A-Z]{2,6}$/ matches in col 0 vs col 1.
+    const countCodeMatches = (col: number) => rows.reduce((n, r) => {
+      const v = String((r ?? [])[col] ?? "").trim().toUpperCase();
+      return n + (/^[A-Z]{2,6}$/.test(v) && v !== "TRUST" ? 1 : 0);
+    }, 0);
+    const codeCol = countCodeMatches(1) > countCodeMatches(0) ? 1 : 0;
+    const colShift = codeCol;
+
     const headerRowIndex = rows.findIndex((row) =>
       row.some((cell) => String(cell ?? "").toLowerCase().includes("number in cohort"))
     );
     const trustRowIndex = rows.findIndex(
-      (row, idx) => idx > Math.max(0, headerRowIndex) && String(row[0] ?? "").trim().toUpperCase() === "TRUST"
+      (row, idx) => idx > Math.max(0, headerRowIndex) && String(row[codeCol] ?? "").trim().toUpperCase() === "TRUST"
     );
     const schoolRowsStart = trustRowIndex >= 0 ? trustRowIndex + 1 : headerRowIndex + 1;
 
     for (let r = schoolRowsStart; r < rows.length; r++) {
       const row = rows[r] ?? [];
-      const schoolRaw = String(row[0] ?? "").trim().toUpperCase();
+      const schoolRaw = String(row[codeCol] ?? "").trim().toUpperCase();
       if (!schoolRaw || schoolRaw === "TRUST" || schoolRaw.startsWith("NATIONAL") || !/^[A-Z]{2,6}$/.test(schoolRaw)) continue;
 
       schools.add(schoolRaw);
@@ -336,10 +345,10 @@ function parseSpreadsheet(workbook: XLSX.WorkBook): ParsedSpreadsheet {
       if (!data[schoolRaw]) data[schoolRaw] = {};
 
       const cohort = {
-        number_in_cohort: parseCell("number_in_cohort", row[1]),
-        number_send: parseCell("number_send", row[2]),
-        ehcp: parseCell("ehcp", row[3]),
-        number_fsm: parseCell("number_fsm", row[4]),
+        number_in_cohort: parseCell("number_in_cohort", row[1 + colShift]),
+        number_send: parseCell("number_send", row[2 + colShift]),
+        ehcp: parseCell("ehcp", row[3 + colShift]),
+        number_fsm: parseCell("number_fsm", row[4 + colShift]),
       };
 
       const all_pupils: Partial<SubjectScores> = {};
@@ -349,7 +358,7 @@ function parseSpreadsheet(workbook: XLSX.WorkBook): ParsedSpreadsheet {
       for (const sectionProfile of profile) {
         const target = sectionProfile.section === "all_pupils" ? all_pupils : sectionProfile.section === "fsm6" ? fsm6 : not_fsm6;
         sectionProfile.metrics.forEach((metric, idx) => {
-          const raw = row[sectionProfile.start + idx];
+          const raw = row[sectionProfile.start + idx + colShift];
           const parsed = parseCell(metric, raw);
           if (parsed !== null) {
             (target as Record<string, number | null>)[metric] = parsed;
