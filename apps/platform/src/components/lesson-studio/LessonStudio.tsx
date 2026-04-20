@@ -25,6 +25,7 @@ import { PupilDetailPanel } from "./PupilDetailPanel";
 import { CurriculumChecklist } from "./CurriculumChecklist";
 import { SchemeManager } from "./SchemeManager";
 import { CurriculumProgressionView } from "./CurriculumProgressionView";
+import { CurriculumAllocator } from "./CurriculumAllocator";
 import { WholeSchoolView } from "./WholeSchoolView";
 import { TimetableSetup } from "./TimetableSetup";
 import type {
@@ -510,6 +511,15 @@ export function LessonStudio() {
               setViewMode("timetable");
             }}
           />
+          {slots.some((s) => s.subject === "Maths") && (
+            <CurriculumAllocator
+              classId={selectedClass.id}
+              subject="Maths"
+              yearGroup={selectedClass.year_group}
+              organizationId={organizationId || ""}
+              schemeName="white-rose-maths"
+            />
+          )}
           <CurriculumChecklist
             classId={selectedClass.id}
             yearGroup={selectedClass.year_group}
