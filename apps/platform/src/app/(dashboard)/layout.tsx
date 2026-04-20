@@ -45,6 +45,8 @@ import { EdChatbotProvider } from "@/components/EdChatbotProvider";
 import { getContrastColor } from "@/lib/color-extractor";
 import AccessibilityToolbar from "@/components/AccessibilityToolbar";
 import { ImpersonationBanner } from "@/components/ImpersonationBanner";
+import { useSubscriptionState } from "@/hooks/useSubscriptionState";
+import SubscriptionBanner from "@/components/SubscriptionBanner";
 
 // 7-Planet module structure — defines how modules are grouped in the sidebar
 const PLANET_GROUPS = [
@@ -115,6 +117,12 @@ export default function DashboardLayout({
   const schoolLogo = brandingData?.settings?.logo_url;
 
   const userRole = organization?.role as Role;
+
+  // Subscription state — controls which modules appear in sidebar + banner
+  const { state: subscription } = useSubscriptionState(organizationId);
+  const enabledModuleSet = new Set(subscription?.enabledModules || []);
+  const subscriptionActive = subscription?.isActive ?? true; // default to allow-all if unknown
+  const hasSubscriptionRecord = subscription?.status !== 'none' && subscription !== null;
 
   // Color name → hex lookup
   const colorMap: Record<string, string> = {
@@ -280,6 +288,14 @@ export default function DashboardLayout({
             (m) => visibleModuleIds.includes(m.id) && (!hasRole || canUserAccess(m.requiredPermissions, userRole)),
           );
           if (accessibleModules.length === 0) return null;
+          // Subscription filter: if a subscription record exists for this org,
+          // only show planets whose moduleIds intersect enabled_modules AND sub is active.
+          // If no subscription record at all, keep legacy behaviour (show everything).
+          if (hasSubscriptionRecord) {
+            if (!subscriptionActive) return null;
+            const planetHasEnabledModule = planet.moduleIds.some((mid) => enabledModuleSet.has(mid));
+            if (!planetHasEnabledModule) return null;
+          }
           return {
             id: planet.id,
             name: planet.name,
@@ -888,6 +904,7 @@ export default function DashboardLayout({
         <main
           className={`flex-1 overflow-y-auto transition-all duration-500 ease-in-out bg-background text-foreground max-lg:ml-0 max-lg:pt-14 ${isSidebarExpanded ? "lg:ml-64" : "lg:ml-20"}`}
         >
+          {subscription && <SubscriptionBanner state={subscription} />}
           <AnimatePresence mode="wait">
             <motion.div
               key={pathname}
