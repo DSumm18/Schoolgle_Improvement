@@ -1112,7 +1112,7 @@ type StaffingByUrn = Record<number, {
   pupilAdultRatio: number | null;
 }>;
 
-function SchoolTab({ school, parsed, dfeData, staffingSnapshots, summaryData, authToken, organizationId }: { school: string; parsed: ParsedSpreadsheet; dfeData?: DfEData | null; staffingSnapshots?: StaffingByUrn | null; summaryData?: SchoolDataSummary | null; authToken?: string; organizationId?: string }) {
+function SchoolTab({ school, parsed, dfeData, staffingSnapshots, summaryData, authToken, organizationId, capturesByPeriod }: { school: string; parsed: ParsedSpreadsheet; dfeData?: DfEData | null; staffingSnapshots?: StaffingByUrn | null; summaryData?: SchoolDataSummary | null; authToken?: string; organizationId?: string; capturesByPeriod?: { autumn_term?: { parsed_data: ParsedSpreadsheet } | null; mid_year?: { parsed_data: ParsedSpreadsheet } | null } }) {
   const schoolData = parsed.data[school] ?? {};
   const info = TRUST_SCHOOLS[school];
 
@@ -2727,13 +2727,27 @@ function SchoolTab({ school, parsed, dfeData, staffingSnapshots, summaryData, au
                   <HideableCard componentId="evidence-ks2-track">
                     <div className="bg-card border border-border rounded-2xl p-8">
                       <h3 className="text-xl font-semibold text-foreground mb-1">KS2 track record</h3>
-                      <p className="text-sm text-muted-foreground mb-6">DfE validated KS2 results 2022–2024 vs current mid-year self-report</p>
-                      <KS2TrackRecordChart
-                        school={TRUST_SCHOOLS[school]?.name ?? school}
-                        abbrev={school}
-                        ks2Results={dfeData?.ks2Results ?? []}
-                        selfReport={y6Combined}
-                      />
+                      <p className="text-sm text-muted-foreground mb-6">DfE validated KS2 (2023–2025) alongside this year&apos;s school self-report captures — Autumn Term and Mid-Year shown separately so movement between the two is visible.</p>
+                      {(() => {
+                        const autumnY6 = capturesByPeriod?.autumn_term?.parsed_data?.data?.[school]?.["Year 6"];
+                        const midYearY6 = capturesByPeriod?.mid_year?.parsed_data?.data?.[school]?.["Year 6"];
+                        // Fallback: if no captures map supplied, use the currently-loaded parsed as mid-year
+                        const fallbackY6 = parsed.data[school]?.["Year 6"];
+                        const selfReports = {
+                          autumn_term: autumnY6 ? { combined: autumnY6.all_pupils.c_are ?? null } : null,
+                          mid_year: midYearY6
+                            ? { combined: midYearY6.all_pupils.c_are ?? null }
+                            : (!autumnY6 && fallbackY6 ? { combined: fallbackY6.all_pupils.c_are ?? null } : null),
+                        };
+                        return (
+                          <KS2TrackRecordChart
+                            school={TRUST_SCHOOLS[school]?.name ?? school}
+                            abbrev={school}
+                            ks2Results={dfeData?.ks2Results ?? []}
+                            selfReports={selfReports}
+                          />
+                        );
+                      })()}
                     </div>
                   </HideableCard>
                 )}
@@ -3281,54 +3295,64 @@ function getKs2SubjectForUrn(ks2Results: KS2Result[], urn: number, year: number,
   return r?.expectedStandardPct ?? null;
 }
 
-function KS2TrackRecordChart({ school, abbrev, ks2Results, selfReport }: {
+function KS2TrackRecordChart({ school, abbrev, ks2Results, selfReports }: {
   school: string;
   abbrev: string;
   ks2Results: KS2Result[];
-  selfReport: { reading: number | null; writing: number | null; maths: number | null; combined: number | null } | null;
+  selfReports: {
+    autumn_term?: { combined: number | null } | null;
+    mid_year?: { combined: number | null } | null;
+  } | null;
 }) {
   const info = TRUST_SCHOOLS[abbrev];
   if (!info) return null;
 
   const ks2Years = [2023, 2024, 2025];
 
-  // Compute Combined for each year
   const ks2Combined = ks2Years.map((year) => getKs2CombinedForUrn(ks2Results, info.urn, year)).filter((v): v is number => v !== null);
   const bestEverKs2 = ks2Combined.length > 0 ? Math.max(...ks2Combined) : null;
-  const selfCombined = selfReport?.combined ?? null;
 
-  // Flag: self-report Combined > best-ever by >10pp
-  const isSuspect = selfCombined !== null && bestEverKs2 !== null && selfCombined > bestEverKs2 + 10;
+  const autumnCombined = selfReports?.autumn_term?.combined ?? null;
+  const midYearCombined = selfReports?.mid_year?.combined ?? null;
 
-  // Horizontal bar data: schools on Y-axis, Combined % on X-axis
-  // Each row = one time period
-  const barData = [
+  // Flag when a self-report is more than 10pp above the best-ever DfE-validated KS2 result.
+  const isAutumnSuspect = autumnCombined !== null && bestEverKs2 !== null && autumnCombined > bestEverKs2 + 10;
+  const isMidYearSuspect = midYearCombined !== null && bestEverKs2 !== null && midYearCombined > bestEverKs2 + 10;
+
+  // Movement between the two self-reports — the forensic signal David is looking for.
+  const hasBothSelfReports = autumnCombined !== null && midYearCombined !== null;
+  const selfReportDelta = hasBothSelfReports ? (midYearCombined as number) - (autumnCombined as number) : null;
+
+  type BarKind = 'dfe' | 'autumn' | 'mid_year';
+  const barData: Array<{ name: string; combined: number | null; kind: BarKind; suspect?: boolean }> = [
     ...ks2Years.map((year) => ({
       name: `KS2 ${year}`,
       combined: getKs2CombinedForUrn(ks2Results, info.urn, year),
-      isSelfReport: false,
+      kind: 'dfe' as const,
     })),
-    ...(selfReport ? [{
-      name: "Mid-Year",
-      combined: selfReport.combined,
-      isSelfReport: true,
-    }] : []),
+    ...(autumnCombined !== null ? [{ name: 'Autumn (self-report)', combined: autumnCombined, kind: 'autumn' as const, suspect: isAutumnSuspect }] : []),
+    ...(midYearCombined !== null ? [{ name: 'Mid-Year (self-report)', combined: midYearCombined, kind: 'mid_year' as const, suspect: isMidYearSuspect }] : []),
   ].reverse(); // Most recent at top
 
-  // Custom bar fill
   const CustomBar = (props: {
     x?: number; y?: number; width?: number; height?: number;
-    combined?: number | null; isSelfReport?: boolean;
+    combined?: number | null; kind?: BarKind; suspect?: boolean;
   }) => {
-    const { x = 0, y = 0, width = 0, height = 0, isSelfReport, combined } = props;
+    const { x = 0, y = 0, width = 0, height = 0, combined, kind, suspect } = props;
     if (combined === null || combined === undefined) return null;
-    const fill = isSelfReport ? (isSuspect ? "#EF4444" : "#F59E0B") : "#3B82F6";
+    let fill = '#3B82F6'; // DfE blue
+    if (kind === 'autumn') fill = suspect ? '#EF4444' : '#F59E0B'; // amber / red if suspect
+    if (kind === 'mid_year') fill = suspect ? '#EF4444' : '#A855F7'; // purple / red if suspect
     return (
       <g>
         <rect x={x} y={y + height * 0.2} width={width} height={height * 0.6} fill={fill} rx={3} opacity={0.85} />
       </g>
     );
   };
+
+  const headlinePct = midYearCombined ?? autumnCombined;
+  const headlineLabel = midYearCombined !== null ? 'Mid-Year' : autumnCombined !== null ? 'Autumn' : null;
+  const headlineSuspect = (midYearCombined !== null && isMidYearSuspect) || (midYearCombined === null && isAutumnSuspect);
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-4">
@@ -3338,36 +3362,49 @@ function KS2TrackRecordChart({ school, abbrev, ks2Results, selfReport }: {
           <div className="text-xs text-gray-500">{school}</div>
           <div className="text-[10px] text-gray-400">URN {info.urn}</div>
         </div>
-        {selfCombined !== null && (
-          <div className={`text-xs font-semibold px-2 py-1 rounded-lg shrink-0 ${isSuspect ? "bg-red-50 text-red-700 border border-red-200" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
-            Mid-Year: {selfCombined}%
-            {isSuspect && <span className="ml-1">⚠ above track record</span>}
+        {headlinePct !== null && headlineLabel && (
+          <div className={`text-xs font-semibold px-2 py-1 rounded-lg shrink-0 ${headlineSuspect ? 'bg-red-50 text-red-700 border border-red-200' : headlineLabel === 'Mid-Year' ? 'bg-purple-50 text-purple-700 border border-purple-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
+            {headlineLabel}: {headlinePct}%
+            {headlineSuspect && <span className="ml-1">⚠ above track record</span>}
           </div>
         )}
       </div>
 
-      {isSuspect && (
+      {isMidYearSuspect && (
         <div className="mb-2 flex items-center gap-1 text-xs text-red-600 bg-red-50 border border-red-200 rounded px-2 py-1">
           <AlertTriangle size={10} />
-          Self-report ({selfCombined}%) exceeds best-ever KS2 ({bestEverKs2}%) by {selfCombined !== null && bestEverKs2 !== null ? Math.round(selfCombined - bestEverKs2) : 0}pp
+          Mid-Year self-report ({midYearCombined}%) exceeds best-ever KS2 ({bestEverKs2}%) by {midYearCombined !== null && bestEverKs2 !== null ? Math.round(midYearCombined - bestEverKs2) : 0}pp
+        </div>
+      )}
+      {isAutumnSuspect && !isMidYearSuspect && (
+        <div className="mb-2 flex items-center gap-1 text-xs text-red-600 bg-red-50 border border-red-200 rounded px-2 py-1">
+          <AlertTriangle size={10} />
+          Autumn self-report ({autumnCombined}%) exceeds best-ever KS2 ({bestEverKs2}%) by {autumnCombined !== null && bestEverKs2 !== null ? Math.round(autumnCombined - bestEverKs2) : 0}pp
+        </div>
+      )}
+      {selfReportDelta !== null && Math.abs(selfReportDelta) >= 5 && (
+        <div className={`mb-2 flex items-center gap-1 text-xs rounded px-2 py-1 border ${selfReportDelta >= 0 ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-red-700 bg-red-50 border-red-200'}`}>
+          <AlertTriangle size={10} />
+          Self-report moved {selfReportDelta >= 0 ? '+' : ''}{selfReportDelta}pp between Autumn ({autumnCombined}%) and Mid-Year ({midYearCombined}%). {selfReportDelta >= 0 ? 'Validate the trajectory.' : 'Revised downward — worth a discussion with the Head.'}
         </div>
       )}
 
-      <ResponsiveContainer width="100%" height={130}>
+      <ResponsiveContainer width="100%" height={160}>
         <BarChart data={barData} layout="vertical" margin={{ top: 4, right: 40, left: 10, bottom: 4 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={true} horizontal={false} />
           <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11, fill: "#6B7280" }} axisLine={false} tickLine={false} />
-          <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "#374151" }} width={70} axisLine={false} tickLine={false} />
+          <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "#374151" }} width={110} axisLine={false} tickLine={false} />
           <ReferenceLine x={61} stroke="#9CA3AF" strokeDasharray="4 4" label={{ value: "Nat 61%", fontSize: 10, fill: "#9CA3AF", position: "right" }} />
           <Tooltip formatter={(val) => [`${val}%`, "Combined"]} contentStyle={{ fontSize: "12px" }} />
           <Bar dataKey="combined" shape={<CustomBar />} label={{ position: "right", fontSize: 11, fill: "#374151" }} />
         </BarChart>
       </ResponsiveContainer>
 
-      <div className="flex items-center gap-3 mt-2 text-[10px] text-gray-400">
-        <span className="flex items-center gap-1"><img src="/logos/connectors/dfe.png" alt="DfE" className="w-4 h-4 rounded-sm inline-block" /> DfE Validated</span>
-        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-amber-400 inline-block" /> Mid-year self-report</span>
-        {isSuspect && <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-red-500 inline-block" /> Suspect (10pp+ above track record)</span>}
+      <div className="flex items-center gap-3 mt-2 text-[10px] text-gray-400 flex-wrap">
+        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-blue-500 inline-block" /> DfE validated</span>
+        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-amber-400 inline-block" /> Autumn self-report</span>
+        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-purple-500 inline-block" /> Mid-Year self-report</span>
+        {(isAutumnSuspect || isMidYearSuspect) && <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-red-500 inline-block" /> Suspect (10pp+ above track record)</span>}
       </div>
     </div>
   );
@@ -3936,6 +3973,11 @@ export default function TrustAssessorPage() {
   const [parsed, setParsed] = useState<ParsedSpreadsheet | null>(null);
   const [parseError, setParseError] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
+  // Full capture map so the KS2 chart can plot Autumn + Mid-Year side-by-side.
+  // Key = capture_period ('autumn_term' | 'mid_year' | 'end_of_year' | 'summer_term').
+  type CapturePeriod = 'autumn_term' | 'mid_year' | 'end_of_year' | 'summer_term';
+  const [capturesByPeriod, setCapturesByPeriod] = useState<Partial<Record<CapturePeriod, { parsed_data: ParsedSpreadsheet; file_name: string; created_at?: string }>>>({});
+  const [currentCapturePeriod, setCurrentCapturePeriod] = useState<CapturePeriod | null>(null);
   const [dfeData, setDfeData] = useState<DfEData | null>(null);
   const [dfeLoading, setDfeLoading] = useState(false);
   const [dfeError, setDfeError] = useState<string | null>(null);
@@ -4318,9 +4360,23 @@ export default function TrustAssessorPage() {
         const res = await fetch(`/api/trust-analysis/trust-spreadsheet?organizationId=${organizationId}`, { headers: authHeaders });
         if (!res.ok) return;
         const data = await res.json();
-        if (data && data.parsed_data) {
+        // New shape: { captures: { autumn_term: {...}, mid_year: {...} }, current, currentPeriod }
+        if (data && data.captures) {
+          setCapturesByPeriod(data.captures);
+          setCurrentCapturePeriod(data.currentPeriod ?? null);
+          if (data.current?.parsed_data) {
+            setParsed(data.current.parsed_data);
+            setFileName(data.current.file_name);
+          }
+        } else if (data && data.parsed_data) {
+          // Back-compat: old response shape (single row)
           setParsed(data.parsed_data);
           setFileName(data.file_name);
+          const period = (data.capture_period as CapturePeriod | undefined) ?? null;
+          if (period) {
+            setCapturesByPeriod({ [period]: { parsed_data: data.parsed_data, file_name: data.file_name } });
+            setCurrentCapturePeriod(period);
+          }
         }
       } catch (e) {
         console.warn('[trust-spreadsheet] load failed:', e);
@@ -4749,7 +4805,7 @@ export default function TrustAssessorPage() {
                       exit={{ opacity: 0, y: -8 }}
                       transition={{ duration: 0.2 }}
                     >
-                      <SchoolTab key={activeSchoolTab} school={activeSchoolTab} parsed={parsed} dfeData={dfeData} staffingSnapshots={staffingSnapshots} summaryData={summaryData?.schoolAbbrev === activeSchoolTab ? summaryData : null} authToken={accessToken ?? undefined} organizationId={organizationId ?? undefined} />
+                      <SchoolTab key={activeSchoolTab} school={activeSchoolTab} parsed={parsed} dfeData={dfeData} staffingSnapshots={staffingSnapshots} summaryData={summaryData?.schoolAbbrev === activeSchoolTab ? summaryData : null} authToken={accessToken ?? undefined} organizationId={organizationId ?? undefined} capturesByPeriod={capturesByPeriod} />
 
                       {/* BUILD 4: No-CTF upsell for non-GHPS schools */}
                       {!groveHouseData && activeSchoolTab !== 'GHPS' && (
@@ -4985,19 +5041,23 @@ export default function TrustAssessorPage() {
                 <>
                   <div className="flex items-start justify-between mb-4">
                     <div>
-                      <h3 className="text-base font-semibold text-gray-800">KS2 Combined % Track Record (2023–2025 + Mid-Year Self-Report)</h3>
-                      <p className="text-sm text-gray-500 mt-0.5">Horizontal bars show Combined % by year. Dashed line = national average (61%). Amber bar = self-reported mid-year. Red = suspect (10pp+ above track record).</p>
+                      <h3 className="text-base font-semibold text-gray-800">KS2 Combined % Track Record — DfE history + this year's self-reported captures</h3>
+                      <p className="text-sm text-gray-500 mt-0.5">
+                        <span className="inline-flex items-center gap-1 mr-3"><span className="inline-block w-3 h-3 rounded-sm bg-blue-500" /> KS2 2023–2025 — DfE validated</span>
+                        <span className="inline-flex items-center gap-1 mr-3"><span className="inline-block w-3 h-3 rounded-sm bg-amber-400" /> Autumn Term 2025/26 — school self-report</span>
+                        <span className="inline-flex items-center gap-1 mr-3"><span className="inline-block w-3 h-3 rounded-sm bg-purple-500" /> Mid-Year 2025/26 — school self-report</span>
+                      </p>
+                      <p className="text-xs text-gray-400 mt-1">Dashed line = national average (61%). Red bar = self-report 10pp+ above best-ever KS2 — flagged as suspect. Self-reports are teacher-assessed, not DfE-moderated — trajectory between them is the forensic signal.</p>
                     </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     {parsed.schools.map((abbrev) => {
-                      const y6Data = parsed.data[abbrev]?.["Year 6"];
-                      const selfReport = y6Data ? {
-                        reading: y6Data.all_pupils.r_are ?? null,
-                        writing: y6Data.all_pupils.w_are ?? null,
-                        maths: y6Data.all_pupils.m_are ?? null,
-                        combined: y6Data.all_pupils.c_are ?? null,
-                      } : null;
+                      const autumnY6 = capturesByPeriod.autumn_term?.parsed_data?.data?.[abbrev]?.["Year 6"];
+                      const midYearY6 = capturesByPeriod.mid_year?.parsed_data?.data?.[abbrev]?.["Year 6"];
+                      const selfReports = {
+                        autumn_term: autumnY6 ? { combined: autumnY6.all_pupils.c_are ?? null } : null,
+                        mid_year: midYearY6 ? { combined: midYearY6.all_pupils.c_are ?? null } : null,
+                      };
                       const info = TRUST_SCHOOLS[abbrev];
                       return (
                         <KS2TrackRecordChart
@@ -5005,7 +5065,7 @@ export default function TrustAssessorPage() {
                           school={info?.name ?? abbrev}
                           abbrev={abbrev}
                           ks2Results={dfeData.ks2Results}
-                          selfReport={selfReport}
+                          selfReports={selfReports}
                         />
                       );
                     })}
