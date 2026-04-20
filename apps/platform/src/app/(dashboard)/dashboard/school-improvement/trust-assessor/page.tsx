@@ -4088,7 +4088,13 @@ export default function TrustAssessorPage() {
       }
     })();
 
-    // Also fetch Grove House full data (non-fatal)
+    // Also fetch Grove House full data (non-fatal) — ONLY when the current org IS Grove House.
+    // Other schools show the locked/connect-your-data state instead of Grove House's data bleeding through.
+    const GROVE_HOUSE_ORG_ID = 'd9d1ac2c-5eff-4043-98f4-e1c43f616fd3';
+    if (organizationId !== GROVE_HOUSE_ORG_ID) {
+      setGroveHouseData(null);
+      return;
+    }
     (async () => {
       try {
         const res = await fetch(`/api/trust-analysis/grove-house${organizationId ? `?organizationId=${organizationId}` : ''}`, { headers: authHeaders });
@@ -4949,9 +4955,9 @@ export default function TrustAssessorPage() {
           )}
         </section>
 
-        {/* ─── Phase 3: Grove House Deep Dive ───────────────────────────── */}
+        {/* ─── Phase 3: Per-Pupil Deep Analytics ───────────────────────────── */}
         <section className="bg-white border border-gray-200 rounded-2xl p-6">
-          <SectionHeader number={3} title="Deep Analytics" subtitle="Per-pupil tracking from CTF assessment files. Grove House Primary School." />
+          <SectionHeader number={3} title="Deep Analytics" subtitle={groveHouseData ? `Per-pupil tracking from CTF assessment files. ${groveHouseData.summary?.totalPupils || ''} pupils.` : "Per-pupil tracking from CTF assessment files. Connect your CTF to unlock pupil-level analysis."} />
 
           {!groveHouseData ? (
             /* Locked state — no data yet */
