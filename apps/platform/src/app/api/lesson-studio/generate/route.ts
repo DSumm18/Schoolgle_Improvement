@@ -183,8 +183,17 @@ function buildPrompt(params: {
   endTime: string;
   classProfile: string;
   teacherNote: string | null;
+  previousLesson: { title: string; objective: string; criteria: string[] } | null;
 }): string {
-  return `You are an expert UK primary school teacher creating a lesson plan.
+  const recapSection = params.previousLesson
+    ? `\n\nPREVIOUS LESSON (build a 5-minute retrieval starter based on this):
+Title: ${params.previousLesson.title}
+Objective: ${params.previousLesson.objective}
+Success Criteria: ${params.previousLesson.criteria.join("; ")}
+Start this lesson with a quick retrieval activity that tests whether pupils remember the key concepts from the previous lesson. This could be a quick quiz, partner discussion, or whiteboard activity. The Starter section should begin with this recap.`
+    : "";
+
+  return `You are an expert UK primary school teacher creating a lesson plan.${recapSection}
 
 CONTEXT:
 - Subject: ${params.subject}
@@ -261,8 +270,8 @@ export const POST = protectedRoute(async (auth, req: NextRequest) => {
 
   const startTime = performance.now();
 
-  // Load class, slot, pupils, scheme mapping, and adaptation profiles in parallel
-  const [classRes, slotRes, pupilsRes, schemesRes, profilesRes] =
+  // Load class, slot, pupils, scheme mapping, adaptation profiles, and previous lesson in parallel
+  const [classRes, slotRes, pupilsRes, schemesRes, profilesRes, prevLessonRes] =
     await Promise.all([
       supabase.from("ls_classes").select("*").eq("id", classId).single(),
       supabase.from("ls_timetable_slots").select("*").eq("id", slotId).single(),
@@ -276,6 +285,15 @@ export const POST = protectedRoute(async (auth, req: NextRequest) => {
         .from("ls_pupil_adaptation_profiles")
         .select("*")
         .eq("organization_id", orgId),
+      // Fetch most recent lesson for this class + subject to build recap
+      supabase
+        .from("ls_lesson_plans")
+        .select("title, learning_objective, success_criteria, key_vocabulary, differentiation_groups, send_adaptations")
+        .eq("class_id", classId)
+        .eq("organization_id", orgId)
+        .lt("week_commencing", weekCommencing)
+        .order("week_commencing", { ascending: false })
+        .limit(1),
     ]);
 
   if (classRes.error || !classRes.data) return apiError("Class not found", 404);
@@ -333,6 +351,15 @@ export const POST = protectedRoute(async (auth, req: NextRequest) => {
     endTime: slot.end_time,
     classProfile,
     teacherNote: teacherNote ?? null,
+    previousLesson: (() => {
+      const prev = prevLessonRes.data?.[0];
+      if (!prev?.title) return null;
+      return {
+        title: prev.title,
+        objective: prev.learning_objective || "",
+        criteria: Array.isArray(prev.success_criteria) ? prev.success_criteria : [],
+      };
+    })(),
   });
 
   // Call AI
