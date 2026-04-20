@@ -305,6 +305,12 @@ export default function BrandingSettingsPage() {
         const formData = new FormData();
         formData.append("file", file);
 
+        if (!organizationId) {
+          setError("No school selected. Use the dropdown to pick a school first.");
+          setUploading(false);
+          return;
+        }
+
         const res = await fetch(
           `/api/settings/branding/logo?organizationId=${organizationId}`,
           {
@@ -336,7 +342,7 @@ export default function BrandingSettingsPage() {
         setUploading(false);
       }
     },
-    [mutate],
+    [mutate, organizationId],
   );
 
   const handleDrop = useCallback(
