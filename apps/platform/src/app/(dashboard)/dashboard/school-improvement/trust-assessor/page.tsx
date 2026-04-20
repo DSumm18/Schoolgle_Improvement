@@ -99,6 +99,87 @@ type YearGroup = (typeof YEAR_GROUPS)[number];
 
 const HEATMAP_YEAR_GROUPS: YearGroup[] = ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6"];
 
+// ─── Reliability Tier System ─────────────────────────────────────────────────
+
+export type ReliabilityTier = 'external' | 'derived' | 'self_reported';
+
+const TIER_CONFIG: Record<ReliabilityTier, { label: string; pill: string; dot: string; border: string }> = {
+  external:      { label: 'External',      pill: 'bg-emerald-100 text-emerald-800 border-emerald-300', dot: 'bg-emerald-500', border: 'border-l-emerald-500' },
+  derived:       { label: 'Derived',       pill: 'bg-amber-100  text-amber-800  border-amber-300',  dot: 'bg-amber-400',  border: 'border-l-amber-400'  },
+  self_reported: { label: 'Self-reported', pill: 'bg-rose-100   text-rose-800   border-rose-300',   dot: 'bg-rose-500',   border: 'border-l-rose-500'   },
+};
+
+function TierPill({ tier, size = 'xs' }: { tier: ReliabilityTier; size?: 'xs' | 'sm' }) {
+  const cfg = TIER_CONFIG[tier];
+  return (
+    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border font-semibold uppercase tracking-wide ${size === 'xs' ? 'text-[9px]' : 'text-xs'} ${cfg.pill}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+      {cfg.label}
+    </span>
+  );
+}
+
+function TierLegendBar() {
+  return (
+    <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-muted/40 border border-border text-xs text-muted-foreground flex-wrap">
+      <span className="font-semibold text-foreground text-[10px] uppercase tracking-wider">Data tiers:</span>
+      {(Object.keys(TIER_CONFIG) as ReliabilityTier[]).map(t => (
+        <TierPill key={t} tier={t} size="xs" />
+      ))}
+      <span className="text-[10px] text-muted-foreground/60 ml-1">Every number is labelled — external = DfE validated, derived = computed from validated inputs, self-reported = school/trust data</span>
+    </div>
+  );
+}
+
+// ─── Intra-Year Progression Types ────────────────────────────────────────────
+
+interface TermSubjectScores {
+  reading?: number | null;
+  writing?: number | null;
+  maths?: number | null;
+  combined?: number | null;
+  reading_gd?: number | null;
+  writing_gd?: number | null;
+  maths_gd?: number | null;
+  combined_gd?: number | null;
+  phonics?: number | null;
+  mtc?: number | null;
+  gld?: number | null;
+}
+
+interface TermData {
+  term: 'eoy_prev' | 'autumn' | 'mid_year' | 'eoy_target' | 'eoy_current';
+  label: string;
+  cohortSize?: number | null;
+  allPupils: TermSubjectScores;
+  fsm6: TermSubjectScores;
+  nonFsm6: TermSubjectScores;
+  tier: ReliabilityTier;
+}
+
+interface Ks1Baseline {
+  year: string;
+  reading: number | null;
+  writing: number | null;
+  maths: number | null;
+  combined: number | null;
+  tier: ReliabilityTier;
+}
+
+interface YearGroupProgression {
+  yearGroup: string; // 'Y1' through 'Y6' or 'EYFS'
+  terms: TermData[];
+  ks1Baseline?: Ks1Baseline;
+}
+
+interface SchoolDataSummary {
+  schoolAbbrev: string;
+  fileName: string;
+  yearGroupProgressions: YearGroupProgression[];
+}
+
+// ─── AppConnector type ────────────────────────────────────────────────────────
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 interface SubjectScores {
@@ -1014,7 +1095,7 @@ type StaffingByUrn = Record<number, {
   pupilAdultRatio: number | null;
 }>;
 
-function SchoolTab({ school, parsed, dfeData, staffingSnapshots, authToken, organizationId }: { school: string; parsed: ParsedSpreadsheet; dfeData?: DfEData | null; staffingSnapshots?: StaffingByUrn | null; authToken?: string; organizationId?: string }) {
+function SchoolTab({ school, parsed, dfeData, staffingSnapshots, summaryData, authToken, organizationId }: { school: string; parsed: ParsedSpreadsheet; dfeData?: DfEData | null; staffingSnapshots?: StaffingByUrn | null; summaryData?: SchoolDataSummary | null; authToken?: string; organizationId?: string }) {
   const schoolData = parsed.data[school] ?? {};
   const info = TRUST_SCHOOLS[school];
 
@@ -2191,6 +2272,9 @@ function SchoolTab({ school, parsed, dfeData, staffingSnapshots, authToken, orga
             {activeTab === "forensic" && (
               <div className="space-y-10 py-8 px-6">
 
+                {/* Always-visible Tier Legend */}
+                <TierLegendBar />
+
                 {/* Forensic Verdict — hero of this tab */}
                 <HideableCard componentId="forensic-verdict">
                   {renderForensicVerdict()}
@@ -2208,6 +2292,21 @@ function SchoolTab({ school, parsed, dfeData, staffingSnapshots, authToken, orga
                     />
                   </HideableCard>
                 )}
+
+                {/* Intra-Year Progression — Autumn → Mid-year → Target */}
+                <HideableCard componentId="forensic-intra-year">
+                  <IntraYearProgressionSection summary={summaryData ?? null} />
+                </HideableCard>
+
+                {/* Pre-meeting verification checklist */}
+                <HideableCard componentId="forensic-pre-meeting">
+                  <PreMeetingVerification
+                    school={school}
+                    summary={summaryData ?? null}
+                    dfeData={dfeData}
+                    parsed={parsed}
+                  />
+                </HideableCard>
 
                 {/* Research-Backed KPIs */}
                 <HideableCard componentId="forensic-kpis">
@@ -2273,6 +2372,29 @@ function SchoolTab({ school, parsed, dfeData, staffingSnapshots, authToken, orga
                         <div className="text-muted-foreground">Support: <span className="font-medium text-foreground">{staffingRow?.fteSupport != null ? `${staffingRow.fteSupport} FTE` : '—'}</span></div>
                         <div className="text-muted-foreground">Total: <span className="font-medium text-foreground">{staffingRow?.fteTotal != null ? `${staffingRow.fteTotal} FTE` : '—'}</span></div>
                       </div>
+
+                      <details className="mt-4 group">
+                        <summary className="cursor-pointer text-xs font-semibold text-muted-foreground hover:text-foreground flex items-center gap-1.5 list-none [&::-webkit-details-marker]:hidden">
+                          <svg className="w-3 h-3 transition-transform group-open:rotate-90" viewBox="0 0 12 12" fill="currentColor">
+                            <path d="M4 2L8 6L4 10" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                          What this ratio doesn&apos;t tell you
+                        </summary>
+                        <div className="mt-3 space-y-2 text-xs text-muted-foreground">
+                          <p>
+                            Pupil-teacher ratio shows <strong className="text-foreground">how many</strong> teachers, not <strong className="text-foreground">who</strong> they are or <strong className="text-foreground">what they cost</strong>.
+                          </p>
+                          <ul className="space-y-1.5 pl-4 list-disc">
+                            <li>A school with a favourable ratio may be carrying long-serving teachers on top of the pay scale — expensive without being demonstrably more effective.</li>
+                            <li>A school with a lean ratio may have a lower pay cost per teacher (ECT / early-career profile).</li>
+                            <li>Cost-per-pupil and average teacher cost would complete this picture. Available via DfE&apos;s Schools Financial Benchmarking — queued as a Tier 2 enhancement.</li>
+                            <li>A school&apos;s &quot;support staff&quot; headcount may include shared trust central services (HR, finance, SEND coordination) that don&apos;t reflect classroom delivery capacity.</li>
+                          </ul>
+                          <p className="pt-1 italic">
+                            Schoolgle flags patterns — it does not judge teachers. This ratio is one signal of many. Read alongside attendance, workforce turnover, and outcomes.
+                          </p>
+                        </div>
+                      </details>
 
                       <div className="mt-3 text-[10px] text-muted-foreground italic">
                         Source: DfE School Workforce Census {staffingRow?.year ?? ''}. National ratios from DfE School Workforce Statistics 2024. A MAT&apos;s central team (HR, finance, SEND coordination) may sit at trust level and not appear in individual school staffing — actual delivery capacity may differ from headline figures.
@@ -3272,6 +3394,510 @@ function FsmTrendChart({ abbrev, census }: { abbrev: string; census: CensusRecor
 // Connector stored in Supabase `app_connectors` table per organization.
 // On page load, we fetch the connector config from the API, then fetch
 // the file live from Google Drive. No file content stored anywhere.
+// ─── School Data Summary Parser ──────────────────────────────────────────────
+// Parses per-school files (LGPS / Grove House Data Summary style)
+// Each sheet is a year group. Row structure per sheet (1-indexed):
+//   Row 4: "End of previous year"
+//   Row 5: "Autumn Term"
+//   Row 6: "Mid year"
+//   Row 7: "End of year"  (EOY current)
+//   Row 8: "Target"
+// For Y6 sheets, additional rows may include KS1 and EYFS baseline data.
+//
+// Columns split: All pupils | FSM6 | Not FSM6
+// Subject order: R ARE, R GD, W ARE, W GD, M ARE, M GD, C ARE, C GD, [Phonics or MTC]
+
+const DATA_SUMMARY_YEAR_GROUP_MAP: Record<string, string> = {
+  'eyfs': 'EYFS', 'ey': 'EYFS', 'reception': 'EYFS',
+  'year 1': 'Y1', 'y1': 'Y1', 'yr 1': 'Y1',
+  'year 2': 'Y2', 'y2': 'Y2', 'yr 2': 'Y2',
+  'year 3': 'Y3', 'y3': 'Y3', 'yr 3': 'Y3',
+  'year 4': 'Y4', 'y4': 'Y4', 'yr 4': 'Y4',
+  'year 5': 'Y5', 'y5': 'Y5', 'yr 5': 'Y5',
+  'year 6': 'Y6', 'y6': 'Y6', 'yr 6': 'Y6',
+};
+
+function normaliseSheetName(name: string): string | null {
+  const lower = name.trim().toLowerCase().replace(/[\s-]+/g, ' ');
+  for (const [key, val] of Object.entries(DATA_SUMMARY_YEAR_GROUP_MAP)) {
+    if (lower === key || lower.includes(key)) return val;
+  }
+  return null;
+}
+
+function extractTermScores(row: unknown[], startCol: number, hasPhonicsOrMtc: boolean): TermSubjectScores {
+  const n = (idx: number) => {
+    const v = row[startCol + idx];
+    if (v === null || v === undefined || v === '') return null;
+    const num = typeof v === 'number' ? v : Number(String(v).replace(/%/g, '').trim());
+    if (!Number.isFinite(num)) return null;
+    // If stored as decimal (0-1 range), convert to %
+    if (num > 0 && num <= 1) return Math.round(num * 10000) / 100;
+    return Math.round(num * 100) / 100;
+  };
+  const result: TermSubjectScores = {
+    reading:    n(0),
+    reading_gd: n(1),
+    writing:    n(2),
+    writing_gd: n(3),
+    maths:      n(4),
+    maths_gd:   n(5),
+    combined:   n(6),
+    combined_gd: n(7),
+  };
+  if (hasPhonicsOrMtc) {
+    result.phonics = n(8);
+    result.mtc     = n(8);
+  }
+  return result;
+}
+
+function parseSchoolDataSummary(workbook: XLSX.WorkBook, schoolAbbrev: string, fileName: string): SchoolDataSummary {
+  const progressions: YearGroupProgression[] = [];
+
+  for (const sheetName of workbook.SheetNames) {
+    const ygNorm = normaliseSheetName(sheetName);
+    if (!ygNorm) continue;
+
+    const ws = workbook.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' }) as unknown[][];
+
+    // Find the row offsets by scanning for keyword rows
+    const ROW_KEYWORDS: { key: string; term: TermData['term']; label: string; tier: ReliabilityTier }[] = [
+      { key: 'end of previous year', term: 'eoy_prev',     label: 'EOY (previous)',  tier: 'self_reported' },
+      { key: 'autumn',               term: 'autumn',       label: 'Autumn Term',     tier: 'self_reported' },
+      { key: 'mid year',             term: 'mid_year',     label: 'Mid-year',        tier: 'self_reported' },
+      { key: 'end of year',          term: 'eoy_current',  label: 'EOY',             tier: 'self_reported' },
+      { key: 'target',               term: 'eoy_target',   label: 'Target',          tier: 'self_reported' },
+    ];
+
+    // Determine column layout — look for a header row that has "r are", "reading" or similar
+    // Default: All pupils from col 1, FSM6 from col 9 or 10, Not FSM6 further right
+    // We'll detect by scanning the first 30 rows for a header
+    let colOffsetAll = 1;
+    let colOffsetFsm = 9;
+    let colOffsetNotFsm = 17;
+    let hasPhonicsOrMtc = ygNorm === 'Y1' || ygNorm === 'Y2' || ygNorm === 'Y4';
+
+    for (let r = 0; r < Math.min(rows.length, 30); r++) {
+      const row = rows[r] ?? [];
+      const cells = row.map(c => String(c ?? '').toLowerCase());
+      const rIdx = cells.findIndex(c => c.includes('r are') || (c.includes('reading') && cells.some(x => x.includes('are'))));
+      if (rIdx > 0) {
+        colOffsetAll = rIdx;
+        // The FSM6 block should start ~9 or 10 columns later
+        const fsm6Idx = cells.findIndex((c, i) => i > rIdx + 6 && (c.includes('r are') || c.includes('reading')));
+        if (fsm6Idx > 0) {
+          colOffsetFsm = fsm6Idx;
+          const notFsmIdx = cells.findIndex((c, i) => i > fsm6Idx + 6 && (c.includes('r are') || c.includes('reading')));
+          if (notFsmIdx > 0) colOffsetNotFsm = notFsmIdx;
+        }
+        break;
+      }
+    }
+
+    const terms: TermData[] = [];
+    let ks1Baseline: Ks1Baseline | undefined;
+
+    for (let r = 0; r < rows.length; r++) {
+      const row = rows[r] ?? [];
+      const label = String(row[0] ?? '').toLowerCase().trim();
+
+      const termDef = ROW_KEYWORDS.find(k => label.includes(k.key));
+      if (termDef) {
+        const cohortSizeRaw = row[colOffsetAll - 1];
+        const cohortSize = typeof cohortSizeRaw === 'number' ? cohortSizeRaw : (cohortSizeRaw ? Number(String(cohortSizeRaw).replace(/\D/g, '')) || null : null);
+        terms.push({
+          term: termDef.term,
+          label: termDef.label,
+          cohortSize,
+          allPupils: extractTermScores(row, colOffsetAll, hasPhonicsOrMtc),
+          fsm6:      extractTermScores(row, colOffsetFsm, hasPhonicsOrMtc),
+          nonFsm6:   extractTermScores(row, colOffsetNotFsm, hasPhonicsOrMtc),
+          tier: termDef.tier,
+        });
+        continue;
+      }
+
+      // For Y6 sheet: detect KS1 baseline row
+      if (ygNorm === 'Y6' && !ks1Baseline) {
+        if (label.includes('ks1') || label.includes('key stage 1') || label.includes('ks 1')) {
+          const yearMatch = label.match(/(\d{4})[\/\-](\d{2,4})/);
+          const yearStr = yearMatch ? `${yearMatch[1]}/${yearMatch[2].length === 2 ? yearMatch[2] : yearMatch[2].slice(2)}` : '2021/22';
+          const s = extractTermScores(row, colOffsetAll, false);
+          ks1Baseline = {
+            year: yearStr,
+            reading:  s.reading ?? null,
+            writing:  s.writing ?? null,
+            maths:    s.maths ?? null,
+            combined: s.combined ?? null,
+            tier: 'external', // KS1 2021/22 = last statutory moderated year
+          };
+        }
+      }
+    }
+
+    if (terms.length > 0) {
+      progressions.push({ yearGroup: ygNorm, terms, ks1Baseline });
+    }
+  }
+
+  return { schoolAbbrev, fileName, yearGroupProgressions: progressions };
+}
+
+// ─── Intra-Year Progression Component ────────────────────────────────────────
+
+const OUTLIER_THRESHOLDS = { amber: 5, red: 8 } as const;
+
+function IntraYearProgressionSection({ summary }: { summary: SchoolDataSummary | null }) {
+  if (!summary || summary.yearGroupProgressions.length === 0) {
+    return (
+      <div className="bg-muted/20 border border-dashed border-border rounded-2xl p-6 text-center">
+        <div className="text-sm text-muted-foreground">No intra-year progression data available.</div>
+        <div className="text-xs text-muted-foreground/60 mt-1">Connect a School Data Summary file in the connector strip above to unlock this section.</div>
+      </div>
+    );
+  }
+
+  const SUBJECTS = [
+    { key: 'reading' as keyof TermSubjectScores,  label: 'Reading',  color: 'text-blue-700'  },
+    { key: 'writing' as keyof TermSubjectScores,  label: 'Writing',  color: 'text-red-700'   },
+    { key: 'maths'   as keyof TermSubjectScores,  label: 'Maths',    color: 'text-emerald-700'},
+    { key: 'combined' as keyof TermSubjectScores, label: 'Combined', color: 'text-purple-700' },
+  ];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.2 }}
+      transition={{ type: 'spring', damping: 28, stiffness: 220 }}
+    >
+      <div className="bg-card border border-border rounded-2xl p-8">
+        <div className="flex items-center gap-3 mb-2">
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 uppercase tracking-wider">Intra-Year Progression</span>
+          <TierPill tier="self_reported" />
+        </div>
+        <h3 className="text-xl font-semibold text-foreground mb-1">Autumn → Mid-year → Target</h3>
+        <p className="text-sm text-muted-foreground mb-4">Term-on-term progression from the school&apos;s own Data Summary. Every number is self-reported. Typical Autumn → Mid-year gain is 3–5pp per subject.</p>
+
+        <TierLegendBar />
+
+        <div className="space-y-6 mt-6">
+          {summary.yearGroupProgressions.map((yg) => {
+            const autumn  = yg.terms.find(t => t.term === 'autumn');
+            const midYear = yg.terms.find(t => t.term === 'mid_year');
+            const target  = yg.terms.find(t => t.term === 'eoy_target');
+            const eoyPrev = yg.terms.find(t => t.term === 'eoy_prev');
+
+            // Calculate Autumn → Mid-year deltas per subject
+            const deltas = SUBJECTS.map(subj => {
+              const aVal = autumn?.allPupils[subj.key] ?? null;
+              const mVal = midYear?.allPupils[subj.key] ?? null;
+              const delta = aVal !== null && mVal !== null ? Math.round((mVal as number) - (aVal as number)) : null;
+              const isOutlierRed    = delta !== null && Math.abs(delta) > OUTLIER_THRESHOLDS.red;
+              const isOutlierAmber  = delta !== null && !isOutlierRed && Math.abs(delta) > OUTLIER_THRESHOLDS.amber;
+              return { ...subj, aVal, mVal, delta, isOutlierRed, isOutlierAmber };
+            });
+
+            const hasAnyData = yg.terms.some(t => Object.values(t.allPupils).some(v => v !== null));
+            if (!hasAnyData) return null;
+
+            return (
+              <div key={yg.yearGroup} className="border border-border rounded-xl overflow-hidden">
+                {/* Year group header */}
+                <div className="flex items-center justify-between px-5 py-3 bg-muted/30 border-b border-border">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-foreground">{yg.yearGroup}</span>
+                    {autumn?.cohortSize && (
+                      <span className="text-xs text-muted-foreground">({autumn.cohortSize} pupils)</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {deltas.some(d => d.isOutlierRed) && (
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700 border border-red-300 uppercase tracking-wider">Significant outlier</span>
+                    )}
+                    {!deltas.some(d => d.isOutlierRed) && deltas.some(d => d.isOutlierAmber) && (
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-300 uppercase tracking-wider">Outlier — check</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* KS1 baseline anchor for Y6 */}
+                {yg.ks1Baseline && yg.yearGroup === 'Y6' && (
+                  <div className="px-5 py-3 bg-emerald-50/40 border-b border-emerald-200/60">
+                    <div className="flex items-center gap-2 mb-1">
+                      <TierPill tier="external" />
+                      <span className="text-xs font-semibold text-emerald-800">KS1 {yg.ks1Baseline.year} — externally moderated anchor (last statutory year)</span>
+                    </div>
+                    <div className="grid grid-cols-4 gap-3 text-xs">
+                      {[
+                        { l: 'Reading',  v: yg.ks1Baseline.reading,  mid: midYear?.allPupils.reading ?? null  },
+                        { l: 'Writing',  v: yg.ks1Baseline.writing,  mid: midYear?.allPupils.writing ?? null  },
+                        { l: 'Maths',    v: yg.ks1Baseline.maths,    mid: midYear?.allPupils.maths   ?? null  },
+                        { l: 'Combined', v: yg.ks1Baseline.combined, mid: midYear?.allPupils.combined ?? null },
+                      ].map(({ l, v, mid }) => {
+                        const gap = v !== null && mid !== null ? Math.round((mid as number) - (v as number)) : null;
+                        return (
+                          <div key={l} className="bg-white rounded-lg border border-emerald-200 p-2.5">
+                            <div className="text-muted-foreground text-[10px] font-medium mb-1">{l}</div>
+                            <div className="font-bold text-emerald-700">{v !== null ? `${v}%` : '—'}</div>
+                            {gap !== null && (
+                              <div className={`text-[10px] mt-0.5 font-medium ${gap >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                vs mid-year: {gap >= 0 ? '+' : ''}{gap}pp
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {midYear?.allPupils.combined !== null && yg.ks1Baseline.combined !== null && (() => {
+                      const gap = Math.round((midYear!.allPupils.combined as number) - yg.ks1Baseline.combined!);
+                      return (
+                        <div className="mt-2 text-xs text-emerald-800 bg-white border border-emerald-200 rounded-lg px-3 py-2">
+                          KS1 {yg.ks1Baseline.year} Combined: <span className="font-semibold">{yg.ks1Baseline.combined}%</span> (external, last statutory year)
+                          {' '}→ Y6 mid-year {new Date().getFullYear()}: <span className="font-semibold">{midYear?.allPupils.combined}%</span> (self-reported)
+                          {' '}= <span className={`font-bold ${gap >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>{gap >= 0 ? '+' : ''}{gap}pp vs external baseline</span>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
+
+                {/* Term-by-term data table */}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b border-border bg-muted/20">
+                        <th className="text-left p-3 text-muted-foreground font-medium w-32">Checkpoint</th>
+                        <th className="text-center p-3 text-muted-foreground font-medium">Cohort</th>
+                        {SUBJECTS.map(s => (
+                          <th key={s.key} className="text-center p-3 text-muted-foreground font-medium">{s.label}</th>
+                        ))}
+                        <th className="text-left p-3 text-muted-foreground font-medium">Source</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {yg.terms.map((term) => {
+                        const isTarget = term.term === 'eoy_target';
+                        return (
+                          <tr key={term.term} className={`border-b border-border/50 ${isTarget ? 'opacity-70 italic' : ''} ${term.term === 'mid_year' ? 'bg-amber-50/30 font-medium' : ''}`}>
+                            <td className="p-3 font-medium text-foreground">{term.label}</td>
+                            <td className="p-3 text-center text-muted-foreground">{term.cohortSize ?? '—'}</td>
+                            {SUBJECTS.map(subj => {
+                              const val = term.allPupils[subj.key] ?? null;
+                              return (
+                                <td key={subj.key} className={`p-3 text-center font-semibold ${val !== null ? subj.color : 'text-muted-foreground'}`}>
+                                  {val !== null ? `${val}%` : '—'}
+                                </td>
+                              );
+                            })}
+                            <td className="p-3"><TierPill tier={term.tier} /></td>
+                          </tr>
+                        );
+                      })}
+
+                      {/* Delta row: Autumn → Mid-year */}
+                      {autumn && midYear && (
+                        <tr className="border-t-2 border-border bg-muted/30">
+                          <td className="p-3 font-bold text-foreground text-[11px]">Autumn → Mid Δ</td>
+                          <td className="p-3 text-center text-muted-foreground/60">—</td>
+                          {deltas.map(d => (
+                            <td key={d.key} className="p-3 text-center">
+                              {d.delta !== null ? (
+                                <div className="flex flex-col items-center gap-0.5">
+                                  <span className={`font-bold text-xs px-2 py-0.5 rounded-full ${
+                                    d.isOutlierRed   ? 'bg-red-100 text-red-700 border border-red-300' :
+                                    d.isOutlierAmber ? 'bg-amber-100 text-amber-700 border border-amber-300' :
+                                    d.delta >= 0     ? 'bg-emerald-100 text-emerald-700' :
+                                    'bg-rose-100 text-rose-700'
+                                  }`}>
+                                    {d.delta >= 0 ? '+' : ''}{d.delta}pp
+                                  </span>
+                                  {d.isOutlierRed   && <span className="text-[9px] text-red-600 font-medium">Outlier &gt;8pp</span>}
+                                  {d.isOutlierAmber && <span className="text-[9px] text-amber-600 font-medium">Outlier &gt;5pp</span>}
+                                </div>
+                              ) : <span className="text-muted-foreground/40">—</span>}
+                            </td>
+                          ))}
+                          <td className="p-3">
+                            <TierPill tier="derived" />
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* FSM subgroup delta if available */}
+                {autumn?.fsm6.combined !== null && midYear?.fsm6.combined !== null && autumn?.nonFsm6.combined !== null && midYear?.nonFsm6.combined !== null && (() => {
+                  const fsmDelta    = Math.round((midYear!.fsm6.combined as number)    - (autumn!.fsm6.combined as number));
+                  const nonFsmDelta = Math.round((midYear!.nonFsm6.combined as number) - (autumn!.nonFsm6.combined as number));
+                  const isUnusual   = nonFsmDelta > fsmDelta + 5;
+                  return (
+                    <div className={`px-5 py-3 border-t border-border/50 text-xs ${isUnusual ? 'bg-amber-50/40' : 'bg-muted/10'}`}>
+                      <div className="flex items-center gap-4 flex-wrap">
+                        <span className="font-semibold text-foreground">Subgroup Δ (Autumn → Mid):</span>
+                        <span>FSM6: <span className={`font-bold ${fsmDelta >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>{fsmDelta >= 0 ? '+' : ''}{fsmDelta}pp</span></span>
+                        <span>Non-FSM6: <span className={`font-bold ${nonFsmDelta >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>{nonFsmDelta >= 0 ? '+' : ''}{nonFsmDelta}pp</span></span>
+                        {isUnusual && (
+                          <span className="text-amber-700 font-medium">Non-FSM gaining faster than FSM — unusual. Typically PP spend drives larger FSM lift.</span>
+                        )}
+                        <TierPill tier="derived" />
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            );
+          })}
+        </div>
+
+        <p className="mt-4 text-[10px] text-muted-foreground/60">Outlier thresholds: amber = Combined Autumn → Mid-year &gt;5pp, red = &gt;8pp. Typical range: 3–5pp. Writing is the subject most vulnerable to teacher-assessment drift between checkpoints.</p>
+      </div>
+    </motion.div>
+  );
+}
+
+// ─── Pre-meeting Verification Checklist ──────────────────────────────────────
+
+interface VerificationItem {
+  label: string;
+  value: string;
+  source: string;
+  tier: ReliabilityTier;
+}
+
+function PreMeetingVerification({ school, summary, dfeData, parsed }: {
+  school: string;
+  summary: SchoolDataSummary | null;
+  dfeData?: DfEData | null;
+  parsed: ParsedSpreadsheet;
+}) {
+  const [checked, setChecked] = useState<Set<number>>(new Set());
+  const schoolInfo = TRUST_SCHOOLS[school];
+  const schoolData = parsed.data[school] ?? {};
+  const y6 = schoolData['Year 6'];
+
+  const items: VerificationItem[] = [];
+
+  // Roll
+  const nor = schoolInfo ? undefined : null; // NOR from spreadsheet
+  let totalPupilsFromSpreadsheet = 0;
+  for (const yg of YEAR_GROUPS) {
+    const n = schoolData[yg]?.cohort.number_in_cohort;
+    if (n) totalPupilsFromSpreadsheet += n;
+  }
+  if (totalPupilsFromSpreadsheet > 0) {
+    items.push({ label: 'Number on roll (spreadsheet total)', value: `${totalPupilsFromSpreadsheet}`, source: 'Trust spreadsheet', tier: 'self_reported' });
+  }
+
+  // Y6 mid-year from main spreadsheet
+  if (y6) {
+    const c = y6.all_pupils.c_are;
+    const r = y6.all_pupils.r_are;
+    const w = y6.all_pupils.w_are;
+    const m = y6.all_pupils.m_are;
+    if (c !== null && c !== undefined) {
+      items.push({ label: 'Y6 Mid-year Combined', value: `${c}%${r !== null && r !== undefined ? ` (R ${r}%, W ${w ?? '—'}%, M ${m ?? '—'}%)` : ''}`, source: 'Trust mid-year spreadsheet', tier: 'self_reported' });
+    }
+  }
+
+  // From Data Summary: Autumn, Target, KS1 baseline
+  if (summary) {
+    const y6Prog = summary.yearGroupProgressions.find(p => p.yearGroup === 'Y6');
+    if (y6Prog) {
+      const autumn = y6Prog.terms.find(t => t.term === 'autumn');
+      if (autumn?.allPupils.combined !== null && autumn?.allPupils.combined !== undefined) {
+        items.push({ label: 'Y6 Autumn Term T1 Combined', value: `${autumn.allPupils.combined}%${autumn.allPupils.reading !== null ? ` (R ${autumn.allPupils.reading}%, W ${autumn.allPupils.writing ?? '—'}%, M ${autumn.allPupils.maths ?? '—'}%)` : ''}`, source: 'School Data Summary', tier: 'self_reported' });
+      }
+      const target = y6Prog.terms.find(t => t.term === 'eoy_target');
+      if (target?.allPupils.combined !== null && target?.allPupils.combined !== undefined) {
+        items.push({ label: 'Y6 EOY Target Combined', value: `${target.allPupils.combined}%`, source: 'School target', tier: 'self_reported' });
+      }
+      if (y6Prog.ks1Baseline) {
+        const b = y6Prog.ks1Baseline;
+        items.push({ label: `KS1 ${b.year} Combined (this cohort's baseline)`, value: `${b.combined ?? '—'}%${b.reading !== null ? ` (R ${b.reading}%, W ${b.writing ?? '—'}%, M ${b.maths ?? '—'}%)` : ''}`, source: `School Data Summary — ${b.year} externally moderated`, tier: 'external' });
+      }
+    }
+  }
+
+  // DfE KS2 history
+  if (dfeData && schoolInfo) {
+    const ks2Years = [2023, 2024, 2025];
+    const ks2Vals = ks2Years.map(yr => ({ yr, pct: getKs2CombinedForUrn(dfeData.ks2Results, schoolInfo.urn, yr) })).filter(x => x.pct !== null);
+    if (ks2Vals.length > 0) {
+      items.push({ label: 'KS2 history (DfE validated)', value: ks2Vals.map(x => `${x.yr - 1}/${String(x.yr).slice(2)}: ${x.pct}%`).join(' · '), source: 'DfE KS2 Published Results', tier: 'external' });
+    }
+  }
+
+  const toggle = (i: number) => setChecked(prev => {
+    const next = new Set(prev);
+    next.has(i) ? next.delete(i) : next.add(i);
+    return next;
+  });
+
+  const allChecked = items.length > 0 && checked.size === items.length;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.2 }}
+      transition={{ type: 'spring', damping: 28, stiffness: 220 }}
+    >
+      <div className="bg-card border border-border rounded-2xl p-8">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-100 text-sky-700 uppercase tracking-wider">Pre-meeting</span>
+            <h3 className="text-xl font-semibold text-foreground">Verification checklist</h3>
+          </div>
+          {allChecked && (
+            <span className="text-xs font-semibold text-emerald-700 bg-emerald-100 px-2 py-1 rounded-full flex items-center gap-1">
+              <CheckCircle2 size={12} /> Ready
+            </span>
+          )}
+        </div>
+        <p className="text-sm text-muted-foreground mb-5">Cross-check these numbers against your own records before the meeting. Tick each one you&apos;ve verified.</p>
+
+        {items.length === 0 ? (
+          <p className="text-sm text-muted-foreground italic">Connect the mid-year spreadsheet and optionally a School Data Summary to populate this checklist.</p>
+        ) : (
+          <div className="space-y-2">
+            {items.map((item, i) => (
+              <div
+                key={i}
+                onClick={() => toggle(i)}
+                className={`flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-colors ${
+                  checked.has(i) ? 'bg-emerald-50/60 border-emerald-200' : 'bg-muted/20 border-border hover:bg-muted/40'
+                }`}
+              >
+                <div className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center mt-0.5 transition-colors ${
+                  checked.has(i) ? 'bg-emerald-600 border-emerald-600' : 'border-muted-foreground/40'
+                }`}>
+                  {checked.has(i) && <CheckCircle2 size={12} className="text-white" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start gap-2 flex-wrap">
+                    <span className="text-sm font-medium text-foreground">{item.label}:</span>
+                    <span className="text-sm font-bold text-foreground">{item.value}</span>
+                    <TierPill tier={item.tier} />
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-0.5">Source: {item.source}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="mt-4 text-[10px] text-muted-foreground/60 italic">
+          If any number doesn&apos;t match your records, the analysis needs to be re-run with corrected data before the meeting.
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 interface AppConnector {
   id: string;
   source_file_id: string;
@@ -3363,6 +3989,16 @@ export default function TrustAssessorPage() {
   const [connector, setConnector] = useState<AppConnector | null>(null);
   const [connectorLoading, setConnectorLoading] = useState(true);
   const [connectorError, setConnectorError] = useState<string | null>(null);
+
+  // School Data Summary connector (per-school detail file: LGPS / Grove House style)
+  const [summaryData, setSummaryData] = useState<SchoolDataSummary | null>(null);
+  const [summaryFileName, setSummaryFileName] = useState<string | null>(null);
+  const [summaryParseError, setSummaryParseError] = useState<string | null>(null);
+  const [showSummaryPicker, setShowSummaryPicker] = useState(false);
+  const summaryFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Which school the summary belongs to (inferred from filename or set explicitly)
+  const [summarySchoolAbbrev, setSummarySchoolAbbrev] = useState<string>('LGPS');
 
   const { isConnected: driveConnected, accessToken: driveToken } = useGoogleDriveAccess();
 
@@ -3563,6 +4199,46 @@ export default function TrustAssessorPage() {
     processFile(file);
   };
 
+  // Process a per-school Data Summary file
+  const processSummaryFile = useCallback((file: File, abbrev?: string) => {
+    setSummaryFileName(file.name);
+    setSummaryParseError(null);
+    setSummaryData(null);
+
+    // Infer school from filename if not provided
+    let resolvedAbbrev = abbrev ?? summarySchoolAbbrev;
+    const upperName = file.name.toUpperCase();
+    const abbrevMatch = Object.keys(TRUST_SCHOOLS).find(a => upperName.includes(a));
+    if (abbrevMatch) {
+      resolvedAbbrev = abbrevMatch;
+      setSummarySchoolAbbrev(abbrevMatch);
+    }
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        if (!ev.target?.result) return;
+        const data = new Uint8Array(ev.target.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const result = parseSchoolDataSummary(workbook, resolvedAbbrev, file.name);
+        if (result.yearGroupProgressions.length === 0) {
+          setSummaryParseError('No year group progression data found. Expected sheets named Year 1–Year 6 or Y1–Y6.');
+          return;
+        }
+        setSummaryData(result);
+      } catch (err) {
+        setSummaryParseError(`Parse error: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  }, [summarySchoolAbbrev]);
+
+  const handleSummaryFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    processSummaryFile(file);
+  };
+
   // Build findings for Phase 2
   const findings: string[] = [];
   if (parsed && dfeData) {
@@ -3656,12 +4332,41 @@ export default function TrustAssessorPage() {
             <span className={dfeData ? "text-gray-600" : "text-gray-400"}>DfE {dfeData ? "●" : "○"}</span>
           </div>
           <span className="text-gray-200">·</span>
-          {/* Connector 3: Per-pupil */}
+          {/* Connector 3: School Data Summary (per-school) */}
+          <div className="flex items-center gap-1.5" title="School Data Summary — per-school Autumn/Mid/Target/EOY breakdown">
+            <FileSpreadsheet size={12} className={summaryData ? "text-orange-500" : "text-gray-300"} />
+            {summaryData ? (
+              <>
+                <span className="text-gray-700 font-medium truncate max-w-[180px]">{summaryFileName}</span>
+                <span className="text-orange-500 text-[10px] font-semibold">{summaryData.schoolAbbrev}</span>
+                <button
+                  onClick={() => { setSummaryData(null); setSummaryFileName(null); setSummaryParseError(null); }}
+                  className="text-gray-300 hover:text-red-500"
+                  title="Remove school data summary"
+                >✕</button>
+              </>
+            ) : (
+              <>
+                <button onClick={() => summaryFileInputRef.current?.click()} className="text-orange-600 hover:text-orange-800 font-medium">
+                  + School Summary
+                </button>
+              </>
+            )}
+            <input ref={summaryFileInputRef} type="file" accept=".xlsx" className="hidden" onChange={handleSummaryFileChange} />
+          </div>
+          <span className="text-gray-200">·</span>
+          {/* Connector 4: Per-pupil */}
           <div className="flex items-center gap-1" title="Per-pupil assessment data">
             <UserCheck size={12} className="text-gray-300" />
             <span className="text-gray-400">Pupil ○</span>
           </div>
         </div>
+        {summaryParseError && (
+          <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2 text-xs text-amber-700 mt-2">
+            <AlertTriangle size={13} className="flex-shrink-0 mt-0.5" />
+            <span><span className="font-semibold">School Summary parse error:</span> {summaryParseError}</span>
+          </div>
+        )}
 
         {/* Connector error — with clear action buttons */}
         {connectorError && (
@@ -3939,7 +4644,7 @@ export default function TrustAssessorPage() {
                       exit={{ opacity: 0, y: -8 }}
                       transition={{ duration: 0.2 }}
                     >
-                      <SchoolTab school={activeSchoolTab} parsed={parsed} dfeData={dfeData} staffingSnapshots={staffingSnapshots} authToken={accessToken ?? undefined} organizationId={organizationId ?? undefined} />
+                      <SchoolTab school={activeSchoolTab} parsed={parsed} dfeData={dfeData} staffingSnapshots={staffingSnapshots} summaryData={summaryData?.schoolAbbrev === activeSchoolTab ? summaryData : null} authToken={accessToken ?? undefined} organizationId={organizationId ?? undefined} />
 
                       {/* BUILD 4: No-CTF upsell for non-GHPS schools */}
                       {!groveHouseData && activeSchoolTab !== 'GHPS' && (

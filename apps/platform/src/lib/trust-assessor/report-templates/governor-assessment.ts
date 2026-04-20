@@ -51,6 +51,29 @@ export interface GovernorReportData {
     questionsForHeadteacher: string[];
   };
 
+  // Intra-year progression data (optional — from School Data Summary)
+  intraYearProgression?: {
+    yearGroup: string;
+    autumnCombined: number | null;
+    midYearCombined: number | null;
+    targetCombined: number | null;
+    delta: number | null;          // autumn → mid-year
+    isOutlierRed: boolean;         // delta > 8pp
+    isOutlierAmber: boolean;       // delta > 5pp
+    subjectDeltas?: { reading: number | null; writing: number | null; maths: number | null };
+    fsmDelta?: number | null;
+    nonFsmDelta?: number | null;
+    ks1Baseline?: { year: string; combined: number | null };
+  }[];
+
+  // Reliability-tagged verification items
+  verificationChecklist?: {
+    label: string;
+    value: string;
+    tier: 'external' | 'derived' | 'self_reported';
+    source: string;
+  }[];
+
   // Branding
   primaryColor?: string;
   secondaryColor?: string;
@@ -891,15 +914,93 @@ ${confWatermark}
 </div>
 
 <!-- ══════════════════════════════════════════════════════════════════
-     PAGE 4 — Governor Questions
+     PAGE 4 — Intra-Year Progression + Governor Questions
 ═══════════════════════════════════════════════════════════════════ -->
-<div class="page page-break" id="slide-4" data-slide="4" data-slide-title="Questions for the Board">
+<div class="page page-break" id="slide-4" data-slide="4" data-slide-title="Intra-Year Progression &amp; Questions">
 
   <aside class="speaker-prompt no-print" aria-hidden="true">${esc(prompts.p4)}</aside>
 
-  <div class="section-title">Five Questions for the Board to Explore</div>
+  <!-- Reliability tier legend -->
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;padding:10px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;font-size:9pt;color:#6b7280;flex-wrap:wrap;">
+    <span style="font-weight:700;color:#374151;font-size:8.5pt;text-transform:uppercase;letter-spacing:0.05em;">Data tiers:</span>
+    <span style="display:inline-flex;align-items:center;gap:4px;background:#dcfce7;color:#166534;border:1px solid #86efac;border-radius:999px;padding:2px 8px;font-weight:700;font-size:8pt;">&#9679; External</span>
+    <span style="display:inline-flex;align-items:center;gap:4px;background:#fef9c3;color:#854d0e;border:1px solid #fde047;border-radius:999px;padding:2px 8px;font-weight:700;font-size:8pt;">&#9679; Derived</span>
+    <span style="display:inline-flex;align-items:center;gap:4px;background:#ffe4e6;color:#9f1239;border:1px solid #fda4af;border-radius:999px;padding:2px 8px;font-weight:700;font-size:8pt;">&#9679; Self-reported</span>
+    <span style="font-size:8pt;color:#9ca3af;margin-left:4px;">External = DfE validated. Self-reported = school/trust assessment data.</span>
+  </div>
 
-  ${questionItems}
+  ${(data.intraYearProgression && data.intraYearProgression.length > 0) ? `
+  <div style="margin-bottom:24px;">
+    <div class="section-title" style="margin-bottom:12px;">Intra-Year Progression — Autumn → Mid-year → Target</div>
+    <div style="font-size:10pt;color:#6b7280;margin-bottom:14px;">All data self-reported. Typical Autumn→Mid gain: 3–5pp. Flags shown where delta exceeds threshold.</div>
+    <table style="width:100%;border-collapse:collapse;font-size:10pt;">
+      <thead>
+        <tr style="background:#f9fafb;border-bottom:2px solid #e5e7eb;">
+          <th style="text-align:left;padding:8px 10px;color:#374151;font-weight:700;">Year Group</th>
+          <th style="text-align:center;padding:8px 10px;color:#374151;font-weight:700;">Autumn</th>
+          <th style="text-align:center;padding:8px 10px;color:#374151;font-weight:700;">Mid-year <span style="font-weight:400;color:#9ca3af;">(self-rep)</span></th>
+          <th style="text-align:center;padding:8px 10px;color:#374151;font-weight:700;">Target</th>
+          <th style="text-align:center;padding:8px 10px;color:#374151;font-weight:700;">Autumn→Mid Δ</th>
+          <th style="text-align:left;padding:8px 10px;color:#374151;font-weight:700;">Flag</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${data.intraYearProgression.map((row, idx) => {
+          const rowBg = idx % 2 === 0 ? '#fff' : '#f9fafb';
+          const deltaColor = row.isOutlierRed ? '#991b1b' : row.isOutlierAmber ? '#92400e' : row.delta !== null && row.delta >= 0 ? '#065f46' : '#6b7280';
+          const deltaBg = row.isOutlierRed ? '#fecaca' : row.isOutlierAmber ? '#fde68a' : '#f0fdf4';
+          const flagText = row.isOutlierRed ? 'Significant outlier >8pp' : row.isOutlierAmber ? 'Outlier >5pp — verify' : '';
+          const flagColor = row.isOutlierRed ? '#991b1b' : '#92400e';
+          return `<tr style="background:${rowBg};border-bottom:1px solid #f3f4f6;">
+            <td style="padding:8px 10px;font-weight:700;color:#111827;">${esc(row.yearGroup)}</td>
+            <td style="padding:8px 10px;text-align:center;color:#374151;">${row.autumnCombined !== null ? `${row.autumnCombined}%` : '—'}</td>
+            <td style="padding:8px 10px;text-align:center;font-weight:700;color:#374151;">${row.midYearCombined !== null ? `${row.midYearCombined}%` : '—'}</td>
+            <td style="padding:8px 10px;text-align:center;color:#9ca3af;font-style:italic;">${row.targetCombined !== null ? `${row.targetCombined}%` : '—'}</td>
+            <td style="padding:8px 10px;text-align:center;"><span style="background:${deltaBg};color:${deltaColor};border-radius:999px;padding:2px 8px;font-weight:700;">${row.delta !== null ? `${row.delta >= 0 ? '+' : ''}${row.delta}pp` : '—'}</span></td>
+            <td style="padding:8px 10px;font-size:9pt;color:${flagColor};font-weight:700;">${flagText}</td>
+          </tr>
+          ${row.ks1Baseline ? `<tr style="background:#f0fdf4;"><td colspan="6" style="padding:6px 10px;font-size:9pt;color:#065f46;border-bottom:1px solid #bbf7d0;">
+            <strong style="color:#14532d;">KS1 ${esc(row.ks1Baseline.year)} Combined: ${row.ks1Baseline.combined !== null ? `${row.ks1Baseline.combined}%` : '—'}</strong>
+            <span style="margin-left:8px;background:#dcfce7;color:#166534;border:1px solid #86efac;border-radius:999px;padding:1px 6px;font-weight:700;font-size:8pt;">External · last statutory year</span>
+            ${row.midYearCombined !== null && row.ks1Baseline.combined !== null ? `<span style="margin-left:8px;color:#374151;">vs mid-year: <strong>${Math.round(row.midYearCombined - row.ks1Baseline.combined) >= 0 ? '+' : ''}${Math.round(row.midYearCombined - row.ks1Baseline.combined)}pp</strong></span>` : ''}
+          </td></tr>` : ''}`;
+        }).join('')}
+      </tbody>
+    </table>
+  </div>` : ''}
+
+  <!-- Auto-generated Five Questions based on outlier data -->
+  <div class="section-title">Five Questions for the Headteacher</div>
+  <div style="font-size:9.5pt;color:#6b7280;margin-bottom:12px;">Auto-generated from the intra-year data. Each question is exploratory, not accusatory.</div>
+
+  ${(data.intraYearProgression && data.intraYearProgression.some(r => r.isOutlierRed || r.isOutlierAmber)) ? (() => {
+    const outlierQuestions: string[] = [];
+    for (const row of (data.intraYearProgression ?? [])) {
+      if (!row.delta) continue;
+      if (row.isOutlierRed && row.delta > 0) {
+        outlierQuestions.push(`${row.yearGroup} Combined jumped <strong>${row.delta >= 0 ? '+' : ''}${row.delta}pp</strong> from Autumn to Mid-year. Most cohorts show 3–5pp at this point. What&apos;s driving the faster progress, and what moderation supported it?`);
+      }
+      if (row.subjectDeltas?.writing && Math.abs(row.subjectDeltas.writing) > 8) {
+        outlierQuestions.push(`Writing in ${row.yearGroup} jumped <strong>${row.subjectDeltas.writing >= 0 ? '+' : ''}${row.subjectDeltas.writing}pp</strong> Autumn to Mid-year. Writing is the subject most vulnerable to teacher-assessment drift. What moderation occurred between checkpoints?`);
+      }
+      if (row.nonFsmDelta !== null && row.fsmDelta !== null && row.nonFsmDelta > (row.fsmDelta ?? 0) + 5) {
+        outlierQuestions.push(`In ${row.yearGroup}, non-FSM pupils gained <strong>${row.nonFsmDelta}pp</strong> vs FSM pupils <strong>${row.fsmDelta}pp</strong>. Typically Pupil Premium strategy drives faster FSM progress. Is there a reason the gain is reversed here?`);
+      }
+      if (row.ks1Baseline?.combined !== null && row.midYearCombined !== null && row.midYearCombined - (row.ks1Baseline?.combined ?? 0) > 5) {
+        const gap = Math.round(row.midYearCombined - (row.ks1Baseline?.combined ?? 0));
+        outlierQuestions.push(`This cohort&apos;s KS1 ${row.ks1Baseline?.year} Combined was <strong>${row.ks1Baseline?.combined}%</strong> (externally moderated). The mid-year prediction is <strong>${row.midYearCombined}%</strong> — <strong>+${gap}pp above</strong> the last external anchor. What evidence supports clearing the KS1 baseline by ${gap}pp?`);
+      }
+    }
+    // Add external validation question if any outliers
+    outlierQuestions.push('What external validation — beyond teacher assessment — would give the trust confidence in these figures? Cross-moderation? SATs practice paper outcomes? Standardised reading scores?');
+    return outlierQuestions.slice(0, 5).map((q, i) => `
+      <div style="border:1px solid #e5e7eb;border-radius:10px;padding:16px 20px;margin-bottom:10px;background:white;">
+        <div style="display:flex;align-items:flex-start;gap:12px;">
+          <div style="font-size:20px;font-weight:800;color:${primary};flex-shrink:0;width:28px;text-align:center;">${i + 1}</div>
+          <div style="font-size:12px;color:#111827;line-height:1.6;">${q}</div>
+        </div>
+      </div>`).join('');
+  })() : questionItems}
 
   <!-- Next review + sign-off -->
   <div style="margin-top:28px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:20px;">

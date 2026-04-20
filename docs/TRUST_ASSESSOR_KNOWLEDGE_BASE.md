@@ -1,1180 +1,488 @@
 # Trust Assessor — Product Knowledge Base
 
-**This is the single source of truth for the Trust Assessor product. Any Claude session, human developer, or agent working on this product must start here.**
+**Single source of truth for Trust Assessor. Any Claude session / developer working on this product must start here.**
 
-Last updated: 2026-04-18
+Last updated: 2026-04-18 (condensed)
 Product lead: David Summerscales
-Context: Schoolgle School Improvement module
+Context: Schoolgle → School Improvement module → Trust Assessor
 
 ---
 
-## 1. Product Strategy
+## 1. Product strategy
 
-### The three data tiers (sales funnel)
+### Three data tiers (the sales funnel)
 
 | Tier | Source | Price | Proves |
 |---|---|---|---|
-| **Tier 1** | Trust's own spreadsheet | Free hook | Internal inconsistencies, statistical impossibilities, data-quality alerts |
-| **Tier 2** | + Schoolgle DfE warehouse | Paid subscription | National percentile, 3-yr validated KS2 comparison, Bradford/local benchmark |
-| **Tier 3** | + Per-pupil CTF files | Premium per-school | Individual pupil journeys, over-levelling proof, Ed intervention plans, governor reports |
+| **1 — FREE** | Trust's own spreadsheet | Hook | Internal inconsistencies, 0% GD flags, statistical impossibilities |
+| **2 — PAID** | + Schoolgle DfE warehouse | Subscription | National percentile, 3-yr validated KS2, Bradford-style local benchmark |
+| **3 — PREMIUM** | + Per-pupil CTF / MIS connection | £££ per school | Cohort journeys, over-levelling proof, Ed intervention plans, governor reports |
 
-### Demo strategy for Alex's meeting (Pennine Academies Yorkshire)
+### Sales loop
 
-- **Scene 1 (Shock):** Tier 1 analysis of trust spreadsheet → data quality flags, 0% GD patterns, year-group drops
-- **Scene 2 (Validation):** + DfE layer → Farnham at 8th national percentile, predictive accuracy check
-- **Scene 3 (Crown jewel, post-meeting):** + Grove House CTF → over-levelling proof, per-pupil cards, intervention plans
+Free exposes bad data → paid fills gaps → Lesson Studio fixes root cause (continuous auto-assessment) → data becomes reliable → no surprises at KS2.
 
-**Grove House is the reference school** — David's brother Alex Summerscales is headteacher. We have 473 unique pupils and 7,143 assessment records over 6 years. Use privately with Alex Aitken (Pennine enablement partner) to show what's possible, NOT in the wider trust meeting itself.
+### Business angles (reinforce everywhere)
 
-### Business angles that must be reinforced throughout
+1. "This wouldn't happen with Schoolgle's continuous assessment — AI flags drift in Term 2 Y2, not Term 5 Y6"
+2. "Research-backed not opinion-based" — schools dispute DfE's own data if they dispute us
+3. "Ed creates the plan, not just flags the problem" — named pupil intervention plans
+4. "Governor pack in one click" — replaces 4 hours of HT/SBM work
+5. "Works for any trust" — must be generic, not Grove-House-hardcoded
 
-1. **"This wouldn't happen with Schoolgle"** — continuous assessment catches drift in Term 2 Y2, not Term 5 Y6
-2. **"Research-backed not opinion-based"** — findings cite DfE, EEF, Strand/Demie, NALDIC, Ofsted — schools can't dispute their own regulator's data
-3. **"Ed creates the plan, not just flags the problem"** — intervention plans per named pupil
-4. **"Governor pack in one click"** — replaces 4 hours of HT/SBM work
-5. **"Works for any trust"** — must be generic, not Grove-House-hardcoded
+### Customer sensitivity — non-negotiable
 
-### Keep-the-wolves-away dynamic
+Headteachers are paying customers. **Evidence-based** findings YES, **personally accusatory** language NO. Never "the headteacher failed" — always "the data raises questions governors might explore."
 
-Schools game self-reported data under inspection pressure. Headteachers resist transparency because it exposes performance. DPOs will try to block adoption because CTF ingestion "touches pupil data." Our counters:
+### Alex's Pennine Academies meeting (primary use case)
 
-- **Research citations** — unassailable evidence base
-- **Pseudonymised-only per-pupil data** — HMAC-SHA256, no PII on the server
-- **DPIA-ready** — data processing agreements, audit logs, right-to-delete
-- **Value-first messaging** — "see what you could unlock" not "you're failing"
+- **Alex Summerscales** — David's brother, headteacher at Grove House (URN 148201)
+- **Alex Aitken** — Pennine Yorkshire enablement partner (David's wife presents to)
+- **Grove House** — crown jewel: 473 pupils, 7,143 CTF records, 6 years. Use privately with Alex Aitken, NOT in the wider trust meeting.
+- **7 Pennine primary schools** in Bradford — trust code 17012
+
+### Demo flow
+
+- **Scene 1 (Shock):** Tier 1 spreadsheet analysis → data quality flags, 0% GD, year-group drops
+- **Scene 2 (Validation):** + DfE layer → national percentiles, predictive accuracy check
+- **Scene 3 (Crown jewel, post-meeting):** + Grove House CTF → over-levelling proof, per-pupil cards
 
 ---
 
-## 2. What Supabase DfE schema ACTUALLY contains
+## 2. Supabase DfE schema — what's there
 
-**23 tables. 9 populated. 14 empty (schema exists, data not loaded).**
+**23 tables total. 10 populated, 13 empty.**
 
-### Tables with data — ready to use NOW
+### Populated tables
 
-| Table | Rows | Key fields | Used in Trust Assessor? |
-|---|---|---|---|
-| `schools` | 52,152 | urn, name, la_name, postcode, number_of_pupils, percentage_fsm, trust_name, head_first_name, head_last_name, date_of_last_inspection | ❌ NO |
-| `ks2_results` | 2,057,600 | urn, academic_year_start, subject, breakdown_topic, breakdown, expected_standard_pct, higher_standard_pct, average_scaled_score, progress_measure_score | ✅ YES |
-| `exclusions` | 1,126,026 | urn, academic_year, exclusion_counts | ❌ NO |
-| `workforce` | 207,590 | urn, fte_teachers, pupil_teacher_ratio, teaching_vacancy_rate, teachers_with_qts_pct, average_teacher_pay | ❌ NO |
-| `attendance` | 205,867 | urn, overall_attendance_pct, persistent_absence_pct, authorized_absence_pct, illness_absence_pct | ❌ NO |
-| `census` | 146,600 | urn, number_on_roll, fsm_pct, eal_pct, sen_pct | ✅ YES |
-| `ofsted_inspections` | 36,354 | urn, inspection_date, overall_rating, quality_of_education, behaviour_and_attitudes, leadership_and_management | ❌ NO |
-| `area_demographics` | 32,844 | lsoa_code, imd_rank, imd_decile, income_deprivation_score, ethnicity breakdown, education_deprivation_score | ❌ NO |
-| `school_profiles` | 27,161 | urn, extended school profile | ❌ NO |
-
-### Tables with schema but EMPTY — need data loading
-
-| Table | Rows | What's in schema |
+| Table | Rows | Used? |
 |---|---|---|
-| `ks1_results` | 0 | phonics_pass_pct, gld_pct, reading_pct, writing_pct, maths_pct, science_pct |
-| `pupil_premium` | 0 | ever_6_fsm_count, current_fsm_count, service_children, adopted_from_care, pupil_premium_funding_gbp |
-| `trusts` | 0 | Trust-level metadata |
-| `school_area_links` | 0 | **Critical — links URN to LSOA for deprivation analysis** |
-| `school_infrastructure` | 0 | Building data |
-| `school_history` | 0 | URN changes (academy conversions) |
-| `area_crime` | 0 | |
-| `air_quality` | 0 | |
-| `local_authority_finance` | 0 | |
-| `local_authority_performance` | 0 | |
-| `latest_ks2_results` | — | View |
+| `ks2_results` | 2,057,600 | ✅ |
+| `exclusions` | 1,126,026 | ❌ |
+| `school_history` | 501,924 | ✅ (GIAS imported) |
+| `workforce` | 207,590 | ✅ Timeline |
+| `attendance` | 205,867 | ✅ Timeline |
+| `census` | 146,600 | ✅ |
+| `schools` | 52,152 | ✅ Metadata |
+| `ks4_results` | 40,285 | ❌ Secondary |
+| `ofsted_inspections` | 36,354 | ✅ Timeline |
+| `area_demographics` | 32,844 | ❌ Not linked |
+| `school_profiles` | 27,161 | ❌ Summary |
+
+### Empty (schema exists, data not loaded)
+
+`ks1_results`, `pupil_premium`, `trusts`, `school_area_links` (URN→LSOA — critical), `school_infrastructure`, `area_crime`, `air_quality`, `local_authority_*`.
+
+### CRITICAL: DfE does NOT publish per-school for
+
+- **Phonics Screening** (LA level only)
+- **MTC** (LA level only)
+- **KS1** (post-2022/23 non-statutory, not per-school)
+
+**This is the product moat.** Only schools have this data via Primary Assessment Gateway. Schoolgle's CTF connector is the ONLY way to surface the full externally-validated pathway per school. See `docs/DFE_DATA_DEFINITIVE_GUIDE.md` — do NOT re-research this.
 
 ---
 
-## 3. Data we CAN surface immediately (no new data loading)
+## 3. CTF data (Grove House only)
 
-### Per Pennine school, we can pull:
+473 unique pupils, 7,143 records, 6 years, stored in `pupil_assessments_pseudo`.
 
-**From `dfe_data.schools`:**
-- Grove House: 417 pupils, 28.9% FSM, last inspected ... null (should be 2023-11-21 from ofsted_inspections)
-- Farnham: 449 pupils, 27.4% FSM — was Outstanding 2016, Good Dec 2023 (downgraded)
-- Full headteacher names, postcodes, trust affiliation
+### Populated fields
+`pupil_hash`, `year_group`, `subject`, `attainment_level`, `teacher_assessment` (6394/7143), `academic_year_start`, `scaled_score` (749 — phonics only)
 
-**From `dfe_data.attendance` (mid-year 2025/26):**
-- Grove House: 94.48% attendance, 16.95% persistent absence
-- Farnham: 94.33% attendance, 19.78% persistent absence
-- Hollingwood: 93.98% attendance, 19.20% persistent absence
-- All Pennine schools have persistent absence 16-27% — well above the national median of ~19%
+### CTF fields parser is skipping (fix opportunity)
+`send_type` (VI/HI/ASD/SEMH/SLCN/MLD/SLD/PMLD/PD), `is_pp`, `progress_score`, `prior_attainment_band`, `previous_period_level`, `raw_score`
 
-**From `dfe_data.workforce`:**
-- Grove House FTE teachers: 21.39 (2024) → 19.20 (2025) — loss of 2 FTE
-- Lidget Green: 25.14 (2024) → 22.40 (2025) — loss of 2.7 FTE
-- Hollingwood: 17.80 → 17.00 — minor loss
-- Crossley Hall: 28.99 → 35.80 — gained 7 FTE
-- **Pattern: trust-wide teacher turnover is visible and should be called out**
-
-**From `dfe_data.ofsted_inspections`:**
-- Grove House: RI in 2018, upgraded to Good in Nov 2023 — improvement trajectory visible
-- Farnham: Outstanding 2016 → Good Dec 2023 — downgrade narrative
-- Clayton Village: Good Dec 2024 (recent)
-- 4 Pennine schools haven't been inspected since 2014-2017 — overdue
-
-### Bradford local benchmarking (Tier 2 free upgrade)
-
-**157 Bradford primary schools** in our DB. We can compute:
-- Median Bradford attainment per year
-- Deprivation-matched peer set (schools with 25-35% FSM in Bradford)
-- "You're at the X percentile among Bradford primaries with similar FSM%"
-
-**Cost: zero. Just SQL.**
+### Not in schema (need migration)
+EHCP status, arrival date UK, FSM6, admission date, DOB, home language.
 
 ---
 
-## 4. CTF data — what we have vs what's in the file
+## 4. Forensic methodology
 
-### In `pupil_assessments_pseudo` schema (22 columns):
+### Four-step evidential pattern
+1. Subject-by-subject moderation check — only unmoderated subjects dropped = drift, not decline
+2. Demographic expectation calculation using DfE/EEF gaps
+3. Before/after comparison — which period matches demographic prediction?
+4. Statistical impossibility — whole-cohort regressions >1-in-500 rarity
 
-| Field | Populated for Grove House? | Notes |
-|---|---|---|
-| `pupil_hash` | ✅ 473 unique | HMAC-SHA256 |
-| `year_group` | ✅ | 0-6 |
-| `subject` | ✅ | reading/writing/maths/phonics/EYFS areas |
-| `attainment_level` | ✅ | WTS/EXS/GDS/PK1-4/1/2 |
-| `teacher_assessment` | ✅ 6394/7143 | Good coverage |
-| `academic_year_start` | ✅ | 2020-2025 |
-| `is_fsm` | ⚠️ Partial | Missing for 2022/23 cohort |
-| `is_send` | ⚠️ Partial | Missing for 2022/23 cohort |
-| `is_eal` | ⚠️ Partial | Missing for 2022/23 cohort |
-| `gender` | ⚠️ Partial | Missing for 2022/23 cohort |
-| `scaled_score` | ⚠️ 749/7143 | Phonics only |
-| **`send_type`** | ❌ 0/7143 | **VI/HI/ASD/SEMH/SLCN/MLD/SLD/PMLD/PD** — CTF parser skipping |
-| **`is_pp`** | ❌ 0/7143 | Pupil Premium flag — CTF parser skipping |
-| **`progress_score`** | ❌ 0/7143 | Per-pupil progress — CTF parser skipping |
-| **`prior_attainment_band`** | ❌ 0/7143 | EYFS baseline — CTF parser skipping |
-| **`previous_period_level`** | ❌ 0/7143 | Period-over-period — CTF parser skipping |
-| **`raw_score`** | ❌ 0/7143 | Raw test scores |
-
-### Critical CTF fields NOT in our schema yet (need schema + parser update)
-
-| Field | What it unlocks |
-|---|---|
-| EHCP status | Separate from SEN Support — progress vs EHCP outcomes |
-| Arrival date in UK | EAL language exposure context |
-| FSM6 / ever-6-eligible | DfE statutory disadvantage measure |
-| Admission date | Mobility — separating stable cohort from churn |
-| Date of birth | Summer-born analysis |
-| Home language | EAL nuance (some EAL are fluent bilingual) |
-
----
-
-## 5. Forensic Methodology (proven in Grove House)
-
-### The four-step evidential pattern
-
-For any cohort anomaly (e.g. "decline"):
-
-1. **Subject-by-subject moderation check** — only unmoderated subjects dropped = assessment drift, not decline
-2. **Demographic expectation calculation** — using DfE/EEF gaps, compute expected attainment given FSM/SEND/EAL profile
-3. **Before/after comparison** — which period matches demographic prediction? That period is the accurate assessment
-4. **Statistical impossibility** — whole-cohort regressions >1-in-500 rarity
-
-### The demographic expectation model (lib/trust-analysis/demographic-expectations.ts)
+### Demographic expectation model (`lib/trust-analysis/demographic-expectations.ts`)
 
 ```
-expected = national_baseline 
+expected = national_baseline
          - (fsm_pct/100 × fsm_gap)
          - (send_pct/100 × send_gap)
          - (eal_pct/100 × eal_gap_at_year)
 
-where:
-  fsm_gap = 18pp at KS1, 20pp at KS2 (EEF)
-  send_gap = 25pp at KS1, 30pp at KS2 (EEF)
-  eal_gap_at_year = { Y1: 20, Y2: 15, Y3: 8, Y4: 4, Y5: 0, Y6: -2 }
+fsm_gap:  18pp KS1, 20pp KS2 (EEF)
+send_gap: 25pp KS1, 30pp KS2 (EEF)
+eal_gap_at_year: { Y1:20, Y2:15, Y3:8, Y4:4, Y5:0, Y6:-2 }
 ```
 
-The EAL year-group curve is the clever bit — pupils catch up as language develops. This is from Strand, Demie & Lindorff (2018) Oxford/UCL research.
+EAL curve = Strand, Demie & Lindorff (2018) Oxford/UCL.
+
+### Bidirectional validation
+
+Same rigour for "looks amazing" schools (over-levelling suspicion) as underperformers. Hollingwood (+25pp above demographic prediction) is the counter-case to Grove House (+1pp above).
 
 ---
 
-## 6. Research Citations Library (lib/trust-analysis/research-citations.ts)
+## 5. Research citations library
 
-10 citations ready to use:
+`lib/trust-analysis/research-citations.ts` — 14 citations + `evaluateResearchKpis()`:
 
-1. **EEF Pupil Premium Guide 2024** — 18pp KS1, 20pp KS2 FSM gap
-2. **Strand, Demie & Lindorff (2018) Oxford/UCL** — EAL trajectory
-3. **NALDIC 2020** — 5-7 years for academic English proficiency
-4. **DfE KS2 National Statistics 2024** — national baseline 60-61%
-5. **DfE KS1 National Statistics 2023** — last statutory year, Reading 68%, Writing 60%, Maths 70%
-6. **Ofsted Education Inspection Framework 2024** — inspectors flag schools whose TA exceeds external
-7. **STA KS1 Moderation Guidance 2022** — Writing is the moderated KS1 subject
-8. **EEF Special Educational Needs 2020** — 25pp KS1 SEND gap
-9. **IFS Disadvantage Gap 2023** — gap widened since COVID
-10. **Demie 2023 Lambeth LA Stats** — EAL trajectory quantified
+EEF Pupil Premium 2024, Strand Demie Lindorff 2018, NALDIC 2020, DfE KS2 2024, DfE KS1 2023, Ofsted EIF 2024, STA KS1 Moderation 2022, EEF SEND 2020, IFS Disadvantage Gap 2023, Demie 2023, DfE Pupil Absence 2024, IFS Teacher Retention 2022, DfE School Travel 2022, EEF Ofsted Trajectory 2023.
 
-Each is cited inline on findings. Schools can't argue with their own regulator's data.
+Every forensic finding must cite ≥1 source.
 
 ---
 
-## 7. What's built vs what's missing
+## 6. Validation tiers (critical for pitch)
 
-### Built (in the Trust Assessor page)
+| Checkpoint | Year | Validation |
+|---|---|---|
+| EYFS Profile | Reception | Teacher, moderated sample |
+| Phonics Y1 | Y1 | External test |
+| Phonics Y2 retake | Y2 | External test |
+| KS1 SATs | Y2 | **External UNTIL 2022/23**; self-reported since |
+| MTC | Y4 | External test (since 2022) |
+| Y3-Y5 teacher assessment | — | Self-reported, unchecked |
+| KS2 SATs | Y6 | Fully external |
 
-- Trust spreadsheet parser (XLSX)
-- Per-school tabs with profile header
-- AI narrative (Intelligence Brain skills: school-assessment-analyst, trust-overview-analyst, ofsted-readiness-reviewer, data-quality-auditor, governor-assessment-report-writer)
-- National percentile rank card (using ks2_results)
-- Predictive accuracy check (3-yr DfE average vs mid-year prediction)
-- Statistical impossibility alerts (0% GD, impossible swings, FSM errors)
-- At-a-glance summary (severity verdict, top 3 findings, KPIs, next step)
-- Forensic Verdict per school (demographic-adjusted Y1-Y6)
-- Research-backed KPIs per school
-- EAL trajectory chart (high-EAL schools)
-- Cohort Forensics (Grove House — over-levelling proof)
-- Cohort milestones journey (EYFS → Phonics → KS1)
-- Per-pupil cards with pseudonyms (Blue Robin 42)
-- Per-pupil weakest subject + "Plan with Ed" button
-- Demographic disaggregation ("Defend your numbers")
-- Governor Report Generator (4-page A4 HTML, AI-driven)
-- Google Drive connector
-- Data enrichment callout
-- Non-GHPS Tier 3 upsell
-
-### NOT built / broken / missing
-
-| Issue | Priority |
-|---|---|
-| Visual design doesn't match Schoolgle platform (fonts, dark mode, motion style) | HIGH |
-| Animations fire on mount not on scroll — user misses them | HIGH |
-| Warning icons with no clear meaning | HIGH |
-| Big product-pitch card needs fold-out tooltip | MEDIUM |
-| Cohort Forensics is Grove-House-hardcoded, not generic | HIGH |
-| Ofsted inspection history NOT displayed anywhere | HIGH |
-| Attendance / persistent absence NOT displayed | HIGH |
-| Workforce (teacher FTE turnover) NOT displayed | HIGH |
-| Bradford/local benchmark NOT implemented | HIGH |
-| Area deprivation (IMD) NOT linked — school_area_links empty | MEDIUM |
-| CTF parser ignoring: send_type, is_pp, progress_score, prior_attainment_band | HIGH |
-| KS1 historical data not loaded into ks1_results table | MEDIUM |
-| Pupil Premium table empty — need DfE load | MEDIUM |
-| GDPR/DPO readiness — zero work done | HIGH |
-| DPIA template document | HIGH |
-| Data Processing Agreement template | HIGH |
-| Pseudonymisation certificate per import | MEDIUM |
-| Connector "holding pit" UX with clear 3-step flow | HIGH |
-| Scroll-triggered animations with whileInView | HIGH |
+**The 4-year gap between Y2 KS1 and Y6 KS2 is where assessment drift happens.** The Cohort Validation Passport component visualises this per school.
 
 ---
 
-## 8. Data acquisition plan
+## 7. Connector pattern
 
-### Phase A — Use what we have (zero cost, immediate)
+Three icons in every module app header:
+1. **Google Drive** — live connection (no re-upload)
+2. **Schoolgle DfE database** — backend
+3. **School assessment data** (CTF / MIS: Arbor / SIMS / Bromcom)
 
-1. Surface Ofsted history (36k inspections already in DB)
-2. Surface attendance / persistent absence (205k rows already in DB)
-3. Surface workforce turnover (207k rows already in DB)
-4. Bradford local benchmark (157 Bradford primaries in DB)
-5. Wire up `dfe_data.schools` metadata (52k schools already in DB)
-
-### Phase B — Populate empty tables with public data (low cost, 1-2 weeks)
-
-1. **KS1 historical data** — DfE CSV download (2018/19-2022/23 final year)
-2. **Pupil Premium data** — DfE Pupil Premium Strategy CSV
-3. **School → LSOA linkage** — postcode lookup service, populate school_area_links
-4. **Trusts table** — DfE GIAS Trust download
-5. **School history** — DfE academy conversion data
-
-### Phase C — Enhance CTF parser (2-3 days dev)
-
-1. Extract `send_type` from CTF XML (VI/HI/ASD categories)
-2. Extract EHCP status (add to schema)
-3. Extract FSM6 / ever-6
-4. Extract admission date (add to schema)
-5. Extract date of birth (add to schema for summer-born)
-
-### Phase D — Third-party data acquisition (future)
-
-1. **Accelerated Reader / reading age** — school internal systems (API)
-2. **Standardised test providers** (PUMA/PiRA/SATS) — integration
-3. **Mental health / SEMH screening** — school well-being systems
+Hover = status + last sync. Locked = grey with "unlock with" tooltip.
 
 ---
 
-## 9. Design System (TODO — audit required)
+## 8. What's built (as of 2026-04-18)
 
-**Must match the rest of Schoolgle platform.**
+### UI components
+- At-a-glance summary, forensic verdict, national percentile, predictive accuracy
+- Statistical impossibility alerts, research-backed KPIs
+- EAL trajectory chart, Cohort Passport, Research Factors Checked
+- Per-pupil card grid (year-group filter), Grove House deep dive
+- School events timeline (embed + full page `/timeline`)
+- Governor Assessment Report (HTML 4-page A4, interactive: present + edit + export)
 
-- [ ] Review Lesson Studio design language
-- [ ] Document Schoolgle font stack
-- [ ] Document colour palette (module accents, semantic colours)
-- [ ] Document spacing / radius tokens
-- [ ] Document animation tokens (durations, easings)
-- [ ] Document card / panel patterns
-- [ ] Dark mode strategy
-- [ ] Governor-appropriate typography scale
+### Infrastructure
+- 5-tab layout: Overview / Forensic Review / Cohort Pathway / Pupil Level / Evidence
+- Track-changes editing: EditableText + HideableCard, localStorage persistence
+- Dev auth test user: `scripts/dev-auth/bootstrap.ts`, `scripts/dev-auth/screenshot.ts`
+- Event emission from Trust Assessor → `school_timeline_events`
 
-**Action:** explore `apps/platform/src/app/(dashboard)/.../lesson-studio/` and other module homepages, document the tokens, rebuild Trust Assessor using those tokens.
-
----
-
-## 10. GDPR / DPO readiness (TODO)
-
-Must have these before talking to any school's DPO:
-
-- [ ] Data Protection Impact Assessment (DPIA) template
-- [ ] Data Processing Agreement (DPA) template
-- [ ] Pseudonymisation certificate — proving PII never leaves school
-- [ ] Right-to-delete audit flow
-- [ ] Access audit log (who viewed what pupil data when)
-- [ ] Retention policy (how long is pseudonymised data kept?)
-- [ ] Legal basis document (contract basis for DfE data)
-- [ ] Child-safeguarding review
-- [ ] ICO registration confirmation (Schoolgle ZC103199)
-- [ ] DPO FAQ pack — common objections + answers
-
-**Critical:** the DPO concern is the biggest adoption blocker. Headteachers rely on DPO to say no. If we pre-empt every DPO objection with a written answer, we remove the blocker.
+### Data imports
+- 7 Pennine schools seeded with DfE-derived Timeline events
+- GIAS history: 501,924 rows across 52,151 schools
+- Grove House phonics surfaced from CTF
 
 ---
 
-## 11. Generic scaling rules (for any trust)
+## 9. Known gaps
 
-For the Trust Assessor to work out-of-box for any trust uploading any spreadsheet:
+### Demo
+- Populated-state visual verification requires real user session
+- Further animation polish for interactive hover feel
 
-1. **Spreadsheet parser must auto-detect schema** — use `SHEET_PROFILES` with heuristics, not hardcoded column positions per school
-2. **Demographic inference from DfE schools table** — if user has URN, auto-pull FSM%, EAL%, SEND% from census/schools tables
-3. **Forensic methodology must be data-driven** — no "Grove House" strings in the code, replace with `{{school.name}}`
-4. **AI narrative prompts must be school-agnostic** — all current prompts already are
-5. **Connector UX must show what unlocks** — explicit tier meter at the top
-6. **Fall-through logic** — if tier 3 data missing, show tier 2 + clear CTA to upgrade
-7. **Licensing gate** — feature flags per subscription tier
+### Data
+- Phonics/MTC/KS1 per-school for non-Grove-House = Tier 3 upsell
+- LA-level phonics/MTC context (deferred)
+- CTF parser not populating `send_type`, `is_pp`, `progress_score`, `prior_attainment_band`
+
+### Product
+- Ed chat panel for edit assistance (AI-led rewording)
+- Supabase persistence for report edits (v2, currently localStorage)
+- Approval workflow (deputy → head → published)
+- Component-level redaction (finer than hide card)
+
+### GDPR
+- DPIA template, DPA template, pseudonymisation certificate
+- Right-to-delete audit flow, DPO FAQ pack
 
 ---
 
-## 12. Files and references
+## 10. Generic scaling rules (for any trust)
 
-### Code locations
-- Main page: `apps/platform/src/app/(dashboard)/dashboard/school-improvement/trust-assessor/page.tsx`
-- API routes: `apps/platform/src/app/api/trust-analysis/` + `/api/trust-assessor/`
+1. Spreadsheet parser auto-detects schema (heuristics, not hardcoded columns)
+2. Demographic inference from DfE tables when user has URN
+3. All AI prompts school-agnostic
+4. Connector UX shows what unlocks (tier meter)
+5. Fall-through logic — Tier 3 missing → Tier 2 + CTA
+6. Licensing gate — feature flags per subscription tier
+7. NO hardcoded "Grove House" strings in display code
+
+---
+
+## 11. File locations
+
+### Code
+- Page: `apps/platform/src/app/(dashboard)/dashboard/school-improvement/trust-assessor/page.tsx`
+- API: `apps/platform/src/app/api/trust-analysis/` + `/api/trust-assessor/`
 - Helpers: `apps/platform/src/lib/trust-analysis/`
-  - `types.ts` — PENNINE_SCHOOLS, URN mapping
+  - `types.ts` — PENNINE_SCHOOLS, URN_PREDECESSORS
   - `demographic-expectations.ts` — prediction model
-  - `research-citations.ts` — 10 citations + KPI engine
-  - `report-templates/governor-assessment.ts` — HTML report template
+  - `research-citations.ts` — 14 citations + KPI engine
+  - `report-templates/governor-assessment.ts` — HTML report
+- Components: `apps/platform/src/components/trust-assessor/`
+  - `SchoolTabTabs.tsx`, `EditableText.tsx`, `HideableCard.tsx`
+  - `CohortPassport.tsx`, `PupilCardGrid.tsx`
+- Timeline: `apps/platform/src/components/school-events/Timeline.tsx`
 - Intelligence Brain: `apps/platform/src/lib/intelligence-brain/skills.ts`
+- GIAS import: `scripts/import-gias-school-history.mjs`
+- Pennine seed: `scripts/seed-pennine-timeline.ts`
+- Dev auth: `scripts/dev-auth/`
 
-### Key memory files (persist across Claude sessions)
-- `project_trust_assessor_methodology.md` — forensic method
-- `project_alex_meeting_demo.md` — demo script
-- `project_pennine_product_strategy.md` — sales funnel
-- `project_trust_analysis_four_tiers.md` — pricing tiers
-
-### User preferences (persistent)
-- David Summerscales — CEO, Schoolgle
-- Direct no-nonsense feedback
-- Values: prove-with-data, not-hypothesis, match-existing-UI, scroll-trigger-animations
-- Dislikes: wall-of-text AI output (use prose), fabricated data, feature bloat without design rigour
-- Demo audience: Alex Aitken (Pennine), then heads/CEOs downstream
+### Supabase tables
+- `school_timeline_events` (unified events; note `school_events` was already a calendar table)
+- `pupil_assessments_pseudo` (Grove House CTF)
+- `dfe_data.*` (23-table warehouse)
 
 ---
 
-## 13. Next priorities (as of 2026-04-18)
+## 12. Rules for Trust Assessor work
 
-**Immediate (before more features):**
-
-1. ✅ Audit DfE schema — DONE (this document)
-2. ⏳ Review Schoolgle platform design system (fonts, motion, dark mode)
-3. ⏳ Surface existing DfE data: Ofsted history, attendance, workforce, Bradford benchmark
-4. ⏳ Fix scroll-triggered animations (use `whileInView`)
-5. ⏳ Make Cohort Forensics data-driven (remove Grove House hardcoding)
-6. ⏳ GDPR / DPO document pack
-
-**Short term:**
-
-7. Enhance CTF parser (send_type, EHCP, progress_score, prior_attainment_band)
-8. Populate KS1 historical data, Pupil Premium
-9. Connector "holding pit" UX redesign
-10. Fold-out tooltips for product pitch sections
+1. Read this doc first
+2. Audit DB schema before coding (see `feedback_data_audit_before_build` memory)
+3. Verify code is data-driven, not Grove-House-hardcoded
+4. Every finding cites published research
+5. Voice: exploratory, not accusatory (HTs are customers)
+6. Connector pattern = icons in header, not banners
+7. Connect limitations to product upsell
+8. JSONB filters: use `.contains('metadata', {key:val})` — NOT `.eq()` (broken)
+9. Always pass `organizationId` on `/api/events` GET
+10. Use dev auth test user for screenshots; don't ask David to log in
 
 ---
 
-## 14. Conversation log — key decisions made
+## 13. Key decisions made
 
-- 2026-04-17: Adopted 3-tier data architecture
-- 2026-04-17: Research citations library committed — EEF, DfE, Strand/Demie, NALDIC, STA, Ofsted
-- 2026-04-17: Governor Report Generator deployed (4-page HTML template)
-- 2026-04-17: Forensic methodology proven on Grove House (over-levelling at KS1)
-- 2026-04-18: Full DfE schema audit — revealed 21 unused tables, 9 populated, 14 empty
-- 2026-04-18: Visual design and animation gaps acknowledged — requires redesign phase
-- 2026-04-18: GDPR/DPO readiness identified as adoption blocker — requires document pack
+- **2026-04-17:** 3-tier data architecture, research citations library, Governor Report deployed, forensic methodology proven on Grove House (over-levelling at KS1)
+- **2026-04-18 (morning):** Full DfE audit — 21 unused tables; DfE doesn't publish phonics/MTC/KS1 per school confirmed
+- **2026-04-18 (afternoon):** 5-tab layout + track-changes editing delivered; customer sensitivity principle locked in
+- **2026-04-18 (evening):** GIAS history imported across 52k schools; Grove House phonics surfaced; Cohort Passport wired
 
 ---
 
-**Rule:** Update this document after any significant conversation. Do not lose context between sessions.
+## 14. SFB Finance Import (2026-04-20)
 
----
+### Source
 
-## 15. Decisions locked in 2026-04-18 (late session)
+- **DfE Financial Benchmarking and Insights Tool** — https://financial-benchmarking-and-insights-tool.education.gov.uk/data-sources
+- CFR full-data workbooks (LA-maintained schools): `CFR_<year>_Full_Data_Workbook.xlsx`
+- AAR download workbooks (academies / free schools): `AAR_<year>_download.xlsx`
+- Data is based on schools' Consistent Financial Reporting (CFR) returns + academies' Accounts Return (AAR)
+- Published by DfE annually, ~6 months after financial year end
 
-### Platform architecture (final)
+### Table
 
-**Three layers:**
+`dfe_data.school_finance` (40 columns, unique on `(urn, financial_year)`)
 
-1. **Data & Intelligence Platform (backend, invisible)**
-   - Connectors, storage, Intelligence Brain, DfE warehouse, `school_events` Timeline
-   
-2. **School Intelligence module (user-facing reporting hub)**
-   - Contains: Visualize (renamed Trust Analysis), Trust Assessor, future report templates
-   - Where users go to SEE analysis
-   - Productised — works for any school/trust
-   
-3. **Tools modules (what schools buy)**
-   - Ofsted Readiness, Lesson Studio, Governance Portal, Assessment Tracker
-   - Tools PRODUCE data, feed Timeline
-   - School Intelligence REPORTS on that data
+Applied via migration: `apps/platform/supabase/migrations/20260420_dfe_school_finance.sql`
 
-### The Timeline is the unifying layer
+### Row counts imported (2026-04-20)
 
-- One `school_events` table
-- Every app writes to it on significant events
-- Shared UI component overlays on performance graphs
-- Shows causality: finding → action → intervention → measured impact
-- Adopts the shape of `sim_studio_timeline_events` which already has the right fields
-- Replaces fragmentation of 4 existing scattered event stores (audit_log, tool_audit_logs, sim_studio_timeline_events, InterventionEvent)
+Total: **235,779 rows** across 20 datasets.
 
-### Bidirectional validation principle
+| Year     | CFR    | AAR    |
+| -------- | -----: | -----: |
+| 2014-15  | 16,904 |      — |
+| 2015-16  | 16,240 |      — |
+| 2016-17  | 15,225 |  6,893 |
+| 2017-18  | 15,249 |  7,951 |
+| 2018-19  | 14,071 |  8,767 |
+| 2019-20  | 13,281 |  9,288 |
+| 2020-21  | 12,806 |  9,646 |
+| 2021-22  | 12,390 | 10,001 |
+| 2022-23  | 12,020 | 10,295 |
+| 2023-24  | 11,537 | 10,954 |
+| 2024-25  | 10,701 | 11,560 |
 
-Forensic methodology applies both ways:
-- Under-performers: is there a reason (demographics, teaching quality, leadership change)?
-- Over-performers: are the numbers real or are they gaming?
-- Same research-backed framework, applied honestly
+Coverage: CFR 2014-15 through 2024-25 (11 years); AAR 2016-17 through 2024-25 (9 years). AAR workbooks for 2014-15 and 2015-16 are not published by DfE on the FBIT data-sources page.
 
-### Closed-loop intervention cycle
+### CFR code mapping
+
+CFR raw codes captured directly:
+
+| Column in `school_finance`    | CFR code(s)                                      |
+| ----------------------------- | ------------------------------------------------ |
+| `teaching_staff_gbp`          | E01                                              |
+| `supply_staff_gbp`            | E02 + E10 + E26 (pre-aggregated by DfE)          |
+| `education_support_gbp`       | E03                                              |
+| `premises_staff_gbp`          | E04                                              |
+| `admin_staff_gbp`             | E05                                              |
+| `catering_staff_gbp`          | E06                                              |
+| `pupil_premium_income_gbp`    | I05                                              |
+| `sen_funding_gbp`             | I03                                              |
+| `energy_gbp`                  | E16                                              |
+| `learning_resources_gbp`      | E19                                              |
+| `total_income_gbp`            | "Total Income: I01:I18 - E30" (DfE aggregate)    |
+| `total_expenditure_gbp`       | "Total Expenditure: (E01:E29 + E31 + E32)"       |
+| `total_staff_gbp`             | "Staff Total: (E01:E03) + E05 + (E07:E11) + E26" |
+| `premises_gbp`                | "Premises: (E12:E14) + E04 + E28b"               |
+| `reserves_gbp`                | "Revenue Reserve: B01 + B02 + B06"               |
+| `surplus_deficit_gbp`         | "In-year Balance"                                |
+
+AAR (academies) uses descriptive headers without the CFR code prefix. The importer maps AAR columns to the same canonical fields. AAR does NOT break out pupil premium separately (rolls up into other DfE grants), so `pupil_premium_income_gbp` is null for academy rows.
+
+Per-pupil derived fields are computed on insert:
+- `income_per_pupil_gbp` = total_income / pupils
+- `expenditure_per_pupil_gbp` = total_expenditure / pupils
+- `teaching_per_pupil_gbp` = teaching_staff / pupils
+- `support_per_pupil_gbp` = education_support / pupils
+- `avg_teacher_cost_gbp` = teaching_staff / fte_teachers
+
+### Verification — Pennine Academies Yorkshire (2023-24)
 
 ```
-Trust Assessor finds problem (event)
-→ Ofsted Readiness creates action w/ EEF citation (event)
-→ Lesson Studio delivers (event)
-→ Assessment Tracker measures impact (event)
-→ Trust Assessor re-analyses — improved? yes/no
-→ If no: lesson observation → teacher feedback → possible HR process
+Clayton Village Primary School      pupils=202  inc/pp=£6,718  teach/pp=£3,144  avgT=£67,054  surplus=£99k
+Crossley Hall Primary School        pupils=666  inc/pp=£7,044  teach/pp=£2,790  avgT=£64,091  surplus=£650k
+Farnham Primary School              pupils=446  inc/pp=£6,274  teach/pp=£2,852  avgT=£61,688  surplus=£324k
+Grove House Primary School          pupils=415  inc/pp=£6,439  teach/pp=£2,713  avgT=£52,641  surplus=£477k
+Hollingwood Primary School          pupils=454  inc/pp=£6,247  teach/pp=£2,405  avgT=£61,348  surplus=£664k
+Laycock Primary School              pupils=89   inc/pp=£8,157  teach/pp=£3,899  avgT=£69,124  surplus=£92k
+Lidget Green Primary School         pupils=526  inc/pp=£6,667  teach/pp=£3,038  avgT=£63,564  surplus=£340k
 ```
 
-All events on one Timeline = full audit trail = Ofsted-ready evidence.
+### Finding (the headline for the trust assessor)
 
-### The "basic product" — assessment snapshot timeline
+**Clayton Village** (weakest outcomes, per the trust assessment narrative) has the **second-highest teaching £/pupil** (£3,144) and the **second-highest average teacher cost** (£67,054) in the trust. It has 9.47 FTE teachers for 202 pupils — a pupil:teacher ratio of ~21.
 
-Before per-pupil data, the product works for any school via:
-- School uploads assessment data each term (T1, T2, T3)
-- Each upload = locked immutable snapshot
-- Cohort progression tracked through snapshots
-- No MIS connection needed for basic tier
+**Hollingwood** (strong outcomes) has the **lowest teaching £/pupil** (£2,405) but a similar average teacher cost (£61,348). It has 17.8 FTE for 454 pupils — ratio of ~25.5.
 
-### Decision: Starting phase = Option C
+**So the per-pupil story is not "Clayton Village is under-staffed" — it's the opposite.** Clayton has more adults per child than Hollingwood, spends more per pupil on teaching, and still underperforms. This reframes the intervention conversation entirely — it's about how teaching time is deployed, not how much is spent.
 
-**Phase 1 (schema) + Trust Assessor event wiring + Timeline UI** — delivers visible value for Alex Aitken's Pennine meeting while laying foundation for everything else.
-
-### Design requirements for Timeline UI
-
-- MUST match existing Schoolgle design system (fonts, colours, spacing, motion tokens)
-- Audit Lesson Studio + other modules for design language first
-- Use `whileInView` scroll-triggered animations (not mount-fired)
-- Category colour-coded events
-- Causality chain connectors animate in
-- Filterable by event type / date / source app
-- Overlayable on performance graphs
-
-### Research portfolio — next workstream
-
-After Timeline foundation, build curated research library:
-- Academic citations ranked A/B/C/D
-- External data source catalog (Police.uk, Land Registry, IMD LSOA, etc.)
-- Bidirectional validation tests (Grove House + Hollingwood contrast)
-- Brain skills cite from this library
-
-
----
-
-## 16. Timeline build log 2026-04-18
-
-### What was built
-
-**Migration — `apps/platform/supabase/migrations/20260418_school_events.sql`**
-- Creates `public.school_timeline_events` table (renamed from `school_events` to avoid collision with existing calendar booking table)
-- 20 columns: identity, timing, content, source/causality, attribution, evidence/metadata, tags
-- 7 indexes including partial index on `metadata->>'school_urn'` for fast per-school queries
-- RLS policies scoped via `organization_members.auth_id = auth.uid()` (not `user_id` which is text/Firebase UID)
-- Applied live to `ygquvauptwyvlhkyxkwy` Supabase project via pg direct connection
-- Migration verified: all 20 columns present, all 7 indexes created
-
-**Event Registry — `apps/platform/src/lib/school-events/registry.ts`**
-- 20 event type definitions across 7 source apps
-- 8 Trust Assessor types: `ta.forensic-finding`, `ta.national-percentile`, `ta.predictive-accuracy-gap`, `ta.research-kpi-failed`, `ta.cohort-mismatch`, `ta.statistical-alert`, `ta.eal-trajectory-concern`, `ta.demographic-expectation-breach`
-- 4 Ofsted Readiness stubs ready for future wiring
-- 3 Lesson Studio stubs ready for future wiring
-- 5 system events (DfE inspections, academy conversion, staff changes)
-- `CATEGORY_COLORS` — 10 categories with Tailwind semantic palette (no hex)
-- `SEVERITY_COLORS` — 5 severities with semantic palette
-- `SOURCE_LABELS` — 7 source human labels
-- 17 unit tests, all green
-
-**Types — `apps/platform/src/lib/school-events/types.ts`**
-- `SchoolEvent` — database row shape
-- `SchoolEventInsert` — insert shape
-- `SchoolEventFilters` — query parameter type
-
-**Trust Assessor Event Emitter — `apps/platform/src/lib/school-events/emit-trust-assessor.ts`**
-- Called client-side in a `useEffect` when a SchoolTab mounts
-- De-duplicates by checking for existing events for school + academic year before inserting
-- Emits: national percentile, predictive accuracy gap, statistical alerts, forensic verdict, failed research KPIs, EAL trajectory concern, cohort mismatch
-- All non-fatal — never blocks UI
-
-**API Routes**
-- `GET /api/events` — paginated list (limit 500 max), filters: category, severity, source_app, from, to, school_urn
-- `POST /api/events` — single event creation with registry validation
-- `POST /api/events/batch` — batch insert (up to 100 events), used by Trust Assessor
-- Both use `protectedRoute` wrapper + `createServiceRoleClient()` for bypass of RLS on insert
-
-**Timeline Component — `apps/platform/src/components/school-events/Timeline.tsx`**
-- Vertical timeline with left-aligned dot column, central connecting line, right content column
-- Category-coloured dots (w-3 h-3, ring-2 ring-background) with spring scale animation on scroll entry
-- Day-grouped events with sticky day labels (bg-background/80 backdrop-blur)
-- Event cards: `bg-card border border-border rounded-2xl`, card-hover lift pattern
-- Header: category pill + severity badge + source badge + relative time
-- Expandable: shows impact_summary, event_type, recorded date
-- All animations use `whileInView viewport={{ once: true, amount: 0.3 }}` — never mount-fired
-- Spring: `{ type: 'spring', damping: 30, stiffness: 250 }`
-- Category/severity/source filters + date range picker
-- Skeleton loading (3 cards) + empty state
-- `variant="embedded"` for Trust Assessor inline, `variant="full-page"` for `/timeline`
-
-**Trust Assessor page wired (`page.tsx`)**
-- `useEffect` at SchoolTab level computes forensic verdict + KPIs + EAL/cohort flags using same logic as render sections, emits via `emitTrustAssessorEvents`
-- `eventsEmittedRef` prevents double-fire
-- Timeline section renders below At-a-glance with "View full timeline →" link
-- State: `timelineEvents`, `timelineLoading`
-
-**Full-page timeline (`/timeline/page.tsx`)**
-- Rewrites old audit log page to use new `school_timeline_events` table
-- Supports `?school=URN` query param to filter by school
-- School name lookup from URN for display
-- Paginated load-more, 50 events per page
-
-### Key decisions
-
-1. **Table name collision**: `school_events` already existed as a calendar booking table. Renamed to `school_timeline_events`. All code uses this name.
-
-2. **RLS auth column**: `organization_members.auth_id` (uuid, Supabase auth) is correct for RLS. `user_id` is text/Firebase UID and cannot be compared to `auth.uid()`. Applied the fix in migration.
-
-3. **No causality chain SVG**: The animated SVG causality connector described in spec was intentionally deferred — requires event IDs to be resolved client-side before rendering. The expand/collapse pattern achieves the same information density with less complexity for v1.
-
-4. **emitter is non-fatal**: All event emission errors are caught and logged as warnings — they must never block the Trust Assessor UI which is the primary user value.
-
-### Test evidence
-
-```
-Test Files  1 passed (1)
-Tests       17 passed (17)
-Build       ✓ Compiled successfully in 16.0s
-Migration   school_timeline_events: 20 columns, 7 indexes — applied to ygquvauptwyvlhkyxkwy
-```
-
-### Files created/modified
-
-| File | Status |
-|------|--------|
-| `apps/platform/supabase/migrations/20260418_school_events.sql` | Created |
-| `apps/platform/src/lib/school-events/registry.ts` | Created |
-| `apps/platform/src/lib/school-events/types.ts` | Created |
-| `apps/platform/src/lib/school-events/emit-trust-assessor.ts` | Created |
-| `apps/platform/src/lib/school-events/registry.test.ts` | Created |
-| `apps/platform/src/app/api/events/route.ts` | Created |
-| `apps/platform/src/app/api/events/batch/route.ts` | Created |
-| `apps/platform/src/components/school-events/Timeline.tsx` | Created |
-| `apps/platform/src/app/(dashboard)/timeline/page.tsx` | Rewritten |
-| `apps/platform/src/app/(dashboard)/dashboard/school-improvement/trust-assessor/page.tsx` | Modified (imports + useEffect + Timeline embed) |
-
-### What's next
-
-- Wire Ofsted Readiness module to emit `ofsted.*` events when actions created/updated
-- Wire Lesson Studio to emit `lesson.*` events on observation completion
-- Add causality chain SVG connector (v2) using `triggered_by_event_id`
-- Add `/api/events` to Ed AI intelligence specialist skill catalogue
-- Expose timeline in the school intelligence hub sidebar
-
----
-
-## 16. Timeline build log — 2026-04-18 (evening)
-
-### What was built (Option C delivered)
-
-**1. Unified Timeline table** — `public.school_timeline_events` (renamed from `school_events` because a calendar booking table already had that name)
-- Migration: `apps/platform/supabase/migrations/20260418_school_events.sql`
-- 20 columns, 7 indexes including partial on `metadata->>'school_urn'`
-- RLS policies use `auth_id = auth.uid()` (Supabase uuid column, not Firebase `user_id`)
-- Verified applied in production
-
-**2. Event registry** — `apps/platform/src/lib/school-events/registry.ts`
-- 20 event types across 7 source apps
-- Category colour tokens (10 categories, each with bg/text/border/dot) — all CSS-var based
-- Severity colour tokens (5 levels)
-- 17 unit tests passing
-
-**3. API routes**
-- `GET /api/events` — paginated, filterable by category/severity/source_app/from/to/school_urn
-- `POST /api/events` — single event with registry validation
-- `POST /api/events/batch` — up to 100 events at once
-
-**4. Trust Assessor event emitter** — `apps/platform/src/lib/school-events/emit-trust-assessor.ts`
-- Auto-emits events when a school tab loads:
-  - National percentile finding (severity based on rank)
-  - Predictive accuracy gap (if >8pp)
-  - Statistical alerts from spreadsheet analysis
-  - Forensic verdict per school
-  - Failed research-backed KPIs
-  - EAL trajectory concerns
-  - Cohort mismatches
-- Deduplicates by academic year — same school doesn't get spammed
-- Non-fatal — never blocks UI
-
-**5. Timeline component** — `apps/platform/src/components/school-events/Timeline.tsx`
-- Embedded and full-page variants
-- Vertical timeline with category-coloured dots + card-hover lift
-- Day-grouped with sticky day headers
-- Filters: category / severity / source / date range
-- Scroll-triggered animations using `whileInView` with `viewport={{ once: true, amount: 0.3 }}`
-- Spring motion: `damping: 30, stiffness: 250`
-- Skeleton loading + empty state
-- Dark-mode-first, all CSS var colours
-
-**6. Integration points**
-- Embedded Timeline section added to Trust Assessor SchoolTab (below At-a-glance, above Validation & Credibility)
-- Full-page `/timeline` route rewritten to read from new table
-- Query param `?school=URN` filters by school
-
-### What this unlocks for future sessions
-
-- Any app (Ofsted Readiness, Lesson Studio, etc.) can write to `school_timeline_events` with its own `source_app` identifier
-- The Timeline UI component is reusable across apps — pass events, get beautiful visualisation
-- The event registry is the shared vocabulary — add new event types by editing `registry.ts`
-- Cross-app causality tracked via `triggered_by_event_id` foreign key
-- Related action tracking via `related_action_id` — once Ofsted Readiness actions flow through Timeline, closed-loop cycle is complete
-
-### Verified
-
-- Build: clean (0 new errors)
-- Server: 3000 running
-- Routes: `/dashboard/school-improvement/trust-assessor` and `/timeline` both 200
-
-
----
-
-## GIAS Change History Import (April 2026)
-
-The `dfe_data.school_history` table has been backfilled from the GIAS bulk download feed.
-
-### What's in there now
-
-- **501,924 rows** spanning **1800-01-01 to 2027-10-31** (the far-future rows are planned school closures already announced)
-- **52,151 distinct URNs** covered — effectively every state-funded English school currently on `dfe_data.schools`
-- Table shape: `(id, urn, snapshot_date, field_name, old_value, new_value, created_at)` with unique constraint on `(urn, snapshot_date, field_name)` and FK to `dfe_data.schools.urn`
-
-### Field taxonomy (with row counts from 2026-04-18 import)
-
-| Field name                         | Rows    | What it is                                                                    |
-| ---------------------------------- | ------- | ----------------------------------------------------------------------------- |
-| `establishment_status_current`     | 64,671  | "Open" / "Closed" / "Proposed to close" etc. as of snapshot                  |
-| `head_current`                     | 59,377  | Current headteacher (title + first + last). Baseline only — no old_value.    |
-| `establishment_name_current`       | 52,151  | Current school name as of snapshot                                            |
-| `phase_of_education_current`       | 52,151  | Primary / Secondary / 16 plus / etc.                                          |
-| `trust_flag_current`               | 52,151  | "Supported by a multi-academy trust" / "Not applicable" etc.                  |
-| `type_of_establishment_current`    | 52,151  | Community school / Academy converter / VA / Free school etc.                  |
-| `head_job_title_current`           | 45,674  | Preferred job title (Head of School, Executive Headteacher, etc.)             |
-| `establishment_closed`             | 24,798  | **Dated event** — school closed on this date, reason in new_value             |
-| `establishment_opened`             | 22,047  | **Dated event** — school opened on this date, reason in new_value             |
-| `religious_character_current`      | 20,272  | CofE / RC / etc. — excludes "Does not apply"                                  |
-| `trust_joined`                     | 14,835  | **Dated event** — date this URN joined a MAT, with MAT name + Group ID       |
-| `successor_link`                   | 13,255  | **Dated event** — this URN became successor X on this date                   |
-| `predecessor_link`                 | 12,475  | **Dated event** — this URN replaced predecessor Y on this date               |
-| `trust_name_current`               | 12,317  | Current MAT name                                                              |
-| `trust_left`                       | 3,351   | **Dated event** — date this URN left a MAT                                   |
-| `establishment_link`               | 248     | Other link types (amalgamations, merges, etc.)                                |
-
-"Dated event" rows are the gold — they have a real timestamp (when it happened). "Current" rows carry the `LastChangedDate` from the GIAS snapshot and should be treated as "latest known state as of that date".
-
-### What's NOT captured (important limitation)
-
-GIAS does **not** publish a row-by-row audit log of every field change. Specifically, we have **no historical record of**:
-
-- Every previous headteacher going back through time — only the CURRENT head at each URN's snapshot
-- Every previous name change (mid-life renames without re-URN)
-- Every previous Ofsted rating / inspection date
-- Previous phase or type changes that didn't trigger a URN change
-
-When a school converts to an academy or is amalgamated, DfE assigns a **new URN**, and the old URN's record is preserved as "Closed" with predecessor/successor links. So headteacher history is only visible across URN boundaries (e.g. Grove House: Miss Lynette Clapham at URN 107242 in 2020, Mrs Alex Summerscales at URN 148201 from 2020-11-01 onward).
-
-**To accumulate richer field-level history going forward**, run the weekly delta job (see below). Every week it diffs the current GIAS snapshot against the previous snapshot and writes one row per changed field — that's how we'll catch every headteacher change, name change, etc. from today onwards.
-
-### Grove House verified ✓
-
-```
-107242 2020-10-31 establishment_closed      "Grove House Primary School" -> "(Academy Converter)"
-107242 2020-10-31 successor_link            -> URN 148201
-148201 2020-11-01 establishment_opened      -> "(Academy Converter)"
-148201 2020-11-01 predecessor_link          -> URN 107242
-148201 2020-11-01 trust_joined              -> PENNINE ACADEMIES YORKSHIRE (TR03728)
-148201 2020-11-01 head_current              -> Mrs Alex Summerscales
-107242 2024-10-28 head_current              -> Miss Lynette Clapham  (final head of old URN)
-148201 2026-02-25 <current baseline>        phase, type, status, trust all current
-```
-
-### Timeline UI extension
-
-A helper at `apps/platform/src/lib/school-events/emit-from-gias-history.ts` is ready to convert `school_history` rows into `school_timeline_events` for display in the school timeline (see Trust Assessor Timeline). The mapping is:
-
-- `establishment_opened` / `establishment_closed` -> timeline "lifecycle" event
-- `trust_joined` / `trust_left` -> timeline "trust movement" event
-- `predecessor_link` / `successor_link` -> timeline "governance change" event linked to partner URN
-
-Fields ending in `_current` are **baseline snapshots**, not events — they should NOT emit timeline entries (only the first time we ever see a change via delta).
-
-### Re-running and weekly deltas
-
-The importer is idempotent via `ON CONFLICT (urn, snapshot_date, field_name) DO NOTHING`.
-
-**Full reimport** (truncate + reload):
+### How to run
 
 ```bash
-cd apps/platform && node scripts-import-gias.mjs --replace
+# 1. Apply migration (one-off)
+psql $DATABASE_URL -f apps/platform/supabase/migrations/20260420_dfe_school_finance.sql
+
+# 2. Download workbooks to /tmp/dfe_work/
+#    (see scripts/import-sfb-finance.mjs header for URLs)
+
+# 3. Run importer (must run from apps/platform/ so pg resolves)
+cd apps/platform && node scripts/import-sfb-finance.mjs [--replace]
 ```
 
-**Incremental / weekly delta** (safe to re-run — new rows only):
+`--replace` truncates and reloads. Default is `ON CONFLICT DO NOTHING`, safe to re-run.
 
-```bash
-cd apps/platform && node scripts-import-gias.mjs
-```
+### Next enhancements
 
-For a weekly job you want to:
+1. **Surface cost-per-pupil in Trust Assessor Staffing Context card** — feeds directly into the pupil:teacher ratio narrative, with 10-year trend
+2. **Join to `dfe_data.workforce`** — the CFR returns FTE teacher counts, but `workforce` has richer age/experience/qualifications data. Cross-join = richer "who are the teachers" picture
+3. **Average teacher cost outlier detection** — e.g. avgT > £80k in a primary school is unusual and worth flagging (senior leader heavy / part-time distortion / data error)
+4. **Year-over-year delta view** — CFR deficits / reserve depletion are leading indicators of school-level stress; build `school_finance_trends` view
 
-1. Download the latest GIAS zip (see `/tmp/gias_work/collate.sh` for the POST form dance — CSRF token + Downloads/Collate + Downloads/Download/Extract)
-2. Extract the three CSVs
-3. Update the filenames in the script's constants (or make them env-driven)
-4. Before insert, compare `head_current`, `establishment_name_current`, etc. for each URN against the most-recent existing row in `school_history` — if different, emit an event with `old_value = previous snapshot's value` and `new_value = current value`
+### Script
 
-**Gotcha**: GIAS FK to `dfe_data.schools`. Any URN not already in `schools` will be silently dropped. Run a schools refresh first or the importer logs them — this import dropped 336 URNs (2,765 events) for schools not yet in our `schools` table.
-
-### Source files and size
-
-- `edubasealldata20260418.csv` — 62 MB, 52,347 rows (current state)
-- `academiesmatmembership20260418.csv` — 8.3 MB, 15,557 rows (MAT history)
-- `links_edubasealldata20260418.csv` — 2.4 MB, 34,988 rows (predecessor/successor)
-- Zip: 9.5 MB
-
-Total ETL runtime: ~90 seconds.
+`scripts/import-sfb-finance.mjs` (symlinked/copied to `apps/platform/scripts/import-sfb-finance.mjs` because pg is only installed in the platform workspace). Header scanning is tolerant of DfE's year-on-year schema drift (header row position varies from 0 to 3 across years; column labels drift). See the `findHeaderRow` and `norm` helpers.
 
 ---
 
-## 17. All-Pennine Timeline Seeding — 2026-04-18
-
-### What was done
-
-All 7 Pennine Academies Yorkshire schools now have fully-populated `school_timeline_events` rows in `public.school_timeline_events` for org `d9d1ac2c-5eff-4043-98f4-e1c43f616fd3`.
-
-### Seed script
-
-`scripts/seed-pennine-timeline.ts` — run with `npx tsx scripts/seed-pennine-timeline.ts`
-
-Deletes all existing events for the org first, then rebuilds from DfE data. Re-runnable.
-
-### Sources
-
-| Table | What was extracted |
-|-------|-------------------|
-| `public.attendance` | Persistent absence events (>10%, >15%, >20% thresholds), attendance change events (>2pp year-on-year), PA turnaround events |
-| `public.workforce` | FTE teacher change events (>1.5 FTE year-on-year), baseline FTE events |
-| `public.ks2_results` | KS2 Combined trend events (>10pp change year-on-year, or absolute <35% or >75%) |
-| `public.schools` | Current and predecessor headteacher name/title |
-| Ofsted history constant | Inspection outcome events (RI, Good, Outstanding) with trajectory annotation |
-| `URN_PREDECESSORS` constant | Academy conversion events |
-
-All events carry `metadata.school_urn = String(currentUrn)` so `.contains('metadata', { school_urn: value })` filtering works.
-
-### Events per school (2026-04-18 run)
-
-| School | URN    | Events |
-|--------|--------|--------|
-| CVPS   | 148869 | 12     |
-| CHPS   | 146581 | 12     |
-| FPS    | 144862 | 15     |
-| GHPS   | 148201 | 10     |
-| HPS    | 144860 | 13     |
-| LPS    | 144861 | 9      |
-| LGPS   | 150016 | 13     |
-| **TOTAL** | — | **84** |
-
-### KS2 metrics table (from DfE `ks2_results`, `breakdown_topic = All pupils`, `subject = Reading, writing and maths`)
-
-| School | 2023 | 2024 | 2025 | 3yr avg | Demo-predicted |
-|--------|------|------|------|---------|----------------|
-| CVPS   | 42%  | 55%  | 56%  | 51%     | ~53%           |
-| CHPS   | 33%  | 56%  | 33%  | 41%     | ~51%           |
-| FPS    | 75%  | 25%  | 69%  | 56%     | ~52%           |
-| GHPS   | 55%  | 50%  | 67%  | 57%     | ~51%           |
-| HPS    | 75%  | 74%  | 80%  | 76%     | ~51%           |
-| LPS    | 60%  | 36%  | 64%  | 53%     | ~46%           |
-| LGPS   | 80%  | 57%  | 41%  | 59%     | ~50%           |
-
-National avg 2025: ~61%.
-
-### New research citations added
-
-- `dfe-pupil-absence-2024` — DfE Pupil Absence Statistics 2024 (PA → KS2 impact)
-- `ifs-teacher-retention-2022` — Sibieta IFS 2022 (teacher turnover → attainment)
-- `dfe-school-travel-2022` — DfE/ONS school travel analysis (catchment stability)
-- `eef-ofsted-trajectory-2023` — EEF School Improvement Evidence Review 2023 (RI→Good trajectory)
-
-### New UI section
-
-"Research Factors Checked" section added to Trust Assessor SchoolTab, after the Research-Backed KPIs section. Shows 6–7 factor cards per school with:
-- FSM attainment gap (EEF 2024 citation)
-- SEND attainment gap (EEF 2020)
-- EAL language trajectory (Strand 2018 / NALDIC 2020, only if EAL > 30%)
-- Persistent absence impact (DfE 2024)
-- Teacher turnover impact (IFS 2022)
-- Distance to school / catchment stability (pending Premium feature)
-- Ofsted trajectory (EEF 2023)
-
-All populated from real DfE data. No invented numbers.
-
-### Trust assessor timeline broadened
-
-The "Events Timeline" panel inside each SchoolTab now fetches all events for that school URN (not just `source_app=trust-assessor`). This means the DfE history events (Ofsted inspections, attendance, workforce, KS2 trends) appear directly in the Trust Assessor UI alongside the forensic findings.
-
-### Data quality notes
-
-- Some predecessor URNs have DfE data attributed to post-conversion years (e.g. URN 107242 showing 2023 attendance). This is a DfE statistical artefact — the school converted November 2020 but the dataset has historical rows. Events from these rows are still accurate values; just the year attribution may be slightly off.
-- CVPS/HPS show duplicate PA events for 2023/2024 because the DfE table has the same value for both years. Both are real DfE records.
-- Ofsted inspection history is from a verified constant (not yet in the DB) — sourced from published Ofsted reports at reports.ofsted.gov.uk.
-
----
-
-## 19. External validation architecture — 2026-04-18
-
-### The validation tiers table
-
-| Validation status | What it means | Source | Visual |
-|---|---|---|---|
-| `external` | Data comes from an externally-administered assessment, now wired into Schoolgle via CTF | `pupil_assessments_pseudo` (CTF ingestion) or DfE KS2 | Green ✅ |
-| `self-reported` | Teacher assessment — no external moderation requirement | MIS/teacher records | Amber ⚠ |
-| `locked` | School HAS this data (held via MTC Service / PAG) but hasn't connected CTF to Schoolgle | N/A — Tier 3 upsell | Violet 🔒 |
-| `future` | Cohort hasn't reached this checkpoint yet | — | Grey — |
-| `no-data` | Data should exist but isn't in the system for other reasons | — | Red ✗ |
-
-### What DfE publishes vs what only schools have
-
-| Checkpoint | DfE publishes? | Who has it | Schoolgle source |
-|---|---|---|---|
-| KS2 SATs | YES — per school, public | Everyone | `dfe_data.ks2_results` |
-| Phonics Screening (Y1+Y2) | NO — LA/national only | School via Primary Assessment Gateway | `pupil_assessments_pseudo` (CTF) |
-| MTC Y4 | NO — DfE explicitly states no per-school publication | School via MTC Service | CTF or MTC export (not yet parsed) |
-| KS1 SATs | NO — was on performance tables (retired). Non-statutory from 2023/24. | School's own MIS | `pupil_assessments_pseudo` (CTF) |
-| EYFS GLD | NO — LA level only | School's own records / EYFSP | Not in CTF — teacher assessment |
-
-**DO NOT** attempt to scrape or API-call DfE for phonics, MTC, or KS1 school-level data. It doesn't exist publicly. This has been verified multiple times. See `docs/DFE_DATA_DEFINITIVE_GUIDE.md` Section 9.
-
-### Why Schoolgle's CTF connector is the moat
-
-No competitor can surface a complete externally-validated cohort pathway because:
-1. DfE only publishes KS2 per school
-2. Phonics, MTC, and KS1 require the school to share their CTF/MIS exports
-3. Schoolgle ingests CTF files and pseudonymises per-pupil data (HMAC-SHA256)
-4. The Cohort Validation Passport then maps the validated checkpoints across all 6 cohort rows
-
-This means a trust that connects CTF for all schools gets a validation layer that their own data team can't build without per-school CTF access — and neither can any competitor working from public DfE data alone.
-
-### The Cohort Passport component as the visual pitch
-
-File: `apps/platform/src/components/trust-assessor/CohortPassport.tsx`
-
-Key visual narrative:
-- **Green cells** = externally validated (CTF phonics, DfE KS2)
-- **Amber cells** = teacher self-reported (EYFS GLD, mid-year, KS1 post-2023)
-- **Violet locked cells** = data the school HAS but hasn't connected to Schoolgle yet — this is the Tier 3 CTA
-- **Grey cells** = future (cohort hasn't reached this checkpoint)
-
-For Grove House (CTF connected): phonics cells are GREEN with real pass rates.
-For other schools (no CTF): phonics cells are VIOLET/locked with "Connect CTF" prompt.
-
-### Grove House phonics data in pupil_assessments_pseudo (confirmed 2026-04-18)
-
-Organization: `d9d1ac2c-5eff-4043-98f4-e1c43f616fd3` (Grove House, URN 148201)
-
-**749 phonics records total.** Pass mark: 32/40.
-
-| academic_year_start | year_group | pupils | pass_pct | avg_score |
-|---------------------|------------|--------|----------|-----------|
-| 2020 | 2 (retake) | 56 | 77% | 32.4 |
-| 2021 | 2 (retake) | 241 | 89% | 34.6 |
-| 2022 | 1 | 159 | 47% | 24.6 |
-| 2022 | 2 (retake) | 24 | 75% | 26.8 |
-| 2023 | 1 | 58 | 81% | 31.7 |
-| 2023 | 2 (retake) | 31 | 68% | 30.7 |
-| 2024 | 1 | 94 | 87% | 32.6 |
-| 2024 | 2 (retake) | 20 | 50% | 20.6 |
-| 2025 | 1 | 58 | 74% | 30.4 |
-| 2025 | 2 (retake) | 8 | 25% | 17.3 |
-
-Note: 2022 Y1 cohort had only 47% pass — significantly below national average (~82%). This is a compelling data point for the demo: "Look what the external test revealed that internal assessment might have masked."
-
-**KS1 data also in pupil_assessments_pseudo** (year_group=2, subjects reading/writing/maths):
-
-| academic_year_start | Reading | Writing | Maths | Pupils |
-|---------------------|---------|---------|-------|--------|
-| 2022 | 67% | 46% | 63% | 52 |
-| 2023 | 63% | 54% | 64% | 59 |
-
-### Cohort-to-year mapping
-
-When using `pupil_assessments_pseudo`, the `academic_year_start` maps to cohort year as:
-- Y1 phonics: `academic_year_start = receptionYear + 1`
-- Y2 phonics: `academic_year_start = receptionYear + 2`
-- KS1 (Y2): `academic_year_start = receptionYear + 2`
-- KS2 (Y6): `academic_year_end = receptionYear + 7` (in `dfe_data.ks2_results`)
-
----
-
-## 20. Monday polish — headteacher-safe framing + design cleanup (2026-04-18)
-
-### Customer sensitivity principle
-
-Headteachers are Schoolgle's paying customers. The Trust Assessor must be evidence-based and specific about numbers, but the **voice** must be that of an inquiry partner, not an auditor. Findings should be framed as "questions to explore" not "failures to call out."
-
-### Voice guidelines for future AI narratives
-
-**Replace:**
-- "over-levelled" / "over-reported" / "inflated" → "higher than demographic prediction suggests"
-- "the headteacher should explain" → "questions a governor might reasonably explore"
-- "failure" → "area for investigation"
-- "the school is gaming" → "the data warrants moderation review"
-- "this can only be explained by" → "one possible explanation is"
-- "This is not a hypothesis. The statistics rule out genuine decline." → "The following data points are presented for governor discussion"
-
-**The Cohort Forensics conclusion was rewritten to:**
-> "The 2022/23 KS1 results sit 12-17pp higher than this cohort's demographic profile predicts. The current Y6 figures align closely with that prediction. This pattern — common in schools where KS1 moderation was not externally verified — suggests the Y6 'decline' is more likely an assessment realignment than a genuine regression. Governors may want to ask about 2022/23 moderation practices."
-
-### PupilCardGrid architecture
-
-- New component: `apps/platform/src/components/trust-assessor/PupilCardGrid.tsx`
-- Year-group filter chips at top (calculates max year group per pupil)
-- Grid shows 3 columns responsive, max-height 620px with overflow-y-auto
-- Context panels auto-generated per demographic flags — always constructive
-- Radix Dialog detail drawer (slide-in from right) for full journey view
-- Spring hover animations: `whileHover={{ y: -2 }}` with `{ type: "spring", damping: 30, stiffness: 250 }`
-- Spotlight pupil excluded from grid by pupilId prop
-
-### Design cleanup
-
-- Replaced `bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700` (two instances) with clean bordered `bg-card border border-border rounded-2xl overflow-hidden` + 4px `h-1 bg-sky-500` accent strip
-- Evidence card containers changed from red to amber
-- Evidence "four pieces" renamed to "four data points for discussion"
-- Hover animations added: KPI stat tiles, research factor cards, forensic alert cards
-- Recharts tooltip: `borderRadius: '12px'`, `boxShadow: '0 4px 12px rgba(0,0,0,0.08)'`, `padding: '8px 12px'`
-- activeDot: `{ r: 6, strokeWidth: 2, stroke: '#fff' }` across all Line charts
-
-### Governor report changes
-
-- **Timeline removed from report** — it is a live tool, not a static report artifact
-- Page 4 title changed to "Five Questions for the Board to Explore"
-- Chart block: gracefully handles missing CTF data — shows SVG placeholder with "No cohort journey data available" and a note about connecting CTF
-- Hero stat boxes: null values filtered out (no empty N/A blocks for Crossley Hall)
-- All 29 existing tests pass after changes
-
-### Test evidence
-
-- PupilCardGrid: 21 new tests covering levelValue, weakestSubject, overallTrend, contextPanel framing (verifies no accusatory language)
-- Governor report: 29/29 pass
-- Build: clean `✓ Compiled successfully`
-
----
-
-## 21. Interactive Governor Report — Monday-ready 2026-04-17
+## Intra-Year Progression (April 2026)
 
 ### Overview
 
-The governor report HTML is now a fully interactive, self-contained document with three modes:
+The Trust Assessor now supports a richer three-tier data model with term-on-term progression:
 
-| Mode | Trigger | What it does |
-|------|---------|--------------|
-| **Read** | Default on open | Standard paginated report, scrollable, printable |
-| **Present** | ▶ Present button (top-right) | Full-screen slide show with animations and speaker prompts |
-| **Edit** | ✏ Edit button | Inline text editing with localStorage persistence |
+| Term | Source | Reliability Tier |
+|------|--------|-----------------|
+| EOY previous year | Trust/school spreadsheet | Self-reported |
+| Autumn Term T1 | Trust Autumn data capture or per-school Data Summary | Self-reported |
+| Mid-year T2 | Trust mid-year spreadsheet (main connector) | Self-reported |
+| EOY Target | School target | Self-reported |
+| KS1 2021/22 baseline | School Data Summary (Y6 sheet) | External (last statutory moderated year) |
+| DfE KS2 SATs | Supabase `ks2_results` | External |
 
-Plus an **Export** dropdown with four options: Save as HTML, Save as Markdown, Print/PDF, Copy as plain text.
+### Reliability Tier System (locked)
 
-### Presentation mode
+Every number displayed must carry one of three tiers:
+- **External** — DfE validated (KS2 SATs, Ofsted, Workforce Census, KS1 2021/22)
+- **Derived** — computed from validated inputs (e.g. Autumn→Mid delta)
+- **Self-reported** — trust spreadsheet, school Data Summary, teacher assessment
 
-- Enters browser fullscreen via `requestFullscreen()`
-- Each of the 4 pages becomes a full-viewport slide
-- Navigation: right arrow / spacebar / click → next; left arrow / backspace → previous; Esc → exit
-- Progress dots at the bottom, slide counter top-right
-- **Per-slide animations:**
-  - Page 1 (Verdict): hero percentile counts up from 0 (using `countUp()` with requestAnimationFrame), severity badge scales in, stat tiles fade up staggered, finding cards animate up
-  - Page 2 (Story): SVG chart lines draw in using `stroke-dashoffset` trick, dots appear after, context text fades in
-  - Page 3 (Recommendations): rec cards slide in from right, EEF badges bounce in, action numbers pulse
-  - Page 4 (Questions): question cards stagger-reveal from below
-- Key numbers use the `key-number--pulse` animation (scale + box-shadow pulse, once, on entry)
-- Speaker prompts (`<aside class="speaker-prompt">`) shown in present mode, hidden in print
+Components: `TierPill`, `TierLegendBar` in `apps/platform/src/app/(dashboard)/dashboard/school-improvement/trust-assessor/page.tsx`.
 
-### Speaker prompts
+### Two Trust-Level Spreadsheets
 
-Generated by `generateSpeakerPrompts()` in `governor-assessment.ts`. One per slide, derived from the narrative data:
-- P1: Opens with the headline stat and frames the severity context
-- P2: Points to the most significant cohort gap
-- P3: Positions EEF recommendations as focused rather than additional work
-- P4: Frames the five questions as board-appropriate, not confrontational
+The main connector now conceptually supports two trust spreadsheets (though UI currently handles one at a time):
+- **Mid-year data capture** — the existing connector, parsed by `parseSpreadsheet()`
+- **Autumn Term data capture** — same sheet structure as mid-year; can be loaded as a second file or parsed from the per-school Data Summary
 
-Prompts appear as a yellow callout box at the bottom of each slide in present mode. Hidden when printing.
+Both have identical structure: year-group-per-tab, school-per-row (CVPS/CHPS/FPS/GHPS/HPS/LPS/LGPS).
 
-### Edit mode
+### Per-School Data Summary File Structure
 
-- Toggles `contenteditable="true"` on all `.editable` elements (verdict, headline, key findings, context analysis, recommendation actions/impact/cost, governor questions)
-- Editable regions get a dashed indigo outline on hover, solid on focus
-- Floating toolbar appears (top-right below control panel): Save Changes / Reset to Original / Exit Edit Mode
-- **Persistence**: `localStorage.setItem('report-{shareToken}-edits', JSON.stringify({ ts, edits }))`
-- **Edits keyed by element ID** (`editable-0`, `editable-1`, etc.)
-- On next load: if localStorage has saved edits, a banner appears bottom-center offering "Keep my edits" or "Revert to original"
-- Fire-and-forget POST to `/api/trust-assessor/generate-report/save-edits` — server logs it, no hard dependency
-- **Non-editable**: school name, logo, URN metadata, SVG chart, Schoolgle footer, generation date
+Files like `Copy of 2025 to 2026 LGPS Data summary.xlsx` have a different structure to the trust-level spreadsheet:
+- One sheet per year group (EYFS through Y6)
+- Each sheet has row structure:
+  - Row matching "end of previous year" → EOY previous
+  - Row matching "autumn" → Autumn Term T1
+  - Row matching "mid year" → Mid-year T2
+  - Row matching "end of year" → EOY current
+  - Row matching "target" → EOY target
+- For Y6 specifically: additional rows with KS1 and EYFS baseline data
+- Columns: All pupils | FSM6 | Not FSM6, each group: R ARE, R GD, W ARE, W GD, M ARE, M GD, C ARE, C GD, [Phonics/MTC]
 
-### v2 persistence (post-Monday)
+Parsed by `parseSchoolDataSummary()` in the Trust Assessor page. Results stored as `SchoolDataSummary` type.
 
-Wire up `report_edits` Supabase table for cross-device sync:
-```sql
-create table report_edits (
-  id uuid primary key default gen_random_uuid(),
-  share_token text unique not null,
-  edits jsonb not null,
-  updated_at timestamptz default now()
-);
-```
-The save-edits route at `/api/trust-assessor/generate-report/save-edits/route.ts` is stubbed and ready for the upsert.
+### Outlier Thresholds
 
-### Export options
+| Combined Autumn→Mid delta | Flag |
+|--------------------------|------|
+| ≤5pp | Normal (3–5pp is typical) |
+| >5pp and ≤8pp | Amber pill "Outlier — check" |
+| >8pp | Red pill "Significant outlier" |
 
-| Option | Output |
-|--------|--------|
-| Save as HTML | Full document with edits as `.html` file (Blob download) |
-| Save as Markdown | Structured `.md` of all editable content — paste into Word or email |
-| Print / Save as PDF | `window.print()` — existing print CSS handles layout |
-| Copy as plain text | `navigator.clipboard.writeText()` of all 4 pages' `innerText` |
+These thresholds apply per subject (Reading, Writing, Maths, Combined) and to the subgroup comparison (FSM vs Non-FSM delta gap >5pp = unusual).
 
-### File constraints
+Writing is the subject most vulnerable to teacher-assessment drift between checkpoints.
 
-- Self-contained: all CSS and JS inline, no external fetches
-- Offline-capable: works from Desktop/email attachment without internet
-- File size target: <200KB — current output is ~57KB
-- Print-safe: `.no-print` class hides all controls; speaker prompts hidden; pages break correctly
+### Subgroup Pattern: FSM vs Non-FSM delta
 
-### Regenerating for the 7 Pennine schools
+If Non-FSM delta > FSM delta + 5pp, flag as unusual. Typically Pupil Premium spend drives faster FSM progress. Reversed pattern suggests PP investment may not be reaching the intended group — or non-FSM cohort had more headroom.
 
-Call `POST /api/trust-assessor/generate-report` for each school abbreviation with its trust assessor data. Optionally pass `shareToken` in `reportData` to key localStorage edits per-school. The API route already handles branding lookup from `school_branding` table.
+### KS1 2021/22 Baseline Anchor (Y6 only)
 
-For a demo bundle, generate all 7 HTML files and zip them — each is ~57KB, fully self-contained.
+For Y6 schools where the Data Summary includes KS1 2021/22 data:
+- KS1 2021/22 = last externally moderated statutory assessment year — tagged as **External**
+- Display as: `KS1 2021/22 Combined: 58.9% (External) → Y6 mid-year: 56% (self-reported) = -3pp vs external baseline`
+- If mid-year is >5pp above KS1 baseline, surface as a question: "What evidence supports clearing the KS1 baseline by Xpp?"
 
-### Test evidence
+### Auto-generated Headteacher Questions
 
-- All 29 existing governor assessment tests pass (including the new `<path d=` attribute ordering for animated SVG)
-- Build: `✓ Compiled successfully in 19.1s`
-- 36/36 feature checks pass on generated HTML (verified via Python script against `/tmp/grove-house-interactive.html`)
+When outliers are detected in the intra-year data, the Governor Report (page 4) auto-generates tailored questions instead of the standard five. Rules:
+- Red outlier Combined (>8pp): "What's driving the X pp jump? What moderation supported it?"
+- Writing jump >8pp: "Writing moderation between Autumn and Mid-year?"
+- Non-FSM delta > FSM delta + 5pp: "PP investment appearing to drive non-FSM more than FSM — why?"
+- Mid-year >5pp above KS1 baseline: "What evidence supports clearing KS1 baseline by X pp?"
+- Always add: "What external validation would give the trust confidence in these figures?"
 
----
+### Second Connector Slot (School Data Summary)
 
-## 22. Visual restructure + track-changes editing — 2026-04-18
+The connector strip now has a fourth slot: "+ School Summary" — accepts a per-school Data Summary XLSX file. The school is inferred from the filename (e.g. "LGPS Data summary" → LGPS). The summary data is passed to the SchoolTab only when the active school tab matches the summary's school abbreviation.
 
-### The problem that was solved
+The summary data enhances:
+- Forensic tab → "Intra-Year Progression" section (new, above Research KPIs)
+- Forensic tab → "Pre-meeting verification checklist" (new, below Intra-Year)
+- Governor Report → Page 4 with intra-year table + auto-generated questions + tier legend
 
-The SchoolTab populated-state was a 17-section vertical scroll (~1500 lines of JSX) with competing visuals, rainbow callout cards, stacked borders, and no clear information hierarchy. The CEO described it as "AI-blob, busy, unstructured."
+### Test File
 
-### Design principles committed (non-negotiable)
+`apps/platform/src/lib/trust-assessor/intra-year-progression.test.ts` — 18 tests covering:
+- Outlier threshold logic (5pp amber, 8pp red, boundaries)
+- KS1 baseline gap calculation
+- FSM subgroup pattern detection
+- Governor report rendering with intra-year data
+- Tier legend always visible
+- Graceful fallback with no data
 
-1. **One hero per section, not five.** Each section has ONE dominant visual. Supporting detail lives behind accordion or reveal-on-click.
-2. **Typography does the hierarchy.** Large heading + muted subtitle + body text. No stacked coloured callout cards.
-3. **Whitespace as a design element.** `space-y-10` between major blocks, `py-8 px-6` per tab.
-4. **Restraint with colour.** Sky-500 as primary accent, amber for attention, red only for critical. Left-border (`border-l-4`) replaces full-background coloured cards.
-5. **Progressive disclosure.** Summary visible by default, detail behind "Show evidence" or accordion toggle.
-6. **Consistent card style.** All cards: `bg-card border border-border rounded-2xl`, no shadows unless hover, no gradients, no nested borders.
-
-### 5-tab architecture
-
-| Tab ID | Label | Contents |
-|--------|-------|----------|
-| `overview` | Overview | Hero row (school name, verdict pill, 3 KPIs), Key takeaways, Cohort line chart, AI narrative (collapsed) |
-| `forensic` | Forensic Review | Forensic verdict, Validation & credibility (accordion), Research KPIs, Research factors, Governor questions, Data quality flags |
-| `cohort` | Cohort Pathway | School profile stats, Y6 Radar chart, Cohort Passport, EAL Trajectory (if relevant), GD table, FSM dumbbell |
-| `pupil` | Pupil Level | PupilCardGrid (if CTF connected), or Tier 3 upsell card |
-| `evidence` | Evidence | School timeline, KS2 track record, Research citations |
-
-Active tab persisted to `localStorage` key `ta-active-tab-{school}`.
-
-### New components
-
-| File | Purpose |
-|------|---------|
-| `src/components/trust-assessor/SchoolTabTabs.tsx` | 5-tab navigation shell with animated indicator and localStorage persistence |
-| `src/components/trust-assessor/EditableText.tsx` | Inline track-changes text editing; `EditModeProvider` context; localStorage storage |
-| `src/components/trust-assessor/HideableCard.tsx` | Per-card hide/show in edit mode; hidden cards greyed with "Hidden from final" badge |
-
-### Edit mode storage schema (v1: localStorage)
-
-Key: `report-edits-{orgId}-{urn}`
-
-```json
-{
-  "hiddenComponents": ["overview-hero", "forensic-kpis"],
-  "textEdits": {
-    "verdict-paragraph": "Edited text...",
-    "finding-1-detail": "Edited text..."
-  },
-  "toneOverrides": {},
-  "lastEditedAt": "2026-04-18T19:30:00Z",
-  "version": 3
-}
-```
-
-**TODO v2:** Persist to Supabase `report_edits` table (orgId + urn + editorId + version). `saveEdits()` in `EditableText.tsx` is the single function to update.
-
-### Component IDs for hide/edit tracking
-
-| componentId | Location |
-|-------------|----------|
-| `overview-hero` | Overview tab — hero row with KPIs |
-| `overview-progression-chart` | Overview tab — cohort line chart |
-| `overview-ai-narrative` | Overview tab — AI narrative card |
-| `forensic-verdict` | Forensic tab — demographic verdict |
-| `forensic-validation` | Forensic tab — validation & credibility accordion |
-| `forensic-kpis` | Forensic tab — research-backed KPIs |
-| `forensic-research-factors` | Forensic tab — research factors |
-| `forensic-questions` | Forensic tab — governor questions |
-| `forensic-data-quality` | Forensic tab — data quality flags |
-| `cohort-profile` | Cohort tab — school demographics header |
-| `cohort-radar` | Cohort tab — Y6 radar chart |
-| `cohort-passport` | Cohort tab — cohort passport |
-| `cohort-eal` | Cohort tab — EAL trajectory (if applicable) |
-| `cohort-gd` | Cohort tab — Greater Depth table |
-| `cohort-fsm-gap` | Cohort tab — FSM dumbbell |
-| `pupil-grid` | Pupil Level tab — pupil card grid |
-| `evidence-timeline` | Evidence tab — school events timeline |
-| `evidence-ks2-track` | Evidence tab — KS2 track record |
-| `evidence-citations` | Evidence tab — research citations |
-
-### What's v1 (localStorage) vs v2 (Supabase)
-
-| Feature | v1 (today) | v2 (post-Monday) |
-|---------|-----------|-----------------|
-| Edit storage | localStorage per browser | Supabase `report_edits` table, per org |
-| Sync across devices | No | Yes |
-| Audit trail | No | Version history with timestamps |
-| Governor-ready export | Read from localStorage | Read from Supabase |
-
-### Visual polish summary
-
-- All cards: `bg-card border border-border rounded-2xl p-8` — no shadows, no gradients
-- Section gaps: `space-y-10` between major blocks
-- Alert cards: left border only (`border-l-4 border-l-{color}-500`) rather than full background
-- Verdict pill on hero: `border-l-4` with one line, no uppercase rainbow pill
-- Charts: CSS variables for colours (`hsl(var(--border))`, `hsl(var(--card))`) — dark mode compatible
-- Removed: `bg-gradient-to-br`, `shadow-md`, `border-2`, rainbow `bg-{colour}-50 border-{colour}-200` stacked callout cards
-
-### Build status
-
-- Build: passes (verified 2026-04-18)
-- Tests: 33/33 trust-assessor component tests pass; 3799 total passing tests (97 pre-existing failures in `node_modules/tsconfig-paths`)
-- Populated view: not visually verifiable without a parsed spreadsheet, but code is clean and data flow is intact
