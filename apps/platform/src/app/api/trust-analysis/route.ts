@@ -88,16 +88,19 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
   });
 
   // ── Insight 1: National Percentile Rankings ──────────────────────────────
-  // Use academicYearEnd=2024 (the 2023/24 academic year — most recent validated data)
+  // Use academicYearEnd=2025 (the 2024/25 academic year — most recent validated data)
+  // NOTE: breakdown = 'Total' is the "all pupils" row (not 'All pupils')
+  // NOTE: limit(20000) override — default PostgREST cap is 1000 rows, we need ~15,751 schools
   const { data: nationalKs2Raw } = await supabase
     .from('ks2_results')
     .select('urn, expected_standard_pct')
     .eq('subject', 'Reading, writing and maths')
     .eq('breakdown_topic', 'All pupils')
-    .eq('breakdown', 'All pupils')
-    .eq('academic_year_end', 2024)
+    .eq('breakdown', 'Total')
+    .eq('academic_year_end', 2025)
     .eq('is_suppressed', false)
-    .not('expected_standard_pct', 'is', null);
+    .not('expected_standard_pct', 'is', null)
+    .limit(20000);
 
   const sortedPcts = ((nationalKs2Raw ?? []) as { urn: number; expected_standard_pct: number | string }[])
     .map(r => Number(r.expected_standard_pct))
@@ -132,7 +135,7 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
       r.urn === urn &&
       r.subject === 'Reading, writing and maths' &&
       r.breakdownTopic === 'All pupils' &&
-      r.breakdown === 'All pupils' &&
+      r.breakdown === 'Total' &&
       r.expectedStandardPct !== null,
     );
     if (schoolKs2.length === 0) continue;

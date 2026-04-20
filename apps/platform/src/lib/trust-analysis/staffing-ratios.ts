@@ -72,7 +72,7 @@ export function assessStaffing(
       severity: 'lean-high-performing',
       label: 'Lean staffing, strong outcomes',
       governorQuestion:
-        'Pupil-teacher ratio is above national (leaner), with attainment above average. How is this being sustained without workload risk? What is transferable to other schools in the trust?',
+        'Pupil-teacher ratio is above national (leaner), with attainment above average. How is this being sustained without workload risk? What is transferable to other schools in the trust? Is this a long-serving experienced staff (expensive lean) or an early-career staff (affordable lean)? Cost-per-teacher data would resolve this.',
     };
   }
   if (isLean && isAttainmentWeak) {
@@ -80,7 +80,7 @@ export function assessStaffing(
       severity: 'lean-underperforming',
       label: 'Lean staffing, below-average outcomes',
       governorQuestion:
-        'Pupil-teacher ratio is above national (leaner). Is under-resourcing contributing to below-average outcomes? Are teacher workload and pupil support adequate?',
+        'Pupil-teacher ratio is above national (leaner). Is under-resourcing contributing to below-average outcomes? Are teacher workload and pupil support adequate? Is this under-resourcing or a sign of cost-cutting? Workforce cost trend would clarify.',
     };
   }
   if (isWellStaffed && isAttainmentStrong) {
@@ -88,7 +88,7 @@ export function assessStaffing(
       severity: 'well-staffed-high-performing',
       label: 'Well-staffed, strong outcomes',
       governorQuestion:
-        'Both staffing levels and attainment sit above average. Investment appears to be converting into outcomes. Is this financially sustainable at current intake?',
+        'Both staffing levels and attainment sit above average. Investment appears to be converting into outcomes. Is this financially sustainable at current intake? What is the cost per pupil, and is that spend sustainable at current intake?',
     };
   }
   if (isWellStaffed && isAttainmentWeak) {
@@ -96,7 +96,7 @@ export function assessStaffing(
       severity: 'well-staffed-underperforming',
       label: 'Well-staffed, below-average outcomes',
       governorQuestion:
-        'Pupil-teacher ratio is below national (more generously staffed) but attainment is below average. Governors may want to explore whether the investment is converting into outcomes and what the intervention strategy is.',
+        'Pupil-teacher ratio is below national (more generously staffed) but attainment is below average. Governors may want to explore whether the investment is converting into outcomes and what the intervention strategy is. What is the investment producing? Financial benchmarking would show cost vs outcomes.',
     };
   }
   return {

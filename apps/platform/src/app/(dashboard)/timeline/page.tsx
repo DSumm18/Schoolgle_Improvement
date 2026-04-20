@@ -22,10 +22,13 @@ const URN_NAMES: Record<string, string> = {
 const SPRING = { type: 'spring' as const, damping: 30, stiffness: 250 };
 
 export default function TimelinePage() {
-  const { organization } = useAuth();
+  const { organization, session } = useAuth();
 
-  // Read ?school=URN from URL
-  const [schoolUrn, setSchoolUrn] = useState<string | null>(null);
+  // Read ?school=URN from URL synchronously via lazy initializer so the FIRST fetch already has it
+  const [schoolUrn, setSchoolUrn] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    return new URLSearchParams(window.location.search).get('school');
+  });
   const [events, setEvents] = useState<SchoolEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(false);
@@ -34,19 +37,20 @@ export default function TimelinePage() {
 
   const LIMIT = 50;
 
+  // Keep schoolUrn in sync if URL changes without a full nav
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const urn = params.get('school');
-      setSchoolUrn(urn);
-    }
+    if (typeof window === 'undefined') return;
+    const urn = new URLSearchParams(window.location.search).get('school');
+    setSchoolUrn(urn);
   }, []);
 
   const fetchEvents = useCallback(async (filters: TimelineFilters, offsetVal: number, append = false) => {
-    if (!organization?.id) return;
+    // Wait for BOTH org and session — otherwise the 400 "no organisation" error fires
+    if (!organization?.id || !session?.access_token) return;
     setLoading(true);
     try {
       const params = new URLSearchParams();
+      params.set('organizationId', organization.id);
       params.set('limit', String(LIMIT));
       params.set('offset', String(offsetVal));
       if (filters.category) params.set('category', filters.category);
@@ -56,7 +60,9 @@ export default function TimelinePage() {
       if (filters.to) params.set('to', filters.to);
       if (schoolUrn) params.set('school_urn', schoolUrn);
 
-      const res = await fetch(`/api/events?${params.toString()}`);
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (session?.access_token) headers['Authorization'] = `Bearer ${session.access_token}`;
+      const res = await fetch(`/api/events?${params.toString()}`, { headers });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       const newEvents: SchoolEvent[] = data.events ?? [];
@@ -69,15 +75,15 @@ export default function TimelinePage() {
     } finally {
       setLoading(false);
     }
-  }, [organization?.id, schoolUrn]);
+  }, [organization?.id, schoolUrn, session?.access_token]);
 
-  // Initial load
+  // Initial load — waits for both org AND session token to be ready
   useEffect(() => {
-    if (organization?.id !== undefined) {
+    if (organization?.id && session?.access_token) {
       fetchEvents(activeFilters, 0, false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [organization?.id, schoolUrn]);
+  }, [organization?.id, schoolUrn, session?.access_token]);
 
   const handleFilter = useCallback((filters: TimelineFilters) => {
     setActiveFilters(filters);

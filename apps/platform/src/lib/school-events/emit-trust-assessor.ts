@@ -50,7 +50,7 @@ export async function emitTrustAssessorEvents(params: TrustAssessorEmitParams): 
   // ── 1. Check for existing events (de-dup) ────────────────────────────────
   try {
     const checkRes = await fetch(
-      `/api/events?source_app=trust-assessor&school_urn=${params.schoolUrn}&from=${academicYear}-08-01T00:00:00Z&limit=1`,
+      `/api/events?organizationId=${params.organizationId}&source_app=trust-assessor&school_urn=${params.schoolUrn}&from=${academicYear}-08-01T00:00:00Z&limit=1`,
       {
         headers: authHeaders(params.authToken),
       }

@@ -73,7 +73,7 @@ export const GET = protectedRoute(async (auth, _req: NextRequest) => {
       });
       const gldCount = pupilLevels.filter(p => p.gld).length;
       return {
-        year: year + 1,
+        year: year,
         pupils: pupils.length,
         gldCount,
         gldPct: pupils.length > 0 ? Math.round(100 * gldCount / pupils.length) : 0,
@@ -119,7 +119,7 @@ export const GET = protectedRoute(async (auth, _req: NextRequest) => {
         };
       }
 
-      return { year: year + 1, areas };
+      return { year: year, areas };
     });
 
     // ─── 3. KS1 by year and subject ─────────────────────────────────
@@ -145,7 +145,7 @@ export const GET = protectedRoute(async (auth, _req: NextRequest) => {
           .filter(r => r.year_group === 2 && ['reading', 'writing', 'maths'].includes(r.subject as string) && r.academic_year_start === year)
           .map(r => r.pupil_hash as string)
       )].length;
-      return { year: year + 1, pupils, subjects };
+      return { year: year, pupils, subjects };
     });
 
     // ─── 4. KS1 Year-over-Year Movement ─────────────────────────────
@@ -161,7 +161,7 @@ export const GET = protectedRoute(async (auth, _req: NextRequest) => {
       const prevYear = ks1Years[i - 1];
       const currYear = ks1Years[i];
       const movement: typeof ks1Movement[number] = {
-        year: currYear + 1,
+        year: currYear,
         writing: { wtsToExs: 0, exsToGds: 0, stayedWts: 0, stayedExs: 0, regression: 0 },
         reading: { wtsToExs: 0, exsToGds: 0, stayedWts: 0, stayedExs: 0, regression: 0 },
         maths:   { wtsToExs: 0, exsToGds: 0, stayedWts: 0, stayedExs: 0, regression: 0 },
@@ -215,7 +215,7 @@ export const GET = protectedRoute(async (auth, _req: NextRequest) => {
         else scoreBands.band32plus++;
       }
 
-      return { year: year + 1, pupils, total, passed, passPct: total > 0 ? Math.round(100 * passed / total) : 0, scoreBands };
+      return { year: year, pupils, total, passed, passPct: total > 0 ? Math.round(100 * passed / total) : 0, scoreBands };
     });
 
     // ─── 6. Cohort journey tracking ─────────────────────────────────
@@ -279,7 +279,7 @@ export const GET = protectedRoute(async (auth, _req: NextRequest) => {
         milestones.push({
           label: 'EYFS GLD',
           yearGroup: 0,
-          academicYear: receptionYear + 1,
+          academicYear: receptionYear,
           percentAt: Math.round(100 * gldCount / eyfsUniquePupils.length),
           pupilCount: eyfsUniquePupils.length,
           nationalBenchmark: NATIONAL_BENCHMARKS['EYFS GLD'],
@@ -299,7 +299,7 @@ export const GET = protectedRoute(async (auth, _req: NextRequest) => {
         milestones.push({
           label: 'Y1 Phonics',
           yearGroup: 1,
-          academicYear: phonicsYear + 1,
+          academicYear: phonicsYear,
           percentAt: Math.round(100 * phonicsPass / phonicsUniquePupils.length),
           pupilCount: phonicsUniquePupils.length,
           nationalBenchmark: NATIONAL_BENCHMARKS['Y1 Phonics'],
@@ -316,7 +316,7 @@ export const GET = protectedRoute(async (auth, _req: NextRequest) => {
           milestones.push({
             label,
             yearGroup: 2,
-            academicYear: ks1Year + 1,
+            academicYear: ks1Year,
             percentAt: Math.round(100 * atExpected / ks1Recs.length),
             pupilCount: ks1Pupils.length,
             nationalBenchmark: NATIONAL_BENCHMARKS[label],
@@ -328,8 +328,8 @@ export const GET = protectedRoute(async (auth, _req: NextRequest) => {
 
       const currentYearGroup = (2025 - receptionYear);
       cohortMilestones.push({
-        cohortLabel: `Started Reception ${receptionYear + 1}/${String(receptionYear + 2).slice(2)}`,
-        startYear: receptionYear + 1,
+        cohortLabel: `Started Reception ${receptionYear}/${String(receptionYear + 1).slice(2)}`,
+        startYear: receptionYear,
         currentYearGroup,
         milestones,
       });
@@ -350,7 +350,7 @@ export const GET = protectedRoute(async (auth, _req: NextRequest) => {
       const journey = pupilRecords
         .filter(r => ['reading', 'writing', 'maths', 'phonics', 'literacy'].includes(r.subject as string))
         .map(r => ({
-          year: (r.academic_year_start as number) + 1,
+          year: (r.academic_year_start as number),
           yearGroup: r.year_group as number,
           subject: r.subject as string,
           level: r.attainment_level as string ?? 'unknown',
@@ -394,7 +394,7 @@ export const GET = protectedRoute(async (auth, _req: NextRequest) => {
         },
         journey: pupilRecords
           .map(r => ({
-            year: (r.academic_year_start as number) + 1,
+            year: (r.academic_year_start as number),
             yearGroup: r.year_group as number,
             subject: r.subject as string,
             level: r.attainment_level as string ?? 'unknown',
@@ -461,7 +461,7 @@ export const GET = protectedRoute(async (auth, _req: NextRequest) => {
     };
 
     const spreadsheetComparison = {
-      latestYear: latestYear + 1,
+      latestYear: latestYear,
       rows: [
         {
           yearGroup: 'Y1',
@@ -491,7 +491,7 @@ export const GET = protectedRoute(async (auth, _req: NextRequest) => {
       summary: {
         totalPupils,
         totalRecords,
-        yearsSpan: yearsSpan.map(y => y + 1),
+        yearsSpan: yearsSpan.map(y => y),
         trackablePupils: trackablePupilsCount,
       },
       eyfsGld,

@@ -43,8 +43,8 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
 
   const schoolUrn = searchParams.get('school_urn');
   if (schoolUrn) {
-    // Filter by metadata->>'school_urn' using the partial index
-    query = (query as any).eq('metadata->>school_urn', schoolUrn);
+    // JSONB filter via @> operator — reliable for nested field matching
+    query = query.contains('metadata', { school_urn: schoolUrn });
   }
 
   const limit = Math.min(parseInt(searchParams.get('limit') ?? '100', 10), 500);
