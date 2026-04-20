@@ -4232,12 +4232,49 @@ export default function TrustAssessorPage() {
           return;
         }
         setSummaryData(result);
+
+        // Persist to server so the report sticks across sessions
+        if (organizationId) {
+          fetch('/api/trust-analysis/school-summary', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...authHeaders },
+            body: JSON.stringify({
+              organizationId,
+              schoolAbbrev: resolvedAbbrev,
+              fileName: file.name,
+              parsedData: result,
+            }),
+          }).catch((err) => console.error('[school-summary] save failed:', err));
+        }
       } catch (err) {
         setSummaryParseError(`Parse error: ${err instanceof Error ? err.message : String(err)}`);
       }
     };
     reader.readAsArrayBuffer(file);
-  }, [summarySchoolAbbrev]);
+  }, [summarySchoolAbbrev, organizationId, authHeaders]);
+
+  // Load persisted school summary on mount / org change
+  const summaryLoadedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!organizationId || !accessToken) return;
+    if (summaryLoadedRef.current === organizationId) return; // already loaded for this org
+    summaryLoadedRef.current = organizationId;
+
+    (async () => {
+      try {
+        const res = await fetch(`/api/trust-analysis/school-summary?organizationId=${organizationId}`, { headers: authHeaders });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data && data.parsed_data) {
+          setSummaryData(data.parsed_data);
+          setSummaryFileName(data.file_name);
+          if (data.school_abbrev) setSummarySchoolAbbrev(data.school_abbrev);
+        }
+      } catch (e) {
+        console.warn('[school-summary] load failed:', e);
+      }
+    })();
+  }, [organizationId, accessToken, authHeaders]);
 
   const handleSummaryFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -4346,7 +4383,17 @@ export default function TrustAssessorPage() {
                 <span className="text-gray-700 font-medium truncate max-w-[180px]">{summaryFileName}</span>
                 <span className="text-orange-500 text-[10px] font-semibold">{summaryData.schoolAbbrev}</span>
                 <button
-                  onClick={() => { setSummaryData(null); setSummaryFileName(null); setSummaryParseError(null); }}
+                  onClick={() => {
+                    setSummaryData(null);
+                    setSummaryFileName(null);
+                    setSummaryParseError(null);
+                    if (organizationId) {
+                      fetch(`/api/trust-analysis/school-summary?organizationId=${organizationId}`, {
+                        method: 'DELETE',
+                        headers: authHeaders,
+                      }).catch((err) => console.error('[school-summary] delete failed:', err));
+                    }
+                  }}
                   className="text-gray-300 hover:text-red-500"
                   title="Remove school data summary"
                 >✕</button>
