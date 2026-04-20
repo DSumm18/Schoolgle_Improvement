@@ -1569,43 +1569,112 @@ function SchoolTab({ school, parsed, dfeData, staffingSnapshots, summaryData, au
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [school]);
 
-  // Generate AI narrative once when component mounts with data
+  // Generate AI narrative once when component mounts with data.
+  // Cache in sessionStorage keyed by content signature so hard-refreshes / school
+  // switches don't burn LLM tokens when the underlying data is unchanged.
   useEffect(() => {
     if (narrativeRequestedRef.current || !school) return;
     narrativeRequestedRef.current = true;
 
+    // Build Autumn comparison payload if both captures exist.
+    const autumnYearGroups: Record<string, unknown> = {};
+    if (capturesByPeriod?.autumn_term?.parsed_data?.data?.[school]) {
+      const autumnSchool = capturesByPeriod.autumn_term.parsed_data.data[school];
+      for (const yg of YEAR_GROUPS) {
+        const d = autumnSchool[yg];
+        if (!d) continue;
+        autumnYearGroups[yg] = {
+          cohort: d.cohort.number_in_cohort,
+          fsm: d.cohort.number_fsm,
+          reading: d.all_pupils.r_are,
+          writing: d.all_pupils.w_are,
+          maths: d.all_pupils.m_are,
+          combined: d.all_pupils.c_are,
+          gd_writing: d.all_pupils.w_gd,
+        };
+      }
+    }
+
+    // Compute per-year-group deltas between Autumn and current (Mid-Year).
+    const midVsAutumnDeltas: Array<{ yg: string; autumn: number; midYear: number; delta: number; subject: string }> = [];
+    if (Object.keys(autumnYearGroups).length > 0) {
+      for (const yg of YEAR_GROUPS) {
+        const mid = schoolData[yg];
+        const aut = autumnYearGroups[yg] as { combined?: number | null } | undefined;
+        if (!mid || !aut) continue;
+        const midC = mid.all_pupils.c_are ?? null;
+        const autC = aut.combined ?? null;
+        if (midC !== null && autC !== null && Math.abs(midC - autC) >= 5) {
+          midVsAutumnDeltas.push({ yg, autumn: autC, midYear: midC, delta: Math.round((midC - autC) * 10) / 10, subject: 'Combined' });
+        }
+      }
+    }
+
+    const schoolMetrics: Record<string, unknown> = {
+      school,
+      totalPupils,
+      fsmPct,
+      sendPct,
+      ehcpCount: totalEhcp,
+      trustFsmAvg: trustFsmPct ? Math.round(trustFsmPct) : null,
+      yearGroups: {} as Record<string, unknown>,
+      // NEW: both captures + movement signal for the AI narrative.
+      autumnSelfReport: Object.keys(autumnYearGroups).length > 0 ? autumnYearGroups : null,
+      midYearSelfReport: true, // the yearGroups field above is always mid-year (latest capture)
+      captureDeltas: midVsAutumnDeltas,
+      captureDeltaSummary: midVsAutumnDeltas.length > 0
+        ? `Between Autumn 2025/26 and Mid-Year 2025/26 self-reports, ${midVsAutumnDeltas.length} year group(s) moved ≥5pp. ${midVsAutumnDeltas.map(d => `${d.yg} Combined ${d.autumn}% → ${d.midYear}% (${d.delta >= 0 ? '+' : ''}${d.delta}pp)`).join('; ')}. These are both school self-reports, not DfE-validated — the narrative should call out any jump >10pp and ask the head to explain what changed in teaching, assessment, or cohort.`
+        : null,
+    };
+
+    for (const yg of YEAR_GROUPS) {
+      const d = schoolData[yg];
+      if (!d) continue;
+      (schoolMetrics.yearGroups as Record<string, unknown>)[yg] = {
+        cohort: d.cohort.number_in_cohort,
+        fsm: d.cohort.number_fsm,
+        send: d.cohort.number_send,
+        reading: d.all_pupils.r_are,
+        writing: d.all_pupils.w_are,
+        maths: d.all_pupils.m_are,
+        combined: d.all_pupils.c_are,
+        gd_reading: d.all_pupils.r_gd,
+        gd_writing: d.all_pupils.w_gd,
+        gd_maths: d.all_pupils.m_gd,
+        phonics: d.all_pupils.phonics,
+        mtc: d.all_pupils.mtc,
+        gld: d.all_pupils.gld,
+      };
+    }
+
+    // Build a stable signature of the payload — if this hasn't changed since last
+    // generation, serve the cached narrative and skip the LLM call entirely.
+    const cacheSignature = JSON.stringify([
+      school,
+      schoolMetrics.yearGroups,
+      schoolMetrics.autumnSelfReport,
+      totalPupils,
+      fsmPct,
+      sendPct,
+    ]);
+    const cacheKey = `trust-assessor:narrative:${school}`;
+
     const generateNarrative = async () => {
       setNarrativeLoading(true);
       try {
-        // Build the data payload for the AI
-        const schoolMetrics: Record<string, unknown> = {
-          school,
-          totalPupils,
-          fsmPct,
-          sendPct,
-          ehcpCount: totalEhcp,
-          trustFsmAvg: trustFsmPct ? Math.round(trustFsmPct) : null,
-          yearGroups: {} as Record<string, unknown>,
-        };
-
-        for (const yg of YEAR_GROUPS) {
-          const d = schoolData[yg];
-          if (!d) continue;
-          (schoolMetrics.yearGroups as Record<string, unknown>)[yg] = {
-            cohort: d.cohort.number_in_cohort,
-            fsm: d.cohort.number_fsm,
-            send: d.cohort.number_send,
-            reading: d.all_pupils.r_are,
-            writing: d.all_pupils.w_are,
-            maths: d.all_pupils.m_are,
-            combined: d.all_pupils.c_are,
-            gd_reading: d.all_pupils.r_gd,
-            gd_writing: d.all_pupils.w_gd,
-            gd_maths: d.all_pupils.m_gd,
-            phonics: d.all_pupils.phonics,
-            mtc: d.all_pupils.mtc,
-            gld: d.all_pupils.gld,
-          };
+        // Cache hit?
+        if (typeof window !== 'undefined') {
+          const cached = window.sessionStorage.getItem(cacheKey);
+          if (cached) {
+            try {
+              const parsed = JSON.parse(cached) as { signature: string; narrative: string };
+              if (parsed.signature === cacheSignature && parsed.narrative) {
+                setAiNarrative(parsed.narrative);
+                setNarrativeLoading(false);
+                return;
+              }
+            } catch { /* ignore corrupt cache */ }
+          }
         }
 
         const res = await fetch('/api/trust-assessor/narrative', {
@@ -1621,7 +1690,14 @@ function SchoolTab({ school, parsed, dfeData, staffingSnapshots, summaryData, au
         if (res.ok) {
           const json = await res.json();
           const text = json.narrative ?? json.data?.narrative;
-          if (text) setAiNarrative(text);
+          if (text) {
+            setAiNarrative(text);
+            if (typeof window !== 'undefined') {
+              try {
+                window.sessionStorage.setItem(cacheKey, JSON.stringify({ signature: cacheSignature, narrative: text }));
+              } catch { /* quota exceeded — ignore */ }
+            }
+          }
         }
       } catch {
         // Non-fatal — fall back to deterministic narrative
@@ -1635,6 +1711,24 @@ function SchoolTab({ school, parsed, dfeData, staffingSnapshots, summaryData, au
 
   // ── Deterministic narrative fallback ──
   const narrativePoints: string[] = [];
+
+  // Autumn vs Mid-Year self-report movement (the forensic signal).
+  // This is a pure guard that also supplies the prose if the AI narrative fails.
+  if (capturesByPeriod?.autumn_term?.parsed_data?.data?.[school] && y6) {
+    const autumnY6 = capturesByPeriod.autumn_term.parsed_data.data[school]["Year 6"];
+    const autumnC = autumnY6?.all_pupils?.c_are ?? null;
+    const midC = y6.all_pupils.c_are ?? null;
+    if (autumnC !== null && midC !== null) {
+      const delta = Math.round((midC - autumnC) * 10) / 10;
+      if (Math.abs(delta) >= 15) {
+        narrativePoints.push(`Y6 Combined moved ${delta > 0 ? '+' : ''}${delta}pp between Autumn (${autumnC}%) and Mid-Year (${midC}%) self-reports. This is a very large single-term movement — both figures are teacher-assessed and not DfE-moderated. Ask the head to explain what has changed in teaching, intervention, or assessment standard between the two captures before accepting the Mid-Year figure at face value.`);
+      } else if (Math.abs(delta) >= 10) {
+        narrativePoints.push(`Y6 Combined moved ${delta > 0 ? '+' : ''}${delta}pp between Autumn (${autumnC}%) and Mid-Year (${midC}%) self-reports — a notable shift worth probing. Both captures are school self-reported, so the trajectory is the useful signal. What interventions or re-assessments drove this movement?`);
+      } else if (Math.abs(delta) >= 5) {
+        narrativePoints.push(`Y6 Combined moved ${delta > 0 ? '+' : ''}${delta}pp between Autumn (${autumnC}%) and Mid-Year (${midC}%) self-reports. Plausible as a term's progress, but validate with a moderated writing sample or a reading-comprehension check.`);
+      }
+    }
+  }
 
   // FSM context
   if (fsmPct !== null && trustFsmPct !== null) {
@@ -3382,12 +3476,29 @@ function KS2TrackRecordChart({ school, abbrev, ks2Results, selfReports }: {
           Autumn self-report ({autumnCombined}%) exceeds best-ever KS2 ({bestEverKs2}%) by {autumnCombined !== null && bestEverKs2 !== null ? Math.round(autumnCombined - bestEverKs2) : 0}pp
         </div>
       )}
-      {selfReportDelta !== null && Math.abs(selfReportDelta) >= 5 && (
-        <div className={`mb-2 flex items-center gap-1 text-xs rounded px-2 py-1 border ${selfReportDelta >= 0 ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-red-700 bg-red-50 border-red-200'}`}>
-          <AlertTriangle size={10} />
-          Self-report moved {selfReportDelta >= 0 ? '+' : ''}{selfReportDelta}pp between Autumn ({autumnCombined}%) and Mid-Year ({midYearCombined}%). {selfReportDelta >= 0 ? 'Validate the trajectory.' : 'Revised downward — worth a discussion with the Head.'}
-        </div>
-      )}
+      {selfReportDelta !== null && Math.abs(selfReportDelta) >= 5 && (() => {
+        // Colour by magnitude, not direction. A +22pp jump in one term should feel
+        // suspect, not celebratory — even though it's technically "positive".
+        const absDelta = Math.abs(selfReportDelta);
+        const tone = selfReportDelta < 0
+          ? 'text-red-700 bg-red-50 border-red-200'      // any downward move — conversation needed
+          : absDelta >= 15 ? 'text-red-700 bg-red-50 border-red-200'   // 15pp+ up — almost certainly not real in one term
+          : absDelta >= 10 ? 'text-amber-800 bg-amber-50 border-amber-200' // 10-15pp up — worth probing
+          : 'text-emerald-700 bg-emerald-50 border-emerald-200';            // 5-10pp — plausible progression
+        const prompt = selfReportDelta < 0
+          ? 'Revised downward — worth a discussion with the Head about what changed.'
+          : absDelta >= 15
+            ? 'This is a very large single-term movement. Ask the head to explain what changed in teaching, intervention, or assessment standard before accepting the Mid-Year figure.'
+            : absDelta >= 10
+              ? 'Notable jump — probe what interventions or re-assessments drove it. Request a moderated writing sample.'
+              : 'Plausible as a term\'s progress. Validate with a moderated sample.';
+        return (
+          <div className={`mb-2 flex items-start gap-1 text-xs rounded px-2 py-1 border ${tone}`}>
+            <AlertTriangle size={10} className="mt-0.5 flex-shrink-0" />
+            <span><strong>Self-report moved {selfReportDelta >= 0 ? '+' : ''}{selfReportDelta}pp</strong> between Autumn ({autumnCombined}%) and Mid-Year ({midYearCombined}%). {prompt}</span>
+          </div>
+        );
+      })()}
 
       <ResponsiveContainer width="100%" height={160}>
         <BarChart data={barData} layout="vertical" margin={{ top: 4, right: 40, left: 10, bottom: 4 }}>
@@ -3412,7 +3523,11 @@ function KS2TrackRecordChart({ school, abbrev, ks2Results, selfReports }: {
 
 // ─── Phase 2: FSM Trend Chart ────────────────────────────────────────────────
 
-function FsmTrendChart({ abbrev, census }: { abbrev: string; census: CensusRecord[] }) {
+function FsmTrendChart({ abbrev, census, selfReportFsmPcts }: {
+  abbrev: string;
+  census: CensusRecord[];
+  selfReportFsmPcts?: { autumn_term: number | null; mid_year: number | null };
+}) {
   const info = TRUST_SCHOOLS[abbrev];
   if (!info) return null;
 
@@ -3422,23 +3537,53 @@ function FsmTrendChart({ abbrev, census }: { abbrev: string; census: CensusRecor
 
   if (schoolCensus.length === 0) return null;
 
-  const chartData = schoolCensus.map((c) => ({
+  // Build chart data with DfE-validated census as the base line.
+  type Row = { year: string; fsm: number | null; autumnSelf?: number | null; midYearSelf?: number | null };
+  const chartData: Row[] = schoolCensus.map((c) => ({
     year: String(c.academicYearEnd),
     fsm: c.fsmPct !== null ? Math.round(c.fsmPct * 10) / 10 : null,
   }));
 
+  // Append Autumn + Mid-Year self-report points. Both are in academic year 2026
+  // (this school year) but shown as separate x-axis categories so the eye sees
+  // "DfE trajectory" vs "what the school is claiming now".
+  const autumnFsm = selfReportFsmPcts?.autumn_term ?? null;
+  const midYearFsm = selfReportFsmPcts?.mid_year ?? null;
+  if (autumnFsm !== null) chartData.push({ year: 'Aut 26*', fsm: null, autumnSelf: autumnFsm });
+  if (midYearFsm !== null) chartData.push({ year: 'Mid 26*', fsm: null, midYearSelf: midYearFsm });
+
+  // Watch for divergence — if the latest DfE census is materially different from
+  // the Mid-Year self-report, that's worth surfacing.
+  const latestDfE = schoolCensus[schoolCensus.length - 1]?.fsmPct ?? null;
+  const divergence = (latestDfE !== null && midYearFsm !== null) ? Math.round((midYearFsm - latestDfE) * 10) / 10 : null;
+  const divergenceFlag = divergence !== null && Math.abs(divergence) >= 5;
+
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-4">
-      <div className="font-semibold text-gray-800 text-sm mb-3">{abbrev} — FSM % trend</div>
-      <ResponsiveContainer width="100%" height={100}>
+      <div className="flex items-center justify-between mb-3">
+        <div className="font-semibold text-gray-800 text-sm">{abbrev} — FSM % trend</div>
+        {divergenceFlag && (
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 font-semibold">
+            Self-report {divergence! > 0 ? '+' : ''}{divergence}pp vs DfE
+          </span>
+        )}
+      </div>
+      <ResponsiveContainer width="100%" height={110}>
         <LineChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
           <XAxis dataKey="year" tick={{ fontSize: 9 }} />
           <YAxis domain={[0, 60]} tick={{ fontSize: 9 }} />
-          <Tooltip formatter={(val) => [`${val}%`, "FSM"]} />
-          <Line type="monotone" dataKey="fsm" stroke="#9F1239" strokeWidth={2} dot={{ r: 2 }} />
+          <Tooltip formatter={(val, name) => [`${val}%`, name === 'fsm' ? 'DfE FSM' : name === 'autumnSelf' ? 'Autumn self-report' : 'Mid-Year self-report']} />
+          <Line type="monotone" dataKey="fsm" stroke="#3B82F6" strokeWidth={2} dot={{ r: 2.5, fill: '#3B82F6' }} connectNulls={false} />
+          <Line type="monotone" dataKey="autumnSelf" stroke="#F59E0B" strokeWidth={0} dot={{ r: 4, fill: '#F59E0B', stroke: '#F59E0B' }} />
+          <Line type="monotone" dataKey="midYearSelf" stroke="#A855F7" strokeWidth={0} dot={{ r: 4, fill: '#A855F7', stroke: '#A855F7' }} />
         </LineChart>
       </ResponsiveContainer>
+      <div className="flex items-center gap-2 mt-1 text-[9px] text-gray-400 flex-wrap">
+        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500 inline-block" /> DfE census</span>
+        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" /> Autumn self-report</span>
+        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-purple-500 inline-block" /> Mid-Year self-report</span>
+      </div>
     </div>
   );
 }
@@ -5073,16 +5218,39 @@ export default function TrustAssessorPage() {
 
                   {/* FSM Trends */}
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-semibold text-gray-700">FSM % Trend (DfE Annual School Census)</h3>
+                    <h3 className="text-sm font-semibold text-gray-700">FSM % Trend (DfE Census + this year&apos;s self-reports)</h3>
                     <span className="text-[10px] text-gray-400 flex items-center gap-1">
                       <Info size={10} />
-                      Source: DfE Annual School Census. Validated — not self-reported.
+                      Source: DfE Annual School Census (blue) + Autumn (amber) &amp; Mid-Year (purple) self-report from trust spreadsheets.
                     </span>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {parsed.schools.map((abbrev) => (
-                      <FsmTrendChart key={abbrev} abbrev={abbrev} census={dfeData.census} />
-                    ))}
+                    {parsed.schools.map((abbrev) => {
+                      // Compute each capture's FSM% = totalFsm / totalPupils across all year groups.
+                      const fsmPctFor = (captureData?: ParsedSpreadsheet | null) => {
+                        if (!captureData?.data?.[abbrev]) return null;
+                        let fsm = 0, pupils = 0;
+                        for (const yg of YEAR_GROUPS) {
+                          const c = captureData.data[abbrev][yg]?.cohort;
+                          if (!c) continue;
+                          if (c.number_in_cohort !== null) pupils += c.number_in_cohort;
+                          if (c.number_fsm !== null) fsm += c.number_fsm;
+                        }
+                        return pupils > 0 ? Math.round((fsm / pupils) * 1000) / 10 : null;
+                      };
+                      const selfReportFsmPcts = {
+                        autumn_term: fsmPctFor(capturesByPeriod.autumn_term?.parsed_data ?? null),
+                        mid_year: fsmPctFor(capturesByPeriod.mid_year?.parsed_data ?? null),
+                      };
+                      return (
+                        <FsmTrendChart
+                          key={abbrev}
+                          abbrev={abbrev}
+                          census={dfeData.census}
+                          selfReportFsmPcts={selfReportFsmPcts}
+                        />
+                      );
+                    })}
                   </div>
                 </>
               )}
