@@ -287,7 +287,15 @@ function extractNumber(value: unknown): number | null {
 
 function parseCell(metricKey: string, value: unknown): number | null {
   const isCount = ["number_in_cohort", "number_send", "ehcp", "number_fsm"].includes(metricKey);
-  if (isCount) return extractNumber(value);
+  if (isCount) {
+    const n = extractNumber(value);
+    if (n === null) return null;
+    // Counts must be whole numbers ≥ 0. If someone has entered a fractional value
+    // (e.g. 0.14 in the FSM column meaning 14%), reject it — otherwise it pollutes
+    // trust-wide totals ("803.14 FSM pupils"). Fractional > 1 likely a typo: round.
+    if (n > 0 && n < 1) return null;
+    return Math.round(n);
+  }
 
   if (typeof value === "number") {
     if (!Number.isFinite(value)) return null;
@@ -785,14 +793,14 @@ function SchoolDetailCard({ school, parsed }: { school: string; parsed: ParsedSp
                   <div className="text-xs text-gray-400">{cohortCount} year groups</div>
                 </div>
                 <div className="bg-white border border-gray-200 rounded-lg p-3 text-center">
-                  <div className="text-xl font-bold text-rose-600">{fsmPct !== null ? `${fsmPct}%` : "—"}</div>
+                  <div className="text-xl font-bold text-rose-600">{fsmPct !== null ? `${Math.round(fsmPct)}%` : "—"}</div>
                   <div className="text-xs text-gray-500 mt-0.5">FSM %</div>
-                  <div className="text-xs text-gray-400">{totalFsm > 0 ? `${totalFsm} pupils` : ""}</div>
+                  <div className="text-xs text-gray-400">{totalFsm > 0 ? `${Math.round(totalFsm)} pupils` : ""}</div>
                 </div>
                 <div className="bg-white border border-gray-200 rounded-lg p-3 text-center">
-                  <div className="text-xl font-bold text-purple-600">{sendPct !== null ? `${sendPct}%` : "—"}</div>
+                  <div className="text-xl font-bold text-purple-600">{sendPct !== null ? `${Math.round(sendPct)}%` : "—"}</div>
                   <div className="text-xs text-gray-500 mt-0.5">SEND %</div>
-                  <div className="text-xs text-gray-400">{totalSend > 0 ? `${totalSend} pupils` : ""}</div>
+                  <div className="text-xs text-gray-400">{totalSend > 0 ? `${Math.round(totalSend)} pupils` : ""}</div>
                 </div>
                 <div className="bg-white border border-gray-200 rounded-lg p-3 text-center">
                   <div className="text-xl font-bold text-indigo-600">{totalEhcp > 0 ? totalEhcp : "—"}</div>
@@ -2497,13 +2505,13 @@ function SchoolTab({ school, parsed, dfeData, staffingSnapshots, summaryData, au
                         <div className="text-xs text-muted-foreground mt-0.5">Total Pupils</div>
                       </div>
                       <div className="text-center p-3 rounded-xl bg-rose-50">
-                        <div className="text-2xl font-bold text-rose-700">{fsmPct !== null ? `${fsmPct}%` : '—'}</div>
-                        <div className="text-xs text-muted-foreground mt-0.5">FSM ({totalFsm})</div>
+                        <div className="text-2xl font-bold text-rose-700">{fsmPct !== null ? `${Math.round(fsmPct)}%` : '—'}</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">FSM ({Math.round(totalFsm)})</div>
                         {trustFsmPct !== null && fsmPct !== null && <div className="text-xs text-muted-foreground/60 mt-0.5">{fsmPct > trustFsmPct ? `+${Math.round(fsmPct - trustFsmPct)}pp` : `${Math.round(trustFsmPct - fsmPct)}pp below`} trust</div>}
                       </div>
                       <div className="text-center p-3 rounded-xl bg-purple-50">
-                        <div className="text-2xl font-bold text-purple-700">{sendPct !== null ? `${sendPct}%` : '—'}</div>
-                        <div className="text-xs text-muted-foreground mt-0.5">SEND ({totalSend})</div>
+                        <div className="text-2xl font-bold text-purple-700">{sendPct !== null ? `${Math.round(sendPct)}%` : '—'}</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">SEND ({Math.round(totalSend)})</div>
                       </div>
                       <div className="text-center p-3 rounded-xl bg-indigo-50">
                         <div className="text-2xl font-bold text-indigo-700">{totalEhcp > 0 ? String(totalEhcp) : '—'}</div>
@@ -4634,7 +4642,7 @@ export default function TrustAssessorPage() {
                     <StatCard label="Year groups" value={parsed.yearGroups.length} sub={parsed.yearGroups.join(", ")} />
                     <StatCard label="Data points" value={parsed.totalDataPoints.toLocaleString()} />
                     <StatCard label="Total pupils" value={totalPupils > 0 ? totalPupils.toLocaleString() : "—"} sub="all year groups" />
-                    <StatCard label="FSM pupils" value={totalFsmRaw > 0 ? totalFsmRaw : "—"} sub={fsmPct !== null ? `${fsmPct}% trust-wide` : undefined} />
+                    <StatCard label="FSM pupils" value={totalFsmRaw > 0 ? Math.round(totalFsmRaw).toLocaleString() : "—"} sub={fsmPct !== null ? `${Math.round(fsmPct)}% trust-wide` : undefined} />
                     <StatCard label="Quality flags" value={parsed.qualityFlags.length} sub={parsed.qualityFlags.length > 0 ? "See below" : "None"} />
                   </div>
                 );
@@ -4741,7 +4749,7 @@ export default function TrustAssessorPage() {
                       exit={{ opacity: 0, y: -8 }}
                       transition={{ duration: 0.2 }}
                     >
-                      <SchoolTab school={activeSchoolTab} parsed={parsed} dfeData={dfeData} staffingSnapshots={staffingSnapshots} summaryData={summaryData?.schoolAbbrev === activeSchoolTab ? summaryData : null} authToken={accessToken ?? undefined} organizationId={organizationId ?? undefined} />
+                      <SchoolTab key={activeSchoolTab} school={activeSchoolTab} parsed={parsed} dfeData={dfeData} staffingSnapshots={staffingSnapshots} summaryData={summaryData?.schoolAbbrev === activeSchoolTab ? summaryData : null} authToken={accessToken ?? undefined} organizationId={organizationId ?? undefined} />
 
                       {/* BUILD 4: No-CTF upsell for non-GHPS schools */}
                       {!groveHouseData && activeSchoolTab !== 'GHPS' && (
