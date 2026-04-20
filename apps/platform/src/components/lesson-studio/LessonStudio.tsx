@@ -98,6 +98,7 @@ export function LessonStudio() {
     weekRange: string;
   } | null>(null);
   const [selectedTheme, setSelectedTheme] = useState("none");
+  const [teacherInput, setTeacherInput] = useState("");
 
   // Load classes directly from Supabase
   useEffect(() => {
@@ -182,10 +183,14 @@ export function LessonStudio() {
             const themeNote = selectedTheme !== "none"
               ? `Theme: ${selectedTheme}. Weave this theme into examples, word problems, and activities to make the lesson engaging. Use ${selectedTheme}-related contexts for mathematical concepts.`
               : "";
+            const teacherIdeas = teacherInput.trim()
+              ? `Teacher's ideas and preferences: ${teacherInput.trim()}. Build the lesson around these ideas — use the teacher's suggested approach, resources, and adaptations.`
+              : "";
             const fullNote = [
               selectedTopic
                 ? `Teach: ${selectedTopic.unitName}. Topics: ${selectedTopic.keyTopics.join(", ")}. NC codes: ${selectedTopic.ncCodes.join(", ")}.`
                 : "",
+              teacherIdeas,
               themeNote,
             ].filter(Boolean).join(" ");
             return fullNote || undefined;
@@ -679,15 +684,42 @@ export function LessonStudio() {
                 onSelect={setSelectedTheme}
               />
 
-              <div className="border border-dashed border-slate-200 rounded-xl p-8 text-center">
-                <Sparkles className="w-10 h-10 text-teal-400 mx-auto mb-3" />
-                <h3 className="text-sm font-semibold text-slate-700 mb-1">No lesson plan yet</h3>
-                <p className="text-xs text-slate-500 mb-4">
-                  Generate an AI lesson plan tailored to {selectedClass?.class_name || "this class"}'s
-                  needs, with differentiated activities and SEND adaptations.
+              {/* Curriculum context */}
+              {selectedTopic && (
+                <div className="bg-teal-50 border border-teal-200 rounded-xl p-3">
+                  <div className="text-[10px] text-teal-500 uppercase tracking-wide font-semibold mb-1">Curriculum</div>
+                  <div className="text-sm font-semibold text-teal-800">{selectedTopic.unitName}</div>
+                  <div className="text-xs text-teal-600 mt-0.5">{selectedTopic.keyTopics.join(" · ")}</div>
+                </div>
+              )}
+
+              {/* Teacher input — their ideas for the lesson */}
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1.5">
+                  Your ideas for this lesson <span className="text-slate-400 font-normal">(optional)</span>
+                </label>
+                <textarea
+                  value={teacherInput}
+                  onChange={(e) => setTeacherInput(e.target.value)}
+                  placeholder="How do you want to teach this? E.g.&#10;• Use pizza slices for fractions — worked well last year&#10;• More practical / hands-on activities&#10;• Jayden's group needs concrete manipulatives&#10;• Start with a recap of last week's equivalent fractions"
+                  className="w-full border border-slate-200 rounded-xl p-3 text-sm text-slate-700 placeholder:text-slate-300 resize-none focus:outline-none focus:border-teal-300 focus:ring-1 focus:ring-teal-200"
+                  rows={4}
+                />
+                <div className="text-[10px] text-slate-400 mt-1">
+                  Tell us your approach, preferred resources, or anything specific. The AI builds around your ideas.
+                </div>
+              </div>
+
+              <div className="border border-dashed border-slate-200 rounded-xl p-6 text-center">
+                <Sparkles className="w-8 h-8 text-teal-400 mx-auto mb-2" />
+                <p className="text-xs text-slate-500 mb-3">
+                  {teacherInput.trim()
+                    ? "We'll build around your ideas with differentiated activities and SEND adaptations."
+                    : "Generate a lesson plan tailored to your class. Add your ideas above for a more personalised plan."
+                  }
                   {selectedTheme !== "none" && (
                     <span className="block mt-1 text-teal-600 font-medium">
-                      Theme: {selectedTheme} will be woven into the lesson.
+                      Theme: {selectedTheme} will be woven in.
                     </span>
                   )}
                 </p>
