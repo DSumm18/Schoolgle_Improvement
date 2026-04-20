@@ -76,6 +76,11 @@ import {
 import { emitTrustAssessorEvents } from "@/lib/school-events/emit-trust-assessor";
 import { Timeline } from "@/components/school-events/Timeline";
 import type { SchoolEvent } from "@/lib/school-events/types";
+import {
+  computeStaffingRatios,
+  assessStaffing,
+  NATIONAL_P_T_RATIO,
+} from "@/lib/trust-analysis/staffing-ratios";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -997,7 +1002,19 @@ function weakestSubject(journey: { subject: string; level: string }[]): { subjec
   return scored[0];
 }
 
-function SchoolTab({ school, parsed, dfeData, authToken, organizationId }: { school: string; parsed: ParsedSpreadsheet; dfeData?: DfEData | null; authToken?: string; organizationId?: string }) {
+type StaffingByUrn = Record<number, {
+  urn: number;
+  numberOfPupils: number | null;
+  fteTeachers: number | null;
+  fteTA: number | null;
+  fteSupport: number | null;
+  fteTotal: number | null;
+  year: number;
+  pupilTeacherRatio: number | null;
+  pupilAdultRatio: number | null;
+}>;
+
+function SchoolTab({ school, parsed, dfeData, staffingSnapshots, authToken, organizationId }: { school: string; parsed: ParsedSpreadsheet; dfeData?: DfEData | null; staffingSnapshots?: StaffingByUrn | null; authToken?: string; organizationId?: string }) {
   const schoolData = parsed.data[school] ?? {};
   const info = TRUST_SCHOOLS[school];
 
@@ -1039,6 +1056,32 @@ function SchoolTab({ school, parsed, dfeData, authToken, organizationId }: { sch
   const threeYearAvg = schoolUrn !== null ? (dfeData?.threeYearAverages?.[schoolUrn] ?? null) : null;
   const y6Combined = schoolData["Year 6"]?.all_pupils.c_are ?? null;
   const statAlerts = detectStatisticalImpossibilities(school, schoolData);
+
+  // ── Staffing ratio computations ──
+  const staffingRow = schoolUrn !== null ? (staffingSnapshots?.[schoolUrn] ?? null) : null;
+  const staffingRatios = staffingRow
+    ? computeStaffingRatios({
+        numberOfPupils: staffingRow.numberOfPupils,
+        fteTeachers: staffingRow.fteTeachers,
+        fteTotal: staffingRow.fteTotal,
+        fteTeachingAssistants: staffingRow.fteTA,
+      })
+    : null;
+  // Trust average P/T ratio across all Pennine schools that have staffing data
+  const trustPtrValues = staffingSnapshots
+    ? Object.values(staffingSnapshots)
+        .map((s) => s.pupilTeacherRatio)
+        .filter((v): v is number => v !== null)
+    : [];
+  const trustAvgPtr =
+    trustPtrValues.length > 0
+      ? Math.round((trustPtrValues.reduce((a, b) => a + b, 0) / trustPtrValues.length) * 10) / 10
+      : null;
+  const staffingVerdict = assessStaffing(
+    staffingRatios?.pupilTeacherRatio ?? null,
+    'primary',
+    threeYearAvg?.averagePct ?? null,
+  );
 
   // Ordinal suffix helper
   const ordinal = (n: number): string => {
@@ -2171,6 +2214,73 @@ function SchoolTab({ school, parsed, dfeData, authToken, organizationId }: { sch
                   {renderResearchKpis()}
                 </HideableCard>
 
+                {/* Staffing Context — pupil-teacher ratio vs national benchmark */}
+                <HideableCard componentId="forensic-staffing">
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, amount: 0.3 }}
+                    transition={{ type: 'spring', damping: 30, stiffness: 250 }}
+                  >
+                    <div className="bg-card border border-border rounded-2xl p-6">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-500 uppercase tracking-wider">Staffing Context</span>
+                      </div>
+                      <h4 className="text-base font-semibold text-foreground mb-3">Pupil-teacher ratio vs national benchmark</h4>
+
+                      {staffingRatios?.pupilTeacherRatio != null ? (
+                        <>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+                            <div className="bg-muted/40 rounded-xl p-4">
+                              <div className="text-xs text-muted-foreground mb-1">This school</div>
+                              <div className={`text-2xl font-bold ${
+                                staffingRatios.pupilTeacherRatio > NATIONAL_P_T_RATIO.primary + 2 ? 'text-sky-600' :
+                                staffingRatios.pupilTeacherRatio < NATIONAL_P_T_RATIO.primary - 2 ? 'text-amber-600' : 'text-foreground'
+                              }`}>{staffingRatios.pupilTeacherRatio}</div>
+                              <div className="text-xs text-muted-foreground mt-0.5">pupils per teacher</div>
+                            </div>
+                            <div className="bg-muted/40 rounded-xl p-4">
+                              <div className="text-xs text-muted-foreground mb-1">Trust average</div>
+                              <div className="text-2xl font-bold text-foreground">{trustAvgPtr ?? '—'}</div>
+                              <div className="text-xs text-muted-foreground mt-0.5">across {trustPtrValues.length} Pennine schools</div>
+                            </div>
+                            <div className="bg-muted/40 rounded-xl p-4">
+                              <div className="text-xs text-muted-foreground mb-1">National (primary)</div>
+                              <div className="text-2xl font-bold text-foreground">{NATIONAL_P_T_RATIO.primary}</div>
+                              <div className="text-xs text-muted-foreground mt-0.5">DfE 2024</div>
+                            </div>
+                          </div>
+
+                          {staffingVerdict.severity !== 'no-data' && staffingVerdict.severity !== 'typical' && (
+                            <div className={`rounded-lg border-l-4 p-3 text-sm mb-4 ${
+                              staffingVerdict.severity === 'lean-high-performing' ? 'border-l-emerald-500 bg-emerald-500/5' :
+                              staffingVerdict.severity === 'lean-underperforming' ? 'border-l-amber-500 bg-amber-500/5' :
+                              staffingVerdict.severity === 'well-staffed-high-performing' ? 'border-l-sky-500 bg-sky-500/5' :
+                              'border-l-orange-500 bg-orange-500/5'
+                            }`}>
+                              <div className="font-semibold text-foreground mb-1">{staffingVerdict.label}</div>
+                              <div className="text-muted-foreground">{staffingVerdict.governorQuestion}</div>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <p className="text-sm text-muted-foreground mb-4">Workforce data not available for this school.</p>
+                      )}
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                        <div className="text-muted-foreground">Teachers: <span className="font-medium text-foreground">{staffingRow?.fteTeachers != null ? `${staffingRow.fteTeachers} FTE` : '—'}</span></div>
+                        <div className="text-muted-foreground">TAs: <span className="font-medium text-foreground">{staffingRow?.fteTA != null ? `${staffingRow.fteTA} FTE` : '—'}</span></div>
+                        <div className="text-muted-foreground">Support: <span className="font-medium text-foreground">{staffingRow?.fteSupport != null ? `${staffingRow.fteSupport} FTE` : '—'}</span></div>
+                        <div className="text-muted-foreground">Total: <span className="font-medium text-foreground">{staffingRow?.fteTotal != null ? `${staffingRow.fteTotal} FTE` : '—'}</span></div>
+                      </div>
+
+                      <div className="mt-3 text-[10px] text-muted-foreground italic">
+                        Source: DfE School Workforce Census {staffingRow?.year ?? ''}. National ratios from DfE School Workforce Statistics 2024. A MAT&apos;s central team (HR, finance, SEND coordination) may sit at trust level and not appear in individual school staffing — actual delivery capacity may differ from headline figures.
+                      </div>
+                    </div>
+                  </motion.div>
+                </HideableCard>
+
                 {/* Research Factors Checked */}
                 <HideableCard componentId="forensic-research-factors">
                   {renderResearchFactors()}
@@ -3186,6 +3296,17 @@ export default function TrustAssessorPage() {
   const [dfeData, setDfeData] = useState<DfEData | null>(null);
   const [dfeLoading, setDfeLoading] = useState(false);
   const [dfeError, setDfeError] = useState<string | null>(null);
+  const [staffingSnapshots, setStaffingSnapshots] = useState<Record<number, {
+    urn: number;
+    numberOfPupils: number | null;
+    fteTeachers: number | null;
+    fteTA: number | null;
+    fteSupport: number | null;
+    fteTotal: number | null;
+    year: number;
+    pupilTeacherRatio: number | null;
+    pupilAdultRatio: number | null;
+  }> | null>(null);
   const [showAllFlags, setShowAllFlags] = useState(false);
   const [showFullHeatmap, setShowFullHeatmap] = useState(false);
   const [activeSchoolTab, setActiveSchoolTab] = useState<string>("overview");
@@ -3358,6 +3479,20 @@ export default function TrustAssessorPage() {
         }
       } catch {
         // non-fatal
+      }
+    })();
+
+    // Also fetch staffing ratios (non-fatal)
+    (async () => {
+      try {
+        const res = await fetch(`/api/trust-analysis/staffing${organizationId ? `?organizationId=${organizationId}` : ''}`, { headers: authHeaders });
+        const json = await res.json();
+        const payload = json.data ?? json;
+        if (res.ok && payload.staffing) {
+          setStaffingSnapshots(payload.staffing);
+        }
+      } catch {
+        // non-fatal — staffing card just won't render
       }
     })();
   }, [accessToken, organizationId, authHeaders]);
@@ -3804,7 +3939,7 @@ export default function TrustAssessorPage() {
                       exit={{ opacity: 0, y: -8 }}
                       transition={{ duration: 0.2 }}
                     >
-                      <SchoolTab school={activeSchoolTab} parsed={parsed} dfeData={dfeData} authToken={accessToken ?? undefined} organizationId={organizationId ?? undefined} />
+                      <SchoolTab school={activeSchoolTab} parsed={parsed} dfeData={dfeData} staffingSnapshots={staffingSnapshots} authToken={accessToken ?? undefined} organizationId={organizationId ?? undefined} />
 
                       {/* BUILD 4: No-CTF upsell for non-GHPS schools */}
                       {!groveHouseData && activeSchoolTab !== 'GHPS' && (
