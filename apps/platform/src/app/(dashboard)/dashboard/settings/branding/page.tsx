@@ -305,13 +305,16 @@ export default function BrandingSettingsPage() {
         const formData = new FormData();
         formData.append("file", file);
 
-        const res = await fetch("/api/settings/branding/logo", {
-          method: "POST",
-          headers: {
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        const res = await fetch(
+          `/api/settings/branding/logo?organizationId=${organizationId}`,
+          {
+            method: "POST",
+            headers: {
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: formData,
           },
-          body: formData,
-        });
+        );
 
         if (!res.ok) {
           const info = await res.json().catch(() => ({}));
