@@ -37,6 +37,7 @@ interface AuthContextType {
   displayName: string | null;
   signInWithGoogle: () => Promise<void>;
   signInWithMicrosoft: () => Promise<void>;
+  signInWithEmail: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   switchOrganization: (orgId: string) => Promise<void>;
@@ -372,6 +373,20 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const signInWithEmail = async (email: string, password: string) => {
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password,
+      });
+      if (error) throw error;
+      // onAuthStateChange fires and populates user/session; redirect handled by login page effect
+    } catch (error: any) {
+      safeAuthLog("Error signing in with email", error);
+      throw new Error(error?.message || "Invalid email or password");
+    }
+  };
+
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
@@ -457,6 +472,7 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
         displayName,
         signInWithGoogle,
         signInWithMicrosoft,
+        signInWithEmail,
         signOut,
         refreshProfile,
         switchOrganization,

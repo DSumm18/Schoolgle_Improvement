@@ -1,17 +1,39 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/SupabaseAuthContext";
 import LoginButton from "@/components/LoginButton";
 import MicrosoftLoginButton from "@/components/MicrosoftLoginButton";
 import SchoolgleAnimatedLogo from "@/components/SchoolgleAnimatedLogo";
-import { Sparkles, ShieldCheck, Brain, Rocket } from "lucide-react";
+import { Sparkles, ShieldCheck, Brain, Rocket, Loader2 } from "lucide-react";
 
 export default function LoginPage() {
-  const { user, loading, session } = useAuth();
+  const { user, loading, session, signInWithEmail } = useAuth();
   const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const handleEmailSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password) {
+      setErrorMsg("Enter email and password");
+      return;
+    }
+    setSubmitting(true);
+    setErrorMsg(null);
+    try {
+      await signInWithEmail(email, password);
+      router.push("/dashboard");
+    } catch (err: any) {
+      setErrorMsg(err?.message || "Sign-in failed");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     if (!loading && (user || session)) {
@@ -102,16 +124,68 @@ export default function LoginPage() {
               <MicrosoftLoginButton />
             </div>
 
-            <div className="relative py-4">
+            <div className="relative py-2">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-slate-200 dark:border-slate-800"></div>
               </div>
               <div className="relative flex justify-center text-[10px] font-bold uppercase">
                 <span className="bg-transparent px-4 text-slate-400 tracking-widest leading-none">
-                  Access Restricted
+                  Or sign in with email
                 </span>
               </div>
             </div>
+
+            <form onSubmit={handleEmailSignIn} className="space-y-3 text-left">
+              <div>
+                <label htmlFor="email" className="sr-only">
+                  Email
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@school.org"
+                  className="w-full px-4 py-3 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={submitting}
+                />
+              </div>
+              <div>
+                <label htmlFor="password" className="sr-only">
+                  Password
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Password"
+                  className="w-full px-4 py-3 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={submitting}
+                />
+              </div>
+              {errorMsg && (
+                <p className="text-xs text-red-500 font-medium" role="alert">
+                  {errorMsg}
+                </p>
+              )}
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-bold py-3 px-8 rounded-xl shadow-lg shadow-blue-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    Signing in…
+                  </>
+                ) : (
+                  <>Sign in</>
+                )}
+              </button>
+            </form>
 
             <p className="text-[10px] text-slate-400 font-medium leading-relaxed uppercase tracking-wider">
               By continuing, you agree to our Terms of Service <br /> and
