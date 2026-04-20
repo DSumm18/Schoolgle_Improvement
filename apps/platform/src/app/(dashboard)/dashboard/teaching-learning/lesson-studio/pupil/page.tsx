@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/SupabaseAuthContext";
 import { Loader2, ChevronLeft, Star, CheckCircle2, XCircle, AlertCircle, Printer } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
+import { WorksheetQR } from "@/components/lesson-studio/WorksheetQR";
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
@@ -507,8 +508,15 @@ export default function PupilWorkPage() {
                 Logo
               </div>
             </div>
-            <div className="text-right">
+            <div className="flex flex-col items-end gap-2">
               <p className="text-xs text-slate-500">{today}</p>
+              {planId && selectedPupilId && pupilWork && (
+                <WorksheetQR
+                  planId={planId}
+                  pupilId={selectedPupilId}
+                  pupilName={pupilWork.pupilName}
+                />
+              )}
             </div>
           </div>
           <h1 className="text-2xl font-bold text-slate-900 mt-2">
@@ -657,7 +665,7 @@ export default function PupilWorkPage() {
           <p className="text-center text-slate-400 py-12">No pupils found for this lesson.</p>
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {classList.pupils.map((p) => (
+            {[...classList.pupils].sort((a, b) => a.name.localeCompare(b.name)).map((p) => (
               <button
                 key={p.id}
                 onClick={() => selectPupil(p.id)}
