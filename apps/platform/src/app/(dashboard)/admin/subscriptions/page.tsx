@@ -87,13 +87,13 @@ function statusBadge(status: string, daysRemaining: number | null) {
 }
 
 export default function AdminSubscriptionsPage() {
-  const { data, mutate, isLoading } = useSWR<{ data: { rows: OrgRow[] } }>(
+  const { data, mutate, isLoading } = useSWR<{ rows: OrgRow[] }>(
     "/api/admin/subscription-state",
     fetcher,
     { revalidateOnFocus: false },
   );
 
-  const rows = data?.data?.rows || [];
+  const rows = data?.rows || [];
   const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
   const [editModules, setEditModules] = useState<Set<string>>(new Set());
   const [editTrialEnd, setEditTrialEnd] = useState<string>("");

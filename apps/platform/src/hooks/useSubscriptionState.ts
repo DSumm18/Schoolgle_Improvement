@@ -9,7 +9,7 @@ export function useSubscriptionState(organizationId: string | null | undefined) 
     ? `/api/subscription/state?organizationId=${organizationId}`
     : null;
 
-  const { data, error, isLoading, mutate } = useSWR<{ data: SubscriptionState }>(
+  const { data, error, isLoading, mutate } = useSWR<SubscriptionState>(
     url,
     fetcher,
     {
@@ -21,7 +21,7 @@ export function useSubscriptionState(organizationId: string | null | undefined) 
   );
 
   return {
-    state: data?.data ?? null,
+    state: data ?? null,
     error,
     isLoading,
     refresh: mutate,
