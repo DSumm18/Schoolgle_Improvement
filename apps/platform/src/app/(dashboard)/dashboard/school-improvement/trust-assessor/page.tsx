@@ -433,12 +433,46 @@ function SectionHeader({ number, title, subtitle, complete }: { number: number; 
   );
 }
 
-function StatCard({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
+type StatSource = 'mid_year' | 'autumn' | 'dfe_ks2' | 'dfe_census' | 'dfe_workforce' | 'mixed' | 'trust_spreadsheet';
+
+function SourcePill({ source }: { source: StatSource }) {
+  const config: Record<StatSource, { label: string; cls: string }> = {
+    mid_year:          { label: 'Mid-Year self-report',  cls: 'bg-purple-50 text-purple-700 border-purple-200' },
+    autumn:            { label: 'Autumn self-report',     cls: 'bg-amber-50 text-amber-700 border-amber-200' },
+    dfe_ks2:           { label: 'DfE KS2',                cls: 'bg-blue-50 text-blue-700 border-blue-200' },
+    dfe_census:        { label: 'DfE Census',             cls: 'bg-blue-50 text-blue-700 border-blue-200' },
+    dfe_workforce:     { label: 'DfE Workforce',          cls: 'bg-blue-50 text-blue-700 border-blue-200' },
+    mixed:             { label: 'Mixed sources',          cls: 'bg-gray-50 text-gray-600 border-gray-200' },
+    trust_spreadsheet: { label: 'Trust spreadsheet',      cls: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+  };
+  const c = config[source];
+  return (
+    <span className={`inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded-full border font-medium uppercase tracking-wide ${c.cls}`}>
+      <span className="w-1 h-1 rounded-full bg-current opacity-60" />
+      {c.label}
+    </span>
+  );
+}
+
+function StatCard({ label, value, sub, source, priorValue, priorLabel }: {
+  label: string;
+  value: string | number;
+  sub?: string;
+  source?: StatSource;
+  priorValue?: string | number | null;
+  priorLabel?: string;
+}) {
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-4">
       <div className="text-2xl font-bold text-gray-900">{value}</div>
       <div className="text-sm font-medium text-gray-600 mt-1">{label}</div>
       {sub && <div className="text-xs text-gray-400 mt-0.5">{sub}</div>}
+      {priorValue !== undefined && priorValue !== null && priorValue !== '' && (
+        <div className="text-[10px] text-gray-400 mt-0.5 italic">
+          {priorLabel ?? 'Prior capture'}: {priorValue}
+        </div>
+      )}
+      {source && <div className="mt-2"><SourcePill source={source} /></div>}
     </div>
   );
 }
@@ -1569,12 +1603,19 @@ function SchoolTab({ school, parsed, dfeData, staffingSnapshots, summaryData, au
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [school]);
 
-  // Generate AI narrative once when component mounts with data.
-  // Cache in sessionStorage keyed by content signature so hard-refreshes / school
-  // switches don't burn LLM tokens when the underlying data is unchanged.
+  // Generate AI narrative when the data payload is fully loaded.
+  // We key off a signature derived from the current + autumn payloads, so if
+  // captures load async *after* this component mounts, we regenerate instead
+  // of locking in a stale narrative built from the Mid-Year data alone.
+  // Cache in sessionStorage keyed by that same signature so repeat visits
+  // (hard refresh, school switch, tab re-open) skip the LLM call entirely.
   useEffect(() => {
-    if (narrativeRequestedRef.current || !school) return;
-    narrativeRequestedRef.current = true;
+    if (!school) return;
+    const hasAutumn = !!capturesByPeriod?.autumn_term?.parsed_data?.data?.[school];
+    const hasMidYear = !!capturesByPeriod?.mid_year?.parsed_data?.data?.[school];
+    // Wait for at least ONE capture to be confirmed loaded before firing the
+    // narrative — otherwise we cache a version that's missing the delta story.
+    if (!hasAutumn && !hasMidYear) return;
 
     // Build Autumn comparison payload if both captures exist.
     const autumnYearGroups: Record<string, unknown> = {};
@@ -1707,7 +1748,11 @@ function SchoolTab({ school, parsed, dfeData, staffingSnapshots, summaryData, au
     };
 
     generateNarrative();
-  }, [school]);
+    // When captures load or change, the cacheSignature changes too — if we
+    // already have a matching cached narrative, we'll serve it instantly;
+    // if not, we regenerate with the proper Autumn + Mid-Year comparison.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [school, capturesByPeriod?.autumn_term?.file_name, capturesByPeriod?.mid_year?.file_name]);
 
   // ── Deterministic narrative fallback ──
   const narrativePoints: string[] = [];
@@ -4837,14 +4882,46 @@ export default function TrustAssessorPage() {
                 }
                 const fsmPct = totalPupils > 0 ? Math.round((totalFsmRaw / totalPupils) * 1000) / 10 : null;
                 const sendPct = totalPupils > 0 ? Math.round((totalSend / totalPupils) * 1000) / 10 : null;
+
+                // Compute same aggregates for the OTHER capture so we can show prior-capture subtitles.
+                const otherKey: 'autumn_term' | 'mid_year' = currentCapturePeriod === 'autumn_term' ? 'mid_year' : 'autumn_term';
+                const otherParsed = capturesByPeriod[otherKey]?.parsed_data ?? null;
+                let otherTotalPupils = 0, otherTotalFsm = 0;
+                if (otherParsed) {
+                  for (const sch of otherParsed.schools) {
+                    for (const yg of YEAR_GROUPS) {
+                      const d = otherParsed.data[sch]?.[yg];
+                      if (!d) continue;
+                      if (d.cohort.number_in_cohort !== null) otherTotalPupils += d.cohort.number_in_cohort;
+                      if (d.cohort.number_fsm !== null && d.cohort.number_fsm <= (d.cohort.number_in_cohort ?? Infinity)) otherTotalFsm += d.cohort.number_fsm;
+                    }
+                  }
+                }
+                const currentSource: StatSource = currentCapturePeriod === 'mid_year' ? 'mid_year' : currentCapturePeriod === 'autumn_term' ? 'autumn' : 'trust_spreadsheet';
+                const otherLabel = otherKey === 'mid_year' ? 'Mid-Year' : 'Autumn';
+
                 return (
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                    <StatCard label="Schools" value={parsed.schools.length} sub={parsed.schools.join(", ")} />
-                    <StatCard label="Year groups" value={parsed.yearGroups.length} sub={parsed.yearGroups.join(", ")} />
-                    <StatCard label="Data points" value={parsed.totalDataPoints.toLocaleString()} />
-                    <StatCard label="Total pupils" value={totalPupils > 0 ? totalPupils.toLocaleString() : "—"} sub="all year groups" />
-                    <StatCard label="FSM pupils" value={totalFsmRaw > 0 ? Math.round(totalFsmRaw).toLocaleString() : "—"} sub={fsmPct !== null ? `${Math.round(fsmPct)}% trust-wide` : undefined} />
-                    <StatCard label="Quality flags" value={parsed.qualityFlags.length} sub={parsed.qualityFlags.length > 0 ? "See below" : "None"} />
+                    <StatCard label="Schools" value={parsed.schools.length} sub={parsed.schools.join(", ")} source={currentSource} />
+                    <StatCard label="Year groups" value={parsed.yearGroups.length} sub={parsed.yearGroups.join(", ")} source={currentSource} />
+                    <StatCard label="Data points" value={parsed.totalDataPoints.toLocaleString()} source={currentSource} />
+                    <StatCard
+                      label="Total pupils"
+                      value={totalPupils > 0 ? totalPupils.toLocaleString() : "—"}
+                      sub="all year groups"
+                      source={currentSource}
+                      priorValue={otherParsed && otherTotalPupils > 0 ? otherTotalPupils.toLocaleString() : undefined}
+                      priorLabel={`${otherLabel}`}
+                    />
+                    <StatCard
+                      label="FSM pupils"
+                      value={totalFsmRaw > 0 ? Math.round(totalFsmRaw).toLocaleString() : "—"}
+                      sub={fsmPct !== null ? `${Math.round(fsmPct)}% trust-wide` : undefined}
+                      source={currentSource}
+                      priorValue={otherParsed && otherTotalFsm > 0 ? Math.round(otherTotalFsm).toLocaleString() : undefined}
+                      priorLabel={`${otherLabel}`}
+                    />
+                    <StatCard label="Quality flags" value={parsed.qualityFlags.length} sub={parsed.qualityFlags.length > 0 ? "See below" : "None"} source={currentSource} />
                   </div>
                 );
               })()}

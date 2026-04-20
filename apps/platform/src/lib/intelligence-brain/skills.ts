@@ -84,20 +84,27 @@ FORMAT RULES:
 - This text will appear in a professional board report — it must read like a written briefing, not a slide deck.
 
 RULES: Only reference data that was provided. Never invent numbers. If data is missing, say "this data was not submitted."`,
-    userPromptTemplate: `Analyse this school's mid-year assessment data for a trust board report.
+    userPromptTemplate: `Analyse this school's assessment data for a trust board report.
 
-This data is SELF-REPORTED by the school — not externally validated. Your job is to identify what looks right, what doesn't add up, and what questions the board should be asking.
+This data includes up to TWO self-reported capture periods (Autumn Term 2025/26 and Mid-Year 2025/26) for the same school year. NEITHER is externally validated — both are teacher-assessed. The *movement between the two captures* is the forensic signal.
 
 Data:
 
 {{DATA}}
 
+CRITICAL — if the data contains "captureDeltas" or "captureDeltaSummary" fields, your OPENING PARAGRAPH must address that movement directly. Use the specific numbers. Ask what changed in teaching, intervention, moderation standard, or cohort between the two captures. Do not bury this below generic context — lead with it.
+
+If only one capture is present (autumnSelfReport is null), frame your analysis as a single-point-in-time snapshot and note that cross-capture comparison will become possible when the next capture is uploaded.
+
+This is a UK PRIMARY school (Reception + Year 1 to Year 6 only). Do NOT reference Year 7, 8, or any secondary year — primary schools do not have them. If you see a year group you don't recognise in the data, ignore it rather than inventing names.
+
 Produce a concise analysis covering:
-1. Context (size, disadvantage, SEND) and what that means for interpreting the numbers
-2. The single biggest strength in this data — be specific
-3. The single biggest concern — explain why it matters and what the likely cause is
-4. Any data contradictions or quality issues (e.g. 0% GD with high ARE%, missing year groups, impossible FSM numbers)
-5. 2-3 sharp questions for the headteacher — questions that can't be answered with "we're working on it"
+1. Opening paragraph: the Autumn→Mid-Year movement if both captures exist, with the single sharpest question the board should ask the head. If only one capture, open with demographic context and biggest signal.
+2. Context — cohort size, disadvantage (%FSM), SEND — and what that means for interpreting the numbers.
+3. The single biggest strength in the data — be specific.
+4. The single biggest concern — explain why and the likely cause.
+5. Data contradictions or quality issues (e.g. 0% GD with high ARE%, impossible jumps, missing year groups).
+6. 2-3 sharp questions for the headteacher — questions that can't be answered with "we're working on it".
 
 Cross-reference the per-year-group FSM and SEND counts against attainment when explaining drops or jumps between year groups. State whether demographics explain the pattern or not.`,
     model: 'anthropic/claude-sonnet-4',
