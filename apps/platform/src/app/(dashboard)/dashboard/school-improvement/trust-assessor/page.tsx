@@ -1976,7 +1976,7 @@ function SchoolTab({ school, parsed, dfeData, staffingSnapshots, summaryData, au
                 <div className="text-[9px] text-muted-foreground/60 mb-1">exp {ya.expected.low}–{ya.expected.high}%</div>
                 <div className={`inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${gapBadgeCls(ya.classification.gap, ya.classification.verdict)}`}>
                   {gapIcon(ya.classification.verdict)}{' '}
-                  {ya.classification.verdict !== 'no-data' ? `${ya.classification.gap > 0 ? '+' : ''}${ya.classification.gap}pp` : '—'}
+                  {ya.classification.verdict !== 'no-data' ? `${ya.classification.gap > 0 ? '+' : ''}${Math.round(ya.classification.gap)}pp` : '—'}
                 </div>
               </div>
             ))}

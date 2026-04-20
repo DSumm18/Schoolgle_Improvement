@@ -110,7 +110,8 @@ export function classifyAttainment(
   if (reported === null || reported === undefined) {
     return { verdict: 'no-data', severity: 'low', gap: 0 };
   }
-  const gap = reported - expected.expected;
+  // Round to 1dp to absorb float-subtraction artefacts (e.g. 56.7 - 28 = 28.700000000000003).
+  const gap = Math.round((reported - expected.expected) * 10) / 10;
   const absGap = Math.abs(gap);
   if (absGap <= 5) return { verdict: 'accurate', severity: 'low', gap };
   if (gap > 5 && gap <= 10) return { verdict: 'over-reported', severity: 'medium', gap };
