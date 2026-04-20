@@ -4160,6 +4160,19 @@ export default function TrustAssessorPage() {
         }
         setParsed(result);
 
+        // Persist trust-level parsed data so it sticks across sessions
+        if (organizationId) {
+          fetch('/api/trust-analysis/trust-spreadsheet', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...authHeaders },
+            body: JSON.stringify({
+              organizationId,
+              fileName: file.name,
+              parsedData: result,
+            }),
+          }).catch((err) => console.error('[trust-spreadsheet] save failed:', err));
+        }
+
         // If this came from Drive, save the connector to Supabase (NOT localStorage)
         if (driveFileId && organizationId) {
           fetch(`/api/app-connectors?organizationId=${organizationId}`, {
@@ -4272,6 +4285,28 @@ export default function TrustAssessorPage() {
         }
       } catch (e) {
         console.warn('[school-summary] load failed:', e);
+      }
+    })();
+  }, [organizationId, accessToken, authHeaders]);
+
+  // Load persisted trust spreadsheet on mount / org change (resolves parent trust automatically server-side)
+  const trustSpreadsheetLoadedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!organizationId || !accessToken) return;
+    if (trustSpreadsheetLoadedRef.current === organizationId) return;
+    trustSpreadsheetLoadedRef.current = organizationId;
+
+    (async () => {
+      try {
+        const res = await fetch(`/api/trust-analysis/trust-spreadsheet?organizationId=${organizationId}`, { headers: authHeaders });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data && data.parsed_data) {
+          setParsed(data.parsed_data);
+          setFileName(data.file_name);
+        }
+      } catch (e) {
+        console.warn('[trust-spreadsheet] load failed:', e);
       }
     })();
   }, [organizationId, accessToken, authHeaders]);
