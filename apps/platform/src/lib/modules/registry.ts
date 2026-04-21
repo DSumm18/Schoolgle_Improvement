@@ -386,15 +386,11 @@ export const APPS: AppDefinition[] = [
     shortDescription: "Structured trust dashboard with DfE cross-referencing.",
     requiredPermissions: ["admin", "headteacher", "slt"],
   },
-  {
-    id: "data-capture",
-    moduleId: "improvement",
-    name: "Data Capture",
-    route: "/dashboard/school-improvement/data-capture",
-    icon: ClipboardList,
-    shortDescription: "Enter termly assessment data directly — no spreadsheet required. Draft, lock, and feed the report.",
-    requiredPermissions: ["admin", "headteacher", "slt"],
-  },
+  // Note: Data Capture was briefly exposed here as its own app but has been
+  // rolled back into the main Trust Assessor (now the single source of truth
+  // for both the reporting and the data-entry flow). URL /dashboard/school-
+  // improvement/data-capture is still live for admins who need the full-screen
+  // grid, but it's accessed from within Trust Assessor, not the main nav.
 
   // Teaching & Learning Apps
   {
