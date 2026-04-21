@@ -104,15 +104,39 @@ export function LessonStudio() {
   // Load classes directly from Supabase
   useEffect(() => {
     if (!organizationId) return;
-    supabase
-      .from("ls_classes")
-      .select("*")
-      .eq("organization_id", organizationId)
-      .order("year_group")
-      .then(({ data }) => {
-        const classes = data || [];
+    Promise.all([
+      supabase
+        .from("ls_classes")
+        .select("*")
+        .eq("organization_id", organizationId)
+        .order("year_group"),
+      // Also check which classes have timetable slots so we can default to one with data
+      supabase
+        .from("ls_timetable_slots")
+        .select("class_id")
+        .eq("organization_id", organizationId),
+    ])
+      .then(([classesRes, slotsRes]) => {
+        const classes = classesRes.data || [];
         setClasses(classes);
-        if (classes.length > 0) setSelectedClass(classes[0]);
+
+        // Default selection: pick a class that has timetable data.
+        // Prefer highest year group (where most planning happens).
+        const classIdsWithSlots = new Set(
+          (slotsRes.data || []).map((s) => s.class_id),
+        );
+        const classesWithData = classes.filter((c) => classIdsWithSlots.has(c.id));
+        const yearOrder = ["Year 6", "Year 5", "Year 4", "Year 3", "Year 2", "Year 1", "Reception", "Nursery"];
+        const sorted = classesWithData.sort((a, b) => {
+          const aIdx = yearOrder.findIndex((y) => a.year_group?.startsWith(y));
+          const bIdx = yearOrder.findIndex((y) => b.year_group?.startsWith(y));
+          return aIdx - bIdx;
+        });
+        if (sorted.length > 0) {
+          setSelectedClass(sorted[0]);
+        } else if (classes.length > 0) {
+          setSelectedClass(classes[0]);
+        }
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -530,6 +554,58 @@ export function LessonStudio() {
       {/* Curriculum — scheme progression + NC objectives + scheme setup */}
       {mainView === "curriculum" && selectedClass && (
         <div className="space-y-6">
+          {/* Getting Started Guide — shows when no data is set up */}
+          {slots.length === 0 && (
+            <div className="bg-gradient-to-r from-teal-50 to-indigo-50 border border-teal-200 rounded-xl p-5">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-full bg-teal-500 flex-shrink-0 flex items-center justify-center text-white font-bold">
+                  👋
+                </div>
+                <div className="flex-1">
+                  <div className="text-base font-bold text-slate-800 mb-1">
+                    Welcome to Lesson Studio — let's get {selectedClass.class_name} set up
+                  </div>
+                  <div className="text-sm text-slate-600 mb-3">
+                    To start planning lessons, follow these 3 steps:
+                  </div>
+                  <ol className="space-y-2 text-sm">
+                    <li className="flex items-start gap-2">
+                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-teal-500 text-white text-xs flex items-center justify-center font-bold">1</span>
+                      <div>
+                        <span className="font-semibold text-slate-800">Set up a timetable</span>
+                        <span className="text-slate-500"> — Click </span>
+                        <button
+                          onClick={() => { setMainView("lessons"); setViewMode("timetable"); }}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 bg-teal-600 text-white text-xs font-medium rounded hover:bg-teal-700"
+                        >
+                          Timetable
+                        </button>
+                        <span className="text-slate-500"> above, then add what's taught in each period (Maths, English, etc.)</span>
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-slate-300 text-white text-xs flex items-center justify-center font-bold">2</span>
+                      <div>
+                        <span className="font-semibold text-slate-800">Allocate your curriculum</span>
+                        <span className="text-slate-500"> — Come back here and drag units into weeks so each lesson knows what to cover</span>
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-slate-300 text-white text-xs flex items-center justify-center font-bold">3</span>
+                      <div>
+                        <span className="font-semibold text-slate-800">Generate lessons</span>
+                        <span className="text-slate-500"> — Click any timetable slot, add your ideas, and the AI builds a full lesson plan</span>
+                      </div>
+                    </li>
+                  </ol>
+                  <div className="text-xs text-slate-400 mt-3">
+                    💡 Tip: scroll down to see the curriculum objectives and scheme of work — these stay with the class across the year.
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           <CurriculumProgressionView
             classId={selectedClass.id}
             subject={slots[0]?.subject || "Maths"}
