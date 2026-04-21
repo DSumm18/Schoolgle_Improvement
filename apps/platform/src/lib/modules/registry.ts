@@ -386,6 +386,15 @@ export const APPS: AppDefinition[] = [
     shortDescription: "Structured trust dashboard with DfE cross-referencing.",
     requiredPermissions: ["admin", "headteacher", "slt"],
   },
+  {
+    id: "data-capture",
+    moduleId: "improvement",
+    name: "Data Capture",
+    route: "/dashboard/school-improvement/data-capture",
+    icon: ClipboardList,
+    shortDescription: "Enter termly assessment data directly — no spreadsheet required. Draft, lock, and feed the report.",
+    requiredPermissions: ["admin", "headteacher", "slt"],
+  },
 
   // Teaching & Learning Apps
   {
