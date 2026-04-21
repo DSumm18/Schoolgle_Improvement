@@ -3,12 +3,13 @@
 import React, { useState } from "react";
 import {
   X, BookOpen, Target, Sparkles, Users, Brain, FileText,
-  Zap, Pencil, ClipboardList, Presentation, Info,
+  Zap, Pencil, ClipboardList, Presentation, Info, Image,
 } from "lucide-react";
 import type { LSLessonPlan, LSTimetableSlot, LSPupil, PlanSection, DifferentiationGroup, SENDAdaptation, VocabularyItem, SecondarySubject } from "@/types/lesson-studio";
 import { AssessmentPanel } from "./AssessmentPanel";
 import { LessonVisualisation } from "./LessonVisualisation";
 import { SUBJECT_COLORS, STATUS_CONFIG, DAY_NAMES } from "@/types/lesson-studio";
+import { useAuth } from "@/context/SupabaseAuthContext";
 
 interface LessonPlanPanelProps {
   plan: LSLessonPlan;
@@ -35,8 +36,38 @@ const DIFF_COLORS: Record<string, string> = {
 
 export function LessonPlanPanel({ plan, slot, pupils, onClose, onTeach, onMarkTaught }: LessonPlanPanelProps) {
   const [activeTab, setActiveTab] = useState<"plan" | "assessment" | "visualisation">("plan");
+  const [generatingImages, setGeneratingImages] = useState(false);
+  const [imagesGenerated, setImagesGenerated] = useState(false);
+  const { session } = useAuth();
   const sc = STATUS_CONFIG[plan.status];
   const subjectColor = SUBJECT_COLORS[plan.subject] ?? SUBJECT_COLORS.English;
+
+  const authHeaders: HeadersInit = session?.access_token
+    ? { Authorization: `Bearer ${session.access_token}` }
+    : {};
+
+  const handleGenerateImages = async () => {
+    setGeneratingImages(true);
+    try {
+      const res = await fetch("/api/lesson-studio/generate-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders },
+        body: JSON.stringify({ lessonPlanId: plan.id }),
+      });
+      const data = await res.json();
+      if (res.ok && data.count !== undefined) {
+        setImagesGenerated(true);
+        alert(`Generated ${data.count} images! Reload the lesson to see them in Teach Mode.`);
+      } else {
+        alert(`Image generation failed: ${data.error ?? "Unknown error"}`);
+      }
+    } catch (err) {
+      alert("Network error generating images. Please try again.");
+      console.error("[LessonPlanPanel] Image generation error:", err);
+    } finally {
+      setGeneratingImages(false);
+    }
+  };
 
   return (
     <div className="fixed inset-y-0 right-0 w-full max-w-2xl bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-700 shadow-2xl z-50 overflow-y-auto">
@@ -93,6 +124,19 @@ export function LessonPlanPanel({ plan, slot, pupils, onClose, onTeach, onMarkTa
             >
               <Users className="w-3.5 h-3.5" />
               Send to Pupils
+            </button>
+            <button
+              onClick={handleGenerateImages}
+              disabled={generatingImages}
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-purple-300 text-purple-700 bg-purple-50 text-xs font-medium rounded-lg hover:bg-purple-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              title="Generate AI illustrations for this lesson (~30s)"
+            >
+              <Image className="w-3.5 h-3.5" />
+              {generatingImages
+                ? "Generating... ~30s"
+                : imagesGenerated
+                  ? "Images Ready"
+                  : "Generate Images"}
             </button>
           </div>
         </div>

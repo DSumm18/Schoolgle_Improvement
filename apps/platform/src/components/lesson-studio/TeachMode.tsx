@@ -82,6 +82,10 @@ export function TeachMode({ plan, onExit, schoolName, schoolLogoUrl }: TeachMode
   // Build slides
   const slides: Slide[] = [];
 
+  // Extract generated images from the plan's resource JSON
+  const lessonResources = (plan.generated_resources_json as Record<string, unknown>) ?? {};
+  const lessonImages = (lessonResources.images as Record<string, { imageBase64?: string; mimeType?: string }>) ?? {};
+
   slides.push({
     type: "welcome",
     label: "Title",
@@ -99,7 +103,19 @@ export function TeachMode({ plan, onExit, schoolName, schoolLogoUrl }: TeachMode
             )}
           </div>
         )}
-        <div className="w-24 h-1 bg-gradient-to-r from-teal-400 to-teal-600 mx-auto mb-8 rounded-full" />
+        {/* AI-generated hero image */}
+        {lessonImages.title?.imageBase64 && (
+          <div className="w-full max-w-2xl mx-auto mb-8 rounded-2xl overflow-hidden shadow-lg">
+            <img
+              src={`data:${lessonImages.title.mimeType ?? "image/png"};base64,${lessonImages.title.imageBase64}`}
+              alt={plan.title}
+              className="w-full h-auto max-h-72 object-cover"
+            />
+          </div>
+        )}
+        {!lessonImages.title?.imageBase64 && (
+          <div className="w-24 h-1 bg-gradient-to-r from-teal-400 to-teal-600 mx-auto mb-8 rounded-full" />
+        )}
         <div className="text-sm font-semibold text-teal-600 uppercase tracking-widest mb-4">{plan.subject}</div>
         <h1 className="text-5xl font-bold text-slate-800 mb-6 leading-tight">{plan.title}</h1>
         <div className="w-24 h-1 bg-gradient-to-r from-teal-400 to-teal-600 mx-auto mt-6 rounded-full" />
@@ -157,12 +173,27 @@ export function TeachMode({ plan, onExit, schoolName, schoolLogoUrl }: TeachMode
       title: "Key Vocabulary",
       content: (
         <div className="grid grid-cols-2 gap-5 max-w-4xl mx-auto">
-          {(plan.key_vocabulary as VocabularyItem[]).map((v, i) => (
-            <div key={i} className="bg-indigo-50 rounded-xl p-5 border border-indigo-200">
-              <div className="text-2xl font-bold text-indigo-800 mb-1">{v.word}</div>
-              <div className="text-lg text-indigo-600">{v.definition}</div>
-            </div>
-          ))}
+          {(plan.key_vocabulary as VocabularyItem[]).map((v, i) => {
+            const vocabKey = `vocab-${v.word.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "")}`;
+            const vocabImage = lessonImages[vocabKey];
+            return (
+              <div key={i} className="bg-indigo-50 rounded-xl border border-indigo-200 overflow-hidden">
+                {vocabImage?.imageBase64 && (
+                  <div className="w-full h-36 overflow-hidden">
+                    <img
+                      src={`data:${vocabImage.mimeType ?? "image/png"};base64,${vocabImage.imageBase64}`}
+                      alt={v.word}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
+                <div className="p-5">
+                  <div className="text-2xl font-bold text-indigo-800 mb-1">{v.word}</div>
+                  <div className="text-lg text-indigo-600">{v.definition}</div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       ),
     });
@@ -171,6 +202,8 @@ export function TeachMode({ plan, onExit, schoolName, schoolLogoUrl }: TeachMode
   for (const section of (plan.plan_sections as PlanSection[]) || []) {
     const accent = PHASE_ACCENT[section.phase] ?? "text-slate-700";
     const phaseIconData = PHASE_EMOJI[section.phase] ?? { emoji: "📋", bg: "bg-slate-100" };
+    // Show the AI-generated concept diagram on the Teach slide
+    const teachImage = section.phase === "Teach" ? lessonImages.teach : undefined;
     slides.push({
       type: "phase",
       label: section.phase,
@@ -192,6 +225,15 @@ export function TeachMode({ plan, onExit, schoolName, schoolLogoUrl }: TeachMode
                 )}
               </div>
             </div>
+            {teachImage?.imageBase64 && (
+              <div className="mb-6 rounded-xl overflow-hidden border border-slate-100 shadow-sm">
+                <img
+                  src={`data:${teachImage.mimeType ?? "image/png"};base64,${teachImage.imageBase64}`}
+                  alt="Lesson concept diagram"
+                  className="w-full h-auto max-h-64 object-contain bg-slate-50"
+                />
+              </div>
+            )}
             <p className="text-xl text-slate-700 leading-relaxed">{section.description}</p>
           </div>
         </div>
