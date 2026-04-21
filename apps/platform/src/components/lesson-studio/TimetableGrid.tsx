@@ -5,12 +5,21 @@ import { Sparkles, Check, FileText, Clock, X } from "lucide-react";
 import type { LSTimetableSlot, LSLessonPlan, LessonStatus } from "@/types/lesson-studio";
 import { SUBJECT_COLORS, STATUS_CONFIG, DAY_NAMES } from "@/types/lesson-studio";
 
+export interface SlotAllocation {
+  title: string;
+  position: number;
+  unitName: string;
+  learningFocus: string;
+  ncCode?: string | null;
+}
+
 interface TimetableGridProps {
   slots: LSTimetableSlot[];
   plans: LSLessonPlan[];
   onSlotClick: (slot: LSTimetableSlot, plan: LSLessonPlan | null) => void;
   onGenerate: (slot: LSTimetableSlot) => void;
   generating: string | null; // slot id currently generating
+  allocations?: Record<string, SlotAllocation>; // keyed by slot.id
 }
 
 const STATUS_ICONS: Record<LessonStatus, React.ReactNode> = {
@@ -21,7 +30,7 @@ const STATUS_ICONS: Record<LessonStatus, React.ReactNode> = {
   cancelled: <X className="w-3 h-3" />,
 };
 
-export function TimetableGrid({ slots, plans, onSlotClick, onGenerate, generating }: TimetableGridProps) {
+export function TimetableGrid({ slots, plans, onSlotClick, onGenerate, generating, allocations = {} }: TimetableGridProps) {
   const planMap = new Map(plans.map((p) => [`${p.day_of_week}-${p.subject}`, p]));
   const days = [1, 2, 3, 4, 5];
 
@@ -51,6 +60,7 @@ export function TimetableGrid({ slots, plans, onSlotClick, onGenerate, generatin
             const sc = STATUS_CONFIG[status];
             const subjectColor = SUBJECT_COLORS[slot.subject] ?? SUBJECT_COLORS.English;
             const isGenerating = generating === slot.id;
+            const allocation = allocations[slot.id];
 
             return (
               <div
@@ -69,10 +79,19 @@ export function TimetableGrid({ slots, plans, onSlotClick, onGenerate, generatin
                   {slot.subject}
                 </div>
 
-                {/* Plan title or generate button */}
+                {/* Plan title or allocated lesson or generate button */}
                 {plan ? (
                   <div className="text-[10px] text-slate-600 dark:text-slate-300 mt-0.5 line-clamp-2">
                     {plan.title}
+                  </div>
+                ) : allocation ? (
+                  <div className="mt-0.5">
+                    <div className="text-[10px] text-slate-700 dark:text-slate-200 font-medium leading-tight line-clamp-2">
+                      {allocation.title}
+                    </div>
+                    <div className="text-[9px] text-slate-400 dark:text-slate-500 mt-0.5">
+                      Lesson {allocation.position} &middot; {allocation.unitName}
+                    </div>
                   </div>
                 ) : (
                   <button

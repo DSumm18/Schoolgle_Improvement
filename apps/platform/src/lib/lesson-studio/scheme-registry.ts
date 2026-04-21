@@ -12,12 +12,20 @@ export interface SchemeDefinition {
   website?: string;
 }
 
+export interface LessonObjective {
+  position: number; // 1, 2, 3...
+  title: string; // e.g. "Equivalent fractions (intro)"
+  ncCode?: string;
+  learningFocus: string; // one-line description
+}
+
 export interface SchemeUnit {
   unitName: string;
   weekRange: string; // e.g. "Weeks 1-2"
   ncCodes: string[]; // National Curriculum reference codes
   keyTopics: string[];
   suggestedHours: number;
+  lessons?: LessonObjective[]; // optional, for detailed breakdown
 }
 
 // ---------------------------------------------------------------------------
@@ -192,6 +200,18 @@ const WHITE_ROSE_Y6_PROGRESSION: Record<string, SchemeUnit[]> = {
         'Unequal sharing',
       ],
       suggestedHours: 10,
+      lessons: [
+        { position: 1, title: 'Introduction to ratio', ncCode: '6R1', learningFocus: 'Understand what ratio means and use ratio notation (e.g. 2:3)' },
+        { position: 2, title: 'Ratio language and notation', ncCode: '6R1', learningFocus: 'Use the colon notation and read/write ratio statements correctly' },
+        { position: 3, title: 'Equivalent ratios', ncCode: '6R1', learningFocus: 'Find equivalent ratios by multiplying and dividing both parts' },
+        { position: 4, title: 'Ratio and fractions', ncCode: '6R2', learningFocus: 'Connect ratio to fractions — express each part as a fraction of the whole' },
+        { position: 5, title: 'Simplify ratios', ncCode: '6R1', learningFocus: 'Express ratios in their simplest form using HCF' },
+        { position: 6, title: 'Ratio problems — missing value', ncCode: '6R1', learningFocus: 'Use ratio to find missing quantities in word problems' },
+        { position: 7, title: 'Scale factors', ncCode: '6R2', learningFocus: 'Apply scale factors to enlarge and reduce shapes and quantities' },
+        { position: 8, title: 'Scale drawings and maps', ncCode: '6R2', learningFocus: 'Interpret and draw scale diagrams; use map scales' },
+        { position: 9, title: 'Ratio with three quantities', ncCode: '6R3', learningFocus: 'Share amounts in ratios with three parts (e.g. 2:3:5)' },
+        { position: 10, title: 'Ratio assessment and consolidation', ncCode: '6R1-3', learningFocus: 'Formative assessment and addressing identified gaps' },
+      ],
     },
     {
       unitName: 'Algebra',
@@ -206,6 +226,18 @@ const WHITE_ROSE_Y6_PROGRESSION: Record<string, SchemeUnit[]> = {
         'Enumeration',
       ],
       suggestedHours: 10,
+      lessons: [
+        { position: 1, title: 'Using letters for numbers', ncCode: '6A1', learningFocus: 'Understand that letters represent unknown values; write simple expressions' },
+        { position: 2, title: 'One-step equations', ncCode: '6A2', learningFocus: 'Solve one-step equations using inverse operations' },
+        { position: 3, title: 'Two-step equations', ncCode: '6A2', learningFocus: 'Solve equations requiring two inverse operations' },
+        { position: 4, title: 'Finding rules in sequences', ncCode: '6A3', learningFocus: 'Identify the rule in a sequence and express it algebraically' },
+        { position: 5, title: 'Formulae', ncCode: '6A4', learningFocus: 'Use and apply formulae (e.g. area = length × width)' },
+        { position: 6, title: 'Substitution', ncCode: '6A4', learningFocus: 'Substitute values into expressions and formulae to find outcomes' },
+        { position: 7, title: 'Linear sequences', ncCode: '6A3', learningFocus: 'Generate and describe linear sequences; find the nth term' },
+        { position: 8, title: 'Describing positions', ncCode: '6A3', learningFocus: 'Use algebra to describe positions in sequences and on grids' },
+        { position: 9, title: 'Algebra problem solving', ncCode: '6A1-4', learningFocus: 'Apply algebraic thinking to multi-step word problems' },
+        { position: 10, title: 'Algebra assessment and consolidation', ncCode: '6A1-4', learningFocus: 'Formative assessment and re-teach identified gaps' },
+      ],
     },
     {
       unitName: 'Decimals',
@@ -219,6 +251,18 @@ const WHITE_ROSE_Y6_PROGRESSION: Record<string, SchemeUnit[]> = {
         'Multiplying and dividing decimals',
       ],
       suggestedHours: 10,
+      lessons: [
+        { position: 1, title: 'Multiply by 10, 100 and 1000', ncCode: '6F10', learningFocus: 'Multiply decimals by 10, 100 and 1000 using place value understanding' },
+        { position: 2, title: 'Divide by 10, 100 and 1000', ncCode: '6F10', learningFocus: 'Divide decimals by 10, 100 and 1000 using place value understanding' },
+        { position: 3, title: 'Multiply decimals by integers', ncCode: '6F11', learningFocus: 'Use short multiplication to multiply a decimal by a whole number' },
+        { position: 4, title: 'Divide decimals by integers', ncCode: '6F11', learningFocus: 'Use short division to divide a decimal by a whole number' },
+        { position: 5, title: 'Multiply decimals by decimals', ncCode: '6F11', learningFocus: 'Multiply a decimal by a decimal using place value and estimation' },
+        { position: 6, title: 'Divide decimals by decimals', ncCode: '6F11', learningFocus: 'Divide a decimal by a decimal by converting to equivalent whole numbers' },
+        { position: 7, title: 'Decimal word problems', ncCode: '6F10', learningFocus: 'Apply decimal calculations to real-life contexts and money problems' },
+        { position: 8, title: 'Rounding decimals', ncCode: '6F10', learningFocus: 'Round decimals to the nearest whole number, 1 dp and 2 dp' },
+        { position: 9, title: 'Decimal assessment', ncCode: '6F10-11', learningFocus: 'Formative assessment of decimal knowledge and skills' },
+        { position: 10, title: 'Decimal consolidation', ncCode: '6F10-11', learningFocus: 'Targeted re-teaching and enrichment based on assessment outcomes' },
+      ],
     },
     {
       unitName: 'Fractions, Decimals and Percentages',
@@ -233,6 +277,18 @@ const WHITE_ROSE_Y6_PROGRESSION: Record<string, SchemeUnit[]> = {
         'Percentage increase and decrease',
       ],
       suggestedHours: 10,
+      lessons: [
+        { position: 1, title: 'Fractions to decimals', ncCode: '6F11', learningFocus: 'Convert fractions to decimals by dividing numerator by denominator' },
+        { position: 2, title: 'Fractions to percentages', ncCode: '6F11', learningFocus: 'Convert fractions to percentages using equivalent fractions over 100' },
+        { position: 3, title: 'Equivalent FDP', ncCode: '6F11', learningFocus: 'Recognise and use equivalent forms (e.g. 1/2 = 0.5 = 50%)' },
+        { position: 4, title: 'Ordering FDP', ncCode: '6F1', learningFocus: 'Order and compare a mixture of fractions, decimals and percentages' },
+        { position: 5, title: 'Percentage of amounts (non-calculator)', ncCode: '6R3', learningFocus: 'Find percentages of amounts using mental methods and factor pairs' },
+        { position: 6, title: 'Percentage of amounts (any %)', ncCode: '6R3', learningFocus: 'Calculate any percentage of a quantity using the 1% method' },
+        { position: 7, title: 'Percentage increase', ncCode: '6R3', learningFocus: 'Increase an amount by a given percentage' },
+        { position: 8, title: 'Percentage decrease', ncCode: '6R3', learningFocus: 'Decrease an amount by a given percentage' },
+        { position: 9, title: 'FDP problem solving', ncCode: '6F1', learningFocus: 'Apply FDP equivalences to multi-step problems and comparisons' },
+        { position: 10, title: 'FDP assessment and consolidation', ncCode: '6F1-11', learningFocus: 'Formative assessment and re-teaching of FDP gaps' },
+      ],
     },
     {
       unitName: 'Area, Perimeter and Volume',

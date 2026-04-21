@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import {
   getSchemeProgression,
   type SchemeUnit,
+  type LessonObjective,
 } from "@/lib/lesson-studio/scheme-registry";
 import {
   BookOpen,
@@ -13,7 +14,10 @@ import {
   ArrowRight,
   Zap,
   LayoutGrid,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
+import type { LSTimetableSlot } from "@/types/lesson-studio";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -36,6 +40,16 @@ interface WeekSlot {
   allocatedUnit: string | null;
 }
 
+interface SlotAllocationRecord {
+  timetable_slot_id: string;
+  week_commencing: string;
+  unit_name: string;
+  lesson_position: number;
+  lesson_title: string;
+  nc_code: string | null;
+  learning_focus: string | null;
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -49,7 +63,6 @@ function getCurrentTerm(): string {
 
 /**
  * Parses "Weeks 1-3" → { start: 1, end: 3 }
- * Parses "Weeks 6-8" → { start: 6, end: 8 }
  */
 function parseWeekRange(weekRange: string): { start: number; end: number } {
   const match = weekRange.match(/(\d+)\s*[-–]\s*(\d+)/);
@@ -65,15 +78,47 @@ function parseWeekRange(weekRange: string): { start: number; end: number } {
 }
 
 /**
+ * Given a startWeek (1-based) and the term, calculate the actual Monday date.
+ * We use the current academic year — for Spring term the year starts in January.
+ */
+function weekNumberToMonday(weekNumber: number, term: string): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  let termStart: Date;
+
+  if (term === "Autumn") {
+    // First Monday of September
+    termStart = new Date(year, 8, 1);
+    const dow = termStart.getDay();
+    const diff = dow === 0 ? 1 : dow === 1 ? 0 : 8 - dow;
+    termStart.setDate(termStart.getDate() + diff);
+  } else if (term === "Spring") {
+    // First Monday of January
+    termStart = new Date(year, 0, 1);
+    const dow = termStart.getDay();
+    const diff = dow === 0 ? 1 : dow === 1 ? 0 : 8 - dow;
+    termStart.setDate(termStart.getDate() + diff);
+  } else {
+    // Summer — first Monday of April
+    termStart = new Date(year, 3, 1);
+    const dow = termStart.getDay();
+    const diff = dow === 0 ? 1 : dow === 1 ? 0 : 8 - dow;
+    termStart.setDate(termStart.getDate() + diff);
+  }
+
+  const monday = new Date(termStart);
+  monday.setDate(monday.getDate() + (weekNumber - 1) * 7);
+  return monday.toISOString().split("T")[0];
+}
+
+/**
  * Build a list of week slots (1-based) with their allocated unit names.
- * We use the last week that any unit covers as the total number of weeks.
  */
 function buildWeekSlots(
   units: SchemeUnit[],
   allocation: TermAllocationMap,
 ): WeekSlot[] {
-  // Determine total weeks from unit data
-  let maxWeek = 12; // default
+  let maxWeek = 12;
   for (const u of units) {
     const r = parseWeekRange(u.weekRange);
     if (r.end > maxWeek) maxWeek = r.end;
@@ -123,7 +168,6 @@ async function saveAllocation(
   term: string,
   allocation: TermAllocationMap,
 ): Promise<void> {
-  // Load existing config first to avoid clobbering other terms
   const { data: existing } = await supabase
     .from("ls_scheme_mappings")
     .select("id, scheme_config")
@@ -131,7 +175,7 @@ async function saveAllocation(
     .eq("subject", subject)
     .maybeSingle();
 
-  if (!existing) return; // No scheme mapping — nothing to save to
+  if (!existing) return;
 
   const existingCfg = (existing.scheme_config as Record<string, unknown>) ?? {};
   const existingTermAlloc =
@@ -151,9 +195,95 @@ async function saveAllocation(
     .eq("id", existing.id);
 }
 
+/**
+ * Writes lesson-level slot allocations to ls_slot_allocations for a unit.
+ * Slots are ordered by day_of_week and start_time within each week.
+ */
+async function saveSlotAllocations(
+  organizationId: string,
+  classId: string,
+  timetableSlots: LSTimetableSlot[],
+  unit: SchemeUnit,
+  startWeek: number,
+  term: string,
+): Promise<void> {
+  const lessons = unit.lessons;
+  if (!lessons || lessons.length === 0) return;
+
+  // Only slots for this subject (already filtered by caller)
+  const subjectSlots = timetableSlots
+    .slice()
+    .sort((a, b) => a.day_of_week - b.day_of_week || a.start_time.localeCompare(b.start_time));
+
+  const weekSpan = parseWeekRange(unit.weekRange);
+  const numWeeks = weekSpan.end - weekSpan.start + 1;
+
+  // Build an ordered list of (week, slot) pairs covering the allocation range
+  const slotInstances: { weekCommencing: string; slotId: string }[] = [];
+  for (let wOffset = 0; wOffset < numWeeks; wOffset++) {
+    const weekNum = startWeek + wOffset;
+    const weekCommencing = weekNumberToMonday(weekNum, term);
+    for (const slot of subjectSlots) {
+      slotInstances.push({ weekCommencing, slotId: slot.id });
+    }
+  }
+
+  const records: SlotAllocationRecord[] = lessons.map((lesson, idx) => {
+    const instance = slotInstances[idx];
+    if (!instance) return null;
+    return {
+      timetable_slot_id: instance.slotId,
+      week_commencing: instance.weekCommencing,
+      unit_name: unit.unitName,
+      lesson_position: lesson.position,
+      lesson_title: lesson.title,
+      nc_code: lesson.ncCode ?? null,
+      learning_focus: lesson.learningFocus ?? null,
+    };
+  }).filter(Boolean) as SlotAllocationRecord[];
+
+  if (records.length === 0) return;
+
+  // Upsert — if teacher reallocates, old records are replaced
+  await supabase.from("ls_slot_allocations").upsert(
+    records.map((r) => ({ ...r, organization_id: organizationId, class_id: classId })),
+    { onConflict: "class_id,timetable_slot_id,week_commencing" },
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
+
+function LessonList({ lessons }: { lessons: LessonObjective[] }) {
+  const [expanded, setExpanded] = useState(false);
+  const preview = expanded ? lessons : lessons.slice(0, 3);
+
+  return (
+    <div className="mt-2">
+      <div className="space-y-1">
+        {preview.map((l) => (
+          <div key={l.position} className="flex items-start gap-1.5 text-[10px] text-teal-700">
+            <span className="font-mono text-teal-400 flex-shrink-0 w-4 text-right">{l.position}.</span>
+            <span className="leading-tight">{l.title}</span>
+          </div>
+        ))}
+      </div>
+      {lessons.length > 3 && (
+        <button
+          onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
+          className="mt-1 flex items-center gap-0.5 text-[10px] text-teal-500 hover:text-teal-700 font-medium"
+        >
+          {expanded ? (
+            <><ChevronUp className="w-3 h-3" /> Show less</>
+          ) : (
+            <><ChevronDown className="w-3 h-3" /> +{lessons.length - 3} more lessons</>
+          )}
+        </button>
+      )}
+    </div>
+  );
+}
 
 function UnitCard({
   unit,
@@ -166,6 +296,8 @@ function UnitCard({
   allocationRange: { startWeek: number; endWeek: number } | null;
   onAllocate: () => void;
 }) {
+  const lessonCount = unit.lessons?.length ?? 0;
+
   return (
     <div
       className={`rounded-xl border p-4 transition-all ${
@@ -181,11 +313,16 @@ function UnitCard({
           ) : (
             <Circle className="w-4 h-4 text-slate-300 flex-shrink-0 mt-0.5" />
           )}
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="text-sm font-semibold text-slate-800 leading-snug">
               {unit.unitName}
             </div>
             <div className="text-xs text-slate-400 mt-0.5">{unit.weekRange}</div>
+            {lessonCount > 0 && (
+              <div className="text-[10px] text-slate-500 mt-0.5">
+                {lessonCount} lessons &middot; {unit.suggestedHours}hrs
+              </div>
+            )}
             {isAllocated && allocationRange && (
               <div className="text-xs text-teal-600 mt-0.5 font-medium">
                 Allocated: Weeks {allocationRange.startWeek}–{allocationRange.endWeek}
@@ -201,6 +338,10 @@ function UnitCard({
                 </span>
               ))}
             </div>
+            {/* Lesson breakdown if allocated */}
+            {isAllocated && unit.lessons && unit.lessons.length > 0 && (
+              <LessonList lessons={unit.lessons} />
+            )}
           </div>
         </div>
         <button
@@ -275,13 +416,24 @@ export function CurriculumAllocator({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [hoveredUnit, setHoveredUnit] = useState<string | null>(null);
+  const [timetableSlots, setTimetableSlots] = useState<LSTimetableSlot[]>([]);
 
-  // Load existing allocation
+  // Load existing allocation + timetable slots
   useEffect(() => {
     if (!classId || !subject) return;
     setLoading(true);
-    loadAllocation(classId, subject, term).then((data) => {
-      setAllocation(data);
+    Promise.all([
+      loadAllocation(classId, subject, term),
+      supabase
+        .from("ls_timetable_slots")
+        .select("*")
+        .eq("class_id", classId)
+        .eq("subject", subject)
+        .order("day_of_week")
+        .order("start_time"),
+    ]).then(([allocData, slotsRes]) => {
+      setAllocation(allocData);
+      setTimetableSlots((slotsRes.data || []) as LSTimetableSlot[]);
       setLoading(false);
     });
   }, [classId, subject, term]);
@@ -328,10 +480,13 @@ export function CurriculumAllocator({
       setAllocation(newAllocation);
 
       setSaving(true);
-      await saveAllocation(classId, subject, term, newAllocation);
+      await Promise.all([
+        saveAllocation(classId, subject, term, newAllocation),
+        saveSlotAllocations(organizationId, classId, timetableSlots, unit, startWeek, term),
+      ]);
       setSaving(false);
     },
-    [allocation, nextFreeWeek, classId, subject, term],
+    [allocation, nextFreeWeek, classId, subject, term, organizationId, timetableSlots],
   );
 
   const handleAutoAllocate = useCallback(async () => {
@@ -351,8 +506,23 @@ export function CurriculumAllocator({
     setAllocation(newAllocation);
     setSaving(true);
     await saveAllocation(classId, subject, term, newAllocation);
+
+    // Save slot allocations for all units in parallel
+    await Promise.all(
+      units.map((unit) => {
+        const range = newAllocation[unit.unitName];
+        return saveSlotAllocations(
+          organizationId,
+          classId,
+          timetableSlots,
+          unit,
+          range.startWeek,
+          term,
+        );
+      }),
+    );
     setSaving(false);
-  }, [units, classId, subject, term]);
+  }, [units, classId, subject, term, organizationId, timetableSlots]);
 
   if (units.length === 0) return null;
 

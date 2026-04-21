@@ -16,7 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { ModulePageHeader } from "@/components/ui/module-page-header";
-import { TimetableGrid } from "./TimetableGrid";
+import { TimetableGrid, type SlotAllocation } from "./TimetableGrid";
 import { CalendarView } from "./CalendarView";
 import { LessonPlanPanel } from "./LessonPlanPanel";
 import { TeachMode } from "./TeachMode";
@@ -154,6 +154,31 @@ export function LessonStudio() {
       .then(({ data }) => setPlans((data || []) as LSLessonPlan[]));
   }, [selectedClass, weekCommencing, organizationId]);
 
+  // Slot-level lesson allocations — keyed by timetable_slot_id
+  const [allocations, setAllocations] = useState<Record<string, SlotAllocation>>({});
+
+  useEffect(() => {
+    if (!selectedClass || !organizationId) return;
+    supabase
+      .from("ls_slot_allocations")
+      .select("timetable_slot_id, unit_name, lesson_position, lesson_title, nc_code, learning_focus")
+      .eq("class_id", selectedClass.id)
+      .eq("week_commencing", weekCommencing)
+      .then(({ data }) => {
+        const map: Record<string, SlotAllocation> = {};
+        for (const a of data || []) {
+          map[a.timetable_slot_id] = {
+            title: a.lesson_title,
+            position: a.lesson_position,
+            unitName: a.unit_name,
+            learningFocus: a.learning_focus ?? "",
+            ncCode: a.nc_code,
+          };
+        }
+        setAllocations(map);
+      });
+  }, [selectedClass, weekCommencing, organizationId]);
+
   // Week navigation
   const prevWeek = () => {
     const d = new Date(weekCommencing);
@@ -181,6 +206,10 @@ export function LessonStudio() {
           weekCommencing,
           organizationId,
           teacherNote: (() => {
+            const allocation = allocations[slot.id];
+            const allocNote = allocation
+              ? `Specific lesson focus: ${allocation.title}. Learning focus: ${allocation.learningFocus}. NC code: ${allocation.ncCode ?? "—"}.`
+              : "";
             const themeNote = selectedTheme !== "none"
               ? `Theme: ${selectedTheme}. Weave this theme into examples, word problems, and activities to make the lesson engaging. Use ${selectedTheme}-related contexts for mathematical concepts.`
               : "";
@@ -188,6 +217,7 @@ export function LessonStudio() {
               ? `Teacher's ideas and preferences: ${teacherInput.trim()}. Build the lesson around these ideas — use the teacher's suggested approach, resources, and adaptations.`
               : "";
             const fullNote = [
+              allocNote,
               selectedTopic
                 ? `Teach: ${selectedTopic.unitName}. Topics: ${selectedTopic.keyTopics.join(", ")}. NC codes: ${selectedTopic.ncCodes.join(", ")}.`
                 : "",
@@ -610,6 +640,7 @@ export function LessonStudio() {
               onSlotClick={handleSlotClick}
               onGenerate={handleGenerate}
               generating={generating}
+              allocations={allocations}
             />
           </>
         ) : selectedClass ? (
@@ -689,6 +720,27 @@ export function LessonStudio() {
                 </button>
               </div>
 
+              {/* Allocated lesson context */}
+              {allocations[selectedSlot.id] && (
+                <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-3">
+                  <div className="text-[10px] text-indigo-500 uppercase tracking-wide font-semibold mb-1">
+                    Planned Lesson
+                  </div>
+                  <div className="text-sm font-semibold text-indigo-800">
+                    {allocations[selectedSlot.id].title}
+                  </div>
+                  <div className="text-xs text-indigo-600 mt-0.5">
+                    {allocations[selectedSlot.id].learningFocus}
+                  </div>
+                  <div className="text-[10px] text-indigo-400 mt-1">
+                    Lesson {allocations[selectedSlot.id].position} of {allocations[selectedSlot.id].unitName} unit
+                    {allocations[selectedSlot.id].ncCode && (
+                      <span className="ml-2 font-mono">{allocations[selectedSlot.id].ncCode}</span>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <ThemeCarousel
                 selectedTheme={selectedTheme}
                 onSelect={setSelectedTheme}
@@ -723,9 +775,11 @@ export function LessonStudio() {
               <div className="border border-dashed border-slate-200 rounded-xl p-6 text-center">
                 <Sparkles className="w-8 h-8 text-teal-400 mx-auto mb-2" />
                 <p className="text-xs text-slate-500 mb-3">
-                  {teacherInput.trim()
-                    ? "We'll build around your ideas with differentiated activities and SEND adaptations."
-                    : "Generate a lesson plan tailored to your class. Add your ideas above for a more personalised plan."
+                  {allocations[selectedSlot.id]
+                    ? `Will generate: ${allocations[selectedSlot.id].title}`
+                    : teacherInput.trim()
+                      ? "We'll build around your ideas with differentiated activities and SEND adaptations."
+                      : "Generate a lesson plan tailored to your class. Add your ideas above for a more personalised plan."
                   }
                   {selectedTheme !== "none" && (
                     <span className="block mt-1 text-teal-600 font-medium">
