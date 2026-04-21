@@ -247,8 +247,26 @@ Return ONLY valid JSON with this exact structure:
   "starterQuestions": [
     {"q": "...", "age": "Yesterday", "interval": "1d", "nc": "Y4-D2"}
   ],
-  "supplyBrief": "Human-readable summary for a supply teacher covering this lesson."
-}`;
+  "supplyBrief": "Human-readable summary for a supply teacher covering this lesson.",
+  "secondarySubjects": [
+    {
+      "subject": "English",
+      "ncCodes": ["Y6W3"],
+      "supportingFocus": "Pupils write explanations using fraction vocabulary"
+    }
+  ]
+}
+
+IMPORTANT — Cross-curricular links:
+If this lesson naturally TOUCHES ON other subjects (not TEACHES them), list them as "secondarySubjects". For example:
+- A Maths lesson on fractions might support English (Y6W3 — writing to explain) if pupils write method explanations
+- A Science lesson on forces might support Maths (6M5 — units) if pupils convert between units
+- A History lesson might support English (reading comprehension) if pupils analyse primary sources
+
+Rules:
+- Only list secondary subjects that are GENUINELY engaged, not tokenistic
+- Primary subject is what is being TAUGHT. Secondary is what is TOUCHED ON.
+- Leave empty array if no cross-curricular link is authentic.`;
 }
 
 export const POST = protectedRoute(async (auth, req: NextRequest) => {
@@ -424,6 +442,7 @@ export const POST = protectedRoute(async (auth, req: NextRequest) => {
       progression?.steps?.[
         (schemeMapping?.scheme_config?.current_step ?? 1) - 1
       ]?.nc_codes ?? [],
+    secondary_subjects: (generated.secondarySubjects as Array<{subject: string; ncCodes: string[]; supportingFocus: string}>) ?? [],
     supply_brief: (generated.supplyBrief as string) || null,
     generated_resources_json: {
       worksheetQuestions: generated.worksheetQuestions ?? {},

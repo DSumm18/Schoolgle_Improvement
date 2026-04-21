@@ -102,6 +102,12 @@ export interface LSSchemeProgression {
 
 // ─── Lesson Plan ─────────────────────────────────────────────────────────
 
+export interface SecondarySubject {
+  subject: string;
+  ncCodes: string[];
+  supportingFocus: string;
+}
+
 export interface PlanSection {
   phase: string;
   time: string;
@@ -194,6 +200,7 @@ export interface LSLessonPlan {
   teacher_edits: Record<string, unknown>;
   supply_brief: string | null;
   generated_resources_json: GeneratedResourcesJSON;
+  secondary_subjects?: SecondarySubject[];
   status: LessonStatus;
   ai_model: string | null;
   generation_time_ms: number | null;

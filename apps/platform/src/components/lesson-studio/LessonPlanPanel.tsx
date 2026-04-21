@@ -3,9 +3,9 @@
 import React, { useState } from "react";
 import {
   X, BookOpen, Target, Sparkles, Users, Brain, FileText,
-  Zap, Pencil, ClipboardList, Presentation, Download,
+  Zap, Pencil, ClipboardList, Presentation, Info,
 } from "lucide-react";
-import type { LSLessonPlan, LSTimetableSlot, LSPupil, PlanSection, DifferentiationGroup, SENDAdaptation, VocabularyItem } from "@/types/lesson-studio";
+import type { LSLessonPlan, LSTimetableSlot, LSPupil, PlanSection, DifferentiationGroup, SENDAdaptation, VocabularyItem, SecondarySubject } from "@/types/lesson-studio";
 import { AssessmentPanel } from "./AssessmentPanel";
 import { LessonVisualisation } from "./LessonVisualisation";
 import { SUBJECT_COLORS, STATUS_CONFIG, DAY_NAMES } from "@/types/lesson-studio";
@@ -157,6 +157,9 @@ export function LessonPlanPanel({ plan, slot, pupils, onClose, onTeach, onMarkTa
           )}
         </Section>
 
+        {/* Curriculum Coverage */}
+        <CurriculumCoverageSection plan={plan} />
+
         {/* Key Vocabulary */}
         {plan.key_vocabulary?.length > 0 && (
           <Section title="Key Vocabulary" icon={<BookOpen className="w-4 h-4 text-indigo-500" />}>
@@ -239,6 +242,87 @@ export function LessonPlanPanel({ plan, slot, pupils, onClose, onTeach, onMarkTa
       </div>
       )}
     </div>
+  );
+}
+
+function CurriculumCoverageSection({ plan }: { plan: LSLessonPlan }) {
+  const [showTooltip, setShowTooltip] = useState(false);
+  const secondary = (plan.secondary_subjects ?? []) as SecondarySubject[];
+
+  return (
+    <Section
+      title="Curriculum Coverage"
+      icon={<BookOpen className="w-4 h-4 text-teal-500" />}
+    >
+      <div className="space-y-2">
+        {/* Primary subject — filled teal badge */}
+        <div>
+          <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide block mb-1">
+            PRIMARY (Taught)
+          </span>
+          <div className="flex flex-wrap gap-2 items-center">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-teal-500 text-white text-xs font-semibold">
+              {plan.subject}
+            </span>
+            {plan.nc_objective_codes?.map((code) => (
+              <span
+                key={code}
+                className="inline-flex items-center px-2 py-0.5 rounded-full bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 text-[11px] font-mono border border-teal-200 dark:border-teal-800"
+              >
+                {code}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Secondary subjects — outlined subtle badges */}
+        {secondary.length > 0 && (
+          <div>
+            <div className="flex items-center gap-1.5 mb-1">
+              <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                SUPPORTS (Touched on)
+              </span>
+              <button
+                className="relative text-slate-400 hover:text-slate-600"
+                onMouseEnter={() => setShowTooltip(true)}
+                onMouseLeave={() => setShowTooltip(false)}
+                aria-label="What does 'Supports' mean?"
+              >
+                <Info className="w-3.5 h-3.5" />
+                {showTooltip && (
+                  <div className="absolute left-0 top-5 z-20 w-64 rounded-lg bg-slate-800 text-white text-[11px] p-2.5 shadow-lg leading-relaxed">
+                    <strong>Primary</strong> = what this lesson teaches.<br />
+                    <strong>Secondary / Supports</strong> = other NC subjects that pupils engage with during this lesson, but are not the teaching focus. Used for curriculum breadth evidence.
+                  </div>
+                )}
+              </button>
+            </div>
+            <div className="flex flex-col gap-2">
+              {secondary.map((s, i) => (
+                <div key={i} className="flex flex-wrap items-start gap-2">
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-medium">
+                    {s.subject}
+                  </span>
+                  {s.ncCodes?.map((code) => (
+                    <span
+                      key={code}
+                      className="inline-flex items-center px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 text-[11px] font-mono"
+                    >
+                      {code}
+                    </span>
+                  ))}
+                  {s.supportingFocus && (
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400 italic self-center">
+                      — {s.supportingFocus}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </Section>
   );
 }
 
