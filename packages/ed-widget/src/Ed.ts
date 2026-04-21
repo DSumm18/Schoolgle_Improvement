@@ -316,14 +316,17 @@ export class Ed {
         },
       });
       console.log("[Ed] ✅ Gemini Live voice initialized");
+    }
 
-      // Keep Web Speech API as fallback for text-only voice input
+    // Web Speech API mic input — transcribes, pipes through /api/ed/chat, reply speaks via Fish Audio
+    if (this.config.features.voice) {
       this.voice = new VoiceInput(this.currentLanguage.voiceLang);
       this.voice.onResult((text) => this.handleUserInput(text));
       this.voice.onListeningChange((listening) => {
         this.isListening = listening;
         this.dock?.setListening(listening);
       });
+      console.log("[Ed] ✅ Web Speech voice input initialized");
     }
   }
 
