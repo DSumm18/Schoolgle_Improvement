@@ -1,7 +1,7 @@
 "use client";
 
 import * as XLSX from "xlsx";
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo, createContext, useContext } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   BarChart,
@@ -86,6 +86,11 @@ import {
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
+// Context for the abbrev → school lookup. Provided by TrustAssessorPage and
+// consumed by sub-components (TrafficLightGrid, SchoolTab, etc.) that were
+// previously reading the hardcoded TRUST_SCHOOLS module constant.
+type AbbrevLookup = Record<string, { id?: string; name: string; urn: number | null }>;
+const AbbrevLookupContext = createContext<AbbrevLookup>({});
 
 const YEAR_GROUPS = ["EYFS", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6"] as const;
 type YearGroup = (typeof YEAR_GROUPS)[number];
@@ -473,6 +478,7 @@ function StatCard({ label, value, sub, source, priorValue, priorLabel }: {
 // ─── Traffic Light Summary Grid ──────────────────────────────────────────────
 
 function TrafficLightGrid({ parsed, onSchoolClick }: { parsed: ParsedSpreadsheet; onSchoolClick: (school: string) => void }) {
+  const abbrevLookup = useContext(AbbrevLookupContext);
   // Compute total pupils per school
   const getTotalPupils = (school: string): number => {
     let total = 0;
@@ -715,6 +721,7 @@ function SubjectHeatmap({ parsed, onSchoolClick }: { parsed: ParsedSpreadsheet; 
 // ─── Phase 1: Per-School Detail Card ─────────────────────────────────────────
 
 function SchoolDetailCard({ school, parsed }: { school: string; parsed: ParsedSpreadsheet }) {
+  const abbrevLookup = useContext(AbbrevLookupContext);
   const [open, setOpen] = useState(false);
 
   const schoolData = parsed.data[school] ?? {};
@@ -1140,6 +1147,7 @@ type StaffingByUrn = Record<number, {
 }>;
 
 function SchoolTab({ school, parsed, dfeData, staffingSnapshots, summaryData, authToken, organizationId, capturesByPeriod, urnToOrgId }: { school: string; parsed: ParsedSpreadsheet; dfeData?: DfEData | null; staffingSnapshots?: StaffingByUrn | null; summaryData?: SchoolDataSummary | null; authToken?: string; organizationId?: string; capturesByPeriod?: { autumn_term?: { parsed_data: ParsedSpreadsheet } | null; mid_year?: { parsed_data: ParsedSpreadsheet } | null }; urnToOrgId?: Record<number, string> }) {
+  const abbrevLookup = useContext(AbbrevLookupContext);
   const schoolData = parsed.data[school] ?? {};
   const info = abbrevLookup[school];
 
@@ -3447,6 +3455,7 @@ function KS2TrackRecordChart({ school, abbrev, urn, ks2Results, selfReports }: {
     mid_year?: { combined: number | null } | null;
   } | null;
 }) {
+  const abbrevLookup = useContext(AbbrevLookupContext);
   // Resolve URN: explicit prop takes precedence, fall back to abbrev lookup.
   const schoolUrn = urn ?? (abbrev ? abbrevLookup[abbrev]?.urn : undefined);
   if (!schoolUrn) return null;
@@ -3582,6 +3591,7 @@ function SchoolCapturesPanelSlot({ school, urnToOrgId, authToken }: {
   urnToOrgId?: Record<number, string>;
   authToken?: string;
 }) {
+  const abbrevLookup = useContext(AbbrevLookupContext);
   const info = abbrevLookup[school];
   const schoolOrgId = info?.urn ? urnToOrgId?.[info.urn] : undefined;
   const authHeaders = useMemo<HeadersInit>(() => {
@@ -3715,6 +3725,7 @@ function FsmTrendChart({ abbrev, urn, label, census, selfReportFsmPcts }: {
   census: CensusRecord[];
   selfReportFsmPcts?: { autumn_term: number | null; mid_year: number | null };
 }) {
+  const abbrevLookup = useContext(AbbrevLookupContext);
   const schoolUrn = urn ?? (abbrev ? abbrevLookup[abbrev]?.urn : undefined);
   if (!schoolUrn) return null;
   const display = label ?? abbrev ?? `URN ${schoolUrn}`;
@@ -4161,6 +4172,7 @@ function PreMeetingVerification({ school, summary, dfeData, parsed }: {
   dfeData?: DfEData | null;
   parsed: ParsedSpreadsheet;
 }) {
+  const abbrevLookup = useContext(AbbrevLookupContext);
   const [checked, setChecked] = useState<Set<number>>(new Set());
   const schoolInfo = abbrevLookup[school];
   const schoolData = parsed.data[school] ?? {};
@@ -4826,6 +4838,7 @@ export default function TrustAssessorPage() {
   }
 
   return (
+    <AbbrevLookupContext.Provider value={abbrevLookup}>
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-5">
@@ -6698,5 +6711,6 @@ export default function TrustAssessorPage() {
 
       </div>
     </div>
+    </AbbrevLookupContext.Provider>
   );
 }
