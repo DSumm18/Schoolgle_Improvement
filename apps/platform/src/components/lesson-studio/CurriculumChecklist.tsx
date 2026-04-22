@@ -55,6 +55,12 @@ interface SubjectGroup {
 interface CurriculumChecklistProps {
   classId: string;
   yearGroup: string;
+  /**
+   * Optional — when provided, the checklist is locked to this subject and the
+   * internal "All subjects / Maths / English / Science" filter chips are hidden.
+   * Parent becomes the source of truth for subject scoping.
+   */
+  subject?: string;
 }
 
 // ─── Status Config ───────────────────────────────────────────────────────
@@ -423,12 +429,17 @@ function StatusLegend() {
 
 // ─── Main Component ──────────────────────────────────────────────────────
 
-export function CurriculumChecklist({ classId, yearGroup }: CurriculumChecklistProps) {
+export function CurriculumChecklist({ classId, yearGroup, subject }: CurriculumChecklistProps) {
   const [subjects, setSubjects] = useState<SubjectGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeFilter, setActiveFilter] = useState<string | null>(null);
+  const [activeFilter, setActiveFilter] = useState<string | null>(subject ?? null);
   const [totalObjectives, setTotalObjectives] = useState(0);
+
+  // Keep internal filter in sync when parent drives the subject
+  useEffect(() => {
+    if (subject !== undefined) setActiveFilter(subject);
+  }, [subject]);
 
   useEffect(() => {
     if (!classId) return;
@@ -600,36 +611,38 @@ export function CurriculumChecklist({ classId, yearGroup }: CurriculumChecklistP
           </div>
         </div>
 
-        {/* Subject filter pills */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={() => setActiveFilter(null)}
-            className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all ${
-              activeFilter === null
-                ? "bg-gray-800 text-white shadow-sm"
-                : "bg-white text-gray-600 hover:bg-gray-50 border border-gray-200"
-            }`}
-          >
-            All Subjects
-          </button>
-          {availableSubjects.map((s) => {
-            const colors = SUBJECT_FILTER_COLORS[s] ?? {
-              active: "bg-gray-800 text-white",
-              idle: "bg-white text-gray-600 border border-gray-200",
-            };
-            return (
-              <button
-                key={s}
-                onClick={() => setActiveFilter(activeFilter === s ? null : s)}
-                className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                  activeFilter === s ? colors.active : colors.idle
-                }`}
-              >
-                {s}
-              </button>
-            );
-          })}
-        </div>
+        {/* Subject filter pills — hidden when parent is driving subject scope */}
+        {subject === undefined && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => setActiveFilter(null)}
+              className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                activeFilter === null
+                  ? "bg-gray-800 text-white shadow-sm"
+                  : "bg-white text-gray-600 hover:bg-gray-50 border border-gray-200"
+              }`}
+            >
+              All Subjects
+            </button>
+            {availableSubjects.map((s) => {
+              const colors = SUBJECT_FILTER_COLORS[s] ?? {
+                active: "bg-gray-800 text-white",
+                idle: "bg-white text-gray-600 border border-gray-200",
+              };
+              return (
+                <button
+                  key={s}
+                  onClick={() => setActiveFilter(activeFilter === s ? null : s)}
+                  className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                    activeFilter === s ? colors.active : colors.idle
+                  }`}
+                >
+                  {s}
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         <StatusLegend />
 

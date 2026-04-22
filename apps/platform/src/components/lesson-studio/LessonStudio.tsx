@@ -101,6 +101,11 @@ export function LessonStudio() {
   const [selectedTheme, setSelectedTheme] = useState("none");
   const [teacherInput, setTeacherInput] = useState("");
 
+  // School-wide scheme adoption — { subject: scheme_name }. One scheme per subject
+  // for the whole school; each subject's Curriculum view reads from here.
+  const [orgSchemes, setOrgSchemes] = useState<Record<string, string>>({});
+  const [curriculumSubject, setCurriculumSubject] = useState<string>("Maths");
+
   // Load classes directly from Supabase
   useEffect(() => {
     if (!organizationId) return;
@@ -141,6 +146,30 @@ export function LessonStudio() {
       })
       .catch(() => setLoading(false));
   }, [organizationId]);
+
+  // Load the school's adopted scheme for each subject
+  useEffect(() => {
+    if (!organizationId) return;
+    const headers: HeadersInit = {};
+    if (session?.access_token) {
+      (headers as Record<string, string>).Authorization = `Bearer ${session.access_token}`;
+    }
+    fetch("/api/organization/schemes", { headers })
+      .then((r) => r.json())
+      .then((res) => {
+        const schemes = res?.data?.schemes;
+        if (Array.isArray(schemes)) {
+          const map: Record<string, string> = {};
+          for (const s of schemes) {
+            if (s?.subject && s?.scheme_name) {
+              map[s.subject] = s.scheme_name;
+            }
+          }
+          setOrgSchemes(map);
+        }
+      })
+      .catch(() => {});
+  }, [organizationId, session?.access_token]);
 
   // Load timetable + pupils when class changes
   useEffect(() => {
@@ -202,6 +231,22 @@ export function LessonStudio() {
         setAllocations(map);
       });
   }, [selectedClass, weekCommencing, organizationId]);
+
+  // Subjects present in this class's timetable — drives the Curriculum tab switcher
+  const curriculumSubjects = useMemo(() => {
+    const fromSlots = Array.from(
+      new Set(slots.map((s) => s.subject).filter(Boolean) as string[]),
+    );
+    return fromSlots.length > 0 ? fromSlots.sort() : ["Maths"];
+  }, [slots]);
+
+  // Keep the currently-selected Curriculum subject in bounds when slots change
+  useEffect(() => {
+    if (curriculumSubjects.length === 0) return;
+    if (!curriculumSubjects.includes(curriculumSubject)) {
+      setCurriculumSubject(curriculumSubjects[0]);
+    }
+  }, [curriculumSubjects, curriculumSubject]);
 
   // Week navigation
   const prevWeek = () => {
@@ -311,6 +356,33 @@ export function LessonStudio() {
       prev?.id === planId ? { ...prev, status: "taught" as const } : prev,
     );
   };
+
+  // After SchemeManager connects a scheme for the current subject, promote the
+  // just-connected scheme to the school-wide adopted scheme for that subject.
+  // This keeps the Curriculum tab instantly in-sync without requiring the user
+  // to go to the Settings > Schemes admin page (Slice 2).
+  const handleSchemeConnectedForSubject = useCallback(async () => {
+    if (!selectedClass || !curriculumSubject) return;
+    const { data } = await supabase
+      .from("ls_scheme_mappings")
+      .select("scheme_name")
+      .eq("class_id", selectedClass.id)
+      .eq("subject", curriculumSubject)
+      .order("created_at", { ascending: false })
+      .limit(1);
+    const schemeName = data?.[0]?.scheme_name;
+    if (!schemeName) return;
+    const headers: HeadersInit = { "Content-Type": "application/json" };
+    if (session?.access_token) {
+      (headers as Record<string, string>).Authorization = `Bearer ${session.access_token}`;
+    }
+    await fetch("/api/organization/schemes", {
+      method: "PUT",
+      headers,
+      body: JSON.stringify({ subject: curriculumSubject, scheme_name: schemeName }),
+    }).catch(() => {});
+    setOrgSchemes((prev) => ({ ...prev, [curriculumSubject]: schemeName }));
+  }, [selectedClass, curriculumSubject, session?.access_token]);
 
   // Stats
   const plannedCount = plans.filter(
@@ -606,57 +678,115 @@ export function LessonStudio() {
             </div>
           )}
 
-          <CurriculumProgressionView
-            classId={selectedClass.id}
-            subject="Maths"
-            yearGroup={selectedClass.year_group}
-            schemeName="white-rose-maths"
-            onSelectTopic={(topic) => {
-              setSelectedTopic(topic);
-              setMainView("lessons");
-              setViewMode("timetable");
-            }}
-          />
-          {slots.some((s) => s.subject === "Maths") && (
-            <CurriculumAllocator
-              classId={selectedClass.id}
-              subject="Maths"
-              yearGroup={selectedClass.year_group}
-              organizationId={organizationId || ""}
-              schemeName="white-rose-maths"
-            />
-          )}
-          {/* Subject schemes for other subjects — show a "not yet set up" card for each */}
-          {(() => {
-            const subjects = Array.from(new Set(slots.map((s) => s.subject))).filter((s) => s !== "Maths");
-            if (subjects.length === 0) return null;
-            return (
-              <div className="bg-white rounded-xl border border-slate-100 p-4">
-                <div className="text-sm font-semibold text-slate-800 mb-1">Other Subjects</div>
-                <div className="text-xs text-slate-500 mb-3">
-                  Only White Rose Maths Year 6 has full scheme data built in. Other subjects can be set up by connecting a scheme below.
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {subjects.map((s) => (
-                    <span key={s} className="px-2 py-1 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-600">
-                      {s} — no scheme connected
-                    </span>
-                  ))}
-                </div>
+          {/* Subject switcher — one view per subject, no cross-subject clutter */}
+          {slots.length > 0 && (
+            <div className="bg-white rounded-xl border border-slate-200 p-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 mr-1">
+                  Subject
+                </span>
+                {curriculumSubjects.map((s) => {
+                  const hasScheme = !!orgSchemes[s];
+                  const isActive = curriculumSubject === s;
+                  return (
+                    <button
+                      key={s}
+                      onClick={() => setCurriculumSubject(s)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                        isActive
+                          ? "bg-teal-600 text-white shadow-sm"
+                          : "bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200"
+                      }`}
+                    >
+                      {s}
+                      {!hasScheme && (
+                        <span
+                          className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                            isActive
+                              ? "bg-white/20 text-white"
+                              : "bg-amber-100 text-amber-700"
+                          }`}
+                        >
+                          no scheme
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
+            </div>
+          )}
+
+          {/* Subject-scoped content: progression + allocator + checklist, or
+              connect-a-scheme prompt when the school hasn't adopted one yet */}
+          {(() => {
+            const schemeForSubject = orgSchemes[curriculumSubject];
+
+            if (!schemeForSubject) {
+              return (
+                <div className="space-y-4">
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-5">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-full bg-amber-100 flex-shrink-0 flex items-center justify-center text-amber-700 text-xl">
+                        📚
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-base font-bold text-slate-800 mb-1">
+                          No {curriculumSubject} scheme adopted yet
+                        </div>
+                        <div className="text-sm text-slate-600 mb-2">
+                          Once you adopt a scheme for {curriculumSubject}, it
+                          applies to every class across the school. You can
+                          change it later in Settings &gt; Schemes.
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          Primary schools typically adopt a single scheme per
+                          subject (e.g. White Rose Maths, Talk for Writing,
+                          Kapow Science) so progression between year groups
+                          stays coherent.
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <SchemeManager
+                    classId={selectedClass.id}
+                    yearGroup={selectedClass.year_group}
+                    onSchemeConnected={handleSchemeConnectedForSubject}
+                  />
+                </div>
+              );
+            }
+
+            return (
+              <>
+                <CurriculumProgressionView
+                  classId={selectedClass.id}
+                  subject={curriculumSubject}
+                  yearGroup={selectedClass.year_group}
+                  schemeName={schemeForSubject}
+                  onSelectTopic={(topic) => {
+                    setSelectedTopic(topic);
+                    setMainView("lessons");
+                    setViewMode("timetable");
+                  }}
+                />
+                {slots.some((s) => s.subject === curriculumSubject) && (
+                  <CurriculumAllocator
+                    classId={selectedClass.id}
+                    subject={curriculumSubject}
+                    yearGroup={selectedClass.year_group}
+                    organizationId={organizationId || ""}
+                    schemeName={schemeForSubject}
+                  />
+                )}
+                <CurriculumChecklist
+                  classId={selectedClass.id}
+                  yearGroup={selectedClass.year_group}
+                  subject={curriculumSubject}
+                />
+              </>
             );
           })()}
-          <CurriculumChecklist
-            classId={selectedClass.id}
-            yearGroup={selectedClass.year_group}
-          />
-          <SchemeManager
-            classId={selectedClass.id}
-            yearGroup={selectedClass.year_group}
-            onSchemeConnected={() => {
-              // Refresh plans when scheme connected
-            }}
-          />
         </div>
       )}
 
