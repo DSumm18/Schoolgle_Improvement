@@ -456,20 +456,33 @@ export const GET = protectedRoute(async (auth, _req: NextRequest) => {
     // Fetch the org's own most-recent trust-spreadsheet (if any) so the CTF-vs-spreadsheet
     // comparison uses real self-reported figures, not hardcoded constants.
     // Resolve to the trust org first (mirrors the trust-spreadsheet route logic).
-    const { data: orgRow } = await supabase
+    const { data: orgRow, error: orgErr } = await supabase
       .from('organizations')
       .select('id, parent_organization_id')
       .eq('id', ORG_ID)
       .maybeSingle();
+    if (orgErr) console.warn('[grove-house] org lookup failed:', orgErr.message);
     const trustOrgId = orgRow?.parent_organization_id || ORG_ID;
 
-    const { data: spreadsheetRow } = await supabase
+    const { data: allSpreadsheetRows, error: spreadsheetErr } = await supabase
       .from('trust_spreadsheets')
-      .select('parsed_data, created_at')
+      .select('parsed_data, created_at, capture_period')
       .eq('trust_organization_id', trustOrgId)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .order('created_at', { ascending: false });
+    if (spreadsheetErr) console.warn('[grove-house] trust_spreadsheets lookup failed:', spreadsheetErr.message);
+
+    // Pick the best snapshot by the same priority used in the sibling trust-spreadsheet route:
+    // mid_year > end_of_year > summer_term > autumn_term
+    const CAPTURE_PRIORITY = ['mid_year', 'end_of_year', 'summer_term', 'autumn_term'] as const;
+    type CapturePeriod = typeof CAPTURE_PRIORITY[number];
+    type SpreadsheetRecord = { parsed_data: unknown; created_at: string; capture_period: string };
+    const byPeriod: Partial<Record<CapturePeriod, SpreadsheetRecord>> = {};
+    for (const row of (allSpreadsheetRows ?? []) as SpreadsheetRecord[]) {
+      const p = row.capture_period as CapturePeriod;
+      if (CAPTURE_PRIORITY.includes(p) && !byPeriod[p]) byPeriod[p] = row;
+    }
+    const bestPeriod = CAPTURE_PRIORITY.find((p) => byPeriod[p]) ?? null;
+    const spreadsheetRow = bestPeriod ? byPeriod[bestPeriod] : null;
 
     type SpreadsheetRow = {
       r: number | null;
