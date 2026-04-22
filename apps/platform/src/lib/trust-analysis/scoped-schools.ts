@@ -32,6 +32,9 @@ export function abbreviateSchoolName(name: string): string {
 /**
  * Build a map of abbrev → { id, name, urn } for the schools in scope.
  * Disambiguates collisions by appending a numeric suffix (GHPS, GHPS2, …).
+ * Schools whose abbreviation reduces to an empty string (e.g. all tokens are
+ * IGNORE_WORDS) are skipped with a warning — including them would cause every
+ * filename to match.
  */
 export function buildAbbrevLookup(
   schools: ScopedSchool[],
@@ -39,6 +42,12 @@ export function buildAbbrevLookup(
   const out: Record<string, ScopedSchool> = {};
   for (const s of schools) {
     const base = abbreviateSchoolName(s.name);
+    if (!base) {
+      console.warn(
+        `[buildAbbrevLookup] Skipping "${s.name}" (urn=${s.urn}): abbreviation is empty (all tokens are ignored words).`,
+      );
+      continue;
+    }
     if (!(base in out)) {
       out[base] = s;
       continue;
@@ -86,7 +95,13 @@ export function resolveSchoolByName(
   const lower = filename.toLowerCase();
   for (const s of schools) {
     const abbrev = abbreviateSchoolName(s.name);
-    if (upper.includes(abbrev)) return s;
+    if (!abbrev) continue;
+    // Require a non-alphanumeric boundary on at least one side so that e.g.
+    // abbrev "GHPS" does not match the token "GHPSA" in "GHPSA_form.xlsx".
+    const boundaryRe = new RegExp(
+      '(^|[^A-Z0-9])' + abbrev + '([^A-Z0-9]|$)',
+    );
+    if (boundaryRe.test(upper)) return s;
   }
   for (const s of schools) {
     const words = distinctiveWords(s.name);

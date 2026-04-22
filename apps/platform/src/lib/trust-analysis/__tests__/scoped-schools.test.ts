@@ -49,4 +49,28 @@ describe('scoped-schools helpers', () => {
     expect(resolveSchoolByName('grove house.xlsx', scoped)?.urn).toBe(148201);
     expect(resolveSchoolByName('CLAYTON village.xlsx', scoped)?.urn).toBe(148869);
   });
+
+  it('resolveSchoolByName does not match abbrev as substring of a longer token', () => {
+    const schools = [{ id: 'x', name: 'Grove House Primary School', urn: 1 }];
+    // "GHPSA" contains "GHPS" but no boundary after — must NOT match
+    expect(resolveSchoolByName('GHPSA_other.xlsx', schools)).toBeNull();
+    // "NOT_GHPS_LIKE.xlsx" — abbrev surrounded by _ on both sides = valid boundary
+    expect(resolveSchoolByName('NOT_GHPS_LIKE.xlsx', schools)).toEqual(
+      expect.objectContaining({ urn: 1 }),
+    );
+  });
+
+  it('buildAbbrevLookup skips schools with empty abbrev (all ignore-words)', () => {
+    const lookup = buildAbbrevLookup([
+      { id: 'a', name: 'The Of And', urn: 1 },
+      { id: 'b', name: 'Grove House Primary School', urn: 2 },
+    ]);
+    expect(lookup.GHPS).toBeDefined();
+    expect(Object.keys(lookup)).toHaveLength(1);
+  });
+
+  it('handles empty schools array gracefully', () => {
+    expect(buildAbbrevLookup([])).toEqual({});
+    expect(resolveSchoolByName('anything.xlsx', [])).toBeNull();
+  });
 });
