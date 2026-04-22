@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { ChevronDown, Building2, School } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/SupabaseAuthContext";
@@ -136,6 +136,35 @@ export default function OrgSwitcher({ currentOrgId, onOrgChange }: OrgSwitcherPr
     setIsOpen(false);
   };
 
+  // Group orgs hierarchically: each trust with its accessible children beneath;
+  // standalone schools (no parent, or parent not in the user's list) go last.
+  const groups = useMemo(() => {
+    const byId = new Map(organizations.map((o) => [o.id, o]));
+    const trusts = organizations
+      .filter((o) => o.organization_type === 'trust' || o.organization_type === 'local_authority')
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    const trustGroups = trusts.map((trust) => ({
+      trust,
+      children: organizations
+        .filter((o) => o.parent_organization_id === trust.id)
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    }));
+
+    const accessibleTrustIds = new Set(trusts.map((t) => t.id));
+    const standalone = organizations
+      .filter((o) =>
+        o.organization_type === 'school' &&
+        (!o.parent_organization_id || !accessibleTrustIds.has(o.parent_organization_id)) &&
+        // Orphans whose parent IS in the list would already be rendered under that parent,
+        // so this filter keeps only genuine standalones.
+        !trustGroups.some((g) => g.children.some((c) => c.id === o.id)),
+      )
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    return { trustGroups, standalone };
+  }, [organizations]);
+
   if (loading) {
     return (
       <div className="px-4 py-2 bg-gray-50 rounded-lg animate-pulse">
@@ -184,33 +213,77 @@ export default function OrgSwitcher({ currentOrgId, onOrgChange }: OrgSwitcherPr
             className="fixed inset-0 z-10"
             onClick={() => setIsOpen(false)}
           />
-          <div className="absolute top-full left-0 mt-2 w-full bg-white rounded-lg shadow-lg border border-gray-200 z-20 max-h-64 overflow-y-auto">
-            {organizations.map((org) => (
-              <button
-                key={org.id}
-                onClick={() => handleOrgSelect(org)}
-                className={`w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left ${
-                  org.id === currentOrgId ? 'bg-blue-50' : ''
-                }`}
-              >
-                {org.organization_type === 'trust' ? (
+          <div className="absolute top-full left-0 mt-2 w-full bg-white rounded-lg shadow-lg border border-gray-200 z-20 max-h-96 overflow-y-auto">
+            {groups.trustGroups.map(({ trust, children }) => (
+              <div key={trust.id} className="border-b border-gray-100 last:border-b-0">
+                {/* Trust row */}
+                <button
+                  onClick={() => handleOrgSelect(trust)}
+                  className={`w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left ${
+                    trust.id === currentOrgId ? 'bg-blue-50' : ''
+                  }`}
+                >
                   <Building2 size={16} className="text-gray-600" />
-                ) : (
-                  <School size={16} className="text-gray-600" />
-                )}
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-gray-900 truncate">
-                    {org.name}
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-gray-900 truncate">
+                      {trust.name}
+                    </div>
+                    <div className="text-xs text-gray-500 capitalize">
+                      {trust.organization_type.replace('_', ' ')} · {children.length} {children.length === 1 ? 'school' : 'schools'}
+                    </div>
                   </div>
-                  <div className="text-xs text-gray-500 capitalize">
-                    {org.organization_type.replace('_', ' ')}
-                  </div>
-                </div>
-                {org.id === currentOrgId && (
-                  <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                )}
-              </button>
+                  {trust.id === currentOrgId && (
+                    <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                  )}
+                </button>
+                {/* Child schools indented */}
+                {children.map((child) => (
+                  <button
+                    key={child.id}
+                    onClick={() => handleOrgSelect(child)}
+                    className={`w-full pl-10 pr-4 py-2 flex items-center gap-2 hover:bg-gray-50 transition-colors text-left ${
+                      child.id === currentOrgId ? 'bg-blue-50' : ''
+                    }`}
+                  >
+                    <School size={14} className="text-gray-500" />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm text-gray-800 truncate">
+                        {child.name}
+                      </div>
+                    </div>
+                    {child.id === currentOrgId && (
+                      <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                    )}
+                  </button>
+                ))}
+              </div>
             ))}
+            {groups.standalone.length > 0 && (
+              <div className="border-t border-gray-100">
+                <div className="px-4 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50">
+                  Standalone schools
+                </div>
+                {groups.standalone.map((org) => (
+                  <button
+                    key={org.id}
+                    onClick={() => handleOrgSelect(org)}
+                    className={`w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left ${
+                      org.id === currentOrgId ? 'bg-blue-50' : ''
+                    }`}
+                  >
+                    <School size={16} className="text-gray-600" />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-gray-900 truncate">
+                        {org.name}
+                      </div>
+                    </div>
+                    {org.id === currentOrgId && (
+                      <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </>
       )}
