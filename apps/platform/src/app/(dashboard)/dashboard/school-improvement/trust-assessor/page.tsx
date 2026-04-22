@@ -76,6 +76,7 @@ import {
 import { emitTrustAssessorEvents } from "@/lib/school-events/emit-trust-assessor";
 import { Timeline } from "@/components/school-events/Timeline";
 import type { SchoolEvent } from "@/lib/school-events/types";
+import { CapturesPanel } from "@/components/school-assessment/CapturesPanel";
 import {
   computeStaffingRatios,
   assessStaffing,
@@ -1146,7 +1147,7 @@ type StaffingByUrn = Record<number, {
   pupilAdultRatio: number | null;
 }>;
 
-function SchoolTab({ school, parsed, dfeData, staffingSnapshots, summaryData, authToken, organizationId, capturesByPeriod }: { school: string; parsed: ParsedSpreadsheet; dfeData?: DfEData | null; staffingSnapshots?: StaffingByUrn | null; summaryData?: SchoolDataSummary | null; authToken?: string; organizationId?: string; capturesByPeriod?: { autumn_term?: { parsed_data: ParsedSpreadsheet } | null; mid_year?: { parsed_data: ParsedSpreadsheet } | null } }) {
+function SchoolTab({ school, parsed, dfeData, staffingSnapshots, summaryData, authToken, organizationId, capturesByPeriod, urnToOrgId }: { school: string; parsed: ParsedSpreadsheet; dfeData?: DfEData | null; staffingSnapshots?: StaffingByUrn | null; summaryData?: SchoolDataSummary | null; authToken?: string; organizationId?: string; capturesByPeriod?: { autumn_term?: { parsed_data: ParsedSpreadsheet } | null; mid_year?: { parsed_data: ParsedSpreadsheet } | null }; urnToOrgId?: Record<number, string> }) {
   const schoolData = parsed.data[school] ?? {};
   const info = TRUST_SCHOOLS[school];
 
@@ -2286,6 +2287,13 @@ function SchoolTab({ school, parsed, dfeData, staffingSnapshots, summaryData, au
           </div>
         </div>
       )}
+
+      {/* Captures for THIS school — each school sees its own list only. */}
+      <SchoolCapturesPanelSlot
+        school={school}
+        urnToOrgId={urnToOrgId}
+        authToken={authToken}
+      />
 
       <SchoolTabTabs school={school}>
         {(activeTab: SchoolTabId) => (
@@ -3434,17 +3442,23 @@ function getKs2SubjectForUrn(ks2Results: KS2Result[], urn: number, year: number,
   return r?.expectedStandardPct ?? null;
 }
 
-function KS2TrackRecordChart({ school, abbrev, ks2Results, selfReports }: {
+function KS2TrackRecordChart({ school, abbrev, urn, ks2Results, selfReports }: {
   school: string;
-  abbrev: string;
+  // abbrev is optional — previously the only URN resolution path was via
+  // TRUST_SCHOOLS[abbrev]. Now we accept urn directly so any school with a
+  // valid URN can render this chart without being in the hardcoded list.
+  abbrev?: string;
+  urn?: number;
   ks2Results: KS2Result[];
   selfReports: {
     autumn_term?: { combined: number | null } | null;
     mid_year?: { combined: number | null } | null;
   } | null;
 }) {
-  const info = TRUST_SCHOOLS[abbrev];
-  if (!info) return null;
+  // Resolve URN: explicit prop takes precedence, fall back to abbrev lookup.
+  const schoolUrn = urn ?? (abbrev ? TRUST_SCHOOLS[abbrev]?.urn : undefined);
+  if (!schoolUrn) return null;
+  const info = { urn: schoolUrn };
 
   const ks2Years = [2023, 2024, 2025];
 
@@ -3568,16 +3582,153 @@ function KS2TrackRecordChart({ school, abbrev, ks2Results, selfReports }: {
 
 // ─── Phase 2: FSM Trend Chart ────────────────────────────────────────────────
 
-function FsmTrendChart({ abbrev, census, selfReportFsmPcts }: {
-  abbrev: string;
+// Slot that mounts CapturesPanel for the active school. Extracted so we can
+// useMemo the auth headers object — inlining it caused a new ref every render,
+// which in turn caused CapturesPanel's useEffect to refetch on every render.
+function SchoolCapturesPanelSlot({ school, urnToOrgId, authToken }: {
+  school: string;
+  urnToOrgId?: Record<number, string>;
+  authToken?: string;
+}) {
+  const info = TRUST_SCHOOLS[school];
+  const schoolOrgId = info?.urn ? urnToOrgId?.[info.urn] : undefined;
+  const authHeaders = useMemo<HeadersInit>(() => {
+    const h: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (authToken) h['Authorization'] = `Bearer ${authToken}`;
+    return h;
+  }, [authToken]);
+  if (!schoolOrgId || !authToken) return null;
+  return (
+    <div className="mb-6">
+      <CapturesPanel
+        organizationId={schoolOrgId}
+        schoolName={info?.name ?? school}
+        authHeaders={authHeaders}
+      />
+    </div>
+  );
+}
+
+// Demographic snapshot card — purely external (DfE Annual School Census).
+// Renders for any school with a URN that has census data, no self-report required.
+// Shows latest-year NOR, FSM%, EAL%, SEND% with 3-year change indicators.
+//
+// Why this card exists: on the no-spreadsheet path the report was sparse. The
+// census table already has eal_pct / sen_pct / number_on_roll — showing them
+// makes the report feel "wow, you already know all this about my school"
+// without any data entry. External tier, always safe to render.
+function DemographicSnapshotCard({ urn, label, census }: {
+  urn: number;
+  label: string;
+  census: CensusRecord[];
+}) {
+  const schoolCensus = census
+    .filter((c) => c.urn === urn)
+    .sort((a, b) => a.academicYearEnd - b.academicYearEnd);
+  if (schoolCensus.length === 0) return null;
+
+  const latest = schoolCensus[schoolCensus.length - 1];
+  const threeYearsAgo = schoolCensus[Math.max(0, schoolCensus.length - 4)];
+  const yearsOfData = schoolCensus.length;
+
+  // Change since earliest available year (capped at ~3 years back).
+  const delta = (latestVal: number | null, baselineVal: number | null): number | null => {
+    if (latestVal == null || baselineVal == null) return null;
+    return Math.round((latestVal - baselineVal) * 10) / 10;
+  };
+
+  const norDelta = delta(latest.numberOnRoll, threeYearsAgo.numberOnRoll);
+  const fsmDelta = delta(latest.fsmPct, threeYearsAgo.fsmPct);
+  const ealDelta = delta(latest.ealPct, threeYearsAgo.ealPct);
+  const senDelta = delta(latest.senPct, threeYearsAgo.senPct);
+
+  const formatDelta = (d: number | null, suffix: string): string => {
+    if (d === null) return '';
+    if (d === 0) return 'no change';
+    const sign = d > 0 ? '+' : '';
+    return `${sign}${d}${suffix} over ${yearsOfData} yr`;
+  };
+
+  const deltaColor = (d: number | null, good: 'up' | 'down'): string => {
+    if (d === null || d === 0) return 'text-gray-400';
+    const isPositiveMove = good === 'up' ? d > 0 : d < 0;
+    return isPositiveMove ? 'text-emerald-600' : 'text-rose-600';
+  };
+
+  type Metric = {
+    label: string;
+    value: string;
+    deltaText: string;
+    deltaClass: string;
+    hint: string;
+  };
+  const metrics: Metric[] = [
+    {
+      label: 'Number on roll',
+      value: latest.numberOnRoll != null ? String(latest.numberOnRoll) : '—',
+      deltaText: formatDelta(norDelta, ''),
+      deltaClass: deltaColor(norDelta, 'up'),
+      hint: 'Pupils enrolled in the DfE January census',
+    },
+    {
+      label: 'FSM (Ever-6)',
+      value: latest.fsmPct != null ? `${Math.round(latest.fsmPct * 10) / 10}%` : '—',
+      deltaText: formatDelta(fsmDelta, 'pp'),
+      deltaClass: deltaColor(fsmDelta, 'down'),
+      hint: 'Pupils eligible for free school meals in the last 6 years — proxy for deprivation',
+    },
+    {
+      label: 'EAL',
+      value: latest.ealPct != null ? `${Math.round(latest.ealPct * 10) / 10}%` : '—',
+      deltaText: formatDelta(ealDelta, 'pp'),
+      deltaClass: 'text-gray-500',
+      hint: 'Pupils with English as an Additional Language',
+    },
+    {
+      label: 'SEND',
+      value: latest.senPct != null ? `${Math.round(latest.senPct * 10) / 10}%` : '—',
+      deltaText: formatDelta(senDelta, 'pp'),
+      deltaClass: 'text-gray-500',
+      hint: 'Pupils with Special Educational Needs or Disabilities',
+    },
+  ];
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl p-4">
+      <div className="flex items-baseline justify-between mb-3">
+        <h4 className="text-sm font-semibold text-gray-800">{label}</h4>
+        <span className="text-[10px] text-gray-400 uppercase tracking-wide">
+          {latest.academicYearEnd} census
+        </span>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        {metrics.map((m) => (
+          <div key={m.label} title={m.hint}>
+            <div className="text-[11px] text-gray-500">{m.label}</div>
+            <div className="text-xl font-semibold text-gray-900 tabular-nums">{m.value}</div>
+            {m.deltaText && (
+              <div className={`text-[10px] ${m.deltaClass}`}>{m.deltaText}</div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FsmTrendChart({ abbrev, urn, label, census, selfReportFsmPcts }: {
+  abbrev?: string;
+  urn?: number;
+  label?: string;
   census: CensusRecord[];
   selfReportFsmPcts?: { autumn_term: number | null; mid_year: number | null };
 }) {
-  const info = TRUST_SCHOOLS[abbrev];
-  if (!info) return null;
+  const schoolUrn = urn ?? (abbrev ? TRUST_SCHOOLS[abbrev]?.urn : undefined);
+  if (!schoolUrn) return null;
+  const display = label ?? abbrev ?? `URN ${schoolUrn}`;
 
   const schoolCensus = census
-    .filter((c) => c.urn === info.urn && c.fsmPct !== null)
+    .filter((c) => c.urn === schoolUrn && c.fsmPct !== null)
     .sort((a, b) => a.academicYearEnd - b.academicYearEnd);
 
   if (schoolCensus.length === 0) return null;
@@ -3606,7 +3757,7 @@ function FsmTrendChart({ abbrev, census, selfReportFsmPcts }: {
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-4">
       <div className="flex items-center justify-between mb-3">
-        <div className="font-semibold text-gray-800 text-sm">{abbrev} — FSM % trend</div>
+        <div className="font-semibold text-gray-800 text-sm">{display} — FSM % trend</div>
         {divergenceFlag && (
           <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 font-semibold">
             Self-report {divergence! > 0 ? '+' : ''}{divergence}pp vs DfE
@@ -4168,6 +4319,13 @@ export default function TrustAssessorPage() {
   type CapturePeriod = 'autumn_term' | 'mid_year' | 'end_of_year' | 'summer_term';
   const [capturesByPeriod, setCapturesByPeriod] = useState<Partial<Record<CapturePeriod, { parsed_data: ParsedSpreadsheet; file_name: string; created_at?: string }>>>({});
   const [currentCapturePeriod, setCurrentCapturePeriod] = useState<CapturePeriod | null>(null);
+  // URN → child-org-id lookup so each school tab can query its OWN captures.
+  // Populated by /api/organizations/children on mount for trust-level users.
+  const [urnToOrgId, setUrnToOrgId] = useState<Record<number, string>>({});
+  // Schools in the current user's scope — trust-level: all children; school-
+  // level (leaf): the current org itself. Drives the DfE KS2 comparison block
+  // so any valid URN auto-populates without TRUST_SCHOOLS being hardcoded.
+  const [scopedSchools, setScopedSchools] = useState<Array<{ id: string; name: string; urn: number | null }>>([]);
   const [dfeData, setDfeData] = useState<DfEData | null>(null);
   const [dfeLoading, setDfeLoading] = useState(false);
   const [dfeError, setDfeError] = useState<string | null>(null);
@@ -4316,6 +4474,44 @@ export default function TrustAssessorPage() {
     fetchViaServer();
   }, [connector, parsed, organizationId, authHeaders]);
 
+  // Fetch this org + its children. Trust-level users get all schools in scope;
+  // standalone / leaf schools get themselves. Drives the KS2 comparison and
+  // the per-school capture queries.
+  useEffect(() => {
+    if (!organizationId || !accessToken) return;
+    (async () => {
+      const res = await fetch(`/api/organizations/children?parentId=${organizationId}`, { headers: authHeaders });
+      if (!res.ok) return;
+      const body = await res.json() as {
+        children?: Array<{ id: string; name: string; urn: string | number | null }>;
+        self?: { id: string; name: string; urn: string | number | null } | null;
+      };
+      const children = body.children ?? [];
+      const self = body.self ?? null;
+
+      const normUrn = (u: string | number | null | undefined): number | null => {
+        if (u === null || u === undefined) return null;
+        const n = typeof u === 'string' ? parseInt(u, 10) : u;
+        return Number.isFinite(n) ? n : null;
+      };
+
+      // URN → orgId map for per-school capture fetches
+      const map: Record<number, string> = {};
+      for (const c of children) {
+        const urn = normUrn(c.urn);
+        if (urn) map[urn] = c.id;
+      }
+      if (self && normUrn(self.urn)) map[normUrn(self.urn)!] = self.id;
+      setUrnToOrgId(map);
+
+      // Scoped schools: children if this org is a trust; self if it's a leaf.
+      const scoped = children.length > 0
+        ? children.map(c => ({ id: c.id, name: c.name, urn: normUrn(c.urn) }))
+        : (self ? [{ id: self.id, name: self.name, urn: normUrn(self.urn) }] : []);
+      setScopedSchools(scoped);
+    })();
+  }, [organizationId, accessToken, authHeaders]);
+
   // Fetch DfE data once on mount (not on every re-render)
   const dfeLoadedRef = useRef(false);
   useEffect(() => {
@@ -4337,20 +4533,19 @@ export default function TrustAssessorPage() {
       }
     })();
 
-    // Also fetch Grove House full data (non-fatal) — ONLY when the current org IS Grove House.
-    // Other schools show the locked/connect-your-data state instead of Grove House's data bleeding through.
-    const GROVE_HOUSE_ORG_ID = 'd9d1ac2c-5eff-4043-98f4-e1c43f616fd3';
-    if (organizationId !== GROVE_HOUSE_ORG_ID) {
-      setGroveHouseData(null);
-      return;
-    }
+    // Fetch per-pupil data for the current org. Server scopes by auth.organizationId,
+    // so a school login gets only its own pupils; a trust login gets the trust's
+    // aggregated per-pupil table (if any school in the trust has CTF data).
     (async () => {
       try {
-        const res = await fetch(`/api/trust-analysis/grove-house${organizationId ? `?organizationId=${organizationId}` : ''}`, { headers: authHeaders });
+        const res = await fetch(
+          `/api/trust-analysis/grove-house${organizationId ? `?organizationId=${organizationId}` : ''}`,
+          { headers: authHeaders },
+        );
         const json = await res.json();
         const payload = json.data ?? json;
         const summary = payload.summary;
-        if (res.ok && summary) {
+        if (res.ok && summary && summary.totalPupils > 0) {
           setGrooveHouseStats({
             totalPupils: summary.totalPupils,
             trackablePupils: summary.trackablePupils,
@@ -4367,9 +4562,12 @@ export default function TrustAssessorPage() {
             cohortMilestones: payload.cohortMilestones ?? [],
             demographicDisaggregation: payload.demographicDisaggregation ?? null,
           });
+        } else {
+          // No per-pupil data for this org — locked state handled by existing UI
+          setGroveHouseData(null);
         }
       } catch {
-        // non-fatal
+        setGroveHouseData(null);
       }
     })();
 
@@ -4624,6 +4822,17 @@ export default function TrustAssessorPage() {
       </div>
 
       <div className="max-w-6xl mx-auto px-6 py-8 space-y-8">
+
+        {/* ─── Data captures for the active org ──────────────────────────── */}
+        {/* Always visible at the top so school-level users (no spreadsheet yet) */}
+        {/* can create captures directly. For trust users it shows the trust's  */}
+        {/* own captures; each school's captures still render inside SchoolTab. */}
+        {organizationId && accessToken && (
+          <CapturesPanel
+            organizationId={organizationId}
+            authHeaders={authHeaders}
+          />
+        )}
 
         {/* ─── Connector Strip (minimal) ─────────────────────────────────── */}
         <div className="flex items-center gap-4 text-xs text-gray-500 px-1">
@@ -5027,7 +5236,7 @@ export default function TrustAssessorPage() {
                       exit={{ opacity: 0, y: -8 }}
                       transition={{ duration: 0.2 }}
                     >
-                      <SchoolTab key={activeSchoolTab} school={activeSchoolTab} parsed={parsed} dfeData={dfeData} staffingSnapshots={staffingSnapshots} summaryData={summaryData?.schoolAbbrev === activeSchoolTab ? summaryData : null} authToken={accessToken ?? undefined} organizationId={organizationId ?? undefined} capturesByPeriod={capturesByPeriod} />
+                      <SchoolTab key={activeSchoolTab} school={activeSchoolTab} parsed={parsed} dfeData={dfeData} staffingSnapshots={staffingSnapshots} summaryData={summaryData?.schoolAbbrev === activeSchoolTab ? summaryData : null} authToken={accessToken ?? undefined} organizationId={organizationId ?? undefined} capturesByPeriod={capturesByPeriod} urnToOrgId={urnToOrgId} />
 
                       {/* BUILD 4: No-CTF upsell for non-GHPS schools */}
                       {!groveHouseData && activeSchoolTab !== 'GHPS' && (
@@ -5332,28 +5541,76 @@ export default function TrustAssessorPage() {
                 </>
               )}
 
-              {/* No spreadsheet: show all schools' KS2 latest */}
-              {!parsed && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-700 mb-4">Trust KS2 Combined % — Latest Available</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {Object.entries(TRUST_SCHOOLS).map(([abbrev, info]) => {
-                      const latestResult = [2025, 2024, 2023].map((year) => ({
-                        year,
-                        pct: getKs2CombinedForUrn(dfeData.ks2Results, info.urn, year),
-                      })).find((r) => r.pct !== null);
-                      return (
-                        <div key={abbrev} className="bg-gray-50 border border-gray-200 rounded-xl p-3 text-center">
-                          <div className="font-bold text-gray-800 text-lg">
-                            {latestResult?.pct !== null && latestResult?.pct !== undefined ? `${latestResult.pct}%` : "—"}
-                          </div>
-                          <div className="text-xs font-semibold text-gray-600">{abbrev}</div>
-                          {latestResult && <div className="text-xs text-gray-400">{latestResult.year}</div>}
-                        </div>
-                      );
-                    })}
+              {/* No spreadsheet: render the SAME track-record and FSM-trend
+                  charts we show for PAYMAT, just scoped to this school's URN.
+                  Self-report bars stay empty (nothing to compare against yet
+                  — spreadsheet or in-app captures fill them later), but the
+                  DfE-blue historic bars and trend lines render for any URN. */}
+              {!parsed && scopedSchools.length > 0 && (
+                <>
+                  {/* Demographic snapshot — always external (DfE census).
+                      Renders for any school with a URN; no self-report needed. */}
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-semibold text-gray-700">Demographic Snapshot</h3>
+                    <span className="text-[10px] text-gray-400 flex items-center gap-1">
+                      <Info size={10} />
+                      Source: DfE Annual School Census — latest validated year with 3-year change.
+                    </span>
                   </div>
-                </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                    {scopedSchools.filter(s => s.urn).map((school) => (
+                      <DemographicSnapshotCard
+                        key={`demo-${school.id}`}
+                        urn={school.urn!}
+                        label={school.name}
+                        census={dfeData.census}
+                      />
+                    ))}
+                  </div>
+
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <h3 className="text-base font-semibold text-gray-800">
+                        {scopedSchools.length === 1
+                          ? `KS2 Combined % Track Record — ${scopedSchools[0].name}`
+                          : 'Trust KS2 Combined % Track Record — DfE history'}
+                      </h3>
+                      <p className="text-sm text-gray-500 mt-0.5">
+                        <span className="inline-flex items-center gap-1 mr-3"><span className="inline-block w-3 h-3 rounded-sm bg-blue-500" /> KS2 2023–2025 — DfE validated</span>
+                        <span className="text-gray-400">Connect a spreadsheet or add a data capture to overlay self-reported Autumn + Mid-Year bars.</span>
+                      </p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    {scopedSchools.filter(s => s.urn).map((school) => (
+                      <KS2TrackRecordChart
+                        key={school.id}
+                        school={school.name}
+                        urn={school.urn!}
+                        ks2Results={dfeData.ks2Results}
+                        selfReports={null}
+                      />
+                    ))}
+                  </div>
+
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-sm font-semibold text-gray-700">FSM % Trend (DfE Annual School Census)</h3>
+                    <span className="text-[10px] text-gray-400 flex items-center gap-1">
+                      <Info size={10} />
+                      Source: DfE Annual School Census — validated, multi-year trend per school.
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {scopedSchools.filter(s => s.urn).map((school) => (
+                      <FsmTrendChart
+                        key={school.id}
+                        urn={school.urn!}
+                        label={school.name}
+                        census={dfeData.census}
+                      />
+                    ))}
+                  </div>
+                </>
               )}
             </>
           )}
