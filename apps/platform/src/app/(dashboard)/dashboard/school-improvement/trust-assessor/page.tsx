@@ -73,6 +73,7 @@ import {
   citationFull,
   evaluateResearchKpis,
 } from "@/lib/trust-analysis/research-citations";
+import { buildAbbrevLookup, resolveSchoolByName } from '@/lib/trust-analysis/scoped-schools';
 import { emitTrustAssessorEvents } from "@/lib/school-events/emit-trust-assessor";
 import { Timeline } from "@/components/school-events/Timeline";
 import type { SchoolEvent } from "@/lib/school-events/types";
@@ -85,15 +86,6 @@ import {
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const TRUST_SCHOOLS: Record<string, { name: string; urn: number }> = {
-  CVPS: { name: "Clayton Village Primary School", urn: 148869 },
-  CHPS: { name: "Crossley Hall Primary School", urn: 146581 },
-  FPS: { name: "Farnham Primary School", urn: 144862 },
-  GHPS: { name: "Grove House Primary School", urn: 148201 },
-  HPS: { name: "Hollingwood Primary School", urn: 144860 },
-  LPS: { name: "Laycock Primary School", urn: 144861 },
-  LGPS: { name: "Lidget Green Primary School", urn: 150016 },
-};
 
 const YEAR_GROUPS = ["EYFS", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6"] as const;
 type YearGroup = (typeof YEAR_GROUPS)[number];
@@ -556,8 +548,8 @@ function TrafficLightGrid({ parsed, onSchoolClick }: { parsed: ParsedSpreadsheet
                   >
                     {school}
                   </button>
-                  {TRUST_SCHOOLS[school] && (
-                    <div className="text-xs text-gray-400 leading-tight">{TRUST_SCHOOLS[school].name.split(" ").slice(0, 3).join(" ")}</div>
+                  {abbrevLookup[school] && (
+                    <div className="text-xs text-gray-400 leading-tight">{abbrevLookup[school].name.split(" ").slice(0, 3).join(" ")}</div>
                   )}
                 </td>
                 <td className="text-center py-3 px-3">
@@ -726,7 +718,7 @@ function SchoolDetailCard({ school, parsed }: { school: string; parsed: ParsedSp
   const [open, setOpen] = useState(false);
 
   const schoolData = parsed.data[school] ?? {};
-  const info = TRUST_SCHOOLS[school];
+  const info = abbrevLookup[school];
 
   // Compute totals across all year groups
   let totalPupils = 0;
@@ -1149,7 +1141,7 @@ type StaffingByUrn = Record<number, {
 
 function SchoolTab({ school, parsed, dfeData, staffingSnapshots, summaryData, authToken, organizationId, capturesByPeriod, urnToOrgId }: { school: string; parsed: ParsedSpreadsheet; dfeData?: DfEData | null; staffingSnapshots?: StaffingByUrn | null; summaryData?: SchoolDataSummary | null; authToken?: string; organizationId?: string; capturesByPeriod?: { autumn_term?: { parsed_data: ParsedSpreadsheet } | null; mid_year?: { parsed_data: ParsedSpreadsheet } | null }; urnToOrgId?: Record<number, string> }) {
   const schoolData = parsed.data[school] ?? {};
-  const info = TRUST_SCHOOLS[school];
+  const info = abbrevLookup[school];
 
   // ── Section A: Profile stats ──
   let totalPupils = 0;
@@ -1184,7 +1176,7 @@ function SchoolTab({ school, parsed, dfeData, staffingSnapshots, summaryData, au
   const trustSendPct = trustTotalPupils > 0 ? (trustTotalSend / trustTotalPupils) * 100 : null;
 
   // ── Insight computations ──
-  const schoolUrn = TRUST_SCHOOLS[school]?.urn ?? null;
+  const schoolUrn = abbrevLookup[school]?.urn ?? null;
   const nationalPercentile = schoolUrn !== null ? (dfeData?.nationalPercentiles?.[schoolUrn] ?? null) : null;
   const threeYearAvg = schoolUrn !== null ? (dfeData?.threeYearAverages?.[schoolUrn] ?? null) : null;
   const y6Combined = schoolData["Year 6"]?.all_pupils.c_are ?? null;
@@ -1370,7 +1362,7 @@ function SchoolTab({ school, parsed, dfeData, staffingSnapshots, summaryData, au
     const reportPayload = {
       schoolAbbrev: school,
       schoolData: {
-        schoolName: TRUST_SCHOOLS[school]?.name ?? school,
+        schoolName: abbrevLookup[school]?.name ?? school,
         y6Combined: schoolData["Year 6"]?.all_pupils.c_are ?? null,
         nationalPercentile: null,
         nationalRank: null,
@@ -2235,7 +2227,7 @@ function SchoolTab({ school, parsed, dfeData, staffingSnapshots, summaryData, au
                 </div>
                 <div>
                   <h3 className="text-base font-semibold text-gray-900">Generate Governor Report</h3>
-                  <p className="text-xs text-gray-500">{school} &mdash; {TRUST_SCHOOLS[school]?.name ?? school}</p>
+                  <p className="text-xs text-gray-500">{school} &mdash; {abbrevLookup[school]?.name ?? school}</p>
                 </div>
               </div>
               <button onClick={() => setShowReportModal(false)} className="text-gray-400 hover:text-gray-600 transition-colors" aria-label="Close">
@@ -2314,7 +2306,7 @@ function SchoolTab({ school, parsed, dfeData, staffingSnapshots, summaryData, au
                           <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-muted text-muted-foreground uppercase tracking-wider">{school}</span>
                           <span className="text-xs text-muted-foreground">{schoolInfo?.nor ?? totalPupils} pupils &middot; {fsmPct !== null ? `${fsmPct}%` : '—'} FSM &middot; {schoolInfo?.ealPct !== undefined ? `${schoolInfo.ealPct}%` : '—'} EAL</span>
                         </div>
-                        <h2 className="text-2xl font-semibold text-foreground">{TRUST_SCHOOLS[school]?.name ?? school}</h2>
+                        <h2 className="text-2xl font-semibold text-foreground">{abbrevLookup[school]?.name ?? school}</h2>
                         {info?.urn && <p className="text-sm text-muted-foreground mt-0.5">URN {info.urn}</p>}
                       </div>
                       <div className="flex items-center gap-3 shrink-0">
@@ -2888,7 +2880,7 @@ function SchoolTab({ school, parsed, dfeData, staffingSnapshots, summaryData, au
                         };
                         return (
                           <KS2TrackRecordChart
-                            school={TRUST_SCHOOLS[school]?.name ?? school}
+                            school={abbrevLookup[school]?.name ?? school}
                             abbrev={school}
                             ks2Results={dfeData?.ks2Results ?? []}
                             selfReports={selfReports}
@@ -3445,7 +3437,7 @@ function getKs2SubjectForUrn(ks2Results: KS2Result[], urn: number, year: number,
 function KS2TrackRecordChart({ school, abbrev, urn, ks2Results, selfReports }: {
   school: string;
   // abbrev is optional — previously the only URN resolution path was via
-  // TRUST_SCHOOLS[abbrev]. Now we accept urn directly so any school with a
+  // abbrevLookup[abbrev]. Now we accept urn directly so any school with a
   // valid URN can render this chart without being in the hardcoded list.
   abbrev?: string;
   urn?: number;
@@ -3456,7 +3448,7 @@ function KS2TrackRecordChart({ school, abbrev, urn, ks2Results, selfReports }: {
   } | null;
 }) {
   // Resolve URN: explicit prop takes precedence, fall back to abbrev lookup.
-  const schoolUrn = urn ?? (abbrev ? TRUST_SCHOOLS[abbrev]?.urn : undefined);
+  const schoolUrn = urn ?? (abbrev ? abbrevLookup[abbrev]?.urn : undefined);
   if (!schoolUrn) return null;
   const info = { urn: schoolUrn };
 
@@ -3590,7 +3582,7 @@ function SchoolCapturesPanelSlot({ school, urnToOrgId, authToken }: {
   urnToOrgId?: Record<number, string>;
   authToken?: string;
 }) {
-  const info = TRUST_SCHOOLS[school];
+  const info = abbrevLookup[school];
   const schoolOrgId = info?.urn ? urnToOrgId?.[info.urn] : undefined;
   const authHeaders = useMemo<HeadersInit>(() => {
     const h: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -3723,7 +3715,7 @@ function FsmTrendChart({ abbrev, urn, label, census, selfReportFsmPcts }: {
   census: CensusRecord[];
   selfReportFsmPcts?: { autumn_term: number | null; mid_year: number | null };
 }) {
-  const schoolUrn = urn ?? (abbrev ? TRUST_SCHOOLS[abbrev]?.urn : undefined);
+  const schoolUrn = urn ?? (abbrev ? abbrevLookup[abbrev]?.urn : undefined);
   if (!schoolUrn) return null;
   const display = label ?? abbrev ?? `URN ${schoolUrn}`;
 
@@ -4170,7 +4162,7 @@ function PreMeetingVerification({ school, summary, dfeData, parsed }: {
   parsed: ParsedSpreadsheet;
 }) {
   const [checked, setChecked] = useState<Set<number>>(new Set());
-  const schoolInfo = TRUST_SCHOOLS[school];
+  const schoolInfo = abbrevLookup[school];
   const schoolData = parsed.data[school] ?? {};
   const y6 = schoolData['Year 6'];
 
@@ -4324,8 +4316,14 @@ export default function TrustAssessorPage() {
   const [urnToOrgId, setUrnToOrgId] = useState<Record<number, string>>({});
   // Schools in the current user's scope — trust-level: all children; school-
   // level (leaf): the current org itself. Drives the DfE KS2 comparison block
-  // so any valid URN auto-populates without TRUST_SCHOOLS being hardcoded.
+  // so any valid URN auto-populates without a hardcoded school registry.
   const [scopedSchools, setScopedSchools] = useState<Array<{ id: string; name: string; urn: number | null }>>([]);
+
+  // Derived lookup: abbrev → { id, name, urn } for the schools in this user's scope.
+  // Replaces the old hardcoded TRUST_SCHOOLS constant. Trust users get all children;
+  // school-level users get just themselves.
+  const abbrevLookup = useMemo(() => buildAbbrevLookup(scopedSchools), [scopedSchools]);
+
   const [dfeData, setDfeData] = useState<DfEData | null>(null);
   const [dfeLoading, setDfeLoading] = useState(false);
   const [dfeError, setDfeError] = useState<string | null>(null);
@@ -4343,8 +4341,8 @@ export default function TrustAssessorPage() {
   const [showAllFlags, setShowAllFlags] = useState(false);
   const [showFullHeatmap, setShowFullHeatmap] = useState(false);
   const [activeSchoolTab, setActiveSchoolTab] = useState<string>("overview");
-  const [grooveHouseStats, setGrooveHouseStats] = useState<{ totalPupils: number; trackablePupils: number } | null>(null);
-  const [groveHouseData, setGroveHouseData] = useState<{
+  const [perPupilStats, setPerPupilStats] = useState<{ totalPupils: number; trackablePupils: number } | null>(null);
+  const [perPupilData, setPerPupilData] = useState<{
     summary: { totalPupils: number; totalRecords: number; yearsSpan: number[]; trackablePupils: number };
     eyfsGld: { year: number; pupils: number; gldCount: number; gldPct: number }[];
     ks1Data: { year: number; pupils: number; subjects: Record<string, { total: number; wts: number; exs: number; gds: number }> }[];
@@ -4546,11 +4544,11 @@ export default function TrustAssessorPage() {
         const payload = json.data ?? json;
         const summary = payload.summary;
         if (res.ok && summary && summary.totalPupils > 0) {
-          setGrooveHouseStats({
+          setPerPupilStats({
             totalPupils: summary.totalPupils,
             trackablePupils: summary.trackablePupils,
           });
-          setGroveHouseData({
+          setPerPupilData({
             summary,
             eyfsGld: payload.eyfsGld ?? [],
             ks1Data: payload.ks1Data ?? [],
@@ -4564,10 +4562,10 @@ export default function TrustAssessorPage() {
           });
         } else {
           // No per-pupil data for this org — locked state handled by existing UI
-          setGroveHouseData(null);
+          setPerPupilData(null);
         }
       } catch {
-        setGroveHouseData(null);
+        setPerPupilData(null);
       }
     })();
 
@@ -4673,11 +4671,13 @@ export default function TrustAssessorPage() {
 
     // Infer school from filename if not provided
     let resolvedAbbrev = abbrev ?? summarySchoolAbbrev;
-    const upperName = file.name.toUpperCase();
-    const abbrevMatch = Object.keys(TRUST_SCHOOLS).find(a => upperName.includes(a));
-    if (abbrevMatch) {
-      resolvedAbbrev = abbrevMatch;
-      setSummarySchoolAbbrev(abbrevMatch);
+    const match = resolveSchoolByName(file.name, scopedSchools);
+    if (match) {
+      const abbrev = Object.keys(abbrevLookup).find(a => abbrevLookup[a].id === match.id);
+      if (abbrev) {
+        resolvedAbbrev = abbrev;
+        setSummarySchoolAbbrev(abbrev);
+      }
     }
 
     const reader = new FileReader();
@@ -4711,7 +4711,7 @@ export default function TrustAssessorPage() {
       }
     };
     reader.readAsArrayBuffer(file);
-  }, [summarySchoolAbbrev, organizationId, authHeaders]);
+  }, [summarySchoolAbbrev, organizationId, authHeaders, scopedSchools, abbrevLookup]);
 
   // Load persisted school summary on mount / org change
   const summaryLoadedRef = useRef<string | null>(null);
@@ -4782,7 +4782,7 @@ export default function TrustAssessorPage() {
   const findings: string[] = [];
   if (parsed && dfeData) {
     for (const abbrev of parsed.schools) {
-      const info = TRUST_SCHOOLS[abbrev];
+      const info = abbrevLookup[abbrev];
       if (!info) continue;
       const y6Data = parsed.data[abbrev]?.["Year 6"];
       const selfReportY6 = y6Data ? getCombinedARE(y6Data.all_pupils) : null;
@@ -5239,7 +5239,7 @@ export default function TrustAssessorPage() {
                       <SchoolTab key={activeSchoolTab} school={activeSchoolTab} parsed={parsed} dfeData={dfeData} staffingSnapshots={staffingSnapshots} summaryData={summaryData?.schoolAbbrev === activeSchoolTab ? summaryData : null} authToken={accessToken ?? undefined} organizationId={organizationId ?? undefined} capturesByPeriod={capturesByPeriod} urnToOrgId={urnToOrgId} />
 
                       {/* BUILD 4: No-CTF upsell for non-GHPS schools */}
-                      {!groveHouseData && activeSchoolTab !== 'GHPS' && (
+                      {!perPupilData && activeSchoolTab !== 'overview' && (
                         <motion.div
                           initial={{ opacity: 0, y: 8 }}
                           animate={{ opacity: 1, y: 0 }}
@@ -5252,7 +5252,7 @@ export default function TrustAssessorPage() {
                               <div className="flex items-center gap-2 mb-3">
                                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 uppercase tracking-wider">Tier 3 — Per-Pupil Analysis</span>
                               </div>
-                              <h3 className="text-lg font-semibold text-foreground mb-2">Connect CTF data for {TRUST_SCHOOLS[activeSchoolTab]?.name ?? activeSchoolTab}</h3>
+                              <h3 className="text-lg font-semibold text-foreground mb-2">Connect CTF data for {abbrevLookup[activeSchoolTab]?.name ?? activeSchoolTab}</h3>
                               <p className="text-sm text-muted-foreground mb-4 max-w-2xl">
                                 You&apos;re seeing the spreadsheet + DfE forensic layer. The per-pupil analysis — tracking every child&apos;s journey from EYFS through KS1 and generating named intervention plans — activates when CTF files are connected.
                               </p>
@@ -5489,7 +5489,7 @@ export default function TrustAssessorPage() {
                         autumn_term: autumnY6 ? { combined: autumnY6.all_pupils.c_are ?? null } : null,
                         mid_year: midYearY6 ? { combined: midYearY6.all_pupils.c_are ?? null } : null,
                       };
-                      const info = TRUST_SCHOOLS[abbrev];
+                      const info = abbrevLookup[abbrev];
                       return (
                         <KS2TrackRecordChart
                           key={abbrev}
@@ -5618,9 +5618,9 @@ export default function TrustAssessorPage() {
 
         {/* ─── Phase 3: Per-Pupil Deep Analytics ───────────────────────────── */}
         <section className="bg-white border border-gray-200 rounded-2xl p-6">
-          <SectionHeader number={3} title="Deep Analytics" subtitle={groveHouseData ? `Per-pupil tracking from CTF assessment files. ${groveHouseData.summary?.totalPupils || ''} pupils.` : "Per-pupil tracking from CTF assessment files. Connect your CTF to unlock pupil-level analysis."} />
+          <SectionHeader number={3} title="Deep Analytics" subtitle={perPupilData ? `Per-pupil tracking from CTF assessment files. ${perPupilData.summary?.totalPupils || ''} pupils.` : "Per-pupil tracking from CTF assessment files. Connect your CTF to unlock pupil-level analysis."} />
 
-          {!groveHouseData ? (
+          {!perPupilData ? (
             /* Locked state — no data yet */
             <div className="bg-gray-50 border border-dashed border-gray-300 rounded-xl p-8 text-center">
               <div className="bg-white border border-gray-200 rounded-2xl px-6 py-5 shadow-sm max-w-md mx-auto text-left">
@@ -5648,15 +5648,15 @@ export default function TrustAssessorPage() {
                 <div className="mb-1">
                   <h3 className="text-base font-semibold text-gray-900">Grove House Primary School — Per-Pupil Deep Dive</h3>
                   <p className="text-sm text-gray-500 mt-0.5">
-                    Data source: CTF assessment files (EYFS, KS1, Phonics). {groveHouseData.summary.totalPupils} unique pupils across {groveHouseData.summary.yearsSpan.length} years (includes leavers — not current roll).
+                    Data source: CTF assessment files (EYFS, KS1, Phonics). {perPupilData.summary.totalPupils} unique pupils across {perPupilData.summary.yearsSpan.length} years (includes leavers — not current roll).
                   </p>
                 </div>
                 <div className="grid grid-cols-4 gap-4 mt-4">
                   {[
-                    { label: "Unique pupils (all years)", value: groveHouseData.summary.totalPupils },
-                    { label: "Trackable across years", value: groveHouseData.summary.trackablePupils },
-                    { label: "Years of data", value: groveHouseData.summary.yearsSpan.length },
-                    { label: "Assessment records", value: groveHouseData.summary.totalRecords.toLocaleString() },
+                    { label: "Unique pupils (all years)", value: perPupilData.summary.totalPupils },
+                    { label: "Trackable across years", value: perPupilData.summary.trackablePupils },
+                    { label: "Years of data", value: perPupilData.summary.yearsSpan.length },
+                    { label: "Assessment records", value: perPupilData.summary.totalRecords.toLocaleString() },
                   ].map(({ label, value }) => (
                     <div key={label} className="bg-gray-50 border border-gray-200 rounded-xl p-4">
                       <div className="text-2xl font-bold text-gray-900">{value}</div>
@@ -5669,7 +5669,7 @@ export default function TrustAssessorPage() {
               {/* ── Section 2: EYFS GLD Trend ── */}
               <div className="border-t border-gray-100 pt-6">
                 <h4 className="text-sm font-semibold text-gray-800 mb-3">EYFS Good Level of Development (GLD) — Trend</h4>
-                {groveHouseData.eyfsGld.length > 0 ? (
+                {perPupilData.eyfsGld.length > 0 ? (
                   <>
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm border-collapse">
@@ -5682,7 +5682,7 @@ export default function TrustAssessorPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {groveHouseData.eyfsGld.map((row) => (
+                          {perPupilData.eyfsGld.map((row) => (
                             <tr key={row.year} className="border-b border-gray-100">
                               <td className="py-2 pr-4 text-gray-700 font-medium">{row.year}/{String(row.year + 1).slice(2)}</td>
                               <td className="py-2 px-4 text-right text-gray-600">{row.pupils}</td>
@@ -5704,13 +5704,13 @@ export default function TrustAssessorPage() {
                         </tbody>
                       </table>
                     </div>
-                    {groveHouseData.eyfsGld.length >= 2 && (() => {
-                      const first = groveHouseData.eyfsGld[0];
-                      const last = groveHouseData.eyfsGld[groveHouseData.eyfsGld.length - 1];
+                    {perPupilData.eyfsGld.length >= 2 && (() => {
+                      const first = perPupilData.eyfsGld[0];
+                      const last = perPupilData.eyfsGld[perPupilData.eyfsGld.length - 1];
                       const drop = first.gldPct - last.gldPct;
                       if (drop > 0) return (
                         <div className="mt-3 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-800">
-                          <span className="font-semibold">EYFS GLD is declining</span> — {first.gldPct}% to {last.gldPct}% over {groveHouseData.eyfsGld.length} years
+                          <span className="font-semibold">EYFS GLD is declining</span> — {first.gldPct}% to {last.gldPct}% over {perPupilData.eyfsGld.length} years
                           ({drop}pp drop). Fewer children entering Y1 with expected foundation skills.
                           <div className="text-xs text-red-600 mt-1">Source: CTF EYFS Profile data — validated per-pupil assessment, not self-reported</div>
                         </div>
@@ -5756,7 +5756,7 @@ export default function TrustAssessorPage() {
               {/* ── Section 3: KS1 Anchor Points ── */}
               <div className="border-t border-gray-100 pt-6">
                 <h4 className="text-sm font-semibold text-gray-800 mb-3">KS1 Anchor Points — Expected Standard by Subject</h4>
-                {groveHouseData.ks1Data.length > 0 ? (
+                {perPupilData.ks1Data.length > 0 ? (
                   <>
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm border-collapse">
@@ -5770,7 +5770,7 @@ export default function TrustAssessorPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {groveHouseData.ks1Data.map((row) => {
+                          {perPupilData.ks1Data.map((row) => {
                             const pct = (subj: string) => {
                               const s = row.subjects[subj];
                               if (!s || s.total === 0) return null;
@@ -6163,8 +6163,8 @@ export default function TrustAssessorPage() {
                 <p className="text-xs text-gray-500 mb-4">Pseudonymised pupil journeys from CTF data. Each card shows one child&apos;s assessment path from EYFS through KS1, with demographic context and support recommendations.</p>
 
                 {/* Spotlight pupil first — full featured card */}
-                {groveHouseData.spotlightPupil && (() => {
-                  const sp = groveHouseData.spotlightPupil!;
+                {perPupilData.spotlightPupil && (() => {
+                  const sp = perPupilData.spotlightPupil!;
                   const demo = sp.demographics;
                   const flags = [demo.isFsm && 'FSM', demo.isSend && 'SEND', demo.isEal && 'EAL'].filter(Boolean) as string[];
 
@@ -6293,13 +6293,13 @@ export default function TrustAssessorPage() {
                       })()}
 
                       {/* BUILD 2b: Top 3 patterns across cohort — which subject is weakest for most pupils */}
-                      {groveHouseData && groveHouseData.cohortJourneys.length > 0 && (() => {
+                      {perPupilData && perPupilData.cohortJourneys.length > 0 && (() => {
                         const subjectCounts: Record<string, number> = { reading: 0, writing: 0, maths: 0 };
-                        for (const p of groveHouseData.cohortJourneys) {
+                        for (const p of perPupilData.cohortJourneys) {
                           const w = weakestSubject(p.journey);
                           if (w && w.subject in subjectCounts) subjectCounts[w.subject]++;
                         }
-                        const total = groveHouseData.cohortJourneys.length;
+                        const total = perPupilData.cohortJourneys.length;
                         if (total === 0) return null;
                         const sorted = Object.entries(subjectCounts).sort(([, a], [, b]) => b - a);
                         return (
@@ -6325,24 +6325,24 @@ export default function TrustAssessorPage() {
                 })()}
 
                 {/* Grid of pupil journey cards — year-group filtered */}
-                {groveHouseData.cohortJourneys.length > 0 && (
+                {perPupilData.cohortJourneys.length > 0 && (
                   <>
                     <div className="flex items-center justify-between mb-3">
-                      <span className="text-xs text-gray-500">{groveHouseData.cohortJourneys.length} trackable pupils with multi-year data</span>
+                      <span className="text-xs text-gray-500">{perPupilData.cohortJourneys.length} trackable pupils with multi-year data</span>
                     </div>
                     <PupilCardGrid
-                      pupils={groveHouseData.cohortJourneys}
-                      spotlightPupilId={groveHouseData.spotlightPupil?.pupilId ?? null}
+                      pupils={perPupilData.cohortJourneys}
+                      spotlightPupilId={perPupilData.spotlightPupil?.pupilId ?? null}
                     />
 
                     {/* Demographic summary */}
                     {(() => {
-                      const total = groveHouseData.cohortJourneys.length;
-                      const fsmCount = groveHouseData.cohortJourneys.filter(p => p.demographics.isFsm).length;
-                      const sendCount = groveHouseData.cohortJourneys.filter(p => p.demographics.isSend).length;
-                      const ealCount = groveHouseData.cohortJourneys.filter(p => p.demographics.isEal).length;
+                      const total = perPupilData.cohortJourneys.length;
+                      const fsmCount = perPupilData.cohortJourneys.filter(p => p.demographics.isFsm).length;
+                      const sendCount = perPupilData.cohortJourneys.filter(p => p.demographics.isSend).length;
+                      const ealCount = perPupilData.cohortJourneys.filter(p => p.demographics.isEal).length;
                       const levelValue = (l: string) => l === 'GDS' ? 3 : l === 'EXS' || l === '2' ? 2 : 1;
-                      const decliningCount = groveHouseData.cohortJourneys.filter(p => {
+                      const decliningCount = perPupilData.cohortJourneys.filter(p => {
                         const levels = p.journey.map(j => levelValue(j.level));
                         return levels.length >= 2 && levels[levels.length - 1] < levels[0];
                       }).length;
@@ -6371,7 +6371,7 @@ export default function TrustAssessorPage() {
                           {fsmCount > 0 && decliningCount > 0 && (
                             <div className="mt-3 text-xs text-gray-600 bg-white rounded-lg border border-gray-200 p-3">
                               <span className="font-semibold">Ofsted focus area:</span> {(() => {
-                                const fsmDeclining = groveHouseData.cohortJourneys.filter(p => {
+                                const fsmDeclining = perPupilData.cohortJourneys.filter(p => {
                                   const levels = p.journey.map(j => levelValue(j.level));
                                   return p.demographics.isFsm && levels.length >= 2 && levels[levels.length - 1] < levels[0];
                                 }).length;
@@ -6443,9 +6443,9 @@ export default function TrustAssessorPage() {
                   Dots are colour-coded green (at/above national), amber (within 5pp), or red (more than 5pp below).
                 </p>
 
-                {groveHouseData.cohortMilestones && groveHouseData.cohortMilestones.length > 0 ? (
+                {perPupilData.cohortMilestones && perPupilData.cohortMilestones.length > 0 ? (
                   <div className="space-y-5">
-                    {groveHouseData.cohortMilestones.map((cohort) => {
+                    {perPupilData.cohortMilestones.map((cohort) => {
                       // Build summary sentence
                       const eyfsMilestone = cohort.milestones.find(m => m.label === 'EYFS GLD');
                       const phonicsMilestone = cohort.milestones.find(m => m.label === 'Y1 Phonics');
@@ -6561,8 +6561,8 @@ export default function TrustAssessorPage() {
                     <div className="text-sm text-gray-500 mb-1">No complete cohort milestones found in the CTF data.</div>
                     <p className="text-xs text-gray-400">
                       Milestones require Reception (EYFS) entry data with at least 5 pupils. Cohorts that started before Reception, or have fewer than 5 pupils at each milestone, are excluded.
-                      {groveHouseData.cohortTracking && groveHouseData.cohortTracking.length > 0 && (
-                        <span> The data does include {groveHouseData.cohortTracking.length} tracked cohort(s) — milestone mapping may be limited by the subjects available in the CTF files.</span>
+                      {perPupilData.cohortTracking && perPupilData.cohortTracking.length > 0 && (
+                        <span> The data does include {perPupilData.cohortTracking.length} tracked cohort(s) — milestone mapping may be limited by the subjects available in the CTF files.</span>
                       )}
                     </p>
                   </div>
@@ -6570,7 +6570,7 @@ export default function TrustAssessorPage() {
               </div>
 
               {/* ── Section 8: Demographic Disaggregation — Defend Your Numbers ── */}
-              {groveHouseData.demographicDisaggregation && (
+              {perPupilData.demographicDisaggregation && (
                 <div className="border-t border-gray-100 pt-6">
                   <h4 className="text-sm font-semibold text-gray-800 mb-1">Defend Your Numbers — Demographic Impact Analysis</h4>
                   <p className="text-xs text-gray-500 mb-4">
@@ -6578,7 +6578,7 @@ export default function TrustAssessorPage() {
                   </p>
 
                   {(() => {
-                    const dd = groveHouseData.demographicDisaggregation!;
+                    const dd = perPupilData.demographicDisaggregation!;
                     const groups = [
                       { key: 'all', label: 'All pupils', data: dd.all.attainment, count: dd.all.count, highlight: false },
                       { key: 'withoutSend', label: `Remove SEND (${dd.withoutSend.removed} pupils)`, data: dd.withoutSend.attainment, count: dd.withoutSend.remaining, highlight: true },
@@ -6633,7 +6633,7 @@ export default function TrustAssessorPage() {
 
                   {/* Ofsted defence narrative */}
                   {(() => {
-                    const dd = groveHouseData.demographicDisaggregation!;
+                    const dd = perPupilData.demographicDisaggregation!;
                     const sendImpact = (dd.all.attainment.reading?.pct ?? 0) - (dd.withoutSend.attainment.reading?.pct ?? 0);
                     const fsmImpact = (dd.all.attainment.reading?.pct ?? 0) - (dd.withoutFsm.attainment.reading?.pct ?? 0);
                     const biggestImpact = Math.abs(sendImpact) > Math.abs(fsmImpact) ? 'SEND' : 'FSM';
