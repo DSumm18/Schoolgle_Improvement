@@ -15,13 +15,6 @@ function pseudonymFromHash(hash: string): string {
   return `${colour} ${animal} ${suffix}`;
 }
 
-// Trust spreadsheet figures for Grove House (mid-year / reported)
-const SPREADSHEET_FIGURES: Record<string, { r: number; w: number; m: number; c?: number }> = {
-  Y1: { r: 39, w: 54, m: 59, c: 44 },
-  Y2: { r: 66, w: 69, m: 74, c: 62 },
-  Y6: { r: 57, w: 54, m: 51, c: 43 },
-};
-
 /**
  * GET /api/trust-analysis/grove-house
  * Authenticated route — returns per-pupil aggregated analytics from CTF assessment data.
@@ -460,24 +453,66 @@ export const GET = protectedRoute(async (auth, _req: NextRequest) => {
       return result;
     };
 
+    // Fetch the org's own most-recent trust-spreadsheet (if any) so the CTF-vs-spreadsheet
+    // comparison uses real self-reported figures, not hardcoded constants.
+    // Resolve to the trust org first (mirrors the trust-spreadsheet route logic).
+    const { data: orgRow } = await supabase
+      .from('organizations')
+      .select('id, parent_organization_id')
+      .eq('id', ORG_ID)
+      .maybeSingle();
+    const trustOrgId = orgRow?.parent_organization_id || ORG_ID;
+
+    const { data: spreadsheetRow } = await supabase
+      .from('trust_spreadsheets')
+      .select('parsed_data, created_at')
+      .eq('trust_organization_id', trustOrgId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    type SpreadsheetRow = {
+      r: number | null;
+      w: number | null;
+      m: number | null;
+      c: number | null;
+    };
+    const emptyRow: SpreadsheetRow = { r: null, w: null, m: null, c: null };
+
+    const buildSpreadsheetRow = (yg: string): SpreadsheetRow => {
+      const parsed = spreadsheetRow?.parsed_data as
+        | {
+            schools?: string[];
+            data?: Record<
+              string,
+              Record<
+                string,
+                { all_pupils?: { r_are?: number | null; w_are?: number | null; m_are?: number | null; c_are?: number | null } }
+              >
+            >;
+          }
+        | undefined;
+      if (!parsed?.data || !parsed.schools?.length) return emptyRow;
+      // First school in the list. For a school-level org this should be the only
+      // one; for a trust, this per-pupil route is typically called at per-school
+      // granularity anyway.
+      const firstAbbrev = parsed.schools[0];
+      const yearData = parsed.data[firstAbbrev]?.[yg]?.all_pupils;
+      if (!yearData) return emptyRow;
+      return {
+        r: yearData.r_are ?? null,
+        w: yearData.w_are ?? null,
+        m: yearData.m_are ?? null,
+        c: yearData.c_are ?? null,
+      };
+    };
+
     const spreadsheetComparison = {
-      latestYear: latestYear,
+      latestYear,
       rows: [
-        {
-          yearGroup: 'Y1',
-          ctf: buildCtfPct(1),
-          spreadsheet: SPREADSHEET_FIGURES.Y1,
-        },
-        {
-          yearGroup: 'Y2',
-          ctf: buildCtfPct(2),
-          spreadsheet: SPREADSHEET_FIGURES.Y2,
-        },
-        {
-          yearGroup: 'Y6',
-          ctf: buildCtfPct(6),
-          spreadsheet: SPREADSHEET_FIGURES.Y6,
-        },
+        { yearGroup: 'Y1', ctf: buildCtfPct(1), spreadsheet: buildSpreadsheetRow('Year 1') },
+        { yearGroup: 'Y2', ctf: buildCtfPct(2), spreadsheet: buildSpreadsheetRow('Year 2') },
+        { yearGroup: 'Y6', ctf: buildCtfPct(6), spreadsheet: buildSpreadsheetRow('Year 6') },
       ],
     };
 
