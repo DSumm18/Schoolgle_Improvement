@@ -73,7 +73,7 @@ import {
   citationFull,
   evaluateResearchKpis,
 } from "@/lib/trust-analysis/research-citations";
-import { buildAbbrevLookup, resolveSchoolByName } from '@/lib/trust-analysis/scoped-schools';
+import { abbreviateSchoolName, buildAbbrevLookup, resolveSchoolByName } from '@/lib/trust-analysis/scoped-schools';
 import { emitTrustAssessorEvents } from "@/lib/school-events/emit-trust-assessor";
 import { Timeline } from "@/components/school-events/Timeline";
 import type { SchoolEvent } from "@/lib/school-events/types";
@@ -4295,7 +4295,7 @@ interface AppConnector {
 }
 
 export default function TrustAssessorPage() {
-  const { organizationId, session } = useAuth();
+  const { organizationId, session, organization } = useAuth();
   const accessToken = session?.access_token;
   const authHeaders = useMemo(() => {
     const h: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -4323,6 +4323,18 @@ export default function TrustAssessorPage() {
   // Replaces the old hardcoded TRUST_SCHOOLS constant. Trust users get all children;
   // school-level users get just themselves.
   const abbrevLookup = useMemo(() => buildAbbrevLookup(scopedSchools), [scopedSchools]);
+
+  const isTrustLevel = organization?.organization_type === 'trust';
+
+  // Which schools should show as tabs. For a school-level login, only self;
+  // for a trust-level login, all children in scope. We intersect with whatever
+  // the parsed spreadsheet contains so that trust users don't see tabs for
+  // schools missing from the spreadsheet (which would crash chart logic).
+  const visibleSchoolAbbrevs = useMemo(() => {
+    const scopedAbbrevs = new Set(Object.keys(abbrevLookup));
+    if (!parsed) return Array.from(scopedAbbrevs);
+    return parsed.schools.filter((s: string) => scopedAbbrevs.has(s));
+  }, [abbrevLookup, parsed]);
 
   const [dfeData, setDfeData] = useState<DfEData | null>(null);
   const [dfeLoading, setDfeLoading] = useState(false);
@@ -4509,6 +4521,15 @@ export default function TrustAssessorPage() {
       setScopedSchools(scoped);
     })();
   }, [organizationId, accessToken, authHeaders]);
+
+  // For school-level users, auto-select their single school tab once scopedSchools loads.
+  useEffect(() => {
+    if (isTrustLevel) return;
+    if (scopedSchools.length === 1 && activeSchoolTab === "overview") {
+      const onlyAbbrev = abbreviateSchoolName(scopedSchools[0].name);
+      setActiveSchoolTab(onlyAbbrev);
+    }
+  }, [isTrustLevel, scopedSchools, activeSchoolTab]);
 
   // Fetch DfE data once on mount (not on every re-render)
   const dfeLoadedRef = useRef(false);
@@ -5194,13 +5215,15 @@ export default function TrustAssessorPage() {
               <div id="school-tabs-section">
                 {/* Tab bar */}
                 <div className="flex items-center gap-1 overflow-x-auto pb-1 mb-4 border-b border-gray-200">
-                  <button
-                    onClick={() => setActiveSchoolTab("overview")}
-                    className={`flex-shrink-0 px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${activeSchoolTab === "overview" ? "bg-white border border-b-white border-gray-200 -mb-px text-blue-700" : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"}`}
-                  >
-                    Trust Overview
-                  </button>
-                  {parsed.schools.map((school) => (
+                  {isTrustLevel && (
+                    <button
+                      onClick={() => setActiveSchoolTab("overview")}
+                      className={`flex-shrink-0 px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${activeSchoolTab === "overview" ? "bg-white border border-b-white border-gray-200 -mb-px text-blue-700" : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"}`}
+                    >
+                      Trust Overview
+                    </button>
+                  )}
+                  {visibleSchoolAbbrevs.map((school) => (
                     <motion.button
                       key={school}
                       onClick={() => setActiveSchoolTab(school)}
@@ -5214,7 +5237,7 @@ export default function TrustAssessorPage() {
 
                 {/* Tab content */}
                 <AnimatePresence mode="wait">
-                  {activeSchoolTab === "overview" ? (
+                  {activeSchoolTab === "overview" && isTrustLevel ? (
                     <motion.div
                       key="overview"
                       initial={{ opacity: 0, y: 8 }}
