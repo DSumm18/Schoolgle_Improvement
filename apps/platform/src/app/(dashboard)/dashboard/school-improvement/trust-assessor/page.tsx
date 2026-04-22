@@ -5669,7 +5669,15 @@ export default function TrustAssessorPage() {
               {/* ── Section 1: Grove House Profile ── */}
               <div>
                 <div className="mb-1">
-                  <h3 className="text-base font-semibold text-gray-900">Grove House Primary School — Per-Pupil Deep Dive</h3>
+                  <h3 className="text-base font-semibold text-gray-900">
+                    {(() => {
+                      const activeSchoolName =
+                        activeSchoolTab === "overview"
+                          ? "Trust"
+                          : abbrevLookup[activeSchoolTab]?.name ?? activeSchoolTab;
+                      return `${activeSchoolName} — Per-Pupil Deep Dive`;
+                    })()}
+                  </h3>
                   <p className="text-sm text-gray-500 mt-0.5">
                     Data source: CTF assessment files (EYFS, KS1, Phonics). {perPupilData.summary.totalPupils} unique pupils across {perPupilData.summary.yearsSpan.length} years (includes leavers — not current roll).
                   </p>
@@ -5960,7 +5968,7 @@ export default function TrustAssessorPage() {
                             <div className="text-xs text-gray-600 space-y-1">
                               <div>School composition: <strong>38% FSM, 22% SEND, 40% EAL</strong> — all well above national.</div>
                               <div>National KS1 Reading EXS+ (2022/23): <strong>68%</strong></div>
-                              <div>Non-disadvantaged pupils achieved ~72%; disadvantaged ~54%. Applying this to Grove House&apos;s FSM profile alone predicts <strong>~65%</strong>. Layering in the SEND gap (~25pp lower attainment) and EAL gap (~12pp) reduces the demographic prediction to <strong>~50-55%</strong>.</div>
+                              <div>Non-disadvantaged pupils achieved ~72%; disadvantaged ~54%. Applying this to this school&apos;s FSM profile alone predicts <strong>~65%</strong>. Layering in the SEND gap (~25pp lower attainment) and EAL gap (~12pp) reduces the demographic prediction to <strong>~50-55%</strong>.</div>
                               <div>Reported: <strong className="text-amber-700">67%</strong>. That is 12-17pp above where this cohort&apos;s demographic profile would predict. This raises a question worth governors exploring with leadership.</div>
                             </div>
                             <div className="mt-2 flex items-center gap-1.5 flex-wrap">
@@ -6103,7 +6111,15 @@ export default function TrustAssessorPage() {
 
                   {/* Questions for the school */}
                   <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
-                    <h5 className="text-sm font-semibold text-blue-900 mb-3">Questions the board should ask Grove House</h5>
+                    <h5 className="text-sm font-semibold text-blue-900 mb-3">
+                      {(() => {
+                        const activeSchoolName =
+                          activeSchoolTab === "overview"
+                            ? "Trust"
+                            : abbrevLookup[activeSchoolTab]?.name ?? activeSchoolTab;
+                        return `Questions the board should ask ${activeSchoolName}`;
+                      })()}
+                    </h5>
                     <ol className="space-y-2 text-sm text-blue-900 list-decimal list-inside">
                       <li>Who assessed Y2 Reading and Maths in 2022/23? Are those teachers still in post? Were their assessments externally moderated, or teacher-only?</li>
                       <li>What percentage of the 2022/23 Y2 cohort was formally moderated? (If under 25%, the results should not be used as a baseline.)</li>
