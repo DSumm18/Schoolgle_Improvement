@@ -288,31 +288,44 @@ export const POST = protectedRoute(async (auth, req: NextRequest) => {
 
   const startTime = performance.now();
 
-  // Load class, slot, pupils, scheme mapping, adaptation profiles, and previous lesson in parallel
-  const [classRes, slotRes, pupilsRes, schemesRes, profilesRes, prevLessonRes] =
-    await Promise.all([
-      supabase.from("ls_classes").select("*").eq("id", classId).single(),
-      supabase.from("ls_timetable_slots").select("*").eq("id", slotId).single(),
-      supabase
-        .from("ls_pupils")
-        .select("*")
-        .eq("class_id", classId)
-        .order("display_name_encrypted"),
-      supabase.from("ls_scheme_mappings").select("*").eq("class_id", classId),
-      supabase
-        .from("ls_pupil_adaptation_profiles")
-        .select("*")
-        .eq("organization_id", orgId),
-      // Fetch most recent lesson for this class + subject to build recap
-      supabase
-        .from("ls_lesson_plans")
-        .select("title, learning_objective, success_criteria, key_vocabulary, differentiation_groups, send_adaptations")
-        .eq("class_id", classId)
-        .eq("organization_id", orgId)
-        .lt("week_commencing", weekCommencing)
-        .order("week_commencing", { ascending: false })
-        .limit(1),
-    ]);
+  // Load class, slot, pupils, scheme state, adaptation profiles, and previous lesson in parallel.
+  // Scheme identity (which scheme for which subject) is school-wide via organization_schemes;
+  // per-class progression (current_unit / current_step) still lives in ls_scheme_mappings.scheme_config.
+  const [
+    classRes,
+    slotRes,
+    pupilsRes,
+    orgSchemesRes,
+    classSchemesRes,
+    profilesRes,
+    prevLessonRes,
+  ] = await Promise.all([
+    supabase.from("ls_classes").select("*").eq("id", classId).single(),
+    supabase.from("ls_timetable_slots").select("*").eq("id", slotId).single(),
+    supabase
+      .from("ls_pupils")
+      .select("*")
+      .eq("class_id", classId)
+      .order("display_name_encrypted"),
+    supabase
+      .from("organization_schemes")
+      .select("subject, scheme_name")
+      .eq("organization_id", orgId),
+    supabase.from("ls_scheme_mappings").select("*").eq("class_id", classId),
+    supabase
+      .from("ls_pupil_adaptation_profiles")
+      .select("*")
+      .eq("organization_id", orgId),
+    // Fetch most recent lesson for this class + subject to build recap
+    supabase
+      .from("ls_lesson_plans")
+      .select("title, learning_objective, success_criteria, key_vocabulary, differentiation_groups, send_adaptations")
+      .eq("class_id", classId)
+      .eq("organization_id", orgId)
+      .lt("week_commencing", weekCommencing)
+      .order("week_commencing", { ascending: false })
+      .limit(1),
+  ]);
 
   if (classRes.error || !classRes.data) return apiError("Class not found", 404);
   if (slotRes.error || !slotRes.data) return apiError("Slot not found", 404);
@@ -320,7 +333,10 @@ export const POST = protectedRoute(async (auth, req: NextRequest) => {
   const cls = classRes.data;
   const slot = slotRes.data as LSTimetableSlot;
   const pupils = (pupilsRes.data ?? []) as LSPupil[];
-  const schemes = (schemesRes.data ?? []) as LSSchemeMapping[];
+  const classSchemes = (classSchemesRes.data ?? []) as LSSchemeMapping[];
+  const orgSchemeForSubject = (orgSchemesRes.data ?? []).find(
+    (s) => s.subject === slot.subject,
+  );
 
   // Index adaptation profiles by pupil_ref for fast lookup
   const adaptationProfiles: Record<string, Record<string, unknown>> = {};
@@ -328,21 +344,28 @@ export const POST = protectedRoute(async (auth, req: NextRequest) => {
     adaptationProfiles[profile.pupil_ref] = profile;
   }
 
-  const schemeMapping = schemes.find((s) => s.subject === slot.subject);
+  // Scheme identity: prefer school-wide (organization_schemes); fall back to the
+  // class-level ls_scheme_mappings row for orgs that haven't adopted yet.
+  const classSchemeMapping = classSchemes.find((s) => s.subject === slot.subject);
+  const schemeName: string | null =
+    orgSchemeForSubject?.scheme_name ?? classSchemeMapping?.scheme_name ?? null;
+
   let progression: LSSchemeProgression | null = null;
   let schemeStep: string | null = null;
   let unitName: string | null = null;
   let methodologyNotes: string | null = null;
 
-  if (schemeMapping) {
-    unitName = schemeMapping.scheme_config?.current_unit ?? null;
-    const stepNum = schemeMapping.scheme_config?.current_step ?? 1;
+  if (schemeName) {
+    // Per-class progression (which unit / step the class is currently on) still
+    // lives on ls_scheme_mappings.scheme_config. That's legitimately per-class —
+    // two Y6 classes may be at different points in the same school-wide scheme.
+    unitName = classSchemeMapping?.scheme_config?.current_unit ?? null;
+    const stepNum = classSchemeMapping?.scheme_config?.current_step ?? 1;
 
-    // Load progression
     const { data: prog } = await supabase
       .from("ls_scheme_progressions")
       .select("*")
-      .eq("scheme_name", schemeMapping.scheme_name)
+      .eq("scheme_name", schemeName)
       .eq("subject", slot.subject)
       .eq("year_group", cls.year_group)
       .maybeSingle();
@@ -361,7 +384,7 @@ export const POST = protectedRoute(async (auth, req: NextRequest) => {
     subject: slot.subject,
     yearGroup: cls.year_group,
     keyStage: cls.key_stage,
-    schemeName: schemeMapping?.scheme_name ?? null,
+    schemeName,
     schemeStep,
     unitName,
     methodologyNotes,
@@ -407,7 +430,7 @@ export const POST = protectedRoute(async (auth, req: NextRequest) => {
     concept_to_visualise: (generated.objective as string) || "",
     learning_objectives: (generated.successCriteria as string[]) ?? [],
     key_vocabulary: ((generated.vocabulary as Array<{ word: string; definition: string }>) ?? []),
-    curriculum_codes: progression?.steps?.[(schemeMapping?.scheme_config?.current_step ?? 1) - 1]?.nc_codes ?? [],
+    curriculum_codes: progression?.steps?.[(classSchemeMapping?.scheme_config?.current_step ?? 1) - 1]?.nc_codes ?? [],
     suggested_interaction_points: [],
   };
 
@@ -428,7 +451,7 @@ export const POST = protectedRoute(async (auth, req: NextRequest) => {
     day_of_week: slot.day_of_week,
     subject: slot.subject,
     unit_name: unitName,
-    scheme_name: schemeMapping?.scheme_name ?? null,
+    scheme_name: schemeName,
     scheme_step: schemeStep,
     title: (generated.title as string) || `${slot.subject} Lesson`,
     learning_objective: (generated.objective as string) || "",
@@ -440,7 +463,7 @@ export const POST = protectedRoute(async (auth, req: NextRequest) => {
     send_adaptations: generated.sendAdaptations ?? [],
     nc_objective_codes:
       progression?.steps?.[
-        (schemeMapping?.scheme_config?.current_step ?? 1) - 1
+        (classSchemeMapping?.scheme_config?.current_step ?? 1) - 1
       ]?.nc_codes ?? [],
     secondary_subjects: (generated.secondarySubjects as Array<{subject: string; ncCodes: string[]; supportingFocus: string}>) ?? [],
     supply_brief: (generated.supplyBrief as string) || null,
