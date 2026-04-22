@@ -16,6 +16,7 @@ import {
   User,
   Palette,
   Calendar,
+  GraduationCap,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -59,6 +60,17 @@ const SETTINGS_TABS: SettingsTab[] = [
     bgColor: "bg-slate-50 dark:bg-slate-900",
   },
   {
+    id: "classes",
+    label: "Classes",
+    icon: GraduationCap,
+    description:
+      "Define your school's classes — year groups, rooms, and linked staff",
+    roles: ["admin", "headteacher", "slt"],
+    href: "/dashboard/settings/classes",
+    color: "text-teal-600",
+    bgColor: "bg-teal-50 dark:bg-teal-950/20",
+  },
+  {
     id: "class-assignments",
     label: "Class Assignments",
     icon: BookOpen,
@@ -68,6 +80,17 @@ const SETTINGS_TABS: SettingsTab[] = [
     href: "/dashboard/settings/class-assignments",
     color: "text-blue-600",
     bgColor: "bg-blue-50 dark:bg-blue-950/20",
+  },
+  {
+    id: "schemes",
+    label: "Schemes of Work",
+    icon: BookOpen,
+    description:
+      "Adopt a single scheme per subject across the whole school — White Rose Maths, Talk for Writing, Kapow, etc.",
+    roles: ["admin", "headteacher", "slt"],
+    href: "/dashboard/settings/schemes",
+    color: "text-teal-600",
+    bgColor: "bg-teal-50 dark:bg-teal-950/20",
   },
   {
     id: "data-connections",

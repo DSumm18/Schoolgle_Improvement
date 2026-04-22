@@ -27,18 +27,18 @@ ALTER TABLE organization_schemes ENABLE ROW LEVEL SECURITY;
 
 -- Members of the org can read
 CREATE POLICY organization_schemes_select ON organization_schemes
-  FOR SELECT USING (organization_id IN (SELECT ls_user_org_ids()));
+  FOR SELECT USING (is_organization_member(organization_id));
 
 -- Writes restricted to org members via RLS; admin gating happens at API layer
 -- for now (a Settings > Schemes page in a later slice will surface role checks).
 CREATE POLICY organization_schemes_insert ON organization_schemes
-  FOR INSERT WITH CHECK (organization_id IN (SELECT ls_user_org_ids()));
+  FOR INSERT WITH CHECK (is_organization_member(organization_id));
 
 CREATE POLICY organization_schemes_update ON organization_schemes
-  FOR UPDATE USING (organization_id IN (SELECT ls_user_org_ids()));
+  FOR UPDATE USING (is_organization_member(organization_id));
 
 CREATE POLICY organization_schemes_delete ON organization_schemes
-  FOR DELETE USING (organization_id IN (SELECT ls_user_org_ids()));
+  FOR DELETE USING (is_organization_member(organization_id));
 
 CREATE POLICY organization_schemes_service ON organization_schemes
   FOR ALL USING (auth.role() = 'service_role');
