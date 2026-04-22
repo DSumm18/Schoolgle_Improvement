@@ -4,6 +4,22 @@ import { NextRequest } from "next/server";
 import { getMISDataService } from "@/lib/mis/data-service";
 import type { MISTeacherClassHistory, MISPupil } from "@/lib/mis/types";
 
+const VALID_KEY_STAGES = ["EYFS", "KS1", "KS2", "KS3", "KS4", "KS5"] as const;
+type KeyStage = (typeof VALID_KEY_STAGES)[number];
+
+function inferKeyStage(yearGroupLabel: string): KeyStage {
+  const s = yearGroupLabel.trim().toLowerCase();
+  if (s === "nursery" || s === "reception") return "EYFS";
+  const match = s.match(/year\s*(\d+)/);
+  if (!match) return "EYFS";
+  const n = parseInt(match[1], 10);
+  if (n <= 2) return "KS1";
+  if (n <= 6) return "KS2";
+  if (n <= 9) return "KS3";
+  if (n <= 11) return "KS4";
+  return "KS5";
+}
+
 function yearGroupToKeyStage(yg: number): "EYFS" | "KS1" | "KS2" {
   if (yg === 0) return "EYFS";
   if (yg <= 2) return "KS1";
@@ -132,4 +148,46 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
     console.error("[lesson-studio/classes] MIS fallback error:", misError);
     return apiSuccess([]);
   }
+});
+
+// POST /api/lesson-studio/classes — create a new ls_classes row
+export const POST = protectedRoute(async (auth, req: NextRequest) => {
+  const supabase = createServiceRoleClient();
+  const orgId = auth.organizationId;
+  if (!orgId) return apiError("No organization", 400);
+
+  const body = (await req.json().catch(() => null)) as {
+    year_group?: string;
+    class_name?: string;
+    key_stage?: string;
+    room?: string | null;
+    academic_year?: string;
+  } | null;
+
+  if (!body?.year_group || !body?.class_name) {
+    return apiError("year_group and class_name are required", 400);
+  }
+
+  const keyStage =
+    body.key_stage && (VALID_KEY_STAGES as readonly string[]).includes(body.key_stage)
+      ? (body.key_stage as KeyStage)
+      : inferKeyStage(body.year_group);
+
+  const row = {
+    organization_id: orgId,
+    year_group: body.year_group.trim(),
+    class_name: body.class_name.trim(),
+    key_stage: keyStage,
+    room: body.room?.trim() || null,
+    academic_year: body.academic_year?.trim() || "2025-26",
+  };
+
+  const { data, error } = await supabase
+    .from("ls_classes")
+    .insert(row)
+    .select("*")
+    .single();
+
+  if (error) return apiError(error.message, 400);
+  return apiSuccess(data, 201);
 });

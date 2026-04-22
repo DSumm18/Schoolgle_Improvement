@@ -608,7 +608,7 @@ export function LessonStudio() {
 
           <CurriculumProgressionView
             classId={selectedClass.id}
-            subject={slots[0]?.subject || "Maths"}
+            subject="Maths"
             yearGroup={selectedClass.year_group}
             schemeName="white-rose-maths"
             onSelectTopic={(topic) => {
@@ -626,6 +626,26 @@ export function LessonStudio() {
               schemeName="white-rose-maths"
             />
           )}
+          {/* Subject schemes for other subjects — show a "not yet set up" card for each */}
+          {(() => {
+            const subjects = Array.from(new Set(slots.map((s) => s.subject))).filter((s) => s !== "Maths");
+            if (subjects.length === 0) return null;
+            return (
+              <div className="bg-white rounded-xl border border-slate-100 p-4">
+                <div className="text-sm font-semibold text-slate-800 mb-1">Other Subjects</div>
+                <div className="text-xs text-slate-500 mb-3">
+                  Only White Rose Maths Year 6 has full scheme data built in. Other subjects can be set up by connecting a scheme below.
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {subjects.map((s) => (
+                    <span key={s} className="px-2 py-1 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-600">
+                      {s} — no scheme connected
+                    </span>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
           <CurriculumChecklist
             classId={selectedClass.id}
             yearGroup={selectedClass.year_group}
