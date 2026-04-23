@@ -82,6 +82,25 @@ export interface DfETrendData {
   }[];
 }
 
+export interface LaBenchmarkData {
+  la_name: string;
+  la_code: string;
+  school_count: number;
+  ks2_combined: {
+    year: number;
+    expected_standard_pct: number;
+  }[];
+  attendance: {
+    year: number;
+    overall_pct: number;
+    persistent_absence_pct: number;
+  }[];
+  persistent_absence: {
+    year: number;
+    pct: number;
+  }[];
+}
+
 export interface ContextualFactor {
   id: string;
   factor_type: string;
@@ -145,6 +164,7 @@ export interface CrossModuleSignals {
 export interface IntelligenceAnalysis {
   title: string;
   executive_summary: string;
+  la_benchmarks?: LaBenchmarkData | null;
   detailed_analysis: {
     cohort_analyses: CohortAnalysis[];
     trend_insights: TrendInsight[];
@@ -357,6 +377,112 @@ export class SchoolIntelligenceEngine {
       exclusions: Object.entries(exclusionsByYear).map(([year, total]) => ({
         year: parseInt(year),
         total,
+      })),
+    };
+  }
+
+  /**
+   * Get LA (Local Authority) benchmark data for comparison
+   * Aggregates data across all schools in the same LA
+   */
+  async getLaBenchmarks(
+    urn: number,
+    yearsBack: number = 5,
+  ): Promise<LaBenchmarkData | null> {
+    // 1. Get this school's LA code
+    const { data: school } = await this.supabase
+      .from("schools")
+      .select("la_name, la_code")
+      .eq("urn", urn)
+      .single();
+
+    if (!school?.la_code) return null;
+
+    // 2. Get all URNs in this LA (primary schools only for fair comparison)
+    const { data: laSchools } = await this.supabase
+      .from("schools")
+      .select("urn")
+      .eq("la_code", school.la_code)
+      .eq("phase_name", "Primary") as any; // Primary phase comparison
+
+    if (!laSchools || laSchools.length === 0) return null;
+
+    const urns = laSchools.map((s: any) => s.urn);
+    const minYear = new Date().getFullYear() - yearsBack - 1;
+
+    // 3. Fetch LA-wide data
+    const [laKs2, laAttendance] = await Promise.all([
+      // KS2 Combined (RWM +) for this LA
+      this.supabase
+        .from("ks2_results")
+        .select("academic_year_start, expected_standard_pct")
+        .in("urn", urns)
+        .gte("academic_year_start", minYear)
+        .eq("subject", "Reading, writing and maths")
+        .eq("breakdown_topic", "All pupils"),
+
+      // Attendance data for this LA
+      this.supabase
+        .from("attendance")
+        .select("academic_year_start, overall_attendance_pct, persistent_absence_pct")
+        .in("urn", urns)
+        .gte("academic_year_start", minYear),
+    ]);
+
+    // 4. Aggregate by year (calculate LA averages)
+    const aggregateByYear = <T extends { academic_year_start: number; value: number }>(
+      data: T[],
+      valueSelector: (d: T) => number,
+    ): { year: number; value: number }[] => {
+      const byYear: Record<number, { sum: number; count: number }> = {};
+      data.forEach((d) => {
+        const year = d.academic_year_start;
+        const value = valueSelector(d);
+        if (value !== null && value !== undefined) {
+          if (!byYear[year]) byYear[year] = { sum: 0, count: 0 };
+          byYear[year].sum += value;
+          byYear[year].count += 1;
+        }
+      });
+      return Object.entries(byYear)
+        .map(([year, { sum, count }]) => ({
+          year: parseInt(year),
+          value: Math.round((sum / count) * 10) / 10, // Round to 1 decimal
+        }))
+        .sort((a, b) => a.year - b.year);
+    };
+
+    const ks2Combined = aggregateByYear(
+      laKs2.data || [],
+      (d: any) => d.expected_standard_pct,
+    );
+
+    const attendanceOverall = aggregateByYear(
+      laAttendance.data || [],
+      (d: any) => d.overall_attendance_pct,
+    );
+
+    const persistentAbsence = aggregateByYear(
+      laAttendance.data || [],
+      (d: any) => d.persistent_absence_pct,
+    );
+
+    return {
+      la_name: school.la_name,
+      la_code: school.la_code,
+      school_count: urns.length,
+      ks2_combined: ks2Combined.map((d) => ({
+        year: d.year,
+        expected_standard_pct: Math.round(d.value),
+      })),
+      attendance: attendanceOverall.map((d) => ({
+        year: d.year,
+        overall_pct: Math.round(d.value),
+        persistent_absence_pct: 0, // Will be filled separately if needed
+      })),
+      persistent_absence: persistentAbsence.map((d) => ({
+        year: d.year,
+        pct: Math.round(d.value * 10) / 10,
       })),
     };
   }
@@ -575,12 +701,13 @@ export class SchoolIntelligenceEngine {
       new Date().getFullYear() - (new Date().getMonth() < 8 ? 1 : 0);
 
     // 1. Gather all data in parallel
-    const [profile, trends, factors, outcomes, signals] = await Promise.all([
+    const [profile, trends, factors, outcomes, signals, laBenchmarks] = await Promise.all([
       this.getSchoolProfile(urn),
       this.getDfETrends(urn, 5),
       this.getContextualFactors(organizationId),
       this.getCohortOutcomes(organizationId),
       this.getCrossModuleSignals(organizationId),
+      this.getLaBenchmarks(urn, 5),
     ]);
 
     // 2. Build the comprehensive analysis prompt
@@ -592,6 +719,7 @@ export class SchoolIntelligenceEngine {
       signals,
       currentYear,
       options,
+      laBenchmarks,
     );
 
     // 3. Send to AI for deep analysis
@@ -822,6 +950,7 @@ Return ONLY valid JSON matching this exact structure:
       suggested_actions: enrichedActions,
       data_sources_used: dataSources,
       confidence_score: this.calculateConfidence(trends, factors, outcomes),
+      la_benchmarks: laBenchmarks,
     };
 
     // 7. Store the analysis
@@ -841,6 +970,7 @@ Return ONLY valid JSON matching this exact structure:
     signals: CrossModuleSignals,
     currentYear: number,
     options: { focusAreas?: string[]; focusYearGroups?: number[] },
+    laBenchmarks: LaBenchmarkData | null,
   ): string {
     const sections: string[] = [];
 
@@ -868,7 +998,9 @@ ${trends.attendance
       `${a.year}/${a.year + 1}: Overall ${a.overall_pct}% | Persistent absence ${a.persistent_absence_pct}% | Illness ${a.illness_pct}%`,
   )
   .join("\n")}
-National average: ~94.5% (primary), ~91.5% (secondary)`);
+National average: ~94.5% (primary), ~91.5% (secondary)
+${laBenchmarks ? `LA average (${laBenchmarks.la_name}): See LA benchmarks above` : ""}
+KEY THRESHOLD: Persistent absence >10% triggers DfE concern and Ofsted scrutiny.`);
     }
 
     // Census demographics
@@ -881,6 +1013,23 @@ ${trends.census
   )
   .join("\n")}
 IMPORTANT: High FSM% means value-added analysis matters more than raw attainment.`);
+    }
+
+    // LA Benchmarks (for local comparison)
+    if (laBenchmarks) {
+      sections.push(`=== LOCAL AUTHORITY BENCHMARKS ===
+LA: ${laBenchmarks.la_name} (${laBenchmarks.school_count} primary schools)
+
+KS2 Combined (LA average):
+${laBenchmarks.ks2_combined.map(k => `${k.year}/${k.year + 1}: ${k.expected_standard_pct}%`).join("\n") || "No data"}
+
+Attendance (LA average):
+${laBenchmarks.attendance.map(a => `${a.year}/${a.year + 1}: ${a.overall_pct}% overall`).join("\n") || "No data"}
+
+Persistent Absence (LA average):
+${laBenchmarks.persistent_absence.map(p => `${p.year}/${p.year + 1}: ${p.pct}%`).join("\n") || "No data"}
+
+IMPORTANT: Compare school performance to BOTH national averages AND LA averages. Schools should contextualise themselves against local comparators, not just national benchmarks.`);
     }
 
     // KS2 Results
@@ -903,7 +1052,9 @@ IMPORTANT: High FSM% means value-added analysis matters more than raw attainment
 
       sections.push(`=== KS2 RESULTS (DfE) ===
 ${ks2Lines.join("\n")}
-National combined expected standard: ~60%. Progress score of 0 = national average.`);
+National combined expected standard: ~60%. Progress score of 0 = national average.
+${laBenchmarks ? `LA average (${laBenchmarks.la_name}): See LA benchmarks above. Compare against local schools, not just national.` : ""}
+QUALITATIVE CONTEXT: Consider FSM%, EAL%, SEND, mobility when judging attainment. A school with 30% FSM achieving 60% may be outperforming research predictions.`);
     }
 
     // Workforce data
