@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    const { userId, email, displayName } = await req.json();
+    const { userId, email, displayName, impersonateOrgId } = await req.json();
 
     if (!userId) {
       return apiError("Missing required fields", 400);
@@ -61,7 +61,48 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 2. Fetch Organization (use .limit(1) instead of .maybeSingle() to handle multi-org users)
+    // 2. Check if user is a super admin FIRST (before fetching memberships)
+    let isSuperAdmin = false;
+    try {
+      const { data: superAdminCheck } = await supabase
+        .from("super_admins")
+        .select("access_level")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      isSuperAdmin = !!superAdminCheck;
+      console.log("[Auth Profile] Is super admin:", isSuperAdmin);
+    } catch {
+      // Non-fatal
+    }
+
+    // 3. If impersonating (and super admin), fetch that org directly
+    if (isSuperAdmin && impersonateOrgId) {
+      console.log("[Auth Profile] Super admin impersonating org:", impersonateOrgId);
+      const { data: impersonatedOrg } = await supabase
+        .from("organizations")
+        .select("id, name, organization_type")
+        .eq("id", impersonateOrgId)
+        .single();
+
+      if (impersonatedOrg) {
+        return apiSuccess({
+          user: {
+            id: userId,
+            email,
+            displayName: storedDisplayName || displayName,
+          },
+          organization: {
+            id: impersonatedOrg.id,
+            name: impersonatedOrg.name,
+            role: "admin", // Super admins get admin role when impersonating
+            organization_type: impersonatedOrg.organization_type,
+          },
+        });
+      }
+    }
+
+    // 4. Fetch Organization memberships
     const { data: memberRows, error: memberError } = await supabase
       .from("organization_members")
       .select(
@@ -82,13 +123,15 @@ export async function POST(req: NextRequest) {
       console.warn("Error fetching member during profile sync:", memberError);
     }
 
-    // Check user metadata for preferred org
+    // Check user metadata for preferred org OR impersonate setting
     let preferredOrgId: string | null = null;
-    try {
-      const { data: authUser } = await supabase.auth.admin.getUserById(userId);
-      preferredOrgId = authUser?.user?.user_metadata?.organization_id || null;
-    } catch {
-      // Non-fatal - just use first membership
+    if (!impersonateOrgId) {  // Only check metadata if not already impersonating
+      try {
+        const { data: authUser } = await supabase.auth.admin.getUserById(userId);
+        preferredOrgId = authUser?.user?.user_metadata?.organization_id || null;
+      } catch {
+        // Non-fatal - just use first membership
+      }
     }
 
     // Find preferred or first membership
@@ -100,8 +143,7 @@ export async function POST(req: NextRequest) {
             : m.organization;
           return org?.id === preferredOrgId;
         })
-      : null;
-    if (!member && members.length > 0) member = members[0];
+      : members[0];
 
     let orgData = member?.organization;
     if (Array.isArray(orgData)) {

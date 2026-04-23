@@ -9,7 +9,7 @@ This is your personal to-do list. Everything technical has been implemented. The
 
 ## 1. ICO Registration (Do First)
 
-- [ ] **Pay ICO data protection fee** — £40/year for micro organisations
+- [x] **Pay ICO data protection fee** — £40/year for micro organisations ✅ **ZC103199 (11 Mar 2026)**
   - Go to: https://ico.org.uk/for-organisations/data-protection-fee/
   - Select: "Data controller" → answer the questions about Schoolgle
   - Pay online (card or direct debit)
@@ -137,7 +137,7 @@ A DPO or ICO auditor will typically check:
 
 | Check                                 | Status                                                 |
 | ------------------------------------- | ------------------------------------------------------ |
-| ICO registration and fee paid         | **YOU NEED TO DO THIS**                                |
+| ICO registration and fee paid         | ✅ **ZC103199** (11 Mar 2026)                            |
 | DPO appointed and registered          | **YOU NEED TO DO THIS**                                |
 | Privacy policy publicly accessible    | ✅ `/privacy`                                          |
 | Cookie consent mechanism              | ✅ Banner with essential/analytics choice              |
@@ -149,4 +149,4 @@ A DPO or ICO auditor will typically check:
 | Retention schedule                    | ✅ Documented (automated enforcement planned)          |
 | Security measures                     | ✅ Auth on all routes, PII masking, encryption at rest |
 
-**Bottom line:** The technical and documentation work is done. You need to pay the ICO fee, sign ~6 DPAs online, and sign off the DPIAs. That's a couple of hours of work.
+**Bottom line:** The technical and documentation work is done. ICO registration is complete (ZC103199). You need to sign ~6 DPAs online and sign off the DPIAs. That's a couple of hours of work.

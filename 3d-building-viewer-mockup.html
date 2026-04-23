@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schoolgle 3D Building Viewer - Mockup</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .room-box {
+            border: 2px solid #333;
+            background: linear-gradient(135deg, var(--room-color) 0%, var(--room-color-dark) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            box-shadow: 4px 4px 8px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+        }
+        .room-box:hover {
+            transform: scale(1.05);
+            box-shadow: 6px 6px 12px rgba(0,0,0,0.4);
+            cursor: pointer;
+        }
+        .fire-exit {
+            background: #22c55e;
+            border: 2px solid #16a34a;
+        }
+        .asset-marker {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            position: absolute;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-white">
+    <div class="min-h-screen">
+        <!-- Header -->
+        <div class="bg-slate-800 border-b border-slate-700 px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-teal-500/20 rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold">Grove House Primary School</h1>
+                        <p class="text-sm text-slate-400">3D Building Viewer • Fire Safety & Compliance</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <button class="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg text-sm font-medium">
+                        📤 Upload Floor Plan
+                    </button>
+                    <button class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm font-medium">
+                        🔍 Zoom In
+                    </button>
+                    <button class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm font-medium">
+                        🔍 Zoom Out
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex">
+            <!-- Left Panel - Controls -->
+            <div class="w-80 bg-slate-800 border-r border-slate-700 p-4 h-[calc(100vh-72px)] overflow-y-auto">
+                <h2 class="text-lg font-semibold mb-4">📊 Building Overview</h2>
+
+                <!-- Stats -->
+                <div class="grid grid-cols-2 gap-3 mb-6">
+                    <div class="bg-slate-700 rounded-lg p-3 text-center">
+                        <div class="text-2xl font-bold text-blue-400">14</div>
+                        <div class="text-xs text-slate-400">Rooms</div>
+                    </div>
+                    <div class="bg-slate-700 rounded-lg p-3 text-center">
+                        <div class="text-2xl font-bold text-green-400">12</div>
+                        <div class="text-xs text-slate-400">Fire Exits</div>
+                    </div>
+                    <div class="bg-slate-700 rounded-lg p-3 text-center">
+                        <div class="text-2xl font-bold text-yellow-400">24</div>
+                        <div class="text-xs text-slate-400">Assets</div>
+                    </div>
+                    <div class="bg-slate-700 rounded-lg p-3 text-center">
+                        <div class="text-2xl font-bold text-red-400">2</div>
+                        <div class="text-xs text-slate-400">Issues</div>
+                    </div>
+                </div>
+
+                <!-- Legend -->
+                <h3 class="text-md font-semibold mb-3">🎨 Room Types</h3>
+                <div class="space-y-2 mb-6">
+                    <div class="flex items-center gap-2">
+                        <div class="w-6 h-6 rounded" style="background: #bfdbfe;"></div>
+                        <span class="text-sm">Classroom</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-6 h-6 rounded" style="background: #fed7aa;"></div>
+                        <span class="text-sm">Hall/Corridor</span>
+                    </div>
+div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-6 h-6 rounded" style="background: #bbf7d0;"></div>
+                        <span class="text-sm">Office</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-6 h-6 rounded" style="background: #fecaca;"></div>
+                        <span class="text-sm">Kitchen</span>
+                    </div>
+                </div>
+
+                <!-- Layers -->
+                <h3 class="text-md font-semibold mb-3">📚 Layers</h3>
+                <div class="space-y-2">
+                    <label class="flex items-center gap-3 p-2 bg-slate-700 rounded hover:bg-slate-600 cursor-pointer">
+                        <input type="checkbox" checked class="w-4 h-4">
+                        <span class="text-sm">🏢 Rooms</span>
+                    </label>
+                    <label class="flex items-center gap-3 p-2 bg-slate-700 rounded hover:bg-slate-600 cursor-pointer">
+                        <input type="checkbox" checked class="w-4 h-4">
+                        <span class="text-sm">🚪 Fire Exits</span>
+                    </label>
+                    <label class="flex items-center gap-3 p-2 bg-slate-700 rounded hover:bg-slate-600 cursor-pointer">
+                        <input type="checkbox" checked class="w-4 h-4">
+                        <span class="text-sm">🧯 Assets</span>
+                    </label>
+                    <label class="flex items-center gap-3 p-2 bg-slate-700 rounded hover:bg-slate-600 cursor-pointer">
+                        <input type="checkbox" class="w-4 h-4">
+                        <span class="text-sm">⚠️ Issues</span>
+                    </label>
+                    <label class="flex items-center gap-3 p-2 bg-slate-700 rounded hover:bg-slate-600 cursor-pointer">
+                        <input type="checkbox" class="w-4 h-4">
+                        <span class="text-sm">🏃 Evacuation Routes</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- 3D Viewer Area (Mockup) -->
+            <div class="flex-1 relative" style="height: calc(100vh - 72px);">
+                <!-- Background -->
+                <div class="absolute inset-0 bg-gradient-to-br from-slate-800 to-slate-900"></div>
+
+                <!-- Grid -->
+                <div class="absolute inset-0" style="background-image: linear-gradient(rgba(100,116,139,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(100,116,139,0.1) 1px, transparent 1px); background-size: 50px 50px;"></div>
+
+                <!-- Building Layout (Top-down view) -->
+                <div class="absolute inset-0 flex items-center justify-center p-8">
+                    <div class="relative" style="width: 600px; height: 400px;">
+                        <!-- Main Building Outline -->
+                        <div class="absolute border-4 border-slate-600 bg-slate-700/50 rounded-lg" style="left: 50px; top: 50px; width: 500px; height: 300px;"></div>
+
+                        <!-- Classrooms (Ground Floor) -->
+                        <div class="room-box" style="--room-color: #bfdbfe; --room-color-dark: #93c5fd; left: 70px; top: 70px; width: 100px; height: 80px; position: absolute;">
+                            <div>Classroom 1A</div>
+                            <div class="asset-marker" style="background: #ef4444; right: 5px; top: 5px;" title="Fire Extinguisher"></div>
+                            <div class="asset-marker" style="background: #f59e0b; right: 5px; bottom: 5px;" title="Fire Alarm"></div>
+                        </div>
+
+                        <div class="room-box" style="--room-color: #bfdbfe; --room-color-dark: #93c5fd; left: 190px; top: 70px; width: 100px; height: 80px; position: absolute;">
+                            <div>Classroom 1B</div>
+                            <div class="asset-marker" style="background: #ef4444; right: 5px; top: 5px;" title="Fire Extinguisher"></div>
+                            <div class="asset-marker" style="background: #fbbf24; right: 5px; bottom: 5px;" title="⚠️ Issue"></div>
+                        </div>
+
+                        <div class="room-box" style="--room-color: #bfdbfe; --room-color-dark: #93c5fd; left: 310px; top: 70px; width: 100px; height: 80px; position: absolute;">
+                            <div>Classroom 2</div>
+                            <div class="asset-marker" style="background: #ef4444; right: 5px; top: 5pxpx;" title="Fire Extinguisher"></div>
+                            <div class="asset-marker" style="background: #f59e0b; right: 5px; bottom: 5px;" title="Fire Alarm"></div>
+                        </div>
+
+                        <!-- Main Hall -->
+                        <div class="room-box" style="--room-color: #fed7aa; --room-color-dark: #fde68a; left: 70px; top: 170px; width: 340px; height: 80px; position: absolute;">
+                            <div>Main Hall</div>
+                            <div class="asset-marker" style="background: #ef4444; right: 10px; top: 10px;" title="Fire Extinguisher"></div>
+                            <div class="asset-marker" style="background: #ef4444; right: 30px; top: 10px;" title="Fire Extinguisher"></div>
+                            <div class="asset-marker" style="background: #f59e0b; right: 10px; bottom: 10px;" title="Fire Alarm"></div>
+                            <div class="asset-marker" style="background: #22c55e; left: 10px; top: 30px;" title="Fire Exit"></div>
+                            <div class="asset-marker" style="background: #22c55e; right: 10px; top: 30px;" title="Fire Exit"></div>
+                            <div class="asset-marker" style="background: #3b82f6; left: 10px; bottom: 10px;" title="First Aid Kit"></div>
+                        </div>
+
+                        <!-- Staff Room -->
+                        <div class="room-box" style="--room-color: #bbf7d0; --room-color-dark: #86efac; left: 430px; top: 70px; width: 100px; height: 80px; position: absolute;">
+                            <div>Staff Room</div>
+                            <div class="asset-marker" style="background: #ef4444; right: 5px; top: 5px;" title="Fire Extinguisher"></div>
+                        </div>
+
+                        <!-- Kitchen -->
+                        <div class="room-box" style="--room-color: #fecaca; --room-color-dark: #fca5a5; left: 70px; top: 270px; width: 120px; height: 60px; position: absolute;">
+                            <div>Kitchen</div>
+                            <div class="asset-marker" style="background: #ef4444; right: 5px; top: 5px;" title="Fire Extinguisher"></div>
+                            <div class="asset-marker" style="background: #f59e0b; right: 5px; bottom: 5px;" title="Fire Alarm"></div>
+                        </div>
+
+                        <!-- Office -->
+                        <div class="room-box" style="--room-color: #bbf7d0; --room-color-dark: #86efac; left: 210px; top: 270px; width: 100px; height: 60px; position: absolute;">
+                            <div>Office</div>
+                        </div>
+
+                        <!-- Fire Exit Doors -->
+                        <div class="fire-exit rounded text-xs font-bold text-white flex items-center justify-center" style="left: 30px; top: 180px; width: 25px; height: 40px; position: absolute;">
+                            EXIT
+                        </div>
+                        <div class="fire-exit rounded text-xs font-bold text-white flex items-center justify-center" style="right: 30px; top: 180px; width: 25px; height: 40px; position: absolute;">
+                            EXIT
+                        </div>
+
+                        <!-- Selected Room Info Panel (Mockup) -->
+                        <div class="absolute bg-white rounded-lg shadow-2xl p-4 text-slate-800" style="right: -20px; top: 20px; width: 280px;">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="text-lg font-bold">Main Hall</h3>
+                                <span class="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">⚠️ 1 Issue</span>
+                            </div>
+                            <div class="space-y-2 text-sm">
+                                <p><strong>Type:</strong> Hall/Corridor</p>
+                                <p><strong>Size:</strong> 12m × 6m</p>
+                                <p><strong>Capacity:</strong> 60 people</p>
+                                <p><strong>Fire Exits:</strong> 2 ✅</p>
+
+                                <hr class="my-3">
+
+                                <p class="font-semibold text-green-600">✅ Assets (6)</p>
+                                <div class="grid grid-cols-4 gap-2 mt-2">
+                                    <div class="text-center p-2 bg-red-100 rounded">
+                                        <div class="text-lg">🧯</div>
+                                        <div class="text-xs">Ext</div>
+                                    </div>
+                                    <div class="text-center p-2 bg-orange-100 rounded">
+                                        <div class="text-lg">🚨</div>
+                                        <div class="text-xs">Alarm</div>
+                                    </div>
+                                    <div class="text-center p-2 bg-green-100 rounded">
+                                        <div class="text-lg">💊</div>
+                                        <div class="text-xs">First Aid</div>
+                                    </div>
+                                    <div class="text-center p-2 bg-green-100 rounded">
+                                        <div class="text-lg">🚪</div>
+                                        <div class="text-xs">Exit</div>
+                                    </div>
+                                </div>
+
+                                <hr class="my-3">
+
+                                <p class="font-semibold text-red-600">⚠️ Issues (1)</p>
+                                <div class="p-2 bg-red-50 rounded border-l-4 border-red-500">
+                                    <p class="text-xs">Fire extinguisher expires in 15 days</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bottom Controls -->
+                <div class="absolute bottom-4 left-4 right-4 flex items-center justify-between">
+                    <div class="bg-white/90 backdrop-blur rounded-lg px-4 py-2 text-sm text-slate-700">
+                        🖱️ Drag to rotate • Scroll to zoom • Click rooms for details
+                    </div>
+                    <div class="flex gap-2">
+                        <button class="px-3 py-2 bg-white/90 backdrop-blur rounded-lg text-sm text-slate-700 hover:bg-white">
+                            📷 Take Screenshot
+                        </button>
+                        <button class="px-3 py-2 bg-white/90 backdrop-blur rounded-lg text-sm text-slate-700 hover:bg-white">
+                            📄 Print Report
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel - Room Details -->
+            <div class="w-96 bg-slate-800 border-l border-slate-700 p-4 h-[calc(100vh-72px)] overflow-y-auto">
+                <h2 class="text-lg font-semibold mb-4">📋 Room Details</h2>
+
+                <div class="bg-slate-700 rounded-lg p-4 mb-4">
+                    <h3 class="font-bold text-lg mb-2">Main Hall</h3>
+                    <div class="space-y-2 text-sm">
+                        <p><span class="text-slate-400">Room ID:</span> rm-hall</p>
+                        <p><span class="text-slate-400">Floor:</span> Ground</p>
+                        <p><span class="text-slate-400">Dimensions:</span> 12m × 6m × 3.5m</p>
+                        <p><span class="text-slate-400">Last Inspection:</span> 15 Mar 2026</p>
+                    </div>
+                </div>
+
+                <h3 class="font-semibold mb-3">🧯 Assets (6)</h3>
+                <div class="space-y-2">
+                    <div class="bg-slate-700 rounded p-3">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="font-medium">Fire Extinguisher</span>
+                            <span class="px-2 py-1 bg-green-500 text-xs rounded">OK</span>
+                        </div>
+                        <p class="text-xs text-slate-400">Location: North wall • Expires: Dec 2026</p>
+                    </div>
+
+                    <div class="bg-slate-700 rounded p-3">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="font-medium">Fire Alarm</span>
+                            <span class="px-2 py-1 bg-green-500 text-xs rounded">OK</span>
+                        </div>
+                        <p class="text-xs text-slate-400">Location: Center ceiling • Last tested: Jan 2026</p>
+                    </div>
+
+                    <div class="bg-slate-700 rounded p-3">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="font-medium">First Aid Kit</span>
+                            <span class="px-2 py-1 bg-green-500 text-xs rounded">OK</span>
+                        </div>
+                        <p class="text-xs text-slate-400">Location: West wall • Expiry: Mar 2026</p>
+                    </div>
+                </div>
+
+                <h3 class="font-semibold mb-3 mt-6">⚠️ Issues (1)</h3>
+                <div class="bg-red-900/30 border border-red-700 rounded-lg p-3">
+                    <div class="flex items-start gap-2">
+                        <span class="text-red-400">⚠️</span>
+                        <div>
+                            <p class="font-medium text-red-300">Fire Extinguisher Expiring</p>
+                            <p class="text-xs text-slate-400">Expires in 15 days (30 Mar 2026)</p>
+                            <button class="mt-2 px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-xs">
+                                Schedule Inspection
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 space-y-2">
+                    <button class="w-full px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg text-sm font-medium">
+                        📅 Schedule Compliance Check
+                    </button>
+                    <button class="w-full px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm font-medium">
+                        📊 View Full Report
+                    </button>
+                    <button class="w-full px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm font-medium">
+                        📧 Email to Estates Manager
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Instructions Overlay -->
+        <div class="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-slate-900 to-transparent p-6">
+            <div class="max-w-4xl mx-auto">
+                <h2 class="text-2xl font-bold text-white mb-4">🎯 What This Tool Does</h2>
+                <div class="grid md:grid-cols-3 gap-6 text-slate-300">
+                    <div>
+                        <h3 class="font-semibold text-white mb-2">📤 Upload</h3>
+                        <p class="text-sm">Upload your school's PDF floor plan</p>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold text-white mb-2">🤖 AI Analysis</h3>
+                        <p class="text-sm">AI detects rooms, walls, doors, fire exits</p>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold text-white mb-2">🏢 Interactive 3D</h3>
+                        <p class="text-sm">Click rooms to see assets, issues, compliance</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Make rooms interactive
+        document.querySelectorAll('.room-box').forEach(room => {
+            room.addEventListener('click', function() {
+                alert('Room clicked! In the real version, this would show detailed room information in the right panel.');
+            });
+        });
+    </script>
+</body>
+</html>

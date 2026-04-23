@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useMemo } from 'react';
+// Import Three.js normally - will use global instance via three-global.ts imported in layout
 import * as THREE from 'three';
 import { useTheme } from 'next-themes';
 import { usePathname } from 'next/navigation';

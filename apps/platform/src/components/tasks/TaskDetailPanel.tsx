@@ -17,6 +17,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { authFetch } from "@/lib/supabase";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -77,10 +78,8 @@ export default function TaskDetailPanel({
     setLoading(true);
     try {
       const [commentsRes, timeRes] = await Promise.all([
-        fetch(
-          `/api/tasks/${task.id}/comments?organizationId=${organizationId}`,
-        ),
-        fetch(`/api/tasks/${task.id}/time?organizationId=${organizationId}`),
+        authFetch(`/api/tasks/${task.id}/comments?organizationId=${organizationId}`, { organizationId }),
+        authFetch(`/api/tasks/${task.id}/time?organizationId=${organizationId}`, { organizationId }),
       ]);
 
       if (commentsRes.ok) {
@@ -113,9 +112,9 @@ export default function TaskDetailPanel({
     if (!task || !content.trim()) return;
 
     try {
-      const response = await fetch(`/api/tasks/${task.id}/comments`, {
+      const response = await authFetch(`/api/tasks/${task.id}/comments`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        organizationId,
         body: JSON.stringify({
           organizationId,
           userId: null, // Would come from auth
@@ -136,9 +135,9 @@ export default function TaskDetailPanel({
     if (!task) return;
 
     try {
-      const response = await fetch(`/api/tasks/${task.id}/time`, {
+      const response = await authFetch(`/api/tasks/${task.id}/time`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        organizationId,
         body: JSON.stringify({
           organizationId,
           userId: null,

@@ -17,9 +17,9 @@ As the Data Processor, Schoolgle processes personal data on your behalf and unde
 **Data Protection Officer (Schoolgle):**
 
 - Email: dpo@schoolgle.co.uk
-- Address: [REQUIRES HUMAN INPUT — insert registered office address]
+- Address: [See footer — to be updated]
 
-**ICO Registration:** [REQUIRES HUMAN INPUT — insert ICO registration number]
+**ICO Registration:** ZC103199
 
 ---
 
@@ -268,4 +268,6 @@ We will notify schools at least 30 days before any material changes to this priv
 Email: dpo@schoolgle.co.uk
 Website: schoolgle.co.uk
 
-[REQUIRES HUMAN INPUT — insert company registration number, registered address, ICO registration number]
+Company Registration: 16776489
+ICO Registration: ZC103199
+[REQUIRES HUMAN INPUT — insert registered address]

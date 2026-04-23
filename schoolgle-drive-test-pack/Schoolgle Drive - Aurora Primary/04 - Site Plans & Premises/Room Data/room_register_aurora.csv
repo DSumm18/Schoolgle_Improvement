@@ -1,0 +1,39 @@
+Room Code,Room Name,Floor,Room Type,Area (m²),Capacity,Fire Exit,Notes
+RM-G-001,Reception,Ground,Reception,25,5,Yes,Main entrance
+RM-G-002,SBM Office,Ground,Office,18,2,Yes,School Business Manager
+RM-G-003,Headteacher Office,Ground,Office,20,2,Yes,Headteacher
+RM-G-004,Admin Office,Ground,Office,15,3,Yes,Administration
+RM-G-005,Staff Room,Ground,Staff Room,35,15,Yes,Staff break room
+RM-G-006,Kitchen,Ground,Kitchen,45,8,Yes,School kitchen
+RM-G-007,Oak (Reception),Ground,Classroom,55,30,Yes,EYFS
+RM-G-008,Maple (Reception),Ground,Classroom,55,30,Yes,EYFS
+RM-G-009,Birch (Year 1),Ground,Classroom,55,30,Yes,KS1
+RM-G-010,Elm (Year 1),Ground,Classroom,55,30,Yes,KS1
+RM-G-011,Medical Room,Ground,Medical,12,3,Yes,First aid / medical
+RM-G-012,SEND Room,Ground,SEND Room,25,8,Yes,Intervention space
+RM-G-013,Main Hall,Ground,Hall,120,200,Yes,Assembly/dining
+RM-G-014,Cloakroom Ground,Ground,Cloakroom,30,20,Yes,Pupil coats/bags
+RM-1-001,Ash (Year 2),First,Classroom,55,30,Yes,KS1
+RM-1-002,Willow (Year 2),First,Classroom,55,30,Yes,KS1
+RM-1-003,Holly (Year 3),First,Classroom,55,30,Yes,KS2
+RM-1-004,Rowan (Year 3),First,Classroom,55,30,Yes,KS2
+RM-1-005,Library,First,Library,45,20,Yes,Reading space
+RM-1-006,ICT Suite,First,ICT Suite,50,25,Yes,Computer room
+RM-1-007,Cedar (Year 4),First,Classroom,50,30,Yes,KS2
+RM-1-008,Pine (Year 4),First,Classroom,50,30,Yes,KS2
+RM-1-009,Music Room,First,Meeting Room,30,15,Yes,Music lessons
+RM-1-010,Art Room,First,Classroom,45,20,Yes,Art and DT
+RM-1-011,SENCO Office,First,Office,15,3,Yes,SENCO workspace
+RM-1-012,Intervention Room,First,SEND Room,25,10,Yes,Small group work
+RM-2-001,Beech (Year 5),Second,Classroom,55,30,Yes,KS2
+RM-2-002,Chestnut (Year 5),Second,Classroom,55,30,Yes,KS2
+RM-2-003,Hazel (Year 6),Second,Classroom,55,30,Yes,KS2
+RM-2-004,Sycamore (Year 6),Second,Classroom,55,30,Yes,KS2
+RM-2-005,Group Room,Second,Meeting Room,20,8,Yes,Small group work
+RM-2-006,Finance Office,Second,Office,18,2,Yes,Finance staff
+RM-2-007,Data Office,Second,Office,15,2,Yes,Data manager
+RM-2-008,Storage,Second,Storage,25,0,Yes,Resource storage
+RM-2-009,Cloakroom First,Second,Cloakroom,30,20,Yes,Pupil coats/bags
+RM-B-001,Boiler Room,Basement,Plant Room,40,2,Yes,Plant equipment
+RM-B-002,Storage,Basement,Storage,50,0,Yes,General storage
+RM-B-003,Plant Room,Basement,Plant Room,30,0,No,Air handling

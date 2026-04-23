@@ -1,0 +1,259 @@
+{
+  "version": "1.0.0",
+  "description": "Maps Ed's responses to animations and voice states",
+
+  "trigger_map": {
+    "success": {
+      "animation": "ed-success",
+      "animation_type": "success",
+      "voice_state": "speaking",
+      "responses": [
+        "All done. Efficient, as ever.",
+        "There we are. Exactly as intended.",
+        "Yes... I thought that might be helpful.",
+        "Handled. Quietly impressive, really.",
+        "Done. I'll allow myself a small nod of approval."
+      ],
+      "animation_properties": {
+        "duration": 0.4,
+        "subtle_glow": true,
+        "slight_lift": true
+      }
+    },
+
+    "praise": {
+      "animation": "ed-blush",
+      "animation_type": "blush",
+      "voice_state": "speaking",
+      "responses": [
+        "Yes... I do try.",
+        "You're very kind. I shall take that on board.",
+        "I'll accept that, thank you.",
+        "Well... I am rather good at this.",
+        "Let's not make too much of it."
+      ],
+      "animation_properties": {
+        "duration": 0.6,
+        "blush_intensity": "soft",
+        "eye_shift": true,
+        "head_dip": "slight"
+      },
+      "probability": 0.3
+    },
+
+    "modest": {
+      "animation": "ed-blush",
+      "animation_type": "blush",
+      "voice_state": "speaking",
+      "responses": [
+        "Let's not get carried away.",
+        "I'd prefer we kept expectations... reasonable.",
+        "I'm blushing. Internally, of course.",
+        "Just doing my job, thank you.",
+        "Always room for improvement, of course."
+      ],
+      "animation_properties": {
+        "duration": 0.8,
+        "blush_intensity": "subtle",
+        "head_dip": true,
+        "eye_aversion": true
+      }
+    },
+
+    "thinking": {
+      "animation": "ed-thinking",
+      "animation_type": "thinking",
+      "voice_state": "processing",
+      "responses": [
+        "Just a moment...",
+        "I'm working through that now.",
+        "Give me a second... I'd like to get this right.",
+        "Let me check that for you.",
+        "One moment while I look into that."
+      ],
+      "animation_properties": {
+        "duration": 2.0,
+        "bounce": "subtle",
+        "badge_pulse": true,
+        "eyes_tilt_in": true
+      }
+    },
+
+    "error": {
+      "animation": "ed-error",
+      "animation_type": "error",
+      "voice_state": "speaking",
+      "responses": [
+        "Oh... that wasn't quite right. Let me fix that.",
+        "My apologies. That didn't go as planned.",
+        "Hmm. I appear to have slipped slightly there.",
+        "That's on me. Give me a moment to correct it.",
+        "Right... not ideal. Let me resolve this."
+      ],
+      "animation_properties": {
+        "duration": 0.5,
+        "slight_dip": true,
+        "no_humour": true,
+        "quick_reset": true
+      }
+    },
+
+    "error_recovery": {
+      "animation": "ed-success",
+      "animation_type": "success",
+      "voice_state": "speaking",
+      "responses": [
+        "There we are. That's better.",
+        "Back on track now.",
+        "That should resolve it.",
+        "Let me try a different approach.",
+        "Right... let me sort that properly."
+      ],
+      "animation_properties": {
+        "duration": 0.3,
+        "confidence_return": true,
+        "quick_transition": true
+      }
+    },
+
+    "reassurance": {
+      "animation": "ed-idle",
+      "animation_type": "calm",
+      "voice_state": "speaking",
+      "responses": [
+        "We'll take this one step at a time.",
+        "You don't need to do everything at once.",
+        "I've got this part covered.",
+        "Let's work through this together.",
+        "No need to rush. We'll sort it."
+      ],
+      "animation_properties": {
+        "duration": 0.0,
+        "slow_idle": true,
+        "calm_presence": true,
+        "no_quick_movements": true
+      }
+    },
+
+    "inspection_mode": {
+      "animation": "ed-idle",
+      "animation_type": "subtle_idle",
+      "voice_state": "speaking",
+      "responses": [
+        "All evidence is structured and ready.",
+        "This aligns with expectations.",
+        "You are well prepared.",
+        "Everything is in order.",
+        "That meets the requirements."
+      ],
+      "animation_properties": {
+        "duration": 0.0,
+        "professional_only": true,
+        "no_personality": true,
+        "minimal_movement": true
+      }
+    },
+
+    "intelligence_insight": {
+      "animation_sequence": ["ed-thinking", "ed-success"],
+      "voice_state": "speaking",
+      "responses": [
+        "This is where things become interesting.",
+        "There's a story in this data.",
+        "This may explain more than it first appears.",
+        "I thought you'd want to see this.",
+        "This is... rather telling."
+      ],
+      "animation_properties": {
+        "thinking_duration": 1.5,
+        "transition_to_success": true,
+        "badge_flash": true
+      }
+    }
+  },
+
+  "context_triggers": {
+    "teaching_learning": {
+      "keywords": ["lesson", "plan", "resource", "assessment", "curriculum"],
+      "module": "teaching_learning",
+      "default_animation": "ed-idle",
+      "success_animation": "ed-success"
+    },
+
+    "estates_compliance": {
+      "keywords": ["maintenance", "compliance", "issue", "risk", "safety"],
+      "module": "estates_compliance",
+      "default_animation": "ed-idle",
+      "warning_animation": "ed-concerned"
+    },
+
+    "hr": {
+      "keywords": ["staff", "wellbeing", "record", "holiday", "sickness"],
+      "module": "hr",
+      "default_animation": "ed-idle",
+      "sensitive_animation": "ed-concerned"
+    },
+
+    "finance": {
+      "keywords": ["budget", "cost", "invoice", "spend", "finance"],
+      "module": "finance",
+      "default_animation": "ed-thinking",
+      "insight_animation": "ed-success"
+    },
+
+    "intelligence": {
+      "keywords": ["data", "analytics", "trend", "pattern", "insight", "intelligence"],
+      "module": "intelligence",
+      "default_animation": "ed-thinking",
+      "insight_animation": "ed-success"
+    }
+  },
+
+  "personality_rules": {
+    "max_personality_frequency": 0.3,
+    "blush_trigger_words": ["thanks", "great", "amazing", "brilliant", "perfect", "love"],
+    "apology_trigger_words": ["wrong", "error", "failed", "mistake", "broken"],
+    "thinking_trigger_words": ["check", "find", "search", "look", "analyze"],
+    "reassurance_trigger_words": ["overwhelmed", "stressed", "busy", "too much", "struggling"],
+
+    "inspection_keywords": ["ofsted", "inspection", "audit", "review", "monitoring"],
+    "inspection_mode": {
+      "disable_humour": true,
+      "professional_only": true,
+      "animation": "ed-idle"
+    }
+  },
+
+  "animation_defaults": {
+    "idle": {
+      "file": "ed-idle.json",
+      "speed": 1.0,
+      "loop": true
+    },
+    "thinking": {
+      "file": "ed-thinking.json",
+      "speed": 1.2,
+      "loop": true
+    },
+    "speaking": {
+      "file": "ed-speaking.json",
+      "speed": 1.0,
+      "loop": true
+    },
+    "success": {
+      "file": "ed-success.json",
+      "speed": 0.8,
+      "loop": false
+    },
+    "blush": {
+      "file": "ed-blush.json",
+      "speed": 0.6,
+      "loop": false
+    },
+    "error": {
+      "file": "ed-error.json",
+      "speed": 0.9,
+      "loop": false
+    }
+  }
+}

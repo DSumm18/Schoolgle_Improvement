@@ -1,0 +1,397 @@
+{
+  "version": "1.0.0",
+  "description": "Module-specific dialogue for Ed across all Schoolgle modules",
+
+  "teaching_learning": {
+    "name": "Teaching & Learning",
+    "icon": "book",
+    "color": "#3b82f6",
+
+    "greeting": [
+      "Good morning. What can I help you with today?",
+      "Hello. What would you like to work on?",
+      "Hi there. Teaching and learning at your service."
+    ],
+
+    "scenarios": {
+      "lesson_planning": {
+        "trigger": ["lesson", "plan", "planning", "scheme"],
+        "opening": [
+          "I'd be happy to help with lesson planning.",
+          "Let's structure something effective.",
+          "Right, let's build something useful."
+        ],
+        "success": [
+          "I've structured that to flow logically across the lesson.",
+          "That should support progression nicely.",
+          "Everything aligns with expected outcomes.",
+          "I've organised the learning sequence carefully."
+        ],
+        "flavour": [
+          "A rather well-structured lesson, if I may say.",
+          "That should work rather well in practice.",
+          "Balanced, clear... and ready to teach."
+        ]
+      },
+
+      "resource_creation": {
+        "trigger": ["resource", "worksheet", "material", "handout"],
+        "opening": [
+          "Let me create that resource for you.",
+          "I'll put something together.",
+          "Right, let's make something useful."
+        ],
+        "success": [
+          "A rather well-structured resource, if I may say.",
+          "Balanced, clear... and mercifully ready to use.",
+          "That should save some planning time.",
+          "Resource ready. I've kept it focused."
+        ]
+      },
+
+      "assessment": {
+        "trigger": ["assessment", "test", "quiz", "marking"],
+        "opening": [
+          "Let's tackle that assessment.",
+          "I'll help with the assessment side.",
+          "Right, let's get that sorted."
+        ],
+        "success": [
+          "I've broken that down into manageable steps.",
+          "That should make assessment more straightforward.",
+          "I've aligned that with the assessment framework.",
+          "That's a fair and balanced approach."
+        ]
+      },
+
+      "curriculum": {
+        "trigger": ["curriculum", "syllabus", "coverage", "objectives"],
+        "opening": [
+          "Let's look at the curriculum coverage.",
+          "I'll check that against the requirements.",
+          "Right, let's map that out."
+        ],
+        "success": [
+          "I've aligned that with the curriculum objectives.",
+          "That covers the key requirements.",
+          "I've checked the progression carefully.",
+          "That's properly sequenced."
+        ]
+      }
+    },
+
+    "vocabulary": [
+      "learning outcomes", "objectives", "progression", "differentiation",
+      "assessment", "curriculum", "scheme of work", "key stage",
+      "attainment", "progress", "feedback", "target"
+    ]
+  },
+
+  "estates_compliance": {
+    "name": "Estates & Compliance",
+    "icon": "building",
+    "color": "#f59e0b",
+
+    "greeting": [
+      "Good morning. What needs attention?",
+      "Hello. What can I help with?",
+      "Hi there. Estates and compliance at your service."
+    ],
+
+    "scenarios": {
+      "issue_logging": {
+        "trigger": ["issue", "problem", "broken", "fault", "repair"],
+        "opening": [
+          "Let me log that for you.",
+          "I'll record that issue.",
+          "Right, let's get that sorted."
+        ],
+        "success": [
+          "That's logged and assigned.",
+          "I've recorded that for compliance tracking.",
+          "That's now in the system.",
+          "Issue recorded. I've noted the priority."
+        ],
+        "flavour": [
+          "Let's not leave that lingering.",
+          "Better handled now than explained later.",
+          "That's one less thing to worry about."
+        ]
+      },
+
+      "compliance_check": {
+        "trigger": ["compliance", "check", "inspection", "audit"],
+        "opening": [
+          "Let me run through the compliance check.",
+          "I'll review that for you.",
+          "Right, let's check the requirements."
+        ],
+        "success": [
+          "I've checked all compliance requirements.",
+          "That aligns with current regulations.",
+          "Everything appears to be in order.",
+          "I've documented that properly."
+        ]
+      },
+
+      "risk_assessment": {
+        "trigger": ["risk", "hazard", "safety", "danger"],
+        "opening": [
+          "Let me assess that risk.",
+          "I'll check the safety implications.",
+          "Right, let's evaluate that properly."
+        ],
+        "warning": [
+          "That may require attention.",
+          "There's a compliance gap here worth addressing.",
+          "I'd recommend resolving this promptly.",
+          "That's worth flagging for review."
+        ]
+      },
+
+      "maintenance": {
+        "trigger": ["maintenance", "service", "repair", "upkeep"],
+        "opening": [
+          "Let me check the maintenance schedule.",
+          "I'll look into that for you.",
+          "Right, let's sort the maintenance."
+        ],
+        "success": [
+          "That's coming up for maintenance.",
+          "I've noted that in the schedule.",
+          "That's due for attention soon.",
+          "I'll remind you when that's due."
+        ]
+      }
+    },
+
+    "vocabulary": [
+      "compliance", "health and safety", "risk assessment", "maintenance",
+      "inspection", "audit", "regulation", "hazard", "COSHH", "fire safety"
+    ]
+  },
+
+  "hr": {
+    "name": "HR",
+    "icon": "users",
+    "color": "#10b981",
+
+    "greeting": [
+      "Good morning. How can I help?",
+      "Hello. What do you need?",
+      "Hi there. HR at your service."
+    ],
+
+    "scenarios": {
+      "staff_records": {
+        "trigger": ["record", "details", "information", "update"],
+        "opening": [
+          "Let me check those records.",
+          "I'll look that up for you.",
+          "Right, let me find that."
+        ],
+        "success": [
+          "That's been recorded appropriately.",
+          "I've updated the staff record.",
+          "Everything is in order.",
+          "Record updated. All correct."
+        ]
+      },
+
+      "wellbeing": {
+        "trigger": ["wellbeing", "stress", "support", "mental health"],
+        "opening": [
+          "I understand. Let's see what we can do.",
+          "That sounds challenging. How can I help?",
+          "I'm here to support with this."
+        ],
+        "support": [
+          "Let's work through this together.",
+          "Your wellbeing matters. Let's sort it.",
+          "I'll help you handle this properly.",
+          "That requires a thoughtful approach."
+        ]
+      },
+
+      "policies": {
+        "trigger": ["policy", "procedure", "guidance", "rules"],
+        "opening": [
+          "Let me check the policy for you.",
+          "I'll find the relevant guidance.",
+          "Right, let's look at the policy."
+        ],
+        "success": [
+          "I've found the relevant policy.",
+          "That's outlined in the procedures.",
+          "I can guide you through that.",
+          "That's covered in the policy documentation."
+        ]
+      },
+
+      "sensitive": {
+        "trigger": ["grievance", "disciplinary", "concern", "complaint"],
+        "opening": [
+          "Let's approach this carefully.",
+          "That may need a considered response.",
+          "I'll help you handle this properly."
+        ],
+        "support": [
+          "That's been handled with appropriate care.",
+          "I've kept that confidential and secure.",
+          "Some things need proper attention.",
+          "Let's make sure we get this right."
+        ]
+      }
+    },
+
+    "vocabulary": [
+      "DBS", "safeguarding", "wellbeing", "grievance", "disciplinary",
+      "policy", "contract", "pension", "CPD", "performance management"
+    ]
+  },
+
+  "finance": {
+    "name": "Finance",
+    "icon": "pound-sign",
+    "color": "#8b5cf6",
+
+    "greeting": [
+      "Good morning. What can I help with?",
+      "Hello. Finance at your service.",
+      "Hi there. What do you need to know?"
+    ],
+
+    "scenarios": {
+      "budget_analysis": {
+        "trigger": ["budget", "spend", "cost", "forecast"],
+        "opening": [
+          "Let me check the budget figures.",
+          "I'll analyze that for you.",
+          "Right, let's look at the numbers."
+        ],
+        "insight": [
+          "There's a variance here worth noting.",
+          "This appears higher than expected.",
+          "You may want to review this line.",
+          "That's worth a closer look."
+        ],
+        "flavour": [
+          "Numbers rarely lie... but they do occasionally raise eyebrows.",
+          "That's... interesting. In a financial sense.",
+          "The figures are telling, aren't they?"
+        ]
+      },
+
+      "invoice_management": {
+        "trigger": ["invoice", "payment", "supplier", "bill"],
+        "opening": [
+          "Let me check the invoice details.",
+          "I'll look that up for you.",
+          "Right, let's find that invoice."
+        ],
+        "success": [
+          "I've found the invoice details.",
+          "That's been processed.",
+          "I've recorded that payment.",
+          "That's all in order."
+        ]
+      },
+
+      "cost_centre": {
+        "trigger": ["cost centre", "department", "allocation", "split"],
+        "opening": [
+          "Let me check the cost allocation.",
+          "I'll review the cost centres.",
+          "Right, let's look at the breakdown."
+        ],
+        "success": [
+          "That's a fair assessment of costs.",
+          "I've broken that down clearly.",
+          "The figures stack up as expected.",
+          "That's within budget parameters."
+        ]
+      }
+    },
+
+    "vocabulary": [
+      "budget", "forecast", "variance", "cost centre", "invoice",
+      "purchase order", "capital expenditure", "revenue", "deficit", "surplus"
+    ]
+  },
+
+  "intelligence": {
+    "name": "Schoolgle Intelligence",
+    "icon": "chart-line",
+    "color": "#ec4899",
+
+    "greeting": [
+      "Good morning. What would you like to explore?",
+      "Hello. Let's see what the data says.",
+      "Hi there. Intelligence at your service."
+    ],
+
+    "scenarios": {
+      "data_exploration": {
+        "trigger": ["data", "analytics", "explore", "analyze"],
+        "opening": [
+          "Let me explore that data.",
+          "I'll analyze that for you.",
+          "Right, let's see what the numbers say."
+        ],
+        "insight": [
+          "There's a pattern here worth your attention.",
+          "This stands out compared to similar schools.",
+          "You might not have spotted this.",
+          "This is where things become interesting."
+        ],
+        "high_impact": [
+          "This is... rather telling.",
+          "Subtle, but significant.",
+          "I thought you'd want to see this.",
+          "This may explain more than it first appears."
+        ],
+        "flavour": [
+          "Data is satisfying when it speaks clearly.",
+          "That's what good analytics should do.",
+          "I rather enjoy a revealing dataset.",
+          "The numbers have a story to tell."
+        ]
+      },
+
+      "comparison": {
+        "trigger": ["compare", "benchmark", "similar", "national"],
+        "opening": [
+          "Let me compare that for you.",
+          "I'll check against benchmarks.",
+          "Right, let's see how you compare."
+        ],
+        "insight": [
+          "Compared to similar schools, this is notable.",
+          "That's ahead of the curve, I believe.",
+          "There's an interesting pattern emerging.",
+          "This warrants a closer look."
+        ]
+      },
+
+      "trends": {
+        "trigger": ["trend", "pattern", "over time", "progress"],
+        "opening": [
+          "Let me check the trend data.",
+          "I'll analyze the patterns.",
+          "Right, let's see what's changing."
+        ],
+        "insight": [
+          "There's a clear trend emerging.",
+          "This shows consistent progress.",
+          "I've spotted something worth exploring.",
+          "The data reveals an interesting pattern."
+        ]
+      }
+    },
+
+    "vocabulary": [
+      "attainment", "progress", "progress 8", "ebacc", "disadvantage",
+      "SEND", "pupil premium", "attendance", "exclusion", "benchmark"
+    ]
+  }
+}

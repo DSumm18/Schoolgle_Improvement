@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Plus, X, Link as LinkIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { authFetch } from "@/lib/supabase";
 import {
   Dialog,
   DialogContent,
@@ -169,8 +170,8 @@ export default function TaskModal({
   const fetchUsersAndTeams = async () => {
     try {
       const [usersRes, teamsRes] = await Promise.all([
-        fetch(`/api/governance/governors?organizationId=${organizationId}`),
-        fetch(`/api/teams?organizationId=${organizationId}`),
+        authFetch(`/api/governance/governors?organizationId=${organizationId}`, { organizationId }),
+        authFetch(`/api/teams?organizationId=${organizationId}`, { organizationId }),
       ]);
 
       if (usersRes.ok) {
@@ -204,9 +205,9 @@ export default function TaskModal({
       }));
 
     try {
-      const response = await fetch("/api/tasks", {
+      const response = await authFetch("/api/tasks", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        organizationId,
         body: JSON.stringify({
           organizationId,
           userId: null, // Would come from auth context

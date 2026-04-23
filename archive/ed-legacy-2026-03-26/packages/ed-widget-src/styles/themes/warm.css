@@ -1,0 +1,36 @@
+/**
+ * Warm Theme - Dyslexia-friendly
+ * Amber tones, reduced blue light
+ */
+
+.ed-theme-warm {
+  --ed-primary: #f59e0b;
+  --ed-primary-dark: #d97706;
+  --ed-primary-light: #fbbf24;
+  --ed-background: #1c1917;
+  --ed-surface: rgba(41, 37, 36, 0.95);
+  --ed-surface-light: rgba(68, 64, 60, 0.9);
+  --ed-text: #fef3c7;
+  --ed-text-muted: #d6d3d1;
+  --ed-success: #84cc16;
+  --ed-error: #f87171;
+  --ed-warning: #fbbf24;
+}
+
+.ed-theme-warm .ed-trigger-button {
+  background: linear-gradient(135deg, var(--ed-primary) 0%, var(--ed-primary-dark) 100%);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(245, 158, 11, 0.3);
+}
+
+.ed-theme-warm .ed-avatar-container {
+  background: radial-gradient(circle at center, rgba(245, 158, 11, 0.15) 0%, transparent 70%);
+}
+
+.ed-theme-warm .ed-dock-mic {
+  background: var(--ed-primary);
+}
+
+.ed-theme-warm .ed-dock-listening::before {
+  background: var(--ed-error);
+}
+

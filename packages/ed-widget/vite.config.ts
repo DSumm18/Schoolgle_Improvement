@@ -19,8 +19,12 @@ export default defineConfig(({ mode }) => {
             formats: ["iife"],
           },
           rollupOptions: {
+            external: ['three', '@react-three/fiber', '@react-three/drei'],
             output: {
               assetFileNames: "ed-widget.[ext]",
+              globals: {
+                three: 'THREE'
+              }
             },
           },
           minify: "esbuild",

@@ -18,6 +18,8 @@ import {
   ChevronRight,
   MapPin,
 } from "lucide-react";
+import { useAuth } from "@/context/SupabaseAuthContext";
+import { authFetch } from "@/lib/supabase";
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -234,21 +236,27 @@ export function NoticeFeed({
   const [notices, setNotices] = useState<Notice[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string | null>(null);
+  const { organizationId } = useAuth();
 
   useEffect(() => {
+    if (!organizationId) {
+      setLoading(false);
+      return;
+    }
+
     const params = new URLSearchParams({ limit: maxItems.toString() });
     if (types && types.length > 0) {
       params.set("type", types[0]);
     }
 
-    fetch(`/api/notices?${params}`)
+    authFetch(`/api/notices?${params}`, { organizationId })
       .then((r) => r.json())
       .then((d) => {
         setNotices(d.notices || []);
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [maxItems, types]);
+  }, [maxItems, types, organizationId]);
 
   const filtered = filter
     ? notices.filter((n) => n.notice_type === filter)

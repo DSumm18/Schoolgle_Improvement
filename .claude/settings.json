@@ -1,0 +1,4 @@
+{
+  "model": "sonnet",
+  "compactAfterTokens": 80000
+}

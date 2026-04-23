@@ -22,6 +22,8 @@ import {
   Shield,
   CalendarDays,
 } from "lucide-react";
+import { useAuth } from "@/context/SupabaseAuthContext";
+import { authFetch } from "@/lib/supabase";
 import { VideoRoomCard } from "@/components/video/VideoRoomEmbed";
 import { NoticeFeed } from "@/components/notices/NoticeFeed";
 import { QuickMessageBar } from "@/components/notices/QuickMessageBar";
@@ -107,6 +109,7 @@ const ASSEMBLY_ICONS: Record<string, typeof Calendar> = {
 // ─── Create Room Modal ───────────────────────────────────────────────
 
 function CreateRoomModal({ onClose, onCreate }: { onClose: () => void; onCreate: (room: any) => void }) {
+  const { organizationId } = useAuth();
   const [form, setForm] = useState({
     room_name: "",
     room_type: "meeting",
@@ -121,12 +124,12 @@ function CreateRoomModal({ onClose, onCreate }: { onClose: () => void; onCreate:
   const [saving, setSaving] = useState(false);
 
   const handleSubmit = async () => {
-    if (!form.room_name) return;
+    if (!form.room_name || !organizationId) return;
     setSaving(true);
     try {
-      const res = await fetch("/api/video-rooms", {
+      const res = await authFetch("/api/video-rooms", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        organizationId,
         body: JSON.stringify({
           ...form,
           scheduled_start: form.scheduled_start || undefined,
@@ -274,6 +277,7 @@ function CreateRoomModal({ onClose, onCreate }: { onClose: () => void; onCreate:
 // ═══════════════════════════════════════════════════════════════════════
 
 export default function CommsHubPage() {
+  const { organizationId } = useAuth();
   const [tab, setTab] = useState<Tab>("overview");
   const [rooms, setRooms] = useState<VideoRoom[]>([]);
   const [assemblies, setAssemblies] = useState<AssemblySchedule[]>([]);
@@ -283,14 +287,16 @@ export default function CommsHubPage() {
   const [showCreateRoom, setShowCreateRoom] = useState(false);
 
   useEffect(() => {
+    if (!organizationId) return;
+
     Promise.all([
-      fetch("/api/video-rooms?limit=50")
+      authFetch(`/api/video-rooms?limit=50`, { organizationId })
         .then((r) => r.json())
         .catch(() => ({ rooms: [], liveCount: 0 })),
-      fetch("/api/assemblies")
+      authFetch(`/api/assemblies`, { organizationId })
         .then((r) => r.json())
         .catch(() => ({ schedules: [] })),
-      fetch("/api/emergency/devices")
+      authFetch(`/api/emergency/devices`, { organizationId })
         .then((r) => r.json())
         .catch(() => ({ devices: [] })),
     ]).then(([roomData, assemblyData, deviceData]) => {
@@ -300,27 +306,29 @@ export default function CommsHubPage() {
       setDevices(deviceData.devices || []);
       setLoading(false);
     });
-  }, []);
+  }, [organizationId]);
 
   const handleGoLive = useCallback(async (id: string) => {
-    await fetch(`/api/video-rooms/${id}`, {
+    if (!organizationId) return;
+    await authFetch(`/api/video-rooms/${id}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      organizationId,
       body: JSON.stringify({ action: "go_live" }),
     });
     setRooms((prev) => prev.map((r) => r.id === id ? { ...r, status: "live" } : r));
     setLiveCount((c) => c + 1);
-  }, []);
+  }, [organizationId]);
 
   const handleEnd = useCallback(async (id: string) => {
-    await fetch(`/api/video-rooms/${id}`, {
+    if (!organizationId) return;
+    await authFetch(`/api/video-rooms/${id}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      organizationId,
       body: JSON.stringify({ action: "end" }),
     });
     setRooms((prev) => prev.filter((r) => r.id !== id));
     setLiveCount((c) => Math.max(0, c - 1));
-  }, []);
+  }, [organizationId]);
 
   const liveRooms = rooms.filter((r) => r.status === "live");
   const scheduledRooms = rooms.filter((r) => r.status === "scheduled");
@@ -426,7 +434,7 @@ export default function CommsHubPage() {
                     </h3>
                     <div className="space-y-3">
                       {liveRooms.map((room) => (
-                        <VideoRoomCard key={room.id} room={room} onEnd={handleEnd} />
+                        <VideoRoomCard key={room.id} room={room} organizationId={organizationId!} onEnd={handleEnd} />
                       ))}
                     </div>
                   </div>

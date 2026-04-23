@@ -1,12 +1,15 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/SupabaseAuthContext';
 import {
     Building2, Users, CreditCard, TrendingUp, TrendingDown,
     AlertTriangle, CheckCircle, Clock, Search, Filter,
     Download, Mail, MoreVertical, ChevronRight, Activity,
     DollarSign, Zap, BarChart3, PieChart, ArrowUpRight,
-    ArrowDownRight, RefreshCw, Eye, Send
+    ArrowDownRight, RefreshCw, Eye, Send, UserPlus, ClipboardList,
+    FileText, Calendar, Ban, Shield, Plus, Tag
 } from 'lucide-react';
 
 // Types
@@ -19,7 +22,7 @@ interface Subscription {
         schoolCount: number;
     };
     plan: 'core' | 'professional' | 'enterprise';
-    status: 'active' | 'cancelled' | 'past_due';
+    status: 'active' | 'cancelled' | 'past_due' | 'trialing';
     paymentMethod: 'card' | 'invoice';
     finalPriceAnnual: number;
     currentPeriodEnd: string;
@@ -30,6 +33,37 @@ interface Subscription {
         lastLogin: string;
         aiSpend: number;
     };
+}
+
+interface Invoice {
+    id: string;
+    invoice_number: string;
+    status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
+    organization: {
+        id: string;
+        name: string;
+        urn: string | null;
+    };
+    total: number;
+    amount_due: number;
+    invoice_date: string;
+    due_date: string;
+    paid_at: string | null;
+}
+
+interface OnboardingItem {
+    id: string;
+    status: 'pending' | 'in_progress' | 'awaiting_info' | 'ready' | 'completed' | 'blocked';
+    stage: string;
+    priority: 'low' | 'normal' | 'high' | 'urgent';
+    organization: {
+        id: string;
+        name: string;
+        urn: string | null;
+    };
+    checklist: Record<string, boolean>;
+    assigned_to: string | null;
+    created_at: string;
 }
 
 interface DashboardMetrics {
@@ -46,75 +80,97 @@ interface DashboardMetrics {
     overdueAmount: number;
 }
 
-// Mock data - replace with real API calls
-const mockMetrics: DashboardMetrics = {
-    mrr: 18500,
-    arr: 222000,
-    totalCustomers: 89,
-    activeCustomers: 84,
-    churnRate: 2.3,
-    aiCostsMonth: 892,
-    aiRevenue: 18500,
-    grossMargin: 95.2,
-    atRiskCount: 7,
-    overdueInvoices: 3,
-    overdueAmount: 4497
-};
-
-const mockSubscriptions: Subscription[] = [
-    {
-        id: '1',
-        organization: { id: 'o1', name: 'St Mary\'s Primary School', type: 'school', schoolCount: 1 },
-        plan: 'professional',
-        status: 'active',
-        paymentMethod: 'invoice',
-        finalPriceAnnual: 2499,
-        currentPeriodEnd: '2025-11-15',
-        startedAt: '2024-11-15',
-        health: { score: 92, status: 'healthy', lastLogin: '2 hours ago', aiSpend: 12.45 }
-    },
-    {
-        id: '2',
-        organization: { id: 'o2', name: 'Inspire Academy Trust', type: 'trust', schoolCount: 8 },
-        plan: 'enterprise',
-        status: 'active',
-        paymentMethod: 'card',
-        finalPriceAnnual: 25592,
-        currentPeriodEnd: '2025-08-20',
-        startedAt: '2024-08-20',
-        health: { score: 78, status: 'neutral', lastLogin: '3 days ago', aiSpend: 89.23 }
-    },
-    {
-        id: '3',
-        organization: { id: 'o3', name: 'Oakwood Academy', type: 'school', schoolCount: 1 },
-        plan: 'core',
-        status: 'active',
-        paymentMethod: 'invoice',
-        finalPriceAnnual: 1499,
-        currentPeriodEnd: '2025-12-01',
-        startedAt: '2024-12-01',
-        health: { score: 34, status: 'at_risk', lastLogin: '21 days ago', aiSpend: 0.12 }
-    },
-    {
-        id: '4',
-        organization: { id: 'o4', name: 'Riverside Primary', type: 'school', schoolCount: 1 },
-        plan: 'professional',
-        status: 'past_due',
-        paymentMethod: 'invoice',
-        finalPriceAnnual: 2499,
-        currentPeriodEnd: '2025-10-15',
-        startedAt: '2024-10-15',
-        health: { score: 18, status: 'critical', lastLogin: '45 days ago', aiSpend: 0 }
-    },
-];
-
 export default function AdminDashboard() {
-    const [metrics, setMetrics] = useState<DashboardMetrics>(mockMetrics);
-    const [subscriptions, setSubscriptions] = useState<Subscription[]>(mockSubscriptions);
-    const [activeTab, setActiveTab] = useState<'overview' | 'customers' | 'revenue' | 'usage'>('overview');
+    const router = useRouter();
+    const { user, loading: authLoading } = useAuth();
+    const [isSuperAdmin, setIsSuperAdmin] = useState<boolean | null>(null);
+
+    const [metrics, setMetrics] = useState<DashboardMetrics>({
+        mrr: 0, arr: 0, totalCustomers: 0, activeCustomers: 0,
+        churnRate: 0, aiCostsMonth: 0, aiRevenue: 0, grossMargin: 0,
+        atRiskCount: 0, overdueInvoices: 0, overdueAmount: 0
+    });
+    const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+    const [invoices, setInvoices] = useState<Invoice[]>([]);
+    const [onboardingQueue, setOnboardingQueue] = useState<OnboardingItem[]>([]);
+
+    const [activeTab, setActiveTab] = useState<'overview' | 'customers' | 'revenue' | 'invoices' | 'onboarding'>('overview');
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('all');
     const [healthFilter, setHealthFilter] = useState<string>('all');
+    const [loading, setLoading] = useState(true);
+
+    // Check super admin access
+    useEffect(() => {
+        async function checkSuperAdmin() {
+            if (!user?.id) return;
+
+            try {
+                const res = await fetch('/api/admin/subscriptions');
+                if (res.ok) {
+                    setIsSuperAdmin(true);
+                    loadData();
+                } else {
+                    setIsSuperAdmin(false);
+                }
+            } catch (error) {
+                console.error('Error checking super admin:', error);
+                setIsSuperAdmin(false);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        if (!authLoading && user) {
+            checkSuperAdmin();
+        }
+    }, [user, authLoading]);
+
+    // Load dashboard data
+    async function loadData() {
+        try {
+            // Load subscriptions with summary
+            const subRes = await fetch('/api/admin/subscriptions');
+            if (subRes.ok) {
+                const subData = await subRes.json();
+                setSubscriptions(subData.data || []);
+                setMetrics({
+                    mrr: Math.round((subData.summary?.mrr || 0)),
+                    arr: subData.summary?.arr || 0,
+                    totalCustomers: subData.summary?.total || 0,
+                    activeCustomers: subData.summary?.active || 0,
+                    churnRate: 0,
+                    aiCostsMonth: 0,
+                    aiRevenue: subData.summary?.mrr || 0,
+                    grossMargin: 95,
+                    atRiskCount: subData.summary?.atRisk || 0,
+                    overdueInvoices: 0,
+                    overdueAmount: 0
+                });
+            }
+
+            // Load invoices
+            const invRes = await fetch('/api/admin/invoices');
+            if (invRes.ok) {
+                const invData = await invRes.json();
+                setInvoices(invData.data || []);
+                setMetrics(prev => ({
+                    ...prev,
+                    overdueInvoices: invData.summary?.overdue || 0,
+                    overdueAmount: invData.summary?.outstanding || 0
+                }));
+            }
+
+            // Load onboarding queue
+            const onboardRes = await fetch('/api/admin/onboarding-queue');
+            if (onboardRes.ok) {
+                const onboardData = await onboardRes.json();
+                setOnboardingQueue(onboardData.data || []);
+            }
+        } catch (error) {
+            console.error('Error loading data:', error);
+        }
+    }
 
     const filteredSubscriptions = subscriptions.filter(sub => {
         const matchesSearch = sub.organization.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -142,6 +198,32 @@ export default function AdminDashboard() {
         }
     };
 
+    if (authLoading || loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900" />
+            </div>
+        );
+    }
+
+    if (isSuperAdmin === false) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                <div className="text-center">
+                    <Shield className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
+                    <p className="text-gray-600 mb-4">You don't have permission to access this area.</p>
+                    <button
+                        onClick={() => router.push('/dashboard')}
+                        className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800"
+                    >
+                        Return to Dashboard
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-screen bg-gray-50">
             {/* Header */}
@@ -155,10 +237,16 @@ export default function AdminDashboard() {
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => router.push('/admin/create-school')}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                        >
+                            <Plus className="w-4 h-4" /> Create School
+                        </button>
                         <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2">
                             <Download className="w-4 h-4" /> Export
                         </button>
-                        <button className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors flex items-center gap-2">
+                        <button onClick={loadData} className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors flex items-center gap-2">
                             <RefreshCw className="w-4 h-4" /> Refresh
                         </button>
                     </div>
@@ -171,20 +259,26 @@ export default function AdminDashboard() {
                     {[
                         { id: 'overview', label: 'Overview', icon: BarChart3 },
                         { id: 'customers', label: 'Customers', icon: Building2 },
+                        { id: 'invoices', label: 'Invoices', icon: FileText },
+                        { id: 'onboarding', label: 'Onboarding', icon: ClipboardList },
                         { id: 'revenue', label: 'Revenue', icon: DollarSign },
-                        { id: 'usage', label: 'Usage & AI Costs', icon: Activity }
                     ].map(tab => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id as any)}
                             className={`flex items-center gap-2 py-4 border-b-2 transition-colors ${
-                                activeTab === tab.id 
-                                    ? 'border-gray-900 text-gray-900' 
+                                activeTab === tab.id
+                                    ? 'border-gray-900 text-gray-900'
                                     : 'border-transparent text-gray-500 hover:text-gray-700'
                             }`}
                         >
                             <tab.icon className="w-4 h-4" />
                             {tab.label}
+                            {tab.id === 'onboarding' && onboardingQueue.filter(i => i.status === 'pending' || i.status === 'in_progress').length > 0 && (
+                                <span className="ml-1 px-1.5 py-0.5 text-xs bg-red-100 text-red-600 rounded-full">
+                                    {onboardingQueue.filter(i => i.status === 'pending' || i.status === 'in_progress').length}
+                                </span>
+                            )}
                         </button>
                     ))}
                 </nav>
@@ -448,7 +542,294 @@ export default function AdminDashboard() {
                     </>
                 )}
 
-                {/* Usage Tab */}
+                {/* Invoices Tab */}
+                {activeTab === 'invoices' && (
+                    <>
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <div className="relative flex-1 max-w-md">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                    <input
+                                        type="text"
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        placeholder="Search invoices..."
+                                        className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                                    />
+                                </div>
+                                <select
+                                    value={statusFilter}
+                                    onChange={(e) => setStatusFilter(e.target.value)}
+                                    className="px-4 py-2 border border-gray-200 rounded-lg"
+                                >
+                                    <option value="all">All Status</option>
+                                    <option value="draft">Draft</option>
+                                    <option value="sent">Sent</option>
+                                    <option value="paid">Paid</option>
+                                    <option value="overdue">Overdue</option>
+                                </select>
+                            </div>
+                            <button
+                                onClick={() => router.push('/admin/invoices/new')}
+                                className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors flex items-center gap-2"
+                            >
+                                <FileText className="w-4 h-4" /> Create Invoice
+                            </button>
+                        </div>
+
+                        {/* Invoice Summary Cards */}
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
+                                <h3 className="text-sm font-medium text-gray-500 mb-2">Total Outstanding</h3>
+                                <p className="text-2xl font-bold text-gray-900">£{invoices.filter(i => ['sent', 'overdue'].includes(i.status)).reduce((sum, i) => sum + i.amount_due, 0).toFixed(2)}</p>
+                            </div>
+                            <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
+                                <h3 className="text-sm font-medium text-gray-500 mb-2">Pending</h3>
+                                <p className="text-2xl font-bold text-blue-600">{invoices.filter(i => i.status === 'sent').length}</p>
+                            </div>
+                            <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
+                                <h3 className="text-sm font-medium text-gray-500 mb-2">Overdue</h3>
+                                <p className="text-2xl font-bold text-red-600">{invoices.filter(i => i.status === 'overdue').length}</p>
+                            </div>
+                            <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
+                                <h3 className="text-sm font-medium text-gray-500 mb-2">Paid (MTD)</h3>
+                                <p className="text-2xl font-bold text-green-600">{invoices.filter(i => i.status === 'paid').length}</p>
+                            </div>
+                        </div>
+
+                        {/* Invoice List */}
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                            <table className="w-full">
+                                <thead className="bg-gray-50 border-b border-gray-200">
+                                    <tr>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Invoice</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Organization</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Due Date</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {invoices.map(inv => (
+                                        <tr key={inv.id} className="hover:bg-gray-50">
+                                            <td className="px-4 py-4">
+                                                <div>
+                                                    <p className="font-medium text-gray-900 text-sm">{inv.invoice_number}</p>
+                                                    <p className="text-xs text-gray-500">{inv.invoice_date}</p>
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-4">
+                                                <p className="text-sm text-gray-900">{inv.organization.name}</p>
+                                                {inv.organization.urn && <p className="text-xs text-gray-500">URN: {inv.organization.urn}</p>}
+                                            </td>
+                                            <td className="px-4 py-4">
+                                                <p className="text-sm font-medium text-gray-900">£{inv.amount_due.toFixed(2)}</p>
+                                            </td>
+                                            <td className="px-4 py-4">
+                                                <p className="text-sm text-gray-600">{inv.due_date}</p>
+                                            </td>
+                                            <td className="px-4 py-4">
+                                                <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                                    inv.status === 'paid' ? 'bg-green-100 text-green-700' :
+                                                    inv.status === 'overdue' ? 'bg-red-100 text-red-700' :
+                                                    inv.status === 'sent' ? 'bg-blue-100 text-blue-700' :
+                                                    'bg-gray-100 text-gray-700'
+                                                }`}>
+                                                    {inv.status}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-4">
+                                                <div className="flex items-center gap-2">
+                                                    <button className="p-1 hover:bg-gray-100 rounded" title="View">
+                                                        <Eye className="w-4 h-4 text-gray-500" />
+                                                    </button>
+                                                    {inv.status === 'sent' || inv.status === 'overdue' ? (
+                                                        <button className="p-1 hover:bg-gray-100 rounded" title="Send reminder">
+                                                            <Send className="w-4 h-4 text-gray-500" />
+                                                        </button>
+                                                    ) : null}
+                                                    {inv.status === 'draft' ? (
+                                                        <button className="p-1 hover:bg-gray-100 rounded" title="Send">
+                                                            <Send className="w-4 h-4 text-gray-500" />
+                                                        </button>
+                                                    ) : null}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                            {invoices.length === 0 && (
+                                <div className="p-8 text-center text-gray-500">
+                                    No invoices found
+                                </div>
+                            )}
+                        </div>
+                    </>
+                )}
+
+                {/* Onboarding Tab */}
+                {activeTab === 'onboarding' && (
+                    <>
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <div className="relative flex-1 max-w-md">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                    <input
+                                        type="text"
+                                        placeholder="Search onboarding queue..."
+                                        className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                                    />
+                                </div>
+                                <select
+                                    className="px-4 py-2 border border-gray-200 rounded-lg"
+                                >
+                                    <option value="all">All Status</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="in_progress">In Progress</option>
+                                    <option value="awaiting_info">Awaiting Info</option>
+                                    <option value="ready">Ready</option>
+                                    <option value="completed">Completed</option>
+                                </select>
+                                <button
+                                    onClick={() => router.push('/admin/onboarding')}
+                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                                >
+                                    <ClipboardList className="w-4 h-4" />
+                                    View Pipeline
+                                </button>
+                                <button
+                                    onClick={() => router.push('/admin/discounts')}
+                                    className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 flex items-center gap-2"
+                                >
+                                    <Tag className="w-4 h-4" />
+                                    Discount Codes
+                                </button>
+                            </div>
+                        </div>
+                                <select
+                                    className="px-4 py-2 border border-gray-200 rounded-lg"
+                                >
+                                    <option value="all">All Status</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="in_progress">In Progress</option>
+                                    <option value="awaiting_info">Awaiting Info</option>
+                                    <option value="ready">Ready</option>
+                                    <option value="completed">Completed</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* Onboarding Summary */}
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
+                                <h3 className="text-sm font-medium text-gray-500 mb-2">Pending</h3>
+                                <p className="text-2xl font-bold text-yellow-600">{onboardingQueue.filter(i => i.status === 'pending').length}</p>
+                            </div>
+                            <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
+                                <h3 className="text-sm font-medium text-gray-500 mb-2">In Progress</h3>
+                                <p className="text-2xl font-bold text-blue-600">{onboardingQueue.filter(i => i.status === 'in_progress').length}</p>
+                            </div>
+                            <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
+                                <h3 className="text-sm font-medium text-gray-500 mb-2">Awaiting Info</h3>
+                                <p className="text-2xl font-bold text-orange-600">{onboardingQueue.filter(i => i.status === 'awaiting_info').length}</p>
+                            </div>
+                            <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
+                                <h3 className="text-sm font-medium text-gray-500 mb-2">Ready</h3>
+                                <p className="text-2xl font-bold text-green-600">{onboardingQueue.filter(i => i.status === 'ready').length}</p>
+                            </div>
+                        </div>
+
+                        {/* Onboarding Queue */}
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                            <table className="w-full">
+                                <thead className="bg-gray-50 border-b border-gray-200">
+                                    <tr>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Organization</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Stage</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Priority</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Progress</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {onboardingQueue.map(item => {
+                                        const completedItems = Object.values(item.checklist || {}).filter(v => v === true).length;
+                                        const totalItems = Object.keys(item.checklist || {}).length;
+                                        const progress = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+
+                                        return (
+                                            <tr key={item.id} className="hover:bg-gray-50">
+                                                <td className="px-4 py-4">
+                                                    <p className="font-medium text-gray-900 text-sm">{item.organization.name}</p>
+                                                    {item.organization.urn && <p className="text-xs text-gray-500">URN: {item.organization.urn}</p>}
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    <span className="text-sm text-gray-600 capitalize">{item.stage.replace('_', ' ')}</span>
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                                        item.status === 'completed' ? 'bg-green-100 text-green-700' :
+                                                        item.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
+                                                        item.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                                                        item.status === 'awaiting_info' ? 'bg-orange-100 text-orange-700' :
+                                                        item.status === 'ready' ? 'bg-emerald-100 text-emerald-700' :
+                                                        'bg-gray-100 text-gray-700'
+                                                    }`}>
+                                                        {item.status.replace('_', ' ')}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                                        item.priority === 'urgent' ? 'bg-red-100 text-red-700' :
+                                                        item.priority === 'high' ? 'bg-orange-100 text-orange-700' :
+                                                        item.priority === 'low' ? 'bg-gray-100 text-gray-600' :
+                                                        'bg-blue-100 text-blue-700'
+                                                    }`}>
+                                                        {item.priority}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-16 bg-gray-200 rounded-full h-2">
+                                                            <div
+                                                                className="h-2 rounded-full bg-green-500"
+                                                                style={{ width: `${progress}%` }}
+                                                            />
+                                                        </div>
+                                                        <span className="text-sm text-gray-600">{progress}%</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    <div className="flex items-center gap-2">
+                                                        <button className="p-1 hover:bg-gray-100 rounded" title="View">
+                                                            <Eye className="w-4 h-4 text-gray-500" />
+                                                        </button>
+                                                        <button className="p-1 hover:bg-gray-100 rounded" title="Assign">
+                                                            <UserPlus className="w-4 h-4 text-gray-500" />
+                                                        </button>
+                                                        <button className="p-1 hover:bg-gray-100 rounded" title="Complete">
+                                                            <CheckCircle className="w-4 h-4 text-gray-500" />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                            {onboardingQueue.length === 0 && (
+                                <div className="p-8 text-center text-gray-500">
+                                    No onboarding items found
+                                </div>
+                            )}
+                        </div>
+                    </>
+                )}
+
+                {/* Usage Tab - DISABLED FOR NOW */}
                 {activeTab === 'usage' && (
                     <>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

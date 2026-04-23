@@ -14,6 +14,8 @@ import {
 } from "@/lib/modules/registry";
 import AppLauncher from "@/components/AppLauncher";
 import { useAuth } from "@/context/SupabaseAuthContext";
+// Import Three.js globally to prevent duplicate instances when Ed widget loads
+import "@/lib/three-global";
 import {
   LayoutDashboard,
   Target,
@@ -34,10 +36,18 @@ import { useAnalytics } from "@/hooks/useAnalytics";
 import { Toaster } from "@/components/ui/toaster";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetchers";
-import { EdChatbotProvider } from "@/components/EdChatbotProvider";
+import { EdProvider, EdChatbot, useEdModule } from "@/components/ed-new";
 import { getContrastColor } from "@/lib/color-extractor";
+import { cn } from "@/lib/utils";
 import AccessibilityToolbar from "@/components/AccessibilityToolbar";
 import { ImpersonationBanner } from "@/components/ImpersonationBanner";
+
+// Wrapper component to handle Ed module detection inside EdProvider context
+function EdChatbotWrapper() {
+  const pathname = usePathname();
+  useEdModule(pathname);
+  return <EdChatbot />;
+}
 
 export default function DashboardLayout({
   children,
@@ -72,6 +82,7 @@ export default function DashboardLayout({
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [expandedModuleId, setExpandedModuleId] = useState<string | null>(null);
+  const [expandedSubcategoryId, setExpandedSubcategoryId] = useState<string | null>(null);
   const navRef = useRef<HTMLElement>(null);
   const moduleRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
@@ -87,6 +98,20 @@ export default function DashboardLayout({
   const schoolLogo = brandingData?.settings?.logo_url;
 
   const userRole = organization?.role as Role;
+
+  // Helper: Get legacy module IDs for backwards compatibility with subscriptions
+  const getLegacyModuleIds = (moduleId: string): string[] => {
+    const legacyMap: Record<string, string[]> = {
+      'improvement': ['ofsted-readiness'],
+      'estates': ['estates-compliance', 'hr-people'],
+      'compliance': ['safeguarding'],
+      'communications': ['calendar'],
+      'intelligence': ['school-intelligence'],
+      'teaching': [],
+      'governance': [],
+    };
+    return legacyMap[moduleId] || [];
+  };
 
   // Color name → hex lookup
   const colorMap: Record<string, string> = {
@@ -105,6 +130,9 @@ export default function DashboardLayout({
     orange: "#f97316",
     violet: "#8b5cf6",
   };
+
+  // Detect current module for Ed chatbot context
+  // Note: This is handled inside EdChatbot component instead
 
   // Scroll active module into view
   const scrollToModule = useCallback((moduleId: string) => {
@@ -160,6 +188,11 @@ export default function DashboardLayout({
   }, [pathname, userRole, authLoading, loading, router]);
 
   useEffect(() => {
+    // DEV MODE: Bypass auth check for testing
+    if (process.env.NODE_ENV === "development") {
+      return;
+    }
+
     // Only redirect when auth has fully resolved and there's genuinely no user
     // Use a delay to allow onAuthStateChange to deliver SIGNED_IN after INITIAL_SESSION
     if (!authLoading && !user && !session) {
@@ -171,6 +204,12 @@ export default function DashboardLayout({
   }, [user, session, authLoading, router]);
 
   useEffect(() => {
+    // DEV MODE: Skip loading in dev
+    if (process.env.NODE_ENV === "development") {
+      setLoading(false);
+      return;
+    }
+
     if (organization?.id) {
       setCurrentOrgId(organization.id);
       setLoading(false);
@@ -196,7 +235,7 @@ export default function DashboardLayout({
           const { data: dataByEmail } = await supabase
             .from("super_admins")
             .select("user_id")
-            .eq("email", user.email)
+            .eq("email", user?.email)
             .maybeSingle();
           data = dataByEmail;
         }
@@ -242,11 +281,35 @@ export default function DashboardLayout({
     {
       section: "MY MODULES",
       type: "modules" as const,
-      items: MODULES.filter(
-        (module) =>
-          !module.pilotHidden &&
-          (!hasRole || canUserAccess(module.requiredPermissions, userRole)),
-      ).map((module) => ({
+      items: MODULES.filter((module) => {
+        // Don't show if marked as pilot/hidden
+        if (module.pilotHidden) return false;
+
+        // Check role-based permissions
+        if (hasRole && !canUserAccess(module.requiredPermissions, userRole)) {
+          return false;
+        }
+
+        // Check subscription-enabled modules (if subscription exists)
+        const enabledModules = organization?.subscription?.enabled_modules;
+        if (enabledModules && enabledModules.length > 0) {
+          // Map module.id to subscription format (handle legacy IDs)
+          const subscriptionModuleIds = [
+            module.id,
+            // Legacy ID mappings for backwards compatibility
+            ...getLegacyModuleIds(module.id)
+          ];
+
+          const isEnabled = subscriptionModuleIds.some(id =>
+            enabledModules.includes(id)
+          );
+
+          return isEnabled;
+        }
+
+        // If no subscription or empty enabled_modules, show all (backwards compat)
+        return true;
+      }).map((module) => ({
         id: module.id,
         name: module.name,
         href: `/dashboard/${module.id}`,
@@ -290,15 +353,19 @@ export default function DashboardLayout({
     },
   ];
 
+  const isDev = process.env.NODE_ENV === "development";
+
   if (authLoading || loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-      </div>
-    );
+    if (!isDev) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        </div>
+      );
+    }
   }
 
-  if (!user) {
+  if (!user && !isDev) {
     return null;
   }
 
@@ -323,7 +390,8 @@ export default function DashboardLayout({
   } as React.CSSProperties;
 
   return (
-    <>
+    <EdProvider>
+      <>
       {/* Impersonation Banner - shows when viewing as another organization */}
       <ImpersonationBanner />
 
@@ -483,6 +551,12 @@ export default function DashboardLayout({
                       pathname === item.href ||
                       (item.id && pathname.startsWith(item.href));
                     const isExpanded = expandedModuleId === item.id;
+
+                    // Get module definition to check for subcategories
+                    const moduleDef = MODULES.find(m => m.id === item.id);
+                    const hasSubcategories = moduleDef?.subcategories && moduleDef.subcategories.length > 0;
+
+                    // Filter apps for this module
                     const subApps =
                       section.type === "modules"
                         ? APPS.filter(
@@ -493,6 +567,15 @@ export default function DashboardLayout({
                                 canUserAccess(a.requiredPermissions, userRole)),
                           )
                         : [];
+
+                    // Group apps by subcategory if module has subcategories
+                    const appsBySubcategory = hasSubcategories && moduleDef?.subcategories
+                      ? moduleDef.subcategories.map(sub => ({
+                          ...sub,
+                          apps: subApps.filter(a => a.subcategoryId === sub.id)
+                        })).filter(sub => sub.apps.length > 0)
+                      : [];
+
                     const hasActiveSubApp = subApps.some(
                       (a) =>
                         pathname === a.route ||
@@ -579,72 +662,197 @@ export default function DashboardLayout({
                             )}
                         </Link>
 
-                        {/* Sub-apps with animated expand/collapse */}
+                        {/* Sub-apps with smooth expand/collapse animation */}
                         <AnimatePresence initial={false}>
                           {isExpanded &&
                             isSidebarExpanded &&
                             subApps.length > 0 && (
                               <motion.div
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: "auto", opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
+                                initial={{ opacity: 0, y: -4 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -4 }}
                                 transition={{
-                                  duration: 0.25,
-                                  ease: "easeInOut",
+                                  duration: 0.3,
+                                  ease: [0.25, 0.1, 0.25, 1.0], // Custom ease-out curve
                                 }}
                                 className="overflow-hidden"
                               >
+                                {/* Module color indicator line */}
+                                <div className="relative my-2 h-px">
+                                  <div
+                                    className="absolute inset-0 bg-gradient-to-r from-transparent via-current to-transparent opacity-50"
+                                    style={{
+                                      '--current': moduleColor
+                                        ? `${moduleColor}40`
+                                        : 'hsl(var(--primary) / 0.4)',
+                                    } as React.CSSProperties}
+                                  />
+                                </div>
+
                                 <div
-                                  className="ml-7 mt-1 mb-1 pl-3 border-l-2 space-y-0.5"
+                                  className="ml-7 mt-1 mb-1 pl-3 border-l space-y-0.5"
                                   style={{
                                     borderColor: moduleColor
-                                      ? `${moduleColor}40`
-                                      : "var(--border)",
-                                  }}
+                                      ? `${moduleColor}50`
+                                      : 'hsl(var(--border))',
+                                    }}
                                 >
-                                  {subApps.map((app) => {
-                                    const isSubActive =
-                                      pathname === app.route ||
-                                      pathname.startsWith(app.route + "/");
-                                    return (
-                                      <Link
-                                        key={app.id}
-                                        href={app.route}
-                                        className={`flex items-center gap-2.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-150 ${
-                                          isSubActive
-                                            ? "text-primary bg-primary/10"
-                                            : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                                        }`}
-                                      >
-                                        <app.icon
-                                          size={14}
-                                          className={
-                                            isSubActive
-                                              ? "text-primary"
-                                              : "text-muted-foreground"
-                                          }
-                                        />
-                                        <span className="truncate">
-                                          {app.name}
-                                        </span>
-                                        {isSubActive && (
-                                          <motion.div
-                                            layoutId="active-sub"
-                                            className="ml-auto w-1.5 h-3 rounded-full shrink-0"
-                                            style={{
-                                              backgroundColor:
-                                                moduleColor || "var(--primary)",
+                                  {hasSubcategories && appsBySubcategory.length > 0 ? (
+                                    // 2-Level Hierarchy: Render subcategories with apps
+                                    appsBySubcategory.map((subcategory) => {
+                                      const isSubcategoryExpanded = expandedSubcategoryId === subcategory.id;
+                                      return (
+                                        <div key={subcategory.id}>
+                                          {/* Subcategory header */}
+                                          <button
+                                            onClick={(e) => {
+                                              e.preventDefault();
+                                              setExpandedSubcategoryId(isSubcategoryExpanded ? null : subcategory.id);
                                             }}
-                                            transition={{
-                                              type: "spring",
-                                              stiffness: 300,
-                                              damping: 30,
+                                            className={cn(
+                                              "flex items-center gap-2.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-200 w-full text-left",
+                                              "hover:bg-accent/50",
+                                              moduleColor && `hover:bg-[${moduleColor}08]`,
+                                            )}
+                                          >
+                                            <subcategory.icon size={12} className="text-muted-foreground" />
+                                            <span className="flex-1 truncate">{subcategory.name}</span>
+                                            <motion.div
+                                              animate={{ rotate: isSubcategoryExpanded ? 90 : 0 }}
+                                              transition={{ duration: 0.2 }}
+                                              className="text-muted-foreground"
+                                            >
+                                              <svg
+                                                width="10"
+                                                height="10"
+                                                viewBox="0 0 10 10"
+                                                fill="none"
+                                              >
+                                                <path
+                                                  d="M3.5 2L6.5 5L3.5 8"
+                                                  stroke="currentColor"
+                                                  strokeWidth="1.5"
+                                                  strokeLinecap="round"
+                                                  strokeLinejoin="round"
+                                                />
+                                              </svg>
+                                            </motion.div>
+                                          </button>
+
+                                          {/* Subcategory apps */}
+                                          <AnimatePresence initial={false}>
+                                            {isSubcategoryExpanded && (
+                                              <motion.div
+                                                initial={{ opacity: 0, height: 0 }}
+                                                animate={{ opacity: 1, height: "auto" }}
+                                                exit={{ opacity: 0, height: 0 }}
+                                                transition={{ duration: 0.2 }}
+                                                className="overflow-hidden ml-2 border-l"
+                                                style={{
+                                                  borderColor: moduleColor
+                                                    ? `${moduleColor}30`
+                                                    : 'hsl(var(--border) / 0.5)',
+                                                }}
+                                              >
+                                                {subcategory.apps.map((app) => {
+                                                  const isSubActive =
+                                                    pathname === app.route ||
+                                                    pathname.startsWith(app.route + "/");
+                                                  return (
+                                                    <Link
+                                                      key={app.id}
+                                                      href={app.route}
+                                                      className={cn(
+                                                        "flex items-center gap-2 px-3 py-1 rounded-md text-xs font-medium transition-all duration-200",
+                                                        moduleColor && `hover:bg-[${moduleColor}10]`,
+                                                        isSubActive && moduleColor && `bg-[${moduleColor}15] text-[${moduleColor}]`,
+                                                        !moduleColor && !isSubActive && "text-muted-foreground hover:text-foreground hover:bg-accent",
+                                                        !moduleColor && isSubActive && "text-primary bg-primary/10",
+                                                      )}
+                                                    >
+                                                      <app.icon
+                                                        size={12}
+                                                        style={{
+                                                          color: isSubActive
+                                                            ? (moduleColor || undefined)
+                                                            : undefined,
+                                                          opacity: isSubActive ? 1 : 0.6,
+                                                        }}
+                                                      />
+                                                      <span className="truncate">{app.name}</span>
+                                                      {isSubActive && (
+                                                        <motion.div
+                                                          layoutId={`active-sub-${subcategory.id}`}
+                                                          className="ml-auto w-1 h-2 rounded-full shrink-0"
+                                                          style={{
+                                                            backgroundColor: moduleColor || "hsl(var(--primary))",
+                                                          }}
+                                                          transition={{
+                                                            type: "spring",
+                                                            stiffness: 300,
+                                                            damping: 30,
+                                                          }}
+                                                        />
+                                                      )}
+                                                    </Link>
+                                                  );
+                                                })}
+                                              </motion.div>
+                                            )}
+                                          </AnimatePresence>
+                                        </div>
+                                      );
+                                    })
+                                  ) : (
+                                    // Single-level: Render apps directly (existing behavior)
+                                    subApps.map((app) => {
+                                      const isSubActive =
+                                        pathname === app.route ||
+                                        pathname.startsWith(app.route + "/");
+                                      return (
+                                        <Link
+                                          key={app.id}
+                                          href={app.route}
+                                          className={cn(
+                                            "flex items-center gap-2.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-200",
+                                            // Subtle module color theming
+                                            moduleColor && `hover:bg-[${moduleColor}10]`,
+                                            isSubActive && moduleColor && `bg-[${moduleColor}15] text-[${moduleColor}]`,
+                                            !moduleColor && !isSubActive && "text-muted-foreground hover:text-foreground hover:bg-accent",
+                                            !moduleColor && isSubActive && "text-primary bg-primary/10",
+                                          )}
+                                        >
+                                          <app.icon
+                                            size={14}
+                                            style={{
+                                              color: isSubActive
+                                                ? (moduleColor || undefined)
+                                                : undefined,
+                                              opacity: isSubActive ? 1 : 0.7,
                                             }}
                                           />
-                                        )}
-                                      </Link>
-                                    );
-                                  })}
+                                          <span className="truncate">
+                                            {app.name}
+                                          </span>
+                                          {isSubActive && (
+                                            <motion.div
+                                              layoutId="active-sub"
+                                              className="ml-auto w-1.5 h-3 rounded-full shrink-0"
+                                              style={{
+                                                backgroundColor:
+                                                  moduleColor || "hsl(var(--primary))",
+                                              }}
+                                              transition={{
+                                                type: "spring",
+                                                stiffness: 300,
+                                                damping: 30,
+                                              }}
+                                            />
+                                          )}
+                                        </Link>
+                                      );
+                                    })
+                                  )}
                                 </div>
                               </motion.div>
                             )}
@@ -677,15 +885,15 @@ export default function DashboardLayout({
             >
               <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-xs shrink-0">
                 {(displayName ||
-                  user.user_metadata?.full_name ||
-                  user.email)?.[0]?.toUpperCase() || "U"}
+                  user?.user_metadata?.full_name ||
+                  user?.email)?.[0]?.toUpperCase() || "U"}
               </div>
               {isSidebarExpanded && (
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-bold truncate">
                     {displayName ||
-                      user.user_metadata?.full_name ||
-                      user.email?.split("@")[0]}
+                      user?.user_metadata?.full_name ||
+                      user?.email?.split("@")[0] || "User"}
                   </div>
                   <div className="text-[10px] text-muted-foreground truncate uppercase font-bold">
                     {organization?.role || "Staff"}
@@ -713,30 +921,11 @@ export default function DashboardLayout({
                 </div>
               )}
             </div>
-
-            {/* Ed AI button slot — right-aligned */}
-            <div
-              id="ed-sidebar-slot"
-              className={`mt-3 flex ${isSidebarExpanded ? "justify-end" : "justify-center"}`}
-            />
           </div>
         </aside>
 
-        {/* Ed AI Assistant — full widget with voice, languages, personas */}
-        <EdChatbotProvider />
-
-        {/* Offset Ed widget to clear the sidebar */}
-        <style>{`
-          .ed-widget-container.ed-position-bottom-left {
-            left: ${isSidebarExpanded ? "272px" : "88px"} !important;
-            transition: left 300ms ease !important;
-          }
-          @media (max-width: 1024px) {
-            .ed-widget-container.ed-position-bottom-left {
-              left: 20px !important;
-            }
-          }
-        `}</style>
+        {/* Ed AI Assistant — new chatbot with inspection mode */}
+        <EdChatbotWrapper />
 
         <main
           className={`flex-1 overflow-y-auto transition-all duration-500 ease-in-out bg-background text-foreground max-lg:ml-0 max-lg:pt-14 ${isSidebarExpanded ? "lg:ml-64" : "lg:ml-20"}`}
@@ -764,6 +953,7 @@ export default function DashboardLayout({
 
         <Toaster />
       </div>
-    </>
+      </>
+    </EdProvider>
   );
 }

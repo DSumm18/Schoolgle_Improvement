@@ -16,8 +16,10 @@
 | **Organisation**     | Schoolgle Ltd               |
 | **Role**             | Data Processor (Article 28) |
 | **DPO Contact**      | dpo@schoolgle.co.uk         |
-| **ICO Registration** | [REQUIRES HUMAN INPUT]      |
-| **Address**          | [REQUIRES HUMAN INPUT]      |
+| **ICO Registration** | ZC103199                    |
+| **Company Number**   | 16776489                                                |
+| **ICO Registration**| ZC103199                                                |
+| **Address**          | [REQUIRES HUMAN INPUT — insert registered office address] |
 
 ---
 

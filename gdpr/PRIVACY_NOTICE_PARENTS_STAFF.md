@@ -162,4 +162,6 @@ If you are unhappy with how your data is handled:
 Email: dpo@schoolgle.co.uk
 Website: schoolgle.co.uk
 
-[REQUIRES HUMAN INPUT — insert registered company address]
+Company Registration: 16776489
+ICO Registration: ZC103199
+[Address to be updated once registered office service arranged]

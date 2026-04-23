@@ -1,0 +1,16 @@
+Check ID,Check Name,Compliance Domain,Frequency,Last Completed,Next Due,Responsible,Evidence Required,Status
+STAT-001,Fire Risk Assessment,Fire,3-yearly,2024-09-01,2027-09-01,SBM,FRA document,Current
+STAT-002,Fire Alarm System Test,Fire,Weekly,2025-03-18,2025-03-25,Site Manager,Logbook,Current
+STAT-003,Fire Extinguisher Annual Service,Fire,Yearly,2024-06-15,2025-06-15,FireSafe UK,Certificate,Current
+STAT-004,Emergency Lighting Test,Fire,Monthly,2025-02-28,2025-03-31,Site Manager,Logbook,Current
+STAT-005,Fire Drill,Fire,Termly,2025-01-15,2025-04-30,Headteacher,Record of drill,Current
+STAT-006,Gas Safety Inspection,Gas,Yearly,2024-08-15,2025-08-15,ABC Gas,Certificate,Current
+STAT-007,Gas Boiler Service,Gas,Yearly,2024-07-10,2025-07-10,ABC Gas,Service record,Current
+STAT-008,EICR Inspection,Electrical,5-yearly,2020-03-10,2025-03-10,PowerCheck,EICR report,Due
+STAT-009,Fixed Wire Test,Electrical,5-yearly,2020-05-15,2025-05-15,PowerCheck,Certificate,Due
+STAT-010,Legionella Risk Assessment,Legionella,2-yearly,2023-09-15,2025-09-15,Water Hygiene,Risk assessment,Current
+STAT-011,Legionella Water Temperature,Legionella,Monthly,2025-02-15,2025-03-15,Site Manager,Logbook,Current
+STAT-012,Asbestos Management Survey,Asbestos,Yearly,2024-11-01,2025-11-01,Asbestos MG,Survey report,Current
+STAT-013,Asbestos Reinspection,Asbestos,6-monthly,2024-10-15,2025-04-15,Asbestos MG,Reinspection report,Current
+STAT-014,Portable Appliance Testing,Electrical,Yearly,2024-09-01,2025-09-01,PowerCheck,PAT certificates,Current
+STAT-015,Lift Inspection (if applicable),Mechanical,6-monthly,2024-12-01,2025-06-01,Mechanical Maintenance,LOLER certificate,Current

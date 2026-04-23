@@ -1,0 +1,13 @@
+Contractor ID,Company Name,Contact Name,Email,Phone,Mobile,Services,Accreditations,Insurance Expiry,Preferred
+CON-001,FireSafe UK Ltd,John Mitchell,john.mitchell@firesafeuk.co.uk,01179 123456,07700 900123,"Fire Alarm Maintenance, Fire Extinguisher Service",BAFE SP203-1,2025-05-15,Yes
+CON-002,Leeds Fire Safety,Sarah Davies,s.davies@leedsfiresafety.co.uk,0113 456789,07700 900234,"Fire Risk Assessment",IFIRE,2025-04-30,No
+CON-003,ABC Gas Services Ltd,David Wilson,d.wilson@abcgas.co.uk,01179 345678,07700 900456,"Gas Safety Inspection, Gas Servicing",Gas Safe Register 123456,2025-06-01,Yes
+CON-004,Northern Gas Engineers,Mark Roberts,m.roberts@northerngas.co.uk,0113 234567,07700 900567,"Gas Boiler Servicing",Gas Safe Register 789012,2025-07-15,No
+CON-005,PowerCheck Electrical,Steve Harris,s.harris@powercheck.co.uk,01179 123457,07700 901234,"EICR Inspection, Electrical Testing",NICEIC Approved,2025-07-31,Yes
+CON-006,Leeds Electrical Solutions,Jenny Thompson,jenny@leedselec.co.uk,0113 345678,07700 901345,"Emergency Lighting Testing",NICEIC,2025-08-30,No
+CON-007,Water Hygiene Solutions,Emma Clark,emma.clark@waterhygiene.co.uk,01179 234567,07700 902456,"Legionella Risk Assessment, Water Testing",ACS,2025-09-15,Yes
+CON-008,Asbestos Management Group,Peter Taylor,p.taylor@asbestos-mg.co.uk,01179 456789,07700 902567,"Asbestos Surveys, Asbestos Management",UKATA,2025-12-31,Yes
+CON-009,Mechanical Maintenance Ltd,James Brown,j.brown@mechmain.co.uk,0113 567890,07700 902678,"HVAC Maintenance, Servicing",CIBSE,2025-10-31,No
+CON-010,Cleaning Services Direct,Linda White,l.white@cleandirect.co.uk,0113 678901,07700 902789,"School Cleaning, Deep Clean",BICS,2025-05-31,Yes
+CON-011,Secure Lock & Key,Tom Green,t.green@securelocks.co.uk,0113 789012,07700 902890,"Locksmith, Access Control",MLA,2025-06-30,No
+CON-012,Pest Control Pro,Karen Black,k.black@pestcontrolpro.co.uk,0113 890123,07700 903123,"Pest Control, Prevention",BPCA,2025-11-30,Yes

@@ -65,6 +65,13 @@ async function resolveUser(request: NextRequest) {
       data: { user },
       error,
     } = await supabase.auth.getUser();
+
+    console.log('[AuthMiddleware] Cookie auth attempt:', {
+      hasUser: !!user,
+      userId: user?.id,
+      error: error?.message
+    });
+
     if (!error && user) return { user, supabase };
   } catch {
     // Cookie-based auth failed, try Bearer token
@@ -152,21 +159,51 @@ export async function withAuth(
     const adminClient = createServiceRoleClient();
 
     if (organizationId) {
-      const { data: membership, error: memberError } = await adminClient
-        .from("organization_members")
-        .select("role")
+      // Check if user is a super admin first (super admins can access any org)
+      console.log('[AuthMiddleware] Checking super admin for user_id:', user.id);
+
+      const { data: superAdminCheck, error: superAdminError } = await adminClient
+        .from("super_admins")
+        .select("access_level")
         .eq("user_id", user.id)
-        .eq("organization_id", organizationId)
-        .single();
+        .maybeSingle();
 
-      if (memberError || !membership) {
-        return NextResponse.json(
-          { error: "Not a member of this organization", code: "FORBIDDEN" },
-          { status: 403 },
-        );
+      const isSuperAdmin = !!superAdminCheck;
+
+      console.log('[AuthMiddleware] Super admin check result:', {
+        userId: user.id,
+        isSuperAdmin,
+        superAdminCheck,
+        superAdminError
+      });
+
+      // If not a super admin, check organization membership
+      if (!isSuperAdmin) {
+        const { data: membership, error: memberError } = await adminClient
+          .from("organization_members")
+          .select("role")
+          .eq("user_id", user.id)
+          .eq("organization_id", organizationId)
+          .single();
+
+        if (memberError || !membership) {
+          console.error('[AuthMiddleware] Org membership check failed:', {
+            userId: user.id,
+            organizationId,
+            memberError,
+            membership
+          });
+          return NextResponse.json(
+            { error: "Not a member of this organization", code: "FORBIDDEN" },
+            { status: 403 },
+          );
+        }
+
+        role = membership.role as AuthContext["role"];
+      } else {
+        // Super admins get admin privileges
+        role = "admin";
       }
-
-      role = membership.role as AuthContext["role"];
     }
 
     // Check role requirement

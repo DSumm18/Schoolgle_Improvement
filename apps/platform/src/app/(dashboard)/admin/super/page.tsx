@@ -24,7 +24,50 @@ import {
   Settings,
   Plus,
   Minus,
+  BookOpen,
+  DollarSign,
+  Info,
+  Sparkles,
 } from "lucide-react";
+import { MODULES } from "@/lib/modules/registry";
+
+// Solar System Module Names (matches current module registry)
+const MODULE_NAMES: Record<string, string> = {
+  // Mercury - School Improvement
+  'improvement': 'School Improvement',
+  'ofsted-readiness': 'School Improvement', // Legacy mapping
+
+  // Venus - Governance
+  'governance': 'Governance',
+
+  // Earth - Business Operations
+  'estates': 'Business',
+  'estates-compliance': 'Business', // Legacy mapping
+  'hr-people': 'Business (HR)', // Legacy mapping
+
+  // Mars - Compliance & Safeguarding
+  'compliance': 'Compliance',
+  'safeguarding': 'Compliance', // Legacy mapping
+
+  // Jupiter - Communications
+  'communications': 'Communications',
+  'calendar': 'Communications', // Legacy mapping
+
+  // Saturn - Intelligence
+  'intelligence': 'Intelligence',
+  'school-intelligence': 'Intelligence', // Legacy mapping
+
+  // Uranus - Teaching & Learning
+  'teaching': 'Teaching & Learning',
+
+  // Ed AI (not a module, but listed for backwards compatibility)
+  'ed-ai': 'Ed AI',
+  'actions-hub': 'Actions', // Legacy mapping
+
+  // Additional modules
+  'surveys': 'Surveys',
+  'canvas': 'Canvas',
+};
 
 interface SchoolSearchResult {
   id: string;
@@ -176,8 +219,77 @@ export default function SuperAdminPage() {
         trialSubscriptions: trial,
         expiringSoon: expiring,
       });
+
+      // Automatically load all schools when stats are loaded
+      if (totalSchools && totalSchools > 0) {
+        await loadAllSchools();
+      }
     } catch (error) {
       console.error("Error loading stats:", error);
+    }
+  }
+
+  // Load all schools (without search)
+  async function loadAllSchools() {
+    setLoading(true);
+    try {
+      const { data: orgs } = await supabase
+        .from("organizations")
+        .select("id, name, urn, local_authority, school_type")
+        .order("name", { ascending: true })
+        .limit(50);
+
+      if (!orgs || orgs.length === 0) {
+        setSearchResults([]);
+        return;
+      }
+
+      // Get member counts and subscriptions for each org
+      const results: SchoolSearchResult[] = await Promise.all(
+        orgs.map(async (org) => {
+          // Get member count
+          const { count: memberCount } = await supabase
+            .from("organization_members")
+            .select("*", { count: "exact", head: true })
+            .eq("organization_id", org.id);
+
+          // Get subscription
+          const { data: sub } = await supabase
+            .from("subscriptions")
+            .select("status, plan_id, trial_end, current_period_end")
+            .eq("organization_id", org.id)
+            .maybeSingle();
+
+          let daysRemaining = null;
+          if (sub) {
+            const endDate = sub.status === "trialing" ? sub.trial_end : sub.current_period_end;
+            if (endDate) {
+              const diff = new Date(endDate).getTime() - Date.now();
+              daysRemaining = Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+            }
+          }
+
+          return {
+            id: org.id,
+            name: org.name,
+            urn: org.urn,
+            localAuthority: org.local_authority,
+            schoolType: org.school_type,
+            memberCount: memberCount || 0,
+            subscription: sub ? {
+              status: sub.status,
+              planId: sub.plan_id,
+              daysRemaining,
+            } : null,
+          };
+        })
+      );
+
+      setSearchResults(results);
+    } catch (error) {
+      console.error("Error loading all schools:", error);
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -262,6 +374,12 @@ export default function SuperAdminPage() {
 
   // Load school details
   async function loadSchoolDetail(schoolId: string) {
+    // Don't try to load if schoolId is empty
+    if (!schoolId || schoolId.trim() === "") {
+      setSelectedSchool(null);
+      return;
+    }
+
     setLoading(true);
     try {
       // Get organization
@@ -277,24 +395,31 @@ export default function SuperAdminPage() {
         return;
       }
 
-      // Get members with user emails from auth
+      // Get members with user emails
       const { data: members } = await supabase
         .from("organization_members")
-        .select("user_id, role, created_at, auth_id")
+        .select("user_id, role, created_at")
         .eq("organization_id", schoolId);
 
-      // Get user emails from auth.users
-      const memberIds = (members || []).map(m => m.auth_id || m.user_id).filter(Boolean);
-      const { data: authUsers } = memberIds.length > 0 ? await supabase.auth.admin.listUsers() : { data: { users: [] } };
+      // Get user emails from the users table (not auth.admin API)
+      const memberIds = (members || []).map(m => m.user_id).filter(Boolean);
+      const userEmailsMap = new Map<string, string>();
 
-      const userEmails = new Map(
-        (authUsers?.users || []).map((u: any) => [u.id, u.email])
-      );
+      if (memberIds.length > 0) {
+        const { data: users } = await supabase
+          .from("users")
+          .select("id, email")
+          .in("id", memberIds);
+
+        (users || []).forEach((u: any) => {
+          userEmailsMap.set(u.id, u.email);
+        });
+      }
 
       const membersWithEmail = (members || []).map((m: any) => ({
         userId: m.user_id,
-        email: userEmails.get(m.auth_id || m.user_id) || "Unknown",
-        displayName: userEmails.get(m.auth_id || m.user_id)?.split("@")[0] || "Unknown",
+        email: userEmailsMap.get(m.user_id) || "Unknown",
+        displayName: userEmailsMap.get(m.user_id)?.split("@")[0] || "Unknown",
         role: m.role,
         createdAt: m.created_at,
       }));
@@ -449,6 +574,10 @@ export default function SuperAdminPage() {
     sessionStorage.setItem("impersonateOrgId", schoolId);
     sessionStorage.setItem("impersonateOrgName", schoolName);
     sessionStorage.setItem("impersonateBy", user?.email || "admin");
+
+    // Dispatch custom event to trigger auth context refresh
+    window.dispatchEvent(new Event('impersonation-changed'));
+
     router.push("/dashboard");
   }
 
@@ -484,18 +613,60 @@ export default function SuperAdminPage() {
     return null;
   }
 
+  // Helper: Get module price (mock until pricing table is populated)
+  const getModulePrice = (moduleId: string): string | null => {
+    // Mock pricing - will be replaced with DB query
+    const prices: Record<string, number> = {
+      'improvement': 490,
+      'governance': 290,
+      'estates': 390,
+      'compliance': 290,
+      'communications': 190,
+      'intelligence': 390,
+      'teaching': 290,
+      'ed-ai': 490,
+      'surveys': 90,
+      'canvas': 290,
+    };
+    return prices[moduleId] ? prices[moduleId].toString() : null;
+  };
+
+  // Calculate total cost for enabled modules
+  const calculateTotalCost = (): string => {
+    if (!selectedSchool.subscription?.enabledModules) return '0';
+
+    const prices: Record<string, number> = {
+      'improvement': 490,
+      'governance': 290,
+      'estates': 390,
+      'compliance': 290,
+      'communications': 190,
+      'intelligence': 390,
+      'teaching': 290,
+      'ed-ai': 490,
+      'surveys': 90,
+      'canvas': 290,
+    };
+
+    const total = selectedSchool.subscription.enabledModules.reduce((sum, moduleId) => {
+      return sum + (prices[moduleId] || 0);
+    }, 0);
+
+    return total.toLocaleString();
+  };
+
   const allModules = [
-    "ofsted-readiness",
-    "estates-compliance",
-    "hr-people",
-    "governance",
-    "actions-hub",
-    "intelligence",
-    "safeguarding",
-    "attendance",
-    "behaviour",
-    "communications",
-    "calendar",
+    // Solar System Modules (7 planets)
+    "improvement",      // Mercury - School Improvement
+    "governance",       // Venus - Governance
+    "estates",          // Earth - Business Operations
+    "compliance",       // Mars - Compliance & Safeguarding
+    "communications",   // Jupiter - Communications
+    "intelligence",     // Saturn - Intelligence
+    "teaching",         // Uranus - Teaching & Learning
+
+    // Additional modules
+    "ed-ai",
     "surveys",
     "canvas",
   ];
@@ -524,13 +695,22 @@ export default function SuperAdminPage() {
                 <p className="text-sm text-gray-400">Schoolgle Management Console</p>
               </div>
             </div>
-            <button
-              onClick={loadStats}
-              className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
-              title="Refresh"
-            >
-              <RefreshCw size={18} />
-            </button>
+            <div className="flex items-center gap-2">
+              <a
+                href="/admin/super/setup-school"
+                className="flex items-center gap-2 px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors text-sm font-medium"
+              >
+                <BookOpen size={16} />
+                Setup School
+              </a>
+              <button
+                onClick={loadStats}
+                className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
+                title="Refresh"
+              >
+                <RefreshCw size={18} />
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -539,7 +719,7 @@ export default function SuperAdminPage() {
         {/* Stats Cards - Now clickable */}
         <div className="grid grid-cols-4 gap-4 mb-8">
           <button
-            onClick={() => { setSearchQuery(""); setSearchResults([]); loadSchoolDetail(""); }}
+            onClick={() => { setSearchQuery(""); setSearchResults([]); setSelectedSchool(null); }}
             className="bg-gray-900 rounded-xl p-4 border border-gray-800 hover:border-gray-700 transition-colors text-left"
           >
             <div className="flex items-center gap-3">
@@ -619,8 +799,8 @@ export default function SuperAdminPage() {
               {searchResults.length === 0 ? (
                 <div className="p-8 text-center text-gray-500">
                   <School size={32} className="mx-auto mb-2 opacity-50" />
-                  <p>Enter a school name or URN to search</p>
-                  <p className="text-xs mt-2">Try "Aurora" or "Rawdon"</p>
+                  <p>No schools found</p>
+                  <p className="text-xs mt-2">Try a different search term or refresh</p>
                 </div>
               ) : (
                 <div className="divide-y divide-gray-800">
@@ -745,35 +925,108 @@ export default function SuperAdminPage() {
                     )}
                   </div>
 
-                  {/* Module Access */}
+                  {/* Module Access - Beautiful Dashboard Style */}
                   {selectedSchool.subscription && (
                     <div>
-                      <h3 className="text-sm font-medium text-gray-400 mb-2">Module Access</h3>
-                      <div className="bg-gray-800 rounded-lg p-3">
-                        <div className="grid grid-cols-2 gap-2">
-                          {allModules.map((module) => {
-                            const isEnabled = selectedSchool.subscription?.enabledModules?.includes(module);
-                            return (
-                              <button
-                                key={module}
-                                onClick={() => {
-                                  const current = selectedSchool.subscription?.enabledModules || [];
-                                  const updated = isEnabled
-                                    ? current.filter((m) => m !== module)
-                                    : [...current, module];
-                                  updateModules(updated);
-                                }}
-                                className={`text-xs px-2 py-2 rounded transition-colors ${
-                                  isEnabled
-                                    ? "bg-emerald-600 text-white"
-                                    : "bg-gray-700 text-gray-400 hover:bg-gray-600"
-                                }`}
-                              >
-                                {isEnabled ? <Plus size={12} className="inline mr-1" /> : <Minus size={12} className="inline mr-1" />}
-                                {module.replace("-", " ")}
-                              </button>
-                            );
-                          })}
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-sm font-medium text-gray-400">Module Access</h3>
+                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                          <span className="flex items-center gap-1">
+                            <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                            Enabled
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <div className="w-2 h-2 rounded-full bg-gray-600" />
+                            Disabled
+                          </span>
+                        </div>
+                      </div>
+                      <div className="bg-gray-800 rounded-lg p-3 space-y-1">
+                        {MODULES.filter(m => !m.pilotHidden).map((module) => {
+                          const isEnabled = selectedSchool.subscription?.enabledModules?.includes(module.id);
+                          const Icon = module.icon;
+                          const price = getModulePrice(module.id);
+
+                          return (
+                            <button
+                              key={module.id}
+                              onClick={() => {
+                                const current = selectedSchool.subscription?.enabledModules || [];
+                                const updated = isEnabled
+                                  ? current.filter((m) => m !== module.id)
+                                  : [...current, module.id];
+                                updateModules(updated);
+                              }}
+                              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all ${
+                                isEnabled
+                                  ? "bg-emerald-600/20 border border-emerald-500 text-emerald-400 hover:bg-emerald-600/30"
+                                  : "bg-gray-700/50 border border-transparent text-gray-400 hover:bg-gray-700"
+                              }`}
+                            >
+                              <Icon size={18} className={isEnabled ? "text-emerald-400" : "text-gray-500"} />
+                              <div className="flex-1 text-left">
+                                <div className="font-medium text-sm">{module.name}</div>
+                                {price && (
+                                  <div className="text-xs opacity-70">£{price}/year</div>
+                                )}
+                              </div>
+                              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                                isEnabled
+                                  ? "border-emerald-500 bg-emerald-500"
+                                  : "border-gray-500"
+                              }`}>
+                                {isEnabled && <CheckCircle size={12} className="text-white" />}
+                              </div>
+                            </button>
+                          );
+                        })}
+
+                        {/* Additional modules not in MODULES registry */}
+                        {['ed-ai', 'surveys', 'canvas'].map((moduleId) => {
+                          const isEnabled = selectedSchool.subscription?.enabledModules?.includes(moduleId);
+                          const price = getModulePrice(moduleId);
+                          const name = MODULE_NAMES[moduleId] || moduleId;
+
+                          return (
+                            <button
+                              key={moduleId}
+                              onClick={() => {
+                                const current = selectedSchool.subscription?.enabledModules || [];
+                                const updated = isEnabled
+                                  ? current.filter((m) => m !== moduleId)
+                                  : [...current, moduleId];
+                                updateModules(updated);
+                              }}
+                              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all ${
+                                isEnabled
+                                  ? "bg-emerald-600/20 border border-emerald-500 text-emerald-400 hover:bg-emerald-600/30"
+                                  : "bg-gray-700/50 border border-transparent text-gray-400 hover:bg-gray-700"
+                              }`}
+                            >
+                              <Sparkles size={18} className={isEnabled ? "text-emerald-400" : "text-gray-500"} />
+                              <div className="flex-1 text-left">
+                                <div className="font-medium text-sm">{name}</div>
+                                {price && (
+                                  <div className="text-xs opacity-70">£{price}/year</div>
+                                )}
+                              </div>
+                              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                                isEnabled
+                                  ? "border-emerald-500 bg-emerald-500"
+                                  : "border-gray-500"
+                              }`}>
+                                {isEnabled && <CheckCircle size={12} className="text-white" />}
+                              </div>
+                            </button>
+                          );
+                        })}
+
+                        {/* Total cost summary */}
+                        <div className="pt-2 mt-2 border-t border-gray-700">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-gray-400">Estimated Annual Cost</span>
+                            <span className="font-bold text-white">£{calculateTotalCost()}</span>
+                          </div>
                         </div>
                       </div>
                     </div>

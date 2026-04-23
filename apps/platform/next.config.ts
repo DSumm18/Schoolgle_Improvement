@@ -31,6 +31,30 @@ const nextConfig: NextConfig = {
         ...config.resolve.fallback,
         fs: false,
       };
+
+      // Share single Three.js instance across all imports
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        'three': require.resolve('three'),
+      };
+
+      // Ensure Three.js is only bundled once
+      config.optimization = {
+        ...config.optimization,
+        runtimeChunk: false,
+        splitChunks: {
+          ...config.optimization.splitChunks,
+          cacheGroups: {
+            ...config.optimization.splitChunks?.cacheGroups,
+            three: {
+              name: 'three',
+              test: /[\\/]node_modules[\\/]three[\\/]/,
+              priority: 10,
+              reuseExistingChunk: true,
+            },
+          },
+        },
+      };
     }
     config.resolve.alias = {
       ...config.resolve.alias,
@@ -41,6 +65,11 @@ const nextConfig: NextConfig = {
       "@schoolgle/ed-agents": path.resolve(
         __dirname,
         "../../packages/ed-agents/src",
+      ),
+      // Add alias for platform lib so ed-agents can import from it
+      "@schoolgle/platform/lib": path.resolve(
+        __dirname,
+        "../platform/src/lib"
       ),
     };
     return config;

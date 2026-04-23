@@ -1,0 +1,164 @@
+Asset ID,Asset Name,Category,Location,Floor,Purchase Date,Cost,Status,Compliance Domains
+AST-001,Main Hall Projector,AV Equipment,Main Hall,Ground,2023-07-15,£1,200,Active,electrical
+AST-002,Main Hall Sound System,AV Equipment,Main Hall,Ground,2023-07-15,£850,Active,electrical
+AST-003,Hall Portable Stage,Storage,Main Hall,Ground,2019-09-01,£2,500,Active,
+AST-004,Hall PE Equipment Storage,Storage,Main Hall,Ground,2020-03-10,£350,Active,
+AST-005,Reception Sofa,Furniture,Reception,Ground,2022-05-20,£450,Active,
+AST-006,Reception Desk,Furniture,Reception,Ground,2022-05-20,£680,Active,
+AST-007,Boiler,Heating,Boiler Room,Basement,2020-06-15,£8,500,Active,gas,electrical
+AST-008,Fire Alarm Panel,Fire Safety,Main Hall,Ground,2021-03-22,£4,200,Active,fire,electrical
+AST-009,Fire Alarm Control Panel,Fire Safety,Reception,Ground,2021-03-22,£1,800,Active,fire,electrical
+AST-010,Kitchen Oven,Catering,Kitchen,Ground,2021-08-10,£3,200,Active,gas,electrical
+AST-011,Kitchen Fridge,Catering,Kitchen,Ground,2021-08-10,£950,Active,electrical
+AST-012,Kitchen Freezer,Catering,Kitchen,Ground,2021-08-10,£780,Active,electrical
+AST-013,Kitchen Dishwasher,Catering,Kitchen,Ground,2021-08-10,£1,100,Active,electrical
+AST-014,Food Warmers x2,Catering,Kitchen,Ground,2022-01-15,£450,Active,electrical
+AST-015,Serving Hatch,Catering,Kitchen,Ground,2021-08-10,£680,Active,
+AST-016,First Aid Cabinet 1,Welfare,Medical Room,Ground,2023-09-01,£120,Active,
+AST-017,First Aid Cabinet 2,Welfare,Staff Room,Ground,2023-09-01,£120,Active,
+AST-018a,Interactive Panel Oak,ICT,Oak,Ground,2023-08-15,£2,800,Active,electrical
+AST-018b,Interactive Panel Maple,ICT,Maple,Ground,2023-08-15,£2,800,Active,electrical
+AST-018c,Interactive Panel Birch,ICT,Birch,Ground,2023-08-15,£2,800,Active,electrical
+AST-018d,Interactive Panel Elm,ICT,Elm,Ground,2023-08-15,£2,800,Active,electrical
+AST-018e,Interactive Panel Ash,ICT,Ash,First,2022-08-15,£2,800,Active,electrical
+AST-018f,Interactive Panel Willow,ICT,Willow,First,2022-08-15,£2,800,Active,electrical
+AST-018g,Interactive Panel Holly,ICT,Holly,First,2022-08-15,£2,800,Active,electrical
+AST-018h,Interactive Panel Rowan,ICT,Rowan,First,2022-08-15,£2,800,Active,electrical
+AST-018i,Interactive Panel Cedar,ICT,Cedar,First,2021-08-15,£2,800,Active,electrical
+AST-018j,Interactive Panel Pine,ICT,Pine,First,2021-08-15,£2,800,Active,electrical
+AST-018k,Interactive Panel Beech,ICT,Beech,Second,2021-08-15,£2,800,Active,electrical
+AST-018l,Interactive Panel Chestnut,ICT,Chestnut,Second,2021-08-15,£2,800,Active,electrical
+AST-018m,Interactive Panel Hazel,ICT,Hazel,Second,2020-08-15,£2,800,Active,electrical
+AST-018n,Interactive Panel Sycamore,ICT,Sycamore,Second,2020-08-15,£2,800,Active,electrical
+AST-019,ICT Desktop 1,ICT,ICT Suite,First,2022-09-01,£650,Active,electrical
+AST-020,ICT Desktop 2,ICT,ICT Suite,First,2022-09-01,£650,Active,electrical
+AST-021,ICT Desktop 3,ICT,ICT Suite,First,2022-09-01,£650,Active,electrical
+AST-022,ICT Desktop 4,ICT,ICT Suite,First,2022-09-01,£650,Active,electrical
+AST-023,ICT Desktop 5,ICT,ICT Suite,First,2022-09-01,£650,Active,electrical
+AST-024,ICT Desktop 6,ICT,ICT Suite,First,2022-09-01,£650,Active,electrical
+AST-025,ICT Desktop 7,ICT,ICT Suite,First,2022-09-01,£650,Active,electrical
+AST-026,ICT Desktop 8,ICT,ICT Suite,First,2022-09-01,£650,Active,electrical
+AST-027,ICT Desktop 9,ICT,ICT Suite,First,2022-09-01,£650,Active,electrical
+AST-028,ICT Desktop 10,ICT,ICT Suite,First,2022-09-01,£650,Active,electrical
+AST-029,ICT Desktop 11,ICT,ICT Suite,First,2022-09-01,£650,Active,electrical
+AST-030,ICT Desktop 12,ICT,ICT Suite,First,2022-09-01,£650,Active,electrical
+AST-031,ICT Desktop 13,ICT,ICT Suite,First,2022-09-01,£650,Active,electrical
+AST-032,ICT Desktop 14,ICT,ICT Suite,First,2022-09-01,£650,Active,electrical
+AST-033,ICT Desktop 15,ICT,ICT Suite,First,2022-09-01,£650,Active,electrical
+AST-034,ICT Server Cabinet,ICT,ICT Suite,First,2022-09-01,£1,200,Active,electrical
+AST-035,ICT Network Switch,ICT,ICT Suite,First,2022-09-01,£450,Active,electrical
+AST-036,Photocopier,Office,Admin Office,Ground,2023-03-10,£3,500,Active,electrical
+AST-037,Printer Staff Room,Office,Staff Room,Ground,2022-06-15,£280,Active,electrical
+AST-038,Printer SBM Office,Office,SBM Office,Ground,2022-06-15,£280,Active,electrical
+AST-039,Shredder,Office,Admin Office,Ground,2022-06-15,£120,Active,electrical
+AST-040,Staff Fridge,Welfare,Staff Room,Ground,2021-09-01,£350,Active,electrical
+AST-041,Staff Microwave,Welfare,Staff Room,Ground,2021-09-01,£85,Active,electrical
+AST-042,Staff Kettle,Welfare,Staff Room,Ground,2021-09-01,£45,Active,electrical
+AST-043,Vending Machine,Welfare,Staff Room,Ground,2022-01-10,£1,200,Active,electrical
+AST-044,Water Cooler,Welfare,Staff Room,Ground,2022-03-15,£350,Active,
+AST-045,Oak Classroom Tables (set 30),Furniture,Oak,Ground,2023-08-01,£2,400,Active,
+AST-046,Oak Classroom Chairs (set 35),Furniture,Oak,Ground,2023-08-01,£1,050,Active,
+AST-047,Maple Classroom Tables (set 30),Furniture,Maple,Ground,2023-08-01,£2,400,Active,
+AST-048,Maple Classroom Chairs (set 35),Furniture,Maple,Ground,2023-08-01,£1,050,Active,
+AST-049,Birch Classroom Tables (set 30),Furniture,Birch,Ground,2022-08-01,£2,400,Active,
+AST-050,Birch Classroom Chairs (set 35),Furniture,Birch,Ground,2022-08-01,£1,050,Active,
+AST-051,Elm Classroom Tables (set 30),Furniture,Elm,Ground,2022-08-01,£2,400,Active,
+AST-052,Elm Classroom Chairs (set 35),Furniture,Elm,Ground,2022-08-01,£1,050,Active,
+AST-053,Ash Classroom Tables (set 30),Furniture,Ash,First,2022-08-01,£2,400,Active,
+AST-054,Ash Classroom Chairs (set 35),Furniture,Ash,First,2022-08-01,£1,050,Active,
+AST-055,Willow Classroom Tables (set 30),Furniture,Willow,First,2022-08-01,£2,400,Active,
+AST-056,Willow Classroom Chairs (set 35),Furniture,Willow,First,2022-08-01,£1,050,Active,
+AST-057,Holly Classroom Tables (set 30),Furniture,Holly,First,2022-08-01,£2,400,Active,
+AST-058,Holly Classroom Chairs (set 35),Furniture,Holly,First,2022-08-01,£1,050,Active,
+AST-059,Rowan Classroom Tables (set 30),Furniture,Rowan,First,2022-08-01,£2,400,Active,
+AST-060,Rowan Classroom Chairs (set 35),Furniture,Rowan,First,2022-08-01,£1,050,Active,
+AST-061,Cedar Classroom Tables (set 30),Furniture,Cedar,First,2021-08-01,£2,400,Active,
+AST-062,Cedar Classroom Chairs (set 35),Furniture,Cedar,First,2021-08-01,£1,050,Active,
+AST-063,Pine Classroom Tables (set 30),Furniture,Pine,First,2021-08-01,£2,400,Active,
+AST-064,Pine Classroom Chairs (set 35),Furniture,Pine,First,2021-08-01,£1,050,Active,
+AST-065,Beech Classroom Tables (set 30),Furniture,Beech,Second,2021-08-01,£2,400,Active,
+AST-066,Beech Classroom Chairs (set 35),Furniture,Beech,Second,2021-08-01,£1,050,Active,
+AST-067,Chestnut Classroom Tables (set 30),Furniture,Chestnut,Second,2021-08-01,£2,400,Active,
+AST-068,Chestnut Classroom Chairs (set 35),Furniture,Chestnut,Second,2021-08-01,£1,050,Active,
+AST-069,Hazel Classroom Tables (set 30),Furniture,Hazel,Second,2020-08-01,£2,400,Active,
+AST-070,Hazel Classroom Chairs (set 35),Furniture,Hazel,Second,2020-08-01,£1,050,Active,
+AST-071,Sycamore Classroom Tables (set 30),Furniture,Sycamore,Second,2020-08-01,£2,400,Active,
+AST-072,Sycamore Classroom Chairs (set 35),Furniture,Sycamore,Second,2020-08-01,£1,050,Active,
+AST-073,Teachers Desk Oak,Furniture,Oak,Ground,2023-08-01,£280,Active,
+AST-074,Teachers Desk Maple,Furniture,Maple,Ground,2023-08-01,£280,Active,
+AST-075,Teachers Desk Birch,Furniture,Birch,Ground,2022-08-01,£280,Active,
+AST-076,Teachers Desk Elm,Furniture,Elm,Ground,2022-08-01,£280,Active,
+AST-077,Teachers Desk Ash,Furniture,Ash,First,2022-08-01,£280,Active,
+AST-078,Teachers Desk Willow,Furniture,Willow,First,2022-08-01,£280,Active,
+AST-079,Teachers Desk Holly,Furniture,Holly,First,2022-08-01,£280,Active,
+AST-080,Teachers Desk Rowan,Furniture,Rowan,First,2022-08-01,£280,Active,
+AST-081,Teachers Desk Cedar,Furniture,Cedar,First,2021-08-01,£280,Active,
+AST-082,Teachers Desk Pine,Furniture,Pine,First,2021-08-01,£280,Active,
+AST-083,Teachers Desk Beech,Furniture,Beech,Second,2021-08-01,£280,Active,
+AST-084,Teachers Desk Chestnut,Furniture,Chestnut,Second,2021-08-01,£280,Active,
+AST-085,Teachers Desk Hazel,Furniture,Hazel,Second,2020-08-01,£280,Active,
+AST-086,Teachers Desk Sycamore,Furniture,Sycamore,Second,2020-08-01,£280,Active,
+AST-087,Library Bookshelves x6,Furniture,Library,First,2021-09-01,£1,800,Active,
+AST-088,Library Reading Corner,Furniture,Library,First,2021-09-01,£450,Active,
+AST-089,Library Desk x4,Furniture,Library,First,2021-09-01,£600,Active,
+AST-090,Music Keyboards x15,Music,Music Room,First,2020-09-01,£2,250,Active,
+AST-091,Music Stand x10,Music,Music Room,First,2020-09-01,£300,Active,
+AST-092,Piano,Music,Music Room,First,2018-09-01,£3,500,Active,
+AST-093,Percussion Trolley,Music,Music Room,First,2020-09-01,£450,Active,
+AST-094,Art Drying Rack,Storage,Art Room,First,2021-09-01,£280,Active,
+AST-095,Art Storage Cupboard,Storage,Art Room,First,2021-09-01,£350,Active,
+AST-096,Portable PA System,AV Equipment,Storage,Main Hall,Ground,2022-03-15,£650,Active,electrical
+AST-097,Emergency Lighting Main Hall,Fire Safety,Main Hall,Ground,2021-03-22,£1,200,Active,fire,electrical
+AST-098,Emergency Lighting Reception,Fire Safety,Reception,Ground,2021-03-22,£800,Active,fire,electrical
+AST-099,Emergency Lighting First Floor,Fire Safety,,First,2021-03-22,£1,500,Active,fire,electrical
+AST-100,Emergency Lighting Second Floor,Fire Safety,,Second,2021-03-22,£1,500,Active,fire,electrical
+AST-101,Fire Extinguisher CO2 Main Hall,Fire Safety,Main Hall,Ground,2024-06-15,£85,Active,fire
+AST-102,Fire Extinguisher Water Main Hall,Fire Safety,Main Hall,Ground,2024-06-15,£45,Active,fire
+AST-103,Fire Extinguisher Foam Kitchen,Fire Safety,Kitchen,Ground,2024-06-15,£65,Active,fire
+AST-104,Fire Extinguisher CO2 ICT Suite,Fire Safety,ICT Suite,First,2024-06-15,£85,Active,fire
+AST-105,Fire Blanket Kitchen,Fire Safety,Kitchen,Ground,2024-06-15,£35,Active,fire
+AST-106,Fire Alarm Call Point Reception,Fire Safety,Reception,Ground,2021-03-22,£120,Active,fire
+AST-107,Fire Alarm Call Point Main Hall,Fire Safety,Main Hall,Ground,2021-03-22,£120,Active,fire
+AST-108,Fire Alarm Call Point First Floor,Fire Safety,,First,2021-03-22,£120,Active,fire
+AST-109,Fire Alarm Call Point Second Floor,Fire Safety,,Second,2021-03-22,£120,Active,fire
+AST-110,Emergency Exit Sign Main Hall,Fire Safety,Main Hall,Ground,2021-03-22,£45,Active,fire
+AST-111,Emergency Exit Sign Reception,Fire Safety,Reception,Ground,2021-03-22,£45,Active,fire
+AST-112,First Aid Kit Medical Room,Welfare,Medical Room,Ground,2024-09-01,£35,Active,
+AST-113,First Aid Kit Kitchen,Welfare,Kitchen,Ground,2024-09-01,£35,Active,
+AST-114,First Aid Kit Playground,Welfare,,Ground,2024-09-01,£35,Active,
+AST-115,Defibrillator,Welfare,Reception,Ground,2023-05-10,£1,200,Active,
+AST-116,Medical Bed,Welfare,Medical Room,Ground,2022-09-01,£450,Active,
+AST-117,Medical Screen,Welfare,Medical Room,Ground,2022-09-01,£280,Active,
+AST-118,EYFS Outdoor Play Equipment,Storage,EYFS outdoor,Ground,2023-04-15,£3,500,Active,
+AST-119,Playground Storage,Storage,,Ground,2022-06-01,£680,Active,
+AST-120,Sports Equipment Storage,Storage,Main Hall,Ground,2021-09-01,£450,Active,
+AST-121,PE Equipment - Balls Set,Storage,Main Hall,Ground,2021-09-01,£320,Active,
+AST-122,PE Equipment - Benches x6,Storage,Main Hall,Ground,2021-09-01,£540,Active,
+AST-123,PE Equipment - Mats x10,Storage,Main Hall,Ground,2021-09-01,£380,Active,
+AST-124,Laptop Trolley (15),ICT,ICT Suite,First,2023-09-01,£2,800,Active,electrical
+AST-125,iPad Trolley (30),ICT,ICT Suite,First,2023-09-01,£4,200,Active,electrical
+AST-126,Senco Assessment Kit,Storage,SEND Room,Ground,2022-09-01,£850,Active,
+AST-127,Reading Intervention Resources,Storage,Intervention Room,First,2022-09-01,£450,Active,
+AST-128,Maths Manipulatives Kit,Storage,Intervention Room,First,2022-09-01,£380,Active,
+AST-129,Lego Therapy Set,Storage,SEND Room,Ground,2023-03-15,£280,Active,
+AST-130,Sensory Resources,Storage,SEND Room,Ground,2023-03-15,£350,Active,
+AST-131,Gas Meter,Heating,Boiler Room,Basement,2020-06-15,£120,Active,gas
+AST-132,Water Meter,Heating,Boiler Room,Basement,2020-06-15,£85,Active,
+AST-133,Electrical Distribution Board,Electrical,Boiler Room,Basement,2020-06-15,£450,Active,electrical
+AST-134,Hot Water Cylinder,Heating,Boiler Room,Basement,2020-06-15,£680,Active,
+AST-135,Water Pump,Heating,Boiler Room,Basement,2020-06-15,£350,Active,electrical
+AST-136,Server Rack,ICT,Finance Office,Second,2023-03-15,£850,Active,electrical
+AST-137,Main Server,ICT,Finance Office,Second,2023-03-15,£3,200,Active,electrical
+AST-138,Backup Server,ICT,Finance Office,Second,2023-03-15,£2,400,Active,electrical
+AST-139,UPS Battery,ICT,Finance Office,Second,2023-03-15,£450,Active,electrical
+AST-140,Broadband Router,ICT,Finance Office,Second,2023-03-15,£180,Active,electrical
+AST-141,Network Cabinet,ICT,ICT Suite,First,2022-09-01,£650,Active,electrical
+AST-142,Wireless Access Point Ground,ICT,,Ground,2022-09-01,£180,Active,electrical
+AST-143,Wireless Access Point First,ICT,,First,2022-09-01,£180,Active,electrical
+AST-144,Wireless Access Point Second,ICT,,Second,2022-09-01,£180,Active,electrical
+AST-145,Playground Benches x4,Furniture,,Ground,2022-05-15,£680,Active,
+AST-146,Bicycle Storage,Storage,,Ground,2021-09-01,£1,200,Active,
+AST-147,Bin Storage Area,Storage,,Ground,2021-09-01,£450,Active,
+AST-148,Recycling Bins x4,Storage,,Ground,2021-09-01,£120,Active,
+AST-149,Lost Property Storage,Storage,Cloakroom Ground,Ground,2022-01-10,£85,Active,
+AST-150,After School Club Equipment,Storage,Staff Room,Ground,2023-04-01,£580,Active,

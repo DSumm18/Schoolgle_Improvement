@@ -89,6 +89,10 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
         resolvedEmail,
       );
 
+      // Check for impersonation first
+      const impersonateOrgId = sessionStorage.getItem('impersonateOrgId');
+      console.log('[AuthContext] Impersonate check:', impersonateOrgId ? `Yes, targeting ${impersonateOrgId}` : 'No');
+
       // Use the server-side profile API which bypasses RLS
       const response = await fetch("/api/auth/profile", {
         method: "POST",
@@ -97,6 +101,7 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
           userId,
           email: resolvedEmail,
           displayName: resolvedName,
+          impersonateOrgId, // Pass impersonate target
         }),
       });
 
@@ -313,6 +318,41 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
       subscription.unsubscribe();
     };
   }, []);
+
+  // Listen for impersonation changes (for super admin "View as School" feature)
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'impersonateOrgId' && user?.id) {
+        console.log('[AuthContext] Impersonation state changed (storage event), refetching organization');
+        fetchOrganization(user.id, user);
+      }
+    };
+
+    // Custom event for same-tab impersonation changes
+    const handleImpersonationChange = () => {
+      if (user?.id) {
+        console.log('[AuthContext] Impersonation changed (custom event), refetching organization');
+        fetchOrganization(user.id, user);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('impersonation-changed', handleImpersonationChange);
+
+    // Check on mount if impersonation is set but doesn't match current org
+    if (user?.id && typeof window !== 'undefined') {
+      const impersonateOrgId = sessionStorage.getItem('impersonateOrgId');
+      if (impersonateOrgId && impersonateOrgId !== organizationId) {
+        console.log('[AuthContext] Detected impersonation on mount, fetching organization');
+        fetchOrganization(user.id, user);
+      }
+    }
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('impersonation-changed', handleImpersonationChange);
+    };
+  }, [user, organizationId]);
 
   const signInWithGoogle = async () => {
     try {

@@ -453,6 +453,7 @@ export default function PupilRecordsPage() {
     : {};
   const [classes, setClasses] = useState<ClassRecord[]>([]);
   const [selectedClass, setSelectedClass] = useState<ClassRecord | null>(null);
+  const [viewAll, setViewAll] = useState(false);
   const [pupils, setPupils] = useState<PupilRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingPupils, setLoadingPupils] = useState(false);
@@ -477,25 +478,46 @@ export default function PupilRecordsPage() {
       .catch(() => setLoading(false));
   }, [organizationId]);
 
-  // Load pupils when class selected
+  // Load pupils when class selected or "All Pupils" is clicked
   useEffect(() => {
-    if (!selectedClass || !organizationId) {
+    if (!organizationId) {
       setPupils([]);
       return;
     }
-    setLoadingPupils(true);
-    setExpandedPupil(null);
-    fetch(
-      `/api/lesson-studio/pupils?classId=${selectedClass.id}&organizationId=${organizationId}`,
-      { headers: authHeaders },
-    )
-      .then((r) => r.json())
-      .then((res) => {
-        setPupils(res.data ?? []);
-        setLoadingPupils(false);
+
+    // If viewing all pupils or no class selected
+    if (viewAll || !selectedClass) {
+      if (!viewAll) {
+        setPupils([]);
+        return;
+      }
+      setLoadingPupils(true);
+      setExpandedPupil(null);
+      fetch(`/api/all-pupils?organizationId=${organizationId}`, {
+        headers: authHeaders,
       })
-      .catch(() => setLoadingPupils(false));
-  }, [selectedClass, organizationId]);
+        .then((r) => r.json())
+        .then((res) => {
+          setPupils(res.data ?? []);
+          setLoadingPupils(false);
+        })
+        .catch(() => setLoadingPupils(false));
+    } else {
+      // Load pupils for selected class
+      setLoadingPupils(true);
+      setExpandedPupil(null);
+      fetch(
+        `/api/lesson-studio/pupils?classId=${selectedClass.id}&organizationId=${organizationId}`,
+        { headers: authHeaders },
+      )
+        .then((r) => r.json())
+        .then((res) => {
+          setPupils(res.data ?? []);
+          setLoadingPupils(false);
+        })
+        .catch(() => setLoadingPupils(false));
+    }
+  }, [selectedClass, viewAll, organizationId]);
 
   // Filter + search
   const filtered = pupils.filter((p) => {
@@ -510,7 +532,7 @@ export default function PupilRecordsPage() {
   });
 
   // Class stats
-  const classStats = selectedClass
+  const classStats = (selectedClass || viewAll)
     ? {
         total: pupils.length,
         ehcp: pupils.filter((p) => p.has_ehcp).length,
@@ -541,14 +563,32 @@ export default function PupilRecordsPage() {
 
       {/* Class selector */}
       <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
-        <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
-          Select a class
+        <div className="flex items-center justify-between mb-3">
+          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+            Select a class
+          </div>
+          <button
+            onClick={() => {
+              setViewAll(true);
+              setSelectedClass(null);
+            }}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              viewAll
+                ? "bg-teal-600 text-white"
+                : "border border-slate-200 dark:border-slate-600 text-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700"
+            }`}
+          >
+            {viewAll ? "✓ All Pupils" : "All Pupils"}
+          </button>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2">
           {classes.map((cls) => (
             <button
               key={cls.id}
-              onClick={() => setSelectedClass(cls)}
+              onClick={() => {
+                setSelectedClass(cls);
+                setViewAll(false);
+              }}
               className={`px-3 py-2.5 rounded-xl text-left transition-all ${
                 selectedClass?.id === cls.id
                   ? "bg-teal-600 text-white shadow-lg shadow-teal-600/20"
@@ -671,11 +711,13 @@ export default function PupilRecordsPage() {
             </div>
           ) : (
             <div className="space-y-2">
-              {filtered.length === 0 && (
+              {filtered.length === 0 && !loadingPupils && (
                 <div className="text-center py-8 text-slate-500 text-sm">
                   {search
                     ? "No pupils match your search"
-                    : "No pupils found for this class"}
+                    : viewAll
+                      ? "No pupils found"
+                      : "No pupils found for this class"}
                 </div>
               )}
               {filtered.map((p) => (
@@ -705,14 +747,14 @@ export default function PupilRecordsPage() {
         </>
       )}
 
-      {!selectedClass && (
+      {!selectedClass && !viewAll && (
         <div className="text-center py-16 text-slate-500">
           <Users className="w-12 h-12 mx-auto mb-3 text-slate-300" />
           <div className="text-lg font-medium text-slate-700 dark:text-slate-300">
-            Select a class to view pupil records
+            Select a class or click "All Pupils" to view pupil records
           </div>
           <div className="text-sm mt-1">
-            Data is loaded from your MIS connection
+            {classes.length > 0 ? `${classes.length} classes available` : "Data is loaded from your MIS connection"}
           </div>
         </div>
       )}

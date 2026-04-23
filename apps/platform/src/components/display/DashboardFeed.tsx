@@ -19,6 +19,8 @@ import {
   AlertTriangle,
   ExternalLink,
 } from "lucide-react";
+import { useAuth } from "@/context/SupabaseAuthContext";
+import { authFetch } from "@/lib/supabase";
 
 // ═══════════════════════════════════════════════════════════════════════
 // DASHBOARD FEED SIDEBAR
@@ -86,16 +88,19 @@ interface DashboardFeedProps {
 }
 
 export function DashboardFeed({ className = "" }: DashboardFeedProps) {
+  const { organizationId } = useAuth();
   const [notices, setNotices] = useState<FeedNotice[]>([]);
   const [liveRooms, setLiveRooms] = useState<FeedVideoRoom[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!organizationId) return;
+
     Promise.all([
-      fetch("/api/notices?limit=12")
+      authFetch(`/api/notices?limit=12`, { organizationId })
         .then((r) => r.json())
         .catch(() => ({ notices: [] })),
-      fetch("/api/video-rooms?limit=5")
+      authFetch(`/api/video-rooms?limit=5`, { organizationId })
         .then((r) => r.json())
         .catch(() => ({ rooms: [] })),
     ]).then(([noticeData, roomData]) => {
@@ -106,18 +111,18 @@ export function DashboardFeed({ className = "" }: DashboardFeedProps) {
 
     // Refresh every 60 seconds
     const interval = setInterval(() => {
-      fetch("/api/notices?limit=12")
+      authFetch(`/api/notices?limit=12`, { organizationId })
         .then((r) => r.json())
         .then((d) => setNotices(d.notices || []))
         .catch(() => {});
-      fetch("/api/video-rooms?limit=5")
+      authFetch(`/api/video-rooms?limit=5`, { organizationId })
         .then((r) => r.json())
         .then((d) => setLiveRooms((d.rooms || []).filter((r: FeedVideoRoom) => r.status === "live" || r.status === "scheduled")))
         .catch(() => {});
     }, 60000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [organizationId]);
 
   if (loading) {
     return (

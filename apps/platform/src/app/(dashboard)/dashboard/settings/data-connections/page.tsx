@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
   FolderOpen,
+  Folder,
   Cloud,
   CheckCircle,
   AlertTriangle,
@@ -65,6 +66,8 @@ interface DataConnection {
   >;
   total_files: number;
   total_folders: number;
+  scope_limited?: boolean;
+  scope_description?: string | null;
 }
 
 interface DriveFile {
@@ -75,6 +78,141 @@ interface DriveFile {
   size?: string;
   folderPath?: string;
   category?: string;
+}
+
+// Folder Browser Component for OAuth flow
+function FolderBrowser({
+  orgId,
+  onSelectFolder,
+}: {
+  orgId: string | undefined;
+  onSelectFolder: (folderId: string, folderName: string) => Promise<void>;
+}) {
+  const [folders, setFolders] = useState<Array<{ id: string; name: string }>>([]);
+  const [schoolgleDriveMissing, setSchoolgleDriveMissing] = useState(false);
+  const [schoolgleDriveMessage, setSchoolgleDriveMessage] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadFolders() {
+      if (!orgId) return;
+
+      setLoading(true);
+      setError(null);
+      setSchoolgleDriveMissing(false);
+
+      try {
+        const authHeaders = await getAuthHeaders();
+        const res = await fetch(`/api/data-connections/list-folders?organizationId=${orgId}`, {
+          headers: authHeaders,
+        });
+
+        if (!res.ok) {
+          throw new Error('Failed to load folders');
+        }
+
+        const data = await res.json();
+        setFolders(data.folders || []);
+
+        // Check if Schoolgle Drive folder exists
+        if (data.schoolgleDriveMissing) {
+          setSchoolgleDriveMissing(true);
+          setSchoolgleDriveMessage(data.message || '');
+        }
+      } catch (err: any) {
+        setError(err.message || 'Failed to load folders');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadFolders();
+  }, [orgId]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-4 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
+        <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+      </div>
+    );
+  }
+
+  if (schoolgleDriveMissing) {
+    return (
+      <div className="space-y-4">
+        <div className="p-4 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800">
+          <div className="flex gap-3">
+            <FolderOpen className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">Schoolgle Drive folder not found</p>
+              <p className="text-sm text-amber-700 dark:text-amber-400 mt-1">
+                {schoolgleDriveMessage}
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+          <p className="text-sm font-medium text-blue-900 dark:text-blue-200 mb-2">How to set up Schoolgle Drive:</p>
+          <ol className="text-sm text-blue-800 dark:text-blue-300 space-y-1 list-decimal list-inside">
+            <li>Go to your <a href="https://drive.google.com" target="_blank" rel="noopener noreferrer" className="underline hover:no-underline">Google Drive</a></li>
+            <li>Create a new folder named exactly <strong>"Schoolgle Drive"</strong></li>
+            <li>Inside it, create folders for your data (e.g., "Pupil Data", "Finance", "Safeguarding")</li>
+            <li>Come back here and click "Refresh" to connect</li>
+          </ol>
+        </div>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
+        >
+          Refresh
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 pb-2 border-b border-border">
+        <FolderOpen className="w-5 h-5 text-blue-500" />
+        <p className="text-sm font-medium">Schoolgle Drive folders</p>
+        <span className="text-xs text-muted-foreground ml-auto">{folders.length} folder{folders.length !== 1 ? 's' : ''}</span>
+      </div>
+      <div className="border border-border rounded-lg divide-y divide-border max-h-96 overflow-y-auto">
+        {folders.length === 0 ? (
+          <div className="p-6 text-center">
+            <Folder className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-50" />
+            <p className="text-sm text-muted-foreground">No folders found in Schoolgle Drive</p>
+            <p className="text-xs text-muted-foreground mt-1">Create folders inside "Schoolgle Drive" to see them here</p>
+          </div>
+        ) : (
+          folders.map((folder) => (
+            <button
+              key={folder.id}
+              onClick={() => onSelectFolder(folder.id, folder.name)}
+              className="w-full px-4 py-3 text-left hover:bg-accent transition-colors flex items-center gap-3"
+            >
+              <Folder className="w-5 h-5 text-blue-500" />
+              <span className="flex-1 text-sm font-medium truncate">{folder.name}</span>
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            </button>
+          ))
+        )}
+      </div>
+      <p className="text-xs text-muted-foreground flex items-start gap-1.5">
+        <Lock className="w-3 h-3 shrink-0 mt-0.5" />
+        <span>Schoolgle only accesses folders inside "Schoolgle Drive"</span>
+      </p>
+    </div>
+  );
 }
 
 // Category display config
@@ -88,6 +226,7 @@ const CATEGORY_CONFIG: Record<
     borderColor: string;
   }
 > = {
+  // Pupil Data
   pupils: {
     label: "Pupil Data",
     icon: Users,
@@ -116,6 +255,22 @@ const CATEGORY_CONFIG: Record<
     bgColor: "bg-pink-50 dark:bg-pink-950/20",
     borderColor: "border-pink-200 dark:border-pink-800",
   },
+  send: {
+    label: "SEND",
+    icon: Users,
+    color: "text-blue-500",
+    bgColor: "bg-blue-50 dark:bg-blue-950/20",
+    borderColor: "border-blue-200 dark:border-blue-800",
+  },
+  pupil_premium: {
+    label: "Pupil Premium",
+    icon: BarChart3,
+    color: "text-yellow-600",
+    bgColor: "bg-yellow-50 dark:bg-yellow-950/20",
+    borderColor: "border-yellow-200 dark:border-yellow-800",
+  },
+  
+  // Staff & HR
   staff: {
     label: "Staff & HR",
     icon: Users,
@@ -123,6 +278,22 @@ const CATEGORY_CONFIG: Record<
     bgColor: "bg-cyan-50 dark:bg-cyan-950/20",
     borderColor: "border-cyan-200 dark:border-cyan-800",
   },
+  training: {
+    label: "CPD & Training",
+    icon: GraduationCap,
+    color: "text-teal-600",
+    bgColor: "bg-teal-50 dark:bg-teal-950/20",
+    borderColor: "border-teal-200 dark:border-teal-800",
+  },
+  dbs: {
+    label: "DBS & SCR",
+    icon: Shield,
+    color: "text-rose-600",
+    bgColor: "bg-rose-50 dark:bg-rose-950/20",
+    borderColor: "border-rose-200 dark:border-rose-800",
+  },
+  
+  // Finance
   fms: {
     label: "Finance (FMS)",
     icon: PoundSterling,
@@ -137,12 +308,81 @@ const CATEGORY_CONFIG: Record<
     bgColor: "bg-orange-50 dark:bg-orange-950/20",
     borderColor: "border-orange-200 dark:border-orange-800",
   },
-  dfe: {
+  purchasing: {
+    label: "Purchasing",
+    icon: ClipboardList,
+    color: "text-amber-500",
+    bgColor: "bg-amber-50 dark:bg-amber-950/20",
+    borderColor: "border-amber-200 dark:border-amber-800",
+  },
+  
+  // Dfe / Census
+  census: {
+    label: "Census & DfE",
+    icon: BarChart3,
+    color: "text-green-600",
+    bgColor: "bg-green-50 dark:bg-green-950/20",
+    borderColor: "border-green-200 dark:border-green-800",
+  },
+  dfe: { // Legacy fallback
     label: "DfE Data",
     icon: BarChart3,
     color: "text-green-600",
     bgColor: "bg-green-50 dark:bg-green-950/20",
     borderColor: "border-green-200 dark:border-green-800",
+  },
+
+  // Governance & Compliance
+  governance: {
+    label: "Governance",
+    icon: Users,
+    color: "text-violet-600",
+    bgColor: "bg-violet-50 dark:bg-violet-950/20",
+    borderColor: "border-violet-200 dark:border-violet-800",
+  },
+  policies: {
+    label: "Policies",
+    icon: BookOpen,
+    color: "text-slate-600",
+    bgColor: "bg-slate-50 dark:bg-slate-900",
+    borderColor: "border-slate-200 dark:border-slate-800",
+  },
+  safeguarding: {
+    label: "Safeguarding",
+    icon: Shield,
+    color: "text-red-500",
+    bgColor: "bg-red-50 dark:bg-red-950/20",
+    borderColor: "border-red-200 dark:border-red-800",
+  },
+  compliance: {
+    label: "Compliance",
+    icon: CheckCircle,
+    color: "text-emerald-600",
+    bgColor: "bg-emerald-50 dark:bg-emerald-950/20",
+    borderColor: "border-emerald-200 dark:border-emerald-800",
+  },
+  risk: {
+    label: "Risk Management",
+    icon: AlertTriangle,
+    color: "text-orange-500",
+    bgColor: "bg-orange-50 dark:bg-orange-950/20",
+    borderColor: "border-orange-200 dark:border-orange-800",
+  },
+  estates: {
+    label: "Estates & Facilities",
+    icon: FolderOpen,
+    color: "text-stone-600",
+    bgColor: "bg-stone-50 dark:bg-stone-950/20",
+    borderColor: "border-stone-200 dark:border-stone-800",
+  },
+
+  // Other specific
+  ofsted: {
+    label: "Ofsted Evidence",
+    icon: Eye,
+    color: "text-sky-600",
+    bgColor: "bg-sky-50 dark:bg-sky-950/20",
+    borderColor: "border-sky-200 dark:border-sky-800",
   },
   documents: {
     label: "Documents",
@@ -162,13 +402,25 @@ const CATEGORY_CONFIG: Record<
 
 const EXPECTED_FOLDERS = [
   {
-    name: "MIS Exports",
-    icon: Database,
+    name: "01 Census Reports",
+    icon: BarChart3,
+    color: "text-green-600",
+    children: [
+      {
+        name: "Census Data",
+        description: "Termly census returns, DfE reports",
+        category: "census",
+      },
+    ],
+  },
+  {
+    name: "02 Pupil Data",
+    icon: Users,
     color: "text-blue-600",
     children: [
       {
-        name: "Pupil Data",
-        description: "Pupil roll, SEN register",
+        name: "Admissions",
+        description: "Pupil roll, transfers in/out",
         category: "pupils",
       },
       {
@@ -178,46 +430,146 @@ const EXPECTED_FOLDERS = [
       },
       {
         name: "Assessments",
-        description: "Statutory results, tracker exports",
+        description: "KS1/KS2 statutory results, trackers",
         category: "assessments",
       },
       {
-        name: "Behaviour",
-        description: "Behaviour incident logs",
-        category: "behaviour",
+        name: "SEN Register",
+        description: "SEND pupils, EHCP documentation",
+        category: "send",
       },
       {
-        name: "Staff & HR",
-        description: "Staff list, teacher history",
-        category: "staff",
+        name: "Pupil Premium",
+        description: "Disadvantaged pupil rosters, strategy",
+        category: "pupil_premium",
+      },
+      {
+        name: "Behaviour",
+        description: "Behaviour incident logs, exclusions",
+        category: "behaviour",
       },
     ],
   },
   {
-    name: "Finance Exports",
+    name: "03 Staff Records",
+    icon: Users,
+    color: "text-cyan-600",
+    children: [
+      {
+        name: "HR Records",
+        description: "Staff list, personnel files",
+        category: "staff",
+      },
+      {
+        name: "Training",
+        description: "CPD certificates, performance mgmt",
+        category: "training",
+      },
+      {
+        name: "DBS Checks",
+        description: "Single Central Record, DBS status",
+        category: "dbs",
+      },
+    ],
+  },
+  {
+    name: "04 Finance",
     icon: PoundSterling,
     color: "text-amber-600",
     children: [
       {
-        name: "Budget Reports",
+        name: "Budgets",
         description: "FMS Detailed Cost Centre reports",
         category: "fms",
+      },
+      {
+        name: "Payroll",
+        description: "Monthly payroll summaries",
+        category: "payroll",
+      },
+      {
+        name: "Purchasing",
+        description: "Contracts, procurement logs",
+        category: "purchasing",
       },
     ],
   },
   {
-    name: "DfE & External Data",
-    icon: BarChart3,
-    color: "text-green-600",
-    children: [],
+    name: "05 Governance",
+    icon: Users,
+    color: "text-violet-600",
+    children: [
+      {
+        name: "Board Meetings",
+        description: "Governors minutes, agendas",
+        category: "governance",
+      },
+      {
+        name: "Policies",
+        description: "Statutory school policies",
+        category: "policies",
+      },
+      {
+        name: "Risk Register",
+        description: "School risk registers",
+        category: "risk",
+      },
+    ],
+  },
+  {
+    name: "07 Estates & HSE",
+    icon: Shield,
+    color: "text-stone-600",
+    children: [
+      {
+        name: "Health & Safety",
+        description: "Audits, compliance actions",
+        category: "estates",
+      },
+      {
+        name: "Safeguarding",
+        description: "DSL reporting, policies",
+        category: "safeguarding",
+      },
+    ],
   },
 ];
 
-function extractFolderId(input: string): string | null {
+function extractFolderId(input: string, provider: 'google' | 'microsoft' = 'google'): string | null {
   const trimmed = input.trim();
+
+  // If it's just an ID (no URL), return it
   if (/^[a-zA-Z0-9_-]{10,}$/.test(trimmed)) return trimmed;
-  const match = trimmed.match(/folders\/([a-zA-Z0-9_-]+)/);
-  return match ? match[1] : null;
+
+  // Google Drive folder URLs
+  if (provider === 'google') {
+    // Format: https://drive.google.com/drive/folders/ABC123...
+    const driveMatch = trimmed.match(/folders\/([a-zA-Z0-9_-]+)/);
+    if (driveMatch) return driveMatch[1];
+  }
+
+  // Microsoft OneDrive folder URLs
+  if (provider === 'microsoft') {
+    // Short URL format: https://1drv.ms/f/s!AbCdEfGhIjKlMnOpQrStUvWx
+    const shortMatch = trimmed.match(/\/f\/s!([a-zA-Z0-9_-]+)/);
+    if (shortMatch) return 's!' + shortMatch[1];
+
+    // Long URL format: https://onedrive.live.com/?authkey=...&cid=...&id=...
+    const liveMatch = trimmed.match(/id=([a-zA-Z0-9_-]+)/);
+    if (liveMatch) return liveMatch[1];
+  }
+
+  return null;
+}
+
+function getOAuthErrorMessage(errorCode: string): string {
+  const errors: Record<string, string> = {
+    access_denied: 'Access denied. You may have cancelled the authorization.',
+    invalid_state: 'Security validation failed. Please try again.',
+    missing_params: 'Invalid OAuth response. Please try again.',
+    server_error: 'Server error. Please try again.',
+  };
+  return errors[errorCode] || `Failed to connect: ${errorCode}`;
 }
 
 function formatFileSize(bytes: string | undefined): string {
@@ -962,9 +1314,8 @@ export default function DataConnectionsPage() {
   const [showMISInstructions, setShowMISInstructions] = useState(false);
   const [showFinanceInstructions, setShowFinanceInstructions] = useState(false);
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
-  const [lastDisconnectedFolder, setLastDisconnectedFolder] = useState<
-    string | null
-  >(null);
+  const [oauthAuthorized, setOAuthAuthorized] = useState(false);
+  const [selectedProvider, setSelectedProvider] = useState<'google' | 'microsoft'>('google');
 
   // Folder browsing state
   const [openCategory, setOpenCategory] = useState<string | null>(null);
@@ -1002,13 +1353,32 @@ export default function DataConnectionsPage() {
 
   useEffect(() => {
     fetchConnection();
+
+    // Check for OAuth success/error on page load (from callback redirect)
+    const urlParams = new URLSearchParams(window.location.search);
+    const oauthSuccess = urlParams.get('oauth_success');
+    const oauthError = urlParams.get('oauth_error');
+
+    if (oauthSuccess === 'google') {
+      console.log('OAuth success detected via URL parameter');
+      setOAuthAuthorized(true);
+      setFolderLink('oauth_connected');
+      // Clean up URL params
+      window.history.replaceState({}, '', window.location.pathname);
+      // Fetch connection after a short delay to allow DB to be updated
+      setTimeout(() => fetchConnection(), 1000);
+    } else if (oauthError) {
+      setError(getOAuthErrorMessage(oauthError));
+      // Clean up URL params
+      window.history.replaceState({}, '', window.location.pathname);
+    }
   }, [fetchConnection]);
 
   const handleConnect = async () => {
     setError(null);
-    const folderId = extractFolderId(folderLink);
+    const folderId = extractFolderId(folderLink, selectedProvider);
     if (!folderId) {
-      setError("Please paste a valid Google Drive folder link");
+      setError(`Please paste a valid ${selectedProvider === 'google' ? 'Google Drive' : 'OneDrive'} folder link`);
       return;
     }
     setConnecting(true);
@@ -1020,6 +1390,7 @@ export default function DataConnectionsPage() {
         body: JSON.stringify({
           organizationId: orgId,
           folderId,
+          provider: selectedProvider,
           connectedBy: user?.id,
         }),
       });
@@ -1074,7 +1445,6 @@ export default function DataConnectionsPage() {
         { method: "DELETE", headers: authHeaders },
       );
       if (res.ok) {
-        setLastDisconnectedFolder(folderName);
         setConnection(null);
         setError(null);
         setOpenCategory(null);
@@ -1532,13 +1902,13 @@ export default function DataConnectionsPage() {
             {[
               {
                 step: "1",
-                title: "Share your folder",
-                desc: "Share your school data folder in Google Drive with a view-only link",
+                title: "Create 'Schoolgle Drive' folder",
+                desc: "Create a folder named 'Schoolgle Drive' in your Google Drive and add your data files inside it",
               },
               {
                 step: "2",
-                title: "Schoolgle reads it",
-                desc: "We detect your files by type — staff, pupils, finance, attendance — and show you what we found",
+                title: "Connect via OAuth",
+                desc: "Click the button below to authorize Schoolgle. We ONLY access your 'Schoolgle Drive' folder — nothing else",
               },
               {
                 step: "3",
@@ -1586,94 +1956,52 @@ export default function DataConnectionsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {!connection ? (
+          {oauthAuthorized && !connection ? (
+            /* OAuth authorized - show folder browser */
             <div className="space-y-4">
-              <div className="bg-slate-50 dark:bg-slate-900 rounded-xl p-4 space-y-3">
-                <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-                  To connect your Google Drive:
+              <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-4 border border-green-200 dark:border-green-800">
+                <p className="text-sm font-semibold text-green-800 dark:text-green-200 mb-2">
+                  ✓ Google account connected successfully!
                 </p>
-                <ol className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
-                  <li className="flex items-start gap-2">
-                    <span className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
-                      1
-                    </span>
-                    Open Google Drive and find your school data folder
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
-                      2
-                    </span>
-                    Right-click the folder → <strong>Share</strong> → set to{" "}
-                    <strong>&quot;Anyone with the link&quot;</strong> (Viewer)
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
-                      3
-                    </span>
-                    Copy the link and paste it below
-                  </li>
-                </ol>
+                <p className="text-sm text-green-700 dark:text-green-300">
+                  Now select which folder you'd like to connect to Schoolgle. We'll only scan files in the folder you choose.
+                </p>
               </div>
 
-              <div className="flex gap-2 max-w-xl">
-                <div className="relative flex-1">
-                  <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input
-                    type="text"
-                    value={folderLink}
-                    onChange={(e) => {
-                      setFolderLink(e.target.value);
-                      setError(null);
-                    }}
-                    placeholder="Paste your Google Drive folder link here..."
-                    className="w-full pl-10 pr-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                    onKeyDown={(e) => e.key === "Enter" && handleConnect()}
-                  />
-                </div>
-                <Button
-                  onClick={handleConnect}
-                  disabled={connecting || !folderLink.trim()}
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
-                  {connecting ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <GoogleDriveLogo className="w-4 h-4 mr-1.5" />
-                  )}
-                  {connecting ? "Checking..." : "Connect"}
-                </Button>
-              </div>
-              {error && (
-                <p className="text-sm text-red-600 flex items-start gap-1.5">
-                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" /> {error}
-                </p>
-              )}
-              <p className="text-xs text-muted-foreground">
-                Schoolgle will read the folder structure to detect your school
-                data files. We only look — we never modify, move, or delete
-                anything in your Drive.
-              </p>
+              <FolderBrowser
+                orgId={orgId}
+                onSelectFolder={async (folderId, folderName) => {
+                  setConnecting(true);
+                  try {
+                    const authHeaders = await getAuthHeaders();
+                    const res = await fetch('/api/data-connections/link', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json', ...authHeaders },
+                      body: JSON.stringify({
+                        provider: 'google',
+                        folderId,
+                        folderName,
+                        organizationId: orgId,
+                      }),
+                    });
 
-              {/* Reconnect shortcut */}
-              {lastDisconnectedFolder && (
-                <div className="flex items-center gap-3 mt-3 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                  <RefreshCw className="w-4 h-4 text-blue-500 shrink-0" />
-                  <p className="text-xs text-blue-700 dark:text-blue-300">
-                    Previously connected to{" "}
-                    <strong>{lastDisconnectedFolder}</strong>.
-                  </p>
-                  <button
-                    onClick={() => {
-                      setLastDisconnectedFolder(null);
-                    }}
-                    className="text-[10px] text-blue-500 hover:text-blue-700 ml-auto shrink-0"
-                  >
-                    Dismiss
-                  </button>
-                </div>
-              )}
+                    if (res.ok) {
+                      setOAuthAuthorized(false);
+                      await fetchConnection();
+                    } else {
+                      const data = await res.json();
+                      setError(data.error || 'Failed to connect folder');
+                    }
+                  } catch (err: any) {
+                    setError(err.message || 'Failed to connect folder');
+                  } finally {
+                    setConnecting(false);
+                  }
+                }}
+              />
             </div>
-          ) : (
+          ) : connection ? (
+            /* Connected state */
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
@@ -1697,6 +2025,15 @@ export default function DataConnectionsPage() {
                       <Eye className="w-3 h-3 mr-1" />
                       READ-ONLY
                     </Badge>
+                    {connection.scope_limited && (
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] text-blue-600 border-blue-300 bg-blue-50 dark:bg-blue-950/20"
+                      >
+                        <Lock className="w-3 h-3 mr-1" />
+                        SCOPED TO "{connection.folder_name || 'Schoolgle Drive'}"
+                      </Badge>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-xs text-muted-foreground">
@@ -1734,9 +2071,134 @@ export default function DataConnectionsPage() {
                 </Button>
               </div>
             </div>
-          )}
-          {error && connection && (
-            <p className="text-sm text-red-600 mt-2">{error}</p>
+          ) : (
+            /* Not connected - show provider selection and folder link input */
+            <div className="space-y-4">
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Choose your cloud provider:</p>
+
+              {/* Provider Selection Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Google Drive */}
+                <button
+                  onClick={() => setSelectedProvider('google')}
+                  className={`flex items-center gap-3 px-4 py-4 rounded-xl border-2 transition-all duration-200 ${
+                    selectedProvider === 'google'
+                      ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-500 dark:border-blue-400'
+                      : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 hover:border-gray-300'
+                  }`}
+                >
+                  <span className="text-3xl">🔵</span>
+                  <div className="text-left flex-1">
+                    <p className="font-semibold">Google Drive</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Share a folder link</p>
+                  </div>
+                  {selectedProvider === 'google' && (
+                    <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center">
+                      <CheckCircle className="w-3 h-3 text-white" />
+                    </div>
+                  )}
+                </button>
+
+                {/* Microsoft OneDrive */}
+                <button
+                  onClick={() => setSelectedProvider('microsoft')}
+                  className={`flex items-center gap-3 px-4 py-4 rounded-xl border-2 transition-all duration-200 ${
+                    selectedProvider === 'microsoft'
+                      ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-500 dark:border-blue-400'
+                      : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 hover:border-gray-300'
+                  }`}
+                >
+                  <span className="text-3xl">🔷</span>
+                  <div className="text-left flex-1">
+                    <p className="font-semibold">Microsoft OneDrive</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Share a folder link</p>
+                  </div>
+                  {selectedProvider === 'microsoft' && (
+                    <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center">
+                      <CheckCircle className="w-3 h-3 text-white" />
+                    </div>
+                  )}
+                </button>
+              </div>
+
+              {/* Instructions based on selected provider */}
+              <div className="bg-slate-50 dark:bg-slate-900 rounded-xl p-4 space-y-3">
+                <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                  Connect your {selectedProvider === 'google' ? 'Google Drive' : 'OneDrive'} to Schoolgle:
+                </p>
+                <ol className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
+                  <li className="flex items-start gap-2">
+                    <span className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
+                      1
+                    </span>
+                    Create a folder in {selectedProvider === 'google' ? 'Google Drive' : 'OneDrive'} (anywhere, name it what you want)
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
+                      2
+                    </span>
+                    Right-click the folder → <strong>Share</strong> → "Anyone with the link" → <strong>Viewer</strong>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
+                      3
+                    </span>
+                    <strong>Copy link</strong> and paste it below
+                  </li>
+                </ol>
+              </div>
+
+              {/* Folder Link Input */}
+              <div className="space-y-3">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Paste your {selectedProvider === 'google' ? 'Google Drive' : 'OneDrive'} folder link:
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={folderLink}
+                    onChange={(e) => setFolderLink(e.target.value)}
+                    placeholder={selectedProvider === 'google'
+                      ? "https://drive.google.com/drive/folders/..."
+                      : "https://1drv.ms/f/..."
+                    }
+                    className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    disabled={connecting}
+                  />
+                  <button
+                    onClick={handleConnect}
+                    disabled={!folderLink.trim() || connecting}
+                    className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-all duration-200 flex items-center gap-2"
+                  >
+                    {connecting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Connecting...
+                      </>
+                    ) : (
+                      <>
+                        <LinkIcon className="w-4 h-4" />
+                        Connect
+                      </>
+                    )}
+                  </button>
+                </div>
+                {error && (
+                  <p className="text-sm text-red-600 flex items-start gap-1.5">
+                    <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" /> {error}
+                  </p>
+                )}
+              </div>
+
+              <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-3 border border-blue-200 dark:border-blue-800">
+                <p className="text-xs text-blue-700 dark:text-blue-300 font-medium mb-1">
+                  🔒 Privacy-First Connection
+                </p>
+                <p className="text-xs text-blue-600 dark:text-blue-400">
+                  Schoolgle will <strong>only</strong> access files in the folder you share — nothing else in your {selectedProvider === 'google' ? 'Google Drive' : 'OneDrive'}. You can revoke access at any time by stopping the share.
+                </p>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>

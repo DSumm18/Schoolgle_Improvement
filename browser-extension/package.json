@@ -1,0 +1,12 @@
+{
+  "name": "ed-browser-extension",
+  "version": "0.1.0",
+  "description": "Ed Browser Automation Extension",
+  "scripts": {
+    "server": "node server.js"
+  },
+  "dependencies": {
+    "canvas": "^3.2.2",
+    "ws": "^8.18.0"
+  }
+}

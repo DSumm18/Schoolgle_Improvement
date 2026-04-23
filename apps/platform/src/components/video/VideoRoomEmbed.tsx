@@ -14,6 +14,7 @@ import {
   Radio,
   MonitorPlay,
 } from "lucide-react";
+import { authFetch } from "@/lib/supabase";
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -94,9 +95,9 @@ function MeetingEmbed({
               className="inline-flex items-center gap-2 mt-6 px-8 py-4 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold text-lg transition"
               onClick={() => {
                 // Record join
-                fetch(`/api/video-rooms/${room.id}`, {
+                authFetch(`/api/video-rooms/${room.id}`, {
                   method: "PATCH",
-                  headers: { "Content-Type": "application/json" },
+                  organizationId,
                   body: JSON.stringify({ action: "join", join_method: "link" }),
                 }).catch(() => {});
               }}
@@ -122,12 +123,13 @@ function MeetingEmbed({
 
 interface VideoRoomCardProps {
   room: VideoRoom;
+  organizationId: string;
   onGoLive?: (id: string) => void;
   onEnd?: (id: string) => void;
   compact?: boolean;
 }
 
-export function VideoRoomCard({ room, onGoLive, onEnd, compact = false }: VideoRoomCardProps) {
+export function VideoRoomCard({ room, organizationId, onGoLive, onEnd, compact = false }: VideoRoomCardProps) {
   const isLive = room.status === "live";
   const startTime = room.scheduled_start
     ? new Date(room.scheduled_start).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })

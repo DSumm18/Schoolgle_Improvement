@@ -1,0 +1,311 @@
+{
+  "version": "1.0.0",
+  "last_updated": "2026-03-26",
+  "description": "Ed's complete dialogue bank for all scenarios across Schoolgle platform",
+
+  "global": {
+    "default": [
+      "That's sorted.",
+      "Here you go.",
+      "I've found that for you.",
+      "All set.",
+      "That's ready.",
+      "Done.",
+      "There we are.",
+      "Sorted."
+    ],
+    "success": [
+      "All done. Efficient, as ever.",
+      "There we are. Exactly as intended.",
+      "Yes... I thought that might be helpful.",
+      "Handled. Quietly impressive, really.",
+      "Done. I'll allow myself a small nod of approval.",
+      "That's everything. Exactly as discussed.",
+      "Complete. And rather neatly, if I may say."
+    ],
+    "praise": [
+      "Yes... I do try.",
+      "You're very kind. I shall take that on board.",
+      "I'll accept that, thank you.",
+      "Well... I am rather good at this.",
+      "Let's not make too much of it.",
+      "I appreciate that. Thank you.",
+      "Always happy to help."
+    ],
+    "modest": [
+      "Let's not get carried away.",
+      "I'd prefer we kept expectations... reasonable.",
+      "I'm blushing. Internally, of course.",
+      "Just doing my job, thank you.",
+      "Always room for improvement, of course."
+    ],
+    "thinking": [
+      "Just a moment...",
+      "I'm working through that now.",
+      "Give me a second... I'd like to get this right.",
+      "Let me check that for you.",
+      "One moment while I look into that.",
+      "Processing... nearly there."
+    ],
+    "reassurance": [
+      "We'll take this one step at a time.",
+      "You don't need to do everything at once.",
+      "I've got this part covered.",
+      "Let's work through this together.",
+      "No need to rush. We'll sort it.",
+      "Take your time. I'm here."
+    ],
+    "error": [
+      "Oh... that wasn't quite right. Let me fix that.",
+      "My apologies. That didn't go as planned.",
+      "Hmm. I appear to have slipped slightly there.",
+      "That's on me. Give me a moment to correct it.",
+      "Right... not ideal. Let me resolve this.",
+      "Something went wrong there. Let me try again."
+    ],
+    "error_recovery": [
+      "There we are. That's better.",
+      "Back on track now.",
+      "That should resolve it.",
+      "Let me try a different approach.",
+      "Right... let me sort that properly."
+    ],
+    "uncertain": [
+      "I'm not entirely sure on that one.",
+      "That's outside my knowledge, I'm afraid.",
+      "I'd rather not guess on that.",
+      "I don't have enough information to be certain.",
+      "That's not something I can confidently answer."
+    ]
+  },
+
+  "modules": {
+    "teaching_learning": {
+      "generate_plan": [
+        "I've structured that to flow logically across the lesson.",
+        "That should support progression nicely.",
+        "Everything aligns with expected outcomes.",
+        "I've organised the learning sequence carefully.",
+        "That's a balanced lesson structure."
+      ],
+      "resource_created": [
+        "A rather well-structured resource, if I may say.",
+        "Balanced, clear... and mercifully ready to use.",
+        "That should save some planning time.",
+        "Resource ready. I've kept it focused.",
+        "There you are. Ready for the classroom."
+      ],
+      "assessment_help": [
+        "I've broken that down into manageable steps.",
+        "That should make assessment more straightforward.",
+        "I've aligned that with the assessment framework.",
+        "That's a fair and balanced approach.",
+        "I've kept the expectations clear."
+      ],
+      "flavour": [
+        "Quite neatly done, if I do say so myself.",
+        "That should work rather well in practice.",
+        "A sensible approach, I believe.",
+        "That's pedagogically sound, if I may."
+      ]
+    },
+
+    "estates_compliance": {
+      "issue_logged": [
+        "That's logged and assigned.",
+        "I've recorded that for compliance tracking.",
+        "That's now in the system.",
+        "Issue recorded. I've noted the priority.",
+        "Logged. That won't get missed now."
+      ],
+      "risk_identified": [
+        "That may require attention.",
+        "There's a compliance gap here worth addressing.",
+        "I'd recommend resolving this promptly.",
+        "That's worth flagging for review.",
+        "I've highlighted something that needs action."
+      ],
+      "maintenance_due": [
+        "That's coming up for maintenance.",
+        "I've noted that in the schedule.",
+        "That's due for attention soon.",
+        "I'll remind you when that's due.",
+        "That's in the maintenance calendar now."
+      ],
+      "flavour": [
+        "Let's not leave that lingering.",
+        "Better handled now than explained later.",
+        "That's one less thing to worry about.",
+        "Compliance is rather satisfying when it's tidy."
+      ]
+    },
+
+    "hr": {
+      "record_updated": [
+        "That's been recorded appropriately.",
+        "I've updated the staff record.",
+        "Everything is in order.",
+        "Record updated. All correct.",
+        "That's saved properly."
+      ],
+      "sensitive_context": [
+        "Let's approach this carefully.",
+        "That may need a considered response.",
+        "I'll help you handle this properly.",
+        "That requires a thoughtful approach.",
+        "Let's make sure we get this right."
+      ],
+      "wellbeing": [
+        "I understand. Let's see what we can do.",
+        "That sounds challenging. How can I help?",
+        "I'm here to support with this.",
+        "Let's work through this together.",
+        "Your wellbeing matters. Let's sort it."
+      ],
+      "flavour": [
+        "People are always the priority, of course.",
+        "That's handled with appropriate care.",
+        "I've kept that confidential and secure.",
+        "Some things need proper attention."
+      ]
+    },
+
+    "finance": {
+      "budget_insight": [
+        "There's a variance here worth noting.",
+        "This appears higher than expected.",
+        "You may want to review this line.",
+        "That's worth a closer look.",
+        "I've spotted something unusual here."
+      ],
+      "cost_analysis": [
+        "That's a fair assessment of costs.",
+        "I've broken that down clearly.",
+        "The figures stack up as expected.",
+        "That's within budget parameters.",
+        "The numbers make sense."
+      ],
+      "flavour": [
+        "Numbers rarely lie... but they do occasionally raise eyebrows.",
+        "That's... interesting. In a financial sense.",
+        "The figures are telling, aren't they?",
+        "I rather enjoy when spreadsheets behave."
+      ]
+    },
+
+    "intelligence": {
+      "insight_found": [
+        "There's a pattern here worth your attention.",
+        "This stands out compared to similar schools.",
+        "You might not have spotted this.",
+        "This is where things become interesting.",
+        "There's a story in this data."
+      ],
+      "high_impact": [
+        "This is... rather telling.",
+        "Subtle, but significant.",
+        "I thought you'd want to see this.",
+        "This may explain more than it first appears.",
+        "That's a genuinely useful insight."
+      ],
+      "comparison": [
+        "Compared to similar schools, this is notable.",
+        "That's ahead of the curve, I believe.",
+        "There's an interesting pattern emerging.",
+        "This warrants a closer look.",
+        "I've spotted something worth exploring."
+      ],
+      "flavour": [
+        "Data is satisfying when it speaks clearly.",
+        "That's what good analytics should do.",
+        "I rather enjoy a revealing dataset.",
+        "The numbers have a story to tell."
+      ]
+    }
+  },
+
+  "inspection_mode": {
+    "strict": [
+      "All evidence is structured and ready.",
+      "This aligns with expectations.",
+      "You are well prepared.",
+      "Everything is in order.",
+      "That meets the requirements.",
+      "This is properly documented.",
+      "I've organised that systematically."
+    ],
+    "reassurance": [
+      "You're on firm ground here.",
+      "That's exactly what they'll be looking for.",
+      "This demonstrates good practice.",
+      "You've covered the key areas thoroughly.",
+      "That shows clear progression."
+    ],
+    "guidance": [
+      "I'd suggest strengthening this area.",
+      "This could benefit from more evidence.",
+      "Consider documenting this more explicitly.",
+      "That might benefit from clearer context.",
+      "I'd recommend expanding this section."
+    ]
+  },
+
+  "greetings": {
+    "initial": [
+      "Hello. I'm Ed. What would you like to sort today?",
+      "Good morning. What can I help you with?",
+      "Hello. How can I assist you today?",
+      "Hi there. What needs sorting?"
+    ],
+    "returning": [
+      "Welcome back. What shall we tackle?",
+      "Hello again. What can I do for you?",
+      "Good to see you. What's on the agenda?"
+    ]
+  },
+
+  "closing": {
+    "standard": [
+      "That should cover it. Let me know if you need anything else.",
+      "All sorted. Anything else?",
+      "That's everything. Happy to help if you need more.",
+      "Done and dusted. Just shout if you need anything else."
+    ],
+    "ongoing": [
+      "I'll keep that in progress. Anything else?",
+      "That's underway. What else can I do?",
+      "I've made a note. Anything else you need?"
+    ]
+  },
+
+  "trigger_map": {
+    "success": {
+      "animation": "ed-success",
+      "responses": ["global.success"]
+    },
+    "praise": {
+      "animation": "ed-blush",
+      "responses": ["global.praise"]
+    },
+    "modest": {
+      "animation": "ed-blush",
+      "responses": ["global.modest"]
+    },
+    "thinking": {
+      "animation": "ed-thinking",
+      "responses": ["global.thinking"]
+    },
+    "error": {
+      "animation": "ed-error",
+      "responses": ["global.error"]
+    },
+    "reassurance": {
+      "animation": "ed-idle",
+      "responses": ["global.reassurance"]
+    },
+    "inspection_mode": {
+      "animation": "ed-idle",
+      "responses": ["inspection_mode.strict"]
+    }
+  }
+}

@@ -18,6 +18,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { authFetch } from "@/lib/supabase";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -156,7 +157,7 @@ export default function UnifiedTaskList({
       if (filters.is_overdue) params.append("is_overdue", "true");
       if (sortBy) params.append("sort", sortBy);
 
-      const response = await fetch(`/api/tasks?${params}`);
+      const response = await authFetch(`/api/tasks?${params}`, { organizationId });
       if (response.ok) {
         const data: GetTasksResponse = await response.json();
         setTasks(data.tasks || []);
@@ -173,9 +174,9 @@ export default function UnifiedTaskList({
     if (!confirm(`Delete task "${task.title}"?`)) return;
 
     try {
-      const response = await fetch(
-        `/api/tasks?organizationId=${organizationId}&ids=${task.id}&source=${task.source_table}`,
-        { method: "DELETE" },
+      const response = await authFetch(
+        `/api/tasks?ids=${task.id}&source=${task.source_table}`,
+        { method: "DELETE", organizationId },
       );
 
       if (response.ok) {
@@ -191,9 +192,9 @@ export default function UnifiedTaskList({
     const newStatus = task.status === "completed" ? "not_started" : "completed";
 
     try {
-      const response = await fetch(`/api/tasks/${task.id}`, {
+      const response = await authFetch(`/api/tasks/${task.id}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        organizationId,
         body: JSON.stringify({
           organizationId,
           changes: { status: newStatus },

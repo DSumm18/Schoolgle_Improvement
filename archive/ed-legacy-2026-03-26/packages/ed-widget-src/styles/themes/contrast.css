@@ -1,0 +1,76 @@
+/**
+ * High Contrast Theme - Visual impairment support
+ * Black/yellow for maximum contrast
+ */
+
+.ed-theme-contrast {
+  --ed-primary: #facc15;
+  --ed-primary-dark: #eab308;
+  --ed-primary-light: #fde047;
+  --ed-background: #000000;
+  --ed-surface: rgba(0, 0, 0, 0.98);
+  --ed-surface-light: rgba(30, 30, 30, 0.95);
+  --ed-text: #ffffff;
+  --ed-text-muted: #fef08a;
+  --ed-success: #4ade80;
+  --ed-error: #f87171;
+  --ed-warning: #fbbf24;
+}
+
+.ed-theme-contrast .ed-widget {
+  border: 3px solid var(--ed-primary);
+}
+
+.ed-theme-contrast .ed-trigger-button {
+  background: var(--ed-primary);
+  box-shadow: none;
+  border: 3px solid var(--ed-text);
+}
+
+.ed-theme-contrast .ed-avatar-container {
+  background: radial-gradient(circle at center, rgba(250, 204, 21, 0.2) 0%, transparent 70%);
+}
+
+.ed-theme-contrast .ed-message-bubble {
+  border: 2px solid currentColor;
+}
+
+.ed-theme-contrast .ed-dock-inner {
+  background: rgba(255, 255, 255, 0.15);
+  border: 2px solid var(--ed-primary);
+}
+
+.ed-theme-contrast .ed-dock-item {
+  border: 2px solid transparent;
+}
+
+.ed-theme-contrast .ed-dock-item:hover,
+.ed-theme-contrast .ed-dock-item:focus-visible {
+  border-color: var(--ed-primary);
+}
+
+.ed-theme-contrast .ed-dock-mic {
+  background: var(--ed-primary);
+  border: 3px solid var(--ed-text);
+}
+
+.ed-theme-contrast .ed-text-input {
+  border: 2px solid var(--ed-text-muted);
+}
+
+.ed-theme-contrast .ed-text-input:focus {
+  border-color: var(--ed-primary);
+  box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.4);
+}
+
+/* Increased font size for readability */
+.ed-theme-contrast .ed-message-bubble {
+  font-size: 16px;
+}
+
+.ed-theme-contrast .ed-dock-tooltip {
+  font-size: 13px;
+  font-weight: 600;
+  border: 2px solid var(--ed-primary);
+}
+

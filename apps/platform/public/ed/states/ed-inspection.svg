@@ -1,0 +1,45 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Ed Inspection - Serious mode for Ofsted/inspections -->
+  <defs>
+    <linearGradient id="inspection-body-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#475569"/>
+      <stop offset="100%" style="stop-color:#334155"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Body - slate gray for serious mode -->
+  <ellipse cx="32" cy="42" rx="18" ry="20" fill="url(#inspection-body-gradient)"/>
+
+  <!-- Belly -->
+  <ellipse cx="32" cy="46" rx="12" ry="14" fill="#E2E8F0"/>
+
+  <!-- Head -->
+  <circle cx="32" cy="22" r="16" fill="url(#inspection-body-gradient)"/>
+
+  <!-- Ear tufts -->
+  <path d="M20 12 L16 6 L22 10 Z" fill="url(#inspection-body-gradient)"/>
+  <path d="M44 12 L48 6 L42 10 Z" fill="url(#inspection-body-gradient)"/>
+
+  <!-- Glasses - serious, professional -->
+  <rect x="18" y="16" width="16" height="10" rx="3" fill="none" stroke="#1E293B" stroke-width="1.5"/>
+  <rect x="30" y="16" width="16" height="10" rx="3" fill="none" stroke="#1E293B" stroke-width="1.5"/>
+  <line x1="34" y1="21" x2="30" y2="21" stroke="#1E293B" stroke-width="1.5"/>
+
+  <!-- Eyes behind glasses - focused, alert -->
+  <circle cx="26" cy="21" r="2.5" fill="#1F2937"/>
+  <circle cx="38" cy="21" r="2.5" fill="#1F2937"/>
+
+  <!-- Eye shine -->
+  <circle cx="27" cy="20" r="1" fill="white"/>
+  <circle cx="39" cy="20" r="1" fill="white"/>
+
+  <!-- Beak -->
+  <path d="M30 27 L32 30 L34 27 Z" fill="#64748B"/>
+
+  <!-- Clipboard -->
+  <rect x="44" y="30" width="16" height="20" rx="2" fill="#F1F5F9" stroke="#475569" stroke-width="1.5"/>
+  <rect x="46" y="28" width="12" height="4" rx="1" fill="#475569"/>
+  <line x1="47" y1="36" x2="57" y2="36" stroke="#CBD5E1" stroke-width="1"/>
+  <line x1="47" y1="40" x2="57" y2="40" stroke="#CBD5E1" stroke-width="1"/>
+  <line x1="47" y1="44" x2="53" y2="44" stroke="#CBD5E1" stroke-width="1"/>
+</svg>

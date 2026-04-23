@@ -21,14 +21,15 @@ export const GET = protectedRoute(
     const locationId = params.get("location_id");
     const limit = parseInt(params.get("limit") || "20", 10);
 
+    // Note: Using compliance_evidence table temporarily until compliance_reviews table is created
     let query = supabase
-      .from("compliance_reviews")
+      .from("compliance_evidence")
       .select("*")
       .eq("organization_id", organizationId)
-      .order("review_date", { ascending: false })
+      .order("created_at", { ascending: false })
       .limit(limit);
 
-    if (domain) query = query.eq("compliance_domain", domain);
+    if (domain) query = query.eq("domain", domain);
     if (locationId) query = query.eq("location_id", locationId);
 
     const { data, error } = await query;
