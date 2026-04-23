@@ -2,6 +2,7 @@ export interface ScopedSchool {
   id: string;
   name: string;
   urn: number | null;
+  nurseryPupils?: number;
 }
 
 const IGNORE_WORDS = new Set([

@@ -283,19 +283,21 @@ export function evaluateResearchKpis(
       ),
     );
     const variance = y6c - predicted;
+    // Asymmetric logic: above prediction is always PASS, only fail if significantly below
+    const passed = variance >= -5; // PASS if >= predicted-5pp (within normal range or above)
     kpis.push({
       id: 'demographic-y6-combined',
       name: 'Y6 Combined vs demographic prediction',
       citationId: 'eef-pupil-premium-2024',
-      target: `~${predicted}% (research-predicted for this demographic profile)`,
+      target: `≥${predicted - 5}% (research-predicted minimum for this demographic)`,
       actual: `${y6c}%`,
-      passed: Math.abs(variance) <= 5,
+      passed,
       explanation:
-        Math.abs(variance) <= 5
-          ? "Y6 attainment within 5pp of research-predicted value for this school's demographic profile. Data is consistent with the published evidence base."
+        variance >= -5 && variance <= 5
+          ? `Y6 attainment within 5pp of research-predicted value (${predicted}%) for this demographic profile. On track.`
           : variance > 5
-          ? `Y6 attainment ${variance}pp above prediction. Either exceptional teaching OR over-assessment. Investigate.`
-          : `Y6 attainment ${-variance}pp below prediction. Either genuine under-performance OR conservative assessment practices.`,
+          ? `Y6 attainment ${variance}pp above prediction. Strong performance — exceptional teaching or robust assessment practices.`
+          : `Y6 attainment ${Math.abs(variance)}pp below prediction. Worth investigating whether this reflects genuine under-performance or conservative assessment.`,
     });
   }
 

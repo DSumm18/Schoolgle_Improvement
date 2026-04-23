@@ -89,7 +89,7 @@ import {
 // Context for the abbrev → school lookup. Provided by TrustAssessorPage and
 // consumed by sub-components (TrafficLightGrid, SchoolTab, etc.) that were
 // previously reading the hardcoded TRUST_SCHOOLS module constant.
-type AbbrevLookup = Record<string, { id?: string; name: string; urn: number | null }>;
+type AbbrevLookup = Record<string, { id?: string; name: string; urn: number | null; nurseryPupils?: number }>;
 const AbbrevLookupContext = createContext<AbbrevLookup>({});
 
 const YEAR_GROUPS = ["EYFS", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6"] as const;
@@ -795,7 +795,14 @@ function SchoolDetailCard({ school, parsed }: { school: string; parsed: ParsedSp
         </div>
         <div className="flex items-center gap-4">
           <div className="hidden sm:flex items-center gap-3 text-xs text-gray-500">
-            {totalPupils > 0 && <span className="font-medium text-gray-700">{totalPupils} pupils</span>}
+            {totalPupils > 0 && (
+              <span className="font-medium text-gray-700">
+                {totalPupils + (info?.nurseryPupils ?? 0)} pupils
+                {info?.nurseryPupils && info.nurseryPupils > 0 && (
+                  <span className="text-gray-400 font-normal"> ({info.nurseryPupils} nursery)</span>
+                )}
+              </span>
+            )}
             {fsmPct !== null && <span className="bg-rose-50 text-rose-700 px-2 py-0.5 rounded-full">FSM {fsmPct}%</span>}
             {sendPct !== null && <span className="bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full">SEND {sendPct}%</span>}
             {pipelineJumps.length > 0 && (
@@ -822,9 +829,16 @@ function SchoolDetailCard({ school, parsed }: { school: string; parsed: ParsedSp
               {/* Quick stats row */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="bg-white border border-gray-200 rounded-lg p-3 text-center">
-                  <div className="text-xl font-bold text-gray-900">{totalPupils > 0 ? totalPupils : "—"}</div>
+                  <div className="text-xl font-bold text-gray-900">
+                    {totalPupils > 0 ? totalPupils + (info?.nurseryPupils ?? 0) : "—"}
+                  </div>
                   <div className="text-xs text-gray-500 mt-0.5">Total Pupils</div>
-                  <div className="text-xs text-gray-400">{cohortCount} year groups</div>
+                  <div className="text-xs text-gray-400">
+                    {cohortCount} year groups
+                    {info?.nurseryPupils && info.nurseryPupils > 0 && (
+                      <span className="text-blue-600"> + {info.nurseryPupils} nursery</span>
+                    )}
+                  </div>
                 </div>
                 <div className="bg-white border border-gray-200 rounded-lg p-3 text-center">
                   <div className="text-xl font-bold text-rose-600">{fsmPct !== null ? `${Math.round(fsmPct)}%` : "—"}</div>
@@ -857,14 +871,46 @@ function SchoolDetailCard({ school, parsed }: { school: string; parsed: ParsedSp
               {/* Bar chart */}
               {barData.length > 0 && (
                 <div>
-                  <div className="text-sm font-semibold text-gray-700 mb-2">Combined ARE % by Year Group</div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-sm font-semibold text-gray-700">
+                      {barChartSubject === "combined" ? "Combined ARE" :
+                       barChartSubject === "reading" ? "Reading ARE" :
+                       barChartSubject === "writing" ? "Writing ARE" : "Maths ARE"} % by Year Group
+                    </div>
+                    {/* Subject filter buttons */}
+                    <div className="flex items-center gap-1">
+                      {(["combined", "reading", "writing", "maths"] as const).map((subj) => (
+                        <button
+                          key={subj}
+                          onClick={() => setBarChartSubject(subj)}
+                          className={`text-xs px-2 py-1 rounded font-medium transition-colors ${
+                            barChartSubject === subj
+                              ? "bg-blue-600 text-white"
+                              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                          }`}
+                        >
+                          {subj === "combined" ? "Combined" :
+                           subj.charAt(0).toUpperCase() + subj.slice(1)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                   <ResponsiveContainer width="100%" height={150}>
                     <BarChart data={barData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                       <XAxis dataKey="yg" tick={{ fontSize: 12 }} />
                       <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} />
                       <Tooltip formatter={(val) => [`${val}%`, ""]} contentStyle={{ fontSize: "13px" }} />
-                      <Bar dataKey="combined" name="Combined" fill="#3B82F6" radius={[3, 3, 0, 0]} />
+                      <Bar
+                        dataKey={barChartSubject}
+                        name={barChartSubject === "combined" ? "Combined" :
+                              barChartSubject === "reading" ? "Reading" :
+                              barChartSubject === "writing" ? "Writing" : "Maths"}
+                        fill={barChartSubject === "combined" ? "#3B82F6" :
+                              barChartSubject === "reading" ? "#10B981" :
+                              barChartSubject === "writing" ? "#F59E0B" : "#8B5CF6"}
+                        radius={[3, 3, 0, 0]}
+                      />
                       <ReferenceLine y={65} stroke="#9CA3AF" strokeDasharray="4 4" />
                     </BarChart>
                   </ResponsiveContainer>
@@ -1190,6 +1236,9 @@ function SchoolTab({ school, parsed, dfeData, staffingSnapshots, summaryData, au
   const y6Combined = schoolData["Year 6"]?.all_pupils.c_are ?? null;
   const statAlerts = detectStatisticalImpossibilities(school, schoolData);
 
+  // ── Subject filter state for bar charts ──
+  const [barChartSubject, setBarChartSubject] = useState<"combined" | "reading" | "writing" | "maths">("combined");
+
   // ── Staffing ratio computations ──
   const staffingRow = schoolUrn !== null ? (staffingSnapshots?.[schoolUrn] ?? null) : null;
   const staffingRatios = staffingRow
@@ -1270,8 +1319,10 @@ function SchoolTab({ school, parsed, dfeData, staffingSnapshots, summaryData, au
     const prev = schoolData[HEATMAP_YEAR_GROUPS[i - 1]]?.all_pupils.c_are ?? null;
     const curr = schoolData[HEATMAP_YEAR_GROUPS[i]]?.all_pupils.c_are ?? null;
     if (prev !== null && curr !== null && Math.abs(curr - prev) > 15) {
+      const direction = curr > prev ? 'rises' : 'falls';
+      const change = Math.abs(Math.round(curr - prev));
       pipelineAlerts.push(
-        `${HEATMAP_YEAR_GROUPS[i - 1].replace("Year ", "Y")} → ${HEATMAP_YEAR_GROUPS[i].replace("Year ", "Y")}: Combined jumps from ${prev}% to ${curr}% (${curr > prev ? "+" : ""}${Math.round(curr - prev)}pp)`
+        `${HEATMAP_YEAR_GROUPS[i - 1].replace("Year ", "Y")} → ${HEATMAP_YEAR_GROUPS[i].replace("Year ", "Y")}: Combined ${direction} from ${prev}% to ${curr}% (${curr > prev ? "+" : "-"}${change}pp)`
       );
     }
   }
@@ -2139,6 +2190,16 @@ function SchoolTab({ school, parsed, dfeData, staffingSnapshots, summaryData, au
       <div className="bg-card border border-border rounded-2xl p-8">
         <h3 className="text-xl font-semibold text-foreground mb-1">Research factors checked</h3>
         <p className="text-sm text-muted-foreground mb-6">Each factor cross-references this school&apos;s data against peer-reviewed research. Presented as context for governor discussion, not as conclusions.</p>
+        {m?.ofsted_last && (
+          <div className="mb-6 bg-amber-50 border border-amber-200 rounded-lg p-3">
+            <p className="text-xs text-amber-900">
+              <strong>Ofsted data verification:</strong> The inspection data shown below is from a sample dataset and should be verified against the latest Ofsted records before governor meetings. Please check{' '}
+              <a href={`https://reports.ofsted.gov.uk/search?q=${school}`} target="_blank" rel="noopener noreferrer" className="underline hover:text-amber-700">
+                reports.ofsted.gov.uk
+              </a> for the most recent inspection outcome.
+            </p>
+          </div>
+        )}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {factors.map((factor) => {
             const cfg = statusConfig[factor.status];
@@ -2312,7 +2373,13 @@ function SchoolTab({ school, parsed, dfeData, staffingSnapshots, summaryData, au
                       <div>
                         <div className="flex items-center gap-2 mb-2">
                           <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-muted text-muted-foreground uppercase tracking-wider">{school}</span>
-                          <span className="text-xs text-muted-foreground">{schoolInfo?.nor ?? totalPupils} pupils &middot; {fsmPct !== null ? `${fsmPct}%` : '—'} FSM &middot; {schoolInfo?.ealPct !== undefined ? `${schoolInfo.ealPct}%` : '—'} EAL</span>
+                          <span className="text-xs text-muted-foreground">
+                            {(schoolInfo?.nor ?? totalPupils) + (info?.nurseryPupils ?? 0)} pupils
+                            {info?.nurseryPupils && info.nurseryPupils > 0 && (
+                              <span className="text-blue-600"> ({info.nurseryPupils} nursery)</span>
+                            )}
+                            {' '}&middot; {fsmPct !== null ? `${fsmPct}%` : '—'} FSM &middot; {schoolInfo?.ealPct !== undefined ? `${schoolInfo.ealPct}%` : '—'} EAL
+                          </span>
                         </div>
                         <h2 className="text-2xl font-semibold text-foreground">{abbrevLookup[school]?.name ?? school}</h2>
                         {info?.urn && <p className="text-sm text-muted-foreground mt-0.5">URN {info.urn}</p>}

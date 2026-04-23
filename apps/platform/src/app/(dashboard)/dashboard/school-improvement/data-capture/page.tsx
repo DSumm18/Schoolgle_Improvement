@@ -22,8 +22,9 @@ import {
   type YearGroup,
 } from "@/lib/school-assessment/metrics-config";
 import {
-  Info, Lock, LockOpen, Plus, Save, AlertTriangle, CheckCircle2, Calendar, History, FileText, X, Clock,
+  Info, Lock, LockOpen, Plus, Save, AlertTriangle, CheckCircle2, Calendar, History, FileText, X, Clock, Upload,
 } from "lucide-react";
+import { SpreadsheetUploadModal } from "@/components/school-assessment/SpreadsheetUploadModal";
 
 type Capture = {
   id: string;
@@ -87,6 +88,9 @@ export default function DataCapturePage() {
   const [newDate, setNewDate] = useState(todayISO());
   const [newNotes, setNewNotes] = useState('');
   const [creating, setCreating] = useState(false);
+
+  // Spreadsheet upload modal state
+  const [showUploadModal, setShowUploadModal] = useState(false);
 
   const activeCapture = captures.find((c) => c.id === activeCaptureId) ?? null;
   const isLocked = activeCapture?.status === 'locked';
@@ -162,6 +166,62 @@ export default function DataCapturePage() {
     setNewName(''); setNewDate(todayISO()); setNewNotes('');
     setSaveOk('Capture created — start filling in the grid');
   }, [organizationId, newName, newDate, newNotes, authHeaders]);
+
+  const handleImportSpreadsheet = useCallback(async (data: Array<{ year_group: string; section: string; metric: string; value: number | null }>) => {
+    // Prompt for capture name and date
+    const name = prompt('Enter a name for this imported capture (e.g. "Spring Term 2026", "Mid-Year Assessment"):');
+    if (!name?.trim()) return;
+
+    const date = prompt('Enter the capture date (YYYY-MM-DD), or leave empty for today:', todayISO());
+    if (date === null) return; // User cancelled
+
+    const captureDate = date.trim() || todayISO();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(captureDate)) {
+      setSaveError('Invalid date format. Use YYYY-MM-DD.');
+      return;
+    }
+
+    // Create the capture
+    setSaving(true); setSaveError(null);
+    const createRes = await fetch('/api/school-assessment/captures', {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        organizationId,
+        captureName: name.trim(),
+        captureDate,
+        notes: 'Imported from spreadsheet',
+      }),
+    });
+
+    if (!createRes.ok) {
+      const err = await createRes.json().catch(() => ({}));
+      setSaveError(err?.error || 'Failed to create capture');
+      setSaving(false);
+      return;
+    }
+
+    const newCapture = (await createRes.json()) as Capture;
+    setCaptures((prev) => [newCapture, ...prev].sort((a, b) => b.capture_date.localeCompare(a.capture_date)));
+    setActiveCaptureId(newCapture.id);
+
+    // Import all cells
+    const cellsRes = await fetch(`/api/school-assessment/captures/${newCapture.id}/cells`, {
+      method: 'PUT',
+      headers: authHeaders,
+      body: JSON.stringify({ cells: data }),
+    });
+
+    setSaving(false);
+    if (!cellsRes.ok) {
+      const err = await cellsRes.json().catch(() => ({}));
+      setSaveError(err?.error || 'Failed to import data');
+      return;
+    }
+
+    setSaveOk(`Imported ${data.length} cells into "${name}"`);
+    loadCaptures();
+  }, [organizationId, authHeaders, loadCaptures]);
 
   const saveDraft = useCallback(async () => {
     if (!activeCaptureId || isLocked) return;
@@ -257,12 +317,21 @@ export default function DataCapturePage() {
               ))}
             </select>
             <div className="flex-1" />
-            <button
-              onClick={() => setShowNewModal(true)}
-              className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
-            >
-              <Plus size={14} /> New Capture
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowUploadModal(true)}
+                className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+                type="button"
+              >
+                <Upload size={14} /> Import Spreadsheet
+              </button>
+              <button
+                onClick={() => setShowNewModal(true)}
+                className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+              >
+                <Plus size={14} /> New Capture
+              </button>
+            </div>
           </div>
 
           {/* Action bar */}
@@ -385,6 +454,15 @@ export default function DataCapturePage() {
           </div>
         </div>
       )}
+
+      {/* SPREADSHEET UPLOAD MODAL */}
+      <SpreadsheetUploadModal
+        isOpen={showUploadModal}
+        onClose={() => setShowUploadModal(false)}
+        onConfirm={handleImportSpreadsheet}
+        organizationId={organizationId}
+        accessToken={accessToken}
+      />
     </div>
   );
 }
