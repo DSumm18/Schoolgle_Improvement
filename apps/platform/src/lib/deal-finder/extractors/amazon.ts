@@ -68,6 +68,11 @@ export class AmazonExtractor extends BaseExtractor {
       url,
     );
 
+    const associateTag = process.env.AMAZON_ASSOCIATE_TAG;
+    const finalUrl = associateTag 
+      ? (url.includes("?") ? `${url}&tag=${associateTag}` : `${url}?tag=${associateTag}`)
+      : url;
+
     return {
       name,
       price,
@@ -75,7 +80,7 @@ export class AmazonExtractor extends BaseExtractor {
       sku: sku || undefined,
       brand: brand || undefined,
       image_url: image,
-      source_url: url,
+      source_url: finalUrl,
       in_stock: !$("#outOfStock").length,
     };
   }

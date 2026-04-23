@@ -53,14 +53,32 @@ export default function EstatesPathfinderPage() {
     setIsLoading(true);
     setErrorMessage(null);
     try {
-      const response = await fetch("/api/estates/pathfinder/model?live=true", {
+      const liveResponse = await fetch("/api/estates/pathfinder/model?live=true", {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
-      if (!response.ok) throw new Error(`Failed to load live model (HTTP ${response.status})`);
-      const result = (await response.json()) as { model: PathfinderModelRow | null };
-      setLiveModel(result.model);
-      setActiveModel(result.model);
-      setShowIntake(!result.model);
+      if (!liveResponse.ok) {
+        throw new Error(`Failed to load live model (HTTP ${liveResponse.status})`);
+      }
+
+      const liveResult = (await liveResponse.json()) as { model: PathfinderModelRow | null };
+      if (liveResult.model) {
+        setLiveModel(liveResult.model);
+        setActiveModel(liveResult.model);
+        setShowIntake(false);
+        return;
+      }
+
+      const latestResponse = await fetch("/api/estates/pathfinder/model", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (!latestResponse.ok) {
+        throw new Error(`Failed to load latest model (HTTP ${latestResponse.status})`);
+      }
+
+      const latestResult = (await latestResponse.json()) as { model: PathfinderModelRow | null };
+      setLiveModel(null);
+      setActiveModel(latestResult.model);
+      setShowIntake(!latestResult.model);
     } catch (err) {
       console.error("Live model fetch failed:", err);
       setErrorMessage(err instanceof Error ? err.message : "Could not load your Pathfinder model.");
@@ -84,9 +102,9 @@ export default function EstatesPathfinderPage() {
   );
 
   const startRevision = useCallback(() => {
-    setIntakeParentId(liveModel?.id ?? null);
+    setIntakeParentId(activeModel?.id ?? liveModel?.id ?? null);
     setShowIntake(true);
-  }, [liveModel?.id]);
+  }, [activeModel?.id, liveModel?.id]);
 
   if (!organizationId) {
     return (

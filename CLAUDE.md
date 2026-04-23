@@ -260,217 +260,48 @@ Models configured in `apps/platform/src/lib/ai-evidence-matcher.ts`:
 
 ---
 
-## Recently Built Modules
+## Modules (built + specced)
 
-### Staff Directory (`/dashboard/hr/people`)
+One-line index. Follow the doc link for details — each doc owns its own spec.
 
-- **Purpose**: Manage school staff with round-trip CSV import/export
-- **Features**: Add/edit staff, role assignments, import/export, CSV with embedded instructions
-- **API**: `/api/staff/*` - CRUD, import/export endpoints
-- **Skill**: `staff-directory` - AI can manage staff on user's behalf
+| Module | Route | API | Docs |
+| --- | --- | --- | --- |
+| Staff Directory | `/dashboard/hr/people` | `/api/staff/*` | skill: `staff-directory` |
+| Actions Hub | `/dashboard/actions-hub` | `/api/actions/*` | dual status + EEF backing; skill: `actions-hub` |
+| Estates Compliance | `/estates-compliance` | `/api/estates/*` | `docs/modules/estates-compliance/SUMMARY.md` |
+| Governance Portal | `/dashboard/governance` | `/api/governance/*` | board, governors, meetings, training, policies, visits |
+| Ed Form Helper | (extension) | `/api/ed/form-helper/*`, `/api/form-templates/*` | `docs/ED_FORM_HELPER_SUMMARY.md` |
+| SEND Hub | `/modules/send` | — | `docs/modules/sen-funding/` (specced, not built) |
+| Staff Connectors | (cross-module) | — | `docs/STAFF_CONNECTORS.md` (specced, not built) |
+| Website Builder | `/dashboard/website` | `/api/website/*` | Firecrawl compliance, 15 expert assessors |
+| Intelligence Engine | `/dashboard/intelligence` | `/api/intelligence/*` | `@schoolgle/core-ai` pkg; HMAC-SHA256 pupil pseudonymisation; cohort/EEF/DfE |
+| Trust Assessor | `/dashboard/school-improvement/trust-assessor` | `/api/trust-analysis/*` | `docs/TRUST_ASSESSOR_KNOWLEDGE_BASE.md` |
+| Lesson Studio | `/dashboard/lesson-studio` | `/api/lesson-studio/*` | per-pupil personalisation, NC tagging |
 
-### Actions Hub (`/dashboard/actions-hub`)
-
-- **Purpose**: AI-augmented school improvement with dual status tracking
-- **Features**: Create/update actions, EEF research backing, cost tracking, staff assignment
-- **Dual Status**: User progress (draft→complete) + AI validation (not_met→met)
-- **API**: `/api/actions/*` - CRUD endpoints
-- **Skill**: `actions-hub` - AI can create/suggest actions with EEF strategies
-
-### Estates Compliance (`/estates-compliance`)
-
-- **Purpose**: Statutory compliance tracking with source attribution
-- **Key Differentiator**: Separates statutory requirements from good practice/contractor suggestions
-- **Features**: Asset register, contractor management, task scheduling, helpdesk, budget planning
-- **Estates Evolution (NEW)**: Hierarchical locations, mobile inspections, harmonized AI skills
-- **API**: `/api/estates/*` - Full CRUD for assets, contractors, tasks, helpdesk
-- **Skills**: `estates-supervisor`, `compliance-legionella`
-- **Documentation**: See `docs/modules/estates-compliance/SUMMARY.md` for complete details
-
-### Governance Portal (`/dashboard/governance`)
-
-- **Purpose**: Governor portal with board meetings, training tracking, policy management
-- **Features**: Governor directory, meeting scheduling, visit tracking, training matrix
-- **API**: `/api/governance/*` - Board, governors, meetings, training, policies, visits
-
-### Ed Form Helper (NEW - ~80% Complete)
-
-- **Purpose**: AI-powered form filling assistant with voice intelligence for non-English speakers
-- **Key Features**: Multi-language voice input (17 languages), privacy-first design, adaptive UX based on user experience
-- **Components**:
-  - Backend skills: `apps/platform/src/lib/skills/form-helper*.ts`
-  - API endpoints: `/api/ed/form-helper/*`, `/api/form-templates/*`
-  - Browser automation: `packages/ed-extension/src/content/automation/`
-  - UI components: `apps/platform/src/components/form-helper/`
-- **AI Models**: Qwen 2.5 VL 72B (form detection), Gemini 2.0 Flash Lite (translation), Web Speech API (voice)
-- **Database Schema**: `form_templates`, `form_template_fields`, `form_template_values`, `form_helper_sessions`
-- **Privacy Guarantees**: Zero data retention, anonymous analytics only, no password/credit card forms
-- **Documentation**: `docs/ED_FORM_HELPER_SUMMARY.md` - Complete implementation guide
-- **Status**: Ready for integration testing and extension build
-
-### SEND Hub (`/modules/send`) — Specced, Not Yet Built
-
-- **Purpose**: Complete SEND management — SEN register, EHCP lifecycle, funding tracking, evidence packs, provision mapping
-- **Key Features**: LA funding reconciliation (Element 1/2/3), EHCP annual review workflow, graduated approach (APDR) documentation, tribunal-ready evidence bundles
-- **Cross-Module Integration**: Finance (CFR I03/E03), HR (staff allocation + payroll costing), Meetings (5 SEND templates), Governance (governor SEND report), Estates (accessibility), Intelligence (pupil assessment gaps)
-- **Documentation**: `docs/modules/sen-funding/` — PRODUCT_SPEC.md, CROSS_MODULE_INTEGRATION.md, EVIDENCE_ECOSYSTEM.md, RESEARCH.md
-- **Database**: `send_register`, `send_funding_allocations`, `send_provision_costs`, `send_evidence_files`, `send_review_history`
-- **Status**: Fully specced, awaiting implementation
-
-### Staff Connectors (Cross-Module) — Specced, Not Yet Built
-
-- **Purpose**: Responsibility engine — tracks who holds which roles/duties, auto-generates tasks, monitors training/ratios, manages handover when staff leave
-- **Two Types**: Statutory (platform-defined, ~20 types: DSL, SENCO, Fire Marshal, First Aider, etc.) and Custom (school-defined: subject leads, key holders, contract managers, etc.)
-- **Key Features**: Active task generation from connector definitions, training expiry monitoring, ratio compliance (e.g. 1:100 first aiders), leaving staff impact analysis with one-click transfer
-- **Cross-Module Surfacing**: Lives on staff profiles in HR; surfaces in Estates (fire marshals), SEND (SENCO), Compliance (statutory roles), Governance (governor link roles), Meetings (auto-invite)
-- **Homepage Integration**: Each staff member sees "Your Responsibilities" dashboard with all tasks from all connectors
-- **Ed AI Skills**: 6 new skills — list_my_connectors, get_connector_holder, check_compliance, get_leaving_impact, get_overdue_tasks, schedule_task
-- **Database**: `connector_types`, `staff_connectors`, `connector_tasks`, `connector_change_log`, `contract_connector_links`
-- **Documentation**: `docs/STAFF_CONNECTORS.md` — Full specification with data model, UI designs, implementation phases
-- **Status**: Fully specced, awaiting implementation
-
-### School Website Builder (`/dashboard/website`)
-
-- **Purpose**: Design, build, and publish school websites with AI-powered compliance checking
-- **Features**: Logo-driven colour extraction, 10 style presets, 20 hero masks, 10 Google font pairings, 28 content block types, static HTML generation, Firecrawl-powered compliance scanning
-- **6-Layer Design System**: Layout, Shape Language, Colour, Typography, Motion, Imagery — each independently customisable
-- **Dashboard Pages**:
-  - `/dashboard/website` — Main dashboard with publish/preview/stats
-  - `/dashboard/website/pages` — Page management with inline editor
-  - `/dashboard/website/design` — Design Studio with setup wizard
-  - `/dashboard/website/news` — News & blog post management
-  - `/dashboard/website/media` — Media library (images, documents)
-  - `/dashboard/website/compliance` — DfE statutory website compliance checker (Firecrawl + AI)
-- **API**: `/api/website/*` — CRUD for websites, pages, posts, navigation, publish, serve
-- **Libraries**:
-  - `website-builder/` — types, colour-extractor, palette-generator, hero-masks, font-pairings, presets, static-generator, content-types
-  - `website-compliance/` — requirements (35+ DfE), assessor (2-phase), 15 expert assessors
-  - `firecrawl-crawler.ts` — Firecrawl API wrapper with Playwright fallback (`smartCrawlWebsite`)
-  - `website-crawler.ts` — Playwright-based crawler (fallback)
-- **Database**: `school_websites`, `website_pages`, `website_posts`, `website_navigation`, `website_published_versions`, `website_media`, `website_domains`, `website_compliance_scans`
-- **Marketing Page**: `/school-websites` — standalone landing page with pricing
-- **Components**: `components/website-builder/` — WebsiteBuilderDashboard, PageEditor, SetupWizard
-
-### School Intelligence Engine (built March 2026)
-
-- **Purpose**: Cross-references ALL data sources (DfE warehouse, contextual factors, cross-module signals from HR/Estates/Compliance/Governance) with EEF research to produce cohort-aware, research-backed analysis
-- **Core Engine**: `@schoolgle/core-ai` Turborepo package (moved from `apps/platform/src/lib/school-intelligence-engine.ts` for strict decoupling).
-- **Key Capabilities**:
-  - **Cohort Tracking**: Traces year groups backwards using `cohort_reception_year = academic_year - year_group`, auto-detects COVID lockdown impact
-  - **DfE Data Trends**: Multi-year attendance, census, KS2, workforce, exclusions (KS2 filter: `breakdown_topic = 'All pupils'`)
-  - **Cross-Module Signals**: Alerts from Estates, Compliance, HR, Governance modules
-  - **EEF Strategy Matching**: 33 strategies ranked by `impact × evidence`, matched to gaps by keyword
-  - **Full Analysis**: Sends all data to DeepSeek for AI pattern detection, stored in `school_intelligence_analyses`
-  - **Inspection Context**: `buildInspectionContext()` feeds demographics + factors into AI Ofsted inspector
-- **Pupil Assessment Analysis** (GDPR-safe zero-knowledge):
-  - `pupil-pseudonymiser.ts` — Client-side HMAC-SHA256 hashing, MIS detection (Arbor, SIMS, Bromcom, etc.)
-  - `pupil-assessment-analyser.ts` — Server-side gap analysis (FSM/SEND/gender/PP), teacher accuracy checking, EEF recommendations
-  - `PupilAssessmentUploader.tsx` — Drag-and-drop CSV uploader, real-name preview (browser only), auto-pseudonymisation
-  - **Privacy**: Server NEVER sees pupil names. HMAC-SHA256 with school-local salt in localStorage.
-- **Database**: `school_cohorts`, `school_contextual_factors`, `school_cohort_outcomes`, `school_intelligence_analyses`, `school_assessment_imports`, `pupil_assessments_pseudo`, `pupil_analysis_insights`
-- **Views**: `cohort_journey_ks2`, `cohort_journey_attendance`
-- **API**: `/api/intelligence`, `/api/intelligence/contextual-factors`, `/api/intelligence/cohort-outcomes`, `/api/intelligence/pupil-assessments`
-- **Migrations**: `20260309_school_intelligence_engine.sql`, `20260309_pupil_assessment_analysis.sql`
-- **DfE Warehouse**: `attendance` (184K), `census` (146K), `ks2_results` (1M+), `workforce` (164K), `exclusions` (1.1M)
+Intelligence Engine key facts: KS2 filter `breakdown_topic = 'All pupils'`; cohort formula `cohort_reception_year = academic_year - year_group`; server NEVER sees pupil names.
 
 ---
 
 ## Ed AI Chatbot Architecture
 
-Ed is the school's AI assistant — a multi-specialist chatbot with domain expertise, function calling, and proactive intelligence.
+Ed = multi-specialist chatbot in `packages/ed-agents/` (aliased `@schoolgle/ed-agents`).
 
-### ⚠️ IMPORTANT: April 2026 AI Architecture Migration / Legacy Code Removal
-**For the attention of Claude Code / Future Agents:**
-A massive amount of legacy AI interaction code was systematically eradicated from the codebase in April 2026. If you notice large chunks of code missing from older Ofsted-readiness AI evaluation routing or direct prompts, here is why:
-1. **Model Consolidation:** We aggressively removed fragmented `DeepSeek` direct-API calls that were scattered across random utilities. All LLM inferences have been centralized behind `OpenRouter` in `@schoolgle/ed-agents` (`ai-openrouter.ts` / `orchestrator.ts`) to ensure enterprise-grade rate limiting and cost control.
-2. **Zero-Trust Data Governance:** The old AI evaluation scripts (like the Ofsted readiness scanner) were bypassing the PII scrubbing firewall. We eradicated this legacy code to forcefully route **all** AI requests through the new `SchoolDataGuardian` middleware. This ensures that no raw database text is ever passed directly to an LLM without being systematically tokenized and cleansed of student PII first.
-3. **Do NOT rebuild legacy AI shortcuts:** All new AI features must be built as formal "Skills" in the `ed-agents` package or funnel through the strict `routeToSpecialist` pipeline.
+**Pipeline:** User → Intent Classifier → Agent Router → Specialist → `SchoolDataGuardian` (PII scrub) → OpenRouter LLM → Guardrails → Response. Skills call `/api/skills/invoke`.
 
-### Architecture
+**Key files in `packages/ed-agents/src/`:**
+- `orchestrator/` — orchestrator, agent-router, intent-classifier, context-loader
+- `agents/agents.ts` — 14 specialist registry; prompts in `agents/prompts/`
+- `models/` — OpenRouter only (no direct provider calls)
+- `guardrails/pipeline.ts` — response safety
+- `credit/manager.ts` — token/cost tracking
 
-```
-User Message → Intent Classifier → Agent Router → Specialist Agent → School Data Guardian (PII Bouncer) → LLM (OpenRouter) → Guardrails → Response
-                                         ↓                               ↓
-                                   Context Loader                  Skills (Function Calling)
-                                   (School + Intelligence)         via /api/skills/invoke
-```
+**Zero-trust rule (April 2026 migration):** ALL LLM calls route through OpenRouter AND `SchoolDataGuardian`. Never add direct provider SDK calls or bypass PII scrub. New AI features = formal Skills in `ed-agents` or go through `routeToSpecialist`.
 
-### Core Package: `packages/ed-agents/src/`
+**14 specialists + feature access by plan + full skill list:** see `docs/AGENT_DEFINITIONS.md` (single source of truth — update that file when changing any agent).
 
-- **Orchestrator**: `orchestrator/orchestrator.ts` — Main `EdOrchestrator` class, coordinates all processing
-- **Agent Router**: `orchestrator/agent-router.ts` — Routes to specialist, manages LLM calls + tool execution
-- **Intent Classifier**: `orchestrator/intent-classifier.ts` — Keyword scoring per domain, form detection, work-focus check
-- **Context Loader**: `orchestrator/context-loader.ts` — School context, expert knowledge injection, proactive alerts, intelligence data
-- **Agents Registry**: `agents/agents.ts` — 14 specialist definitions + domain keywords (see `docs/AGENT_DEFINITIONS.md`)
-- **Skills Agent**: `agents/skills-agent.ts` — LLM function-calling bridge to `/api/skills/invoke`
-- **Models**: `models/` — OpenRouter integration, model selection by task type
-- **Guardrails**: `guardrails/pipeline.ts` — Response safety checks
-- **Perspectives**: `perspectives/generator.ts` — Multi-perspective for complex decisions
-- **Communications**: `communication/` — Email (Resend), SMS (Twilio), TTS (Fish Audio)
-- **Credit Manager**: `credit/manager.ts` — Token/cost tracking per session
+**API:** `/api/ed/chat`, `/api/ed/knowledge`, `/api/ed/analytics`, `/api/ed/embed`, `/api/ed/website-chat`, `/api/skills/invoke` (POST invoke, GET discovery).
 
-### 14 Specialist Agents
-
-> Full details with qualifications and prompt files: `docs/AGENT_DEFINITIONS.md`
-
-| Agent                       | Domain           | Expertise                                                                    |
-| --------------------------- | ---------------- | ---------------------------------------------------------------------------- |
-| Estates Specialist          | `estates`        | RIDDOR, fire, asbestos, legionella, electrical, contractors                  |
-| HR Specialist               | `hr`             | Sickness, contracts, maternity, performance, disciplinary                    |
-| SEND Specialist             | `send`           | EHCP, graduated approach, annual reviews, funding                            |
-| Data Specialist             | `data`           | Census returns, CLLA, attendance codes, GDPR                                 |
-| Curriculum Specialist       | `curriculum`     | Ofsted deep dives, pedagogy, key stage transitions                           |
-| IT Tech Specialist          | `it-tech`        | Networks, Google/Microsoft admin, SIMS/Arbor, Chromebooks                    |
-| Procurement Specialist      | `procurement`    | Frameworks, tendering, value for money (Trusts plan)                         |
-| Governance Specialist       | `governance`     | Board responsibilities, trustee recruitment (Trusts plan)                    |
-| Communications Specialist   | `communications` | Parent/staff comms, media, crisis communication                              |
-| Form Specialist             | `form`           | Form filling, wording suggestions, red flags, RIDDOR help                    |
-| **Intelligence Specialist** | `intelligence`   | Cohort tracking, attainment gaps, EEF research, teacher accuracy, DfE trends |
-| **Risk Specialist**         | `risk`           | Risk registers, 5x5 scoring, 4T framework, ATH 2025, ISO 31000             |
-| **Canvas Specialist**       | `canvas`         | Smart data ingestion, MIS detection, field matching, reconciliation          |
-| Ed General                  | `general`        | Routing, platform guidance, general support                                  |
-
-### Intelligence Specialist (NEW)
-
-Ed's intelligence specialist has full access to:
-
-- **6 callable skills**: `run_intelligence_analysis`, `get_cohort_journey`, `get_assessment_insights`, `get_contextual_factors`, `get_dfe_trends`, `get_cross_module_signals`
-- **Proactive context**: When user is on intelligence pages, Ed automatically loads latest analysis, critical insights, active contextual factors, and assessment import status
-- **60+ routing keywords**: cohort, attainment gap, EEF, progress, teacher assessment, scaled score, intervention, KS2, etc.
-- **Zero-PII guarantee**: Ed discusses cohort patterns but never individual pupils by name (HMAC-SHA256 pseudonymised)
-
-### Skill Categories Available to Ed (43+ functions)
-
-- **Staff Directory** (6): create/update/list/export/import/deactivate staff
-- **Actions Hub** (6): create/update/list actions, stats, EEF strategies, notes
-- **Estates & Compliance** (8): helpdesk tickets, contractors, compliance tasks, knowledge base, document extraction, spatial analysis
-- **Estates Spatial** (6): floor plans, asset locations, QR scans, energy readings
-- **Intelligence & Data** (6): full analysis, cohort journey, assessment insights, contextual factors, DfE trends, cross-module signals
-- **Risk Register** (6): risk CRUD, heatmap, mitigations, decisions, score recalc
-- **Document Production** (7): list_document_templates, generate_document, list_generated_documents, get_document, send_document, generate_newsletter
-- **Form Helper** (6): detect forms, start session, field questions, verify responses, change requests, field summary
-
-### Feature Access by Plan
-
-| Plan    | Domains Available                  |
-| ------- | ---------------------------------- |
-| Free    | general, it-tech                   |
-| Schools | All except procurement, governance |
-| Trusts  | All domains                        |
-
-### API Endpoints
-
-- **Chat**: `POST /api/ed/chat` — Main chat endpoint
-- **Knowledge**: `GET/POST/PATCH /api/ed/knowledge` — Self-improving knowledge base
-- **Analytics**: `GET /api/ed/analytics` — Usage analytics
-- **Embed**: `GET /api/ed/embed?key=<key>` — Website embed JS loader
-- **Website Chat**: `POST /api/ed/website-chat` — Public chat for embedded widget
-- **Skills**: `POST /api/skills/invoke` — Unified skill execution
-- **Skills Discovery**: `GET /api/skills/invoke` — List all available functions + categories
-
-### All Agent Definitions
-
-For a complete index of **every agent** in the repo (Claude Code dev agents, VECTOR review agent, 14 Ed specialists, core-AI personas), see **`docs/AGENT_DEFINITIONS.md`** — the single source of truth. Update that file when adding or modifying any agent.
+**Zero-PII guarantee for Intelligence specialist:** cohort patterns only, never individual pupils by name (HMAC-SHA256 pseudonymised).
 
 ---
 
@@ -505,97 +336,24 @@ FIRECRAWL_API_KEY=
 
 ## Testing
 
-- **Vitest** for unit/integration tests (config: `vitest.config.ts`)
-- **Playwright** for form-fill E2E tests (`packages/form-fill-lab/`)
+- **Vitest** for unit/integration tests (`vitest.config.ts`, jsdom, `@` → `src/`)
+- **Playwright** for form-fill E2E (`packages/form-fill-lab/`)
 - Test files: `*.test.ts` or `*.spec.ts`
-- Tests run in jsdom environment with `@` alias for `src/`
-
-### Integration Test Gate (Mandatory for External AI Models)
-
-Any task that integrates an external AI model or API (Gemini, OpenRouter, Fish Audio, Firecrawl, etc.) is NOT COMPLETE until ALL of the following are met:
-
-1. **Real API call made** — with representative, realistic input data (not mocks)
-2. **Output evaluated for accuracy** — does the model return correct, useful results?
-3. **Evidence saved** — JSON dump or screenshot of real results saved to `/tmp/` or Supabase storage
-4. **Sandra test** — honest assessment: would a school business manager find this output useful? If no, the task is NOT done.
-5. **UI verified** — if there's a user-facing page, it must be loaded in a browser with real data and screenshotted
-
-Mocked unit tests are necessary but NOT sufficient. They prove code structure, not product value.
+- Integration Test Gate for external AI/API models: see MANDATORY Quality Rules above
 
 ---
 
-## Key Features by Directory
+## Skills System
 
-### Marketing/Landing Pages
+- Definitions: `.agent/skills/<name>/SKILL.md` — register in `.agent/skills/INDEX.md`
+- Schemas/handlers: `apps/platform/src/lib/skills/` — registry at `school-skills-registry.ts` (STAFF 6, ACTIONS 6, ESTATES 8, ESTATES_SPATIAL 6, INTELLIGENCE 6, RISK 6, DOCUMENT 7)
+- API: `POST /api/skills/invoke` (execute), `GET /api/skills/invoke` (discover)
+- Docs: `docs/SKILLS_SYSTEM.md`
+- **Adding a new skill:** create SKILL.md → add to INDEX.md → schemas in `src/lib/skills/` → API route → test via invoke endpoint
 
-- `apps/platform/src/app/page.tsx` - Homepage
-- `apps/platform/src/components/landing/` - Landing page components
-- `apps/platform/src/components/website/` - Website components
+Skills Lab (prototyping sandbox): `skills-lab/` — knowledge bases, TS prototypes, example conversations.
 
-### Dashboard Application
-
-- `apps/platform/src/app/(dashboard)/` - Dashboard pages (using route groups)
-- `apps/platform/src/app/(marketing)/` - Marketing/landing pages
-- `apps/platform/src/app/(auth)/` - Authentication pages
-- Evidence management, Ofsted/SIAMS framework views, action tracking
-
-### Evidence System
-
-- `apps/platform/src/lib/evidence/` - Evidence types and utilities
-- `apps/platform/src/components/evidence/` - Evidence UI components
-
-### Pack System
-
-- `apps/platform/src/lib/packs/` - Pack types and utilities
-- `apps/platform/src/components/packs/` - Pack UI components
-
-### Skills System (AI Assistant)
-
-- `.agent/skills/` - Skill definitions for AI assistant (SKILL.md files)
-- `apps/platform/src/lib/skills/` - Function schemas and handlers
-- `docs/SKILLS_SYSTEM.md` - Complete skills documentation
-- **API**: `POST /api/skills/invoke` - Unified skill execution endpoint
-- **Discovery**: `GET /api/skills/invoke` - List all available functions
-- **Categories**: School Management, Governance & Compliance, Estates & Facilities, Research & Analysis, Intelligence & Data, Document Production
-- **Current Skills**: staff-directory, actions-hub, estates-supervisor, compliance-legionella, deep-research, guardian-privacy, ed-form-helper, school-intelligence, document-production
-- **Function Registry**: `apps/platform/src/lib/skills/school-skills-registry.ts` — 7 schema groups: STAFF (6), ACTIONS (6), ESTATES (8), ESTATES_SPATIAL (6), INTELLIGENCE (6), RISK (6), DOCUMENT (7)
-
-**Adding a New Skill**:
-
-1. Create skill directory: `.agent/skills/your-skill/`
-2. Create `SKILL.md` with frontmatter (name, description, category, triggers)
-3. Register in `.agent/skills/INDEX.md`
-4. Add function schemas in `apps/platform/src/lib/skills/`
-5. Implement API endpoints in `apps/platform/src/app/api/`
-6. Test with the skills invoke endpoint
-
-### Skills Lab
-
-- `skills-lab/` - Knowledge-based skills system
-- `skills-lab/knowledge/` - MD knowledge bases for skills
-- `skills-lab/skills/` - TypeScript skill prototypes
-- `skills-lab/examples/` - Conversation examples for training
-
-### Module System
-
-- `apps/platform/src/lib/modules/registry.ts` - Module and app definitions
-- Modules are organizational units (e.g., governance, improvement, estates, hr)
-- Apps are specific features within modules (e.g., ofsted-readiness, staff-directory, estates-audit)
-- Each module has an accent color and icon for visual consistency
-- Access control based on user roles (admin, headteacher, slt, teacher, governor, caretaker, viewer)
-
----
-
-## Git Repository Notes
-
-- Main branch: `main`
-- Current branch: `feature/estates-evolution` (as of session start)
-- Recent commits:
-  - `feat(ed): implement Ed Form Helper with voice intelligence and learning mode`
-  - `feat(estates): implement Estates Evolution - hierarchical locations, mobile inspections, and harmonized AI skills`
-  - `chore: add additional Radix UI primitives for component library`
-- Design: Antigravity-style redesign with planet logo and interactive effects
-- Untracked files in `apps/platform/src/app/api/drive/`, `/api/ofsted/` - Google Drive/Ofsted integration in progress
+Module registry: `apps/platform/src/lib/modules/registry.ts` (defines modules, apps, role-based access).
 
 ---
 
@@ -661,72 +419,11 @@ The API is organized by domain under `apps/platform/src/app/api/`:
 
 ---
 
-## NotebookLM Integration (tools/notebooklm/)
+## NotebookLM Integration
 
-Google NotebookLM automation for research and content generation.
+Internal tooling only (training podcasts, research, newsletter content) — **NOT for production Schoolgle features**. Uses undocumented Google APIs; dedicated account, not primary. 2s delays between batch ops.
 
-- `notebooklm-py` is installed for CLI access to Google NotebookLM
-- Claude Code skill is installed for natural language operations (`/notebooklm` or ask Claude to "create a podcast about X")
-- **Use for**: training podcasts, newsletter content, research, product documentation
-- **NOT for production Schoolgle features** — internal tooling only
-- Uses undocumented Google APIs — use a dedicated Google account, not primary
-- Always add 2s delays between batch operations
-
-**Setup:**
-```bash
-# Install CLI
-python -m pip install notebooklm-py[browser] yt-dlp
-
-# Authenticate (one-time — if auth fails, run: notebooklm login)
-python -m notebooklm login
-```
-
-**Scripts:**
-| Script | Purpose |
-|--------|---------|
-| `youtube_fetcher.py` | Auto-fetch latest videos from AI YouTubers |
-| `scheduler.py` | Run scheduled tasks (fetch, status, list) |
-
-**Notebooks:**
-| Notebook | ID | Purpose |
-|----------|-----|---------|
-| AI News - YouTube Sources | `9be1115e` | 61 videos from AI/tech channels |
-| Education Research | `f3db1de5` | EEF early years evidence |
-
-**Key Commands:**
-```bash
-# Check notebook status
-python tools/notebooklm/scheduler.py status
-
-# List all notebooks
-python tools/notebooklm/scheduler.py list-notebooks
-
-# Manual YouTube fetch
-python tools/notebooklm/youtube_fetcher.py
-
-# Schedule daily fetch
-/schedule "0 9 * * *" python tools/notebooklm/scheduler.py fetch-youtube
-```
-
-**Common Workflows:**
-```bash
-# Create a training podcast
-notebooklm create "Topic Name"
-notebooklm use <notebook_id>
-notebooklm source add "./document.pdf"
-notebooklm generate audio "Focus prompt here" --wait
-notebooklm download audio ./output.mp3
-
-# Research from web sources
-notebooklm source add "https://example.com/article"
-notebooklm source add-research "search query"
-notebooklm ask "Your question here"
-
-# Generate visual content
-notebooklm generate infographic --wait
-notebooklm generate mind-map --wait
-notebooklm download infographic ./output.png
-```
+See `tools/notebooklm/README.md` for setup, scripts (`youtube_fetcher.py`, `scheduler.py`), notebook IDs, and workflows. Claude Code skill: `/notebooklm`.
 
 ---
 
@@ -765,33 +462,9 @@ notebooklm download infographic ./output.png
 
 ---
 
-## Development Patterns & Conventions
+## Schoolgle-Specific Conventions
 
-### File Organization
-
-- **Route groups**: Use `(dashboard)`, `(marketing)`, `(auth)` for logical organization without affecting URL structure
-- **API routes**: Organized by domain under `/api/{domain}/*` (e.g., `/api/staff/*`, `/api/estates/*`)
-- **Components**: Organized by feature/domain in `src/components/{domain}/`
-- **Libraries**: Core business logic in `src/lib/`, organized by domain
-
-### Component Patterns
-
-- **Server Components**: Default for all pages (Next.js 16)
-- **Client Components**: Mark with `"use client"` directive only when needed (interactivity, hooks, browser APIs)
-- **UI Primitives**: Prefer Radix UI over browser native elements for accessibility
-- **Styling**: Use Tailwind CSS with class-variance-authority for component variants
-- **Icons**: Use Lucide React consistently
-
-### State Management
-
-- **Server State**: Use React Server Components and Server Actions
-- **Client State**: Use React Context API for global state (auth, theme)
-- **Form State**: Use React Hook Form or native FormData with Server Actions
-- **Remote State**: Use SWR for data fetching (already in dependencies)
-
-### API Route Auth Pattern
-
-All API routes must use the `protectedRoute` wrapper (unless intentionally public):
+**API Route Auth** — all routes must use `protectedRoute` wrapper unless intentionally public:
 
 ```typescript
 import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
@@ -804,39 +477,15 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
 });
 ```
 
-- For `[id]` routes: extract ID from `req.nextUrl.pathname` (protectedRoute doesn't pass params)
+- For `[id]` routes: extract ID from `req.nextUrl.pathname` (wrapper doesn't pass params)
 - Intentionally public: webhooks, OAuth callbacks, DfE lookups, survey submissions, ed embed/website-chat
-- ~95% of routes (310+/325) now use this pattern
+- Coverage: ~95% of routes (310+/325)
 
-### Database Patterns
+**Layout** — route groups `(dashboard)/`, `(marketing)/`, `(auth)/`. API by domain `/api/{domain}/*`. Components in `src/components/{domain}/`, business logic in `src/lib/`.
 
-- **Supabase Client**: Use `@supabase/ssr` for server-side, `@supabase/supabase-js` for client-side
-- **Row Level Security (RLS)**: Enable for all tables, use organization-based access control
-- **Migrations**: Store in `apps/platform/supabase/migrations/` with timestamp prefix
-- **Type Safety**: Generate TypeScript types from Supabase schema
+**Stack** — Next.js 16 Server Components by default (mark `"use client"` only when needed). Radix UI + Tailwind + class-variance-authority + Lucide. SWR for remote state. Supabase `@supabase/ssr` server-side, `@supabase/supabase-js` client-side. RLS enabled on every table with org-based policies. Migrations timestamp-prefixed.
 
-### AI Integration Patterns
-
-- **OpenRouter**: Primary AI model provider (multi-model support)
-- **Model Selection**: Choose based on cost vs quality tradeoffs (see AI Model Stack section)
-- **Function Calling**: Use structured schemas in `src/lib/skills/` for AI skill execution
-- **Error Handling**: Always implement fallback logic for AI model failures
-- **Cost Monitoring**: Track token usage and costs, especially for DeepSeek V3
-
-### Testing Strategy
-
-- **Unit Tests**: Vitest with jsdom environment, test files co-located with source
-- **Integration Tests**: API route tests using Vitest
-- **E2E Tests**: Playwright for form filling and user workflows
-- **Test Naming**: Use `*.test.ts` or `*.test.tsx` suffix
-- **Coverage**: Run with `npm run test:coverage`
-
-### Git Workflow
-
-- **Feature Branches**: Use `feature/` prefix for new features
-- **Commit Messages**: Conventional Commits format (feat:, fix:, chore:, docs:)
-- **Pull Requests**: Required before merging to main
-- **Code Review**: At least one approval required
+**Git** — `feature/` branches, Conventional Commits, PR required before main merge.
 
 ---
 
@@ -864,50 +513,7 @@ All marketing docs live in `docs/marketing/`:
 
 ---
 
-## Quick Reference
-
-### Common Development Tasks
-
-**Create a new API route**:
-
-```bash
-# Create file at apps/platform/src/app/api/your-domain/route.ts
-# Export async function GET/POST/PUT/DELETE handlers
-```
-
-**Create a new page**:
-
-```bash
-# For dashboard: apps/platform/src/app/(dashboard)/your-page/page.tsx
-# For marketing: apps/platform/src/app/(marketing)/your-page/page.tsx
-```
-
-**Add a new AI skill**:
-
-```bash
-# 1. Create .agent/skills/your-skill/SKILL.md
-# 2. Add to .agent/skills/INDEX.md
-# 3. Add schemas to apps/platform/src/lib/skills/
-# 4. Create API endpoints
-```
-
-**Run database migration**:
-
-```bash
-# Create migration file in apps/platform/supabase/migrations/
-# Run: supabase db push
-# Or manually execute in Supabase dashboard
-```
-
-**Add a new module/app**:
-
-```bash
-# Update apps/platform/src/lib/modules/registry.ts
-# Add module definition with accent color and icon
-# Add app definition with access control
-```
-
-### Useful File Paths
+## Useful File Paths
 
 | Purpose               | Path                                                    |
 | --------------------- | ------------------------------------------------------- |

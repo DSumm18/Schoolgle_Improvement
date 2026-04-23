@@ -31,6 +31,12 @@ export const PATCH = protectedRoute(
       wallSide: typeof body.wallSide === "string" ? body.wallSide : undefined,
       locationScope: body.siteFeatureId ? "site" : "building",
       confidence: typeof body.confidence === "number" ? body.confidence : 0.9,
+      status:
+        typeof body.status === "string"
+          ? body.status
+          : body.roomId || body.siteFeatureId || (typeof body.x === "number" && typeof body.y === "number")
+            ? "mapped"
+            : "needs_position",
       updatedAt: new Date().toISOString(),
       updatedBy: auth.userId,
     };
@@ -48,4 +54,3 @@ export const PATCH = protectedRoute(
   },
   { requiredRole: "caretaker" },
 );
-

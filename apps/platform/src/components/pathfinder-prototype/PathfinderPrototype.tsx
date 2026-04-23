@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { Canvas } from "@react-three/fiber";
 import { Edges, Html, Line, OrbitControls } from "@react-three/drei";
@@ -204,6 +204,21 @@ function polygonFromBounds(bounds: PathfinderRoomDraft["bounds"]): PathfinderRoo
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
+}
+
+function pointInPolygon(point: PathfinderPoint, polygon: PathfinderPoint[]): boolean {
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i]?.x ?? 0;
+    const yi = polygon[i]?.y ?? 0;
+    const xj = polygon[j]?.x ?? 0;
+    const yj = polygon[j]?.y ?? 0;
+    const intersects =
+      yi > point.y !== yj > point.y &&
+      point.x < ((xj - xi) * (point.y - yi)) / ((yj - yi) || 1e-6) + xi;
+    if (intersects) inside = !inside;
+  }
+  return inside;
 }
 
 function toScene(room: PathfinderRoomDraft, image: PathfinderExtractionResult["image"]) {
@@ -1493,6 +1508,25 @@ function findNearestRoomForPoint(rooms: PathfinderRoomDraft[], point: Pathfinder
     .sort((a, b) => a.distance - b.distance)[0]?.room ?? null;
 }
 
+function findBestRoomForPoint(rooms: PathfinderRoomDraft[], point: PathfinderPoint): PathfinderRoomDraft | null {
+  return rooms.find((room) => pointInPolygon(point, room.polygon)) ?? findNearestRoomForPoint(rooms, point);
+}
+
+function clientPointToImagePoint(
+  svg: SVGSVGElement,
+  clientX: number,
+  clientY: number,
+  image: PathfinderExtractionResult["image"],
+): PathfinderPoint {
+  const rect = svg.getBoundingClientRect();
+  const scaleX = image.width / Math.max(rect.width, 1);
+  const scaleY = image.height / Math.max(rect.height, 1);
+  return {
+    x: Math.round(clamp((clientX - rect.left) * scaleX, 0, image.width)),
+    y: Math.round(clamp((clientY - rect.top) * scaleY, 0, image.height)),
+  };
+}
+
 function findPath(
   data: PathfinderExtractionResult,
   startRoomId: string | null,
@@ -1573,6 +1607,7 @@ export default function PathfinderPrototype({
   const auth = useContext(AuthContext);
   const organizationId = auth?.organizationId ?? null;
   const session = auth?.session ?? null;
+  const overlaySvgRef = useRef<SVGSVGElement | null>(null);
   const [data, setData] = useState<PathfinderExtractionResult | null>(initialModel);
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
@@ -1589,12 +1624,15 @@ export default function PathfinderPrototype({
   const [fireRouteMode, setFireRouteMode] = useState(false);
   const [startRoomId, setStartRoomId] = useState<string | null>(null);
   const [destinationRoomId, setDestinationRoomId] = useState<string | null>(null);
+  const [draggedAssetId, setDraggedAssetId] = useState<string | null>(null);
   const [isNavigating, setIsNavigating] = useState(true);
   const [status, setStatus] = useState("Ready");
   const [isLoading, setIsLoading] = useState(false);
   const [approvalState, setApprovalState] = useState<SetupApprovalState>("school_review");
   const [correctionPrompt, setCorrectionPrompt] = useState("");
-  const [activeControlDeck, setActiveControlDeck] = useState<ControlDeckTab>("tickets");
+  const [activeControlDeck, setActiveControlDeck] = useState<ControlDeckTab>(
+    estatesMode ? "assets" : "tickets",
+  );
   const [siteDraftType, setSiteDraftType] = useState<PathfinderSiteFeatureType>("site_boundary");
   const [siteDraftName, setSiteDraftName] = useState("Site boundary");
   const [siteDraftPoints, setSiteDraftPoints] = useState<PathfinderScenePoint[]>([]);
@@ -1621,6 +1659,13 @@ export default function PathfinderPrototype({
   const operationalAssets = useMemo(
     () => data?.assets.filter((asset) => asset.type !== "door" && asset.type !== "qr_anchor") ?? [],
     [data?.assets],
+  );
+  const unplacedOperationalAssets = useMemo(
+    () =>
+      operationalAssets.filter(
+        (asset) => asset.sourceTable === "estates_assets" && asset.status !== "mapped",
+      ),
+    [operationalAssets],
   );
   const visibleAssets = useMemo(
     () =>
@@ -1873,9 +1918,13 @@ export default function PathfinderPrototype({
       setSelectedAssetId(asset.id);
       setSelectedTicketId(null);
       setSelectedRoomId(asset.linkedRoomId ?? selectedRoomId);
-      setStatus(`${asset.label} selected. Hover or tap markers for details.`);
+      setStatus(
+        estatesMode && asset.sourceTable === "estates_assets"
+          ? `${asset.label} selected. Drag the marker on the plan for exact placement, then save it back to the Asset Register.`
+          : `${asset.label} selected. Hover or tap markers for details.`,
+      );
     },
-    [selectedRoomId],
+    [estatesMode, selectedRoomId],
   );
 
   const selectTicket = useCallback(
@@ -1888,32 +1937,91 @@ export default function PathfinderPrototype({
     [selectedRoomId],
   );
 
-  const moveSelectedAsset = useCallback(
-    (dx: number, dy: number) => {
-      if (!selectedAssetId) return;
+  const updateAssetPlacement = useCallback(
+    (
+      assetId: string,
+      next: {
+        point?: PathfinderPoint;
+        roomId?: string | null;
+        siteFeatureId?: string | null;
+        status?: PathfinderAssetDraft["status"];
+        confidence?: number;
+      },
+    ) => {
       setData((current) => {
         if (!current) return current;
         return {
           ...current,
           assets: current.assets.map((asset) => {
-            if (asset.id !== selectedAssetId) return asset;
-            const point = {
-              x: Math.round(clamp(asset.x + dx, 0, current.image.width)),
-              y: Math.round(clamp(asset.y + dy, 0, current.image.height)),
-            };
-            const linkedRoom = findNearestRoomForPoint(current.rooms, point);
+            if (asset.id !== assetId) return asset;
+
+            const point = next.point
+              ? {
+                  x: Math.round(clamp(next.point.x, 0, current.image.width)),
+                  y: Math.round(clamp(next.point.y, 0, current.image.height)),
+                }
+              : { x: asset.x, y: asset.y };
+
+            const explicitRoom =
+              next.roomId === undefined
+                ? undefined
+                : current.rooms.find((room) => room.id === next.roomId) ?? null;
+            const resolvedRoom =
+              asset.locationScope === "site"
+                ? null
+                : explicitRoom === undefined
+                  ? findBestRoomForPoint(current.rooms, point)
+                  : explicitRoom;
+
             return {
               ...asset,
-              ...point,
-              linkedRoomId: asset.locationScope === "site" ? undefined : linkedRoom?.id ?? asset.linkedRoomId,
-              status: "needs_position",
-              confidence: Math.min(asset.confidence, 0.72),
+              x: point.x,
+              y: point.y,
+              linkedRoomId:
+                asset.locationScope === "site"
+                  ? undefined
+                  : resolvedRoom?.id ?? (explicitRoom === null ? undefined : asset.linkedRoomId),
+              linkedSiteFeatureId:
+                next.siteFeatureId === undefined ? asset.linkedSiteFeatureId : next.siteFeatureId ?? undefined,
+              status: next.status ?? "needs_position",
+              confidence: next.confidence ?? Math.min(asset.confidence, 0.72),
             };
           }),
         };
       });
     },
-    [selectedAssetId],
+    [],
+  );
+
+  const moveSelectedAsset = useCallback(
+    (dx: number, dy: number) => {
+      if (!selectedAssetId) return;
+      const asset = data?.assets.find((candidate) => candidate.id === selectedAssetId);
+      if (!asset) return;
+      updateAssetPlacement(selectedAssetId, {
+        point: { x: asset.x + dx, y: asset.y + dy },
+      });
+    },
+    [data?.assets, selectedAssetId, updateAssetPlacement],
+  );
+
+  const assignSelectedAssetToRoom = useCallback(
+    (roomId: string | null) => {
+      if (!selectedAssetId || !data) return;
+      const room = roomId ? data.rooms.find((candidate) => candidate.id === roomId) ?? null : null;
+      const point = room ? getRoomPoint(room) : undefined;
+      updateAssetPlacement(selectedAssetId, {
+        point,
+        roomId,
+      });
+      setSelectedRoomId(roomId);
+      setStatus(
+        room
+          ? `${room.roomCode || room.id} linked to the selected asset. Drag the marker to the exact wall position, then save it back to the Asset Register.`
+          : "Room link removed from the selected asset.",
+      );
+    },
+    [data, selectedAssetId, updateAssetPlacement],
   );
 
   const queueCorrectionNote = useCallback(() => {
@@ -2014,7 +2122,13 @@ export default function PathfinderPrototype({
       if (asset.sourceTable !== "estates_assets" || !asset.sourceId) return;
 
       try {
-        await fetch(`/api/estates/pathfinder/assets/${asset.sourceId}/pin`, {
+        const modelId = estatesModelId ?? (await saveEstatesModel("school_review"));
+        if (!modelId) {
+          setStatus("Save the Pathfinder draft before saving asset pins.");
+          return;
+        }
+
+        const response = await fetch(`/api/estates/pathfinder/assets/${asset.sourceId}/pin`, {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
@@ -2023,7 +2137,7 @@ export default function PathfinderPrototype({
               : {}),
           },
           body: JSON.stringify({
-            modelId: estatesModelId,
+            modelId,
             roomId: asset.linkedRoomId,
             siteFeatureId: asset.linkedSiteFeatureId,
             x: asset.x,
@@ -2031,7 +2145,16 @@ export default function PathfinderPrototype({
             wallSide: asset.wallSide,
             confidence: asset.confidence,
             locationScope: asset.locationScope,
+            status: asset.linkedRoomId || asset.linkedSiteFeatureId ? "mapped" : "needs_position",
           }),
+        });
+        if (!response.ok) {
+          setStatus(`Saving the asset pin failed with HTTP ${response.status}.`);
+          return;
+        }
+        updateAssetPlacement(asset.id, {
+          status: asset.linkedRoomId || asset.linkedSiteFeatureId ? "mapped" : "needs_position",
+          confidence: Math.max(asset.confidence, 0.92),
         });
         setStatus(`Saved pin for ${asset.label}.`);
       } catch (error) {
@@ -2039,7 +2162,14 @@ export default function PathfinderPrototype({
         setStatus("Could not save pin — please try again.");
       }
     },
-    [estatesMode, organizationId, session?.access_token, estatesModelId],
+    [
+      estatesMode,
+      organizationId,
+      session?.access_token,
+      estatesModelId,
+      saveEstatesModel,
+      updateAssetPlacement,
+    ],
   );
 
   const syncEstatesLocations = useCallback(async () => {
@@ -2555,10 +2685,36 @@ export default function PathfinderPrototype({
                   draggable={false}
                 />
                 <svg
+                  ref={overlaySvgRef}
                   className="absolute inset-0 h-full w-full"
                   viewBox={`0 0 ${data.image.width} ${data.image.height}`}
                   role="img"
                   aria-label="Draft Pathfinder extraction overlay"
+                  onPointerMove={(event) => {
+                    if (!draggedAssetId || !overlaySvgRef.current) return;
+                    event.preventDefault();
+                    event.stopPropagation();
+                    updateAssetPlacement(
+                      draggedAssetId,
+                      {
+                        point: clientPointToImagePoint(
+                          overlaySvgRef.current,
+                          event.clientX,
+                          event.clientY,
+                          data.image,
+                        ),
+                      },
+                    );
+                  }}
+                  onPointerUp={(event) => {
+                    if (!draggedAssetId || !overlaySvgRef.current) return;
+                    event.preventDefault();
+                    overlaySvgRef.current.releasePointerCapture?.(event.pointerId);
+                    setDraggedAssetId(null);
+                  }}
+                  onPointerLeave={() => {
+                    setDraggedAssetId(null);
+                  }}
                 >
                   {data.routes.filter((route) => !activeRouteIds.has(route.id)).map((route) => (
                     <polyline
@@ -2733,6 +2889,22 @@ export default function PathfinderPrototype({
                       key={asset.id}
                       className="cursor-pointer"
                       onClick={() => selectAsset(asset)}
+                      onPointerDown={(event) => {
+                        if (
+                          !estatesMode ||
+                          asset.type === "door" ||
+                          asset.type === "qr_anchor" ||
+                          asset.locationScope === "site" ||
+                          asset.sourceTable !== "estates_assets"
+                        ) {
+                          return;
+                        }
+                        event.preventDefault();
+                        event.stopPropagation();
+                        selectAsset(asset);
+                        overlaySvgRef.current?.setPointerCapture?.(event.pointerId);
+                        setDraggedAssetId(asset.id);
+                      }}
                     >
                       <circle
                         cx={asset.x}
@@ -3323,12 +3495,42 @@ export default function PathfinderPrototype({
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         <h3 className="font-semibold">Asset QR capture</h3>
-                        <p className="text-xs text-[#aeb8b4]">{operationalAssets.length} estates assets mapped to rooms, corridors, gates, and external site features.</p>
+                        <p className="text-xs text-[#aeb8b4]">
+                          {operationalAssets.length} estates assets linked to this site plan. Select one, assign it to a room if needed, drag it to the exact wall position on the plan, then save it back to the Asset Register.
+                        </p>
                       </div>
                       <button type="button" onClick={simulateAssetQrScan} className="rounded-md bg-[#2f7d6d] px-2 py-1 text-xs font-semibold text-[#f8fafc]">
                         Scan asset QR
                       </button>
                     </div>
+                    {unplacedOperationalAssets.length > 0 && (
+                      <div className="mt-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <h4 className="text-xs font-semibold uppercase tracking-[0.14em] text-[#aeb8b4]">
+                            Needs exact position ({unplacedOperationalAssets.length})
+                          </h4>
+                          <span className="text-[11px] text-[#91a09b]">
+                            Good first pass: assign a room, then drag the pin onto the correct wall.
+                          </span>
+                        </div>
+                        <div className="mt-2 flex max-h-[124px] flex-wrap gap-2 overflow-auto pr-1">
+                          {unplacedOperationalAssets.map((asset) => (
+                            <button
+                              key={asset.id}
+                              type="button"
+                              onClick={() => selectAsset(asset)}
+                              className={`rounded-md border px-2 py-1 text-left text-xs ${
+                                selectedAssetId === asset.id
+                                  ? "border-[#f59e0b] bg-[#3a2c15] text-[#f8fafc]"
+                                  : "border-[#4f635f] bg-[#141414] text-[#d8dfdc]"
+                              }`}
+                            >
+                              {assetIconLabel(asset.type)} {asset.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     <select
                       value={selectedAssetId ?? ""}
                       onChange={(event) => {
@@ -3358,7 +3560,35 @@ export default function PathfinderPrototype({
                           {selectedAsset.locationScope === "site" && selectedAsset.geoPoint && (
                             <p>Coordinate: {selectedAsset.geoPoint.lat.toFixed(6)}, {selectedAsset.geoPoint.lon.toFixed(6)}</p>
                           )}
+                          {selectedAsset.status === "mapped" ? (
+                            <p className="mt-1 text-emerald-300">Saved to Asset Register.</p>
+                          ) : (
+                            <p className="mt-1 text-amber-300">
+                              Needs exact position. Drag the marker on the plan, then save.
+                            </p>
+                          )}
                         </div>
+                        {selectedAsset.locationScope !== "site" && (
+                          <label className="md:col-span-2">
+                            <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#aeb8b4]">
+                              Linked room or corridor
+                            </span>
+                            <select
+                              value={selectedAsset.linkedRoomId ?? ""}
+                              onChange={(event) =>
+                                assignSelectedAssetToRoom(event.target.value || null)
+                              }
+                              className="mt-1 w-full rounded-md border border-[#4f635f] bg-[#141414] px-2 py-2 text-[#f8fafc]"
+                            >
+                              <option value="">No room linked yet</option>
+                              {data.rooms.map((room) => (
+                                <option key={room.id} value={room.id}>
+                                  {roomOptionLabel(room)}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        )}
                         <div className="grid grid-cols-4 gap-2 md:w-[260px]">
                           <button className="rounded-md bg-[#303a37] px-2 py-1" onClick={() => moveSelectedAsset(0, -16)}>Up</button>
                           <button className="rounded-md bg-[#303a37] px-2 py-1" onClick={() => moveSelectedAsset(0, 16)}>Down</button>

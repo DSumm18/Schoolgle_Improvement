@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { protectedRoute, apiSuccess, apiError } from '@/lib/api-utils';
 import { createServiceRoleClient } from '@/lib/supabase-server';
-import { ALL_PENNINE_URNS, URN_PREDECESSORS } from '@/lib/trust-analysis/types';
+import { URN_PREDECESSORS } from '@/lib/trust-analysis/types';
 import { computeStaffingRatios } from '@/lib/trust-analysis/staffing-ratios';
 
 /**
@@ -9,10 +9,41 @@ import { computeStaffingRatios } from '@/lib/trust-analysis/staffing-ratios';
  * Returns per-school workforce data (FTE teachers, TAs, support, total)
  * joined with number_of_pupils from dfe_data.schools for pupil-teacher ratio computation.
  *
+ * Scoped to the caller's organization tree (their own org + any child schools).
+ * Previously hardcoded ALL_PENNINE_URNS — meant every trust saw PAYMAT data.
+ *
  * Uses most recent year where fte_teachers is populated for each school.
  */
-export const GET = protectedRoute(async (_auth, _req: NextRequest) => {
+export const GET = protectedRoute(async (auth, req: NextRequest) => {
   const supabase = createServiceRoleClient();
+
+  // ── Resolve which URNs this caller's org actually covers ─────────────────
+  const orgId = req.nextUrl.searchParams.get('organizationId') || auth.organizationId;
+  const effectiveUrns = new Set<number>();
+
+  if (orgId) {
+    const { data: orgRows } = await supabase
+      .from('organizations')
+      .select('id, urn')
+      .or(`id.eq.${orgId},parent_organization_id.eq.${orgId}`);
+    for (const row of orgRows ?? []) {
+      const raw = row.urn;
+      if (raw === null || raw === undefined) continue;
+      const n = typeof raw === 'string' ? parseInt(raw, 10) : Number(raw);
+      if (Number.isFinite(n)) effectiveUrns.add(n);
+    }
+    for (const urn of Array.from(effectiveUrns)) {
+      const pred = URN_PREDECESSORS[urn];
+      if (pred) effectiveUrns.add(pred.oldUrn);
+    }
+  }
+
+  if (effectiveUrns.size === 0) {
+    // No URNs in scope — return empty rather than leak other trusts' data.
+    return apiSuccess({ staffing: {} });
+  }
+
+  const urnList = Array.from(effectiveUrns);
 
   // Build reverse map: old URN → current URN
   const oldToNew = new Map<number, number>();
@@ -25,7 +56,7 @@ export const GET = protectedRoute(async (_auth, _req: NextRequest) => {
   const { data: workforceRaw, error: workforceError } = await supabase
     .from('workforce')
     .select('urn, academic_year_end, fte_teachers, fte_teaching_assistants, fte_support_staff, fte_total')
-    .in('urn', ALL_PENNINE_URNS)
+    .in('urn', urnList)
     .not('fte_teachers', 'is', null)
     .order('urn', { ascending: true })
     .order('academic_year_end', { ascending: false });
@@ -38,7 +69,7 @@ export const GET = protectedRoute(async (_auth, _req: NextRequest) => {
   const { data: schoolsRaw, error: schoolsError } = await supabase
     .from('schools')
     .select('urn, number_of_pupils')
-    .in('urn', ALL_PENNINE_URNS);
+    .in('urn', urnList);
 
   if (schoolsError) {
     return apiError(`Failed to fetch schools data: ${schoolsError.message}`, 500);

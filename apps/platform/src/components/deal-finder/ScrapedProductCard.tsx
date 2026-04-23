@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ExternalLink, Package } from "lucide-react";
+import { ExternalLink, Package, Star } from "lucide-react";
 import type { ScrapedProduct } from "@/lib/deal-finder/types";
 
 interface ScrapedProductCardProps {
@@ -55,7 +55,16 @@ export function ScrapedProductCard({ product }: ScrapedProductCardProps) {
           <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">
             {product.name}
           </h3>
-          {packInfo && <p className="text-sm text-gray-500 mt-0.5">{packInfo}</p>}
+          {product.rating_value && (
+            <div className="flex items-center gap-1.5 mt-1.5 text-sm text-amber-600">
+              <div className="flex items-center">
+                <Star className="w-4 h-4 fill-amber-500 text-amber-500" />
+              </div>
+              <span className="font-bold">{product.rating_value.toFixed(1)}</span>
+              {product.rating_count && <span className="text-amber-700/70">({product.rating_count.toLocaleString()} reviews)</span>}
+            </div>
+          )}
+          {packInfo && <p className="text-sm text-gray-500 mt-1">{packInfo}</p>}
           {product.description && (
             <p className="text-sm text-gray-500 mt-1 line-clamp-2">{product.description}</p>
           )}

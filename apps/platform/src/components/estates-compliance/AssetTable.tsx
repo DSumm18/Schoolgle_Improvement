@@ -90,11 +90,15 @@ export function AssetTable({ assets }: AssetTableProps) {
                         ? "text-slate-300"
                         : pin.status === "needs_review"
                           ? "text-amber-500"
+                          : pin.status === "needs_position"
+                            ? "text-yellow-400"
                           : "text-emerald-500";
                       const pinTitle = !pin
                         ? "Not placed on Pathfinder"
                         : pin.status === "needs_review"
                           ? "Pin needs review — location changed in a revision"
+                          : pin.status === "needs_position"
+                            ? "Pin needs exact position"
                           : "Mapped on Pathfinder";
                       return (
                         <span className="inline-flex items-center gap-1.5">

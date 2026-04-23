@@ -69,27 +69,7 @@ export interface ScrapeResponse {
   error?: string;
 }
 
-export interface ProcurementDecision {
-  id: string;
-  school_id?: string;
-  user_id?: string;
-  scrape_job_id?: string;
-  chosen_product_id?: string;
-  chosen_supplier_id?: string;
-  price_paid: number;
-  quantity: number;
-  reason_text?: string;
-  reason_category?:
-    | "best_price"
-    | "best_quality"
-    | "framework_compliant"
-    | "existing_supplier"
-    | "other";
-  alternatives_considered: ProductMatch[];
-  threshold_band?: string;
-  policy_compliant?: boolean;
-  created_at: string;
-}
+
 
 export interface ProcurementThreshold {
   band: string;

@@ -81,7 +81,7 @@ const PRODUCT_TYPE_MAP: Array<{ patterns: RegExp[]; group: string }> = [
     group: "notebook",
   },
   {
-    patterns: [/\bcopy\s*paper\b|\bprinter\s*paper\b|\ba4\s*paper\b/i],
+    patterns: [/\b(?:copy|copier|printer|print|a4)\s*paper\b/i, /\bpaper\b.*\bream\b/i, /\ba4\b.*\bpaper\b/i],
     group: "copy-paper",
   },
   { patterns: [/\bpaper\b/i], group: "paper" },

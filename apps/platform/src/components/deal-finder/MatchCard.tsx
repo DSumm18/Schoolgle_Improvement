@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ExternalLink, Package, ArrowDown, ArrowUp, Crown } from "lucide-react";
+import { ExternalLink, Package, ArrowDown, ArrowUp, Crown, Clock, Star } from "lucide-react";
 import type { ProductMatch } from "@/lib/deal-finder/types";
 
 interface MatchCardProps {
@@ -29,6 +29,20 @@ function formatPackLabel(match: ProductMatch): string | null {
   return `${unit.charAt(0).toUpperCase() + unit.slice(1)} of ${match.pack_quantity}`;
 }
 
+function getFreshnessStatus(dateString: string | null): { label: string; colorClass: string; dotClass: string } {
+  if (!dateString) return { label: "Unknown age", colorClass: "text-gray-500", dotClass: "bg-gray-400" };
+  
+  const ageInDays = Math.floor((Date.now() - new Date(dateString).getTime()) / (1000 * 60 * 60 * 24));
+  
+  if (ageInDays <= 7) {
+    return { label: ageInDays === 0 ? "Live" : `${ageInDays}d ago`, colorClass: "text-green-600", dotClass: "bg-green-500 animate-pulse" };
+  } else if (ageInDays <= 30) {
+    return { label: `${ageInDays}d ago`, colorClass: "text-amber-600", dotClass: "bg-amber-500" };
+  } else {
+    return { label: `Stale (${Math.floor(ageInDays/30)}mo)`, colorClass: "text-red-500", dotClass: "bg-red-500" };
+  }
+}
+
 export function MatchCard({ match, rank }: MatchCardProps) {
   const hasSaving = match.saving_gbp !== null && match.saving_gbp > 0;
   const isMoreExpensive = match.saving_gbp !== null && match.saving_gbp < 0;
@@ -36,10 +50,14 @@ export function MatchCard({ match, rank }: MatchCardProps) {
   const packLabel = formatPackLabel(match);
   const equiv = equivalenceBadge[match.equivalence_type];
   const [imgError, setImgError] = useState(false);
+  const freshness = getFreshnessStatus(match.price_date);
 
   return (
-    <div
-      className={`border rounded-xl p-4 transition-all duration-200 hover:shadow-md bg-white ${
+    <a
+      href={match.source_url || "#"}
+      target={match.source_url ? "_blank" : undefined}
+      rel={match.source_url ? "noopener noreferrer" : undefined}
+      className={`block border rounded-xl p-4 transition-all duration-200 hover:shadow-md bg-white ${
         hasSaving ? "border-green-200 bg-green-50/30" : ""
       } ${match.is_best_value ? "ring-2 ring-amber-400" : rank === 0 && hasSaving ? "ring-2 ring-green-300" : ""}`}
     >
@@ -65,10 +83,23 @@ export function MatchCard({ match, rank }: MatchCardProps) {
         )}
 
         <div className="flex-1 min-w-0">
-          <h4 className="font-medium text-gray-900 text-sm line-clamp-2">{match.product_name}</h4>
+          <h4 className="font-medium text-gray-900 text-sm line-clamp-2 hover:text-cyan-600 transition-colors">{match.product_name}</h4>
           {packLabel && <p className="text-xs text-gray-500 mt-0.5">{packLabel}</p>}
-          <p className="text-sm font-medium text-gray-700">{match.supplier_name}</p>
-          <div className="flex items-center gap-2 mt-1 flex-wrap">
+          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+            <p className="text-sm font-medium text-gray-700">{match.supplier_name}</p>
+            {match.rating_value && (
+              <div className="flex items-center gap-1 text-xs text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
+                <span className="font-bold">{match.rating_value.toFixed(1)}</span>
+                {match.rating_count && <span className="text-amber-700/70">({match.rating_count})</span>}
+              </div>
+            )}
+            <div className={`flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-gray-50 border border-gray-100 ${freshness.colorClass}`} title={match.price_date ? new Date(match.price_date).toLocaleDateString() : 'Unknown date'}>
+              <span className={`w-1.5 h-1.5 rounded-full ${freshness.dotClass}`} />
+              {freshness.label}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs border border-gray-200 text-gray-600">
               {matchTypeLabels[match.match_type] || match.match_type}
             </span>
@@ -120,18 +151,13 @@ export function MatchCard({ match, rank }: MatchCardProps) {
               <span className="text-xs text-gray-400">{match.value_score}pts</span>
             )}
             {match.source_url && (
-              <a
-                href={match.source_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-cyan-500 hover:underline flex items-center gap-1"
-              >
-                View <ExternalLink className="w-3 h-3" />
-              </a>
+              <span className="text-xs text-cyan-500 font-medium flex items-center gap-1 group-hover:underline">
+                View Deal <ExternalLink className="w-3 h-3" />
+              </span>
             )}
           </div>
         </div>
       </div>
-    </div>
+    </a>
   );
 }

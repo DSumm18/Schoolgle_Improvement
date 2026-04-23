@@ -93,4 +93,4 @@ export const PUT = protectedRoute(async (auth, req: NextRequest) => {
     .eq('id', captureId);
 
   return apiSuccess({ ok: true, updated: rows.length });
-});
+}, { orgOptional: true });

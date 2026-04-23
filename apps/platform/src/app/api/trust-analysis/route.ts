@@ -8,7 +8,7 @@ import {
   persistShadowComparison,
 } from '@/lib/intelligence-brain/orchestrator';
 import {
-  ALL_PENNINE_URNS, URN_PREDECESSORS, PENNINE_URNS,
+  URN_PREDECESSORS,
   KS2Result, CensusRecord, DfEData, NationalPercentile, ThreeYearAverage,
 } from '@/lib/trust-analysis/types';
 
@@ -24,14 +24,51 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
     isDebugBrainRequest(req.headers.get('x-schoolgle-debug-brain'));
   const supabase = createServiceRoleClient();
 
-  // Fetch for ALL URNs (current + predecessor)
+  // ── Resolve which URNs this caller's org actually covers ─────────────────
+  // Previously hardcoded to ALL_PENNINE_URNS — meant every trust saw PAYMAT's
+  // data and never their own. Now we resolve the org tree: the caller's own
+  // org + all its direct children, with any known predecessor URNs mixed in.
+  const orgId = req.nextUrl.searchParams.get('organizationId') || auth.organizationId;
+  const effectiveUrns = new Set<number>();
+
+  if (orgId) {
+    const { data: orgRows } = await supabase
+      .from('organizations')
+      .select('id, urn')
+      .or(`id.eq.${orgId},parent_organization_id.eq.${orgId}`);
+    for (const row of orgRows ?? []) {
+      const raw = row.urn;
+      if (raw === null || raw === undefined) continue;
+      const n = typeof raw === 'string' ? parseInt(raw, 10) : Number(raw);
+      if (Number.isFinite(n)) effectiveUrns.add(n);
+    }
+    // Add any known predecessor URNs so we keep pre-academy-conversion data.
+    for (const urn of Array.from(effectiveUrns)) {
+      const pred = URN_PREDECESSORS[urn];
+      if (pred) effectiveUrns.add(pred.oldUrn);
+    }
+  }
+
+  // If no URNs resolved from the caller's org tree, return empty rather than
+  // leak cross-tenant data. Callers without any URN in their org tree get an
+  // empty response — they need to register their URN to see DfE data.
+  if (effectiveUrns.size === 0) {
+    return apiSuccess({
+      ks2Results: [],
+      census: [],
+      nationalPercentiles: {},
+      threeYearAverages: {},
+    });
+  }
+  const urnList = Array.from(effectiveUrns);
+  // Fetch KS2 + census scoped to this org's URNs only — no cross-trust leakage.
   const { data: ks2Raw, error: ks2Error } = await supabase
     .from('ks2_results')
     .select(
       'urn, academic_year_end, subject, breakdown_topic, breakdown, ' +
         'expected_standard_pct, higher_standard_pct, average_scaled_score, progress_measure_score',
     )
-    .in('urn', ALL_PENNINE_URNS)
+    .in('urn', urnList)
     .order('urn', { ascending: true })
     .order('academic_year_end', { ascending: false });
 
@@ -42,7 +79,7 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
   const { data: censusRaw, error: censusError } = await supabase
     .from('census')
     .select('urn, academic_year_end, number_on_roll, fsm_pct, eal_pct, sen_pct')
-    .in('urn', ALL_PENNINE_URNS)
+    .in('urn', urnList)
     .order('urn', { ascending: true })
     .order('academic_year_end', { ascending: false });
 
@@ -110,7 +147,7 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
   const totalSchools = sortedPcts.length;
 
   const nationalPercentiles: Record<number, NationalPercentile> = {};
-  for (const urn of PENNINE_URNS) {
+  for (const urn of urnList) {
     const schoolRecord = ((nationalKs2Raw ?? []) as { urn: number; expected_standard_pct: number | string }[])
       .find(r => Number(r.urn) === urn);
     if (!schoolRecord) continue;
@@ -130,7 +167,7 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
 
   // ── Insight 2: Three-Year KS2 Averages ───────────────────────────────────
   const threeYearAverages: Record<number, ThreeYearAverage> = {};
-  for (const urn of PENNINE_URNS) {
+  for (const urn of urnList) {
     const schoolKs2 = ks2Results.filter(r =>
       r.urn === urn &&
       r.subject === 'Reading, writing and maths' &&
@@ -160,7 +197,15 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
       0,
     );
 
-    const currentUrnSet = new Set(PENNINE_URNS);
+    // Shadow comparison: "current URN scope" = the caller's resolved URN set
+    // (post-academy conversion URNs only, i.e. the current URN for each school).
+    // We filter out the predecessor URNs from effectiveUrns.
+    const predecessorUrns = new Set(
+      Object.values(URN_PREDECESSORS).map((p) => p.oldUrn),
+    );
+    const currentUrnSet = new Set(
+      Array.from(effectiveUrns).filter((u) => !predecessorUrns.has(u)),
+    );
     const ks2Current = ks2Results.filter((row) => currentUrnSet.has(row.urn));
     const censusCurrent = census.filter((row) => currentUrnSet.has(row.urn));
 

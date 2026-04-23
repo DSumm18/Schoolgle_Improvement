@@ -51,7 +51,7 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
     capture: check.capture,
     cells: cells ?? [],
   });
-});
+}, { orgOptional: true });
 
 export const PATCH = protectedRoute(async (auth, req: NextRequest) => {
   const id = extractId(req);
@@ -70,7 +70,7 @@ export const PATCH = protectedRoute(async (auth, req: NextRequest) => {
     .eq('id', id);
   if (error) return apiError(error.message, 500);
   return apiSuccess({ ok: true });
-});
+}, { orgOptional: true });
 
 export const DELETE = protectedRoute(async (auth, req: NextRequest) => {
   const id = extractId(req);
@@ -87,4 +87,4 @@ export const DELETE = protectedRoute(async (auth, req: NextRequest) => {
     .eq('id', id);
   if (error) return apiError(error.message, 500);
   return apiSuccess({ ok: true });
-});
+}, { orgOptional: true });

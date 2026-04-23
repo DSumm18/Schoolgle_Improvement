@@ -3,6 +3,7 @@ import { AssetService } from "@/lib/estates-compliance/services/AssetService";
 import {
   estateAssetToPathfinderAsset,
   getPathfinderPin,
+  isMappedPathfinderPin,
 } from "@/lib/pathfinder/estates-integration";
 import type { PathfinderExtractionResult } from "@/lib/pathfinder/prototype";
 import type { AssetFilters, AssetStatus, AssetType } from "@/types/estates-compliance";
@@ -22,7 +23,9 @@ export const GET = protectedRoute(async (auth, request) => {
     pageSize,
   });
 
-  const mapped = result.data.filter((asset) => Boolean(getPathfinderPin(asset.location_details)));
+  const mapped = result.data.filter((asset) =>
+    isMappedPathfinderPin(getPathfinderPin(asset.location_details)),
+  );
 
   return apiSuccess({
     assets: result.data,
@@ -44,7 +47,9 @@ export const POST = protectedRoute(async (auth, request) => {
     page: 1,
     pageSize,
   });
-  const mapped = result.data.filter((asset) => Boolean(getPathfinderPin(asset.location_details)));
+  const mapped = result.data.filter((asset) =>
+    isMappedPathfinderPin(getPathfinderPin(asset.location_details)),
+  );
 
   return apiSuccess({
     assets: result.data,

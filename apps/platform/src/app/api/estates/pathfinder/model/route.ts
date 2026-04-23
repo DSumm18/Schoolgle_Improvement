@@ -3,6 +3,8 @@ import { createServiceRoleClient } from "@/lib/supabase-server";
 import type { PathfinderExtractionResult } from "@/lib/pathfinder/prototype";
 import type { PathfinderModelStatus } from "@/lib/pathfinder/estates-integration";
 
+const BUCKET = "pathfinder-sources";
+const SIGNED_URL_TTL = 60 * 60;
 const MODEL_SELECT =
   "id, organization_id, name, status, source_document_id, source_document_provider, source_document_path, source_page_number, generated_image_url, extraction_mode, extraction_timestamp, parent_model_id, revision_number, is_live, superseded_by, source_document_url, source_document_name, extraction_result, metrics, approved_at, published_at, created_at, updated_at";
 
@@ -12,6 +14,32 @@ function toStatus(value: unknown): PathfinderModelStatus {
   return STATUS_VALUES.includes(value as PathfinderModelStatus)
     ? (value as PathfinderModelStatus)
     : "school_review";
+}
+
+async function withFreshImageUrl<T extends { generated_image_url?: string | null; extraction_result?: PathfinderExtractionResult | null }>(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  model: T | null,
+): Promise<T | null> {
+  if (!model?.generated_image_url || !model.extraction_result) return model;
+
+  const { data, error } = await supabase.storage
+    .from(BUCKET)
+    .createSignedUrl(model.generated_image_url, SIGNED_URL_TTL);
+  if (error || !data?.signedUrl) {
+    console.error("Error signing Pathfinder image URL:", error);
+    return model;
+  }
+
+  return {
+    ...model,
+    extraction_result: {
+      ...model.extraction_result,
+      image: {
+        ...model.extraction_result.image,
+        src: data.signedUrl,
+      },
+    },
+  };
 }
 
 export const GET = protectedRoute(async (auth, request) => {
@@ -31,7 +59,7 @@ export const GET = protectedRoute(async (auth, request) => {
       console.error("Error loading Pathfinder model:", error);
       return apiError("Failed to load Pathfinder model", 500);
     }
-    return apiSuccess({ model: data ?? null });
+    return apiSuccess({ model: await withFreshImageUrl(supabase, data ?? null) });
   }
 
   if (live) {
@@ -47,7 +75,7 @@ export const GET = protectedRoute(async (auth, request) => {
       console.error("Error loading live Pathfinder model:", error);
       return apiError("Failed to load live Pathfinder model", 500);
     }
-    return apiSuccess({ model: data ?? null });
+    return apiSuccess({ model: await withFreshImageUrl(supabase, data ?? null) });
   }
 
   const { data, error } = await supabase
@@ -62,7 +90,7 @@ export const GET = protectedRoute(async (auth, request) => {
     console.error("Error loading Pathfinder model:", error);
     return apiError("Failed to load Pathfinder model", 500);
   }
-  return apiSuccess({ model: data ?? null });
+  return apiSuccess({ model: await withFreshImageUrl(supabase, data ?? null) });
 });
 
 export const POST = protectedRoute(

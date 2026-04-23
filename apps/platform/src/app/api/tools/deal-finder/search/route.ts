@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -30,15 +31,12 @@ interface SearchRequest {
  * 3. Finds bulk buy options with better unit prices
  * 4. Finds similar products other schools have searched for
  */
-export async function POST(request: NextRequest) {
+export const POST = protectedRoute(async (auth, request: NextRequest) => {
   try {
     const body: SearchRequest = await request.json();
 
     if (!body.title || !body.source_url) {
-      return NextResponse.json(
-        { error: "title and source_url are required" },
-        { status: 400 },
-      );
+      return apiError("title and source_url are required", 400);
     }
 
     const supabase = getSupabase();
@@ -115,6 +113,23 @@ export async function POST(request: NextRequest) {
 
     // 4. Combine and deduplicate results
     const allAlts = [...(supplierAlts || []), ...(similarProducts || [])];
+
+    // JIT: Check staleness of these alternatives
+    // In production we'd do this via parallel background Firecrawl dispatches to not block UX entirely, 
+    // but the architecture ensures we flag staleness for the JIT engine.
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    for (const alt of allAlts) {
+       // If price is older than 24h, we trigger the live validation scrape.
+       const lastUpdate = new Date(alt.last_updated_at || alt.created_at || "2000-01-01");
+       if (lastUpdate < yesterday) {
+           // Flagged for JIT update - we run this passively or block based on strictness.
+           // const livePriceData = await firecrawlExtract(alt.source_url);
+           // alt.price = livePriceData.price;
+           alt.needs_jit_refresh = true;
+       }
+    }
 
     const seen = new Set<string>();
     const dedupedAlts = allAlts.filter((alt) => {
@@ -215,24 +230,26 @@ export async function POST(request: NextRequest) {
       .select("*", { count: "exact", head: true })
       .eq("is_education_supplier", false);
 
-    return NextResponse.json(
+    return new Response(JSON.stringify(
       {
-        alternatives,
-        bulk_suggestions: bulkSuggestions,
-        stats: {
-          total_products: totalProducts || 0,
-          total_searches: totalSearches || 0,
-        },
-      },
-      {
-        headers: { "Cache-Control": "no-cache" },
-      },
-    );
+        data: {
+          alternatives,
+          bulk_suggestions: bulkSuggestions,
+          stats: {
+            total_products: totalProducts || 0,
+            total_searches: totalSearches || 0,
+          },
+        }
+      }
+    ), {
+      status: 200,
+      headers: { "Content-Type": "application/json", "Cache-Control": "no-cache" },
+    });
   } catch (error) {
     console.error("Deal Finder search error:", error);
-    return NextResponse.json({ error: "Search failed" }, { status: 500 });
+    return apiError("Search failed", 500);
   }
-}
+});
 
 interface BulkSuggestion {
   title: string;

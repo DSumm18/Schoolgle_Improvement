@@ -72,7 +72,7 @@ export function UrlInput({
         />
         <input
           type="url"
-          placeholder="Paste a product URL from any supplier..."
+          placeholder="What does your school need?"
           value={url}
           onChange={(e) => {
             setUrl(e.target.value);
@@ -82,13 +82,13 @@ export function UrlInput({
           disabled={isLoading}
           className={`w-full ${
             isLarge ? "pl-12 pr-36 py-5 text-lg" : "pl-10 pr-28 py-3"
-          } rounded-full border-2 border-gray-200 focus:border-cyan-500 focus:ring-cyan-500 focus:outline-none shadow-lg`}
+          } rounded-full bg-gray-900 border-2 border-gray-800 text-white placeholder-gray-500 focus:border-blue-500 focus:ring-blue-500 focus:outline-none shadow-lg`}
         />
         <div className="absolute right-2 flex gap-1">
           <button
             onClick={handlePaste}
             disabled={isLoading}
-            className="rounded-full p-2 text-gray-400 hover:text-cyan-500"
+            className="rounded-full p-2 text-gray-400 hover:text-blue-500"
             title="Paste from clipboard"
           >
             <ClipboardPaste className="w-4 h-4" />
@@ -96,7 +96,7 @@ export function UrlInput({
           <button
             onClick={handleSubmit}
             disabled={isLoading || !url.trim()}
-            className={`rounded-full bg-cyan-500 hover:bg-cyan-600 text-white disabled:opacity-50 flex items-center gap-1 ${
+            className={`rounded-full bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 flex items-center gap-1 ${
               isLarge ? "px-6 py-2" : "px-4 py-1.5"
             }`}
           >

@@ -65,29 +65,9 @@ export const GET = protectedRoute(async (_auth, req: NextRequest) => {
     // org lookup failed — swallow, fall through to locked state
   }
 
-  // Fallback: if no URN column on organizations, try a direct lookup by known org IDs
-  // that have phonics data. This covers Grove House for the demo.
-  if (!ctfOrgId) {
-    try {
-      const { data: orgsWithPhonics } = await supabase
-        .from('pupil_assessments_pseudo')
-        .select('organization_id')
-        .eq('subject', 'phonics')
-        .limit(1);
-
-      if (orgsWithPhonics && orgsWithPhonics.length > 0) {
-        // We have CTF data in the system. Check if ANY org has phonics data for
-        // cohort years that would match this URN's school size (from dfe_data.schools).
-        // For now, for Grove House URN 148201 we use the known org ID.
-        // TODO: Wire up organizations.urn column when onboarding flow is built.
-        if (urn === 148201) {
-          ctfOrgId = 'd9d1ac2c-5eff-4043-98f4-e1c43f616fd3';
-        }
-      }
-    } catch {
-      // swallow
-    }
-  }
+  // No hardcoded fallback — if the org→URN mapping above didn't find CTF data,
+  // the passport simply reports "locked" for CTF-derived sections. Any school
+  // that wants to unlock it uploads CTF data; we look up their org by URN.
 
   const hasCTF = ctfOrgId !== null;
 

@@ -44,4 +44,4 @@ export const POST = protectedRoute(async (auth, req: NextRequest) => {
 
   if (error) return apiError(error.message, 500);
   return apiSuccess({ ok: true });
-});
+}, { orgOptional: true });

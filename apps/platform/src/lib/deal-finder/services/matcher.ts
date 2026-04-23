@@ -36,10 +36,68 @@ export async function findSimilarProducts(
 
   if (error) {
     console.error("find_similar_products RPC error:", error);
-    return [];
   }
 
-  return (data || []) as MatchResult[];
+  let results = (data || []) as MatchResult[];
+
+  // Fallback: Use Equivalence Group if tsvector was too strict
+  if (results.length < limit) {
+     const { data: sourceUnit } = await db().from('product_unit_details').select('equivalence_group, product_id').eq('product_id', productId).maybeSingle();
+     if (sourceUnit && sourceUnit.equivalence_group && sourceUnit.equivalence_group !== 'unknown') {
+         const { data: siblingUnits } = await db().from('product_unit_details')
+             .select('product_id, equivalence_group, pack_quantity, pack_unit, unit_price_each, unit_weight_g')
+             .eq('equivalence_group', sourceUnit.equivalence_group)
+             .neq('product_id', productId);
+             
+         if (siblingUnits && siblingUnits.length > 0) {
+             const existingIds = new Set(results.map(r => r.product_id));
+             const newIds = siblingUnits.map(u => u.product_id).filter(id => !existingIds.has(id));
+             
+             if (newIds.length > 0) {
+                 const { data: prods } = await db().from('products')
+                     .select('id, name, image_url, source_url, typical_price, rating_value, rating_count, suppliers(id, name), prices(price_gbp, price_date)')
+                     .in('id', newIds);
+                     
+                 if (prods) {
+                     for (const p of prods) {
+                         const u = siblingUnits.find(su => su.product_id === p.id);
+                         // Handle Supabase joining array vs object for one-to-many vs many-to-one
+                         const supplierId = Array.isArray(p.suppliers) ? p.suppliers[0]?.id : (p.suppliers as any)?.id;
+                         const supplierName = Array.isArray(p.suppliers) ? p.suppliers[0]?.name : (p.suppliers as any)?.name;
+                         const priceObj = Array.isArray(p.prices) ? p.prices[0] : p.prices;
+                         
+                         results.push({
+                             product_id: p.id,
+                             product_name: p.name,
+                             supplier_id: supplierId || 'unknown',
+                             supplier_name: supplierName || 'Unknown',
+                             price_gbp: priceObj?.price_gbp || p.typical_price || 0,
+                             image_url: p.image_url,
+                             source_url: p.source_url,
+                             match_type: 'category_equivalence',
+                             match_score: 55, // distinct score to highlight it
+                             pack_quantity: u?.pack_quantity || 1,
+                             pack_unit: u?.pack_unit || 'pack',
+                             unit_price_each: u?.unit_price_each || null,
+                             unit_weight_g: u?.unit_weight_g || null,
+                             canonical_product_key: null,
+                             equivalence_group: sourceUnit.equivalence_group,
+                             price_date: priceObj?.price_date || null,
+                             rating_value: p.rating_value || null,
+                             rating_count: p.rating_count || null
+                         });
+                     }
+                 }
+             }
+         }
+     }
+  }
+
+  // Deduplicate and sort by price
+  const unique = Array.from(new Map(results.map(r => [r.product_id, r])).values());
+  unique.sort((a, b) => (a.price_gbp || 9999) - (b.price_gbp || 9999));
+  
+  return unique.slice(0, limit);
 }
 
 export async function upsertProduct(product: {

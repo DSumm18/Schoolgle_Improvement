@@ -112,6 +112,16 @@ export function getPathfinderPin(locationDetails: Asset["location_details"]): Pa
   };
 }
 
+export function isMappedPathfinderPin(pin: PathfinderAssetPin | null): boolean {
+  if (!pin) return false;
+  if (pin.status === "needs_position" || pin.status === "needs_review") return false;
+  if (pin.status === "mapped") return true;
+
+  const hasTarget = Boolean(pin.roomId || pin.siteFeatureId);
+  const hasCoordinates = typeof pin.x === "number" && typeof pin.y === "number";
+  return hasTarget && hasCoordinates;
+}
+
 export function mergePathfinderPin(
   locationDetails: Asset["location_details"],
   pin: PathfinderAssetPin,
@@ -182,7 +192,12 @@ export function estateAssetToPathfinderAsset(asset: Asset, model?: PathfinderExt
     locationScope,
     qrCode: asset.qr_code ?? asset.code ?? undefined,
     wallSide: pin?.wallSide,
-    status: pin ? "mapped" : "needs_position",
+    status:
+      pin?.status === "mapped" || pin?.status === "needs_position"
+        ? pin.status
+        : isMappedPathfinderPin(pin)
+          ? "mapped"
+          : "needs_position",
     sourceTable: "estates_assets",
     sourceId: asset.id,
     serviceDue: asset.next_inspection_due ?? undefined,
@@ -228,4 +243,3 @@ export function buildLocationPayloads(model: PathfinderExtractionResult): Pathfi
 
   return [...siteFeatures, ...rooms];
 }
-
