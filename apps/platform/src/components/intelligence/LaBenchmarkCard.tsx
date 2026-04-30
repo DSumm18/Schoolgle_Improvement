@@ -225,14 +225,14 @@ function MetricCard({
                       y={threshold?.value}
                       stroke={atThreshold ? '#ef4444' : '#d1d5db'}
                       strokeDasharray="3 3"
-                      label={{ value: threshold?.label, position: 'topLeft', fontSize: 9, fill: '#9ca3af' }}
+                      label={{ value: threshold?.label, position: "insideTopLeft", fontSize: 9, fill: "#9ca3af" }}
                     />
                     <Line
                       type="monotone"
                       dataKey="School"
                       stroke={atThreshold ? '#ef4444' : betterThanLa ? '#10b981' : '#f59e0b'}
                       strokeWidth={2.5}
-                      dot={{ fill: '#fff, r: 3 }}
+                      dot={{ fill: "#fff", r: 3 }}
                       activeDot={{ r: 5 }}
                     />
                     <Line

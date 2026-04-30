@@ -3,6 +3,9 @@ export interface ScopedSchool {
   name: string;
   urn: number | null;
   nurseryPupils?: number;
+  organization_type?: string | null;
+  parent_organization_id?: string | null;
+  logo_url?: string | null;
 }
 
 const IGNORE_WORDS = new Set([

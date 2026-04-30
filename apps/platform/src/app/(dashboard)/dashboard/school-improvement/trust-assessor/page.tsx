@@ -10,11 +10,6 @@ import {
   Line,
   AreaChart,
   Area,
-  RadarChart,
-  Radar,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -77,6 +72,9 @@ import { abbreviateSchoolName, buildAbbrevLookup, resolveSchoolByName } from '@/
 import { emitTrustAssessorEvents } from "@/lib/school-events/emit-trust-assessor";
 import { Timeline } from "@/components/school-events/Timeline";
 import type { SchoolEvent } from "@/lib/school-events/types";
+import { KpiDashboard } from "@/components/intelligence";
+import type { LaBenchmarkData, DemographicCohort, SchoolKpiData } from "@/components/intelligence";
+import type { UrnValidationResult } from "@/lib/dfe-urn-validation";
 import { CapturesPanel } from "@/components/school-assessment/CapturesPanel";
 import {
   computeStaffingRatios,
@@ -102,9 +100,9 @@ const HEATMAP_YEAR_GROUPS: YearGroup[] = ["Year 1", "Year 2", "Year 3", "Year 4"
 export type ReliabilityTier = 'external' | 'derived' | 'self_reported';
 
 const TIER_CONFIG: Record<ReliabilityTier, { label: string; pill: string; dot: string; border: string }> = {
-  external:      { label: 'External',      pill: 'bg-emerald-100 text-emerald-800 border-emerald-300', dot: 'bg-emerald-500', border: 'border-l-emerald-500' },
-  derived:       { label: 'Derived',       pill: 'bg-amber-100  text-amber-800  border-amber-300',  dot: 'bg-amber-400',  border: 'border-l-amber-400'  },
-  self_reported: { label: 'Self-reported', pill: 'bg-rose-100   text-rose-800   border-rose-300',   dot: 'bg-rose-500',   border: 'border-l-rose-500'   },
+  external:      { label: 'External',      pill: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/30', dot: 'bg-emerald-500', border: 'border-l-emerald-500' },
+  derived:       { label: 'Derived',       pill: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:border-amber-500/30',  dot: 'bg-amber-400',  border: 'border-l-amber-400'  },
+  self_reported: { label: 'Self-reported', pill: 'bg-muted/30 text-muted-foreground border-border',   dot: 'bg-current',   border: 'border-l-muted'   },
 };
 
 function TierPill({ tier, size = 'xs' }: { tier: ReliabilityTier; size?: 'xs' | 'sm' }) {
@@ -227,6 +225,71 @@ interface DfEData {
   census: CensusRecord[];
   nationalPercentiles?: Record<number, NationalPercentile>;
   threeYearAverages?: Record<number, ThreeYearAverage>;
+}
+
+function countSpreadsheetDataPoints(data: Record<string, Record<string, SchoolYearData>>): number {
+  let total = 0;
+  for (const schoolData of Object.values(data)) {
+    for (const yearData of Object.values(schoolData)) {
+      for (const value of Object.values(yearData.cohort)) {
+        if (value !== null && value !== undefined) total += 1;
+      }
+      for (const section of [yearData.all_pupils, yearData.fsm6, yearData.not_fsm6]) {
+        for (const value of Object.values(section)) {
+          if (value !== null && value !== undefined) total += 1;
+        }
+      }
+    }
+  }
+  return total;
+}
+
+function scopeParsedSpreadsheet(
+  parsed: ParsedSpreadsheet,
+  allowedSchools: string[],
+): ParsedSpreadsheet {
+  const allowed = new Set(allowedSchools);
+  const schools = parsed.schools.filter((school) => allowed.has(school));
+
+  if (
+    schools.length === parsed.schools.length &&
+    schools.every((school, index) => school === parsed.schools[index])
+  ) {
+    return parsed;
+  }
+
+  const data: ParsedSpreadsheet["data"] = {};
+  for (const school of schools) {
+    if (parsed.data[school]) data[school] = parsed.data[school];
+  }
+
+  return {
+    ...parsed,
+    schools,
+    yearGroups: parsed.yearGroups.filter((yearGroup) =>
+      schools.some((school) => Boolean(data[school]?.[yearGroup])),
+    ),
+    data,
+    totalDataPoints: countSpreadsheetDataPoints(data),
+    qualityFlags: parsed.qualityFlags.filter((flag) => allowed.has(flag.school)),
+  };
+}
+
+function formatShortDate(value?: string | null): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+}
+
+function getSubmittedYearGroups(parsed: ParsedSpreadsheet): YearGroup[] {
+  return YEAR_GROUPS.filter((yearGroup) =>
+    parsed.schools.some((school) => {
+      const cohortSize = parsed.data[school]?.[yearGroup]?.cohort.number_in_cohort;
+      const hasAssessment = parsed.data[school]?.[yearGroup] && countSpreadsheetDataPoints({ [school]: { [yearGroup]: parsed.data[school][yearGroup] } }) > 0;
+      return (typeof cohortSize === "number" && cohortSize > 0) || Boolean(hasAssessment);
+    }),
+  );
 }
 
 // ─── XLSX Parsing Logic ───────────────────────────────────────────────────────
@@ -424,8 +487,8 @@ function SectionHeader({ number, title, subtitle, complete }: { number: number; 
         {complete ? <CheckCircle2 size={18} /> : number}
       </div>
       <div>
-        <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
-        <p className="text-sm text-gray-500 mt-0.5">{subtitle}</p>
+        <h2 className="text-lg font-semibold text-foreground">{title}</h2>
+        <p className="text-sm text-muted-foreground mt-0.5">{subtitle}</p>
       </div>
     </div>
   );
@@ -433,64 +496,166 @@ function SectionHeader({ number, title, subtitle, complete }: { number: number; 
 
 type StatSource = 'mid_year' | 'autumn' | 'dfe_ks2' | 'dfe_census' | 'dfe_workforce' | 'mixed' | 'trust_spreadsheet';
 
-function SourcePill({ source }: { source: StatSource }) {
+function SourcePill({ source, labelOverride }: { source: StatSource; labelOverride?: string }) {
   const config: Record<StatSource, { label: string; cls: string }> = {
-    mid_year:          { label: 'Mid-Year self-report',  cls: 'bg-purple-50 text-purple-700 border-purple-200' },
-    autumn:            { label: 'Autumn self-report',     cls: 'bg-amber-50 text-amber-700 border-amber-200' },
-    dfe_ks2:           { label: 'DfE KS2',                cls: 'bg-blue-50 text-blue-700 border-blue-200' },
-    dfe_census:        { label: 'DfE Census',             cls: 'bg-blue-50 text-blue-700 border-blue-200' },
-    dfe_workforce:     { label: 'DfE Workforce',          cls: 'bg-blue-50 text-blue-700 border-blue-200' },
-    mixed:             { label: 'Mixed sources',          cls: 'bg-gray-50 text-gray-600 border-gray-200' },
-    trust_spreadsheet: { label: 'Trust spreadsheet',      cls: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+    mid_year:          { label: 'Mid-Year self-report',  cls: 'bg-muted/30 text-muted-foreground border-border' },
+    autumn:            { label: 'Autumn self-report',     cls: 'bg-muted/30 text-muted-foreground border-border' },
+    dfe_ks2:           { label: 'DfE KS2',                cls: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-300 dark:border-blue-500/30' },
+    dfe_census:        { label: 'DfE Census',             cls: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-300 dark:border-blue-500/30' },
+    dfe_workforce:     { label: 'DfE Workforce',          cls: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-300 dark:border-blue-500/30' },
+    mixed:             { label: 'Mixed sources',          cls: 'bg-muted/30 text-muted-foreground border-border' },
+    trust_spreadsheet: { label: 'Trust spreadsheet',      cls: 'bg-muted/30 text-muted-foreground border-border' },
   };
   const c = config[source];
   return (
     <span className={`inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded-full border font-medium uppercase tracking-wide ${c.cls}`}>
       <span className="w-1 h-1 rounded-full bg-current opacity-60" />
-      {c.label}
+      {labelOverride ?? c.label}
     </span>
   );
 }
 
-function StatCard({ label, value, sub, source, priorValue, priorLabel }: {
+function StatCard({ label, value, sub, source, sourceLabel, priorValue, priorLabel }: {
   label: string;
   value: string | number;
   sub?: string;
   source?: StatSource;
+  sourceLabel?: string;
   priorValue?: string | number | null;
   priorLabel?: string;
 }) {
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-4">
-      <div className="text-2xl font-bold text-gray-900">{value}</div>
-      <div className="text-sm font-medium text-gray-600 mt-1">{label}</div>
-      {sub && <div className="text-xs text-gray-400 mt-0.5">{sub}</div>}
+    <div className="bg-card border border-border rounded-xl p-4">
+      <div className="text-2xl font-semibold text-foreground">{value}</div>
+      <div className="text-sm font-medium text-muted-foreground mt-1">{label}</div>
+      {sub && <div className="text-xs text-muted-foreground/70 mt-0.5">{sub}</div>}
       {priorValue !== undefined && priorValue !== null && priorValue !== '' && (
-        <div className="text-[10px] text-gray-400 mt-0.5 italic">
+        <div className="text-[10px] text-muted-foreground/70 mt-0.5 italic">
           {priorLabel ?? 'Prior capture'}: {priorValue}
         </div>
       )}
-      {source && <div className="mt-2"><SourcePill source={source} /></div>}
+      {source && <div className="mt-2"><SourcePill source={source} labelOverride={sourceLabel} /></div>}
     </div>
   );
 }
 
 // ─── Traffic Light Summary Grid ──────────────────────────────────────────────
 
+function TrustExecutiveOverview({ parsed }: { parsed: ParsedSpreadsheet }) {
+  const abbrevLookup = useContext(AbbrevLookupContext);
+  const y6Rows = parsed.schools
+    .map((school) => {
+      const y6 = parsed.data[school]?.["Year 6"];
+      const combined = y6?.all_pupils.c_are ?? null;
+      const y6Pupils = y6?.cohort.number_in_cohort ?? 0;
+      return { school, combined, y6Pupils };
+    })
+    .filter((row) => row.combined !== null);
+
+  const weakestY6 = [...y6Rows].sort((a, b) => (a.combined ?? 0) - (b.combined ?? 0))[0] ?? null;
+  const strongestY6 = [...y6Rows].sort((a, b) => (b.combined ?? 0) - (a.combined ?? 0))[0] ?? null;
+  const attentionSchools = y6Rows.filter((row) => (row.combined ?? 0) < 55);
+  const gdWritingZeros = parsed.schools
+    .map((school) => ({
+      school,
+      zeros: HEATMAP_YEAR_GROUPS.filter((yg) => parsed.data[school]?.[yg]?.all_pupils.w_gd === 0).length,
+    }))
+    .filter((row) => row.zeros >= 3)
+    .sort((a, b) => b.zeros - a.zeros);
+  const eyfsComplete = parsed.schools.filter((school) => {
+    const eyfs = parsed.data[school]?.EYFS;
+    return Boolean(eyfs?.cohort.number_in_cohort && eyfs?.all_pupils.gld !== null && eyfs?.all_pupils.gld !== undefined);
+  }).length;
+  const y6CombinedAverage = y6Rows.length > 0
+    ? Math.round((y6Rows.reduce((sum, row) => sum + (row.combined ?? 0), 0) / y6Rows.length) * 10) / 10
+    : null;
+
+  const schoolName = (school: string) => abbrevLookup[school]?.name ?? school;
+  const shortSchool = (school: string) => abbreviateSchoolName(schoolName(school));
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-sky-100 bg-gradient-to-br from-white via-sky-50/60 to-indigo-50/70 shadow-sm">
+      <div className="flex flex-col gap-5 border-b border-sky-100/80 p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-4">
+          <div className="h-16 w-16 overflow-hidden rounded-2xl border border-white bg-white shadow-sm">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logos/pennine-academies.jpg" alt="Pennine Academies Yorkshire" className="h-full w-full object-contain p-1" />
+          </div>
+          <div>
+            <div className="text-[11px] font-bold uppercase tracking-[0.22em] text-sky-700">Trustee Briefing</div>
+            <h2 className="mt-1 text-2xl font-bold text-slate-950">Pennine Academies Yorkshire — School Improvement Overview</h2>
+            <p className="mt-1 text-sm text-slate-600">Latest trust capture, summarised for trustee-level oversight and challenge.</p>
+          </div>
+        </div>
+        <div className="rounded-xl border border-white/80 bg-white/80 px-4 py-3 text-sm shadow-sm">
+          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Y6 combined average</div>
+          <div className="mt-1 text-2xl font-bold text-slate-950">{y6CombinedAverage !== null ? `${y6CombinedAverage}%` : "—"}</div>
+          <div className="text-xs text-slate-500">Across {y6Rows.length} schools with Y6 data</div>
+        </div>
+      </div>
+
+      <div className="grid gap-3 p-5 md:grid-cols-4">
+        <div className="rounded-xl border border-white/80 bg-white/85 p-4 shadow-sm">
+          <div className="text-xs font-bold uppercase tracking-wide text-rose-600">Schools needing attention</div>
+          <div className="mt-2 text-3xl font-bold text-slate-950">{attentionSchools.length}</div>
+          <p className="mt-1 text-sm text-slate-600">Y6 combined below 55%.</p>
+          <p className="mt-2 text-xs text-slate-500">
+            {attentionSchools.length > 0 ? attentionSchools.map((row) => `${row.school} ${row.combined}%`).join(", ") : "No schools below this threshold."}
+          </p>
+        </div>
+        <div className="rounded-xl border border-white/80 bg-white/85 p-4 shadow-sm">
+          <div className="text-xs font-bold uppercase tracking-wide text-emerald-600">Notable strength</div>
+          <div className="mt-2 text-xl font-bold text-slate-950">{strongestY6 ? shortSchool(strongestY6.school) : "—"}</div>
+          <p className="mt-1 text-sm text-slate-600">{strongestY6 ? `Y6 combined at ${strongestY6.combined}%.` : "No Y6 combined data available."}</p>
+          <p className="mt-2 text-xs text-slate-500">Trustees may want to explore transferable practice.</p>
+        </div>
+        <div className="rounded-xl border border-white/80 bg-white/85 p-4 shadow-sm">
+          <div className="text-xs font-bold uppercase tracking-wide text-amber-600">Key challenge</div>
+          <div className="mt-2 text-xl font-bold text-slate-950">{weakestY6 ? shortSchool(weakestY6.school) : "—"}</div>
+          <p className="mt-1 text-sm text-slate-600">{weakestY6 ? `Y6 combined at ${weakestY6.combined}%.` : "No Y6 combined data available."}</p>
+          <p className="mt-2 text-xs text-slate-500">Use the school tab to inspect subject and cohort gaps.</p>
+        </div>
+        <div className="rounded-xl border border-white/80 bg-white/85 p-4 shadow-sm">
+          <div className="text-xs font-bold uppercase tracking-wide text-sky-600">Data confidence</div>
+          <div className="mt-2 text-xl font-bold text-slate-950">{eyfsComplete}/{parsed.schools.length} EYFS complete</div>
+          <p className="mt-1 text-sm text-slate-600">{parsed.qualityFlags.length === 0 ? "No parser quality flags." : `${parsed.qualityFlags.length} quality flags to review.`}</p>
+          <p className="mt-2 text-xs text-slate-500">All figures are from the selected trust submission unless labelled otherwise.</p>
+        </div>
+      </div>
+
+      <div className="border-t border-sky-100/80 bg-white/60 p-5">
+        <h3 className="text-sm font-bold uppercase tracking-wide text-slate-700">Key findings for trustees</h3>
+        <div className="mt-3 grid gap-3 md:grid-cols-3">
+          <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
+            <span className="font-semibold text-slate-950">Attainment lens: </span>
+            {weakestY6 && strongestY6
+              ? `${strongestY6.school} is strongest on Y6 combined (${strongestY6.combined}%), while ${weakestY6.school} is the clearest immediate challenge (${weakestY6.combined}%).`
+              : "Y6 combined data is not complete enough for a trust-wide ranking."}
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
+            <span className="font-semibold text-slate-950">Greater depth writing: </span>
+            {gdWritingZeros.length > 0
+              ? `${gdWritingZeros[0].school} has ${gdWritingZeros[0].zeros} year groups reporting 0% GD writing; triangulate before drawing conclusions.`
+              : "No repeated 0% GD writing pattern is currently flagged."}
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
+            <span className="font-semibold text-slate-950">Governance challenge: </span>
+            Ask leaders what support is targeted at the lowest Y6 combined outcomes, and where stronger schools can share practice across the trust.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function TrafficLightGrid({ parsed, onSchoolClick }: { parsed: ParsedSpreadsheet; onSchoolClick: (school: string) => void }) {
   const abbrevLookup = useContext(AbbrevLookupContext);
-  // Compute total pupils per school
-  const getTotalPupils = (school: string): number => {
-    let total = 0;
-    for (const yg of YEAR_GROUPS) {
-      const n = parsed.data[school]?.[yg]?.cohort.number_in_cohort;
-      if (n !== null && n !== undefined) total += n;
-    }
-    return total;
+  const getY6Pupils = (school: string): number => {
+    const n = parsed.data[school]?.["Year 6"]?.cohort.number_in_cohort;
+    return n ?? 0;
   };
 
-  // Sort schools by total pupils descending (largest first)
-  const sortedSchools = [...parsed.schools].sort((a, b) => getTotalPupils(b) - getTotalPupils(a));
+  const sortedSchools = [...parsed.schools].sort((a, b) => getY6Pupils(b) - getY6Pupils(a));
 
   const getCircleColor = (pct: number | null, thresholdGreen = 70, thresholdAmber = 50): string => {
     if (pct === null) return "bg-gray-200";
@@ -529,7 +694,7 @@ function TrafficLightGrid({ parsed, onSchoolClick }: { parsed: ParsedSpreadsheet
         <thead>
           <tr>
             <th className="text-left py-3 pr-4 text-sm font-semibold text-gray-700 min-w-[120px]">School</th>
-            <th className="text-center py-3 px-3 text-xs font-semibold text-gray-600 whitespace-nowrap">Pupils</th>
+            <th className="text-center py-3 px-3 text-xs font-semibold text-gray-600 whitespace-nowrap">Y6 pupils</th>
             {cols.map((c) => (
               <th key={c.key} className="text-center py-3 px-3 text-xs font-semibold text-gray-600 whitespace-nowrap">{c.label}</th>
             ))}
@@ -542,8 +707,8 @@ function TrafficLightGrid({ parsed, onSchoolClick }: { parsed: ParsedSpreadsheet
         <tbody>
           {sortedSchools.map((school) => {
             const y6 = parsed.data[school]?.["Year 6"]?.all_pupils ?? {};
-            const totalPupils = getTotalPupils(school);
-            const isSmall = totalPupils > 0 && totalPupils < 100;
+            const y6Pupils = getY6Pupils(school);
+            const isSmall = y6Pupils > 0 && y6Pupils < 100;
             const hasWarning = hasConsistencyWarning(school);
             return (
               <tr key={school} className="border-t border-gray-100 hover:bg-gray-50 transition-colors">
@@ -559,9 +724,9 @@ function TrafficLightGrid({ parsed, onSchoolClick }: { parsed: ParsedSpreadsheet
                   )}
                 </td>
                 <td className="text-center py-3 px-3">
-                  {totalPupils > 0 ? (
+                  {y6Pupils > 0 ? (
                     <span className={`text-xs font-medium ${isSmall ? "italic text-gray-400" : "text-gray-700"}`}>
-                      {isSmall ? `${totalPupils}*` : totalPupils}
+                      {isSmall ? `${y6Pupils}*` : y6Pupils}
                     </span>
                   ) : (
                     <span className="text-xs text-gray-300">—</span>
@@ -606,7 +771,7 @@ function TrafficLightGrid({ parsed, onSchoolClick }: { parsed: ParsedSpreadsheet
         <span className="flex items-center gap-1.5"><span className="w-3.5 h-3.5 rounded-full bg-amber-400 inline-block" /> 50–69% (Amber)</span>
         <span className="flex items-center gap-1.5"><span className="w-3.5 h-3.5 rounded-full bg-red-500 inline-block" /> Below 50% (Red)</span>
         <span className="flex items-center gap-1.5"><span className="w-3.5 h-3.5 rounded-full bg-gray-200 inline-block" /> No data</span>
-        <span className="text-gray-400 ml-2">Sorted by total pupils (largest first). * = under 100 pupils — interpret percentages with caution. Click school name to drill down.</span>
+        <span className="text-gray-400 ml-2">Sorted by Year 6 cohort size (largest first). * = under 100 Year 6 pupils — interpret percentages with caution. Click school name to drill down.</span>
       </div>
     </div>
   );
@@ -719,6 +884,81 @@ function SubjectHeatmap({ parsed, onSchoolClick }: { parsed: ParsedSpreadsheet; 
 }
 
 // ─── Phase 1: Per-School Detail Card ─────────────────────────────────────────
+
+function FsmGapSnapshot({ parsed, school }: { parsed: ParsedSpreadsheet; school: string }) {
+  const schoolData = parsed.data[school] ?? {};
+  const rows = HEATMAP_YEAR_GROUPS.map((yearGroup) => {
+    const data = schoolData[yearGroup];
+    const fsm = data?.fsm6.c_are ?? null;
+    const nonFsm = data?.not_fsm6.c_are ?? null;
+    return {
+      label: yearGroup.replace("Year ", "Y"),
+      fsm,
+      nonFsm,
+      gap: fsm !== null && nonFsm !== null ? Math.round(nonFsm - fsm) : null,
+    };
+  }).filter((row) => row.fsm !== null || row.nonFsm !== null);
+
+  if (rows.length === 0) return null;
+
+  return (
+    <div className="bg-card border border-border rounded-xl p-5">
+      <div className="flex flex-col gap-1 mb-5">
+        <h3 className="text-base font-semibold text-foreground">FSM6 gap snapshot</h3>
+        <p className="text-xs text-muted-foreground">
+          Combined ARE % for FSM6 and non-FSM pupils in the latest submission. The line between dots shows the attainment gap.
+        </p>
+      </div>
+      <div className="space-y-3">
+        {rows.map((row) => {
+          const fsm = row.fsm;
+          const nonFsm = row.nonFsm;
+          const left = Math.min(fsm ?? 100, nonFsm ?? 100);
+          const right = Math.max(fsm ?? 0, nonFsm ?? 0);
+          const gapWidth = Math.max(0, right - left);
+          const gapTone = row.gap === null ? "text-muted-foreground" : row.gap > 20 ? "text-red-600 dark:text-red-300" : row.gap > 10 ? "text-amber-600 dark:text-amber-300" : "text-emerald-600 dark:text-emerald-300";
+
+          return (
+            <div key={row.label} className="grid grid-cols-[42px_1fr_78px] items-center gap-3">
+              <div className="text-sm font-semibold text-foreground">{row.label}</div>
+              <div className="relative h-8 rounded-full bg-muted/40 border border-border overflow-hidden">
+                <div className="absolute inset-x-3 top-1/2 h-px -translate-y-1/2 bg-border" />
+                {fsm !== null && nonFsm !== null && gapWidth > 0 && (
+                  <div
+                    className="absolute top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-amber-400/80"
+                    style={{ left: `${left}%`, width: `${gapWidth}%` }}
+                  />
+                )}
+                {fsm !== null && (
+                  <div
+                    className="absolute top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-red-500 border-2 border-card shadow-sm"
+                    style={{ left: `calc(${fsm}% - 8px)` }}
+                    title={`FSM6: ${fsm}%`}
+                  />
+                )}
+                {nonFsm !== null && (
+                  <div
+                    className="absolute top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-sky-500 border-2 border-card shadow-sm"
+                    style={{ left: `calc(${nonFsm}% - 8px)` }}
+                    title={`Non-FSM: ${nonFsm}%`}
+                  />
+                )}
+              </div>
+              <div className={`text-right text-xs font-semibold ${gapTone}`}>
+                {row.gap !== null ? `${row.gap > 0 ? "+" : ""}${row.gap}pp` : "partial"}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="flex flex-wrap items-center gap-4 mt-5 text-xs text-muted-foreground">
+        <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-red-500" /> FSM6</span>
+        <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-sky-500" /> Non-FSM</span>
+        <span>Positive gap means non-FSM pupils are ahead.</span>
+      </div>
+    </div>
+  );
+}
 
 function SchoolDetailCard({ school, parsed }: { school: string; parsed: ParsedSpreadsheet }) {
   const abbrevLookup = useContext(AbbrevLookupContext);
@@ -1192,10 +1432,21 @@ type StaffingByUrn = Record<number, {
   pupilAdultRatio: number | null;
 }>;
 
-function SchoolTab({ school, parsed, dfeData, staffingSnapshots, summaryData, authToken, organizationId, capturesByPeriod, urnToOrgId }: { school: string; parsed: ParsedSpreadsheet; dfeData?: DfEData | null; staffingSnapshots?: StaffingByUrn | null; summaryData?: SchoolDataSummary | null; authToken?: string; organizationId?: string; capturesByPeriod?: { autumn_term?: { parsed_data: ParsedSpreadsheet } | null; mid_year?: { parsed_data: ParsedSpreadsheet } | null }; urnToOrgId?: Record<number, string> }) {
+type CaptureSnapshot = {
+  parsed_data: ParsedSpreadsheet;
+  file_name?: string;
+  capture_name?: string;
+  created_at?: string;
+};
+
+function SchoolTab({ school, parsed, dfeData, staffingSnapshots, summaryData, authToken, organizationId, capturesByPeriod, urnToOrgId, showCapturesPanel = true, pupilRecords = [], spotlightPupilId = null, defendNumbersData = null, kpiLoading, kpiError, laBenchmarks, demographicCohort, schoolKpiData, urnValidation }: { school: string; parsed: ParsedSpreadsheet; dfeData?: DfEData | null; staffingSnapshots?: StaffingByUrn | null; summaryData?: SchoolDataSummary | null; authToken?: string; organizationId?: string; capturesByPeriod?: Partial<Record<'autumn_term' | 'mid_year', CaptureSnapshot | null>>; urnToOrgId?: Record<number, string>; showCapturesPanel?: boolean; pupilRecords?: { pupilId: string; demographics: { isFsm: boolean; isSend: boolean; isEal: boolean; gender: string }; journey: { year: number; yearGroup: number; subject: string; level: string }[] }[]; spotlightPupilId?: string | null; defendNumbersData?: Record<string, any> | null; kpiLoading?: boolean; kpiError?: string | null; laBenchmarks?: LaBenchmarkData | null; demographicCohort?: DemographicCohort | null; schoolKpiData?: SchoolKpiData | null; urnValidation?: UrnValidationResult | null }) {
   const abbrevLookup = useContext(AbbrevLookupContext);
   const schoolData = parsed.data[school] ?? {};
   const info = abbrevLookup[school];
+  const selfReportLabels: SelfReportLabels = {
+    autumn_term: capturesByPeriod?.autumn_term?.capture_name ?? capturesByPeriod?.autumn_term?.file_name ?? 'Autumn self-report',
+    mid_year: capturesByPeriod?.mid_year?.capture_name ?? capturesByPeriod?.mid_year?.file_name ?? 'Mid-Year self-report',
+  };
 
   // ── Section A: Profile stats ──
   let totalPupils = 0;
@@ -2350,11 +2601,13 @@ function SchoolTab({ school, parsed, dfeData, staffingSnapshots, summaryData, au
       )}
 
       {/* Captures for THIS school — each school sees its own list only. */}
-      <SchoolCapturesPanelSlot
-        school={school}
-        urnToOrgId={urnToOrgId}
-        authToken={authToken}
-      />
+      {showCapturesPanel && (
+        <SchoolCapturesPanelSlot
+          school={school}
+          urnToOrgId={urnToOrgId}
+          authToken={authToken}
+        />
+      )}
 
       <SchoolTabTabs school={school}>
         {(activeTab: SchoolTabId) => (
@@ -2451,6 +2704,10 @@ function SchoolTab({ school, parsed, dfeData, staffingSnapshots, summaryData, au
                   </div>
                 </HideableCard>
 
+                <HideableCard componentId="overview-fsm-gap-snapshot">
+                  <FsmGapSnapshot parsed={parsed} school={school} />
+                </HideableCard>
+
                 {/* Single dominant chart: cohort line chart Y1–Y6 */}
                 {progressionData.some((d) => d.reading !== null || d.writing !== null || d.maths !== null) && (
                   <HideableCard componentId="overview-progression-chart">
@@ -2505,6 +2762,49 @@ function SchoolTab({ school, parsed, dfeData, staffingSnapshots, summaryData, au
 
                 {/* Always-visible Tier Legend */}
                 <TierLegendBar />
+
+                <UrnValidationWarning validation={urnValidation} />
+
+                {/* KPI Dashboard — Real DfE-powered intelligence */}
+                {kpiLoading && (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="text-center">
+                      <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mb-3"></div>
+                      <p className="text-sm text-gray-500">Loading school intelligence data...</p>
+                    </div>
+                  </div>
+                )}
+                {kpiError && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                    <p className="text-sm text-amber-800">{kpiError}</p>
+                  </div>
+                )}
+                {!kpiLoading && !kpiError && (!laBenchmarks || !schoolKpiData) && (
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-6">
+                    <h4 className="text-sm font-semibold text-slate-700 mb-2">School Intelligence Dashboard</h4>
+                    <p className="text-xs text-slate-500">
+                      {!laBenchmarks ? "Waiting for LA benchmark data to load..." : "Waiting for school KPI data to load..."}
+                    </p>
+                    <div className="mt-3 space-y-1 text-xs text-slate-400">
+                      <div className={laBenchmarks ? "text-emerald-600" : "text-amber-600"}>
+                        {laBenchmarks ? "✓ LA benchmarks loaded" : "○ LA benchmarks pending"}
+                      </div>
+                      <div className={schoolKpiData ? "text-emerald-600" : "text-amber-600"}>
+                        {schoolKpiData ? "✓ School KPI data loaded" : "○ School KPI data pending"}
+                      </div>
+                      <div className={dfeData?.ks2Results?.length > 0 ? "text-emerald-600" : "text-amber-600"}>
+                        {dfeData?.ks2Results?.length > 0 ? `✓ DfE KS2 data loaded (${dfeData.ks2Results.length} records)` : "○ DfE KS2 data pending"}
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {!kpiLoading && laBenchmarks && schoolKpiData && (
+                  <KpiDashboard
+                    laBenchmarks={laBenchmarks}
+                    demographicCohort={demographicCohort}
+                    schoolData={schoolKpiData}
+                  />
+                )}
 
                 {/* Forensic Verdict — hero of this tab */}
                 <HideableCard componentId="forensic-verdict">
@@ -2714,53 +3014,80 @@ function SchoolTab({ school, parsed, dfeData, staffingSnapshots, summaryData, au
                       </div>
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                      <div className="text-center p-3 rounded-xl bg-muted/30">
+                      <div className="text-center p-3 rounded-xl border border-border bg-background">
                         <div className="text-2xl font-bold text-foreground">{totalPupils > 0 ? String(totalPupils) : '—'}</div>
                         <div className="text-xs text-muted-foreground mt-0.5">Total Pupils</div>
                       </div>
-                      <div className="text-center p-3 rounded-xl bg-rose-50">
-                        <div className="text-2xl font-bold text-rose-700">{fsmPct !== null ? `${Math.round(fsmPct)}%` : '—'}</div>
+                      <div className="text-center p-3 rounded-xl border border-border bg-background">
+                        <div className="text-2xl font-bold text-foreground">{fsmPct !== null ? `${Math.round(fsmPct)}%` : '—'}</div>
                         <div className="text-xs text-muted-foreground mt-0.5">FSM ({Math.round(totalFsm)})</div>
                         {trustFsmPct !== null && fsmPct !== null && <div className="text-xs text-muted-foreground/60 mt-0.5">{fsmPct > trustFsmPct ? `+${Math.round(fsmPct - trustFsmPct)}pp` : `${Math.round(trustFsmPct - fsmPct)}pp below`} trust</div>}
                       </div>
-                      <div className="text-center p-3 rounded-xl bg-purple-50">
-                        <div className="text-2xl font-bold text-purple-700">{sendPct !== null ? `${Math.round(sendPct)}%` : '—'}</div>
+                      <div className="text-center p-3 rounded-xl border border-border bg-background">
+                        <div className="text-2xl font-bold text-foreground">{sendPct !== null ? `${Math.round(sendPct)}%` : '—'}</div>
                         <div className="text-xs text-muted-foreground mt-0.5">SEND ({Math.round(totalSend)})</div>
                       </div>
-                      <div className="text-center p-3 rounded-xl bg-indigo-50">
-                        <div className="text-2xl font-bold text-indigo-700">{totalEhcp > 0 ? String(totalEhcp) : '—'}</div>
+                      <div className="text-center p-3 rounded-xl border border-border bg-background">
+                        <div className="text-2xl font-bold text-foreground">{totalEhcp > 0 ? String(totalEhcp) : '—'}</div>
                         <div className="text-xs text-muted-foreground mt-0.5">EHCPs</div>
                       </div>
                     </div>
                   </div>
                 </HideableCard>
 
-                {/* Y6 Radar — compact, single chart */}
+                {/* Y6 subject comparison */}
                 {radarData.length > 0 && (
                   <HideableCard componentId="cohort-radar">
                     <div className="bg-card border border-border rounded-2xl p-8">
                       <h3 className="text-xl font-semibold text-foreground mb-1">Y6 subject profile vs trust average</h3>
-                      <p className="text-sm text-muted-foreground mb-2">How this school compares on every subject at Year 6</p>
-                      <div className="flex flex-wrap gap-2 mb-4">
+                      <p className="text-sm text-muted-foreground mb-5">How this school compares on every subject at Year 6. Bars use the same 0–100% scale so the shape is immediately readable.</p>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-6">
                         {radarData.map((d) => {
                           const diff = d.school - d.trust;
                           return (
-                            <span key={d.subject} className={`text-xs px-2.5 py-1 rounded-full font-semibold border ${diff >= 0 ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-red-50 text-red-700 border-red-200"}`}>
-                              {d.subject}: {d.school}% {d.trust > 0 && <span className="font-normal opacity-70">({diff >= 0 ? "+" : ""}{diff}pp)</span>}
-                            </span>
+                            <div key={d.subject} className="rounded-xl border border-border bg-background px-3 py-2">
+                              <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{d.subject}</div>
+                              <div className="mt-1 flex items-baseline gap-1">
+                                <span className="text-lg font-bold text-foreground">{d.school}%</span>
+                                {d.trust > 0 && <span className={`text-xs font-medium ${diff >= 0 ? "text-emerald-600" : "text-red-600"}`}>{diff >= 0 ? "+" : ""}{diff}pp</span>}
+                              </div>
+                            </div>
                           );
                         })}
                       </div>
-                      <ResponsiveContainer width="100%" height={280}>
-                        <RadarChart data={radarData} margin={{ top: 15, right: 40, left: 40, bottom: 15 }}>
-                          <PolarGrid stroke="hsl(var(--border))" gridType="polygon" />
-                          <PolarAngleAxis dataKey="subject" tick={{ fontSize: 13, fill: "hsl(var(--foreground))", fontWeight: 600 }} />
-                          <PolarRadiusAxis angle={90} domain={[0, 100]} tickCount={5} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
-                          <Radar name="Trust Avg" dataKey="trust" stroke="#94A3B8" fill="#CBD5E1" fillOpacity={0.4} strokeWidth={2} strokeDasharray="5 3" />
-                          <Radar name={school} dataKey="school" stroke="#0ea5e9" fill="#38bdf8" fillOpacity={0.3} strokeWidth={2.5} dot={{ r: 5, fill: "#0ea5e9", strokeWidth: 0 }} />
-                          <Tooltip formatter={(val, name) => [`${val}%`, name]} contentStyle={{ fontSize: "12px", borderRadius: "8px", border: "1px solid hsl(var(--border))" }} />
-                        </RadarChart>
-                      </ResponsiveContainer>
+                      <div className="space-y-5">
+                        {radarData.map((d) => {
+                          const schoolWidth = Math.max(0, Math.min(100, d.school));
+                          const trustWidth = Math.max(0, Math.min(100, d.trust));
+                          const diff = d.school - d.trust;
+                          return (
+                            <div key={d.subject} className="space-y-2">
+                              <div className="flex items-center justify-between gap-3 text-sm">
+                                <span className="font-semibold text-foreground">{d.subject}</span>
+                                <span className={`text-xs font-semibold ${diff >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                                  {d.trust > 0 ? `${diff >= 0 ? "+" : ""}${diff}pp vs trust` : "No trust benchmark"}
+                                </span>
+                              </div>
+                              <div className="space-y-1.5">
+                                <div className="flex items-center gap-3">
+                                  <span className="w-16 text-xs font-medium text-muted-foreground">School</span>
+                                  <div className="h-3 flex-1 rounded-full bg-muted overflow-hidden">
+                                    <div className="h-full rounded-full bg-sky-500" style={{ width: `${schoolWidth}%` }} />
+                                  </div>
+                                  <span className="w-10 text-right text-xs font-semibold text-foreground">{d.school}%</span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <span className="w-16 text-xs font-medium text-muted-foreground">Trust</span>
+                                  <div className="h-3 flex-1 rounded-full bg-muted overflow-hidden">
+                                    <div className="h-full rounded-full bg-slate-400" style={{ width: `${trustWidth}%` }} />
+                                  </div>
+                                  <span className="w-10 text-right text-xs font-semibold text-muted-foreground">{d.trust}%</span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </HideableCard>
                 )}
@@ -2887,12 +3214,12 @@ function SchoolTab({ school, parsed, dfeData, staffingSnapshots, summaryData, au
             ───────────────────────────────────────────────────────────────────── */}
             {activeTab === "pupil" && (
               <div className="py-8 px-6">
-                {cohortPassport?.hasCTF ? (
+                {pupilRecords.length > 0 ? (
                   <HideableCard componentId="pupil-grid">
                     <div className="bg-card border border-border rounded-2xl p-8">
                       <h3 className="text-xl font-semibold text-foreground mb-1">Pupil-level data</h3>
                       <p className="text-sm text-muted-foreground mb-6">Individual pupil attainment from connected CTF. All pupil names are pseudonymised — only cohort patterns are surfaced.</p>
-                      <PupilCardGrid urn={info?.urn ?? 0} authToken={authToken} />
+                      <PupilCardGrid pupils={pupilRecords} spotlightPupilId={spotlightPupilId} />
                     </div>
                   </HideableCard>
                 ) : (
@@ -2910,6 +3237,40 @@ function SchoolTab({ school, parsed, dfeData, staffingSnapshots, summaryData, au
                     </div>
                     <p className="text-xs text-muted-foreground mt-3">Pupil data is HMAC-SHA256 pseudonymised. No names are stored on Schoolgle servers.</p>
                   </div>
+                )}
+                {defendNumbersData && (
+                  <HideableCard componentId="pupil-defend-numbers">
+                    <div className="mt-6 bg-card border border-border rounded-2xl p-8">
+                      <div className="flex items-start justify-between gap-4 mb-5">
+                        <div>
+                          <h3 className="text-xl font-semibold text-foreground mb-1">Defend your numbers</h3>
+                          <p className="text-sm text-muted-foreground">
+                            A concise demographic impact check from the CTF file — useful when explaining whether outcomes are being driven by FSM, SEND or EAL context.
+                          </p>
+                        </div>
+                        <span className="rounded-full border border-border bg-muted/30 px-3 py-1 text-xs font-semibold text-muted-foreground">
+                          Pupil-level evidence
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                        {[
+                          { label: "All pupils analysed", value: defendNumbersData.all?.count ?? "—", sub: "baseline cohort" },
+                          { label: "FSM removed", value: defendNumbersData.withoutFsm?.removed ?? "—", sub: `${defendNumbersData.withoutFsm?.remaining ?? "—"} remaining` },
+                          { label: "SEND removed", value: defendNumbersData.withoutSend?.removed ?? "—", sub: `${defendNumbersData.withoutSend?.remaining ?? "—"} remaining` },
+                          { label: "EAL removed", value: defendNumbersData.withoutEal?.removed ?? "—", sub: `${defendNumbersData.withoutEal?.remaining ?? "—"} remaining` },
+                        ].map((item) => (
+                          <div key={item.label} className="rounded-xl border border-border bg-muted/20 p-4">
+                            <div className="text-2xl font-semibold text-foreground">{item.value}</div>
+                            <div className="mt-1 text-sm font-medium text-muted-foreground">{item.label}</div>
+                            <div className="mt-0.5 text-xs text-muted-foreground/70">{item.sub}</div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-4 rounded-xl border border-border bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
+                        Use this as a prompt for professional discussion, not as a conclusion: “If we remove specific contextual groups, does the headline attainment picture materially change?”
+                      </div>
+                    </div>
+                  </HideableCard>
                 )}
               </div>
             )}
@@ -2957,9 +3318,10 @@ function SchoolTab({ school, parsed, dfeData, staffingSnapshots, summaryData, au
                           <KS2TrackRecordChart
                             school={abbrevLookup[school]?.name ?? school}
                             abbrev={school}
-                            ks2Results={dfeData?.ks2Results ?? []}
-                            selfReports={selfReports}
-                          />
+                           ks2Results={dfeData?.ks2Results ?? []}
+                           selfReports={selfReports}
+                           selfReportLabels={selfReportLabels}
+                         />
                         );
                       })()}
                     </div>
@@ -3368,7 +3730,7 @@ function TrustInsights({ parsed, onSchoolClick }: { parsed: ParsedSpreadsheet; o
 
 // ─── Key Findings Banner ──────────────────────────────────────────────────────
 
-function KeyFindingsBanner({ parsed }: { parsed: ParsedSpreadsheet }) {
+function KeyFindingsBanner({ parsed, isTrustLevel }: { parsed: ParsedSpreadsheet; isTrustLevel: boolean }) {
   // Finding 1: How many schools have Y6 Combined below 50%
   const schoolsBelow50 = parsed.schools.filter((s) => {
     const pct = parsed.data[s]?.["Year 6"]?.all_pupils.c_are ?? null;
@@ -3408,67 +3770,55 @@ function KeyFindingsBanner({ parsed }: { parsed: ParsedSpreadsheet }) {
     value: string;
     sub?: string;
     color: string;
-    bg: string;
-    border: string;
   }[] = [];
 
   if (trustAvg !== null) {
     findings.push({
       icon: <BarChart3 size={18} />,
-      label: "Trust Y6 Combined",
+      label: isTrustLevel ? "Trust Y6 Combined" : "Y6 Combined",
       value: `${trustAvg}%`,
-      sub: `${y6Count} schools reporting`,
+      sub: isTrustLevel ? `${y6Count} ${y6Count === 1 ? "school" : "schools"} reporting` : "latest school submission",
       color: trustAvg >= 65 ? "text-emerald-700" : trustAvg >= 50 ? "text-amber-700" : "text-red-700",
-      bg: trustAvg >= 65 ? "bg-emerald-50" : trustAvg >= 50 ? "bg-amber-50" : "bg-red-50",
-      border: trustAvg >= 65 ? "border-emerald-200" : trustAvg >= 50 ? "border-amber-200" : "border-red-200",
     });
   }
 
-  if (strongestSchool && strongestPct !== null) {
+  if (isTrustLevel && strongestSchool && strongestPct !== null) {
     findings.push({
       icon: <Trophy size={18} />,
       label: "Strongest school",
       value: `${strongestSchool} — ${strongestPct}%`,
       sub: "Highest Y6 Combined ARE",
       color: "text-emerald-700",
-      bg: "bg-emerald-50",
-      border: "border-emerald-200",
     });
   }
 
-  if (weakestSchool && weakestPct !== null && weakestSchool !== strongestSchool) {
+  if (isTrustLevel && weakestSchool && weakestPct !== null && weakestSchool !== strongestSchool) {
     findings.push({
       icon: <AlertCircle size={18} />,
       label: "Needs attention",
       value: `${weakestSchool} — ${weakestPct}%`,
       sub: "Lowest Y6 Combined ARE",
       color: weakestPct < 50 ? "text-red-700" : "text-amber-700",
-      bg: weakestPct < 50 ? "bg-red-50" : "bg-amber-50",
-      border: weakestPct < 50 ? "border-red-200" : "border-amber-200",
     });
   }
 
   if (schoolsBelow50.length > 0) {
     findings.push({
       icon: <XCircle size={18} />,
-      label: "Below 50% Y6 Combined",
-      value: `${schoolsBelow50.length} ${schoolsBelow50.length === 1 ? "school" : "schools"}`,
-      sub: schoolsBelow50.join(", "),
+      label: isTrustLevel ? "Below 50% Y6 Combined" : "Y6 below 50% combined",
+      value: isTrustLevel ? `${schoolsBelow50.length} ${schoolsBelow50.length === 1 ? "school" : "schools"}` : `${parsed.data[parsed.schools[0]]?.["Year 6"]?.all_pupils.c_are ?? "—"}%`,
+      sub: isTrustLevel ? schoolsBelow50.join(", ") : "flagged from latest submission",
       color: "text-red-700",
-      bg: "bg-red-50",
-      border: "border-red-200",
     });
   }
 
   if (schoolsZeroGdW3plus.length > 0) {
     findings.push({
       icon: <AlertTriangle size={18} />,
-      label: "Zero GD Writing (3+ yr groups)",
-      value: `${schoolsZeroGdW3plus.length} ${schoolsZeroGdW3plus.length === 1 ? "school" : "schools"}`,
-      sub: schoolsZeroGdW3plus.join(", "),
+      label: isTrustLevel ? "Zero GD Writing (3+ yr groups)" : "Zero GD Writing pattern",
+      value: isTrustLevel ? `${schoolsZeroGdW3plus.length} ${schoolsZeroGdW3plus.length === 1 ? "school" : "schools"}` : "3+ year groups",
+      sub: isTrustLevel ? schoolsZeroGdW3plus.join(", ") : "review writing greater-depth evidence",
       color: "text-amber-700",
-      bg: "bg-amber-50",
-      border: "border-amber-200",
     });
   }
 
@@ -3479,22 +3829,48 @@ function KeyFindingsBanner({ parsed }: { parsed: ParsedSpreadsheet }) {
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35 }}
-      className="bg-white border border-gray-200 rounded-2xl p-5"
+      className="bg-card border border-border rounded-2xl p-5 shadow-sm"
     >
       <div className="flex items-center gap-2 mb-3">
-        <Layers size={15} className="text-gray-500" />
-        <span className="text-sm font-semibold text-gray-800">Key Findings</span>
-        <span className="text-xs text-gray-400 ml-1">from your mid-year data</span>
+        <Layers size={15} className="text-muted-foreground" />
+        <span className="text-sm font-semibold text-foreground">Key Findings</span>
+        <span className="text-xs text-muted-foreground ml-1">from your mid-year data</span>
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        {findings.map((f, i) => (
-          <div key={i} className={`rounded-xl border px-4 py-3 ${f.bg} ${f.border}`}>
-            <div className={`${f.color} mb-1.5`}>{f.icon}</div>
-            <div className={`text-base font-bold ${f.color} leading-tight`}>{f.value}</div>
-            <div className={`text-xs font-semibold mt-0.5 ${f.color} opacity-80`}>{f.label}</div>
-            {f.sub && <div className={`text-[10px] mt-0.5 ${f.color} opacity-60 truncate`}>{f.sub}</div>}
-          </div>
-        ))}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        {findings.map((f, i) => {
+          const severityDot = f.color.includes("red")
+            ? "bg-red-500"
+            : f.color.includes("amber")
+              ? "bg-amber-400"
+              : f.color.includes("emerald")
+                ? "bg-emerald-500"
+                : "bg-sky-500";
+          const iconTone = f.color.includes("red")
+            ? "text-red-500"
+            : f.color.includes("amber")
+              ? "text-amber-500"
+              : f.color.includes("emerald")
+                ? "text-emerald-500"
+                : "text-sky-500";
+
+          return (
+            <div key={i} className="rounded-xl border border-border bg-card px-4 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-muted/20">
+                  <span className={iconTone}>{f.icon}</span>
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className={`h-1.5 w-1.5 rounded-full ${severityDot}`} />
+                    <div className="text-base font-semibold text-foreground leading-tight">{f.value}</div>
+                  </div>
+                  <div className="text-xs font-medium mt-1 text-muted-foreground">{f.label}</div>
+                  {f.sub && <div className="text-[10px] mt-0.5 text-muted-foreground/70 truncate">{f.sub}</div>}
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </motion.div>
   );
@@ -3509,7 +3885,172 @@ function getKs2SubjectForUrn(ks2Results: KS2Result[], urn: number, year: number,
   return r?.expectedStandardPct ?? null;
 }
 
-function KS2TrackRecordChart({ school, abbrev, urn, ks2Results, selfReports }: {
+type SelfReportLabels = {
+  autumn_term?: string;
+  mid_year?: string;
+};
+
+function captureDisplayName(period: keyof SelfReportLabels, labels?: SelfReportLabels): string {
+  return labels?.[period] ?? (period === 'autumn_term' ? 'Autumn self-report' : 'Mid-Year self-report');
+}
+
+function UrnValidationWarning({ validation }: { validation: UrnValidationResult | null }) {
+  if (!validation || validation.status === "valid") return null;
+
+  const isBlocking = validation.status === "mismatch" || validation.status === "not_found";
+  const tone = isBlocking
+    ? "border-red-200 bg-red-50 text-red-900"
+    : "border-amber-200 bg-amber-50 text-amber-900";
+  const iconTone = isBlocking ? "text-red-600" : "text-amber-600";
+  const candidate = validation.candidates?.[0];
+
+  return (
+    <div className={`mb-6 rounded-2xl border p-4 ${tone}`}>
+      <div className="flex items-start gap-3">
+        <AlertTriangle size={18} className={`${iconTone} mt-0.5 flex-shrink-0`} />
+        <div className="min-w-0">
+          <div className="text-sm font-semibold">
+            DfE data verification in progress
+          </div>
+          <p className="mt-1 text-sm leading-relaxed">
+            We are checking this school's official DfE identity before displaying KPI data, so the report does not show the wrong establishment's results.
+          </p>
+          {process.env.NODE_ENV === "development" && validation.dfeSchool && (
+            <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2">
+              <div className="rounded-xl bg-white/70 border border-white px-3 py-2">
+                <div className="font-semibold">Stored organization</div>
+                <div>{validation.organization.name}</div>
+                <div>URN {validation.organization.urn ?? "—"} · {validation.organization.postcode ?? "postcode missing"}</div>
+              </div>
+              <div className="rounded-xl bg-white/70 border border-white px-3 py-2">
+                <div className="font-semibold">DfE/GIAS match for stored URN</div>
+                <div>{validation.dfeSchool.name}</div>
+                <div>URN {validation.dfeSchool.urn} · {validation.dfeSchool.postcode ?? "postcode missing"}</div>
+              </div>
+            </div>
+          )}
+          {process.env.NODE_ENV === "development" && candidate && (
+            <p className="mt-2 text-xs">
+              Stronger candidate found: <strong>{candidate.name}</strong> — URN {candidate.urn}
+              {candidate.postcode ? `, ${candidate.postcode}` : ""} ({candidate.match_reasons.join(", ")}).
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function latestByYear<T extends { year: number }>(rows?: T[]) {
+  if (!rows || rows.length === 0) return null;
+  return [...rows].sort((a, b) => a.year - b.year)[rows.length - 1];
+}
+
+function formatSigned(value: number, suffix = "pp") {
+  return `${value > 0 ? "+" : ""}${Math.round(value * 10) / 10}${suffix}`;
+}
+
+function DfeSchoolNarrativeCard({
+  schoolName,
+  schoolData,
+  laBenchmarks,
+  demographicCohort,
+}: {
+  schoolName: string;
+  schoolData: SchoolKpiData | null;
+  laBenchmarks: LaBenchmarkData | null;
+  demographicCohort: DemographicCohort | null;
+}) {
+  if (!schoolData || !laBenchmarks) return null;
+
+  const latestKs2 = latestByYear(schoolData.ks2_combined);
+  const latestReading = latestByYear(schoolData.ks2_reading);
+  const latestWriting = latestByYear(schoolData.ks2_writing);
+  const latestMaths = latestByYear(schoolData.ks2_maths);
+  const latestAttendance = latestByYear(schoolData.attendance);
+  const latestPa = latestByYear(schoolData.persistent_absence);
+
+  const laKs2 = latestKs2
+    ? laBenchmarks.ks2_combined.find((row) => row.year === latestKs2.year)?.expected_standard_pct ?? null
+    : null;
+  const laAttendance = latestAttendance
+    ? laBenchmarks.attendance.find((row) => row.year === latestAttendance.year)?.overall_pct ?? null
+    : null;
+  const laPa = latestPa
+    ? laBenchmarks.persistent_absence.find((row) => row.year === latestPa.year)?.pct ?? null
+    : null;
+
+  const ks2Diff = latestKs2 && laKs2 !== null ? latestKs2.expected_standard_pct - laKs2 : null;
+  const attendanceDiff = latestAttendance && laAttendance !== null ? latestAttendance.overall_pct - laAttendance : null;
+  const paDiff = latestPa && laPa !== null ? latestPa.pct - laPa : null;
+
+  const subjectRows = [
+    latestReading ? { label: "Reading", value: latestReading.expected_standard_pct } : null,
+    latestWriting ? { label: "Writing", value: latestWriting.expected_standard_pct } : null,
+    latestMaths ? { label: "Maths", value: latestMaths.expected_standard_pct } : null,
+  ].filter(Boolean) as Array<{ label: string; value: number }>;
+  const strongest = subjectRows.length ? [...subjectRows].sort((a, b) => b.value - a.value)[0] : null;
+  const weakest = subjectRows.length ? [...subjectRows].sort((a, b) => a.value - b.value)[0] : null;
+
+  return (
+    <div className="mb-6 rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 via-white to-sky-50 p-5 shadow-sm">
+      <div className="flex items-start gap-3">
+        <div className="rounded-xl bg-indigo-600 p-2 text-white">
+          <BarChart3 size={18} />
+        </div>
+        <div>
+          <h3 className="text-base font-semibold text-gray-900">DfE intelligence narrative — {schoolName}</h3>
+          <p className="mt-1 text-sm text-gray-600">
+            This is generated from validated DfE performance, attendance and census data only. Uploaded assessment captures add a second layer later; they are not required for this external view.
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3 md:grid-cols-3">
+        <div className="rounded-xl border border-white bg-white/75 p-3">
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-indigo-600">Attainment lens</div>
+          <p className="mt-1 text-sm text-gray-700">
+            {latestKs2
+              ? `Latest KS2 combined is ${latestKs2.expected_standard_pct}%${ks2Diff !== null ? ` (${formatSigned(ks2Diff)} vs ${laBenchmarks.la_name})` : ""}.`
+              : "No recent KS2 combined result is available in the warehouse."}
+          </p>
+          {strongest && weakest && (
+            <p className="mt-2 text-xs text-gray-500">
+              Subject split: strongest {strongest.label} at {strongest.value}%; watch {weakest.label} at {weakest.value}%.
+            </p>
+          )}
+        </div>
+
+        <div className="rounded-xl border border-white bg-white/75 p-3">
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-emerald-600">Attendance lens</div>
+          <p className="mt-1 text-sm text-gray-700">
+            {latestAttendance
+              ? `Attendance is ${latestAttendance.overall_pct}%${attendanceDiff !== null ? ` (${formatSigned(attendanceDiff)} vs ${laBenchmarks.la_name})` : ""}.`
+              : "No attendance trend is available yet."}
+          </p>
+          {latestPa && (
+            <p className="mt-2 text-xs text-gray-500">
+              Persistent absence is {latestPa.pct}%{paDiff !== null ? ` (${formatSigned(paDiff)} vs LA; lower is better)` : ""}.
+            </p>
+          )}
+        </div>
+
+        <div className="rounded-xl border border-white bg-white/75 p-3">
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-sky-600">Comparison lens</div>
+          <p className="mt-1 text-sm text-gray-700">
+            Compared with {laBenchmarks.school_count} primary schools in {laBenchmarks.la_name}
+            {demographicCohort ? ` and ${demographicCohort.school_count} schools with similar FSM/EAL/SEN profiles.` : "."}
+          </p>
+          <p className="mt-2 text-xs text-gray-500">
+            Provision-specific comparisons, such as VI resource bases, need resource provision fields imported from GIAS; this warehouse currently only exposes general SEN%.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function KS2TrackRecordChart({ school, abbrev, urn, ks2Results, selfReports, selfReportLabels }: {
   school: string;
   // abbrev is optional — previously the only URN resolution path was via
   // abbrevLookup[abbrev]. Now we accept urn directly so any school with a
@@ -3521,6 +4062,7 @@ function KS2TrackRecordChart({ school, abbrev, urn, ks2Results, selfReports }: {
     autumn_term?: { combined: number | null } | null;
     mid_year?: { combined: number | null } | null;
   } | null;
+  selfReportLabels?: SelfReportLabels;
 }) {
   const abbrevLookup = useContext(AbbrevLookupContext);
   // Resolve URN: explicit prop takes precedence, fall back to abbrev lookup.
@@ -3535,6 +4077,10 @@ function KS2TrackRecordChart({ school, abbrev, urn, ks2Results, selfReports }: {
 
   const autumnCombined = selfReports?.autumn_term?.combined ?? null;
   const midYearCombined = selfReports?.mid_year?.combined ?? null;
+  const hasAutumnSelfReport = autumnCombined !== null;
+  const hasMidYearSelfReport = midYearCombined !== null;
+  const autumnLabel = captureDisplayName('autumn_term', selfReportLabels);
+  const midYearLabel = captureDisplayName('mid_year', selfReportLabels);
 
   // Flag when a self-report is more than 10pp above the best-ever DfE-validated KS2 result.
   const isAutumnSuspect = autumnCombined !== null && bestEverKs2 !== null && autumnCombined > bestEverKs2 + 10;
@@ -3551,8 +4097,8 @@ function KS2TrackRecordChart({ school, abbrev, urn, ks2Results, selfReports }: {
       combined: getKs2CombinedForUrn(ks2Results, info.urn, year),
       kind: 'dfe' as const,
     })),
-    ...(autumnCombined !== null ? [{ name: 'Autumn (self-report)', combined: autumnCombined, kind: 'autumn' as const, suspect: isAutumnSuspect }] : []),
-    ...(midYearCombined !== null ? [{ name: 'Mid-Year (self-report)', combined: midYearCombined, kind: 'mid_year' as const, suspect: isMidYearSuspect }] : []),
+    ...(hasAutumnSelfReport ? [{ name: autumnLabel, combined: autumnCombined, kind: 'autumn' as const, suspect: isAutumnSuspect }] : []),
+    ...(hasMidYearSelfReport ? [{ name: midYearLabel, combined: midYearCombined, kind: 'mid_year' as const, suspect: isMidYearSuspect }] : []),
   ].reverse(); // Most recent at top
 
   const CustomBar = (props: {
@@ -3572,7 +4118,7 @@ function KS2TrackRecordChart({ school, abbrev, urn, ks2Results, selfReports }: {
   };
 
   const headlinePct = midYearCombined ?? autumnCombined;
-  const headlineLabel = midYearCombined !== null ? 'Mid-Year' : autumnCombined !== null ? 'Autumn' : null;
+  const headlineLabel = midYearCombined !== null ? midYearLabel : autumnCombined !== null ? autumnLabel : null;
   const headlineSuspect = (midYearCombined !== null && isMidYearSuspect) || (midYearCombined === null && isAutumnSuspect);
 
   return (
@@ -3594,13 +4140,13 @@ function KS2TrackRecordChart({ school, abbrev, urn, ks2Results, selfReports }: {
       {isMidYearSuspect && (
         <div className="mb-2 flex items-center gap-1 text-xs text-red-600 bg-red-50 border border-red-200 rounded px-2 py-1">
           <AlertTriangle size={10} />
-          Mid-Year self-report ({midYearCombined}%) exceeds best-ever KS2 ({bestEverKs2}%) by {midYearCombined !== null && bestEverKs2 !== null ? Math.round(midYearCombined - bestEverKs2) : 0}pp
+          {midYearLabel} ({midYearCombined}%) exceeds best-ever KS2 ({bestEverKs2}%) by {midYearCombined !== null && bestEverKs2 !== null ? Math.round(midYearCombined - bestEverKs2) : 0}pp
         </div>
       )}
       {isAutumnSuspect && !isMidYearSuspect && (
         <div className="mb-2 flex items-center gap-1 text-xs text-red-600 bg-red-50 border border-red-200 rounded px-2 py-1">
           <AlertTriangle size={10} />
-          Autumn self-report ({autumnCombined}%) exceeds best-ever KS2 ({bestEverKs2}%) by {autumnCombined !== null && bestEverKs2 !== null ? Math.round(autumnCombined - bestEverKs2) : 0}pp
+          {autumnLabel} ({autumnCombined}%) exceeds best-ever KS2 ({bestEverKs2}%) by {autumnCombined !== null && bestEverKs2 !== null ? Math.round(autumnCombined - bestEverKs2) : 0}pp
         </div>
       )}
       {selfReportDelta !== null && Math.abs(selfReportDelta) >= 5 && (() => {
@@ -3622,7 +4168,7 @@ function KS2TrackRecordChart({ school, abbrev, urn, ks2Results, selfReports }: {
         return (
           <div className={`mb-2 flex items-start gap-1 text-xs rounded px-2 py-1 border ${tone}`}>
             <AlertTriangle size={10} className="mt-0.5 flex-shrink-0" />
-            <span><strong>Self-report moved {selfReportDelta >= 0 ? '+' : ''}{selfReportDelta}pp</strong> between Autumn ({autumnCombined}%) and Mid-Year ({midYearCombined}%). {prompt}</span>
+            <span><strong>Self-report moved {selfReportDelta >= 0 ? '+' : ''}{selfReportDelta}pp</strong> between {autumnLabel} ({autumnCombined}%) and {midYearLabel} ({midYearCombined}%). {prompt}</span>
           </div>
         );
       })()}
@@ -3640,8 +4186,8 @@ function KS2TrackRecordChart({ school, abbrev, urn, ks2Results, selfReports }: {
 
       <div className="flex items-center gap-3 mt-2 text-[10px] text-gray-400 flex-wrap">
         <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-blue-500 inline-block" /> DfE validated</span>
-        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-amber-400 inline-block" /> Autumn self-report</span>
-        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-purple-500 inline-block" /> Mid-Year self-report</span>
+        {hasAutumnSelfReport && <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-amber-400 inline-block" /> {autumnLabel}</span>}
+        {hasMidYearSelfReport && <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-purple-500 inline-block" /> {midYearLabel}</span>}
         {(isAutumnSuspect || isMidYearSuspect) && <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-red-500 inline-block" /> Suspect (10pp+ above track record)</span>}
       </div>
     </div>
@@ -3785,12 +4331,13 @@ function DemographicSnapshotCard({ urn, label, census }: {
   );
 }
 
-function FsmTrendChart({ abbrev, urn, label, census, selfReportFsmPcts }: {
+function FsmTrendChart({ abbrev, urn, label, census, selfReportFsmPcts, selfReportLabels }: {
   abbrev?: string;
   urn?: number;
   label?: string;
   census: CensusRecord[];
   selfReportFsmPcts?: { autumn_term: number | null; mid_year: number | null };
+  selfReportLabels?: SelfReportLabels;
 }) {
   const abbrevLookup = useContext(AbbrevLookupContext);
   const schoolUrn = urn ?? (abbrev ? abbrevLookup[abbrev]?.urn : undefined);
@@ -3815,8 +4362,24 @@ function FsmTrendChart({ abbrev, urn, label, census, selfReportFsmPcts }: {
   // "DfE trajectory" vs "what the school is claiming now".
   const autumnFsm = selfReportFsmPcts?.autumn_term ?? null;
   const midYearFsm = selfReportFsmPcts?.mid_year ?? null;
-  if (autumnFsm !== null) chartData.push({ year: 'Aut 26*', fsm: null, autumnSelf: autumnFsm });
-  if (midYearFsm !== null) chartData.push({ year: 'Mid 26*', fsm: null, midYearSelf: midYearFsm });
+  const hasAutumnSelfReport = autumnFsm !== null;
+  const hasMidYearSelfReport = midYearFsm !== null;
+  const autumnLabel = captureDisplayName('autumn_term', selfReportLabels);
+  const midYearLabel = captureDisplayName('mid_year', selfReportLabels);
+  if (hasAutumnSelfReport) chartData.push({ year: autumnLabel, fsm: null, autumnSelf: autumnFsm });
+  if (hasMidYearSelfReport) chartData.push({ year: midYearLabel, fsm: null, midYearSelf: midYearFsm });
+
+  const plottedValues = chartData.flatMap((row) =>
+    [row.fsm, row.autumnSelf, row.midYearSelf].filter((value): value is number => typeof value === "number"),
+  );
+  const minValue = plottedValues.length ? Math.min(...plottedValues) : 0;
+  const maxValue = plottedValues.length ? Math.max(...plottedValues) : 60;
+  const padding = Math.max(2, (maxValue - minValue) * 0.35);
+  const yMin = Math.max(0, Math.floor(minValue - padding));
+  const yMax = Math.min(100, Math.ceil(maxValue + padding));
+  const yDomain: [number, number] = yMax - yMin < 8
+    ? [Math.max(0, Math.floor(minValue - 3)), Math.min(100, Math.ceil(maxValue + 3))]
+    : [yMin, yMax];
 
   // Watch for divergence — if the latest DfE census is materially different from
   // the Mid-Year self-report, that's worth surfacing.
@@ -3838,17 +4401,17 @@ function FsmTrendChart({ abbrev, urn, label, census, selfReportFsmPcts }: {
         <LineChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
           <XAxis dataKey="year" tick={{ fontSize: 9 }} />
-          <YAxis domain={[0, 60]} tick={{ fontSize: 9 }} />
-          <Tooltip formatter={(val, name) => [`${val}%`, name === 'fsm' ? 'DfE FSM' : name === 'autumnSelf' ? 'Autumn self-report' : 'Mid-Year self-report']} />
+          <YAxis domain={yDomain} tick={{ fontSize: 9 }} allowDecimals />
+          <Tooltip formatter={(val, name) => [`${val}%`, name === 'fsm' ? 'DfE FSM' : name === 'autumnSelf' ? autumnLabel : midYearLabel]} />
           <Line type="monotone" dataKey="fsm" stroke="#3B82F6" strokeWidth={2} dot={{ r: 2.5, fill: '#3B82F6' }} connectNulls={false} />
-          <Line type="monotone" dataKey="autumnSelf" stroke="#F59E0B" strokeWidth={0} dot={{ r: 4, fill: '#F59E0B', stroke: '#F59E0B' }} />
-          <Line type="monotone" dataKey="midYearSelf" stroke="#A855F7" strokeWidth={0} dot={{ r: 4, fill: '#A855F7', stroke: '#A855F7' }} />
+          {hasAutumnSelfReport && <Line type="monotone" dataKey="autumnSelf" stroke="#F59E0B" strokeWidth={0} dot={{ r: 4, fill: '#F59E0B', stroke: '#F59E0B' }} />}
+          {hasMidYearSelfReport && <Line type="monotone" dataKey="midYearSelf" stroke="#A855F7" strokeWidth={0} dot={{ r: 4, fill: '#A855F7', stroke: '#A855F7' }} />}
         </LineChart>
       </ResponsiveContainer>
       <div className="flex items-center gap-2 mt-1 text-[9px] text-gray-400 flex-wrap">
         <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500 inline-block" /> DfE census</span>
-        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" /> Autumn self-report</span>
-        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-purple-500 inline-block" /> Mid-Year self-report</span>
+        {hasAutumnSelfReport && <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" /> {autumnLabel}</span>}
+        {hasMidYearSelfReport && <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-purple-500 inline-block" /> {midYearLabel}</span>}
       </div>
     </div>
   );
@@ -4289,9 +4852,10 @@ function PreMeetingVerification({ school, summary, dfeData, parsed }: {
   }
 
   // DfE KS2 history
-  if (dfeData && schoolInfo) {
+  if (dfeData && schoolInfo?.urn) {
+    const schoolUrn = schoolInfo.urn;
     const ks2Years = [2023, 2024, 2025];
-    const ks2Vals = ks2Years.map(yr => ({ yr, pct: getKs2CombinedForUrn(dfeData.ks2Results, schoolInfo.urn, yr) })).filter(x => x.pct !== null);
+    const ks2Vals = ks2Years.map(yr => ({ yr, pct: getKs2CombinedForUrn(dfeData.ks2Results, schoolUrn, yr) })).filter(x => x.pct !== null);
     if (ks2Vals.length > 0) {
       items.push({ label: 'KS2 history (DfE validated)', value: ks2Vals.map(x => `${x.yr - 1}/${String(x.yr).slice(2)}: ${x.pct}%`).join(' · '), source: 'DfE KS2 Published Results', tier: 'external' });
     }
@@ -4388,15 +4952,35 @@ export default function TrustAssessorPage() {
   // Full capture map so the KS2 chart can plot Autumn + Mid-Year side-by-side.
   // Key = capture_period ('autumn_term' | 'mid_year' | 'end_of_year' | 'summer_term').
   type CapturePeriod = 'autumn_term' | 'mid_year' | 'end_of_year' | 'summer_term';
-  const [capturesByPeriod, setCapturesByPeriod] = useState<Partial<Record<CapturePeriod, { parsed_data: ParsedSpreadsheet; file_name: string; created_at?: string }>>>({});
+  const [capturesByPeriod, setCapturesByPeriod] = useState<Partial<Record<CapturePeriod, CaptureSnapshot | null>>>({});
   const [currentCapturePeriod, setCurrentCapturePeriod] = useState<CapturePeriod | null>(null);
+  const selfReportLabels: SelfReportLabels = useMemo(() => ({
+    autumn_term: capturesByPeriod.autumn_term?.capture_name
+      ?? capturesByPeriod.autumn_term?.file_name
+      ?? 'Autumn self-report',
+    mid_year: capturesByPeriod.mid_year?.capture_name
+      ?? capturesByPeriod.mid_year?.file_name
+      ?? 'Mid-Year self-report',
+  }), [
+    capturesByPeriod.autumn_term?.capture_name,
+    capturesByPeriod.autumn_term?.file_name,
+    capturesByPeriod.mid_year?.capture_name,
+    capturesByPeriod.mid_year?.file_name,
+  ]);
   // URN → child-org-id lookup so each school tab can query its OWN captures.
   // Populated by /api/organizations/children on mount for trust-level users.
   const [urnToOrgId, setUrnToOrgId] = useState<Record<number, string>>({});
   // Schools in the current user's scope — trust-level: all children; school-
   // level (leaf): the current org itself. Drives the DfE KS2 comparison block
   // so any valid URN auto-populates without a hardcoded school registry.
-  const [scopedSchools, setScopedSchools] = useState<Array<{ id: string; name: string; urn: number | null }>>([]);
+  const [scopedSchools, setScopedSchools] = useState<Array<{
+    id: string;
+    name: string;
+    urn: number | null;
+    organization_type?: string | null;
+    parent_organization_id?: string | null;
+    logo_url?: string | null;
+  }>>([]);
 
   // Derived lookup: abbrev → { id, name, urn } for the schools in this user's scope.
   // Replaces the old hardcoded TRUST_SCHOOLS constant. Trust users get all children;
@@ -4418,6 +5002,18 @@ export default function TrustAssessorPage() {
   const [dfeData, setDfeData] = useState<DfEData | null>(null);
   const [dfeLoading, setDfeLoading] = useState(false);
   const [dfeError, setDfeError] = useState<string | null>(null);
+  const dfeLoadedForOrgRef = useRef<string | null>(null);
+
+  // KPI Dashboard / Intelligence data
+  const [laBenchmarks, setLaBenchmarks] = useState<LaBenchmarkData | null>(null);
+  const [demographicCohort, setDemographicCohort] = useState<DemographicCohort | null>(null);
+  const [schoolKpiData, setSchoolKpiData] = useState<SchoolKpiData | null>(null);
+  const [kpiLoading, setKpiLoading] = useState(false);
+  const [kpiError, setKpiError] = useState<string | null>(null);
+  const [urnValidation, setUrnValidation] = useState<UrnValidationResult | null>(null);
+  const [urnValidationLoading, setUrnValidationLoading] = useState(false);
+  const [urnValidationChecked, setUrnValidationChecked] = useState(false);
+
   const [staffingSnapshots, setStaffingSnapshots] = useState<Record<number, {
     urn: number;
     numberOfPupils: number | null;
@@ -4432,6 +5028,40 @@ export default function TrustAssessorPage() {
   const [showAllFlags, setShowAllFlags] = useState(false);
   const [showFullHeatmap, setShowFullHeatmap] = useState(false);
   const [activeSchoolTab, setActiveSchoolTab] = useState<string>("overview");
+  const activeOrganizationRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!organizationId || activeOrganizationRef.current === organizationId) return;
+    activeOrganizationRef.current = organizationId;
+    setActiveSchoolTab("overview");
+    setDfeData(null);
+    setDfeError(null);
+    setPerPupilStats(null);
+    setPerPupilData(null);
+    setStaffingSnapshots(null);
+    setLaBenchmarks(null);
+    setDemographicCohort(null);
+    setSchoolKpiData(null);
+    setKpiError(null);
+    setUrnValidation(null);
+    setUrnValidationChecked(false);
+  }, [organizationId]);
+  const selectedKpiSchool = useMemo(() => {
+    if (scopedSchools.length === 0) return null;
+
+    if (activeSchoolTab !== "overview") {
+      const selectedFromLookup = abbrevLookup[activeSchoolTab];
+      const selectedSchool = scopedSchools.find((school) =>
+        school.id === selectedFromLookup?.id ||
+        school.name === activeSchoolTab ||
+        abbreviateSchoolName(school.name) === activeSchoolTab,
+      );
+
+      if (selectedSchool) return selectedSchool;
+    }
+
+    return scopedSchools[0];
+  }, [activeSchoolTab, abbrevLookup, scopedSchools]);
   const [perPupilStats, setPerPupilStats] = useState<{ totalPupils: number; trackablePupils: number } | null>(null);
   const [perPupilData, setPerPupilData] = useState<{
     summary: { totalPupils: number; totalRecords: number; yearsSpan: number[]; trackablePupils: number };
@@ -4572,8 +5202,22 @@ export default function TrustAssessorPage() {
       const res = await fetch(`/api/organizations/children?parentId=${organizationId}`, { headers: authHeaders });
       if (!res.ok) return;
       const body = await res.json() as {
-        children?: Array<{ id: string; name: string; urn: string | number | null }>;
-        self?: { id: string; name: string; urn: string | number | null } | null;
+        children?: Array<{
+          id: string;
+          name: string;
+          urn: string | number | null;
+          organization_type?: string | null;
+          parent_organization_id?: string | null;
+          settings?: { logo_url?: string | null; trust_logo_url?: string | null } | null;
+        }>;
+        self?: {
+          id: string;
+          name: string;
+          urn: string | number | null;
+          organization_type?: string | null;
+          parent_organization_id?: string | null;
+          settings?: { logo_url?: string | null; trust_logo_url?: string | null } | null;
+        } | null;
       };
       const children = body.children ?? [];
       const self = body.self ?? null;
@@ -4595,8 +5239,22 @@ export default function TrustAssessorPage() {
 
       // Scoped schools: children if this org is a trust; self if it's a leaf.
       const scoped = children.length > 0
-        ? children.map(c => ({ id: c.id, name: c.name, urn: normUrn(c.urn) }))
-        : (self ? [{ id: self.id, name: self.name, urn: normUrn(self.urn) }] : []);
+        ? children.map(c => ({
+          id: c.id,
+          name: c.name,
+          urn: normUrn(c.urn),
+          organization_type: c.organization_type,
+          parent_organization_id: c.parent_organization_id,
+          logo_url: c.settings?.logo_url ?? null,
+        }))
+        : (self ? [{
+          id: self.id,
+          name: self.name,
+          urn: normUrn(self.urn),
+          organization_type: self.organization_type,
+          parent_organization_id: self.parent_organization_id,
+          logo_url: self.settings?.logo_url ?? null,
+        }] : []);
       setScopedSchools(scoped);
     })();
   }, [organizationId, accessToken, authHeaders]);
@@ -4610,11 +5268,74 @@ export default function TrustAssessorPage() {
     }
   }, [isTrustLevel, scopedSchools, activeSchoolTab]);
 
-  // Fetch DfE data once on mount (not on every re-render)
-  const dfeLoadedRef = useRef(false);
+  // School-level orgs must never render trust-wide spreadsheet rows, even if a
+  // connector or legacy saved capture contains multiple schools. Trust orgs keep
+  // the full spreadsheet; school orgs get only their own abbreviation.
   useEffect(() => {
-    if (dfeLoadedRef.current || !accessToken) return;
-    dfeLoadedRef.current = true;
+    if (isTrustLevel || scopedSchools.length === 0) return;
+    const allowedSchools = Object.keys(abbrevLookup);
+    if (allowedSchools.length === 0) return;
+
+    if (parsed) {
+      const scopedParsed = scopeParsedSpreadsheet(parsed, allowedSchools);
+      if (scopedParsed !== parsed) setParsed(scopedParsed);
+    }
+
+    setCapturesByPeriod((previous) => {
+      let changed = false;
+      const next: Partial<Record<CapturePeriod, CaptureSnapshot | null>> = {};
+
+      for (const [period, snapshot] of Object.entries(previous) as Array<[CapturePeriod, CaptureSnapshot | null]>) {
+        if (!snapshot?.parsed_data) {
+          next[period] = snapshot;
+          continue;
+        }
+
+        const scopedSnapshotParsed = scopeParsedSpreadsheet(snapshot.parsed_data, allowedSchools);
+        changed = changed || scopedSnapshotParsed !== snapshot.parsed_data;
+        next[period] = scopedSnapshotParsed === snapshot.parsed_data
+          ? snapshot
+          : { ...snapshot, parsed_data: scopedSnapshotParsed };
+      }
+
+      return changed ? next : previous;
+    });
+  }, [isTrustLevel, scopedSchools, abbrevLookup, parsed]);
+
+  // Belt-and-braces validation: before showing DfE KPIs, ensure the stored
+  // organization URN resolves back to the same school identity in our GIAS
+  // warehouse. This catches copy/paste/import mistakes like a correct school
+  // name paired with another school's URN.
+  useEffect(() => {
+    if (!accessToken || !selectedKpiSchool) return;
+
+    if (!selectedKpiSchool.id) return;
+
+    (async () => {
+      setUrnValidationLoading(true);
+      setUrnValidationChecked(false);
+      try {
+        const res = await fetch(
+          `/api/intelligence/urn-validation?organizationId=${selectedKpiSchool.id}`,
+          { headers: authHeaders },
+        );
+        const json = await res.json();
+        setUrnValidation(res.ok ? json : null);
+      } catch (error) {
+        console.error("[Trust Assessor] URN validation failed", error);
+        setUrnValidation(null);
+      } finally {
+        setUrnValidationChecked(true);
+        setUrnValidationLoading(false);
+      }
+    })();
+  }, [accessToken, selectedKpiSchool, authHeaders]);
+
+  // Fetch DfE data once per organization.
+  useEffect(() => {
+    if (!accessToken || !organizationId) return;
+    if (dfeLoadedForOrgRef.current === organizationId) return;
+    dfeLoadedForOrgRef.current = organizationId;
 
     (async () => {
       setDfeLoading(true);
@@ -4683,6 +5404,80 @@ export default function TrustAssessorPage() {
       }
     })();
   }, [accessToken, organizationId, authHeaders]);
+
+  // Fetch KPI Dashboard / Intelligence data for LA benchmarks and demographic cohort
+  // This runs separately from the DfE data fetch and waits for scopedSchools to be populated
+  useEffect(() => {
+    // Skip if not authenticated or no schools yet
+    if (!accessToken || !selectedKpiSchool) {
+      return;
+    }
+
+    if (urnValidationLoading || !urnValidationChecked) {
+      setKpiLoading(true);
+      return;
+    }
+
+    if (urnValidation && ["mismatch", "not_found", "missing_urn"].includes(urnValidation.status)) {
+      setKpiLoading(false);
+      setKpiError(urnValidation.message);
+      setLaBenchmarks(null);
+      setDemographicCohort(null);
+      setSchoolKpiData(null);
+      return;
+    }
+
+    if (!selectedKpiSchool.urn) {
+      setKpiError("No school URN available for intelligence data");
+      setKpiLoading(false);
+      setLaBenchmarks(null);
+      setDemographicCohort(null);
+      setSchoolKpiData(null);
+      return;
+    }
+
+    (async () => {
+      setKpiLoading(true);
+      setKpiError(null);
+      setLaBenchmarks(null);
+      setDemographicCohort(null);
+      setSchoolKpiData(null);
+      try {
+        // Fetch fresh DfE-powered KPI data for the primary school. School KPI
+        // data is loaded from the DfE warehouse, not uploaded trust spreadsheets.
+        const [laRes, cohortRes, schoolKpiRes] = await Promise.all([
+          fetch(`/api/intelligence/la-benchmarks?urn=${selectedKpiSchool.urn}`, { headers: authHeaders }),
+          fetch(`/api/intelligence/demographic-cohort?urn=${selectedKpiSchool.urn}`, { headers: authHeaders }),
+          fetch(`/api/intelligence/kpi-dashboard?urn=${selectedKpiSchool.urn}`, { headers: authHeaders }),
+        ]);
+
+        if (laRes.ok) {
+          const laJson = await laRes.json();
+          setLaBenchmarks(laJson.data ?? laJson);
+        } else {
+          const laJson = await laRes.json();
+          setKpiError(laJson.error || "Failed to fetch LA benchmarks");
+        }
+
+        if (cohortRes.ok) {
+          const cohortJson = await cohortRes.json();
+          setDemographicCohort(cohortJson.data ?? cohortJson);
+        }
+
+        if (schoolKpiRes.ok) {
+          const schoolKpiJson = await schoolKpiRes.json();
+          setSchoolKpiData(schoolKpiJson.data ?? schoolKpiJson);
+        } else {
+          const schoolKpiJson = await schoolKpiRes.json();
+          setKpiError(schoolKpiJson.error || "Failed to fetch school KPI data");
+        }
+      } catch (e) {
+        setKpiError(e instanceof Error ? e.message : "Failed to load KPI data");
+      } finally {
+        setKpiLoading(false);
+      }
+    })();
+  }, [accessToken, selectedKpiSchool, authHeaders, urnValidation, urnValidationLoading, urnValidationChecked]);
 
   // Process a file (from Drive picker or manual upload). If driveFileId is provided,
   // save the connector to Supabase so it auto-connects on future page loads.
@@ -4842,6 +5637,10 @@ export default function TrustAssessorPage() {
     if (!organizationId || !accessToken) return;
     if (trustSpreadsheetLoadedRef.current === organizationId) return;
     trustSpreadsheetLoadedRef.current = organizationId;
+    setParsed(null);
+    setFileName(null);
+    setCapturesByPeriod({});
+    setCurrentCapturePeriod(null);
 
     (async () => {
       try {
@@ -4883,13 +5682,14 @@ export default function TrustAssessorPage() {
   if (parsed && dfeData) {
     for (const abbrev of parsed.schools) {
       const info = abbrevLookup[abbrev];
-      if (!info) continue;
+      if (!info?.urn) continue;
       const y6Data = parsed.data[abbrev]?.["Year 6"];
       const selfReportY6 = y6Data ? getCombinedARE(y6Data.all_pupils) : null;
       if (selfReportY6 === null) continue;
 
+      const schoolUrn = info.urn;
       const ks2Years = [2023, 2024, 2025];
-      const historical = ks2Years.map((year) => getKs2CombinedForUrn(dfeData.ks2Results, info.urn, year)).filter((v): v is number => v !== null);
+      const historical = ks2Years.map((year) => getKs2CombinedForUrn(dfeData.ks2Results, schoolUrn, year)).filter((v): v is number => v !== null);
       if (historical.length === 0) continue;
 
       const bestEver = Math.max(...historical);
@@ -4904,19 +5704,33 @@ export default function TrustAssessorPage() {
     }
   }
 
+  const activeCapture = currentCapturePeriod ? capturesByPeriod[currentCapturePeriod] : null;
+  const activeSubmissionName = activeCapture?.capture_name ?? activeCapture?.file_name ?? fileName ?? "Latest submission";
+  const inferredCapturePeriod = currentCapturePeriod
+    ?? (/mid/i.test(activeSubmissionName) ? "mid_year" : /autumn/i.test(activeSubmissionName) ? "autumn_term" : null);
+  const activeSubmissionDate = formatShortDate(activeCapture?.created_at);
+  const activeSubmissionLabel = inferredCapturePeriod === "mid_year"
+    ? "Mid-year submission"
+    : inferredCapturePeriod === "autumn_term"
+      ? "Autumn submission"
+      : isTrustLevel
+        ? "Trust data capture"
+        : "School submission";
+  const showFullCapturePanel = !parsed;
+
   return (
     <AbbrevLookupContext.Provider value={abbrevLookup}>
-    <div className="min-h-screen bg-gray-50">
+    <div className="trust-assessor-page min-h-screen bg-background text-foreground">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-5">
+      <div className="bg-card border-b border-border px-6 py-5">
         <div className="max-w-6xl mx-auto">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-blue-50 rounded-lg flex items-center justify-center">
-              <TrendingUp size={20} className="text-blue-600" />
+            <div className="w-9 h-9 bg-primary/10 border border-primary/20 rounded-lg flex items-center justify-center">
+              <TrendingUp size={20} className="text-primary" />
             </div>
             <div>
-              <h1 className="text-xl font-semibold text-gray-900">Trust Assessor</h1>
-              <p className="text-sm text-gray-500">Upload mid-year data. Cross-reference with DfE. No AI — pure numbers.</p>
+              <h1 className="text-xl font-semibold text-foreground">Trust Assessor</h1>
+              <p className="text-sm text-muted-foreground">Upload mid-year data. Cross-reference with DfE. No AI — pure numbers.</p>
             </div>
           </div>
         </div>
@@ -4928,21 +5742,40 @@ export default function TrustAssessorPage() {
         {/* Always visible at the top so school-level users (no spreadsheet yet) */}
         {/* can create captures directly. For trust users it shows the trust's  */}
         {/* own captures; each school's captures still render inside SchoolTab. */}
-        {organizationId && accessToken && (
+        {organizationId && accessToken && showFullCapturePanel && (
           <CapturesPanel
             organizationId={organizationId}
             authHeaders={authHeaders}
           />
         )}
+        {organizationId && accessToken && !showFullCapturePanel && (
+          <details className="rounded-xl border border-border bg-card/60 px-4 py-3 text-sm">
+            <summary className="cursor-pointer list-none text-muted-foreground hover:text-foreground">
+              <span className="font-medium text-foreground">Data captures</span>
+              <span className="mx-2 text-border">·</span>
+              <span>{activeSubmissionLabel}</span>
+              {activeSubmissionDate && <span className="ml-2">updated {activeSubmissionDate}</span>}
+              <span className="ml-2 text-xs text-muted-foreground/70">(open to manage)</span>
+            </summary>
+            <div className="mt-4">
+              <CapturesPanel
+                organizationId={organizationId}
+                authHeaders={authHeaders}
+              />
+            </div>
+          </details>
+        )}
 
         {/* ─── Connector Strip (minimal) ─────────────────────────────────── */}
-        <div className="flex items-center gap-4 text-xs text-gray-500 px-1">
+        <div className="flex items-center gap-4 text-xs text-muted-foreground px-1">
           {/* Connector 1: Spreadsheet */}
           <div className="flex items-center gap-1.5">
             {parsed ? (
               <>
                 <Cloud size={12} className="text-emerald-500" />
-                <span className="text-gray-700 font-medium truncate max-w-[200px]">{fileName}</span>
+                <span className="text-foreground font-medium truncate max-w-[220px]">{activeSubmissionLabel}</span>
+                <span className="text-muted-foreground/70 truncate max-w-[220px]">{activeSubmissionName}</span>
+                {activeSubmissionDate && <span className="text-muted-foreground/70">{activeSubmissionDate}</span>}
                 {connector && <span className="text-emerald-500">●</span>}
                 <button
                   onClick={async () => {
@@ -4951,7 +5784,7 @@ export default function TrustAssessorPage() {
                     }
                     setParsed(null); setFileName(null); setConnector(null); setConnectorError(null);
                   }}
-                  className="text-gray-300 hover:text-red-500"
+                  className="text-muted-foreground/50 hover:text-red-500"
                   title="Disconnect"
                 >✕</button>
               </>
@@ -4964,31 +5797,31 @@ export default function TrustAssessorPage() {
             ) : connectorLoading ? (
               <>
                 <Cloud size={12} className="text-blue-400 animate-pulse" />
-                <span className="text-gray-400">Loading...</span>
+                <span className="text-muted-foreground">Loading...</span>
               </>
             ) : (
               <>
-                <Cloud size={12} className="text-gray-300" />
+                <Cloud size={12} className="text-muted-foreground/50" />
                 <button onClick={() => setShowDrivePicker(true)} className="text-blue-600 hover:text-blue-800 font-medium">Connect</button>
-                <span className="text-gray-200">|</span>
-                <button onClick={() => fileInputRef.current?.click()} className="text-gray-400 hover:text-gray-600">upload</button>
+                <span className="text-border">|</span>
+                <button onClick={() => fileInputRef.current?.click()} className="text-muted-foreground hover:text-foreground">upload</button>
               </>
             )}
             <input ref={fileInputRef} type="file" accept=".xlsx" className="hidden" onChange={handleFileChange} />
           </div>
-          <span className="text-gray-200">·</span>
+          <span className="text-border">·</span>
           {/* Connector 2: DfE */}
           <div className="flex items-center gap-1" title="Schoolgle DfE Database">
-            <Database size={12} className={dfeData ? "text-blue-500" : "text-gray-300"} />
-            <span className={dfeData ? "text-gray-600" : "text-gray-400"}>DfE {dfeData ? "●" : "○"}</span>
+            <Database size={12} className={dfeData ? "text-blue-500" : "text-muted-foreground/50"} />
+            <span className={dfeData ? "text-muted-foreground" : "text-muted-foreground/70"}>{dfeData ? "DfE loaded" : "DfE loading"}</span>
           </div>
-          <span className="text-gray-200">·</span>
+          <span className="text-border">·</span>
           {/* Connector 3: School Data Summary (per-school) */}
           <div className="flex items-center gap-1.5" title="School Data Summary — per-school Autumn/Mid/Target/EOY breakdown">
             <FileSpreadsheet size={12} className={summaryData ? "text-orange-500" : "text-gray-300"} />
             {summaryData ? (
               <>
-                <span className="text-gray-700 font-medium truncate max-w-[180px]">{summaryFileName}</span>
+                <span className="text-foreground font-medium truncate max-w-[180px]">{summaryFileName}</span>
                 <span className="text-orange-500 text-[10px] font-semibold">{summaryData.schoolAbbrev}</span>
                 <button
                   onClick={() => {
@@ -5002,24 +5835,24 @@ export default function TrustAssessorPage() {
                       }).catch((err) => console.error('[school-summary] delete failed:', err));
                     }
                   }}
-                  className="text-gray-300 hover:text-red-500"
+                  className="text-muted-foreground/50 hover:text-red-500"
                   title="Remove school data summary"
                 >✕</button>
               </>
             ) : (
               <>
                 <button onClick={() => summaryFileInputRef.current?.click()} className="text-orange-600 hover:text-orange-800 font-medium">
-                  + School Summary
+                  + Add school summary
                 </button>
               </>
             )}
             <input ref={summaryFileInputRef} type="file" accept=".xlsx" className="hidden" onChange={handleSummaryFileChange} />
           </div>
-          <span className="text-gray-200">·</span>
+          <span className="text-border">·</span>
           {/* Connector 4: Per-pupil */}
           <div className="flex items-center gap-1" title="Per-pupil assessment data">
-            <UserCheck size={12} className="text-gray-300" />
-            <span className="text-gray-400">Pupil ○</span>
+            <UserCheck size={12} className="text-muted-foreground/50" />
+            <span className="text-muted-foreground/70">Pupil data not connected</span>
           </div>
         </div>
         {summaryParseError && (
@@ -5073,7 +5906,7 @@ export default function TrustAssessorPage() {
         )}
 
         {/* Key Findings — visible once data is loaded */}
-        {parsed && <KeyFindingsBanner parsed={parsed} />}
+        {parsed && <KeyFindingsBanner parsed={parsed} isTrustLevel={isTrustLevel} />}
 
         {/* No data — step-by-step guide */}
         {!parsed && !showDrivePicker && !connectorLoading && !connectorError && (
@@ -5159,17 +5992,37 @@ export default function TrustAssessorPage() {
               key="phase1"
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white border border-gray-200 rounded-2xl p-6 space-y-8"
+              className="bg-card border border-border rounded-2xl p-6 space-y-8"
             >
-              <SectionHeader number={1} title="Your Data" subtitle="What the spreadsheet contains — parsed deterministically, no AI." complete />
+              <SectionHeader
+                number={1}
+                title={isTrustLevel ? "Trust Data" : "School Report"}
+                subtitle={isTrustLevel
+                  ? "Trust-level capture parsed deterministically from the connected submission."
+                  : "Headline findings, DfE review, cohort gaps and evidence for this school."}
+                complete
+              />
+
+              <div className="rounded-xl border border-border bg-muted/20 p-4 text-sm text-muted-foreground">
+                <div className="font-semibold text-foreground">{activeSubmissionLabel}: {activeSubmissionName}</div>
+                <div className="mt-1">
+                  {isTrustLevel
+                    ? "These figures summarise the schools included in the selected trust capture."
+                    : `${parsed.schools[0] ?? "This school"} figures summarise what was submitted in this capture. If EYFS or other year groups were not included, they are intentionally not counted here.`}
+                  {activeSubmissionDate && <span> Last updated {activeSubmissionDate}.</span>}
+                </div>
+              </div>
+
+              {isTrustLevel && <TrustExecutiveOverview parsed={parsed} />}
 
               {/* ── 1. Trust Summary Bar ── */}
-              {(() => {
+              {isTrustLevel && (() => {
+                const submittedYearGroups = getSubmittedYearGroups(parsed);
                 let totalPupils = 0;
                 let totalFsmRaw = 0;
                 let totalSend = 0;
                 for (const school of parsed.schools) {
-                  for (const yg of YEAR_GROUPS) {
+                  for (const yg of submittedYearGroups) {
                     const d = parsed.data[school]?.[yg];
                     if (!d) continue;
                     const cohortN = d.cohort.number_in_cohort;
@@ -5198,8 +6051,9 @@ export default function TrustAssessorPage() {
                 const otherParsed = capturesByPeriod[otherKey]?.parsed_data ?? null;
                 let otherTotalPupils = 0, otherTotalFsm = 0;
                 if (otherParsed) {
+                  const otherYearGroups = getSubmittedYearGroups(otherParsed);
                   for (const sch of otherParsed.schools) {
-                    for (const yg of YEAR_GROUPS) {
+                    for (const yg of otherYearGroups) {
                       const d = otherParsed.data[sch]?.[yg];
                       if (!d) continue;
                       if (d.cohort.number_in_cohort !== null) otherTotalPupils += d.cohort.number_in_cohort;
@@ -5209,39 +6063,43 @@ export default function TrustAssessorPage() {
                 }
                 const currentSource: StatSource = currentCapturePeriod === 'mid_year' ? 'mid_year' : currentCapturePeriod === 'autumn_term' ? 'autumn' : 'trust_spreadsheet';
                 const otherLabel = otherKey === 'mid_year' ? 'Mid-Year' : 'Autumn';
+                const sourceLabel = isTrustLevel ? undefined : activeSubmissionLabel;
 
                 return (
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                    <StatCard label="Schools" value={parsed.schools.length} sub={parsed.schools.join(", ")} source={currentSource} />
-                    <StatCard label="Year groups" value={parsed.yearGroups.length} sub={parsed.yearGroups.join(", ")} source={currentSource} />
-                    <StatCard label="Data points" value={parsed.totalDataPoints.toLocaleString()} source={currentSource} />
+                    {isTrustLevel && <StatCard label="Schools" value={parsed.schools.length} sub={parsed.schools.join(", ")} source={currentSource} sourceLabel={sourceLabel} />}
+                    <StatCard label={isTrustLevel ? "Year groups" : "Submitted year groups"} value={submittedYearGroups.length} sub={submittedYearGroups.join(", ")} source={currentSource} sourceLabel={sourceLabel} />
+                    <StatCard label="Data points" value={parsed.totalDataPoints.toLocaleString()} source={currentSource} sourceLabel={sourceLabel} />
                     <StatCard
-                      label="Total pupils"
+                      label={isTrustLevel ? "Total pupils" : "Pupils in submission"}
                       value={totalPupils > 0 ? totalPupils.toLocaleString() : "—"}
-                      sub="all year groups"
+                      sub={isTrustLevel ? "included year groups" : "not the DfE census roll"}
                       source={currentSource}
+                      sourceLabel={sourceLabel}
                       priorValue={otherParsed && otherTotalPupils > 0 ? otherTotalPupils.toLocaleString() : undefined}
                       priorLabel={`${otherLabel}`}
                     />
                     <StatCard
                       label="FSM pupils"
                       value={totalFsmRaw > 0 ? Math.round(totalFsmRaw).toLocaleString() : "—"}
-                      sub={fsmPct !== null ? `${Math.round(fsmPct)}% trust-wide` : undefined}
+                      sub={fsmPct !== null ? `${Math.round(fsmPct)}% ${isTrustLevel ? "trust-wide" : "of submitted pupils"}` : undefined}
                       source={currentSource}
+                      sourceLabel={sourceLabel}
                       priorValue={otherParsed && otherTotalFsm > 0 ? Math.round(otherTotalFsm).toLocaleString() : undefined}
                       priorLabel={`${otherLabel}`}
                     />
-                    <StatCard label="Quality flags" value={parsed.qualityFlags.length} sub={parsed.qualityFlags.length > 0 ? "See below" : "None"} source={currentSource} />
+                    <StatCard label="Quality flags" value={parsed.qualityFlags.length} sub={parsed.qualityFlags.length > 0 ? "See below" : "None"} source={currentSource} sourceLabel={sourceLabel} />
                   </div>
                 );
               })()}
 
               {/* ── 2. Traffic Light Summary Grid ── */}
+              {isTrustLevel && (
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <div>
                     <h3 className="text-base font-semibold text-gray-800">Y6 Summary — Traffic Light View</h3>
-                    <p className="text-xs text-gray-500 mt-0.5">Schools sorted by total pupils (largest first). Click a school name to drill into its detail.</p>
+                    <p className="text-xs text-gray-500 mt-0.5">Schools sorted by Year 6 cohort size (largest first). Click a school name to drill into its detail.</p>
                   </div>
                 </div>
                 <TrafficLightGrid
@@ -5257,8 +6115,10 @@ export default function TrustAssessorPage() {
                   Source: Trust mid-year data capture spreadsheet (2025/26). Self-reported — not externally validated.
                 </div>
               </div>
+              )}
 
               {/* ── 2b. Full Year Group Heatmap (collapsed by default) ── */}
+              {isTrustLevel && (
               <div className="border border-gray-200 rounded-xl overflow-hidden">
                 <button
                   onClick={() => setShowFullHeatmap((o) => !o)}
@@ -5290,30 +6150,44 @@ export default function TrustAssessorPage() {
                   )}
                 </AnimatePresence>
               </div>
+              )}
 
               {/* ── 3. School Tabs ── */}
               <div id="school-tabs-section">
                 {/* Tab bar */}
+                {isTrustLevel && (
                 <div className="flex items-center gap-1 overflow-x-auto pb-1 mb-4 border-b border-gray-200">
                   {isTrustLevel && (
                     <button
                       onClick={() => setActiveSchoolTab("overview")}
-                      className={`flex-shrink-0 px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${activeSchoolTab === "overview" ? "bg-white border border-b-white border-gray-200 -mb-px text-blue-700" : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"}`}
+                      className={`flex-shrink-0 px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${activeSchoolTab === "overview" ? "bg-card border border-b-card border-border -mb-px text-primary" : "text-muted-foreground hover:text-foreground hover:bg-accent"}`}
                     >
                       Trust Overview
                     </button>
                   )}
-                  {visibleSchoolAbbrevs.map((school) => (
-                    <motion.button
-                      key={school}
-                      onClick={() => setActiveSchoolTab(school)}
-                      whileHover={activeSchoolTab !== school ? { scale: 1.04 } : {}}
-                      className={`flex-shrink-0 px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${activeSchoolTab === school ? "bg-white border border-b-white border-gray-200 -mb-px text-blue-700" : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"}`}
-                    >
-                      {school}
-                    </motion.button>
-                  ))}
+                  {visibleSchoolAbbrevs.map((school) => {
+                    const schoolInfo = abbrevLookup[school];
+                    return (
+                      <motion.button
+                        key={school}
+                        onClick={() => setActiveSchoolTab(school)}
+                        whileHover={activeSchoolTab !== school ? { scale: 1.04 } : {}}
+                        className={`flex-shrink-0 px-4 py-2 text-sm font-medium rounded-t-lg transition-colors inline-flex items-center gap-2 ${activeSchoolTab === school ? "bg-card border border-b-card border-border -mb-px text-primary" : "text-muted-foreground hover:text-foreground hover:bg-accent"}`}
+                      >
+                        {schoolInfo?.logo_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={schoolInfo.logo_url}
+                            alt={`${schoolInfo.name} logo`}
+                            className="h-5 w-5 rounded bg-card object-contain"
+                          />
+                        ) : null}
+                        {school}
+                      </motion.button>
+                    );
+                  })}
                 </div>
+                )}
 
                 {/* Tab content */}
                 <AnimatePresence mode="wait">
@@ -5339,7 +6213,7 @@ export default function TrustAssessorPage() {
                       exit={{ opacity: 0, y: -8 }}
                       transition={{ duration: 0.2 }}
                     >
-                      <SchoolTab key={activeSchoolTab} school={activeSchoolTab} parsed={parsed} dfeData={dfeData} staffingSnapshots={staffingSnapshots} summaryData={summaryData?.schoolAbbrev === activeSchoolTab ? summaryData : null} authToken={accessToken ?? undefined} organizationId={organizationId ?? undefined} capturesByPeriod={capturesByPeriod} urnToOrgId={urnToOrgId} />
+            <SchoolTab key={activeSchoolTab} school={activeSchoolTab} parsed={parsed} dfeData={dfeData} staffingSnapshots={staffingSnapshots} summaryData={summaryData?.schoolAbbrev === activeSchoolTab ? summaryData : null} authToken={accessToken ?? undefined} organizationId={organizationId ?? undefined} capturesByPeriod={capturesByPeriod} urnToOrgId={urnToOrgId} showCapturesPanel={isTrustLevel} pupilRecords={perPupilData?.cohortJourneys ?? []} spotlightPupilId={perPupilData?.spotlightPupil?.pupilId ?? null} defendNumbersData={perPupilData?.demographicDisaggregation ?? null} kpiLoading={kpiLoading} kpiError={kpiError} laBenchmarks={laBenchmarks} demographicCohort={demographicCohort} schoolKpiData={schoolKpiData} urnValidation={urnValidation} />
 
                       {/* BUILD 4: No-CTF upsell for non-GHPS schools */}
                       {!perPupilData && activeSchoolTab !== 'overview' && (
@@ -5395,10 +6269,15 @@ export default function TrustAssessorPage() {
                 // Compute additional quality flags from parsed data
                 const extraFlags: QualityFlag[] = [];
 
-                // Missing EYFS
+                // Missing or blank EYFS
                 for (const school of parsed.schools) {
-                  if (!parsed.data[school]?.["EYFS"]) {
+                  const eyfs = parsed.data[school]?.["EYFS"];
+                  const hasEyfsCohort = Boolean(eyfs?.cohort.number_in_cohort);
+                  const hasEyfsOutcome = eyfs?.all_pupils.gld !== null && eyfs?.all_pupils.gld !== undefined;
+                  if (!eyfs || (!hasEyfsCohort && !hasEyfsOutcome)) {
                     extraFlags.push({ school, yearGroup: "EYFS", field: "gld", issue: `${school} has not submitted EYFS data`, severity: "warning" });
+                  } else if (!hasEyfsOutcome) {
+                    extraFlags.push({ school, yearGroup: "EYFS", field: "gld", issue: `${school} has EYFS cohort data but no GLD outcome`, severity: "warning" });
                   }
                 }
 
@@ -5487,6 +6366,8 @@ export default function TrustAssessorPage() {
           )}
         </AnimatePresence>
 
+        {!parsed && (
+        <>
         {/* ─── Phase 1 → Phase 2 Divider ──────────────────────────────────── */}
         <div className="flex items-center gap-4 py-2">
           <div className="flex-1 h-px bg-gray-200" />
@@ -5548,6 +6429,42 @@ export default function TrustAssessorPage() {
                 KS2 results: {dfeData.ks2Results.length.toLocaleString()} rows. Census: {dfeData.census.length.toLocaleString()} rows.
               </div>
 
+              {parsed && (
+                <>
+                  <UrnValidationWarning validation={urnValidation} />
+
+                  <DfeSchoolNarrativeCard
+                    schoolName={selectedKpiSchool?.name ?? "this school"}
+                    schoolData={schoolKpiData}
+                    laBenchmarks={laBenchmarks}
+                    demographicCohort={demographicCohort}
+                  />
+
+                  {kpiLoading && (
+                    <div className="mb-6 flex items-center justify-center rounded-2xl border border-gray-200 bg-white py-10">
+                      <div className="text-center">
+                        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mb-3"></div>
+                        <p className="text-sm text-gray-500">Loading DfE comparison dashboard...</p>
+                      </div>
+                    </div>
+                  )}
+                  {!kpiLoading && kpiError && (
+                    <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                      {kpiError}
+                    </div>
+                  )}
+                  {!kpiLoading && !kpiError && laBenchmarks && schoolKpiData && (
+                    <div className="mb-8">
+                      <KpiDashboard
+                        laBenchmarks={laBenchmarks}
+                        demographicCohort={demographicCohort}
+                        schoolData={schoolKpiData}
+                      />
+                    </div>
+                  )}
+                </>
+              )}
+
               {/* Findings */}
               {findings.length > 0 && (
                 <div className="mb-6">
@@ -5600,6 +6517,7 @@ export default function TrustAssessorPage() {
                           abbrev={abbrev}
                           ks2Results={dfeData.ks2Results}
                           selfReports={selfReports}
+                          selfReportLabels={selfReportLabels}
                         />
                       );
                     })}
@@ -5637,6 +6555,7 @@ export default function TrustAssessorPage() {
                           abbrev={abbrev}
                           census={dfeData.census}
                           selfReportFsmPcts={selfReportFsmPcts}
+                          selfReportLabels={selfReportLabels}
                         />
                       );
                     })}
@@ -5651,6 +6570,38 @@ export default function TrustAssessorPage() {
                   DfE-blue historic bars and trend lines render for any URN. */}
               {!parsed && scopedSchools.length > 0 && (
                 <>
+                  <UrnValidationWarning validation={urnValidation} />
+
+                  <DfeSchoolNarrativeCard
+                    schoolName={selectedKpiSchool?.name ?? "this school"}
+                    schoolData={schoolKpiData}
+                    laBenchmarks={laBenchmarks}
+                    demographicCohort={demographicCohort}
+                  />
+
+                  {kpiLoading && (
+                    <div className="mb-6 flex items-center justify-center rounded-2xl border border-gray-200 bg-white py-10">
+                      <div className="text-center">
+                        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mb-3"></div>
+                        <p className="text-sm text-gray-500">Loading DfE comparison dashboard...</p>
+                      </div>
+                    </div>
+                  )}
+                  {!kpiLoading && kpiError && (
+                    <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                      {kpiError}
+                    </div>
+                  )}
+                  {!kpiLoading && !kpiError && laBenchmarks && schoolKpiData && (
+                    <div className="mb-8">
+                      <KpiDashboard
+                        laBenchmarks={laBenchmarks}
+                        demographicCohort={demographicCohort}
+                        schoolData={schoolKpiData}
+                      />
+                    </div>
+                  )}
+
                   {/* Demographic snapshot — always external (DfE census).
                       Renders for any school with a URN; no self-report needed. */}
                   <div className="flex items-center justify-between mb-3">
@@ -5680,7 +6631,7 @@ export default function TrustAssessorPage() {
                       </h3>
                       <p className="text-sm text-gray-500 mt-0.5">
                         <span className="inline-flex items-center gap-1 mr-3"><span className="inline-block w-3 h-3 rounded-sm bg-blue-500" /> KS2 2023–2025 — DfE validated</span>
-                        <span className="text-gray-400">Connect a spreadsheet or add a data capture to overlay self-reported Autumn + Mid-Year bars.</span>
+                        <span className="text-gray-400">Add data captures to overlay school-named self-report snapshots.</span>
                       </p>
                     </div>
                   </div>
@@ -5718,7 +6669,11 @@ export default function TrustAssessorPage() {
             </>
           )}
         </section>
+        </>
+        )}
 
+        {!parsed && (
+        <>
         {/* ─── Phase 3: Per-Pupil Deep Analytics ───────────────────────────── */}
         <section className="bg-white border border-gray-200 rounded-2xl p-6">
           <SectionHeader number={3} title="Deep Analytics" subtitle={perPupilData ? `Per-pupil tracking from CTF assessment files. ${perPupilData.summary?.totalPupils || ''} pupils.` : "Per-pupil tracking from CTF assessment files. Connect your CTF to unlock pupil-level analysis."} />
@@ -6775,6 +7730,8 @@ export default function TrustAssessorPage() {
             </div>
           )}
         </section>
+        </>
+        )}
 
       </div>
     </div>
