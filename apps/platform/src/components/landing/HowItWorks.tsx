@@ -24,7 +24,6 @@ const Step = ({ number, title, description, icon: Icon, delay }: StepProps) => (
             <div className="absolute -top-4 -left-4 w-10 h-10 rounded-full bg-lp-bg border border-lp-border flex items-center justify-center text-lp-accent font-black text-xs outfit">
                 {number}
             </div>
-            // @ts-expect-error - Auto-masked during strict compilation enforcement
             <Icon className="text-lp-accent" size={32} />
         </div>
         <h3 className="text-2xl font-black text-lp-text outfit mb-4 tracking-tight">{title}</h3>

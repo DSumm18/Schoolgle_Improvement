@@ -194,7 +194,6 @@ function NavDropdown({
                     className="mt-0.5 w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110"
                     style={{ backgroundColor: `${item.color}15` }}
                   >
-                    // @ts-expect-error - Auto-masked during strict compilation enforcement
                     <item.icon size={16} style={{ color: item.color }} />
                   </div>
                   <div className="min-w-0">

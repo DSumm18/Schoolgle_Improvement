@@ -288,7 +288,6 @@ const HeroShowcase = () => {
                 : "text-muted-foreground hover:text-foreground hover:bg-foreground/5"
             }`}
           >
-            // @ts-expect-error - Auto-masked during strict compilation enforcement
             <scene.icon size={14} />
             {scene.label}
           </button>
@@ -310,9 +309,7 @@ const HeroShowcase = () => {
             </div>
             <div className="ml-3 flex items-center gap-2 px-3 py-1 rounded-md bg-foreground/5 text-[11px] text-muted-foreground">
               <currentScene.icon
-                // @ts-expect-error - Auto-masked during strict compilation enforcement
                 size={12}
-                // @ts-expect-error - Auto-masked during strict compilation enforcement
                 className={currentScene.accentColor}
               />
               <span className="font-medium">{currentScene.title}</span>
