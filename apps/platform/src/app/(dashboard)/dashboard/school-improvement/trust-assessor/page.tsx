@@ -87,7 +87,7 @@ import {
 // Context for the abbrev → school lookup. Provided by TrustAssessorPage and
 // consumed by sub-components (TrafficLightGrid, SchoolTab, etc.) that were
 // previously reading the hardcoded TRUST_SCHOOLS module constant.
-type AbbrevLookup = Record<string, { id?: string; name: string; urn: number | null; nurseryPupils?: number }>;
+type AbbrevLookup = Record<string, { id?: string; name: string; urn: number | null; nurseryPupils?: number; logo_url?: string | null }>;
 const AbbrevLookupContext = createContext<AbbrevLookup>({});
 
 const YEAR_GROUPS = ["EYFS", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6"] as const;
@@ -494,6 +494,35 @@ function SectionHeader({ number, title, subtitle, complete }: { number: number; 
   );
 }
 
+function SchoolLogoMark({
+  school,
+  info,
+  size = "md",
+}: {
+  school: string;
+  info?: { name?: string; logo_url?: string | null } | null;
+  size?: "sm" | "md" | "lg";
+}) {
+  const sizes = {
+    sm: "h-7 w-7 text-[10px]",
+    md: "h-9 w-9 text-xs",
+    lg: "h-12 w-12 text-sm",
+  };
+  const initials = school.replace(/[^A-Z0-9]/gi, "").slice(0, 4).toUpperCase() || "SCH";
+  const label = info?.name ?? school;
+
+  return (
+    <span className={`${sizes[size]} inline-flex shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm`}>
+      {info?.logo_url ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={info.logo_url} alt={`${label} logo`} className="h-full w-full object-contain p-1" />
+      ) : (
+        <span className="font-bold text-slate-500">{initials}</span>
+      )}
+    </span>
+  );
+}
+
 type StatSource = 'mid_year' | 'autumn' | 'dfe_ks2' | 'dfe_census' | 'dfe_workforce' | 'mixed' | 'trust_spreadsheet';
 
 function SourcePill({ source, labelOverride }: { source: StatSource; labelOverride?: string }) {
@@ -572,6 +601,9 @@ function TrustExecutiveOverview({ parsed }: { parsed: ParsedSpreadsheet }) {
 
   const schoolName = (school: string) => abbrevLookup[school]?.name ?? school;
   const shortSchool = (school: string) => abbreviateSchoolName(schoolName(school));
+  const featuredSchools = [strongestY6?.school, weakestY6?.school, ...attentionSchools.map((row) => row.school)]
+    .filter((school, index, list): school is string => Boolean(school) && list.indexOf(school) === index)
+    .slice(0, 7);
 
   return (
     <div className="overflow-hidden rounded-2xl border border-sky-100 bg-gradient-to-br from-white via-sky-50/60 to-indigo-50/70 shadow-sm">
@@ -591,6 +623,13 @@ function TrustExecutiveOverview({ parsed }: { parsed: ParsedSpreadsheet }) {
           <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Y6 combined average</div>
           <div className="mt-1 text-2xl font-bold text-slate-950">{y6CombinedAverage !== null ? `${y6CombinedAverage}%` : "—"}</div>
           <div className="text-xs text-slate-500">Across {y6Rows.length} schools with Y6 data</div>
+          {featuredSchools.length > 0 && (
+            <div className="mt-3 flex -space-x-2">
+              {featuredSchools.map((school) => (
+                <SchoolLogoMark key={school} school={school} info={abbrevLookup[school]} size="sm" />
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -605,13 +644,19 @@ function TrustExecutiveOverview({ parsed }: { parsed: ParsedSpreadsheet }) {
         </div>
         <div className="rounded-xl border border-white/80 bg-white/85 p-4 shadow-sm">
           <div className="text-xs font-bold uppercase tracking-wide text-emerald-600">Notable strength</div>
-          <div className="mt-2 text-xl font-bold text-slate-950">{strongestY6 ? shortSchool(strongestY6.school) : "—"}</div>
+          <div className="mt-2 flex items-center gap-2">
+            {strongestY6 && <SchoolLogoMark school={strongestY6.school} info={abbrevLookup[strongestY6.school]} size="sm" />}
+            <div className="text-xl font-bold text-slate-950">{strongestY6 ? shortSchool(strongestY6.school) : "—"}</div>
+          </div>
           <p className="mt-1 text-sm text-slate-600">{strongestY6 ? `Y6 combined at ${strongestY6.combined}%.` : "No Y6 combined data available."}</p>
           <p className="mt-2 text-xs text-slate-500">Trustees may want to explore transferable practice.</p>
         </div>
         <div className="rounded-xl border border-white/80 bg-white/85 p-4 shadow-sm">
           <div className="text-xs font-bold uppercase tracking-wide text-amber-600">Key challenge</div>
-          <div className="mt-2 text-xl font-bold text-slate-950">{weakestY6 ? shortSchool(weakestY6.school) : "—"}</div>
+          <div className="mt-2 flex items-center gap-2">
+            {weakestY6 && <SchoolLogoMark school={weakestY6.school} info={abbrevLookup[weakestY6.school]} size="sm" />}
+            <div className="text-xl font-bold text-slate-950">{weakestY6 ? shortSchool(weakestY6.school) : "—"}</div>
+          </div>
           <p className="mt-1 text-sm text-slate-600">{weakestY6 ? `Y6 combined at ${weakestY6.combined}%.` : "No Y6 combined data available."}</p>
           <p className="mt-2 text-xs text-slate-500">Use the school tab to inspect subject and cohort gaps.</p>
         </div>
@@ -713,15 +758,20 @@ function TrafficLightGrid({ parsed, onSchoolClick }: { parsed: ParsedSpreadsheet
             return (
               <tr key={school} className="border-t border-gray-100 hover:bg-gray-50 transition-colors">
                 <td className="py-3 pr-4">
-                  <button
-                    onClick={() => onSchoolClick(school)}
-                    className="text-sm font-bold text-gray-900 hover:text-blue-600 transition-colors"
-                  >
-                    {school}
-                  </button>
-                  {abbrevLookup[school] && (
-                    <div className="text-xs text-gray-400 leading-tight">{abbrevLookup[school].name.split(" ").slice(0, 3).join(" ")}</div>
-                  )}
+                  <div className="flex items-center gap-2">
+                    <SchoolLogoMark school={school} info={abbrevLookup[school]} size="sm" />
+                    <div>
+                      <button
+                        onClick={() => onSchoolClick(school)}
+                        className="text-sm font-bold text-gray-900 hover:text-blue-600 transition-colors"
+                      >
+                        {school}
+                      </button>
+                      {abbrevLookup[school] && (
+                        <div className="text-xs text-gray-400 leading-tight">{abbrevLookup[school].name.split(" ").slice(0, 3).join(" ")}</div>
+                      )}
+                    </div>
+                  </div>
                 </td>
                 <td className="text-center py-3 px-3">
                   {y6Pupils > 0 ? (
@@ -791,6 +841,7 @@ function getSubjectARE(data: Partial<SubjectScores>, subject: HeatmapSubject): n
 }
 
 function SubjectHeatmap({ parsed, onSchoolClick }: { parsed: ParsedSpreadsheet; onSchoolClick: (school: string) => void }) {
+  const abbrevLookup = useContext(AbbrevLookupContext);
   const [subject, setSubject] = useState<HeatmapSubject>("combined");
 
   const tabs: { key: HeatmapSubject; label: string }[] = [
@@ -835,9 +886,10 @@ function SubjectHeatmap({ parsed, onSchoolClick }: { parsed: ParsedSpreadsheet; 
                 <td className="p-2">
                   <button
                     onClick={() => onSchoolClick(school)}
-                    className="text-xs font-semibold text-blue-600 hover:underline"
+                    className="inline-flex items-center gap-2 text-xs font-semibold text-blue-600 hover:underline"
                   >
-                    {school}
+                    <SchoolLogoMark school={school} info={abbrevLookup[school]} size="sm" />
+                    <span>{school}</span>
                   </button>
                 </td>
                 {allYearGroups.map((yg) => {
@@ -1025,9 +1077,7 @@ function SchoolDetailCard({ school, parsed }: { school: string; parsed: ParsedSp
         className="w-full flex items-center justify-between px-5 py-4 bg-white hover:bg-gray-50 transition-colors"
       >
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center">
-            <School size={16} className="text-blue-600" />
-          </div>
+          <SchoolLogoMark school={school} info={info} />
           <div className="text-left">
             <div className="font-semibold text-gray-900">{school}</div>
             {info && <div className="text-xs text-gray-400">{info.name}</div>}
@@ -2623,7 +2673,9 @@ function SchoolTab({ school, parsed, dfeData, staffingSnapshots, summaryData, au
                 <HideableCard componentId="overview-hero">
                   <div className="bg-card border border-border rounded-2xl p-8">
                     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-8">
-                      <div>
+                      <div className="flex items-start gap-4">
+                        <SchoolLogoMark school={school} info={info} size="lg" />
+                        <div>
                         <div className="flex items-center gap-2 mb-2">
                           <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-muted text-muted-foreground uppercase tracking-wider">{school}</span>
                           <span className="text-xs text-muted-foreground">
@@ -2636,6 +2688,7 @@ function SchoolTab({ school, parsed, dfeData, staffingSnapshots, summaryData, au
                         </div>
                         <h2 className="text-2xl font-semibold text-foreground">{abbrevLookup[school]?.name ?? school}</h2>
                         {info?.urn && <p className="text-sm text-muted-foreground mt-0.5">URN {info.urn}</p>}
+                        </div>
                       </div>
                       <div className="flex items-center gap-3 shrink-0">
                         <div className={`inline-flex px-3 py-1.5 rounded-full text-sm font-semibold border-l-4 ${
@@ -3005,9 +3058,7 @@ function SchoolTab({ school, parsed, dfeData, staffingSnapshots, summaryData, au
                 <HideableCard componentId="cohort-profile">
                   <div className="bg-card border border-border rounded-2xl p-6">
                     <div className="flex items-center gap-4 mb-4">
-                      <div className="w-10 h-10 rounded-xl bg-sky-50 flex items-center justify-center flex-shrink-0">
-                        <School size={18} className="text-sky-600" />
-                      </div>
+                      <SchoolLogoMark school={school} info={info} />
                       <div>
                         <h3 className="font-semibold text-foreground">{school} — {info?.name ?? school}</h3>
                         {info?.urn && <p className="text-xs text-muted-foreground">URN {info.urn}</p>}
@@ -3520,6 +3571,7 @@ function useCountUp(target: number, duration = 1200) {
 // ─── Phase 1: Trust Insights (clean 3-zone layout) ───────────────────────────
 
 function TrustInsights({ parsed, onSchoolClick }: { parsed: ParsedSpreadsheet; onSchoolClick?: (school: string) => void }) {
+  const abbrevLookup = useContext(AbbrevLookupContext);
   // ── Compute trust-wide metrics ──
   let totalTrustPupils = 0;
   let totalY6Combined = 0;
@@ -3714,8 +3766,9 @@ function TrustInsights({ parsed, onSchoolClick }: { parsed: ParsedSpreadsheet; o
                 key={school}
                 whileHover={{ scale: 1.04 }}
                 onClick={() => onSchoolClick(school)}
-                className="text-xs px-3 py-1.5 bg-white border border-blue-200 text-blue-700 rounded-lg font-medium hover:bg-blue-100 transition-colors"
+                className="inline-flex items-center gap-2 text-xs px-3 py-1.5 bg-white border border-blue-200 text-blue-700 rounded-lg font-medium hover:bg-blue-100 transition-colors"
               >
+                <SchoolLogoMark school={school} info={abbrevLookup[school]} size="sm" />
                 View {school}
               </motion.button>
             ))}
@@ -6174,14 +6227,7 @@ export default function TrustAssessorPage() {
                         whileHover={activeSchoolTab !== school ? { scale: 1.04 } : {}}
                         className={`flex-shrink-0 px-4 py-2 text-sm font-medium rounded-t-lg transition-colors inline-flex items-center gap-2 ${activeSchoolTab === school ? "bg-card border border-b-card border-border -mb-px text-primary" : "text-muted-foreground hover:text-foreground hover:bg-accent"}`}
                       >
-                        {schoolInfo?.logo_url ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={schoolInfo.logo_url}
-                            alt={`${schoolInfo.name} logo`}
-                            className="h-5 w-5 rounded bg-card object-contain"
-                          />
-                        ) : null}
+                        <SchoolLogoMark school={school} info={schoolInfo} size="sm" />
                         {school}
                       </motion.button>
                     );
