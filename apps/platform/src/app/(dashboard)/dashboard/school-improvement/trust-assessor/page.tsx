@@ -848,13 +848,17 @@ function SubjectHeatmap({ parsed, onSchoolClick }: { parsed: ParsedSpreadsheet; 
   const [subject, setSubject] = useState<HeatmapSubject>("combined");
 
   const tabs: { key: HeatmapSubject; label: string }[] = [
-    { key: "combined", label: "Combined" },
+    { key: "combined", label: "Combined RWM+" },
     { key: "reading",  label: "Reading" },
     { key: "writing",  label: "Writing" },
     { key: "maths",    label: "Maths" },
   ];
 
   const allYearGroups: YearGroup[] = ["EYFS", ...HEATMAP_YEAR_GROUPS];
+  const subjectDescription =
+    subject === "combined"
+      ? "Combined RWM+ is pupils meeting expected+ in Reading, Writing and Maths together — not an average of the three subject percentages."
+      : `${subject.charAt(0).toUpperCase() + subject.slice(1)} shows the percentage meeting expected+ in that single subject.`;
 
   return (
     <div>
@@ -870,6 +874,9 @@ function SubjectHeatmap({ parsed, onSchoolClick }: { parsed: ParsedSpreadsheet; 
           </button>
         ))}
       </div>
+      <p className="mb-3 text-xs text-gray-500">
+        {subjectDescription}
+      </p>
 
       <div className="overflow-x-auto">
         <table className="w-full text-sm border-collapse">
@@ -908,11 +915,18 @@ function SubjectHeatmap({ parsed, onSchoolClick }: { parsed: ParsedSpreadsheet; 
                   const cohort = yearData?.cohort.number_in_cohort ?? null;
                   const small = cohort !== null && cohort < 15;
                   const colorClass = getHeatmapColor(pct);
+                  const titleParts = [
+                    cohort !== null ? `Cohort: ${cohort}` : null,
+                    subject === "combined" && yearData && yg !== "EYFS"
+                      ? `Combined RWM+: ${pct ?? "No data"}%; Reading: ${yearData.all_pupils.r_are ?? "No data"}%; Writing: ${yearData.all_pupils.w_are ?? "No data"}%; Maths: ${yearData.all_pupils.m_are ?? "No data"}%`
+                      : null,
+                    small ? "Small cohort — treat with caution" : null,
+                  ].filter(Boolean).join(" | ");
                   return (
                     <td key={yg} className={`p-1 text-center ${small ? "opacity-60" : ""}`}>
                       <span
                         className={`inline-block rounded px-2 py-1 text-xs font-semibold ${colorClass} min-w-[42px]`}
-                        title={small ? `Cohort: ${cohort} (small — treat with caution)` : undefined}
+                        title={titleParts || undefined}
                       >
                         {pct !== null ? `${pct}%` : "—"}
                         {small && pct !== null ? "*" : ""}
@@ -927,7 +941,7 @@ function SubjectHeatmap({ parsed, onSchoolClick }: { parsed: ParsedSpreadsheet; 
       </div>
 
       <div className="flex flex-wrap items-center gap-4 mt-3 text-xs text-gray-500">
-        <span>{subject === "combined" ? "Combined ARE %" : `${subject.charAt(0).toUpperCase() + subject.slice(1)} ARE %`}  (EYFS = GLD %):</span>
+        <span>{subject === "combined" ? "Combined RWM+ %" : `${subject.charAt(0).toUpperCase() + subject.slice(1)} ARE %`}  (EYFS = GLD %):</span>
         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-emerald-100 inline-block" /> 70%+</span>
         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-amber-100 inline-block" /> 50–69%</span>
         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-100 inline-block" /> Below 50%</span>
