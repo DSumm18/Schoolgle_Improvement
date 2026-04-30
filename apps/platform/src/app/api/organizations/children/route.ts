@@ -15,32 +15,23 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
 
   const supabase = createServiceRoleClient();
 
-  // The caller must be a member of the parent org, or a member of one of
-  // its children (so a school head can see their sibling list if needed —
-  // but we never leak cross-tenant).
+  // The caller must be a member of the parent org. School-level users should
+  // not be able to list sibling schools by passing the trust parentId; trust
+  // overviews are reserved for trust-level memberships.
   const { data: asMember } = await supabase
     .from('organization_members')
     .select('organization_id')
-    .eq('auth_id', auth.userId)
     .eq('organization_id', parentId)
+    .or(`user_id.eq.${auth.userId},auth_id.eq.${auth.userId}`)
     .maybeSingle();
 
   if (!asMember) {
-    const { data: asChildMember } = await supabase
-      .from('organization_members')
-      .select('organization_id, organizations!inner(parent_organization_id)')
-      .eq('auth_id', auth.userId)
-      .limit(1);
-    const validParent = asChildMember?.some((m) => {
-      const row = m as unknown as { organizations?: { parent_organization_id?: string | null } };
-      return row.organizations?.parent_organization_id === parentId;
-    });
-    if (!validParent) return apiError('Not authorised to view this trust', 403);
+    return apiError('Not authorised to view this trust', 403);
   }
 
   const { data: children, error: childErr } = await supabase
     .from('organizations')
-    .select('id, name, urn')
+    .select('id, name, urn, organization_type, parent_organization_id, settings')
     .eq('parent_organization_id', parentId)
     .order('name');
   if (childErr) return apiError(childErr.message, 500);
@@ -49,7 +40,7 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
   // school when the org is a standalone / leaf with no children of its own.
   const { data: self } = await supabase
     .from('organizations')
-    .select('id, name, urn, parent_organization_id')
+    .select('id, name, urn, organization_type, parent_organization_id, settings')
     .eq('id', parentId)
     .maybeSingle();
 

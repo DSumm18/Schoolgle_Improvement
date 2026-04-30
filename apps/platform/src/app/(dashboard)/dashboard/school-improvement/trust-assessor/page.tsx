@@ -504,18 +504,21 @@ function SchoolLogoMark({
   size?: "sm" | "md" | "lg";
 }) {
   const sizes = {
-    sm: "h-7 w-7 text-[10px]",
-    md: "h-9 w-9 text-xs",
-    lg: "h-12 w-12 text-sm",
+    sm: "h-8 w-8 text-[10px]",
+    md: "h-11 w-11 text-xs",
+    lg: "h-14 w-14 text-sm",
   };
   const initials = school.replace(/[^A-Z0-9]/gi, "").slice(0, 4).toUpperCase() || "SCH";
   const label = info?.name ?? school;
 
   return (
-    <span className={`${sizes[size]} inline-flex shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm`}>
-      {info?.logo_url ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={info.logo_url} alt={`${label} logo`} className="h-full w-full object-contain p-1" />
+      <span
+        className={`${sizes[size]} inline-flex shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm ring-1 ring-white/80`}
+        title={label}
+      >
+        {info?.logo_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+        <img src={info.logo_url} alt={`${label} logo`} className="h-full w-full object-contain p-0.5" />
       ) : (
         <span className="font-bold text-slate-500">{initials}</span>
       )}
@@ -624,7 +627,7 @@ function TrustExecutiveOverview({ parsed }: { parsed: ParsedSpreadsheet }) {
           <div className="mt-1 text-2xl font-bold text-slate-950">{y6CombinedAverage !== null ? `${y6CombinedAverage}%` : "—"}</div>
           <div className="text-xs text-slate-500">Across {y6Rows.length} schools with Y6 data</div>
           {featuredSchools.length > 0 && (
-            <div className="mt-3 flex -space-x-2">
+            <div className="mt-3 flex flex-wrap gap-1">
               {featuredSchools.map((school) => (
                 <SchoolLogoMark key={school} school={school} info={abbrevLookup[school]} size="sm" />
               ))}

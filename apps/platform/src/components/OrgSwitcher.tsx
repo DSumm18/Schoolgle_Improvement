@@ -10,6 +10,11 @@ interface Organization {
   name: string;
   organization_type: 'school' | 'trust' | 'local_authority';
   parent_organization_id: string | null;
+  role?: string;
+  settings?: {
+    logo_url?: string | null;
+    trust_logo_url?: string | null;
+  } | null;
 }
 
 interface OrgSwitcherProps {
@@ -38,6 +43,21 @@ export default function OrgSwitcher({ currentOrgId, onOrgChange }: OrgSwitcherPr
       }
 
       try {
+        const response = await fetch('/api/organizations/accessible', {
+          headers: session.access_token
+            ? { Authorization: `Bearer ${session.access_token}` }
+            : {},
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const orgsArray = (data.organizations || []) as Organization[];
+          setOrganizations(orgsArray);
+          setCurrentOrg(orgsArray.find((o: Organization) => o.id === currentOrgId) || orgsArray[0] || null);
+          setLoading(false);
+          return;
+        }
+
         // Ensure the Supabase client has the current session token
         // This is critical to prevent 401 errors
         if (session?.access_token) {
@@ -82,7 +102,7 @@ export default function OrgSwitcher({ currentOrgId, onOrgChange }: OrgSwitcherPr
 
           const { data: orgs, error: orgError } = await supabase
             .from('organizations')
-            .select('id, name, organization_type, parent_organization_id')
+            .select('id, name, organization_type, parent_organization_id, settings')
             .in('id', directOrgIds);
 
           if (orgError) {
@@ -102,7 +122,7 @@ export default function OrgSwitcher({ currentOrgId, onOrgChange }: OrgSwitcherPr
         if (orgIds && orgIds.length > 0) {
           const { data: orgs, error: orgError } = await supabase
             .from('organizations')
-            .select('id, name, organization_type, parent_organization_id')
+            .select('id, name, organization_type, parent_organization_id, settings')
             .in('id', orgIds);
 
           if (orgError) {
@@ -136,6 +156,37 @@ export default function OrgSwitcher({ currentOrgId, onOrgChange }: OrgSwitcherPr
     setIsOpen(false);
   };
 
+  const getLogoUrl = (org?: Organization | null) => {
+    if (!org) return null;
+    return org.organization_type === 'trust' || org.organization_type === 'local_authority'
+      ? org.settings?.trust_logo_url || org.settings?.logo_url || null
+      : org.settings?.logo_url || null;
+  };
+
+  const OrgMark = ({ org, size = 'md' }: { org?: Organization | null; size?: 'sm' | 'md' }) => {
+    const logoUrl = getLogoUrl(org);
+    const dimensions = size === 'sm' ? 'h-8 w-8' : 'h-10 w-10';
+    const iconSize = size === 'sm' ? 14 : 16;
+    const isTrust = org?.organization_type === 'trust' || org?.organization_type === 'local_authority';
+
+    return (
+      <span className={`${dimensions} shrink-0 overflow-hidden rounded-xl border border-border bg-white shadow-sm flex items-center justify-center`}>
+        {logoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={logoUrl}
+            alt={org?.name ? `${org.name} logo` : 'Organization logo'}
+            className="h-full w-full object-contain p-0.5"
+          />
+        ) : isTrust ? (
+          <Building2 size={iconSize} className="text-muted-foreground" />
+        ) : (
+          <School size={iconSize} className="text-muted-foreground" />
+        )}
+      </span>
+    );
+  };
+
   // Group orgs hierarchically: each trust with its accessible children beneath;
   // standalone schools (no parent, or parent not in the user's list) go last.
   const groups = useMemo(() => {
@@ -167,8 +218,8 @@ export default function OrgSwitcher({ currentOrgId, onOrgChange }: OrgSwitcherPr
 
   if (loading) {
     return (
-      <div className="px-4 py-2 bg-gray-50 rounded-lg animate-pulse">
-        <div className="h-4 w-32 bg-gray-200 rounded"></div>
+      <div className="px-4 py-2 bg-muted rounded-lg animate-pulse">
+        <div className="h-4 w-32 bg-muted-foreground/20 rounded"></div>
       </div>
     );
   }
@@ -179,13 +230,9 @@ export default function OrgSwitcher({ currentOrgId, onOrgChange }: OrgSwitcherPr
 
   if (organizations.length === 1) {
     return (
-      <div className="px-4 py-2 bg-gray-50 rounded-lg flex items-center gap-2">
-        {currentOrg?.organization_type === 'trust' ? (
-          <Building2 size={16} className="text-gray-600" />
-        ) : (
-          <School size={16} className="text-gray-600" />
-        )}
-        <span className="text-sm font-medium text-gray-900">{currentOrg?.name}</span>
+      <div className="px-3 py-2 bg-card border border-border rounded-lg flex items-center gap-2">
+        <OrgMark org={currentOrg} />
+        <span className="text-sm font-medium text-foreground truncate">{currentOrg?.name}</span>
       </div>
     );
   }
@@ -194,17 +241,13 @@ export default function OrgSwitcher({ currentOrgId, onOrgChange }: OrgSwitcherPr
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="px-4 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg flex items-center gap-2 transition-colors w-full text-left"
+        className="px-3 py-2 bg-card hover:bg-accent border border-border rounded-lg flex items-center gap-2 transition-colors w-full text-left"
       >
-        {currentOrg?.organization_type === 'trust' ? (
-          <Building2 size={16} className="text-gray-600" />
-        ) : (
-          <School size={16} className="text-gray-600" />
-        )}
-        <span className="text-sm font-medium text-gray-900 flex-1 truncate">
+        <OrgMark org={currentOrg} />
+        <span className="text-sm font-medium text-foreground flex-1 truncate">
           {currentOrg?.name}
         </span>
-        <ChevronDown size={16} className={`text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown size={16} className={`text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {isOpen && (
@@ -213,27 +256,27 @@ export default function OrgSwitcher({ currentOrgId, onOrgChange }: OrgSwitcherPr
             className="fixed inset-0 z-10"
             onClick={() => setIsOpen(false)}
           />
-          <div className="absolute top-full left-0 mt-2 w-full bg-white rounded-lg shadow-lg border border-gray-200 z-20 max-h-96 overflow-y-auto">
+          <div className="absolute top-full left-0 mt-2 w-full bg-popover text-popover-foreground rounded-lg shadow-lg border border-border z-20 max-h-96 overflow-y-auto">
             {groups.trustGroups.map(({ trust, children }) => (
-              <div key={trust.id} className="border-b border-gray-100 last:border-b-0">
+              <div key={trust.id} className="border-b border-border last:border-b-0">
                 {/* Trust row */}
                 <button
                   onClick={() => handleOrgSelect(trust)}
-                  className={`w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left ${
-                    trust.id === currentOrgId ? 'bg-blue-50' : ''
+                  className={`w-full px-4 py-3 flex items-center gap-3 hover:bg-accent transition-colors text-left ${
+                    trust.id === currentOrgId ? 'bg-primary/10' : ''
                   }`}
                 >
-                  <Building2 size={16} className="text-gray-600" />
+                  <OrgMark org={trust} />
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-semibold text-gray-900 truncate">
+                    <div className="text-sm font-semibold text-foreground truncate">
                       {trust.name}
                     </div>
-                    <div className="text-xs text-gray-500 capitalize">
+                    <div className="text-xs text-muted-foreground capitalize">
                       {trust.organization_type.replace('_', ' ')} · {children.length} {children.length === 1 ? 'school' : 'schools'}
                     </div>
                   </div>
                   {trust.id === currentOrgId && (
-                    <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                    <div className="w-2 h-2 bg-primary rounded-full"></div>
                   )}
                 </button>
                 {/* Child schools indented */}
@@ -241,44 +284,44 @@ export default function OrgSwitcher({ currentOrgId, onOrgChange }: OrgSwitcherPr
                   <button
                     key={child.id}
                     onClick={() => handleOrgSelect(child)}
-                    className={`w-full pl-10 pr-4 py-2 flex items-center gap-2 hover:bg-gray-50 transition-colors text-left ${
-                      child.id === currentOrgId ? 'bg-blue-50' : ''
+                    className={`w-full pl-10 pr-4 py-2 flex items-center gap-2 hover:bg-accent transition-colors text-left ${
+                      child.id === currentOrgId ? 'bg-primary/10' : ''
                     }`}
                   >
-                    <School size={14} className="text-gray-500" />
+                    <OrgMark org={child} size="sm" />
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm text-gray-800 truncate">
+                      <div className="text-sm text-foreground truncate">
                         {child.name}
                       </div>
                     </div>
                     {child.id === currentOrgId && (
-                      <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                      <div className="w-2 h-2 bg-primary rounded-full"></div>
                     )}
                   </button>
                 ))}
               </div>
             ))}
             {groups.standalone.length > 0 && (
-              <div className="border-t border-gray-100">
-                <div className="px-4 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50">
+              <div className="border-t border-border">
+                <div className="px-4 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider bg-muted/50">
                   Standalone schools
                 </div>
                 {groups.standalone.map((org) => (
                   <button
                     key={org.id}
                     onClick={() => handleOrgSelect(org)}
-                    className={`w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left ${
-                      org.id === currentOrgId ? 'bg-blue-50' : ''
+                    className={`w-full px-4 py-3 flex items-center gap-3 hover:bg-accent transition-colors text-left ${
+                      org.id === currentOrgId ? 'bg-primary/10' : ''
                     }`}
                   >
-                    <School size={16} className="text-gray-600" />
+                    <OrgMark org={org} />
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-gray-900 truncate">
+                      <div className="text-sm font-medium text-foreground truncate">
                         {org.name}
                       </div>
                     </div>
                     {org.id === currentOrgId && (
-                      <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                      <div className="w-2 h-2 bg-primary rounded-full"></div>
                     )}
                   </button>
                 ))}
@@ -290,4 +333,3 @@ export default function OrgSwitcher({ currentOrgId, onOrgChange }: OrgSwitcherPr
     </div>
   );
 }
-
