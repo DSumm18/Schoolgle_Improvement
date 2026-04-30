@@ -6,6 +6,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { buildPupilRegisterGroups } from './PupilCardGrid';
 
 // ─── Replicate helpers from PupilCardGrid (pure functions, no JSX) ─────────────
 
@@ -183,5 +184,43 @@ describe('contextPanel framing', () => {
   it('gives reassuring framing for no-flag stable pupils', () => {
     const text = contextPanel({ isFsm: false, isSend: false, isEal: false }, 'stable');
     expect(text).toContain('within the expected range');
+  });
+});
+
+describe('buildPupilRegisterGroups', () => {
+  it('groups pupils by their latest year group and creates compact row summaries', () => {
+    const groups = buildPupilRegisterGroups([
+      {
+        pupilId: 'Amber Fox 25',
+        demographics: { isFsm: true, isSend: false, isEal: true, gender: 'F' },
+        journey: [
+          { year: 2026, yearGroup: 2, subject: 'reading', level: 'EXS' },
+          { year: 2026, yearGroup: 2, subject: 'writing', level: 'WTS' },
+          { year: 2026, yearGroup: 2, subject: 'maths', level: 'EXS' },
+        ],
+      },
+      {
+        pupilId: 'Blue Robin 75',
+        demographics: { isFsm: false, isSend: true, isEal: false, gender: 'M' },
+        journey: [
+          { year: 2026, yearGroup: 3, subject: 'reading', level: 'WTS' },
+          { year: 2026, yearGroup: 3, subject: 'writing', level: 'WTS' },
+          { year: 2026, yearGroup: 3, subject: 'maths', level: 'EXS' },
+        ],
+      },
+    ]);
+
+    expect(groups.map((group) => group.yearGroup)).toEqual([2, 3]);
+    expect(groups[0].label).toBe('Y2 cohort');
+    expect(groups[0].rows[0]).toMatchObject({
+      pupilId: 'Amber Fox 25',
+      reading: 'EXS',
+      writing: 'WTS',
+      maths: 'EXS',
+      expectedCount: 2,
+      totalSubjects: 3,
+      flags: ['FSM', 'EAL'],
+    });
+    expect(groups[1].rows[0].flags).toEqual(['SEND']);
   });
 });

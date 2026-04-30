@@ -32,6 +32,7 @@ import {
   Brain,
   GraduationCap,
   Plug,
+  Boxes,
 } from "lucide-react";
 import NotificationBell from "@/components/NotificationBell";
 import OrgSwitcher from "@/components/OrgSwitcher";
@@ -57,6 +58,7 @@ const PLANET_GROUPS = [
   { id: "jupiter", name: "Communications", color: "#F97316", icon: Radio, moduleIds: ["communications", "calendar", "surveys"] },
   { id: "saturn", name: "Intelligence", color: "#A78BFA", icon: Brain, moduleIds: ["school-intelligence", "attendance", "send", "behaviour", "canvas"] },
   { id: "uranus", name: "Teaching & Learning", color: "#06B6D4", icon: GraduationCap, moduleIds: ["teaching-learning"] },
+  { id: "toolbox", name: "Toolbox", color: "#10B981", icon: Boxes, moduleIds: ["toolbox"] },
 ];
 
 // Map a pathname to its parent planet for auto-expand

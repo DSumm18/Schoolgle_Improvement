@@ -3,7 +3,7 @@
 /**
  * SchoolTabTabs — 5-tab navigation shell for the Trust Assessor school detail view.
  *
- * Tabs: Overview | Forensic Review | Cohort Pathway | Pupil Level | Evidence
+ * Tabs: Overview | DfE Review | Cohort & Gaps | Pupil Data | Evidence
  *
  * Active tab is persisted to localStorage keyed by `ta-active-tab-{school}` so
  * refreshing the page returns the user to the same tab.
@@ -22,10 +22,10 @@ interface Tab {
 
 const TABS: Tab[] = [
   { id: "overview",  label: "Overview",        description: "Governor-ready summary" },
-  { id: "forensic",  label: "Forensic Review",  description: "Research-backed verdict" },
-  { id: "cohort",    label: "Cohort Pathway",   description: "Year-group progression" },
-  { id: "pupil",     label: "Pupil Level",      description: "Individual pupil detail" },
-  { id: "evidence",  label: "Evidence",         description: "Timeline & sources" },
+  { id: "forensic",  label: "DfE Review",      description: "Validated DfE comparison" },
+  { id: "cohort",    label: "Cohort & Gaps",   description: "Year-group and disadvantage analysis" },
+  { id: "pupil",     label: "Pupil Data",      description: "Individual pupil detail" },
+  { id: "evidence",  label: "Evidence",        description: "Timeline & sources" },
 ];
 
 interface SchoolTabTabsProps {
@@ -48,26 +48,36 @@ export function SchoolTabTabs({ school, children }: SchoolTabTabsProps) {
   return (
     <div className="space-y-0">
       {/* Tab bar */}
-      <div className="border-b border-border bg-card sticky top-0 z-20">
-        <nav className="-mb-px flex gap-0 overflow-x-auto px-6 scrollbar-hide" aria-label="School report tabs">
+      <div className="sticky top-0 z-20 rounded-2xl border border-border bg-card/95 p-3 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/85">
+        <div className="mb-2 flex items-center justify-between gap-3 px-1">
+          <div>
+            <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-sky-600 dark:text-sky-300">Report Sections</div>
+            <div className="text-xs text-muted-foreground">Switch between the main parts of this school review</div>
+          </div>
+          <div className="hidden rounded-full bg-sky-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-sky-700 dark:bg-sky-500/10 dark:text-sky-300 sm:block">
+            {TABS.find((tab) => tab.id === activeTab)?.label}
+          </div>
+        </div>
+        <nav className="flex gap-1 overflow-x-auto rounded-xl bg-muted/50 p-1 scrollbar-hide" aria-label="School report tabs">
           {TABS.map((tab) => {
             const isActive = tab.id === activeTab;
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`relative flex-shrink-0 px-4 py-3.5 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
+                className={`relative flex-shrink-0 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all whitespace-nowrap ${
                   isActive
-                    ? "border-sky-500 text-sky-600"
-                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+                    ? "bg-card text-sky-600 shadow-sm ring-1 ring-border dark:text-sky-300"
+                    : "text-muted-foreground hover:bg-card/60 hover:text-foreground"
                 }`}
                 aria-current={isActive ? "page" : undefined}
+                title={tab.description}
               >
                 {tab.label}
                 {isActive && (
                   <motion.div
                     layoutId={`tab-indicator-${school}`}
-                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-sky-500 rounded-t-full"
+                    className="absolute inset-x-4 -bottom-1 h-0.5 rounded-full bg-sky-500"
                     transition={{ type: "spring", damping: 30, stiffness: 300 }}
                   />
                 )}

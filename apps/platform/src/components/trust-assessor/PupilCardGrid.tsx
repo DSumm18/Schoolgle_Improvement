@@ -1,20 +1,8 @@
 "use client";
 
-/**
- * PupilCardGrid — Year-group-filtered pupil journey cards
- * Used in Trust Assessor "Per-Pupil Journey Tracking" section.
- *
- * Framing principle: findings are presented as questions to explore,
- * never as accusations. Context panels use constructive, research-backed
- * language appropriate for headteachers as well as governors.
- */
-
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import * as Dialog from "@radix-ui/react-dialog";
+import { useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
-
-// ─── Types ───────────────────────────────────────────────────────────────────
 
 interface JourneyEntry {
   year: number;
@@ -31,385 +19,443 @@ interface PupilRecord {
     isSend: boolean;
     isEal: boolean;
     gender: string;
+    isEhcp?: boolean;
+    hasEhcp?: boolean;
+    isCp?: boolean;
+    hasChildProtection?: boolean;
   };
   journey: JourneyEntry[];
 }
 
 interface PupilCardGridProps {
   pupils: PupilRecord[];
-  /** If provided, this pupil is already shown in a spotlight card above — exclude from grid */
   spotlightPupilId?: string | null;
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function levelValue(l: string): number {
-  return l === "GDS" ? 3 : l === "EXS" || l === "2" ? 2 : l === "WTS" || l === "WT" || l === "1" ? 1 : 0;
+export interface PupilRegisterRow {
+  pupil: PupilRecord;
+  pupilId: string;
+  yearGroup: number;
+  className: string;
+  reading: string;
+  writing: string;
+  maths: string;
+  expectedCount: number;
+  totalSubjects: number;
+  trend: "improving" | "declining" | "stable" | "insufficient";
+  flags: string[];
 }
 
-function weakestSubject(journey: JourneyEntry[]): { subject: string; avgLevel: number } | null {
-  const subjects = [...new Set(journey.map((j) => j.subject).filter((s) => ["reading", "writing", "maths"].includes(s)))];
-  if (subjects.length === 0) return null;
-  const scored = subjects.map((s) => {
-    const levels = journey.filter((j) => j.subject === s).map((j) => levelValue(j.level));
-    const avg = levels.length > 0 ? levels.reduce((a, b) => a + b, 0) / levels.length : 0;
-    return { subject: s, avgLevel: avg };
-  });
-  scored.sort((a, b) => a.avgLevel - b.avgLevel);
-  return scored[0];
+export interface PupilRegisterGroup {
+  yearGroup: number;
+  label: string;
+  rows: PupilRegisterRow[];
 }
-
-function overallTrend(journey: JourneyEntry[]): "improving" | "declining" | "stable" | "insufficient" {
-  const levels = journey.map((j) => levelValue(j.level));
-  if (levels.length < 2) return "insufficient";
-  const first = levels[0];
-  const last = levels[levels.length - 1];
-  if (last > first) return "improving";
-  if (last < first) return "declining";
-  return "stable";
-}
-
-/** Auto-generate a constructive, non-accusatory context panel. */
-function contextPanel(
-  demo: PupilRecord["demographics"],
-  trend: "improving" | "declining" | "stable" | "insufficient"
-): string {
-  const { isFsm, isSend, isEal } = demo;
-  const flags = [isFsm && "FSM", isSend && "SEND", isEal && "EAL"].filter(Boolean);
-
-  if (isSend && isFsm) {
-    return "This pupil carries dual disadvantage markers (FSM-eligible and SEND-registered). EEF research indicates a 9+ month average attainment gap for pupils with both markers. Questions to explore: Is the Pupil Premium strategy specifically addressing this pupil? Is the EHCP or SEN Support plan being reviewed regularly?";
-  }
-  if (isSend) {
-    return "SEND-registered. Any attainment gap may reflect processing, communication, or specific learning needs rather than a literacy or numeracy deficit. It is worth asking: Does current provision align with the graduated approach, and is progress being measured against this pupil's own baseline rather than national norms?";
-  }
-  if (isEal && isFsm) {
-    return "EAL and Pupil Premium eligible. Language acquisition curve typically takes 5–7 years for academic fluency — earlier shortfalls often reflect exposure time rather than ability. Questions to explore: How long has this pupil been in English-medium education? Is the Pupil Premium strategy accounting for language development as well as academic gaps?";
-  }
-  if (isEal) {
-    return "EAL learner. Research (Strand & Demie, 2018) shows EAL pupils typically reach or exceed peers by KS2 once they have had sufficient language exposure. If this pupil is in their first 3 years of English immersion, current attainment scores should be read in that context.";
-  }
-  if (isFsm) {
-    return "Pupil Premium eligible. The EEF Toolkit identifies feedback, metacognition, and reading comprehension strategies as highest-impact approaches for FSM pupils (5+ months additional progress). It is worth asking: Is this pupil included in the Pupil Premium strategy review, and is impact being tracked?";
-  }
-
-  // No flags, but declining
-  if (trend === "declining" && flags.length === 0) {
-    return "No recorded demographic vulnerability flags. A declining trajectory without obvious contextual factors is worth investigating — possible areas to explore include attendance, wellbeing, specific learning needs not yet identified, or a transition between year groups.";
-  }
-
-  return "No additional vulnerability flags on record. Progress is within the expected range for this cohort.";
-}
-
-// ─── Year-group chip bar ──────────────────────────────────────────────────────
 
 const YG_OPTIONS = [0, 1, 2, 3, 4, 5, 6] as const;
 type YGOption = (typeof YG_OPTIONS)[number];
 
-function ygLabel(yg: YGOption): string {
+function ygLabel(yg: number): string {
   return yg === 0 ? "EYFS" : `Y${yg}`;
 }
 
-// ─── Pupil Detail Drawer ──────────────────────────────────────────────────────
+function levelValue(level: string): number {
+  return level === "GDS" ? 3 : level === "EXS" || level === "2" ? 2 : level === "WTS" || level === "WT" || level === "1" ? 1 : 0;
+}
 
-function PupilDetailDrawer({ pupil, open, onClose }: { pupil: PupilRecord; open: boolean; onClose: () => void }) {
-  const demo = pupil.demographics;
-  const flags = [demo.isFsm && "FSM", demo.isSend && "SEND", demo.isEal && "EAL"].filter(Boolean) as string[];
-  const trend = overallTrend(pupil.journey);
-  const ctx = contextPanel(demo, trend);
-  const weak = weakestSubject(pupil.journey);
+function levelBadgeClass(level: string): string {
+  if (level === "GDS") return "bg-emerald-500/10 text-emerald-600 border-emerald-500/20";
+  if (level === "EXS" || level === "2") return "bg-sky-500/10 text-sky-600 border-sky-500/20";
+  if (level === "—") return "bg-muted text-muted-foreground border-border";
+  return "bg-rose-500/10 text-rose-600 border-rose-500/20";
+}
 
-  const subjectsByYear = ["reading", "writing", "maths"].map((subj) => {
-    const entries = pupil.journey
-      .filter((j) => j.subject === subj)
-      .sort((a, b) => a.yearGroup - b.yearGroup);
-    return { subj, entries };
+function trendLabel(trend: PupilRegisterRow["trend"]): string {
+  if (trend === "improving") return "Improving";
+  if (trend === "declining") return "Needs attention";
+  if (trend === "stable") return "Stable";
+  return "Insufficient";
+}
+
+function trendClass(trend: PupilRegisterRow["trend"]): string {
+  if (trend === "improving") return "text-emerald-600";
+  if (trend === "declining") return "text-rose-600";
+  return "text-muted-foreground";
+}
+
+function vulnerabilityFlags(demo: PupilRecord["demographics"]): string[] {
+  return [
+    demo.isFsm && "FSM",
+    demo.isSend && "SEND",
+    demo.isEal && "EAL",
+    (demo.isEhcp || demo.hasEhcp) && "EHCP",
+    (demo.isCp || demo.hasChildProtection) && "CP",
+  ].filter(Boolean) as string[];
+}
+
+function latestEntryForSubject(pupil: PupilRecord, subject: string): JourneyEntry | undefined {
+  return pupil.journey
+    .filter((entry) => entry.subject === subject)
+    .sort((a, b) => b.year - a.year || b.yearGroup - a.yearGroup)[0];
+}
+
+function latestYearGroup(pupil: PupilRecord): number {
+  if (pupil.journey.length === 0) return 0;
+  return Math.max(...pupil.journey.map((entry) => entry.yearGroup));
+}
+
+function weakestSubject(journey: JourneyEntry[]): { subject: string; avgLevel: number } | null {
+  const subjects = [...new Set(journey.map((entry) => entry.subject).filter((subject) => ["reading", "writing", "maths"].includes(subject)))];
+  if (subjects.length === 0) return null;
+
+  const scored = subjects.map((subject) => {
+    const levels = journey.filter((entry) => entry.subject === subject).map((entry) => levelValue(entry.level));
+    const avgLevel = levels.length > 0 ? levels.reduce((total, value) => total + value, 0) / levels.length : 0;
+    return { subject, avgLevel };
   });
 
+  scored.sort((a, b) => a.avgLevel - b.avgLevel);
+  return scored[0];
+}
+
+function overallTrend(journey: JourneyEntry[]): PupilRegisterRow["trend"] {
+  const levels = [...journey]
+    .sort((a, b) => a.year - b.year || a.yearGroup - b.yearGroup)
+    .map((entry) => levelValue(entry.level));
+
+  if (levels.length < 2) return "insufficient";
+  if (levels[levels.length - 1] > levels[0]) return "improving";
+  if (levels[levels.length - 1] < levels[0]) return "declining";
+  return "stable";
+}
+
+function contextPanel(demo: PupilRecord["demographics"], trend: PupilRegisterRow["trend"]): string {
+  const { isFsm, isSend, isEal } = demo;
+
+  if (isSend && isFsm) {
+    return "This pupil carries dual disadvantage markers. Review whether provision and Pupil Premium support are being tracked against the pupil's own starting point.";
+  }
+  if (isSend) {
+    return "SEND-registered. Read attainment alongside individual provision, the graduated approach and progress from the pupil's own baseline.";
+  }
+  if (isEal && isFsm) {
+    return "EAL and Pupil Premium eligible. Language acquisition and disadvantage should both be considered before interpreting attainment in isolation.";
+  }
+  if (isEal) {
+    return "EAL learner. Consider time in English-medium education and whether language exposure explains current attainment patterns.";
+  }
+  if (isFsm) {
+    return "Pupil Premium eligible. Check whether strategy actions are specific, tracked and matched to the pupil's main barrier.";
+  }
+  if (trend === "declining") {
+    return "No recorded vulnerability flags. A declining profile without obvious context is worth checking for attendance, wellbeing or unidentified need.";
+  }
+  return "No additional vulnerability flags on record. Keep the focus on the journey and any subject-specific changes.";
+}
+
+export function buildPupilRegisterGroups(pupils: PupilRecord[]): PupilRegisterGroup[] {
+  const rows: PupilRegisterRow[] = pupils.map((pupil) => {
+    const reading = latestEntryForSubject(pupil, "reading")?.level ?? "—";
+    const writing = latestEntryForSubject(pupil, "writing")?.level ?? "—";
+    const maths = latestEntryForSubject(pupil, "maths")?.level ?? "—";
+    const levels = [reading, writing, maths].filter((level) => level !== "—");
+    const yearGroup = latestYearGroup(pupil);
+
+    return {
+      pupil,
+      pupilId: pupil.pupilId,
+      yearGroup,
+      className: `${ygLabel(yearGroup)} cohort`,
+      reading,
+      writing,
+      maths,
+      expectedCount: levels.filter((level) => ["EXS", "GDS", "2"].includes(level)).length,
+      totalSubjects: levels.length,
+      trend: overallTrend(pupil.journey),
+      flags: vulnerabilityFlags(pupil.demographics),
+    };
+  });
+
+  const groupedRows = rows.reduce<Record<number, PupilRegisterRow[]>>((acc, row) => {
+    acc[row.yearGroup] = acc[row.yearGroup] || [];
+    acc[row.yearGroup].push(row);
+    return acc;
+  }, {});
+
+  return Object.entries(groupedRows)
+    .map(([yearGroup, groupRows]) => ({
+      yearGroup: Number(yearGroup),
+      label: `${ygLabel(Number(yearGroup))} cohort`,
+      rows: groupRows.sort((a, b) => a.pupilId.localeCompare(b.pupilId)),
+    }))
+    .sort((a, b) => a.yearGroup - b.yearGroup);
+}
+
+function PupilDetailPanel({ pupil, onClose }: { pupil: PupilRecord | null; onClose: () => void }) {
+  if (!pupil) {
+    return (
+      <aside className="rounded-2xl border border-border bg-muted/20 p-5 min-h-[320px] flex items-center justify-center text-center">
+        <div>
+          <div className="text-sm font-semibold text-foreground">Select a pupil</div>
+          <p className="text-xs text-muted-foreground mt-1 max-w-xs">
+            Choose a row to view the journey, flags and suggested focus without cluttering the register.
+          </p>
+        </div>
+      </aside>
+    );
+  }
+
+  const flags = vulnerabilityFlags(pupil.demographics);
+  const trend = overallTrend(pupil.journey);
+  const weak = weakestSubject(pupil.journey);
+  const subjectsByYear = ["reading", "writing", "maths"].map((subject) => ({
+    subject,
+    entries: pupil.journey
+      .filter((entry) => entry.subject === subject)
+      .sort((a, b) => a.yearGroup - b.yearGroup || a.year - b.year),
+  }));
+
   const edPrompt = weak
-    ? `Create an intervention plan for pupil ${pupil.pupilId} who needs focus on ${weak.subject}. ` +
-      `Demographics: ${flags.join(", ") || "no additional flags"}. ` +
-      `Year groups in journey: ${[...new Set(pupil.journey.map((j) => "Y" + j.yearGroup))].join(", ")}. ` +
-      `Use EEF-evidenced strategies and produce a 6-week plan with weekly check-ins.`
+    ? `Create an intervention plan for pupil ${pupil.pupilId} who needs focus on ${weak.subject}. Demographics: ${flags.join(", ") || "no additional flags"}. Use EEF-evidenced strategies and produce a 6-week plan with weekly check-ins.`
     : null;
 
   return (
-    <Dialog.Root open={open} onOpenChange={(v) => !v && onClose()}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-        <Dialog.Content
-          className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-md bg-white shadow-2xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right overflow-y-auto"
-          aria-describedby="pupil-detail-desc"
-        >
-          <div className="p-5">
-            {/* Header */}
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
-                  trend === "declining" ? "bg-red-100 text-red-700" :
-                  trend === "improving" ? "bg-green-100 text-green-700" :
-                  "bg-gray-100 text-gray-600"
-                }`}>
-                  {pupil.pupilId.split(" ").map((w) => w[0]).join("")}
-                </div>
-                <div>
-                  <Dialog.Title className="text-sm font-semibold text-gray-900">{pupil.pupilId}</Dialog.Title>
-                  <div className="flex items-center gap-1 mt-0.5">
-                    {flags.map((f) => (
-                      <span key={f} className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
-                        f === "FSM" ? "bg-amber-100 text-amber-700" :
-                        f === "SEND" ? "bg-purple-100 text-purple-700" :
-                        "bg-cyan-100 text-cyan-700"
-                      }`}>{f}</span>
-                    ))}
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                      demo.gender === "M" ? "bg-blue-100 text-blue-600" :
-                      demo.gender === "F" ? "bg-pink-100 text-pink-600" :
-                      "bg-gray-100 text-gray-500"
-                    }`}>
-                      {demo.gender === "M" ? "Male" : demo.gender === "F" ? "Female" : demo.gender}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <Dialog.Close asChild>
-                <button className="p-1 rounded hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600" aria-label="Close">
-                  <X size={18} />
-                </button>
-              </Dialog.Close>
+    <aside className="rounded-2xl border border-border bg-card p-5 shadow-sm lg:sticky lg:top-24 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto">
+      <div className="flex items-start justify-between gap-3 mb-5">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-full border border-border bg-muted/40 flex items-center justify-center text-sm font-bold text-foreground shrink-0">
+            {pupil.pupilId.split(" ").map((word) => word[0]).join("")}
+          </div>
+          <div className="min-w-0">
+            <h4 className="text-sm font-semibold text-foreground truncate">{pupil.pupilId}</h4>
+            <div className="flex items-center gap-1 mt-1 flex-wrap">
+              {flags.length === 0 ? (
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full border border-border bg-background text-muted-foreground">No flags</span>
+              ) : flags.map((flag) => (
+                <span key={flag} className="text-[10px] px-1.5 py-0.5 rounded-full border border-border bg-background text-muted-foreground">{flag}</span>
+              ))}
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full border border-border bg-background text-muted-foreground">
+                {pupil.demographics.gender === "M" ? "Male" : pupil.demographics.gender === "F" ? "Female" : pupil.demographics.gender}
+              </span>
             </div>
+          </div>
+        </div>
+        <button onClick={onClose} className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" aria-label="Clear selected pupil">
+          <X size={18} />
+        </button>
+      </div>
 
-            <Dialog.Description id="pupil-detail-desc" className="sr-only">
-              Full assessment journey for {pupil.pupilId}
-            </Dialog.Description>
+      <div className="grid grid-cols-2 gap-2 mb-5">
+        <div className="rounded-xl border border-border bg-background p-3">
+          <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">Trend</div>
+          <div className={`text-sm font-bold mt-1 ${trendClass(trend)}`}>{trendLabel(trend)}</div>
+        </div>
+        <div className="rounded-xl border border-border bg-background p-3">
+          <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">Focus</div>
+          <div className="text-sm font-bold text-foreground mt-1">{weak?.subject ?? "Review"}</div>
+        </div>
+      </div>
 
-            {/* Full journey per subject */}
-            <div className="mb-4">
-              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Assessment Journey</div>
-              <div className="space-y-2">
-                {subjectsByYear.map(({ subj, entries }) => (
-                  <div key={subj} className="bg-gray-50 rounded-lg border border-gray-200 p-3">
-                    <div className="text-xs font-semibold text-gray-600 uppercase mb-2">{subj}</div>
-                    {entries.length === 0 ? (
-                      <span className="text-xs text-gray-400">No data</span>
-                    ) : (
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        {entries.map((e, i) => (
-                          <div key={i} className="flex items-center gap-1">
-                            {i > 0 && <span className="text-gray-300 text-xs">→</span>}
-                            <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${
-                              e.level === "GDS" ? "bg-green-100 text-green-700" :
-                              e.level === "EXS" || e.level === "2" ? "bg-blue-100 text-blue-700" :
-                              "bg-red-100 text-red-700"
-                            }`} title={`Y${e.yearGroup} (${e.year})`}>
-                              {e.level}
-                            </span>
-                            <span className="text-[9px] text-gray-400">Y{e.yearGroup}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+      <div className="space-y-3 mb-5">
+        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Assessment journey</div>
+        {subjectsByYear.map(({ subject, entries }) => (
+          <div key={subject} className="rounded-xl border border-border bg-background p-3">
+            <div className="text-xs font-semibold text-muted-foreground uppercase mb-2">{subject}</div>
+            {entries.length === 0 ? (
+              <span className="text-xs text-muted-foreground">No data</span>
+            ) : (
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {entries.map((entry, index) => (
+                  <div key={`${subject}-${entry.year}-${entry.yearGroup}-${index}`} className="flex items-center gap-1">
+                    {index > 0 && <span className="text-muted-foreground text-xs">→</span>}
+                    <span className={`text-xs font-bold px-1.5 py-0.5 rounded border ${levelBadgeClass(entry.level)}`} title={`Y${entry.yearGroup} (${entry.year})`}>
+                      {entry.level}
+                    </span>
+                    <span className="text-[9px] text-muted-foreground">Y{entry.yearGroup}</span>
                   </div>
                 ))}
               </div>
-            </div>
-
-            {/* Context panel */}
-            <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <div className="text-xs font-semibold text-blue-900 mb-1">Context &amp; considerations</div>
-              <p className="text-xs text-blue-800 leading-relaxed">{ctx}</p>
-            </div>
-
-            {/* EEF intervention suggestion */}
-            {weak && (
-              <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg p-3">
-                <div className="text-xs font-semibold text-amber-900 mb-1">Suggested focus area</div>
-                <p className="text-xs text-amber-800">
-                  {weak.subject.charAt(0).toUpperCase() + weak.subject.slice(1)} has the lowest average across recorded assessments (avg level {weak.avgLevel.toFixed(1)}).
-                  EEF-evidenced strategies for this area include structured feedback, reciprocal teaching, and targeted small-group intervention.
-                </p>
-                {edPrompt && (
-                  <button
-                    onClick={() => window.open(`/dashboard/ed?prompt=${encodeURIComponent(edPrompt)}`, "_blank")}
-                    className="mt-2 text-[10px] px-2 py-0.5 rounded bg-amber-600 text-white hover:bg-amber-700 transition-colors font-medium"
-                  >
-                    Generate 6-week plan with Ed &rarr;
-                  </button>
-                )}
-              </div>
             )}
           </div>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+        ))}
+      </div>
+
+      <div className="mb-4 bg-sky-500/10 border border-sky-500/20 rounded-xl p-3">
+        <div className="text-xs font-semibold text-sky-700 dark:text-sky-300 mb-1">Context & considerations</div>
+        <p className="text-xs text-sky-800 dark:text-sky-100 leading-relaxed">{contextPanel(pupil.demographics, trend)}</p>
+      </div>
+
+      {weak && (
+        <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3">
+          <div className="text-xs font-semibold text-amber-700 dark:text-amber-300 mb-1">Suggested focus area</div>
+          <p className="text-xs text-amber-800 dark:text-amber-100 leading-relaxed">
+            {weak.subject.charAt(0).toUpperCase() + weak.subject.slice(1)} has the lowest average across recorded assessments.
+          </p>
+          {edPrompt && (
+            <button
+              onClick={() => window.open(`/dashboard/ed?prompt=${encodeURIComponent(edPrompt)}`, "_blank")}
+              className="mt-2 text-[10px] px-2 py-1 rounded bg-amber-600 text-white hover:bg-amber-700 transition-colors font-medium"
+            >
+              Generate 6-week plan with Ed →
+            </button>
+          )}
+        </div>
+      )}
+    </aside>
   );
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
+function LevelBadge({ label, value }: { label: string; value: string }) {
+  return (
+    <span className={`inline-flex min-w-[58px] justify-center rounded-md border px-2 py-1 text-[11px] font-bold ${levelBadgeClass(value)}`}>
+      {label}: {value}
+    </span>
+  );
+}
+
+function PupilRegisterTable({
+  group,
+  selectedPupilId,
+  onSelect,
+}: {
+  group: PupilRegisterGroup;
+  selectedPupilId: string | null;
+  onSelect: (pupil: PupilRecord) => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-border bg-card overflow-hidden">
+      <div className="flex items-center justify-between gap-3 border-b border-border bg-muted/25 px-4 py-3">
+        <div>
+          <h4 className="text-sm font-semibold text-foreground">{group.label}</h4>
+          <p className="text-xs text-muted-foreground">Class grouping will appear here when class metadata is imported.</p>
+        </div>
+        <span className="rounded-full border border-border bg-background px-2.5 py-1 text-xs font-semibold text-muted-foreground">
+          {group.rows.length} pupils
+        </span>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-muted/20 text-[11px] uppercase tracking-wide text-muted-foreground">
+            <tr>
+              <th className="text-left font-semibold px-4 py-2">Pupil</th>
+              <th className="text-left font-semibold px-3 py-2">Flags</th>
+              <th className="text-left font-semibold px-3 py-2">Levels</th>
+              <th className="text-center font-semibold px-3 py-2">Expected+</th>
+              <th className="text-left font-semibold px-3 py-2">Trend</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            <AnimatePresence initial={false}>
+              {group.rows.map((row) => {
+                const selected = row.pupilId === selectedPupilId;
+                return (
+                  <motion.tr
+                    key={row.pupilId}
+                    layout
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    onClick={() => onSelect(row.pupil)}
+                    className={`cursor-pointer transition-colors hover:bg-muted/35 ${selected ? "bg-sky-500/10" : "bg-card"}`}
+                  >
+                    <td className="px-4 py-3">
+                      <div className="font-semibold text-foreground">{row.pupilId}</div>
+                      <div className="text-xs text-muted-foreground">{row.className}</div>
+                    </td>
+                    <td className="px-3 py-3">
+                      <div className="flex flex-wrap gap-1">
+                        {row.flags.length === 0 ? (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        ) : row.flags.map((flag) => (
+                          <span key={flag} className="rounded-full border border-border bg-background px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                            {flag}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-3 py-3">
+                      <div className="flex flex-wrap gap-1.5">
+                        <LevelBadge label="R" value={row.reading} />
+                        <LevelBadge label="W" value={row.writing} />
+                        <LevelBadge label="M" value={row.maths} />
+                      </div>
+                    </td>
+                    <td className="px-3 py-3 text-center">
+                      <span className="font-semibold text-foreground">{row.expectedCount}/{row.totalSubjects || 3}</span>
+                    </td>
+                    <td className="px-3 py-3">
+                      <span className={`text-xs font-semibold ${trendClass(row.trend)}`}>{trendLabel(row.trend)}</span>
+                    </td>
+                  </motion.tr>
+                );
+              })}
+            </AnimatePresence>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
 
 export function PupilCardGrid({ pupils, spotlightPupilId }: PupilCardGridProps) {
-  // Default to Y6 (most relevant for governor discussions)
   const [selectedYg, setSelectedYg] = useState<YGOption | "all">("all");
-  const [selectedPupil, setSelectedPupil] = useState<PupilRecord | null>(null);
+  const visiblePupils = useMemo(
+    () => spotlightPupilId ? pupils.filter((pupil) => pupil.pupilId !== spotlightPupilId) : pupils,
+    [pupils, spotlightPupilId],
+  );
+  const groups = useMemo(() => buildPupilRegisterGroups(visiblePupils), [visiblePupils]);
+  const filteredGroups = selectedYg === "all" ? groups : groups.filter((group) => group.yearGroup === selectedYg);
+  const firstPupil = filteredGroups[0]?.rows[0]?.pupil ?? null;
+  const [selectedPupilId, setSelectedPupilId] = useState<string | null>(null);
+  const selectedPupil = visiblePupils.find((pupil) => pupil.pupilId === selectedPupilId) ?? firstPupil;
 
-  // Exclude spotlight pupil from grid
-  const gridPupils = spotlightPupilId
-    ? pupils.filter((p) => p.pupilId !== spotlightPupilId)
-    : pupils;
-
-  // Compute per-year-group counts based on highest yearGroup in journey
-  const ygCounts = YG_OPTIONS.reduce<Record<number, number>>((acc, yg) => {
-    acc[yg] = gridPupils.filter((p) => {
-      const maxYg = Math.max(...p.journey.map((j) => j.yearGroup));
-      return yg === 0 ? maxYg === 0 : maxYg === yg;
-    }).length;
-    return acc;
-  }, {} as Record<number, number>);
-
-  // Filter pupils by selected year group
-  const filteredPupils = selectedYg === "all"
-    ? gridPupils
-    : gridPupils.filter((p) => {
-        const maxYg = Math.max(...p.journey.map((j) => j.yearGroup));
-        return selectedYg === 0 ? maxYg === 0 : maxYg === selectedYg;
-      });
+  const availableYearGroups = groups.map((group) => group.yearGroup);
 
   return (
-    <div>
-      {/* ── Year group filter chips ── */}
-      <div className="flex items-center gap-1.5 flex-wrap mb-4">
+    <div className="space-y-5">
+      <div className="flex items-center gap-1.5 flex-wrap">
         <button
           onClick={() => setSelectedYg("all")}
-          className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-            selectedYg === "all"
-              ? "bg-gray-900 text-white"
-              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+          className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+            selectedYg === "all" ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:bg-muted/80"
           }`}
         >
-          All ({gridPupils.length})
+          All ({visiblePupils.length})
         </button>
-        {YG_OPTIONS.map((yg) => {
-          const count = ygCounts[yg] ?? 0;
-          if (count === 0) return null;
-          const active = selectedYg === yg;
+        {availableYearGroups.map((yearGroup) => {
+          const active = selectedYg === yearGroup;
+          const count = groups.find((group) => group.yearGroup === yearGroup)?.rows.length ?? 0;
           return (
             <button
-              key={yg}
-              onClick={() => setSelectedYg(yg)}
-              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                active
-                  ? "bg-gray-900 text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              key={yearGroup}
+              onClick={() => setSelectedYg(yearGroup as YGOption)}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                active ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:bg-muted/80"
               }`}
             >
-              {ygLabel(yg)} ({count})
+              {ygLabel(yearGroup)} ({count})
             </button>
           );
         })}
       </div>
 
-      {filteredPupils.length === 0 ? (
-        <p className="text-xs text-gray-400 py-4">No pupils in this year group with multi-year tracking data.</p>
+      {visiblePupils.length === 0 ? (
+        <p className="text-xs text-muted-foreground py-4">No pupils with multi-year tracking data.</p>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[620px] overflow-y-auto pr-1">
-          <AnimatePresence mode="popLayout">
-            {filteredPupils.map((pupil, pidx) => {
-              const demo = pupil.demographics;
-              const flags = [demo.isFsm && "FSM", demo.isSend && "SEND", demo.isEal && "EAL"].filter(Boolean) as string[];
-              const yearGroups = [...new Set(pupil.journey.map((j) => j.yearGroup))].sort((a, b) => a - b);
-              const trend = overallTrend(pupil.journey);
-              const latestEntries = pupil.journey.filter((j) => j.year === Math.max(...pupil.journey.map((jj) => jj.year)));
-              const atExpected = latestEntries.filter((j) => ["EXS", "GDS", "2"].includes(j.level)).length;
-              const totalSubjects = latestEntries.length;
-              const ctx = contextPanel(demo, trend);
-
-              return (
-                <motion.div
-                  key={`${pupil.pupilId}-${pidx}`}
-                  layout
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ type: "spring", damping: 30, stiffness: 250, delay: pidx * 0.015 }}
-                  whileHover={{ y: -2, transition: { type: "spring", damping: 30, stiffness: 250 } }}
-                  onClick={() => setSelectedPupil(pupil)}
-                  className={`border rounded-xl p-3 text-xs cursor-pointer hover:shadow-md transition-shadow ${
-                    trend === "declining" ? "border-red-200 bg-red-50/30" :
-                    trend === "improving" ? "border-green-200 bg-green-50/30" :
-                    "border-gray-200 bg-white"
-                  }`}
-                >
-                  {/* Card header */}
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
-                        trend === "declining" ? "bg-red-100 text-red-700" :
-                        trend === "improving" ? "bg-green-100 text-green-700" :
-                        "bg-gray-100 text-gray-600"
-                      }`}>
-                        {pupil.pupilId.split(" ").map((w) => w[0]).join("")}
-                      </div>
-                      <div>
-                        <div className="font-semibold text-gray-700">{pupil.pupilId}</div>
-                        <div className="text-gray-400">Y{yearGroups.join("→Y")}</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1 flex-wrap justify-end">
-                      {flags.map((f) => (
-                        <span key={f} className={`px-1.5 py-0.5 rounded-full text-[10px] font-medium ${
-                          f === "FSM" ? "bg-amber-100 text-amber-700" :
-                          f === "SEND" ? "bg-purple-100 text-purple-700" :
-                          "bg-cyan-100 text-cyan-700"
-                        }`}>{f}</span>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Latest assessment levels */}
-                  <div className="flex items-center gap-1.5 mb-2">
-                    {latestEntries.map((e, i) => (
-                      <span key={i} className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                        e.level === "GDS" ? "bg-green-100 text-green-700" :
-                        e.level === "EXS" || e.level === "2" ? "bg-blue-100 text-blue-700" :
-                        "bg-red-100 text-red-700"
-                      }`} title={e.subject}>
-                        {e.subject.slice(0, 1).toUpperCase()}: {e.level}
-                      </span>
-                    ))}
-                  </div>
-
-                  {/* Summary row */}
-                  <div className="flex items-center justify-between text-gray-500 mb-2">
-                    <span>{atExpected}/{totalSubjects} at expected+</span>
-                    <span className={`font-semibold ${
-                      trend === "improving" ? "text-green-600" :
-                      trend === "declining" ? "text-red-600" :
-                      "text-gray-500"
-                    }`}>
-                      {trend === "improving" ? "↑ Improving" : trend === "declining" ? "↓ Needs attention" : "→ Stable"}
-                    </span>
-                  </div>
-
-                  {/* Context panel (truncated) */}
-                  <div className="bg-gray-50 rounded-lg border border-gray-100 p-2 text-[10px] text-gray-500 leading-relaxed line-clamp-2">
-                    {ctx}
-                  </div>
-
-                  <div className="mt-2 text-[10px] text-gray-400 text-right">Click for full journey →</div>
-                </motion.div>
-              );
-            })}
-          </AnimatePresence>
+        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px] gap-5 items-start">
+          <div className="space-y-4 max-h-[680px] overflow-y-auto pr-1">
+            {filteredGroups.map((group) => (
+              <PupilRegisterTable
+                key={group.yearGroup}
+                group={group}
+                selectedPupilId={selectedPupil?.pupilId ?? null}
+                onSelect={(pupil) => setSelectedPupilId(pupil.pupilId)}
+              />
+            ))}
+          </div>
+          <PupilDetailPanel pupil={selectedPupil} onClose={() => setSelectedPupilId(null)} />
         </div>
-      )}
-
-      {/* Detail drawer */}
-      {selectedPupil && (
-        <PupilDetailDrawer
-          pupil={selectedPupil}
-          open={!!selectedPupil}
-          onClose={() => setSelectedPupil(null)}
-        />
       )}
     </div>
   );

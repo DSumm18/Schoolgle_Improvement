@@ -1,5 +1,7 @@
-// GET/POST/DELETE the trust-level parsed spreadsheet for the user's current org.
-// Resolves to the trust org (parent or self) so any child school sees its parent trust's data.
+// GET/POST/DELETE the parsed spreadsheet for the user's current org.
+// Trust orgs store trust-wide captures. School orgs store school-only captures.
+// Do not resolve child schools to their parent trust here: that would leak
+// trust-wide school lists into a standalone school view.
 //
 // Supports multiple capture_period snapshots per trust (autumn_term, mid_year, end_of_year,
 // summer_term). GET without ?capturePeriod returns the full map keyed by period; with it,
@@ -21,19 +23,6 @@ function detectCapturePeriod(fileName: string, parsedDataHeader?: string | null)
   return 'mid_year'; // safe default — most current captures are mid-year
 }
 
-async function resolveTrustOrg(
-  supabase: ReturnType<typeof createServiceRoleClient>,
-  organizationId: string,
-): Promise<string> {
-  const { data: org } = await supabase
-    .from('organizations')
-    .select('id, parent_organization_id')
-    .eq('id', organizationId)
-    .maybeSingle();
-  if (!org) return organizationId;
-  return org.parent_organization_id || org.id;
-}
-
 export const GET = protectedRoute(async (auth, req: NextRequest) => {
   const orgId = req.nextUrl.searchParams.get('organizationId') || auth.organizationId;
   const requestedPeriod = req.nextUrl.searchParams.get('capturePeriod') as CapturePeriod | null;
@@ -48,11 +37,10 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
     .maybeSingle();
   if (!mem) return apiError('Not a member', 403);
 
-  const trustId = await resolveTrustOrg(supabase, orgId);
   const query = supabase
     .from('trust_spreadsheets')
     .select('file_name, parsed_data, uploaded_by, created_at, updated_at, capture_period')
-    .eq('trust_organization_id', trustId);
+    .eq('trust_organization_id', orgId);
 
   if (requestedPeriod) {
     const { data, error } = await query.eq('capture_period', requestedPeriod).maybeSingle();
@@ -109,11 +97,10 @@ export const POST = protectedRoute(async (auth, req: NextRequest) => {
     .maybeSingle();
   if (!mem) return apiError('Not a member', 403);
 
-  const trustId = await resolveTrustOrg(supabase, orgId);
   const { error } = await supabase
     .from('trust_spreadsheets')
     .upsert({
-      trust_organization_id: trustId,
+      trust_organization_id: orgId,
       file_name: fileName,
       parsed_data: parsedData,
       uploaded_by: auth.userId,
@@ -121,7 +108,7 @@ export const POST = protectedRoute(async (auth, req: NextRequest) => {
     }, { onConflict: 'trust_organization_id,capture_period' });
 
   if (error) return apiError(error.message, 500);
-  return apiSuccess({ ok: true, trust_organization_id: trustId, capture_period: period });
+  return apiSuccess({ ok: true, trust_organization_id: orgId, capture_period: period });
 });
 
 export const DELETE = protectedRoute(async (auth, req: NextRequest) => {
@@ -138,8 +125,7 @@ export const DELETE = protectedRoute(async (auth, req: NextRequest) => {
     .maybeSingle();
   if (!mem) return apiError('Not a member', 403);
 
-  const trustId = await resolveTrustOrg(supabase, orgId);
-  let q = supabase.from('trust_spreadsheets').delete().eq('trust_organization_id', trustId);
+  let q = supabase.from('trust_spreadsheets').delete().eq('trust_organization_id', orgId);
   if (capturePeriod) q = q.eq('capture_period', capturePeriod);
 
   const { error } = await q;

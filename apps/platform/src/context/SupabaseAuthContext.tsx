@@ -416,32 +416,28 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
     if (!user?.id) return;
 
     try {
-      // Fetch the new org's details + user's role in it
-      const { data: membership, error: memError } = await supabase
-        .from("organization_members")
-        .select("role, organizations(id, name, organization_type)")
-        .eq("user_id", user.id)
-        .eq("organization_id", orgId)
-        .maybeSingle();
+      const token = (await supabase.auth.getSession()).data.session?.access_token;
+      const response = await fetch(
+        `/api/organizations/accessible?organizationId=${encodeURIComponent(orgId)}`,
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        },
+      );
 
-      if (memError || !membership) {
-        console.error(
-          "[AuthContext] switchOrganization failed:",
-          memError?.message,
-        );
+      if (!response.ok) {
+        console.error("[AuthContext] switchOrganization failed:", response.status);
         return;
       }
 
-      const org = Array.isArray(membership.organizations)
-        ? membership.organizations[0]
-        : membership.organizations;
+      const data = await response.json();
+      const org = data.organizations?.[0];
 
       if (org) {
         setOrganizationId(org.id);
         setOrganization({
           id: org.id,
           name: org.name,
-          role: (membership.role || "viewer") as Organization["role"],
+          role: (org.role || "viewer") as Organization["role"],
           organization_type: org.organization_type,
         });
 

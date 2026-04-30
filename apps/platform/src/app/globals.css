@@ -437,3 +437,159 @@ img {
 .dark ::-webkit-scrollbar-thumb:hover {
   background: var(--slate-700);
 }
+
+/* Trust Assessor: legacy widgets still use hard-coded Tailwind light classes.
+   Keep this scoped so the wider dashboard and sidebar continue using tokens. */
+.dark .trust-assessor-page {
+  color-scheme: dark;
+}
+
+.dark .trust-assessor-page .bg-white,
+.dark .trust-assessor-page .bg-white\/75,
+.dark .trust-assessor-page .bg-white\/70,
+.dark .trust-assessor-page .bg-white\/60,
+.dark .trust-assessor-page .bg-gray-50,
+.dark .trust-assessor-page .bg-gray-50\/50,
+.dark .trust-assessor-page .bg-slate-50,
+.dark .trust-assessor-page .bg-slate-50\/50 {
+  background-color: var(--card) !important;
+}
+
+.dark .trust-assessor-page .bg-gray-100,
+.dark .trust-assessor-page .bg-gray-100\/50,
+.dark .trust-assessor-page .bg-gray-200,
+.dark .trust-assessor-page .bg-slate-100,
+.dark .trust-assessor-page .bg-slate-100\/50,
+.dark .trust-assessor-page .bg-slate-200 {
+  background-color: var(--muted) !important;
+}
+
+.dark .trust-assessor-page .border-white,
+.dark .trust-assessor-page .border-gray-100,
+.dark .trust-assessor-page .border-gray-200,
+.dark .trust-assessor-page .border-gray-300,
+.dark .trust-assessor-page .border-slate-100,
+.dark .trust-assessor-page .border-slate-200,
+.dark .trust-assessor-page .border-slate-300 {
+  border-color: var(--border) !important;
+}
+
+.dark .trust-assessor-page .text-gray-900,
+.dark .trust-assessor-page .text-gray-800,
+.dark .trust-assessor-page .text-gray-700,
+.dark .trust-assessor-page .text-slate-900,
+.dark .trust-assessor-page .text-slate-800,
+.dark .trust-assessor-page .text-slate-700 {
+  color: var(--foreground) !important;
+}
+
+.dark .trust-assessor-page .text-gray-600,
+.dark .trust-assessor-page .text-gray-500,
+.dark .trust-assessor-page .text-gray-400,
+.dark .trust-assessor-page .text-slate-600,
+.dark .trust-assessor-page .text-slate-500,
+.dark .trust-assessor-page .text-slate-400 {
+  color: var(--muted-foreground) !important;
+}
+
+.dark .trust-assessor-page .hover\:bg-gray-50:hover,
+.dark .trust-assessor-page .hover\:bg-gray-100:hover,
+.dark .trust-assessor-page .hover\:bg-gray-200:hover,
+.dark .trust-assessor-page .hover\:bg-slate-50:hover,
+.dark .trust-assessor-page .hover\:bg-slate-100:hover,
+.dark .trust-assessor-page .hover\:bg-slate-200:hover {
+  background-color: color-mix(in srgb, var(--muted) 82%, var(--foreground) 8%) !important;
+}
+
+.dark .trust-assessor-page .bg-blue-50,
+.dark .trust-assessor-page .bg-blue-50\/30,
+.dark .trust-assessor-page .bg-blue-50\/50,
+.dark .trust-assessor-page .from-blue-50 {
+  background-color: color-mix(in srgb, var(--card) 92%, rgb(59 130 246) 8%) !important;
+}
+
+.dark .trust-assessor-page .bg-indigo-50,
+.dark .trust-assessor-page .bg-indigo-50\/50,
+.dark .trust-assessor-page .from-indigo-50,
+.dark .trust-assessor-page .to-indigo-50 {
+  background-color: color-mix(in srgb, var(--card) 92%, rgb(99 102 241) 8%) !important;
+}
+
+.dark .trust-assessor-page .bg-emerald-50,
+.dark .trust-assessor-page .bg-emerald-50\/30,
+.dark .trust-assessor-page .bg-emerald-50\/50 {
+  background-color: color-mix(in srgb, var(--card) 92%, rgb(16 185 129) 8%) !important;
+}
+
+.dark .trust-assessor-page .bg-amber-50,
+.dark .trust-assessor-page .bg-amber-50\/30,
+.dark .trust-assessor-page .bg-amber-50\/50,
+.dark .trust-assessor-page .bg-yellow-50 {
+  background-color: color-mix(in srgb, var(--card) 92%, rgb(245 158 11) 8%) !important;
+}
+
+.dark .trust-assessor-page .bg-red-50,
+.dark .trust-assessor-page .bg-red-50\/50,
+.dark .trust-assessor-page .bg-rose-50,
+.dark .trust-assessor-page .bg-rose-50\/50 {
+  background-color: color-mix(in srgb, var(--card) 92%, rgb(239 68 68) 8%) !important;
+}
+
+.dark .trust-assessor-page .border-blue-200,
+.dark .trust-assessor-page .border-indigo-200,
+.dark .trust-assessor-page .border-emerald-200,
+.dark .trust-assessor-page .border-green-200,
+.dark .trust-assessor-page .border-amber-200,
+.dark .trust-assessor-page .border-yellow-400,
+.dark .trust-assessor-page .border-red-200,
+.dark .trust-assessor-page .border-rose-200 {
+  border-color: color-mix(in srgb, var(--border) 78%, var(--foreground) 10%) !important;
+}
+
+.dark .trust-assessor-page .text-blue-950,
+.dark .trust-assessor-page .text-blue-900,
+.dark .trust-assessor-page .text-blue-800,
+.dark .trust-assessor-page .text-blue-700,
+.dark .trust-assessor-page .text-indigo-900,
+.dark .trust-assessor-page .text-indigo-800,
+.dark .trust-assessor-page .text-indigo-700 {
+  color: rgb(191 219 254) !important;
+}
+
+.dark .trust-assessor-page .text-emerald-900,
+.dark .trust-assessor-page .text-emerald-800,
+.dark .trust-assessor-page .text-emerald-700,
+.dark .trust-assessor-page .text-green-800,
+.dark .trust-assessor-page .text-green-700 {
+  color: rgb(167 243 208) !important;
+}
+
+.dark .trust-assessor-page .text-amber-900,
+.dark .trust-assessor-page .text-amber-800,
+.dark .trust-assessor-page .text-amber-700,
+.dark .trust-assessor-page .text-yellow-800 {
+  color: rgb(253 230 138) !important;
+}
+
+.dark .trust-assessor-page .text-red-900,
+.dark .trust-assessor-page .text-red-800,
+.dark .trust-assessor-page .text-red-700,
+.dark .trust-assessor-page .text-rose-800,
+.dark .trust-assessor-page .text-rose-700 {
+  color: rgb(254 202 202) !important;
+}
+
+.dark .trust-assessor-page .recharts-cartesian-grid line,
+.dark .trust-assessor-page .recharts-reference-line line {
+  stroke: rgb(51 65 85) !important;
+}
+
+.dark .trust-assessor-page .recharts-text,
+.dark .trust-assessor-page .recharts-legend-item-text {
+  fill: var(--muted-foreground) !important;
+  color: var(--muted-foreground) !important;
+}
+
+.dark .trust-assessor-page .recharts-tooltip-wrapper .bg-white\/95 {
+  background-color: rgb(15 23 42 / 0.96) !important;
+}
