@@ -2,6 +2,7 @@
 
 import { AlertCircle, Clock, Lock } from "lucide-react";
 import type { SubscriptionState } from "@/lib/subscription/state";
+import { APPS, MODULES } from "@/lib/modules/registry";
 
 interface Props {
   state: SubscriptionState;
@@ -34,6 +35,10 @@ export default function SubscriptionBanner({ state }: Props) {
   // Trialing — countdown
   if (state.isTrialing && state.daysRemaining !== null) {
     const urgent = state.daysRemaining <= 2;
+    const enabledLabels = state.enabledModules
+      .filter((moduleId) => moduleId !== "toolbox")
+      .map((moduleId) => APPS.find((app) => app.id === moduleId)?.name || MODULES.find((module) => module.id === moduleId)?.name || moduleId)
+      .filter(Boolean);
     return (
       <div
         className={`w-full border-b px-6 py-3 flex items-center gap-3 ${
@@ -52,7 +57,7 @@ export default function SubscriptionBanner({ state }: Props) {
             {state.effectiveEnd
               ? new Date(state.effectiveEnd).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
               : "soon"}
-            . Enabled modules: {state.enabledModules.join(", ") || "none"}.
+            . Enabled product{enabledLabels.length === 1 ? "" : "s"}: {enabledLabels.join(", ") || "none"}.
           </p>
         </div>
       </div>

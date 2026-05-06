@@ -42,7 +42,7 @@ import {
   FileText,
   X,
   Download,
-  Landmark,
+  Building2,
 } from "lucide-react";
 import { DriveFilePicker } from "@/components/canvas/DriveFilePicker";
 import { CohortPassport } from "@/components/trust-assessor/CohortPassport";
@@ -4626,7 +4626,7 @@ function PublicDataTrustOverview({
                 <img src={report.parent.logo_url} alt={report.parent.name} className="h-full w-full object-contain" />
               </>
             ) : (
-              <Landmark className="h-7 w-7 text-indigo-700 dark:text-sky-300" aria-hidden="true" />
+              <Building2 className="h-7 w-7 text-indigo-700 dark:text-sky-300" aria-hidden="true" />
             )}
           </div>
           <div>

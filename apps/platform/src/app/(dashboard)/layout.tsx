@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -71,6 +71,9 @@ function getPlanetByPath(path: string): (typeof PLANET_GROUPS)[number] | undefin
 // Module IDs that are hidden from pilot
 const HIDDEN_MODULE_IDS = new Set(MODULES.filter((m) => m.pilotHidden).map((m) => m.id));
 
+const TRUST_ASSESSOR_APP_ID = "trust-assessor";
+const TRUST_ASSESSOR_ROUTE = "/dashboard/school-improvement/trust-assessor";
+
 export default function DashboardLayout({
   children,
 }: {
@@ -122,9 +125,39 @@ export default function DashboardLayout({
 
   // Subscription state — controls which modules appear in sidebar + banner
   const { state: subscription } = useSubscriptionState(organizationId);
-  const enabledModuleSet = new Set(subscription?.enabledModules || []);
+  const enabledModuleSet = useMemo(
+    () => new Set(subscription?.enabledModules || []),
+    [subscription?.enabledModules],
+  );
   const subscriptionActive = subscription?.isActive ?? true; // default to allow-all if unknown
   const hasSubscriptionRecord = subscription?.status !== 'none' && subscription !== null;
+  const explicitlyEnabledApps = APPS.filter((app) => enabledModuleSet.has(app.id));
+  const hasAppLevelRestrictions = hasSubscriptionRecord && subscriptionActive && explicitlyEnabledApps.length > 0;
+  const singleEnabledApp = explicitlyEnabledApps.length === 1 ? explicitlyEnabledApps[0] : null;
+  const isSingleAppMode = singleEnabledApp?.id === TRUST_ASSESSOR_APP_ID;
+
+  const isAppEnabledBySubscription = useCallback(
+    (app: (typeof APPS)[number]) => {
+      if (!hasSubscriptionRecord) return true;
+      if (!subscriptionActive) return false;
+      if (enabledModuleSet.has(app.id)) return true;
+      if (hasAppLevelRestrictions) return false;
+      return enabledModuleSet.has(app.moduleId);
+    },
+    [enabledModuleSet, hasAppLevelRestrictions, hasSubscriptionRecord, subscriptionActive],
+  );
+
+  const isModuleEnabledBySubscription = useCallback(
+    (moduleId: string) => {
+      if (!hasSubscriptionRecord) return true;
+      if (!subscriptionActive) return false;
+      if (hasAppLevelRestrictions) {
+        return APPS.some((app) => app.moduleId === moduleId && enabledModuleSet.has(app.id));
+      }
+      return enabledModuleSet.has(moduleId);
+    },
+    [enabledModuleSet, hasAppLevelRestrictions, hasSubscriptionRecord, subscriptionActive],
+  );
 
   // Color name → hex lookup
   const colorMap: Record<string, string> = {
@@ -188,14 +221,37 @@ export default function DashboardLayout({
         !canUserAccess(currentApp.requiredPermissions, userRole)
       ) {
         router.push("/dashboard/no-access");
+      } else if (currentApp && !isAppEnabledBySubscription(currentApp)) {
+        router.push(singleEnabledApp?.route || "/dashboard/no-access");
       } else if (
         currentModule &&
         !canUserAccess(currentModule.requiredPermissions, userRole)
       ) {
         router.push("/dashboard/no-access");
+      } else if (
+        currentModule &&
+        !currentApp &&
+        !isModuleEnabledBySubscription(currentModule.id)
+      ) {
+        router.push(singleEnabledApp?.route || "/dashboard/no-access");
       }
     }
-  }, [pathname, userRole, authLoading, loading, router]);
+  }, [
+    pathname,
+    userRole,
+    authLoading,
+    loading,
+    router,
+    isAppEnabledBySubscription,
+    isModuleEnabledBySubscription,
+    singleEnabledApp,
+  ]);
+
+  useEffect(() => {
+    if (!authLoading && !loading && isSingleAppMode && pathname === "/dashboard") {
+      router.replace(TRUST_ASSESSOR_ROUTE);
+    }
+  }, [authLoading, isSingleAppMode, loading, pathname, router]);
 
   useEffect(() => {
     // Only redirect when auth has fully resolved and there's genuinely no user
@@ -261,7 +317,7 @@ export default function DashboardLayout({
   // Build navigation from registry — show all if no role set (new user)
   const hasRole = !!userRole;
   const navigationItems = [
-    ...NAVBAR_CONFIG.map((section) => ({
+    ...(isSingleAppMode ? [] : NAVBAR_CONFIG.map((section) => ({
       section: section.name.toUpperCase(),
       type: "workspace" as const,
       items: section.items
@@ -276,7 +332,7 @@ export default function DashboardLayout({
           icon: item.icon,
           color: undefined as string | undefined,
         })),
-    })),
+    }))),
     {
       section: "MY MODULES",
       type: "modules" as const,
@@ -298,13 +354,19 @@ export default function DashboardLayout({
           // If no subscription record at all, keep legacy behaviour (show everything).
           if (hasSubscriptionRecord) {
             if (!subscriptionActive) return null;
-            const planetHasEnabledModule = planet.moduleIds.some((mid) => enabledModuleSet.has(mid));
+            const planetHasEnabledModule = planet.moduleIds.some((mid) => isModuleEnabledBySubscription(mid));
             if (!planetHasEnabledModule) return null;
           }
+          const firstEnabledApp = APPS.find(
+            (app) =>
+              planet.moduleIds.includes(app.moduleId) &&
+              !app.pilotHidden &&
+              isAppEnabledBySubscription(app),
+          );
           return {
             id: planet.id,
             name: planet.name,
-            href: `/dashboard/${accessibleModules[0].id}`,
+            href: firstEnabledApp?.route || `/dashboard/${accessibleModules[0].id}`,
             icon: planet.icon,
             color: planet.color,
             moduleIds: planet.moduleIds,
@@ -312,7 +374,7 @@ export default function DashboardLayout({
         })
         .filter((item): item is NonNullable<typeof item> => item !== null),
     },
-    {
+    ...(isSingleAppMode ? [] : [{
       section: "SETTINGS",
       type: "settings" as const,
       items: [
@@ -352,7 +414,7 @@ export default function DashboardLayout({
           color: undefined as string | undefined,
         },
       ],
-    },
+    }]),
   ];
 
   if (authLoading || loading) {
@@ -503,7 +565,7 @@ export default function DashboardLayout({
           <div
             className={`px-6 py-4 flex items-center gap-4 ${!isSidebarExpanded ? "justify-center px-0" : ""}`}
           >
-            <AppLauncher />
+            {!isSingleAppMode && <AppLauncher />}
             {isSidebarExpanded && (
               <div className="flex-1 min-w-0">
                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
@@ -520,7 +582,7 @@ export default function DashboardLayout({
             )}
           </div>
 
-          {user && isSidebarExpanded && (
+          {user && isSidebarExpanded && !isSingleAppMode && (
             <div className="p-4 border-b border-border">
               <OrgSwitcher
                 currentOrgId={
@@ -563,6 +625,7 @@ export default function DashboardLayout({
                               itemModuleIds.includes(a.moduleId) &&
                               !HIDDEN_MODULE_IDS.has(a.moduleId) &&
                               !a.pilotHidden &&
+                              isAppEnabledBySubscription(a) &&
                               (!hasRole ||
                                 canUserAccess(a.requiredPermissions, userRole)),
                           )

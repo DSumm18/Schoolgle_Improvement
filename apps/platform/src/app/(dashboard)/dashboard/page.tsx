@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import useSWR, { mutate } from "swr";
 import { useAuth } from "@/context/SupabaseAuthContext";
@@ -12,6 +12,7 @@ import {
   canUserAccess,
   Role,
 } from "@/lib/modules/registry";
+import { useSubscriptionState } from "@/hooks/useSubscriptionState";
 import { MyTasksWidget } from "@/components/dashboard/MyTasksWidget";
 import { DashboardFeed } from "@/components/display/DashboardFeed";
 import Link from "next/link";
@@ -558,11 +559,23 @@ function AddEventModal({
 // ─── Main Dashboard Page ─────────────────────────────────────────────
 
 export default function DashboardPage() {
-  const { user, organization } = useAuth();
+  const { user, organization, displayName: authDisplayName } = useAuth();
   const organizationId = organization?.id || "";
   const userRole = organization?.role as Role;
   const greeting = getGreeting();
   const GreetingIcon = greeting.icon;
+  const { state: subscription } = useSubscriptionState(organizationId);
+  const enabledModules = subscription?.enabledModules || [];
+  const isTrustAssessorOnly =
+    subscription?.isActive &&
+    enabledModules.includes("trust-assessor") &&
+    !APPS.some((app) => app.id !== "trust-assessor" && enabledModules.includes(app.id));
+
+  useEffect(() => {
+    if (isTrustAssessorOnly) {
+      window.location.replace("/dashboard/school-improvement/trust-assessor");
+    }
+  }, [isTrustAssessorOnly]);
 
   const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
   const [showEventModal, setShowEventModal] = useState(false);
@@ -581,7 +594,11 @@ export default function DashboardPage() {
   const isSetupIncomplete = staffCount === 0;
 
   const displayName =
-    user?.user_metadata?.full_name || user?.email?.split("@")[0] || "there";
+    authDisplayName ||
+    user?.user_metadata?.full_name ||
+    user?.user_metadata?.display_name ||
+    user?.email?.split("@")[0] ||
+    "there";
   const userName =
     user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Staff";
   const userId = user?.id || "";
