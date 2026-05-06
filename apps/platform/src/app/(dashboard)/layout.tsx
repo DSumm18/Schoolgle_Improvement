@@ -286,9 +286,12 @@ export default function DashboardLayout({
           const visibleModuleIds = planet.moduleIds.filter((mid) => !HIDDEN_MODULE_IDS.has(mid));
           if (visibleModuleIds.length === 0) return null;
           // Check user has access to at least one module in this planet
-          const accessibleModules = MODULES.filter(
-            (m) => visibleModuleIds.includes(m.id) && (!hasRole || canUserAccess(m.requiredPermissions, userRole)),
-          );
+          const accessibleModules = visibleModuleIds
+            .map((mid) => MODULES.find((m) => m.id === mid))
+            .filter(
+              (m): m is (typeof MODULES)[number] =>
+                !!m && (!hasRole || canUserAccess(m.requiredPermissions, userRole)),
+            );
           if (accessibleModules.length === 0) return null;
           // Subscription filter: if a subscription record exists for this org,
           // only show planets whose moduleIds intersect enabled_modules AND sub is active.
@@ -457,7 +460,9 @@ export default function DashboardLayout({
                       {organization?.name || "Dashboard"}
                     </p>
                     <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">
-                      {organization?.organization_type === "trust"
+                      {/council|local authority|borough/i.test(organization?.name ?? "") || organization?.organization_type === "local_authority"
+                        ? "Local Authority"
+                        : organization?.organization_type === "trust"
                         ? "Multi-Academy Trust"
                         : "School Platform"}
                     </p>
