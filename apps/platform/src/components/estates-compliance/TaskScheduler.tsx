@@ -25,6 +25,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RecurrencePattern, TaskPriority, ComplianceDomain } from '@/types/estates-compliance';
 import { Calendar, Clock, User, Users, Settings, CheckCircle2, AlertCircle } from 'lucide-react';
 import { STATUTORY_CHECKS, ComplianceDomain as StatutoryDomain } from '@/lib/estates-compliance/statutory-checks';
+import { useAuth } from '@/context/SupabaseAuthContext';
 
 interface TaskSchedulerProps {
   organizationId: string;
@@ -59,6 +60,7 @@ export function TaskScheduler({
   onCancel,
   initialDomain = 'legionella',
 }: TaskSchedulerProps) {
+  const { session } = useAuth();
   const [activeTab, setActiveTab] = useState<'manual' | 'statutory'>('statutory');
 
   // Manual task form state
@@ -87,7 +89,7 @@ export function TaskScheduler({
 
   // Assignment state
   const [assignment, setAssignment] = useState<Assignment | null>(null);
-  const [contractorId, setContractorId] = useState('');
+  const [contractorId, setContractorId] = useState('unassigned');
 
   // Statutory checks state
   const [selectedDomain, setSelectedDomain] = useState<StatutoryDomain>(initialDomain);
@@ -98,6 +100,12 @@ export function TaskScheduler({
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const statutoryChecks = STATUTORY_CHECKS[selectedDomain] || [];
+  const authHeaders = {
+    'Content-Type': 'application/json',
+    ...(session?.access_token
+      ? { Authorization: `Bearer ${session.access_token}` }
+      : {}),
+  };
 
   useEffect(() => {
     setSelectedDomain(initialDomain as StatutoryDomain);
@@ -110,6 +118,7 @@ export function TaskScheduler({
       setMessage(null);
 
       const payload = {
+        organizationId,
         title: manualTask.title,
         description: manualTask.description,
         task_type: manualTask.task_type,
@@ -127,9 +136,9 @@ export function TaskScheduler({
         contractor_id: assignment?.type === 'contractor' ? assignment.id : undefined,
       };
 
-      const response = await fetch('/api/estates/tasks', {
+      const response = await fetch(`/api/estates/tasks?organizationId=${organizationId}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify(payload),
       });
 
@@ -137,7 +146,7 @@ export function TaskScheduler({
 
       const data = await response.json();
       setMessage({ type: 'success', text: 'Task scheduled successfully!' });
-      onSuccess?.(data.task);
+      onSuccess?.(data.task || data);
     } catch (error) {
       console.error('Error scheduling task:', error);
       setMessage({ type: 'error', text: 'Failed to schedule task. Please try again.' });
@@ -160,6 +169,7 @@ export function TaskScheduler({
 
       for (const check of checksToSchedule) {
         const payload = {
+          organizationId,
           title: check.name,
           description: check.description,
           task_type: 'inspection' as const,
@@ -188,9 +198,9 @@ export function TaskScheduler({
           },
         };
 
-        await fetch('/api/estates/tasks', {
+        await fetch(`/api/estates/tasks?organizationId=${organizationId}`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders,
           body: JSON.stringify(payload),
         });
       }
@@ -373,7 +383,7 @@ export function TaskScheduler({
                     <SelectValue placeholder="Select staff or contractor..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Unassigned</SelectItem>
+                    <SelectItem value="unassigned">Unassigned</SelectItem>
                     <SelectItem value="staff-1">Site Manager</SelectItem>
                     <SelectItem value="staff-2">Care-taking Staff</SelectItem>
                     {/* Would be populated from actual users/contractors */}
@@ -662,9 +672,9 @@ export function TaskScheduler({
               <div>
                 <Label>Assign To (Optional)</Label>
                 <Select
-                  value={assignment?.id || ''}
+                  value={assignment?.id || 'unassigned'}
                   onValueChange={(value) => {
-                    if (value === '') {
+                    if (value === 'unassigned') {
                       setAssignment(null);
                     } else {
                       // In a real app, you'd look up the actual user/contractor
@@ -681,7 +691,7 @@ export function TaskScheduler({
                     <SelectValue placeholder="Select staff or contractor..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Unassigned</SelectItem>
+                    <SelectItem value="unassigned">Unassigned</SelectItem>
                     <SelectItem value="staff-site-manager">Site Manager</SelectItem>
                     <SelectItem value="staff-caretaker">Care-taker</SelectItem>
                     <SelectItem value="contractor-1">ABC Facilities Ltd</SelectItem>

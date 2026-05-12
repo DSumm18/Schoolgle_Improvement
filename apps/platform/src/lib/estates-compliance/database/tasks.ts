@@ -111,7 +111,7 @@ export async function getComplianceTasks(
     : 1;
 
   return {
-    data: data || [],
+    data: (data || []).map(normalizeComplianceTaskRow),
     total: count || 0,
     page: pagination?.page || 1,
     pageSize: pagination?.pageSize || data?.length || 0,
@@ -138,7 +138,7 @@ export async function getComplianceTaskById(
     return null;
   }
 
-  return data;
+  return normalizeComplianceTaskRow(data);
 }
 
 /**
@@ -168,6 +168,104 @@ export interface CreateTaskInput {
   checklist_items?: string[];
 }
 
+function toDateOnly(value?: string): string {
+  if (value) return value.split("T")[0];
+  return new Date().toISOString().split("T")[0];
+}
+
+function normalizeFrequency(
+  pattern?: RecurrencePattern,
+  recurring?: boolean,
+): ComplianceTask["frequency"] {
+  if (!recurring || !pattern) return "ad_hoc";
+  if (pattern === "annually") return "annual";
+  return pattern;
+}
+
+export function buildTaskInsertRow(input: CreateTaskInput) {
+  const dueDate = toDateOnly(input.due_date);
+  const interval = input.recurrence_interval || 1;
+  const recurrencePattern =
+    input.recurring && input.recurrence_pattern
+      ? { type: input.recurrence_pattern, interval }
+      : null;
+
+  return {
+    organization_id: input.organization_id,
+    task_type: input.task_type,
+    compliance_domain: input.compliance_domain,
+    task_name: input.title,
+    description: input.description || null,
+    priority: input.priority || "medium",
+    scheduled_for: dueDate,
+    due_by: dueDate,
+    frequency: normalizeFrequency(input.recurrence_pattern, input.recurring),
+    is_recurring: Boolean(input.recurring),
+    recurrence_pattern: recurrencePattern,
+    task_source: input.contractor_id ? "external" : "internal",
+    assigned_to: input.assigned_to || null,
+    assigned_contractor_id: input.contractor_id || null,
+    asset_id: input.asset_id || null,
+    checklist: input.checklist_items || [],
+    status: input.status || "pending",
+    ai_insights:
+      typeof (input as any).metadata === "object" ? (input as any).metadata : {},
+  };
+}
+
+export function buildTaskUpdateRow(updates: UpdateTaskInput) {
+  const row: Record<string, unknown> = {};
+
+  if (updates.title !== undefined) row.task_name = updates.title;
+  if (updates.description !== undefined) row.description = updates.description;
+  if (updates.task_type !== undefined) row.task_type = updates.task_type;
+  if (updates.compliance_domain !== undefined) {
+    row.compliance_domain = updates.compliance_domain;
+  }
+  if (updates.priority !== undefined) row.priority = updates.priority;
+  if (updates.status !== undefined) row.status = updates.status;
+  if (updates.due_date !== undefined) row.due_by = toDateOnly(updates.due_date);
+  if (updates.assigned_to !== undefined) row.assigned_to = updates.assigned_to;
+  if (updates.asset_id !== undefined) row.asset_id = updates.asset_id;
+  if (updates.contractor_id !== undefined) {
+    row.assigned_contractor_id = updates.contractor_id;
+    row.task_source = updates.contractor_id ? "external" : "internal";
+  }
+  if (updates.recurring !== undefined) row.is_recurring = updates.recurring;
+  if (updates.recurrence_pattern !== undefined) {
+    row.frequency = normalizeFrequency(updates.recurrence_pattern, true);
+    row.recurrence_pattern = {
+      type: updates.recurrence_pattern,
+      interval: updates.recurrence_interval || 1,
+    };
+  }
+  if (updates.checklist_items !== undefined) {
+    row.checklist = updates.checklist_items;
+  }
+  if (updates.completion_notes !== undefined) {
+    row.completion_notes = updates.completion_notes;
+  }
+  if (updates.completed_at !== undefined) row.completed_at = updates.completed_at;
+  if (updates.completed_by !== undefined) row.completed_by = updates.completed_by;
+  if (updates.findings !== undefined) row.findings = updates.findings;
+  if (updates.photo_urls !== undefined) row.photo_urls = updates.photo_urls;
+  if (updates.metadata !== undefined) {
+    row.ai_insights = {
+      ...(typeof updates.metadata === "object" ? updates.metadata : {}),
+    };
+  }
+
+  return row;
+}
+
+export function normalizeComplianceTaskRow(row: any): ComplianceTask {
+  return {
+    ...row,
+    title: row.title || row.task_name,
+    due_date: row.due_date || row.due_by,
+  } as ComplianceTask;
+}
+
 /**
  * Create a new compliance task
  */
@@ -178,10 +276,7 @@ export async function createComplianceTask(
 
   const { data, error } = await supabase
     .from("estates_compliance_tasks")
-    .insert({
-      ...input,
-      status: input.status || "pending",
-    })
+    .insert(buildTaskInsertRow(input))
     .select()
     .single();
 
@@ -190,7 +285,7 @@ export async function createComplianceTask(
     throw new Error("Failed to create compliance task");
   }
 
-  return data;
+  return normalizeComplianceTaskRow(data);
 }
 
 /**
@@ -220,7 +315,7 @@ export async function updateComplianceTask(
   const { data, error } = await supabase
     .from("estates_compliance_tasks")
     .update({
-      ...updates,
+      ...buildTaskUpdateRow(updates),
       updated_at: new Date().toISOString(),
     })
     .eq("id", taskId)
@@ -232,7 +327,7 @@ export async function updateComplianceTask(
     throw new Error("Failed to update compliance task");
   }
 
-  return data;
+  return normalizeComplianceTaskRow(data);
 }
 
 /**

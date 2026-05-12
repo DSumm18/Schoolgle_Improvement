@@ -94,6 +94,56 @@ export interface UpdateCompletionInput {
   rag_status?: "red" | "amber" | "green";
 }
 
+const UPDATABLE_COMPLETION_COLUMNS = [
+  "status",
+  "completed_at",
+  "completed_by",
+  "completion_notes",
+  "next_due_date",
+  "evidence_ids",
+  "documents_received",
+  "contractor_id",
+  "completion_duration_minutes",
+  "findings",
+  "compliance_domain",
+  "rag_status",
+  "last_due_date",
+  "location_id",
+  "room_id",
+  "reviewed_by",
+  "reviewed_at",
+] as const;
+
+export function normalizeCompletionUpdates(
+  updates: UpdateCompletionInput & Record<string, unknown>,
+): UpdateCompletionInput & Record<string, unknown> {
+  const row: Record<string, unknown> = {};
+
+  for (const key of UPDATABLE_COMPLETION_COLUMNS) {
+    if (updates[key] !== undefined) {
+      row[key] = updates[key];
+    }
+  }
+
+  if (row.status === "pending_contractor") {
+    row.status = "in_progress";
+  }
+
+  return row;
+}
+
+async function getCheckFrequency(
+  checkId: string,
+  domain?: string,
+): Promise<string> {
+  const { getAllStatutoryChecks, getChecksForDomain } = await import(
+    "@/lib/estates-compliance/statutory-checks"
+  );
+
+  const checks = domain ? getChecksForDomain(domain as ComplianceDomain) : getAllStatutoryChecks();
+  return checks.find((check) => check.id === checkId)?.frequency || "annually";
+}
+
 /**
  * Get all completions for an organization
  */
@@ -307,7 +357,7 @@ export async function updateCompletion(
   const { data, error } = await supabase
     .from("estates_statutory_completions")
     .update({
-      ...updates,
+      ...normalizeCompletionUpdates(updates as UpdateCompletionInput & Record<string, unknown>),
       updated_at: new Date().toISOString(),
     })
     .eq("id", completionId)
@@ -328,20 +378,42 @@ export async function updateCompletion(
 export async function completeStatutoryCheck(
   organizationId: string,
   checkId: string,
-  updates: Omit<UpdateCompletionInput, "next_due_date"> & {
+  updates: Omit<UpdateCompletionInput, "next_due_date"> & Record<string, unknown> & {
     next_due_date?: string;
   },
 ): Promise<StatutoryCompletion> {
   // First get the existing completion
   const existing = await getLatestCompletion(organizationId, checkId);
+  const normalizedUpdates = normalizeCompletionUpdates(updates);
+  const completionStatus =
+    (normalizedUpdates.status as StatutoryCompletion["status"] | undefined) ||
+    "completed";
+  const ragStatus =
+    (normalizedUpdates.rag_status as "red" | "amber" | "green" | undefined) ||
+    (completionStatus === "completed" || completionStatus === "not_applicable"
+      ? "green"
+      : "amber");
+  const nextDueDate =
+    (normalizedUpdates.next_due_date as string | undefined) ||
+    calculateNextDueDate(
+      await getCheckFrequency(
+        checkId,
+        (normalizedUpdates.compliance_domain as string | undefined) ||
+          existing?.compliance_domain,
+      ),
+      updates.inspection_date as string | undefined,
+    );
 
   if (existing) {
     // Update existing record
     return updateCompletion(existing.id, {
-      ...updates,
-      status: updates.status || "completed",
-      rag_status: updates.rag_status || "green",
-      completed_at: updates.completed_at || new Date().toISOString(),
+      ...normalizedUpdates,
+      status: completionStatus,
+      rag_status: ragStatus,
+      next_due_date: nextDueDate,
+      completed_at:
+        (normalizedUpdates.completed_at as string | undefined) ||
+        new Date().toISOString(),
     });
   } else {
     // Create new completion record
@@ -351,18 +423,21 @@ export async function completeStatutoryCheck(
       .insert({
         organization_id: organizationId,
         check_id: checkId,
-        compliance_domain: updates.compliance_domain,
-        next_due_date: updates.next_due_date || calculateNextDueDate("annual"),
-        status: "completed",
-        rag_status: "green",
-        completed_at: updates.completed_at || new Date().toISOString(),
-        completed_by: updates.completed_by,
-        completion_notes: updates.completion_notes,
-        evidence_ids: updates.evidence_ids || [],
-        documents_received: updates.documents_received || false,
-        contractor_id: updates.contractor_id,
-        completion_duration_minutes: updates.completion_duration_minutes,
-        findings: updates.findings || [],
+        compliance_domain: normalizedUpdates.compliance_domain,
+        next_due_date: nextDueDate,
+        status: completionStatus,
+        rag_status: ragStatus,
+        completed_at:
+          (normalizedUpdates.completed_at as string | undefined) ||
+          new Date().toISOString(),
+        completed_by: normalizedUpdates.completed_by,
+        completion_notes: normalizedUpdates.completion_notes,
+        evidence_ids: normalizedUpdates.evidence_ids || [],
+        documents_received: normalizedUpdates.documents_received || false,
+        contractor_id: normalizedUpdates.contractor_id,
+        completion_duration_minutes:
+          normalizedUpdates.completion_duration_minutes,
+        findings: normalizedUpdates.findings || [],
       })
       .select()
       .single();
@@ -417,10 +492,14 @@ export async function getUpcomingChecks(
 /**
  * Calculate next due date based on frequency
  */
-export function calculateNextDueDate(frequency: string): string {
-  const date = new Date();
+export function calculateNextDueDate(
+  frequency: string,
+  fromDate?: string,
+): string {
+  const date = fromDate ? new Date(`${fromDate}T00:00:00`) : new Date();
 
   switch (frequency) {
+    case "hourly":
     case "daily":
       date.setDate(date.getDate() + 1);
       break;
@@ -445,7 +524,10 @@ export function calculateNextDueDate(frequency: string): string {
       date.setFullYear(date.getFullYear() + 1);
   }
 
-  return date.toISOString().split("T")[0];
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 /**

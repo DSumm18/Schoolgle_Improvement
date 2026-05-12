@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useParams, notFound, useRouter } from "next/navigation";
+import { useParams, notFound } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/SupabaseAuthContext";
 import {
@@ -14,7 +14,6 @@ import {
   X,
   Plus,
   Calendar,
-  Download,
   ExternalLink,
   History,
   Building,
@@ -26,8 +25,12 @@ import {
   getChecksForDomain,
   type ComplianceDomain,
   type StatutoryCheck,
-  type CheckStatus,
 } from "@/lib/estates-compliance/statutory-checks";
+import {
+  calculateComplianceBriefing,
+  type BriefingTask,
+} from "@/lib/estates-compliance/compliance-briefing";
+import { ComplianceCheckBriefing } from "@/components/estates-compliance/ComplianceCheckBriefing";
 import { supabase } from "@/lib/supabase";
 
 // --- Types ---
@@ -64,6 +67,24 @@ interface CompletionRecord {
   next_due: string;
   evidence_ids?: string[];
   evidence?: EvidenceItem[];
+}
+
+type CompletionApiRecord = CompletionRecord & {
+  next_due_date?: string;
+  next_due?: string;
+};
+
+interface EvidenceApiItem {
+  id?: string;
+  evidence_type?: EvidenceItem["type"];
+  title?: string;
+  file_name?: string;
+  file_url?: string;
+  url?: string;
+  uploaded_at?: string;
+  created_at?: string;
+  uploaded_by?: string;
+  file_size?: number;
 }
 
 // --- Helpers ---
@@ -192,7 +213,6 @@ function isCheckDue(completions: CompletionRecord[]): boolean {
 // --- Main Page ---
 
 export default function CheckDetailPage() {
-  const router = useRouter();
   const { user, organizationId } = useAuth();
   const params = useParams();
 
@@ -212,6 +232,7 @@ export default function CheckDetailPage() {
 
   const [check, setCheck] = useState<StatutoryCheck | null>(null);
   const [completions, setCompletions] = useState<CompletionRecord[]>([]);
+  const [relatedTasks, setRelatedTasks] = useState<BriefingTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [descExpanded, setDescExpanded] = useState(false);
   const [formExpanded, setFormExpanded] = useState(false);
@@ -251,31 +272,33 @@ export default function CheckDetailPage() {
 
       if (res.ok) {
         const result = await res.json();
-        const all = result.completions || [];
-        const mine = all.filter((r: any) => r.check_id === checkId);
+        const all = (result.completions || []) as CompletionApiRecord[];
+        const mine = all.filter((record) => record.check_id === checkId);
 
         mine.sort(
-          (a: any, b: any) =>
+          (a, b) =>
             new Date(b.completed_at).getTime() -
             new Date(a.completed_at).getTime(),
         );
 
         const withEvidence: CompletionRecord[] = await Promise.all(
-          mine.map(async (record: any) => {
+          mine.map(async (record) => {
             const evidenceIds: string[] = record.evidence_ids || [];
             let evidence: EvidenceItem[] = [];
 
             if (evidenceIds.length > 0) {
               try {
                 const evRes = await fetch(
-                  `/api/estates/evidence?ids=${evidenceIds.join(",")}`,
+                  `/api/estates/evidence?organizationId=${organizationId}&ids=${evidenceIds.join(",")}`,
                   { headers },
                 );
                 if (evRes.ok) {
                   const evData = await evRes.json();
                   const items = evData?.data || evData || [];
-                  evidence = (Array.isArray(items) ? items : [items]).map(
-                    (ev: any) => ({
+                  const evidenceItems = (Array.isArray(items)
+                    ? items
+                    : [items]) as EvidenceApiItem[];
+                  evidence = evidenceItems.map((ev) => ({
                       id: ev.id,
                       type: ev.evidence_type || "document",
                       title: ev.title || ev.file_name || "Evidence",
@@ -285,8 +308,7 @@ export default function CheckDetailPage() {
                       fileSize: ev.file_size
                         ? `${Math.round(ev.file_size / 1024)} KB`
                         : undefined,
-                    }),
-                  );
+                    }));
                 }
               } catch {
                 // silent fail
@@ -317,6 +339,55 @@ export default function CheckDetailPage() {
     }
   }
 
+  async function fetchRelatedTasks(foundCheck: StatutoryCheck) {
+    if (!organizationId || !domainSlug) return;
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const headers: Record<string, string> = {};
+      if (session?.access_token) {
+        headers["Authorization"] = `Bearer ${session.access_token}`;
+      }
+
+      const res = await fetch(
+        `/api/estates/tasks?organizationId=${organizationId}&domain=${domainSlug}&pageSize=50`,
+        { headers },
+      );
+
+      if (!res.ok) return;
+
+      const result = await res.json();
+      const tasks = (result.tasks || []) as Array<BriefingTask & Record<string, unknown>>;
+      const checkName = foundCheck.name.toLowerCase();
+      const exactMatches = tasks.filter((task) => {
+        const haystack = [
+          task.id,
+          task.title,
+          task.task_name,
+          task.description,
+          task["check_id"],
+          task["statutory_check_id"],
+          task["metadata"],
+          task["ai_insights"],
+        ]
+          .filter(Boolean)
+          .map((value) =>
+            typeof value === "string" ? value : JSON.stringify(value),
+          )
+          .join(" ")
+          .toLowerCase();
+
+        return haystack.includes(checkId.toLowerCase()) || haystack.includes(checkName);
+      });
+
+      setRelatedTasks(exactMatches);
+    } catch (err) {
+      console.error("[CHECK DETAIL] related tasks fetch error", err);
+    }
+  }
+
   useEffect(() => {
     let cancelled = false;
 
@@ -342,7 +413,7 @@ export default function CheckDetailPage() {
       }
 
       if (organizationId) {
-        await fetchCompletions();
+        await Promise.all([fetchCompletions(), fetchRelatedTasks(foundCheck)]);
       } else {
         if (!cancelled) setFormExpanded(true);
       }
@@ -427,11 +498,14 @@ export default function CheckDetailPage() {
           `compliance,${domainSlug},${checkId},${ef.category}`,
         );
 
-        const uploadRes = await fetch("/api/estates/evidence", {
+        const uploadRes = await fetch(
+          `/api/estates/evidence?organizationId=${organizationId}`,
+          {
           method: "POST",
           headers: authHeader,
           body: formData,
-        });
+          },
+        );
 
         if (uploadRes.ok) {
           const uploadResult = await uploadRes.json();
@@ -567,6 +641,11 @@ export default function CheckDetailPage() {
   const currentDue = latestCompletion?.next_due;
   const isOverdue = currentDue && new Date(currentDue) < new Date();
   const daysUntil = getDaysUntil(currentDue);
+  const briefing = calculateComplianceBriefing({
+    check,
+    completions,
+    relatedTasks,
+  });
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
@@ -724,7 +803,10 @@ export default function CheckDetailPage() {
         )}
       </div>
 
-      {/* 3. Completion form (hidden when N/A) */}
+      {/* 3. Quick briefing */}
+      <ComplianceCheckBriefing briefing={briefing} />
+
+      {/* 4. Completion form (hidden when N/A) */}
       {isNotApplicable ? (
         <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 p-5 text-center">
           <p className="text-sm text-slate-500 dark:text-slate-400">
@@ -1019,7 +1101,7 @@ export default function CheckDetailPage() {
       </div>
       )}
 
-      {/* 4. Completion history */}
+      {/* 5. Completion history */}
       <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100 dark:border-gray-800">
           <History className="w-5 h-5 text-gray-500 dark:text-gray-400" />

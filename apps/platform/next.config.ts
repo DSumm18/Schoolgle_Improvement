@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import path from "path";
+
 const withBundleAnalyzer = require("@next/bundle-analyzer")({
   enabled: process.env.ANALYZE === "true",
 });
@@ -7,7 +8,6 @@ const withBundleAnalyzer = require("@next/bundle-analyzer")({
 const nextConfig: NextConfig = {
   outputFileTracingRoot: path.join(__dirname, "../../"),
   typescript: { ignoreBuildErrors: true },
-  eslint: { ignoreDuringBuilds: true },
   images: {
     remotePatterns: [
       {
@@ -41,6 +41,7 @@ const nextConfig: NextConfig = {
         __dirname,
         "../../packages/ed-agents/src",
       ),
+      "@schoolgle/platform": path.resolve(__dirname, "src"),
     };
     return config;
   },
@@ -49,6 +50,8 @@ const nextConfig: NextConfig = {
       "@schoolgle/ed-widget": "../../packages/ed-widget/src",
       "@schoolgle/ed-agents": "../../packages/ed-agents/src",
       "@schoolgle/ed-agents/*": "../../packages/ed-agents/src/*",
+      "@schoolgle/platform": "./src",
+      "@schoolgle/platform/*": "./src/*",
     },
   },
 } as NextConfig;
