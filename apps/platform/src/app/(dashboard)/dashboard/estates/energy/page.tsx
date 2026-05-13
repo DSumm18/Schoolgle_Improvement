@@ -30,8 +30,12 @@ import {
   FileText,
   Sparkles,
   Car,
+  Target,
   Receipt,
+  RefreshCw,
+  Loader2,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import {
   ModulePageHeader,
   getModuleColors,
@@ -47,6 +51,7 @@ import {
 import { EnergyReportTab } from "@/components/energy/EnergyReportTab";
 import { CarbonReportTab } from "@/components/energy/CarbonReportTab";
 import { MileageClaimsTab } from "@/components/energy/MileageClaimsTab";
+import { EnergyActionPlanTab } from "@/components/energy/EnergyActionPlanTab";
 import { InvoiceDataTable } from "@/components/energy/InvoiceDataTable";
 import {
   AreaChart,
@@ -67,7 +72,7 @@ import {
   ComposedChart,
 } from "recharts";
 
-// ─── Types ───────────────────────────────────────────────────────────
+// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface Meter {
   id: string;
@@ -197,7 +202,7 @@ interface DailyTrendData {
   school_events: SchoolEvent[];
 }
 
-// ─── Constants ───────────────────────────────────────────────────────
+// â”€â”€â”€ Constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const CARBON_FACTORS = {
   electricity: 0.233, // kgCO2/kWh (DESNZ 2025)
@@ -310,7 +315,7 @@ const STATUS_BADGES: Record<string, { label: string; className: string }> = {
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-// ─── Helpers ─────────────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function fmtGBP(n: number) {
   return new Intl.NumberFormat("en-GB", {
@@ -323,6 +328,10 @@ function fmtGBP(n: number) {
 
 function fmtNumber(n: number) {
   return new Intl.NumberFormat("en-GB").format(Math.round(n));
+}
+
+function meterReferenceFromLabel(label: string) {
+  return label.match(/\(([^)]+)\)/)?.[1] ?? label;
 }
 
 function fmtPct(n: number) {
@@ -342,7 +351,7 @@ function heatColor(value: number, max: number): string {
   return `rgba(239,68,68,${0.5 + (ratio - 0.75) * 2})`;
 }
 
-// ─── Custom Tooltip Components ───────────────────────────────────────
+// â”€â”€â”€ Custom Tooltip Components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function DailyTrendTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
@@ -365,7 +374,7 @@ function DailyTrendTooltip({ active, payload, label }: any) {
       <div className="mt-1.5 space-y-1">
         <p className="flex items-center gap-2">
           <Zap className="h-3.5 w-3.5 text-yellow-400" />
-          <span className="font-bold text-lg">{d.kwh?.toFixed(0) ?? "—"}</span>
+          <span className="font-bold text-lg">{d.kwh?.toFixed(0) ?? "â€”"}</span>
           <span className="text-slate-400">kWh</span>
         </p>
         {d.day_type && (
@@ -458,7 +467,7 @@ function MomYoyTooltip({ active, payload, label }: any) {
   );
 }
 
-// ─── Animated KPI Card ───────────────────────────────────────────────
+// â”€â”€â”€ Animated KPI Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function KPICard({
   icon,
@@ -498,7 +507,7 @@ function KPICard({
   );
 }
 
-// ─── Animated Section Wrapper ────────────────────────────────────────
+// â”€â”€â”€ Animated Section Wrapper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function Section({
   children,
@@ -521,7 +530,106 @@ function Section({
   );
 }
 
-// ─── Page ────────────────────────────────────────────────────────────
+// â”€â”€â”€ Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+function EnergyConnectionGuide({
+  hasMeters,
+  syncing,
+  syncMessage,
+  onSync,
+}: {
+  hasMeters: boolean;
+  syncing: boolean;
+  syncMessage: string | null;
+  onSync: () => void;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="rounded-2xl border border-teal-200 dark:border-teal-800 bg-gradient-to-r from-teal-50 to-cyan-50 dark:from-teal-950/30 dark:to-cyan-950/20 p-5"
+    >
+      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <div className="p-2 rounded-xl bg-white/80 dark:bg-slate-900/70 text-teal-600 dark:text-teal-300 border border-teal-100 dark:border-teal-800">
+            <Upload className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="text-sm font-semibold text-teal-950 dark:text-teal-100">
+              How Energy connects for a new school
+            </h2>
+            <p className="mt-1 text-sm text-teal-900 dark:text-teal-200 max-w-3xl">
+              The live system can use uploaded invoices, selected Google Drive
+              invoice files and manual or smart meter readings. Once an invoice
+              is extracted it should populate meters, readings, costs and
+              reconciliation checks against finance transactions.
+            </p>
+            <p className="mt-2 text-xs text-teal-700 dark:text-teal-300">
+              Current flow: connect the school Drive in Settings, then drop PDFs
+              into Estates & Compliance / Energy Invoices and press Sync here.
+            </p>
+            <div className="mt-4 flex flex-col sm:flex-row sm:items-center gap-3">
+              <button
+                type="button"
+                onClick={onSync}
+                disabled={syncing}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {syncing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" />
+                )}
+                {syncing ? "Checking folder..." : "Sync invoice folder"}
+              </button>
+              {syncMessage && (
+                <p className="text-xs text-teal-800 dark:text-teal-200">
+                  {syncMessage}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 lg:w-[520px] gap-2 text-xs">
+          <div className="rounded-xl bg-white/80 dark:bg-slate-900/70 border border-teal-100 dark:border-teal-800 p-3">
+            <Receipt className="h-4 w-4 text-teal-600 dark:text-teal-300 mb-2" />
+            <p className="font-semibold text-gray-900 dark:text-white">
+              1. Import invoices
+            </p>
+            <p className="mt-1 text-gray-600 dark:text-gray-300">
+              Upload PDFs or select Drive files.
+            </p>
+          </div>
+          <div className="rounded-xl bg-white/80 dark:bg-slate-900/70 border border-teal-100 dark:border-teal-800 p-3">
+            <Sparkles className="h-4 w-4 text-teal-600 dark:text-teal-300 mb-2" />
+            <p className="font-semibold text-gray-900 dark:text-white">
+              2. AI extracts data
+            </p>
+            <p className="mt-1 text-gray-600 dark:text-gray-300">
+              Meter refs, kWh, VAT and totals.
+            </p>
+          </div>
+          <div className="rounded-xl bg-white/80 dark:bg-slate-900/70 border border-teal-100 dark:border-teal-800 p-3">
+            <FileCheck className="h-4 w-4 text-teal-600 dark:text-teal-300 mb-2" />
+            <p className="font-semibold text-gray-900 dark:text-white">
+              3. Review risks
+            </p>
+            <p className="mt-1 text-gray-600 dark:text-gray-300">
+              Estimated bills, anomalies and spend.
+            </p>
+          </div>
+        </div>
+      </div>
+      {!hasMeters && (
+        <div className="mt-4 rounded-xl border border-dashed border-teal-300 dark:border-teal-700 px-4 py-3 text-sm text-teal-800 dark:text-teal-200">
+          No meters are registered yet. Importing the first invoice or adding a
+          manual reading should create the starting point for this schoolâ€™s
+          energy dashboard.
+        </div>
+      )}
+    </motion.div>
+  );
+}
 
 export default function EnergyDashboardPage() {
   const colors = getModuleColors("estates");
@@ -563,6 +671,10 @@ export default function EnergyDashboardPage() {
   const [meterReadingSuccess, setMeterReadingSuccess] = useState(false);
   const [supplierEmailSent, setSupplierEmailSent] = useState(false);
   const [supplierEmailLoading, setSupplierEmailLoading] = useState(false);
+  const [invoiceSyncing, setInvoiceSyncing] = useState(false);
+  const [invoiceSyncMessage, setInvoiceSyncMessage] = useState<string | null>(
+    null,
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Manual add form
@@ -585,8 +697,12 @@ export default function EnergyDashboardPage() {
     | "reports"
     | "carbon"
     | "mileage"
+    | "action-plan"
   >("combined");
   const [filters, setFilters] = useState<EnergyFilters>(DEFAULT_FILTERS);
+  const [selectedInvoiceMeterRef, setSelectedInvoiceMeterRef] = useState<
+    string | null
+  >(null);
 
   // View toggles
   const [showHolidayOverlay, setShowHolidayOverlay] = useState(true);
@@ -598,7 +714,7 @@ export default function EnergyDashboardPage() {
     "profile" | "heatmap" | "baseload" | "anomalies"
   >("profile");
 
-  // ─── Data fetch ──────────────────────────────────────────────────
+  // â”€â”€â”€ Data fetch â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const fetchData = useCallback(async () => {
     if (!organizationId) return;
@@ -728,7 +844,45 @@ export default function EnergyDashboardPage() {
     fetchData();
   }, [fetchData]);
 
-  // ─── Meter reading handlers (unchanged) ──────────────────────────
+  const handleSyncInvoiceFolder = useCallback(async () => {
+    if (!organizationId) return;
+    setInvoiceSyncing(true);
+    setInvoiceSyncMessage(null);
+    try {
+      const res = await authFetch(
+        `/api/estates/energy/sync-invoices?organizationId=${organizationId}`,
+        {
+          method: "POST",
+        },
+      );
+      const contentType = res.headers.get("content-type") || "";
+      const data = contentType.includes("application/json")
+        ? await res.json()
+        : { error: await res.text() };
+      if (!res.ok) {
+        throw new Error(
+          data.error ?? data.message ?? "Failed to sync energy invoices",
+        );
+      }
+      setInvoiceSyncMessage(
+        data.message ??
+          `Imported ${data.processed ?? 0} invoice${
+            data.processed === 1 ? "" : "s"
+          }.`,
+      );
+      await fetchData();
+    } catch (error) {
+      setInvoiceSyncMessage(
+        error instanceof Error
+          ? error.message
+          : "Failed to sync energy invoices",
+      );
+    } finally {
+      setInvoiceSyncing(false);
+    }
+  }, [authFetch, fetchData, organizationId]);
+
+  // â”€â”€â”€ Meter reading handlers (unchanged) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   async function handleAddReading(e: React.FormEvent) {
     e.preventDefault();
@@ -863,7 +1017,7 @@ export default function EnergyDashboardPage() {
     }
   }
 
-  // ─── Derived data ────────────────────────────────────────────────
+  // â”€â”€â”€ Derived data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const decBand = summary ? getDECBand(summary.dec_kwh_per_sqm) : null;
   const totalAnnualWaste = anomalies.reduce(
@@ -980,7 +1134,7 @@ export default function EnergyDashboardPage() {
     }));
   }, [monthly]);
 
-  // ─── MOM / YOY Monthly Comparison (from daily trend data) ──────────
+  // â”€â”€â”€ MOM / YOY Monthly Comparison (from daily trend data) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const momYoyData = useMemo(() => {
     if (!filteredDailyData.length)
       return {
@@ -1084,7 +1238,7 @@ export default function EnergyDashboardPage() {
     );
   }, [hhAnalysis]);
 
-  // ─── Loading state ────────────────────────────────────────────────
+  // â”€â”€â”€ Loading state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   if (loading) {
     return (
@@ -1115,7 +1269,6 @@ export default function EnergyDashboardPage() {
 
   return (
     <div className="p-6 md:p-8 space-y-6 min-h-screen max-w-[1600px] mx-auto">
-      {/* ─── Header ────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <ModulePageHeader
           moduleId="estates"
@@ -1148,7 +1301,6 @@ export default function EnergyDashboardPage() {
         </div>
       </div>
 
-      {/* ─── Demo Banner ──────────────────────────────────── */}
       {isDemo && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -1158,7 +1310,7 @@ export default function EnergyDashboardPage() {
           <Info className="h-5 w-5 flex-shrink-0 mt-0.5" />
           <div>
             <p className="font-semibold">
-              Demo Mode — Connect your meters to see real data
+              Demo Mode â€” Connect your meters to see real data
             </p>
             <p className="mt-0.5 text-amber-700 dark:text-amber-400">
               Showing sample data for a typical 2-form entry primary school
@@ -1168,7 +1320,13 @@ export default function EnergyDashboardPage() {
         </motion.div>
       )}
 
-      {/* ─── Summary KPI Cards ────────────────────────────── */}
+      <EnergyConnectionGuide
+        hasMeters={meters.length > 0}
+        syncing={invoiceSyncing}
+        syncMessage={invoiceSyncMessage}
+        onSync={handleSyncInvoiceFolder}
+      />
+
       {summary && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <KPICard
@@ -1240,12 +1398,8 @@ export default function EnergyDashboardPage() {
         </div>
       )}
 
-      {/* ═══════════════════════════════════════════════════════════════ */}
-      {/* MAIN TABS                                                    */}
-      {/* ═══════════════════════════════════════════════════════════════ */}
       <Section delay={0.15}>
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-gray-700 px-4 py-3">
-          {/* Tab bar */}
           <div className="flex items-center gap-1 mb-3">
             {(
               [
@@ -1298,11 +1452,21 @@ export default function EnergyDashboardPage() {
                   "text-violet-500",
                   "bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-800/60",
                 ],
-              ] as [string, string, any, string, string][]
+                [
+                  "action-plan",
+                  "Action Plan",
+                  Target,
+                  "text-rose-500",
+                  "bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/60",
+                ],
+              ] as [typeof mainTab, string, LucideIcon, string, string][]
             ).map(([key, label, Icon, iconColor, activeClass]) => (
               <button
                 key={key}
-                onClick={() => setMainTab(key as typeof mainTab)}
+                onClick={() => {
+                  if (key !== "invoices") setSelectedInvoiceMeterRef(null);
+                  setMainTab(key as typeof mainTab);
+                }}
                 className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
                   mainTab === key
                     ? activeClass
@@ -1316,37 +1480,32 @@ export default function EnergyDashboardPage() {
               </button>
             ))}
           </div>
-          {/* Filter bar (not shown on Reports/Carbon/Mileage/Invoices tabs) */}
           {mainTab !== "reports" &&
             mainTab !== "carbon" &&
             mainTab !== "mileage" &&
+            mainTab !== "action-plan" &&
             mainTab !== "invoices" && (
               <EnergyFilterBar filters={filters} onChange={setFilters} />
             )}
         </div>
       </Section>
 
-      {/* ═══════════════════════════════════════════════════════════════ */}
-      {/* INVOICES TAB                                                 */}
-      {/* ═══════════════════════════════════════════════════════════════ */}
       {mainTab === "invoices" && organizationId && (
         <Section delay={0.2}>
-          <InvoiceDataTable organizationId={organizationId} />
+          <InvoiceDataTable
+            organizationId={organizationId}
+            selectedMeterRef={selectedInvoiceMeterRef}
+            onClearSelectedMeter={() => setSelectedInvoiceMeterRef(null)}
+          />
         </Section>
       )}
 
-      {/* ═══════════════════════════════════════════════════════════════ */}
-      {/* REPORTS TAB                                                  */}
-      {/* ═══════════════════════════════════════════════════════════════ */}
       {mainTab === "reports" && organizationId && (
         <Section delay={0.2}>
           <EnergyReportTab organizationId={organizationId} />
         </Section>
       )}
 
-      {/* ═══════════════════════════════════════════════════════════════ */}
-      {/* CARBON TAB                                                    */}
-      {/* ═══════════════════════════════════════════════════════════════ */}
       {mainTab === "carbon" && (
         <Section delay={0.2}>
           <CarbonReportTab
@@ -1358,23 +1517,22 @@ export default function EnergyDashboardPage() {
         </Section>
       )}
 
-      {/* ═══════════════════════════════════════════════════════════════ */}
-      {/* MILEAGE TAB                                                   */}
-      {/* ═══════════════════════════════════════════════════════════════ */}
       {mainTab === "mileage" && (
         <Section delay={0.2}>
-          <MileageClaimsTab />
+          {organizationId && <MileageClaimsTab organizationId={organizationId} />}
         </Section>
       )}
 
-      {/* ═══════════════════════════════════════════════════════════════ */}
-      {/* MOM / YOY COMPARISON CHART                                   */}
-      {/* ═══════════════════════════════════════════════════════════════ */}
+      {mainTab === "action-plan" && (
+        <Section delay={0.2}>
+          {organizationId && <EnergyActionPlanTab organizationId={organizationId} />}
+        </Section>
+      )}
+
       {(mainTab === "combined" || mainTab === "electricity") &&
         momYoyData.chartData.length > 1 && (
           <Section delay={0.18}>
             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-              {/* Header with MOM / YOY badges */}
               <div className="px-6 pt-5 pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
                   <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -1423,7 +1581,6 @@ export default function EnergyDashboardPage() {
                 </div>
               </div>
 
-              {/* ComposedChart: Bars for current year, Line for previous year */}
               <div className="px-3 pb-4" style={{ height: 360 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart
@@ -1518,7 +1675,6 @@ export default function EnergyDashboardPage() {
                 </ResponsiveContainer>
               </div>
 
-              {/* Summary strip */}
               <div className="px-6 py-3 bg-gray-50 dark:bg-slate-800/50 border-t border-gray-100 dark:border-gray-800 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-gray-500 dark:text-gray-400">
                 <span className="flex items-center gap-1.5">
                   <span
@@ -1545,17 +1701,14 @@ export default function EnergyDashboardPage() {
           </Section>
         )}
 
-      {/* ═══════════════════════════════════════════════════════════════ */}
-      {/* HERO CHART — 13-Month Daily Electricity Consumption          */}
-      {/* ═══════════════════════════════════════════════════════════════ */}
       {mainTab !== "reports" &&
         mainTab !== "gas" &&
         mainTab !== "carbon" &&
         mainTab !== "mileage" &&
+        mainTab !== "action-plan" &&
         dailyChartData.length > 0 && (
           <Section delay={0.2}>
             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-              {/* Chart header with controls */}
               <div className="px-6 pt-5 pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
                   <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -1567,7 +1720,6 @@ export default function EnergyDashboardPage() {
                   </p>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  {/* View toggle */}
                   <div className="flex bg-gray-100 dark:bg-slate-800 rounded-lg p-0.5">
                     {(
                       [
@@ -1589,7 +1741,6 @@ export default function EnergyDashboardPage() {
                       </button>
                     ))}
                   </div>
-                  {/* Overlay toggles */}
                   <button
                     onClick={() => setShowHolidayOverlay(!showHolidayOverlay)}
                     className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-all ${
@@ -1617,7 +1768,6 @@ export default function EnergyDashboardPage() {
                 </div>
               </div>
 
-              {/* Main chart */}
               <div className="px-3 pb-4" style={{ height: 420 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   {trendView === "daily" ? (
@@ -1688,7 +1838,6 @@ export default function EnergyDashboardPage() {
                       />
                       <Tooltip content={<DailyTrendTooltip />} />
 
-                      {/* Holiday overlay bands */}
                       {showHolidayOverlay &&
                         dailyTrend?.holidays?.map((h, i) => (
                           <ReferenceArea
@@ -1712,7 +1861,6 @@ export default function EnergyDashboardPage() {
                           />
                         ))}
 
-                      {/* Daily area */}
                       <Area
                         type="monotone"
                         dataKey="kwh"
@@ -1730,7 +1878,6 @@ export default function EnergyDashboardPage() {
                         }}
                       />
 
-                      {/* 7-day moving average line */}
                       {showMovingAvg && (
                         <Line
                           type="monotone"
@@ -1950,7 +2097,6 @@ export default function EnergyDashboardPage() {
                 </ResponsiveContainer>
               </div>
 
-              {/* Chart legend / summary strip */}
               <div className="px-6 py-3 bg-gray-50 dark:bg-slate-800/50 border-t border-gray-100 dark:border-gray-800 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-gray-500 dark:text-gray-400">
                 {trendView === "daily" && (
                   <>
@@ -1996,14 +2142,11 @@ export default function EnergyDashboardPage() {
           </Section>
         )}
 
-      {/* ═══════════════════════════════════════════════════════════════ */}
-      {/* DEC RATING + METERS ROW                                      */}
-      {/* ═══════════════════════════════════════════════════════════════ */}
       {mainTab !== "reports" &&
         mainTab !== "carbon" &&
-        mainTab !== "mileage" && (
+        mainTab !== "mileage" &&
+        mainTab !== "action-plan" && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* DEC Rating */}
             {summary && decBand && (
               <Section delay={0.3}>
                 <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 h-full">
@@ -2059,7 +2202,6 @@ export default function EnergyDashboardPage() {
               </Section>
             )}
 
-            {/* Meters */}
             <Section delay={0.35} className="lg:col-span-2">
               <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 h-full">
                 <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
@@ -2072,6 +2214,10 @@ export default function EnergyDashboardPage() {
                     <p className="text-sm text-gray-400">
                       No meters registered yet.
                     </p>
+                    <p className="mt-1 text-xs text-gray-400 max-w-sm mx-auto">
+                      Add a manual reading or import an invoice so the system can
+                      start building this schoolâ€™s live energy record.
+                    </p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -2082,14 +2228,31 @@ export default function EnergyDashboardPage() {
                       const bgStyle =
                         METER_BG[meter.meter_type] ??
                         "bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700";
-                      return (
-                        <motion.div
-                          key={meter.id}
-                          initial={{ opacity: 0, x: -10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: 0.4 + idx * 0.05 }}
-                          className={`relative rounded-xl border p-4 transition-all hover:shadow-md ${bgStyle}`}
-                        >
+	                      return (
+	                        <motion.div
+	                          key={meter.id}
+	                          initial={{ opacity: 0, x: -10 }}
+	                          animate={{ opacity: 1, x: 0 }}
+	                          transition={{ delay: 0.4 + idx * 0.05 }}
+	                          role="button"
+	                          tabIndex={0}
+	                          onClick={() => {
+	                            setSelectedInvoiceMeterRef(
+	                              meterReferenceFromLabel(meter.label),
+	                            );
+	                            setMainTab("invoices");
+	                          }}
+	                          onKeyDown={(event) => {
+	                            if (event.key === "Enter" || event.key === " ") {
+	                              event.preventDefault();
+	                              setSelectedInvoiceMeterRef(
+	                                meterReferenceFromLabel(meter.label),
+	                              );
+	                              setMainTab("invoices");
+	                            }
+	                          }}
+	                          className={`relative rounded-xl border p-4 transition-all hover:shadow-md cursor-pointer focus:outline-none focus:ring-2 focus:ring-teal-500 ${bgStyle}`}
+	                        >
                           <div className="flex items-start justify-between mb-2">
                             <div className="flex items-center gap-2">
                               <div
@@ -2129,16 +2292,32 @@ export default function EnergyDashboardPage() {
                                   </span>
                                 </p>
                               )}
-                              <button
-                                onClick={() => {
-                                  setShowMeterReader(true);
-                                  setSelectedMeterId(meter.id);
-                                }}
-                                className="mt-1 inline-flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-900/30 rounded-md hover:bg-teal-100 dark:hover:bg-teal-900/50 transition-colors"
-                              >
-                                <Camera className="h-2.5 w-2.5" />
-                                Reading
-                              </button>
+	                              <div className="mt-1 flex items-center justify-end gap-1">
+	                                <button
+	                                  onClick={(event) => {
+	                                    event.stopPropagation();
+	                                    setSelectedInvoiceMeterRef(
+	                                      meterReferenceFromLabel(meter.label),
+	                                    );
+	                                    setMainTab("invoices");
+	                                  }}
+                                  className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-900/30 rounded-md hover:bg-teal-100 dark:hover:bg-teal-900/50 transition-colors"
+                                >
+                                  <Receipt className="h-2.5 w-2.5" />
+                                  View data
+                                </button>
+	                                <button
+	                                  onClick={(event) => {
+	                                    event.stopPropagation();
+	                                    setShowMeterReader(true);
+	                                    setSelectedMeterId(meter.id);
+	                                  }}
+                                  className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-gray-600 dark:text-gray-300 bg-white/70 dark:bg-slate-800/80 rounded-md hover:bg-white dark:hover:bg-slate-700 transition-colors"
+                                >
+                                  <Camera className="h-2.5 w-2.5" />
+                                  Add reading
+                                </button>
+                              </div>
                             </div>
                           </div>
                         </motion.div>
@@ -2151,9 +2330,6 @@ export default function EnergyDashboardPage() {
           </div>
         )}
 
-      {/* ═══════════════════════════════════════════════════════════════ */}
-      {/* SMART METER READER                                           */}
-      {/* ═══════════════════════════════════════════════════════════════ */}
       <AnimatePresence>
         {showMeterReader && (
           <motion.div
@@ -2181,7 +2357,6 @@ export default function EnergyDashboardPage() {
                 </button>
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Upload area */}
                 <div>
                   {!meterImagePreview ? (
                     <div
@@ -2221,7 +2396,6 @@ export default function EnergyDashboardPage() {
                     </div>
                   ) : (
                     <div className="relative">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={meterImagePreview}
                         alt="Meter"
@@ -2260,7 +2434,6 @@ export default function EnergyDashboardPage() {
                   )}
                 </div>
 
-                {/* Result area */}
                 <div className="flex flex-col justify-center">
                   {!meterReadingResult && !meterReadingLoading && (
                     <div className="text-center py-8">
@@ -2374,7 +2547,6 @@ export default function EnergyDashboardPage() {
         )}
       </AnimatePresence>
 
-      {/* Manual Add Reading Form */}
       <AnimatePresence>
         {showAddForm && (
           <motion.div
@@ -2481,9 +2653,6 @@ export default function EnergyDashboardPage() {
         )}
       </AnimatePresence>
 
-      {/* ═══════════════════════════════════════════════════════════════ */}
-      {/* HALF-HOURLY ANALYSIS (Electricity tab or Combined)           */}
-      {/* ═══════════════════════════════════════════════════════════════ */}
       {hhAnalysis && (mainTab === "electricity" || mainTab === "combined") && (
         <Section delay={0.4}>
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
@@ -2522,7 +2691,6 @@ export default function EnergyDashboardPage() {
             </div>
 
             <div className="px-3 pb-4">
-              {/* HH Profile — Weekday vs Weekend area chart */}
               {hhTab === "profile" && hhProfileData.length > 0 && (
                 <div style={{ height: 360 }}>
                   <ResponsiveContainer width="100%" height="100%">
@@ -2604,7 +2772,6 @@ export default function EnergyDashboardPage() {
                         wrapperStyle={{ fontSize: 12, paddingTop: 8 }}
                       />
 
-                      {/* School hours reference */}
                       <ReferenceArea
                         x1="08:30"
                         x2="15:30"
@@ -2657,7 +2824,6 @@ export default function EnergyDashboardPage() {
                 </div>
               )}
 
-              {/* Heatmap */}
               {hhTab === "heatmap" &&
                 hhAnalysis.day_of_week_profile.length > 0 && (
                   <div className="px-3 py-2">
@@ -2689,7 +2855,7 @@ export default function EnergyDashboardPage() {
                                 <td
                                   key={i}
                                   className="px-0 py-0.5"
-                                  title={`${dayData.day} ${String(slot.hour).padStart(2, "0")}:${String(slot.minute).padStart(2, "0")} — ${slot.kwh.toFixed(1)} kWh`}
+                                  title={`${dayData.day} ${String(slot.hour).padStart(2, "0")}:${String(slot.minute).padStart(2, "0")} â€” ${slot.kwh.toFixed(1)} kWh`}
                                 >
                                   <div
                                     className="w-full h-6 rounded-[2px] transition-colors"
@@ -2708,7 +2874,6 @@ export default function EnergyDashboardPage() {
                         </tbody>
                       </table>
                     </div>
-                    {/* Legend */}
                     <div className="flex items-center gap-2 mt-3 text-xs text-gray-500 dark:text-gray-400">
                       <span>Low</span>
                       <div className="flex gap-0.5">
@@ -2733,11 +2898,9 @@ export default function EnergyDashboardPage() {
                   </div>
                 )}
 
-              {/* Baseload */}
               {hhTab === "baseload" && (
                 <div className="px-3 py-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-                    {/* Term vs Holiday */}
                     <div className="bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 rounded-xl p-5 border border-teal-100 dark:border-teal-800">
                       <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
                         <Sun className="h-4 w-4 text-yellow-500" />
@@ -2776,7 +2939,6 @@ export default function EnergyDashboardPage() {
                       </div>
                     </div>
 
-                    {/* Baseload breakdown */}
                     <div className="bg-gradient-to-br from-slate-50 to-gray-50 dark:from-slate-800/50 dark:to-gray-800/50 rounded-xl p-5 border border-gray-100 dark:border-gray-700">
                       <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
                         <Moon className="h-4 w-4 text-blue-500" />
@@ -2826,7 +2988,6 @@ export default function EnergyDashboardPage() {
                 </div>
               )}
 
-              {/* Anomalies */}
               {hhTab === "anomalies" && (
                 <div className="px-3 py-4 space-y-3">
                   {anomalies.length === 0 ? (
@@ -2891,9 +3052,6 @@ export default function EnergyDashboardPage() {
         </Section>
       )}
 
-      {/* ═══════════════════════════════════════════════════════════════ */}
-      {/* GAS TAB — Monthly gas consumption                            */}
-      {/* ═══════════════════════════════════════════════════════════════ */}
       {mainTab === "gas" && monthlyChartData.length > 0 && (
         <Section delay={0.2}>
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
@@ -2903,7 +3061,7 @@ export default function EnergyDashboardPage() {
                 Gas Consumption
               </h2>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                Monthly invoice data — gas meters are read monthly/quarterly (no
+                Monthly invoice data â€” gas meters are read monthly/quarterly (no
                 half-hourly data)
               </p>
             </div>
@@ -2976,7 +3134,6 @@ export default function EnergyDashboardPage() {
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
-            {/* Gas summary strip */}
             <div className="px-6 py-3 bg-orange-50 dark:bg-orange-900/10 border-t border-orange-100 dark:border-orange-900 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs">
               <span className="text-gray-500 dark:text-gray-400">
                 Total gas:{" "}
@@ -2997,7 +3154,7 @@ export default function EnergyDashboardPage() {
               </span>
               <span className="text-orange-600 dark:text-orange-400 ml-auto flex items-center gap-1">
                 <Info className="h-3 w-3" />
-                Gas is billed monthly — no half-hourly smart meter data
+                Gas is billed monthly â€” no half-hourly smart meter data
                 available
               </span>
             </div>
@@ -3005,12 +3162,10 @@ export default function EnergyDashboardPage() {
         </Section>
       )}
 
-      {/* ═══════════════════════════════════════════════════════════════ */}
-      {/* MONTHLY COMPARISON (fallback if no daily trend data)         */}
-      {/* ═══════════════════════════════════════════════════════════════ */}
       {mainTab !== "reports" &&
         mainTab !== "carbon" &&
         mainTab !== "mileage" &&
+        mainTab !== "action-plan" &&
         !dailyChartData.length &&
         monthlyChartData.length > 0 && (
           <Section delay={0.2}>
@@ -3112,12 +3267,10 @@ export default function EnergyDashboardPage() {
           </Section>
         )}
 
-      {/* ═══════════════════════════════════════════════════════════════ */}
-      {/* SCHOOL EVENTS CONTEXT                                        */}
-      {/* ═══════════════════════════════════════════════════════════════ */}
       {mainTab !== "reports" &&
         mainTab !== "carbon" &&
         mainTab !== "mileage" &&
+        mainTab !== "action-plan" &&
         dailyTrend?.school_events &&
         dailyTrend.school_events.length > 0 && (
           <Section delay={0.5}>
@@ -3127,7 +3280,7 @@ export default function EnergyDashboardPage() {
                 School Events Context
               </h2>
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                These events may explain usage anomalies — extra heating,
+                These events may explain usage anomalies â€” extra heating,
                 lighting or equipment use outside normal hours.
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">

@@ -1,5 +1,6 @@
 import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
+import { buildAssessmentIntelligenceReportingSummary } from "@/lib/assessment-intelligence/reporting";
 import type {
   OfstedCategoryId,
   OfstedRating,
@@ -271,8 +272,24 @@ export const GET = protectedRoute(async (auth, req) => {
     };
   }
 
+  const assessmentEvidence = await buildAssessmentIntelligenceReportingSummary(supabase, {
+    organizationId,
+    includeChildOrganizations: true,
+    limit: 10,
+  });
+
   const response: GetOfstedReadinessResponse = {
     overall,
+    assessmentEvidence: {
+      source: assessmentEvidence.source,
+      caveat: assessmentEvidence.caveat,
+      batchCount: assessmentEvidence.batchCount,
+      eventCount: assessmentEvidence.eventCount,
+      pupilCount: assessmentEvidence.pupilCount,
+      latestSourceLabel: assessmentEvidence.latestSourceLabel,
+      latestAssessmentPeriod: assessmentEvidence.latestAssessmentPeriod,
+      latestAcademicYearStart: assessmentEvidence.latestAcademicYearStart,
+    },
     snapshots,
     trends,
   };

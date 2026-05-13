@@ -952,9 +952,125 @@ export const ESTATES_FUNCTION_SCHEMAS = [
     },
   },
   {
+    name: "triage_estate_finding",
+    description:
+      "Classify an estates finding from a contractor report, condition survey, or compliance check into risk-led routing: task now, risk review, estate strategy, watchlist, or asset-only update. Use before turning report findings into work so serviceable end-of-life assets do not become panic tasks.",
+    parameters: {
+      type: "object",
+      properties: {
+        organization_id: {
+          type: "string",
+          description: "Organization ID (auto-populated from auth)",
+        },
+        title: {
+          type: "string",
+          description: "Short finding title or asset name",
+        },
+        description: {
+          type: "string",
+          description: "Finding text from the report/survey",
+        },
+        estimated_cost: {
+          type: "number",
+          description: "Estimated cost in GBP if known",
+        },
+        result: {
+          type: "string",
+          enum: ["pass", "fail", "advisory", "not_assessed"],
+          description: "Inspection result if known",
+        },
+        urgency: {
+          type: "string",
+          enum: ["emergency", "urgent", "routine", "monitor"],
+          description: "Urgency stated by the report or user",
+        },
+        priority: {
+          type: "string",
+          enum: ["urgent", "essential", "desirable", "cosmetic"],
+          description: "Condition survey priority if known",
+        },
+        condition_grade: {
+          type: "string",
+          enum: ["A", "B", "C", "D"],
+          description: "Condition grade if known",
+        },
+        compliance_domain: {
+          type: "string",
+          description: "Domain such as gas, fire, electrical, legionella, roof, mechanical",
+        },
+      },
+      required: ["description"],
+    },
+  },
+  {
+    name: "create_estate_strategy_item",
+    description:
+      "Create a finance/trustee-facing estate strategy item from a risk-led finding. Defaults to the current three-year Estate Strategy if no plan_id is supplied. Use for capital pressures, serviceable end-of-life assets, and material estates risks that need budget planning rather than immediate helpdesk noise.",
+    parameters: {
+      type: "object",
+      properties: {
+        organization_id: {
+          type: "string",
+          description: "Organization ID (auto-populated from auth)",
+        },
+        plan_id: {
+          type: "string",
+          description: "Optional strategic_plans.id. If omitted, the current estates strategy is found or created.",
+        },
+        title: {
+          type: "string",
+          description: "Short title of the strategy item",
+        },
+        description: {
+          type: "string",
+          description: "What needs doing and why",
+        },
+        estimated_cost: {
+          type: "number",
+          description: "Estimated cost in GBP",
+        },
+        year: {
+          type: "number",
+          description: "Planning year within the estate strategy, usually 1, 2, or 3",
+        },
+        risk_score: {
+          type: "number",
+          description: "Risk score for prioritisation. Use 1-25 if linked to risk register; triage 1-5 scores can be passed and will be recorded as provided.",
+        },
+        priority_band: {
+          type: "string",
+          enum: ["must", "should", "could", "wont"],
+          description: "MoSCoW priority band if known",
+        },
+        is_statutory: {
+          type: "boolean",
+          description: "True if the work is required to meet a statutory duty",
+        },
+        risk_register_id: {
+          type: "string",
+          description: "Linked risk_register.id if a risk has already been created",
+        },
+        source_entity_id: {
+          type: "string",
+          description: "Source finding/report/check/asset identifier for traceability",
+        },
+        consequence_if_unfunded: {
+          type: "string",
+          description: "Plain-English consequence if finance/trustees do not fund the item",
+        },
+        cfr_code: {
+          type: "string",
+          enum: ["E12", "E13", "E16", "E18"],
+          description: "Likely CFR budget code: E12 maintenance, E13 improvement, E16 energy, E18 other premises",
+        },
+      },
+      required: ["title", "estimated_cost", "year"],
+    },
+  },
+  {
     name: "create_cost_request",
     description:
-      "Create a cost/budget request for estates work that needs financial approval. Links to the 5-year estates strategy and routes to SBM/Headteacher for approval. Requires user confirmation before submission.",
+      "Create a cost/budget request for estates work that needs financial approval. For strategic/capital planning, prefer create_estate_strategy_item so the item lands in the separate finance-facing estate strategy. Requires user confirmation before submission.",
     parameters: {
       type: "object",
       properties: {

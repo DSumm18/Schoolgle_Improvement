@@ -2,241 +2,91 @@
 
 ## For School IT Teams, DPOs, and Governors
 
----
+## Status
+
+This is a draft technical security overview. It must be read alongside the current GDPR/security audit findings before being used for customer assurance. Do not use this document to make a final legal claim that Schoolgle is “UK GDPR compliant” without dated technical evidence and DPO/legal sign-off.
 
 ## Executive Summary
 
-Schoolgle is built with security and data protection at its core. This document provides an overview of our security measures for school decision-makers.
+Schoolgle is designed as a multi-tenant school technology platform with organisation-scoped access controls, encrypted hosting, and AI-assisted workflows. Because the platform includes modules for documents, HR, safeguarding-adjacent workflows, SEND, incidents, compliance, governance and school operations, schools may process sensitive staff, pupil, parent, safeguarding, SEND, HR, financial, document and incident data depending on enabled modules and usage.
 
-**Key Points:**
-- ✅ UK GDPR compliant
-- ✅ Data encrypted at rest and in transit
-- ✅ Multi-tenant architecture with complete data isolation
-- ✅ No pupil data required or stored
-- ✅ Regular security testing
-- ✅ Incident response procedures in place
+Customer-facing assurance must therefore be evidence-backed and dated. Each assurance pack should include live database/RLS checks, storage bucket checks, API authorization checks, secrets scan output, dependency scan output, AI-provider/subprocessor review, retention review, and DPO/legal validation where required.
 
----
+## Current Assurance Position
 
-## 1. Architecture Overview
+| Area | Status | Notes |
+| --- | --- | --- |
+| Encryption in transit/at rest | PASS / PROVIDER-EVIDENCED | Depends on Vercel, Supabase and connected providers. Evidence should be archived from current provider docs/contracts. |
+| Multi-tenant isolation | NEEDS PERIODIC EVIDENCE | Code uses organisation scoping and Supabase RLS patterns, but live RLS/policy/storage checks must be run before assurance. |
+| Pupil data claim | GAP IN PREVIOUS DOCS | The platform should minimise pupil data, but some modules can process pupil/parent/safeguarding/SEND/incident data if used. |
+| UK GDPR / DPA 2018 compliance | NEEDS DPO/LEGAL REVIEW | Do not claim legal compliance without DPIA, DPA, subprocessor and transfer evidence. |
+| AI/provider data flows | NEEDS REVIEW | Approved provider/model policy, PII minimisation, retention/training settings and international transfer position must be evidenced. |
+| Secrets management | GAP BEING REMEDIATED | Previously exposed keys must be rotated. No secrets should be stored in tracked code/docs/config. |
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                     SCHOOLGLE ARCHITECTURE                       │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐       │
-│  │   Browser    │───▶│   Vercel     │───▶│   Supabase   │       │
-│  │   (School)   │    │   (EU/UK)    │    │   (EU)       │       │
-│  └──────────────┘    └──────────────┘    └──────────────┘       │
-│        │                   │                    │                │
-│        │              TLS 1.3              TLS 1.3               │
-│        │                   │                    │                │
-│        │             ┌──────────────┐           │                │
-│        └────────────▶│   Firebase   │           │                │
-│                      │   Auth (EU)  │           │                │
-│                      └──────────────┘           │                │
-│                                                 │                │
-│  AI Features (Optional):                        │                │
-│  ┌──────────────┐                               │                │
-│  │   OpenAI     │◀──────────────────────────────┘                │
-│  │   API (US)   │  (Transient processing only)                   │
-│  └──────────────┘                                                │
-│                                                                  │
-└─────────────────────────────────────────────────────────────────┘
-```
+## Data Classification
 
----
+| Classification | Examples | Expected Controls |
+| --- | --- | --- |
+| Public | Marketing copy, generic framework information | No customer data. |
+| Internal | Templates, product configuration, non-sensitive metadata | Authenticated access and change control. |
+| Confidential | Staff names/emails, school documents, governance records, operational notes | Organisation isolation, role-based access, audit trail, retention rules. |
+| Restricted | Safeguarding, SEND, pupil/parent data, medical details, HR casework, incident records, DBS/SCR data | Strict role access, minimisation, audit logging, retention policy, DPO review and DPIA where applicable. |
 
-## 2. Data Classification
+## Architecture Controls
 
-| Classification | Examples | Protection Level |
-|---------------|----------|------------------|
-| **Public** | Marketing materials | None required |
-| **Internal** | Framework templates | Access control |
-| **Confidential** | Staff names, emails | Encrypted, access logged |
-| **Restricted** | N/A (no pupil data) | N/A |
+- Authentication is handled through the platform auth layer and organisation membership checks.
+- API routes should derive `organization_id` from the authenticated session, not from caller-controlled input.
+- Supabase RLS should be enabled for tenant data tables unless access is deliberately service-route-only and documented.
+- Server-side service-role use should be limited, reviewed and never exposed to clients.
+- Storage buckets must be reviewed for public/private status and file access policies.
+- Documents and generated outputs should inherit organisation branding and organisation scoping.
 
-**Important:** Schoolgle is designed for school IMPROVEMENT data. We do not process:
-- Pupil names or identifiers
-- Parent contact information
-- Medical or SEND records
-- Safeguarding case details
-- Financial records
+## AI and Provider Controls
 
----
+- Only approved provider families should process customer/school data unless a DPA, transfer and GDPR review has been completed.
+- AI prompts should use the minimum data needed for the task.
+- PII masking should be used where feasible before sending data to AI providers.
+- Voice recordings and meeting recordings should have clear retention/deletion rules.
+- Provider training, retention, region and subprocessor terms must be evidenced.
 
-## 3. Authentication & Access Control
+## Incident and Breach Response
 
-### 3.1 User Authentication
-- **Provider:** Firebase Authentication (Google Cloud)
-- **Methods:** Google SSO, Microsoft SSO
-- **MFA:** Available for all users
-- **Session:** 24-hour timeout, refresh token rotation
+Schoolgle should maintain an incident response process covering:
 
-### 3.2 Role-Based Access Control (RBAC)
+- Detection and triage.
+- Customer notification.
+- ICO notification support where applicable.
+- Containment and remediation.
+- Evidence preservation.
+- Post-incident review.
+- DPO/legal sign-off.
 
-| Role | Dashboard | Assessments | Actions | Reports | Settings | Users |
-|------|-----------|-------------|---------|---------|----------|-------|
-| Admin | ✅ | ✅ Edit | ✅ Edit | ✅ | ✅ | ✅ |
-| SLT | ✅ | ✅ Edit | ✅ Edit | ✅ | View | ❌ |
-| Teacher | ✅ | View | ✅ Edit | View | ❌ | ❌ |
-| Governor | ✅ | View | View | ✅ | ❌ | ❌ |
-| Viewer | ✅ | View | View | View | ❌ | ❌ |
+## School Responsibilities
 
-### 3.3 Data Isolation
-- Row Level Security (RLS) enforced at database level
-- Users can ONLY access their organisation's data
-- API requests validated against organisation membership
-- No cross-organisation data access possible
+Schools should:
 
----
+1. Keep user access reviewed and remove leavers promptly.
+2. Use SSO/MFA where available.
+3. Minimise personal data uploaded to the platform.
+4. Only use sensitive-data workflows where local policy, lawful basis and retention rules are understood.
+5. Report suspected incidents promptly.
 
-## 4. Encryption
+## Assurance Pack Requirements
 
-### 4.1 Data at Rest
-- **Database:** AES-256 encryption (Supabase managed)
-- **File storage:** AES-256 encryption
-- **Backups:** Encrypted with separate keys
+Before customer-facing security assurance is issued, archive:
 
-### 4.2 Data in Transit
-- **All connections:** TLS 1.3 minimum
-- **Certificate management:** Automated via Let's Encrypt
-- **HSTS:** Enabled with 12-month max-age
-
-### 4.3 Key Management
-- Keys managed by cloud providers (AWS KMS, Google Cloud KMS)
-- No keys stored in application code
-- Regular key rotation
-
----
-
-## 5. Infrastructure Security
-
-### 5.1 Hosting
-| Component | Provider | Certifications |
-|-----------|----------|---------------|
-| Application | Vercel | SOC 2 Type II |
-| Database | Supabase | SOC 2 Type II, ISO 27001 |
-| Authentication | Firebase | SOC 2 Type II, ISO 27001 |
-| AI Processing | OpenAI | SOC 2 Type II |
-
-### 5.2 Network Security
-- DDoS protection (Cloudflare/Vercel)
-- WAF (Web Application Firewall)
-- Rate limiting on all API endpoints
-- IP allowlisting available for enterprise
-
-### 5.3 Monitoring
-- Real-time security event monitoring
-- Anomaly detection alerts
-- 24/7 incident response capability
-
----
-
-## 6. Data Handling
-
-### 6.1 Data Location
-| Data Type | Primary Location | Backup Location |
-|-----------|-----------------|-----------------|
-| User accounts | EU (Frankfurt) | EU (Ireland) |
-| School data | EU (Frankfurt) | EU (Ireland) |
-| Authentication | EU (Belgium) | EU (Netherlands) |
-| AI processing | US (transient) | Not stored |
-
-### 6.2 Data Retention
-| Data Type | Retention | Deletion Method |
-|-----------|-----------|-----------------|
-| Active accounts | While subscribed | Hard delete on request |
-| Closed accounts | 30 days | Automatic purge |
-| Activity logs | 12 months | Automatic purge |
-| Backups | 90 days | Automatic expiry |
-
-### 6.3 Data Minimisation
-- Only necessary data collected
-- No tracking cookies
-- No analytics on personal data
-- AI processing uses minimal context
-
----
-
-## 7. AI Security
-
-### 7.1 How AI is Used
-- Voice transcription (Whisper)
-- Observation processing (GPT-4)
-- Mock inspector conversations (GPT-4)
-- Ed chatbot (GPT-4)
-
-### 7.2 AI Data Handling
-- **API mode only** - data NOT used for training
-- **No storage** - data processed in real-time
-- **Minimal context** - only necessary data sent
-- **Encryption** - all API calls over TLS 1.3
-
-### 7.3 AI Provider Agreements
-- Data Processing Agreements in place
-- Standard Contractual Clauses for US transfers
-- Opt-out from training confirmed
-
----
-
-## 8. Incident Response
-
-### 8.1 Response Timeline
-| Severity | Detection | Response | Resolution |
-|----------|-----------|----------|------------|
-| Critical | Immediate | 15 mins | 4 hours |
-| High | 15 mins | 1 hour | 24 hours |
-| Medium | 1 hour | 4 hours | 72 hours |
-| Low | 24 hours | 48 hours | 1 week |
-
-### 8.2 Breach Notification
-- Schools notified within 24 hours
-- ICO notification support provided
-- Post-incident report within 14 days
-
----
-
-## 9. Compliance
-
-### 9.1 Certifications & Standards
-- ✅ UK GDPR compliant
-- ✅ Data Protection Act 2018 compliant
-- ✅ Cyber Essentials (in progress)
-- ✅ ISO 27001 alignment (roadmap)
-
-### 9.2 Regular Activities
-- Annual penetration testing
-- Quarterly vulnerability scanning
-- Monthly access reviews
-- Ongoing security training
-
----
-
-## 10. School Responsibilities
-
-While Schoolgle provides robust security, schools should:
-
-1. **Use strong passwords** - Encourage SSO where possible
-2. **Review user access** - Regularly audit who has access
-3. **Don't upload pupil data** - Schoolgle is for school improvement data only
-4. **Report concerns** - Contact us immediately if you suspect issues
-5. **Keep contact details current** - For security notifications
-
----
-
-## 11. Contact
-
-**Security Team:** security@schoolgle.co.uk  
-**Data Protection:** dpo@schoolgle.co.uk  
-**Emergency (breaches):** [Phone number]
-
----
+- Date/time and environment audited.
+- Supabase RLS/policy/grants/storage/function security outputs.
+- API authorization coverage notes.
+- Secrets scan output.
+- Dependency audit output.
+- AI provider/subprocessor review.
+- DPIA/DPA/legal review status.
+- Risk register and remediation tracker.
 
 ## Document Control
 
-| Version | Date | Author | Changes |
-|---------|------|--------|---------|
-| 1.0 | Nov 2025 | Security Team | Initial release |
+| Version | Date | Owner | Changes |
+| --- | --- | --- | --- |
+| 1.1 | 2026-04-28 | Product/Security | Replaced over-confident compliance/no-pupil-data claims with evidence-backed assurance wording. |
 

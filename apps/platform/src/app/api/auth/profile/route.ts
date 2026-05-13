@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
       )
       .eq("user_id", userId)
       .order("created_at", { ascending: true })
-      .limit(10);
+      .limit(500);
 
     if (memberError) {
       console.warn("Error fetching member during profile sync:", memberError);

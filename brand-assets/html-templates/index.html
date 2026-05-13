@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Schoolgle HTML Template Pack</title>
+    <style>
+      :root {
+        --navy: #0b1320;
+        --text: #111827;
+        --muted: #667085;
+        --line: #e5e7eb;
+        --soft: #f8fafc;
+        --blue: #3b82f6;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 40px;
+        color: var(--text);
+        font-family: Inter, "Segoe UI", Arial, sans-serif;
+        background: #eef2f7;
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        color: var(--navy);
+        font-size: 42px;
+        letter-spacing: -0.04em;
+      }
+
+      .intro {
+        max-width: 780px;
+        margin: 0 0 24px;
+        color: var(--muted);
+        line-height: 1.55;
+      }
+
+      .top-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin: 0 0 28px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 18px;
+      }
+
+      .card {
+        display: flex;
+        min-height: 340px;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 22px;
+        background: #ffffff;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        box-shadow: 0 14px 40px rgb(15 23 42 / 0.08);
+      }
+
+      .thumb {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 150px;
+        margin: 0 0 16px;
+        overflow: hidden;
+        background: #f8fafc;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+      }
+
+      .thumb img {
+        display: block;
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+      }
+
+      .thumb.logo-thumb img {
+        max-width: 78%;
+        max-height: 78%;
+      }
+
+      .asset-strip {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin: 0 0 16px;
+      }
+
+      .asset-strip a {
+        display: flex;
+        min-height: 96px;
+        align-items: center;
+        justify-content: center;
+        padding: 10px;
+        background: #f8fafc;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+      }
+
+      .asset-strip img {
+        display: block;
+        max-width: 100%;
+        max-height: 76px;
+        object-fit: contain;
+      }
+
+      strong {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--navy);
+        font-size: 19px;
+      }
+
+      .description {
+        margin: 0 0 16px;
+        color: var(--muted);
+        line-height: 1.45;
+      }
+
+      .meta {
+        display: block;
+        margin-top: 10px;
+        color: #8a94a6;
+        font-size: 12px;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 9px;
+      }
+
+      a.button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 34px;
+        padding: 8px 12px;
+        color: var(--navy);
+        font-size: 13px;
+        font-weight: 800;
+        text-decoration: none;
+        background: var(--soft);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+      }
+
+      a.button.primary {
+        color: #ffffff;
+        background: var(--navy);
+        border-color: var(--navy);
+      }
+
+      a.button.blue {
+        color: #ffffff;
+        background: var(--blue);
+        border-color: var(--blue);
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Schoolgle Template & Asset Pack</h1>
+    <p class="intro">
+      One clean place for the templates and assets we have created so far. Use the buttons to jump straight to the actual HTML template, PDF preview, PNG preview, or upload-ready asset.
+    </p>
+
+    <nav class="top-actions" aria-label="Folder links">
+      <a class="button primary" href="./">Open Template Folder</a>
+      <a class="button" href="./previews/">Open Preview Folder</a>
+      <a class="button" href="./assets/">Open Asset Folder</a>
+      <a class="button" href="./linkedin-advertising.html">Open LinkedIn Upload Tray</a>
+    </nav>
+
+    <section class="grid">
+      <article class="card">
+        <div>
+          <a class="thumb" href="./previews/letterhead.png" aria-label="Open Letterhead preview image">
+            <img src="./previews/letterhead.png" alt="Letterhead preview" />
+          </a>
+          <strong>Letterhead</strong>
+          <p class="description">General correspondence and formal letters.</p>
+          <span class="meta">Source: letterhead.html</span>
+        </div>
+        <div class="actions">
+          <a class="button primary" href="./letterhead.html">Open Template</a>
+          <a class="button" href="./previews/letterhead.pdf">Open PDF</a>
+          <a class="button" href="./previews/letterhead.png">Open PNG</a>
+        </div>
+      </article>
+
+      <article class="card">
+        <div>
+          <a class="thumb" href="./previews/proposal.png" aria-label="Open Proposal preview image">
+            <img src="./previews/proposal.png" alt="Proposal preview" />
+          </a>
+          <strong>Proposal</strong>
+          <p class="description">Sales proposals, pilots, and founding offers.</p>
+          <span class="meta">Source: proposal.html</span>
+        </div>
+        <div class="actions">
+          <a class="button primary" href="./proposal.html">Open Template</a>
+          <a class="button" href="./previews/proposal.pdf">Open PDF</a>
+          <a class="button" href="./previews/proposal.png">Open PNG</a>
+        </div>
+      </article>
+
+      <article class="card">
+        <div>
+          <a class="thumb" href="./previews/invoice.png" aria-label="Open Invoice preview image">
+            <img src="./previews/invoice.png" alt="Invoice preview" />
+          </a>
+          <strong>Invoice</strong>
+          <p class="description">Clean finance-ready invoice layout.</p>
+          <span class="meta">Source: invoice.html</span>
+        </div>
+        <div class="actions">
+          <a class="button primary" href="./invoice.html">Open Template</a>
+          <a class="button" href="./previews/invoice.pdf">Open PDF</a>
+          <a class="button" href="./previews/invoice.png">Open PNG</a>
+        </div>
+      </article>
+
+      <article class="card">
+        <div>
+          <a class="thumb" href="./previews/meeting-notes.png" aria-label="Open Meeting Notes preview image">
+            <img src="./previews/meeting-notes.png" alt="Meeting Notes preview" />
+          </a>
+          <strong>Meeting Notes</strong>
+          <p class="description">Meeting minutes, reports, and action summaries.</p>
+          <span class="meta">Source: meeting-notes.html</span>
+        </div>
+        <div class="actions">
+          <a class="button primary" href="./meeting-notes.html">Open Template</a>
+          <a class="button" href="./previews/meeting-notes.pdf">Open PDF</a>
+          <a class="button" href="./previews/meeting-notes.png">Open PNG</a>
+        </div>
+      </article>
+
+      <article class="card">
+        <div>
+          <a class="thumb" href="./previews/email-signature.png" aria-label="Open Email Signature preview image">
+            <img src="./previews/email-signature.png" alt="Email Signature preview" />
+          </a>
+          <strong>Email Signature</strong>
+          <p class="description">Compact Gmail / Outlook signature blocks with copy buttons.</p>
+          <span class="meta">Source: email-signature.html</span>
+        </div>
+        <div class="actions">
+          <a class="button primary" href="./email-signature.html">Open Signatures</a>
+          <a class="button" href="./previews/email-signature.pdf">Open PDF</a>
+          <a class="button" href="./previews/email-signature.png">Open PNG</a>
+        </div>
+      </article>
+
+      <article class="card">
+        <div>
+          <div class="asset-strip" aria-label="LinkedIn asset thumbnails">
+            <a href="./assets/linkedin-advertising/linkedin-company-logo.png" title="Company Logo">
+              <img src="./assets/linkedin-advertising/linkedin-company-logo.png" alt="LinkedIn company logo" />
+            </a>
+            <a href="./assets/linkedin-advertising/linkedin-advertising-profile-banner.png" title="Profile Banner">
+              <img src="./assets/linkedin-advertising/linkedin-advertising-profile-banner.png" alt="LinkedIn profile banner" />
+            </a>
+            <a href="./assets/linkedin-advertising/linkedin-advertising-company-banner.png" title="Company Banner">
+              <img src="./assets/linkedin-advertising/linkedin-advertising-company-banner.png" alt="LinkedIn company banner" />
+            </a>
+            <a href="./assets/linkedin-advertising/linkedin-advertising-post-image.png" title="Post Image">
+              <img src="./assets/linkedin-advertising/linkedin-advertising-post-image.png" alt="LinkedIn post image" />
+            </a>
+          </div>
+          <strong>LinkedIn Advertising</strong>
+          <p class="description">Profile banner, company banner, company logo, and post image assets. Open the tray to preview, download, or copy the exact file path.</p>
+          <span class="meta">Source: linkedin-advertising.html</span>
+        </div>
+        <div class="actions">
+          <a class="button primary" href="./linkedin-advertising.html">Open Upload Tray</a>
+          <a class="button blue" href="./assets/linkedin-advertising/linkedin-company-logo.png">Company Logo</a>
+          <a class="button" href="./assets/linkedin-advertising/linkedin-advertising-profile-banner.png">Profile Banner</a>
+          <a class="button" href="./assets/linkedin-advertising/linkedin-advertising-company-banner.png">Company Banner</a>
+          <a class="button" href="./assets/linkedin-advertising/linkedin-advertising-post-image.png">Post Image</a>
+        </div>
+      </article>
+
+      <article class="card">
+        <div>
+          <div class="asset-strip" aria-label="Core logo thumbnails">
+            <a href="./assets/schoolgle-logo-horizontal.png" title="Horizontal Logo">
+              <img src="./assets/schoolgle-logo-horizontal.png" alt="Schoolgle horizontal logo" />
+            </a>
+            <a href="./assets/schoolgle-logo-mark.png" title="Icon Mark">
+              <img src="./assets/schoolgle-logo-mark.png" alt="Schoolgle icon mark" />
+            </a>
+          </div>
+          <strong>Core Logo Assets</strong>
+          <p class="description">Approved true-circle logo lockup and standalone mark used across the pack.</p>
+          <span class="meta">Source: assets/</span>
+        </div>
+        <div class="actions">
+          <a class="button blue" href="./assets/schoolgle-logo-horizontal.png">Horizontal Logo</a>
+          <a class="button" href="./assets/schoolgle-logo-mark.png">Icon Mark</a>
+          <a class="button" href="./assets/">Open Folder</a>
+        </div>
+      </article>
+
+      <article class="card">
+        <div>
+          <a class="thumb logo-thumb" href="./motion-ofsted-readiness.html" aria-label="Open Ofsted Readiness motion concept">
+            <img src="./assets/schoolgle-logo-mark.png" alt="Schoolgle motion concept mark" />
+          </a>
+          <strong>Motion Concept: Ofsted Readiness</strong>
+          <p class="description">Spinning module-wheel prototype that stops on School Improvement and introduces the Ofsted Readiness app.</p>
+          <span class="meta">Source: motion-ofsted-readiness.html</span>
+        </div>
+        <div class="actions">
+          <a class="button primary" href="./motion-ofsted-readiness.html">Open Motion Concept</a>
+        </div>
+      </article>
+    </section>
+  </body>
+</html>

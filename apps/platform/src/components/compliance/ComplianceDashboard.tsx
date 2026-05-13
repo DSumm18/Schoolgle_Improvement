@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   FileText,
@@ -122,7 +123,7 @@ export default function ComplianceDashboard({
             Compliance
           </h1>
           <p className="text-slate-500 mt-1">
-            Policies, training, GDPR, and compliance tasks
+            Policies, SOPs, training, GDPR, evidence and compliance tasks
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -246,6 +247,12 @@ export default function ComplianceDashboard({
             Training
           </TabsTrigger>
           <TabsTrigger
+            value="sops"
+            className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg px-6"
+          >
+            SOPs
+          </TabsTrigger>
+          <TabsTrigger
             value="gdpr"
             className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg px-6"
           >
@@ -280,6 +287,10 @@ export default function ComplianceDashboard({
           <TrainingDashboard organizationId={organizationId} />
         </TabsContent>
 
+        <TabsContent value="sops" className="mt-6">
+          <SopsTab />
+        </TabsContent>
+
         <TabsContent value="gdpr" className="mt-6">
           <GDPRDashboard organizationId={organizationId} />
         </TabsContent>
@@ -297,6 +308,62 @@ export default function ComplianceDashboard({
         onSelect={handleSelectTemplate}
       />
     </div>
+  );
+}
+
+function SopsTab() {
+  return (
+    <Card className="overflow-hidden border-purple-100 bg-gradient-to-br from-white via-purple-50/50 to-white dark:border-purple-900/40 dark:from-slate-950 dark:via-purple-950/20 dark:to-slate-950">
+      <CardContent className="p-6">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="max-w-2xl space-y-3">
+            <div className="inline-flex items-center gap-2 rounded-full bg-purple-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-purple-700 dark:bg-purple-900/40 dark:text-purple-200">
+              <ClipboardList className="h-3.5 w-3.5" />
+              Policies into practice
+            </div>
+            <div>
+              <h2 className="text-2xl font-black text-slate-950 dark:text-white">
+                Standard Operating Procedures
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                Create the practical “how we do this here” documents that sit
+                behind policies, with linked forms, local setup questions,
+                guided checklists and evidence trails.
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {[
+                "Linked to policy requirements",
+                "Personalised to the school",
+                "Can create tasks and evidence",
+              ].map((item) => (
+                <div
+                  key={item}
+                  className="rounded-xl border border-purple-100 bg-white/80 p-3 text-xs font-semibold text-slate-700 shadow-sm dark:border-purple-900/40 dark:bg-slate-900/70 dark:text-slate-200"
+                >
+                  {item}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
+            <Link
+              href="/dashboard/compliance/sops"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-purple-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-purple-700"
+            >
+              Open SOPs
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+            <Link
+              href="/dashboard/compliance/policies"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-purple-200 bg-white px-5 py-3 text-sm font-bold text-purple-700 transition hover:bg-purple-50 dark:border-purple-900/50 dark:bg-slate-900 dark:text-purple-200"
+            >
+              View policies
+            </Link>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -327,6 +394,12 @@ function OverviewTab({
           >
             <FileText className="w-4 h-4 mr-2" />
             New Policy
+          </Button>
+          <Button asChild variant="outline" className="w-full justify-start">
+            <Link href="/dashboard/compliance/sops">
+              <ClipboardList className="w-4 h-4 mr-2" />
+              New SOP / Procedure
+            </Link>
           </Button>
           <Button variant="outline" className="w-full justify-start">
             <ShieldAlert className="w-4 h-4 mr-2" />
@@ -497,6 +570,18 @@ function OverviewTab({
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {[
+                {
+                  icon: FileText,
+                  label: "Policies",
+                  href: "/dashboard/compliance/policies",
+                  color: "text-purple-600 bg-purple-100",
+                },
+                {
+                  icon: ClipboardList,
+                  label: "SOPs",
+                  href: "/dashboard/compliance/sops",
+                  color: "text-indigo-600 bg-indigo-100",
+                },
                 {
                   icon: ClipboardList,
                   label: "Single Central Record",

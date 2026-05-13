@@ -16,6 +16,7 @@ type OrgRow = {
   id: string;
   name: string;
   urn: string | number | null;
+  organization_type?: string | null;
   school_type?: string | null;
   local_authority?: string | null;
   la_code?: string | null;
@@ -72,6 +73,21 @@ type Ks2Row = {
   progress_measure_score: number | null;
 };
 
+type Ks4Row = {
+  urn: number;
+  academic_year_end: number;
+  time_period: string | null;
+  breakdown_topic: string | null;
+  breakdown: string | null;
+  t_pupils: number | null;
+  avg_att8: number | null;
+  avg_p8score: number | null;
+  pt_5em_94: number | null;
+  pt_ebacc_e_ptq_ee: number | null;
+  avg_ebaccaps: number | null;
+  is_suppressed: boolean | null;
+};
+
 type GiasExtendedProfileRow = {
   urn: number;
   school_name: string | null;
@@ -87,6 +103,14 @@ type GiasExtendedProfileRow = {
   source_fetched_at: string | null;
   confidence_status: string | null;
   validation_notes: unknown;
+  raw_snapshot: {
+    total_pupils?: number | null;
+    sen_support?: number | null;
+    ehc_plan?: number | null;
+    sen_unit_flag?: number | null;
+    resource_provision_flag?: number | null;
+    provision_needs?: Array<{ code: string; label: string; count: number }>;
+  } | null;
 };
 
 type AcademyImpactReport = AcademisationImpactOutput & {
@@ -153,6 +177,16 @@ function latestKs2ByUrnAndSubject(rows: Ks2Row[]) {
   return byUrn;
 }
 
+function latestKs4ByUrn(rows: Ks4Row[]) {
+  const byUrn = new Map<number, Ks4Row>();
+  for (const row of rows) {
+    if (row.breakdown_topic !== 'Total' || row.breakdown !== 'Total') continue;
+    const existing = byUrn.get(row.urn);
+    if (!existing || row.academic_year_end > existing.academic_year_end) byUrn.set(row.urn, row);
+  }
+  return byUrn;
+}
+
 function buildAcademisationMetricRows(args: {
   currentUrn: number;
   predecessorUrn: number;
@@ -210,6 +244,24 @@ function settingString(settings: Record<string, unknown> | null | undefined, key
   return null;
 }
 
+function settingIncludes(settings: Record<string, unknown> | null | undefined, keys: string[], needle: RegExp) {
+  return keys.some((key) => {
+    const value = settings?.[key];
+    return typeof value === 'string' && needle.test(value);
+  });
+}
+
+function isExplicitLocalAuthorityContainer(parent: OrgRow, childCount: number) {
+  const typeText = `${parent.organization_type ?? ''} ${parent.school_type ?? ''}`;
+  return (
+    childCount > 0 &&
+    (
+      /local[_ -]?authority|council|borough/i.test(typeText) ||
+      settingIncludes(parent.settings, ['trust_label', 'organisation_label', 'organization_label', 'demo_context', 'display_name'], /local authority|council|borough/i)
+    )
+  );
+}
+
 function academicYearLabel(year: number | null | undefined) {
   if (!year) return 'latest available year';
   return `${year - 1}/${String(year).slice(-2)}`;
@@ -227,6 +279,7 @@ function ppGapLabel(value: number | null | undefined) {
 
 function buildNarrative(args: {
   schoolName: string;
+  localAuthorityName: string;
   ks2Combined: number | null;
   ks2Year: number | null;
   readingPct: number | null;
@@ -243,6 +296,11 @@ function buildNarrative(args: {
   ealPct: number | null;
   censusYear: number | null;
   similarSchoolCount: number;
+  senProvisionType?: string | null;
+  senUnitFlag?: number | null;
+  resourceProvisionFlag?: number | null;
+  ehcPlanCount?: number | null;
+  senSupportCount?: number | null;
 }) {
   const strengths: string[] = [];
   const watch: string[] = [];
@@ -271,7 +329,7 @@ function buildNarrative(args: {
       ? ` Weakest subject signal: ${weakestSubject[0]} at ${weakestSubject[1]}%.`
       : '';
     priorityRationale.push(
-      `Source: DfE KS2 ${academicYearLabel(args.ks2Year)} — combined RWM+ is ${pctLabel(args.ks2Combined)}, ${ppGapLabel(ks2Diff)} Rochdale LA primary average (${pctLabel(args.laKs2Average)}).${weakestClause}`,
+      `Source: DfE KS2 ${academicYearLabel(args.ks2Year)} — combined RWM+ is ${pctLabel(args.ks2Combined)}, ${ppGapLabel(ks2Diff)} ${args.localAuthorityName} LA primary average (${pctLabel(args.laKs2Average)}).${weakestClause}`,
     );
   } else {
     sourceNotes.push(`DfE KS2 ${academicYearLabel(args.ks2Year)}: no combined RWM+ value found for this school.`);
@@ -323,6 +381,22 @@ function buildNarrative(args: {
   if ((args.senPct ?? 0) >= 18) {
     watch.push(`DfE census ${academicYearLabel(args.censusYear)}: SEND context is notable at ${args.senPct}%; compare outcomes with similar SEN-profile schools as well as LA averages.`);
   }
+  if (args.senProvisionType) {
+    const provisionFlags = [
+      (args.resourceProvisionFlag ?? 0) > 0 ? 'resource provision' : null,
+      (args.senUnitFlag ?? 0) > 0 ? 'SEN unit' : null,
+    ].filter(Boolean).join(' and ');
+    const provisionDescriptor = provisionFlags || args.senProvisionType;
+    priorityRationale.push(
+      `Source: DfE SEN 2024/25 school-level file — ${args.schoolName} is flagged with ${provisionDescriptor}. The same source records ${args.ehcPlanCount ?? 'no published'} EHCP pupils and ${args.senSupportCount ?? 'no published'} SEN support pupils, so headline outcomes should be challenged through a provision-quality and pupil-progress lens, not only a raw attainment lens.`,
+    );
+    watch.push(
+      `DfE SEN 2024/25: specialist provision flag present (${args.senProvisionType}); ask how leaders evidence progress, access arrangements and curriculum adaptation for this cohort.`,
+    );
+    questions.push(
+      'For pupils in the SEN unit/resource provision, what evidence shows progress from individual starting points, and how is that separated from whole-school KS2 headline performance?',
+    );
+  }
   if ((args.ealPct ?? 0) >= 40) {
     strengths.push(`DfE census ${academicYearLabel(args.censusYear)}: EAL context is substantial at ${args.ealPct}%; inspect language acquisition and curriculum access evidence.`);
   }
@@ -361,14 +435,14 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
 
   const { data: parent, error: parentError } = await supabase
     .from('organizations')
-    .select('id, name, urn, school_type, local_authority, la_code, logo_url, website_url, address, settings')
+    .select('id, name, urn, organization_type, school_type, local_authority, la_code, logo_url, website_url, address, settings')
     .eq('id', organizationId)
     .single();
   if (parentError) return apiError(parentError.message, 500);
 
   const { data: childRows, error: childError } = await supabase
     .from('organizations')
-    .select('id, name, urn, school_type, local_authority, la_code, logo_url, website_url, address, settings')
+    .select('id, name, urn, organization_type, school_type, local_authority, la_code, logo_url, website_url, address, settings')
     .eq('parent_organization_id', organizationId)
     .order('name');
   if (childError) return apiError(childError.message, 500);
@@ -418,9 +492,7 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
       .filter((entry): entry is readonly [number, OrgRow] => entry[0] !== null),
   );
   const isLocalAuthorityGroup =
-    String(parent.school_type ?? '').toLowerCase().includes('local authority') ||
-    String(parent.settings?.trust_label ?? '').toLowerCase().includes('local authority') ||
-    Boolean(parent.local_authority);
+    isExplicitLocalAuthorityContainer(parent as OrgRow, childRows?.length ?? 0);
   const virtualLaRows: OrgRow[] = isLocalAuthorityGroup
     ? laMaintained
         .filter((school) => !registeredUrnSet.has(school.urn))
@@ -445,7 +517,7 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
   const oldToNew = buildOldToCurrentUrnMap(urnLineage);
   const comparisonUrns = expandUrnsWithLineage(currentComparisonUrns, urnLineage);
 
-  const [censusResult, attendanceResult, ks2Result, provisionResult] = await Promise.all([
+  const [censusResult, attendanceResult, ks2Result, ks4Result, provisionResult] = await Promise.all([
     supabase
       .from('census')
       .select('urn, academic_year_end, number_on_roll, fsm_pct, eal_pct, sen_pct')
@@ -464,23 +536,34 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
       .eq('breakdown', 'Total')
       .in('subject', ['Reading, writing and maths', 'Reading', 'Writing', 'Maths'])
       .not('expected_standard_pct', 'is', null)
-      .limit(5000)
+      .limit(10000)
+      .order('urn', { ascending: true })
+      .order('academic_year_end', { ascending: false }),
+    supabase
+      .from('ks4_results')
+      .select('urn, academic_year_end, time_period, breakdown_topic, breakdown, t_pupils, avg_att8, avg_p8score, pt_5em_94, pt_ebacc_e_ptq_ee, avg_ebaccaps, is_suppressed')
+      .in('urn', comparisonUrns)
+      .eq('breakdown_topic', 'Total')
+      .eq('breakdown', 'Total')
+      .limit(10000)
       .order('urn', { ascending: true })
       .order('academic_year_end', { ascending: false }),
     supabase
       .from('school_gias_extended_profiles')
-      .select('urn, school_name, sen_provision_type, resourced_provision_type, resourced_provision_on_roll, resourced_provision_capacity, sen_unit_on_roll, sen_unit_capacity, gias_last_confirmed, source_url, source_method, source_fetched_at, confidence_status, validation_notes')
+      .select('urn, school_name, sen_provision_type, resourced_provision_type, resourced_provision_on_roll, resourced_provision_capacity, sen_unit_on_roll, sen_unit_capacity, gias_last_confirmed, source_url, source_method, source_fetched_at, confidence_status, validation_notes, raw_snapshot')
       .in('urn', currentComparisonUrns),
   ]);
 
   if (censusResult.error) return apiError(censusResult.error.message, 500);
   if (attendanceResult.error) return apiError(attendanceResult.error.message, 500);
   if (ks2Result.error) return apiError(ks2Result.error.message, 500);
+  if (ks4Result.error) return apiError(ks4Result.error.message, 500);
   const provisionTableMissing = Boolean(provisionResult.error);
 
   const rawCensusRows = (censusResult.data ?? []) as CensusRow[];
   const rawAttendanceRows = (attendanceResult.data ?? []) as AttendanceRow[];
   const rawKs2Rows = (ks2Result.data ?? []) as Ks2Row[];
+  const rawKs4Rows = (ks4Result.data ?? []) as Ks4Row[];
 
   const censusRows = rawCensusRows.map((row) => ({
     ...row,
@@ -494,6 +577,10 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
     ...row,
     urn: oldToNew.get(Number(row.urn)) ?? Number(row.urn),
   }));
+  const ks4Rows = rawKs4Rows.map((row) => ({
+    ...row,
+    urn: oldToNew.get(Number(row.urn)) ?? Number(row.urn),
+  }));
 
   const latestCensus = latestByUrn(censusRows);
   const latestAttendance = latestValueByUrn(attendanceRows, (row) =>
@@ -503,6 +590,7 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
     row.persistent_absence_pct !== null && row.persistent_absence_pct !== undefined,
   );
   const latestKs2 = latestKs2ByUrnAndSubject(ks2Rows);
+  const latestKs4 = latestKs4ByUrn(ks4Rows);
   const provisionByUrn = new Map(
     (((provisionResult.error ? [] : provisionResult.data) ?? []) as GiasExtendedProfileRow[])
       .map((profile) => [Number(profile.urn), profile] as const),
@@ -555,6 +643,7 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
     const attendance = urn ? latestAttendance.get(urn) : undefined;
     const persistentAbsence = urn ? latestPersistentAbsence.get(urn) : undefined;
     const ks2 = urn ? latestKs2.get(urn) : undefined;
+    const ks4 = urn ? latestKs4.get(urn) : undefined;
     const fsmPct = round(census?.fsm_pct ?? profile?.percentage_fsm ?? null);
     const senPct = round(census?.sen_pct ?? null);
     const ealPct = round(census?.eal_pct ?? null);
@@ -579,6 +668,7 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
     const email = settingString(org.settings, ['email', 'school_email', 'contact_email']);
     const narrative = buildNarrative({
       schoolName: org.name,
+      localAuthorityName: laName,
       ks2Combined,
       ks2Year: ks2?.['Reading, writing and maths']?.academic_year_end ?? null,
       readingPct: round(ks2?.Reading?.expected_standard_pct ?? null),
@@ -595,6 +685,11 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
       ealPct,
       censusYear: census?.academic_year_end ?? null,
       similarSchoolCount: similarUrns.length,
+      senProvisionType: provision?.resourced_provision_type ?? provision?.sen_provision_type ?? null,
+      senUnitFlag: provision?.raw_snapshot?.sen_unit_flag ?? null,
+      resourceProvisionFlag: provision?.raw_snapshot?.resource_provision_flag ?? null,
+      ehcPlanCount: provision?.raw_snapshot?.ehc_plan ?? null,
+      senSupportCount: provision?.raw_snapshot?.sen_support ?? null,
     });
 
     return {
@@ -655,6 +750,13 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
         reading_pct: round(ks2?.Reading?.expected_standard_pct ?? null),
         writing_pct: round(ks2?.Writing?.expected_standard_pct ?? null),
         maths_pct: round(ks2?.Maths?.expected_standard_pct ?? null),
+        ks4_year: ks4?.academic_year_end ?? null,
+        ks4_pupils: ks4?.t_pupils ?? null,
+        attainment8: round(ks4?.avg_att8 ?? null),
+        progress8: round(ks4?.avg_p8score ?? null, 2),
+        english_maths_4_plus_pct: round(ks4?.pt_5em_94 ?? null),
+        ebacc_entry_pct: round(ks4?.pt_ebacc_e_ptq_ee ?? null),
+        ebacc_aps: round(ks4?.avg_ebaccaps ?? null, 2),
       },
       comparators: {
         similar_school_count: similarUrns.length,
@@ -672,12 +774,43 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
           source_fetched_at: provision.source_fetched_at,
           confidence_status: provision.confidence_status,
           validation_notes: Array.isArray(provision.validation_notes) ? provision.validation_notes : [],
+          sen_support: provision.raw_snapshot?.sen_support ?? null,
+          ehc_plan: provision.raw_snapshot?.ehc_plan ?? null,
+          sen_unit_flag: provision.raw_snapshot?.sen_unit_flag ?? null,
+          resource_provision_flag: provision.raw_snapshot?.resource_provision_flag ?? null,
+          provision_needs: provision.raw_snapshot?.provision_needs ?? [],
         } : null,
       },
       is_virtual_dfe_school: Boolean(org.settings?.virtual_dfe_school),
       narrative,
     };
   });
+
+  const specialSchools = schools.filter((school) =>
+    String(school.profile?.type_name ?? '').toLowerCase().includes('special') ||
+    (String(school.profile?.phase_name ?? '').toLowerCase().includes('not applicable') &&
+      (school.latest.sen_pct ?? 0) >= 95),
+  );
+  const specialSchoolIds = new Set(specialSchools.map((school) => school.id));
+  const primarySchools = schools.filter((school) => school.profile?.phase_name === 'Primary' && !specialSchoolIds.has(school.id));
+  const secondarySchools = schools.filter((school) => school.profile?.phase_name === 'Secondary' && !specialSchoolIds.has(school.id));
+  const phaseSummary = {
+    primary: primarySchools.length,
+    secondary: secondarySchools.length,
+    special: specialSchools.length,
+    other: Math.max(0, schools.length - primarySchools.length - secondarySchools.length - specialSchools.length),
+  };
+  const secondaryBenchmarks = {
+    secondary_count: secondarySchools.length,
+    ks4_year: Math.max(0, ...secondarySchools.map((school) => school.latest.ks4_year ?? 0)) || null,
+    attainment8_avg: average(secondarySchools.map((school) => school.latest.attainment8)),
+    progress8_avg: average(secondarySchools.map((school) => school.latest.progress8)),
+    english_maths_4_plus_avg: average(secondarySchools.map((school) => school.latest.english_maths_4_plus_pct)),
+    ebacc_entry_avg: average(secondarySchools.map((school) => school.latest.ebacc_entry_pct)),
+    ebacc_aps_avg: average(secondarySchools.map((school) => school.latest.ebacc_aps)),
+    attendance_avg: average(secondarySchools.map((school) => school.latest.attendance_pct)),
+    persistent_absence_avg: average(secondarySchools.map((school) => school.latest.persistent_absence_pct)),
+  };
 
   const ranked = [...schools].sort((a, b) => {
     const aScore =
@@ -706,9 +839,19 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
     reading: schools.filter((school) => school.latest.reading_pct !== null).length,
     writing: schools.filter((school) => school.latest.writing_pct !== null).length,
     maths: schools.filter((school) => school.latest.maths_pct !== null).length,
+    ks4: schools.filter((school) => school.latest.attainment8 !== null || school.latest.english_maths_4_plus_pct !== null).length,
+    attainment8: schools.filter((school) => school.latest.attainment8 !== null).length,
+    progress8: schools.filter((school) => school.latest.progress8 !== null).length,
+    english_maths_4_plus: schools.filter((school) => school.latest.english_maths_4_plus_pct !== null).length,
     academy_history: schools.filter((school) => school.academy_history !== null).length,
     academy_impact: schools.filter((school) => school.academy_impact !== null).length,
-    provision_specific: schools.filter((school) => school.comparators.provision_specific !== null).length,
+    sen_profile: schools.filter((school) => school.comparators.provision_specific !== null).length,
+    provision_specific: schools.filter((school) => Boolean(
+      school.comparators.provision_specific?.resourced_provision_type ||
+      school.comparators.provision_specific?.sen_provision_type ||
+      (school.comparators.provision_specific?.sen_unit_flag ?? 0) > 0 ||
+      (school.comparators.provision_specific?.resource_provision_flag ?? 0) > 0,
+    )).length,
   };
 
   return apiSuccess({
@@ -728,6 +871,8 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
       onboarded_maintained_coverage: laMaintained.length > 0 ? `${registeredOrgRows.length}/${laMaintained.length}` : null,
     },
     laBenchmarks,
+    secondaryBenchmarks,
+    phaseSummary,
     dataCoverage,
     schools,
     prioritySchools: ranked.slice(0, 6),

@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Schoolgle Proposal</title>
+    <link rel="stylesheet" href="./styles/schoolgle-docs.css?v=accent-3px" />
+  </head>
+  <body>
+    <nav class="template-nav" aria-label="Template previews">
+      <a href="./letterhead.html">Letterhead</a>
+      <a class="active" href="./proposal.html">Proposal</a>
+      <a href="./invoice.html">Invoice</a>
+      <a href="./meeting-notes.html">Meeting Notes</a>
+      <a href="./email-signature.html">Email Signature</a>
+      <a href="./linkedin-advertising.html">LinkedIn Advertising</a>
+      <a href="./index.html">Gallery</a>
+    </nav>
+    <main class="page">
+      <header class="doc-header">
+        <img class="logo" src="./assets/schoolgle-logo-horizontal.png" alt="Schoolgle" />
+        <div class="meta">
+          Proposal<br />
+          {{proposal_date}}<br />
+          <a href="mailto:david@schoolgle.co.uk">david@schoolgle.co.uk</a>
+        </div>
+      </header>
+
+      <div class="accent-line" aria-hidden="true">
+        <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+      </div>
+
+      <section>
+        <div class="label">Prepared For</div>
+        <p>
+          {{school_or_trust_name}}<br />
+          <a class="email-chip" href="mailto:{{recipient_email}}">{{recipient_email}}</a>
+        </p>
+        <h1>{{proposal_title}}</h1>
+        <p class="muted">{{executive_summary}}</p>
+      </section>
+
+      <section class="section-card">
+        <h2>The Situation</h2>
+        <p>
+          It sounds like {{school_or_trust_name}} is trying to reduce workload, improve
+          assurance, and avoid paying for fragmented systems that do not talk to each other.
+          This proposal sets out how Schoolgle can help.
+        </p>
+      </section>
+
+      <section class="section-card">
+        <h2>What Schoolgle Provides</h2>
+        <p>
+          Schoolgle is your school's operating system: one connected platform for school
+          improvement, compliance and safeguarding, business operations, governance,
+          communications, intelligence, and teaching workflows.
+        </p>
+      </section>
+
+      <section class="grid-2">
+        <div class="card">
+          <div class="label">Recommended Package</div>
+          <p>
+            <strong>{{recommended_package}}</strong><br />
+            Modules: {{modules_included}}
+          </p>
+        </div>
+        <div class="card">
+          <div class="label">Commercials</div>
+          <p>
+            Annual cost: <strong>{{annual_cost}}</strong><br />
+            Founding offer: {{offer_details}}
+          </p>
+        </div>
+      </section>
+
+      <section>
+        <h2>Why This Makes Sense</h2>
+        <ul>
+          <li>One connected view instead of separate systems and spreadsheets.</li>
+          <li>AI support through Ed that is designed for school context.</li>
+          <li>Safer handling of school data than uncontrolled consumer AI use.</li>
+          <li>Clear annual pricing that schools can explain to governors.</li>
+          <li>Practical tools built for primary schools and trusts.</li>
+        </ul>
+      </section>
+
+      <section class="section-card">
+        <h2>Implementation Plan</h2>
+        <p><strong>Phase 1:</strong> {{phase_1}}</p>
+        <p><strong>Phase 2:</strong> {{phase_2}}</p>
+        <p><strong>Phase 3:</strong> {{phase_3}}</p>
+      </section>
+
+      <footer class="doc-footer">
+        <span>Schoolgle proposal for {{school_or_trust_name}}</span>
+        <span><a href="mailto:david@schoolgle.co.uk">david@schoolgle.co.uk</a> · <a href="https://schoolgle.co.uk">schoolgle.co.uk</a></span>
+      </footer>
+    </main>
+  </body>
+</html>

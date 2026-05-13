@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
-  SchoolSelfReport, PENNINE_SCHOOLS, YEAR_GROUPS, Subject, CORE_SUBJECTS,
+  SchoolSelfReport, YEAR_GROUPS, Subject, CORE_SUBJECTS,
 } from '@/lib/trust-analysis/types';
 
 interface Props {
@@ -26,6 +26,7 @@ function getSubjectKey(subject: Subject): 'reading' | 'writing' | 'maths' | 'com
 
 export default function TrustOverviewHeatmap({ selfReports }: Props) {
   const [selectedSubject, setSelectedSubject] = useState<Subject>('Combined');
+  const schools = selfReports.map((report) => report.school);
 
   return (
     <div className="space-y-4">
@@ -56,19 +57,19 @@ export default function TrustOverviewHeatmap({ selfReports }: Props) {
             </tr>
           </thead>
           <tbody>
-            {PENNINE_SCHOOLS.map((school, schoolIdx) => {
-              const report = selfReports.find(r => r.school === school.abbrev);
+            {schools.map((school, schoolIdx) => {
+              const report = selfReports.find(r => r.school === school);
               return (
                 <motion.tr
-                  key={school.abbrev}
+                  key={school}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: schoolIdx * 0.05 }}
                   className="border-t border-gray-100"
                 >
                   <td className="p-3">
-                    <div className="text-sm font-semibold text-gray-900">{school.abbrev}</div>
-                    <div className="text-xs text-gray-500">{school.nor} NOR</div>
+                    <div className="text-sm font-semibold text-gray-900">{school}</div>
+                    <div className="text-xs text-gray-500">Submitted capture</div>
                   </td>
                   {YEAR_GROUPS.map(yg => {
                     const ygData = report?.yearGroups.find(y => y.yearGroup === yg);

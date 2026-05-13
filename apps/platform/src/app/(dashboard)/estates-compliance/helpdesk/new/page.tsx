@@ -28,6 +28,7 @@ import {
 import { useAuth } from "@/context/SupabaseAuthContext";
 import { supabase } from "@/lib/supabase";
 import { AssetPicker } from "@/components/estates-compliance/AssetPicker";
+import { getWarrantyRoutingRecommendation } from "@/lib/estates-compliance/warranty-routing";
 import { toast } from "sonner";
 
 type Priority = "low" | "medium" | "high" | "critical";
@@ -85,11 +86,15 @@ interface SelectedAsset {
 
 interface WarrantyInfo {
   warranty_status: "active" | "expiring_soon" | "expired" | "none";
+  warranty_expiry: string | null;
+  warranty_days_remaining: number | null;
   warranty_provider: string | null;
   supplier_contact: {
     contractor_id: string;
     company_name: string;
+    contact_name?: string | null;
     email: string | null;
+    phone?: string | null;
   } | null;
 }
 
@@ -151,6 +156,8 @@ export default function NewTicketPage() {
   const [location, setLocation] = useState("");
   const [selectedAsset, setSelectedAsset] = useState<SelectedAsset | null>(null);
   const [warranty, setWarranty] = useState<WarrantyInfo | null>(null);
+  const [paidRepairOverride, setPaidRepairOverride] = useState(false);
+  const [paidRepairOverrideReason, setPaidRepairOverrideReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [uploadingFiles, setUploadingFiles] = useState(false);
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
@@ -256,6 +263,15 @@ export default function NewTicketPage() {
       toast.error("Title is required");
       return;
     }
+    const warrantyRecommendation = getWarrantyRoutingRecommendation(warranty);
+    if (
+      warrantyRecommendation?.requiresOverrideForPaidWork &&
+      paidRepairOverride &&
+      !paidRepairOverrideReason.trim()
+    ) {
+      toast.error("Please record why warranty routing is being bypassed");
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -273,7 +289,13 @@ export default function NewTicketPage() {
         body: JSON.stringify({
           organizationId,
           title: title.trim(),
-          description: description.trim() || title.trim(),
+          description: buildTicketDescription({
+            title: title.trim(),
+            description: description.trim(),
+            warrantyRecommendation,
+            paidRepairOverride,
+            paidRepairOverrideReason: paidRepairOverrideReason.trim(),
+          }),
           priority,
           category,
           location: location.trim() || undefined,
@@ -310,6 +332,7 @@ export default function NewTicketPage() {
   }
 
   const isWorking = submitting || uploadingFiles;
+  const warrantyRecommendation = getWarrantyRoutingRecommendation(warranty);
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-6">
@@ -344,6 +367,8 @@ export default function NewTicketPage() {
                   setSelectedAsset(null);
                 }
                 setWarranty(warrantyInfo);
+                setPaidRepairOverride(false);
+                setPaidRepairOverrideReason("");
               }}
             />
           )}
@@ -498,13 +523,34 @@ export default function NewTicketPage() {
           </div>
         </div>
 
-        {/* Warning if asset under warranty */}
-        {warranty && warranty.warranty_status === "active" && (
+        {/* Warranty routing control */}
+        {warrantyRecommendation && warrantyRecommendation.requiresOverrideForPaidWork && (
           <div className="rounded-lg border-2 border-green-600 bg-green-50 p-4 text-sm text-green-900 dark:border-green-700 dark:bg-green-950/40 dark:text-green-200">
-            <strong>Reminder:</strong> this asset is covered by{" "}
-            {warranty.warranty_provider || "the supplier"}. Raising this ticket
-            is fine for tracking, but the <strong>supplier should fix it for free</strong>.
-            Contact them first.
+            <strong>{warrantyRecommendation.title}:</strong>{" "}
+            {warrantyRecommendation.guidance}
+            <div className="mt-4 rounded-lg border border-green-200 bg-white/70 p-3 dark:border-green-800 dark:bg-green-950/30">
+              <label className="flex items-start gap-2 text-sm font-medium">
+                <input
+                  type="checkbox"
+                  checked={paidRepairOverride}
+                  onChange={(e) => setPaidRepairOverride(e.target.checked)}
+                  className="mt-1"
+                />
+                <span>
+                  We still need to use another contractor or treat this as paid
+                  work. Record why for the asset and finance audit trail.
+                </span>
+              </label>
+              {paidRepairOverride && (
+                <textarea
+                  value={paidRepairOverrideReason}
+                  onChange={(e) => setPaidRepairOverrideReason(e.target.value)}
+                  rows={3}
+                  placeholder="Example: emergency make-safe required; warranty provider unavailable; safety risk if delayed."
+                  className="mt-3 w-full resize-y rounded-lg border border-green-300 bg-white px-3 py-2 text-sm text-green-950 placeholder:text-green-700/60 focus:border-green-600 focus:outline-none focus:ring-2 focus:ring-green-600/20 dark:border-green-700 dark:bg-green-950/60 dark:text-green-100"
+                />
+              )}
+            </div>
           </div>
         )}
 
@@ -537,4 +583,38 @@ export default function NewTicketPage() {
       </form>
     </div>
   );
+}
+
+function buildTicketDescription({
+  title,
+  description,
+  warrantyRecommendation,
+  paidRepairOverride,
+  paidRepairOverrideReason,
+}: {
+  title: string;
+  description: string;
+  warrantyRecommendation: ReturnType<typeof getWarrantyRoutingRecommendation>;
+  paidRepairOverride: boolean;
+  paidRepairOverrideReason: string;
+}) {
+  const body = description || title;
+  if (!warrantyRecommendation) return body;
+
+  const warrantyLines = [
+    "",
+    "---",
+    "Warranty routing check",
+    `Recommendation: ${warrantyRecommendation.title}`,
+    warrantyRecommendation.guidance,
+  ];
+
+  if (paidRepairOverride) {
+    warrantyLines.push(
+      "Warranty route bypassed for paid/non-warranty work.",
+      `Reason: ${paidRepairOverrideReason}`,
+    );
+  }
+
+  return `${body}${warrantyLines.join("\n")}`;
 }

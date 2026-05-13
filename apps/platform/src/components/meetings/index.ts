@@ -7,5 +7,6 @@ export { MeetingPreparationPack } from "./MeetingPreparationPack";
 export { MeetingRecorder } from "./MeetingRecorder";
 export { MeetingSignaturePad } from "./MeetingSignaturePad";
 export { MeetingDocUpload } from "./MeetingDocUpload";
+export { MeetingRecordingUpload } from "./MeetingRecordingUpload";
 export { StaffPicker } from "./StaffPicker";
 export { PostMeetingActions } from "./PostMeetingActions";

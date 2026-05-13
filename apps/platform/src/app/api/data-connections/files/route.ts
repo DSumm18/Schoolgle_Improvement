@@ -1,6 +1,10 @@
 import { NextRequest } from "next/server";
 import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
+import {
+  getGoogleReauthoriseMessage,
+  getValidGoogleAccessToken,
+} from "@/lib/google-oauth-tokens";
 
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 
@@ -32,8 +36,18 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
     );
   }
 
-  if (!GOOGLE_API_KEY) {
-    return apiError("Google API key not configured", 500);
+  let accessToken: string | null = null;
+  try {
+    accessToken = await getValidGoogleAccessToken({
+      supabase,
+      connection: conn,
+    });
+  } catch {
+    return apiError(getGoogleReauthoriseMessage(), 401);
+  }
+
+  if (!GOOGLE_API_KEY && !accessToken) {
+    return apiError("Google Drive access is not configured", 500);
   }
 
   const detectedFolders = (conn.detected_folders || {}) as Record<
@@ -57,17 +71,21 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
     // List files in all matching folders
     const allFiles = [];
     for (const [folderPath, info] of matchingFolders) {
+      const params = new URLSearchParams({
+        q: `'${info.folderId}' in parents and trashed = false and mimeType != 'application/vnd.google-apps.folder'`,
+        fields: "files(id,name,mimeType,modifiedTime,size)",
+        pageSize: "100",
+        supportsAllDrives: "true",
+        includeItemsFromAllDrives: "true",
+        orderBy: "modifiedTime desc",
+      });
+      if (!accessToken && GOOGLE_API_KEY) params.set("key", GOOGLE_API_KEY);
+
       const res = await fetch(
-        `https://www.googleapis.com/drive/v3/files?` +
-          new URLSearchParams({
-            key: GOOGLE_API_KEY,
-            q: `'${info.folderId}' in parents and trashed = false and mimeType != 'application/vnd.google-apps.folder'`,
-            fields: "files(id,name,mimeType,modifiedTime,size)",
-            pageSize: "100",
-            supportsAllDrives: "true",
-            includeItemsFromAllDrives: "true",
-            orderBy: "modifiedTime desc",
-          }),
+        `https://www.googleapis.com/drive/v3/files?${params}`,
+        accessToken
+          ? { headers: { Authorization: `Bearer ${accessToken}` } }
+          : undefined,
       );
 
       if (res.ok) {
@@ -125,8 +143,30 @@ export const POST = protectedRoute(async (auth, req) => {
     return apiError("Missing fileId", 400);
   }
 
-  if (!GOOGLE_API_KEY) {
-    return apiError("Google API key not configured", 500);
+  const supabase = createServiceRoleClient();
+  const { data: conn } = await supabase
+    .from("school_data_connections")
+    .select(
+      "id,access_token_encrypted,refresh_token_encrypted,token_expiry",
+    )
+    .eq("organization_id", orgId)
+    .eq("is_active", true)
+    .single();
+
+  let accessToken: string | null = null;
+  if (conn) {
+    try {
+      accessToken = await getValidGoogleAccessToken({
+        supabase,
+        connection: conn,
+      });
+    } catch {
+      return apiError(getGoogleReauthoriseMessage(), 401);
+    }
+  }
+
+  if (!GOOGLE_API_KEY && !accessToken) {
+    return apiError("Google Drive access is not configured", 500);
   }
 
   let buffer: Buffer;
@@ -136,12 +176,16 @@ export const POST = protectedRoute(async (auth, req) => {
 
   if (exportConfig) {
     // Google native file → export to a downloadable format
+    const params = new URLSearchParams({
+      mimeType: exportConfig.exportMime,
+    });
+    if (!accessToken && GOOGLE_API_KEY) params.set("key", GOOGLE_API_KEY);
+
     const res = await fetch(
-      `https://www.googleapis.com/drive/v3/files/${fileId}/export?` +
-        new URLSearchParams({
-          key: GOOGLE_API_KEY,
-          mimeType: exportConfig.exportMime,
-        }),
+      `https://www.googleapis.com/drive/v3/files/${fileId}/export?${params}`,
+      accessToken
+        ? { headers: { Authorization: `Bearer ${accessToken}` } }
+        : undefined,
     );
 
     if (!res.ok) {
@@ -155,8 +199,14 @@ export const POST = protectedRoute(async (auth, req) => {
     contentType = exportConfig.outputMime;
   } else {
     // Binary file (xlsx, csv, pdf, docx, etc.) → direct download
+    const params = new URLSearchParams({ alt: "media" });
+    if (!accessToken && GOOGLE_API_KEY) params.set("key", GOOGLE_API_KEY);
+
     const res = await fetch(
-      `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${GOOGLE_API_KEY}`,
+      `https://www.googleapis.com/drive/v3/files/${fileId}?${params}`,
+      accessToken
+        ? { headers: { Authorization: `Bearer ${accessToken}` } }
+        : undefined,
     );
 
     if (!res.ok) {

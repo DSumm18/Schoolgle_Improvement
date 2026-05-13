@@ -1,4 +1,3 @@
-import { NextRequest } from "next/server";
 import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
 
@@ -38,7 +37,7 @@ export const POST = protectedRoute(async (auth, req) => {
   if (!driveRes.ok) {
     if (driveRes.status === 404 || driveRes.status === 403) {
       return apiError(
-        "Cannot access this folder. Please check it is shared as 'Anyone with the link' with Viewer access.",
+        "Cannot access this folder. Use the secure Google sign-in Connector route, or confirm this fallback folder link has view-only access enabled.",
         403,
       );
     }
@@ -110,6 +109,12 @@ const FOLDER_PATTERNS: Record<string, string> = {
   finance: "fms",
   fms: "fms",
   payroll: "payroll",
+  energy: "energy",
+  utilities: "energy",
+  "utility bills": "energy",
+  "energy invoices": "energy",
+  "electricity invoices": "energy",
+  "gas invoices": "energy",
   dfe: "dfe",
   external: "dfe",
   document: "documents",

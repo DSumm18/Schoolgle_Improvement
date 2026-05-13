@@ -49,7 +49,7 @@ export function getLanguageName(code: string): string {
 
 const FORM_HELPER_CONFIG = {
   // Vision model for form detection (via OpenRouter)
-  visionModel: "qwen/qwen-2.5-vl-72b-instruct",
+  visionModel: "google/gemini-2.0-flash-001",
 
   // Translation model
   translationModel: "google/gemini-2.0-flash-lite-001",

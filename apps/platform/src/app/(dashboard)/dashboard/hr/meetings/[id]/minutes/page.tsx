@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useState, useEffect, useMemo } from "react";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -16,10 +17,9 @@ import { useAuth } from "@/context/SupabaseAuthContext";
 import { MeetingSignaturePad } from "@/components/meetings";
 
 export default function MeetingMinutesPage() {
-  const router = useRouter();
   const params = useParams();
   const meetingId = params.id as string;
-  const { organization, user } = useAuth();
+  const { organization, session, user } = useAuth();
   const organizationId = organization?.id || "";
 
   const [meeting, setMeeting] = useState<any>(null);
@@ -27,17 +27,27 @@ export default function MeetingMinutesPage() {
   const [signatures, setSignatures] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [finalising, setFinalising] = useState(false);
+  const [reopening, setReopening] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [signing, setSigning] = useState(false);
 
+  const requestHeaders = useMemo(
+    () =>
+      session?.access_token
+        ? { Authorization: `Bearer ${session.access_token}` }
+        : {},
+    [session?.access_token],
+  );
+
   useEffect(() => {
-    if (!organizationId || !meetingId) return;
+    if (!organizationId || !meetingId || !session?.access_token) return;
     Promise.all([
-      fetch(`/api/meetings/${meetingId}?organizationId=${organizationId}`).then(
-        (r) => r.json(),
-      ),
+      fetch(`/api/meetings/${meetingId}?organizationId=${organizationId}`, {
+        headers: requestHeaders,
+      }).then((r) => r.json()),
       fetch(
         `/api/meetings/${meetingId}/minutes?organizationId=${organizationId}`,
+        { headers: requestHeaders },
       ).then((r) => r.json()),
     ])
       .then(([meetingData, minutesData]) => {
@@ -47,14 +57,14 @@ export default function MeetingMinutesPage() {
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [organizationId, meetingId]);
+  }, [organizationId, meetingId, requestHeaders, session?.access_token]);
 
   const handleFinalise = async () => {
     setFinalising(true);
     try {
       const res = await fetch(`/api/meetings/${meetingId}/minutes`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...requestHeaders },
         body: JSON.stringify({ organizationId, status: "finalised" }),
       });
       if (res.ok) {
@@ -68,12 +78,31 @@ export default function MeetingMinutesPage() {
     }
   };
 
+  const handleReopenDraft = async () => {
+    setReopening(true);
+    try {
+      const res = await fetch(`/api/meetings/${meetingId}/minutes`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...requestHeaders },
+        body: JSON.stringify({ organizationId, status: "draft" }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMinutes(data.minutes);
+      }
+    } catch (err) {
+      console.error("Failed to reopen minutes:", err);
+    } finally {
+      setReopening(false);
+    }
+  };
+
   const handleRegenerate = async () => {
     setRegenerating(true);
     try {
       const res = await fetch(`/api/meetings/${meetingId}/minutes`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...requestHeaders },
         body: JSON.stringify({ organizationId }),
       });
       if (res.ok) {
@@ -100,7 +129,7 @@ export default function MeetingMinutesPage() {
 
       const res = await fetch(`/api/meetings/${meetingId}/sign`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...requestHeaders },
         body: JSON.stringify({
           organizationId,
           signer_name: signerName,
@@ -138,13 +167,15 @@ export default function MeetingMinutesPage() {
 
   if (loading) {
     return (
-      <div className="p-12 text-center text-slate-400">Loading minutes...</div>
+      <div className="min-h-screen bg-slate-50 p-12 text-center text-slate-500 dark:bg-slate-950 dark:text-slate-300">
+        Loading minutes...
+      </div>
     );
   }
 
   if (!minutes) {
     return (
-      <div className="p-12 text-center text-slate-400">
+      <div className="min-h-screen bg-slate-50 p-12 text-center text-slate-500 dark:bg-slate-950 dark:text-slate-300">
         No minutes generated yet.{" "}
         <Link
           href={`/dashboard/hr/meetings/${meetingId}`}
@@ -173,12 +204,17 @@ export default function MeetingMinutesPage() {
     existingSignatureSlots.some((s: any) => s.role === "attendee");
 
   return (
-    <div className="p-6 md:p-8 min-h-screen max-w-[1000px] mx-auto space-y-6">
+    <div className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900 dark:bg-slate-950 dark:text-slate-100 md:px-8">
+      <div className="mx-auto max-w-[1100px] space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="rounded-3xl border border-slate-200 bg-white/95 p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/95 md:flex md:items-center md:justify-between md:p-5">
         <div className="flex items-center gap-3">
           <Link href={`/dashboard/hr/meetings/${meetingId}`}>
-            <Button variant="ghost" size="icon" className="rounded-xl">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-xl text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+            >
               <ArrowLeft size={18} />
             </Button>
           </Link>
@@ -188,17 +224,17 @@ export default function MeetingMinutesPage() {
             </h1>
             <div className="flex items-center gap-2 mt-0.5">
               {isFinalised ? (
-                <span className="inline-flex items-center gap-1 text-xs font-semibold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
                   <Check size={12} />
                   Finalised
                 </span>
               ) : (
-                <span className="text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
                   Draft
                 </span>
               )}
               {bothSigned && (
-                <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
                   <Check size={12} />
                   Signed by both parties
                 </span>
@@ -206,14 +242,27 @@ export default function MeetingMinutesPage() {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {!isFinalised && (
+        <div className="mt-4 flex flex-wrap items-center gap-2 md:mt-0">
+          {isFinalised ? (
+            <Button
+              variant="outline"
+              onClick={handleReopenDraft}
+              disabled={reopening}
+              className="rounded-xl border-slate-300 bg-white text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800 gap-2"
+            >
+              <RefreshCw
+                size={14}
+                className={reopening ? "animate-spin" : ""}
+              />
+              Reopen draft
+            </Button>
+          ) : (
             <>
               <Button
                 variant="outline"
                 onClick={handleRegenerate}
                 disabled={regenerating}
-                className="rounded-xl gap-2"
+                className="rounded-xl border-slate-300 bg-white text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800 gap-2"
               >
                 <RefreshCw
                   size={14}
@@ -238,7 +287,7 @@ export default function MeetingMinutesPage() {
           <Button
             variant="outline"
             onClick={handlePrint}
-            className="rounded-xl gap-2"
+            className="rounded-xl border-slate-300 bg-white text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800 gap-2"
           >
             <Printer size={14} />
             Print
@@ -246,7 +295,7 @@ export default function MeetingMinutesPage() {
           <Button
             variant="outline"
             onClick={handleDownloadPdf}
-            className="rounded-xl gap-2"
+            className="rounded-xl border-slate-300 bg-white text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800 gap-2"
           >
             <Download size={14} />
             PDF
@@ -255,15 +304,15 @@ export default function MeetingMinutesPage() {
       </div>
 
       {/* Minutes preview */}
-      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div className="rounded-3xl border border-slate-200 bg-slate-200/70 p-2 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         {minutes.html ? (
           <iframe
             srcDoc={minutes.html}
-            className="w-full min-h-[700px] border-0"
+            className="min-h-[760px] w-full rounded-2xl border-0 bg-white shadow-inner"
             title="Meeting Minutes Preview"
           />
         ) : (
-          <div className="p-12 text-center text-slate-400">
+          <div className="rounded-2xl bg-white p-12 text-center text-slate-400 dark:bg-slate-900 dark:text-slate-500">
             <FileText size={32} className="mx-auto mb-3 opacity-50" />
             No content available
           </div>
@@ -271,7 +320,7 @@ export default function MeetingMinutesPage() {
       </div>
 
       {/* Digital Signatures */}
-      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6">
+      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <MeetingSignaturePad
           leaderName={leaderName}
           attendeeName={attendeeName}
@@ -305,6 +354,7 @@ export default function MeetingMinutesPage() {
           </Button>
         </div>
       )}
+      </div>
     </div>
   );
 }

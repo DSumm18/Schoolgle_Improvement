@@ -1,4 +1,4 @@
-/**
+﻿/**
  * OpenRouter AI Client
  * Unified API for multiple AI models with best pricing
  */
@@ -37,8 +37,8 @@ export const MODELS = {
   // Recommended: Best balance of speed, quality, cost
   CLAUDE_HAIKU: 'anthropic/claude-3.5-haiku',
   
-  // Budget: Cheapest, good quality
-  DEEPSEEK_V3: 'deepseek/deepseek-chat',
+  // Budget: approved low-cost text model
+  APPROVED_FAST_TEXT: 'openai/gpt-4o-mini',
   
   // Premium: Best general knowledge
   GPT4O_MINI: 'openai/gpt-4o-mini',
@@ -201,4 +201,7 @@ Use this context to provide relevant, specific answers about what the user is vi
     return [...this.conversationHistory];
   }
 }
+
+
+
 

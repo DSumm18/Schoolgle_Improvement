@@ -1,38 +1,42 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/SupabaseAuthContext";
 import { supabase } from "@/lib/supabase";
 import StaffList from "@/components/staff/StaffList";
 import StaffModal from "@/components/staff/StaffModal";
 import StaffImportModal from "@/components/staff/StaffImportModal";
 import type { StaffMember } from "@/lib/staff-directory";
+import { saveStaffMember } from "@/lib/hr/staff-directory-client";
 import { Loader2 } from "lucide-react";
 
 type ModalType = "none" | "add" | "edit" | "import";
 
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (session?.access_token) {
+    return { Authorization: `Bearer ${session.access_token}` };
+  }
+  return {};
+}
+
 export default function StaffDirectoryPage() {
-  const router = useRouter();
   const { organizationId } = useAuth();
 
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalType, setModalType] = useState<ModalType>("none");
   const [selectedStaff, setSelectedStaff] = useState<StaffMember | undefined>();
+  const [saveError, setSaveError] = useState("");
 
   const fetchStaff = useCallback(async () => {
     if (!organizationId) return;
 
     setLoading(true);
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const headers: Record<string, string> = {};
-      if (session?.access_token) {
-        headers["Authorization"] = `Bearer ${session.access_token}`;
-      }
+      const headers = await getAuthHeaders();
       const response = await fetch(
         `/api/staff?organizationId=${organizationId}&source=db`,
         { headers },
@@ -56,11 +60,13 @@ export default function StaffDirectoryPage() {
 
   const handleAddStaff = useCallback(() => {
     setSelectedStaff(undefined);
+    setSaveError("");
     setModalType("add");
   }, []);
 
   const handleEditStaff = useCallback((staffMember: StaffMember) => {
     setSelectedStaff(staffMember);
+    setSaveError("");
     setModalType("edit");
   }, []);
 
@@ -72,8 +78,10 @@ export default function StaffDirectoryPage() {
     if (!organizationId) return;
 
     try {
+      const headers = await getAuthHeaders();
       const response = await fetch(
         `/api/staff/import?type=export&organizationId=${organizationId}`,
+        { headers },
       );
 
       if (response.ok) {
@@ -95,12 +103,20 @@ export default function StaffDirectoryPage() {
   const handleCloseModal = useCallback(() => {
     setModalType("none");
     setSelectedStaff(undefined);
+    setSaveError("");
   }, []);
 
   const handleSaveStaff = useCallback(
     async (staffData: Partial<StaffMember>) => {
-      handleCloseModal();
-      await fetchStaff();
+      try {
+        await saveStaffMember(staffData);
+        handleCloseModal();
+        await fetchStaff();
+      } catch (error) {
+        setSaveError(
+          error instanceof Error ? error.message : "Failed to save staff member",
+        );
+      }
     },
     [handleCloseModal, fetchStaff],
   );
@@ -117,8 +133,10 @@ export default function StaffDirectoryPage() {
       }
 
       try {
+        const headers = await getAuthHeaders();
         const response = await fetch(`/api/staff?id=${staffId}`, {
           method: "DELETE",
+          headers,
         });
 
         if (response.ok) {
@@ -149,20 +167,25 @@ export default function StaffDirectoryPage() {
     );
   }
 
-  const modalOpen = modalType !== "none";
   const mode = modalType === "edit" ? "edit" : "create";
 
   return (
     <div className="container mx-auto px-4 py-8">
       <StaffList
         staff={staff}
-        organizationId={organizationId}
         onAddStaff={handleAddStaff}
         onEditStaff={handleEditStaff}
         onDeleteStaff={handleDeleteStaff}
         onImport={handleImport}
         onExport={handleExport}
+        showBulkActions={false}
       />
+
+      {saveError && (
+        <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+          {saveError}
+        </div>
+      )}
 
       {/* Add/Edit Modal */}
       {(modalType === "add" || modalType === "edit") && (

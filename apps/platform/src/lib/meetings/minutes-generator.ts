@@ -11,12 +11,11 @@ export function generateMinutesContent(
   template: MeetingTemplate,
   checklistItems: MeetingChecklistItem[],
 ): MinutesContent {
-  // Group checklist items by category
   const grouped = new Map<string, MeetingChecklistItem[]>();
   for (const item of checklistItems) {
-    const cat = item.category || "General";
-    if (!grouped.has(cat)) grouped.set(cat, []);
-    grouped.get(cat)!.push(item);
+    const category = item.category || "General";
+    if (!grouped.has(category)) grouped.set(category, []);
+    grouped.get(category)!.push(item);
   }
 
   const sections: MinutesSection[] = Array.from(grouped.entries()).map(
@@ -24,35 +23,53 @@ export function generateMinutesContent(
       title,
       items: items
         .sort((a, b) => a.order_index - b.order_index)
-        .map((item) => ({
-          phrase: item.phrase,
-          covered: item.status === "green" || item.manually_ticked,
-        })),
+        .map((item) => {
+          const covered = item.status === "green" || item.manually_ticked;
+          return {
+            phrase: item.phrase,
+            covered,
+            notes: covered
+              ? "Covered or confirmed during the meeting."
+              : item.is_critical
+                ? "Critical item not yet evidenced in the captured notes or transcript."
+                : "Not yet evidenced in the captured notes or transcript.",
+          };
+        }),
     }),
   );
 
   const total = checklistItems.length;
   const covered = checklistItems.filter(
-    (i) => i.status === "green" || i.manually_ticked,
+    (item) => item.status === "green" || item.manually_ticked,
   ).length;
   const score = total > 0 ? Math.round((covered / total) * 100) : 0;
 
   const notes = Array.isArray(meeting.notes)
-    ? meeting.notes.map((n) => n.text)
+    ? meeting.notes.map((note) => note.text)
     : [];
+  const hasDetailedCapture = notes.length > 0;
 
   return {
     title: `${template.name} — Meeting Minutes`,
     date: meeting.scheduled_at,
     location: meeting.location,
-    leader: "", // Resolved by caller with user data
+    leader: "",
     attendee: meeting.attendee_name,
     attendee_role: meeting.attendee_role,
     purpose: meeting.purpose,
-    opening: template.opening_script,
+    opening: [
+      `This meeting was held using the ${template.name} template.`,
+      hasDetailedCapture
+        ? "The draft minutes below combine the captured meeting notes with the required checklist coverage."
+        : "No transcript or detailed meeting notes were captured, so these draft minutes record the meeting setup and checklist coverage only.",
+    ],
     sections,
     notes,
-    closing: template.closing_script,
+    closing: [
+      hasDetailedCapture
+        ? "The meeting closed with the recorded points and checklist coverage noted above."
+        : "These draft minutes should be reviewed and expanded before finalising or sharing.",
+    ],
     compliance_summary: { total, covered, score },
   };
 }
@@ -82,15 +99,16 @@ export function renderMinutesHtml(
 
   const sectionHtml = content.sections
     .map(
-      (s) => `
-    <h3 style="margin-top:1.5em;color:${headingColor};border-bottom:1px solid #e2e8f0;padding-bottom:4px;">${s.title}</h3>
+      (section) => `
+    <h3 style="margin-top:1.5em;color:${headingColor};border-bottom:1px solid #e2e8f0;padding-bottom:4px;">${escapeHtml(section.title)}</h3>
     <ul style="list-style:none;padding:0;">
-      ${s.items
+      ${section.items
         .map(
           (item) => `
         <li style="padding:6px 0;border-bottom:1px solid #f1f5f9;">
           <span style="display:inline-block;width:20px;text-align:center;margin-right:8px;">${item.covered ? "\u2705" : "\u274c"}</span>
           <span style="${!item.covered ? "color:#dc2626;" : ""}">${escapeHtml(item.phrase)}</span>
+          ${item.notes ? `<p style="margin:4px 0 0 32px;color:#64748b;font-size:0.95em;">${escapeHtml(item.notes)}</p>` : ""}
         </li>`,
         )
         .join("")}
@@ -102,7 +120,7 @@ export function renderMinutesHtml(
     content.notes.length > 0
       ? `
     <h3 style="margin-top:1.5em;color:${headingColor};border-bottom:1px solid #e2e8f0;padding-bottom:4px;">Meeting Notes</h3>
-    <ul>${content.notes.map((n) => `<li>${escapeHtml(n)}</li>`).join("")}</ul>`
+    <ul>${content.notes.map((note) => `<li>${escapeHtml(note)}</li>`).join("")}</ul>`
       : "";
 
   const logoHtml = branding?.logo_url
@@ -131,7 +149,7 @@ export function renderMinutesHtml(
   </table>
 
   <h3 style="margin-top:1.5em;color:${headingColor};border-bottom:1px solid #e2e8f0;padding-bottom:4px;">Opening Statement</h3>
-  ${content.opening.map((p) => `<p>${escapeHtml(p)}</p>`).join("")}
+  ${content.opening.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("")}
 
   <h2 style="margin-top:2em;color:${headingColor};">Compliance Checklist</h2>
   <p style="color:#64748b;">Coverage: <strong>${content.compliance_summary.covered}/${content.compliance_summary.total}</strong> items (${content.compliance_summary.score}%)</p>
@@ -140,7 +158,7 @@ export function renderMinutesHtml(
   ${notesHtml}
 
   <h3 style="margin-top:1.5em;color:${headingColor};border-bottom:1px solid #e2e8f0;padding-bottom:4px;">Closing Statement</h3>
-  ${content.closing.map((p) => `<p>${escapeHtml(p)}</p>`).join("")}
+  ${content.closing.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("")}
 
   <h2 style="margin-top:2em;color:${headingColor};">Signatures</h2>
   <div style="display:flex;gap:2em;margin-top:1em;">

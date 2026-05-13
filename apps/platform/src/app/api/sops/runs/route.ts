@@ -12,11 +12,19 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
   try {
     const supabase = createServiceRoleClient();
     const runs = await getActiveRuns(supabase, auth.organizationId, {
+      status:
+        status === "completed" || status === "abandoned"
+          ? status
+          : "in_progress",
       templateId: templateId || undefined,
       linkedModule: linkedModule || undefined,
     });
 
-    return apiSuccess({ runs });
+    if (runs.error) {
+      return apiError(runs.error, 500);
+    }
+
+    return apiSuccess({ runs: runs.runs });
   } catch (err: any) {
     console.error("[SOP Runs] Error listing runs:", err.message);
     return apiError("Failed to list SOP runs", 500);
@@ -32,6 +40,7 @@ export const POST = protectedRoute(async (auth, req: NextRequest) => {
     linked_incident_id,
     linked_module,
     linked_entity_id,
+    setup_answers,
   } = body;
 
   if (!template_id) {
@@ -48,9 +57,14 @@ export const POST = protectedRoute(async (auth, req: NextRequest) => {
       linkedIncidentId: linked_incident_id || undefined,
       linkedModule: linked_module || undefined,
       linkedEntityId: linked_entity_id || undefined,
+      setupAnswers: setup_answers || undefined,
     });
 
-    return apiSuccess({ run }, 201);
+    if (run.error || !run.run) {
+      return apiError(run.error || "Failed to start SOP run", 400);
+    }
+
+    return apiSuccess({ run: run.run }, 201);
   } catch (err: any) {
     console.error("[SOP Runs] Error starting run:", err.message);
     return apiError("Failed to start SOP run", 500);

@@ -88,9 +88,10 @@ function NewDocumentContent() {
     )
       .then((r) => r.json())
       .then((data) => {
-        if (data.template) {
-          setSelectedTemplate(data.template);
-          setTitle(data.template.name);
+        const template = data.template || data;
+        if (template?.id) {
+          setSelectedTemplate(template);
+          setTitle(template.name);
           setShowEditor(true);
         }
       })

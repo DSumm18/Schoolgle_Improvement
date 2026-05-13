@@ -1,4 +1,4 @@
-# Ed Form Helper - Using Existing Infrastructure
+﻿# Ed Form Helper - Using Existing Infrastructure
 
 ## You're Right! We Already Have the Pieces
 
@@ -9,7 +9,7 @@ Like Firecrawl reads pages to understand structure, we need the **reverse** - un
 ## What We Already Have
 
 ### 1. Page Reader (`page-reader.ts`)
-✅ Already exists - extracts forms from DOM
+âœ… Already exists - extracts forms from DOM
 ```typescript
 extractForms(doc: Document): FormInfo[] {
   // Finds all <form> elements
@@ -20,7 +20,7 @@ extractForms(doc: Document): FormInfo[] {
 ```
 
 ### 2. Website Knowledge (`/api/ed/website-knowledge`)
-✅ Already exists - scans and stores page content
+âœ… Already exists - scans and stores page content
 ```sql
 -- Table already exists:
 ed_website_knowledge (
@@ -33,43 +33,43 @@ ed_website_knowledge (
 ```
 
 ### 3. Tool Detector (`tool-detector.ts`)
-✅ Already exists - detects school systems (Arbor, SIMS, etc.)
+âœ… Already exists - detects school systems (Arbor, SIMS, etc.)
 
 ---
 
-## The Missing Piece: Form → Site Mapping
+## The Missing Piece: Form â†’ Site Mapping
 
 We need to **map forms back to the website structure** we already scanned:
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    EXISTING INFRASTRUCTURE                      │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  Website Scanner ──────> ed_website_knowledge table             │
-│  (already built)          - page_url                            │
-│                           - headings                            │
-│                           - content                             │
-│                           - forms (WE SHOULD ADD THIS!)         │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    NEW: FORM STRUCTURE CACHE                   │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  When we scan a page, ALSO store:                               │
-│  - Form IDs and names                                           │
-│  - Field labels and types                                       │
-│  - Form structure (what fields belong together)                │
-│                                                                 │
-│  This means NEXT TIME we visit:                                  │
-│  - We already know the form structure!                          │
-│  - No need to re-analyze with AI                                 │
-│  - Just ask: "What's your name?" → fill field #0               │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚                    EXISTING INFRASTRUCTURE                      â”‚
+â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤
+â”‚                                                                 â”‚
+â”‚  Website Scanner â”€â”€â”€â”€â”€â”€> ed_website_knowledge table             â”‚
+â”‚  (already built)          - page_url                            â”‚
+â”‚                           - headings                            â”‚
+â”‚                           - content                             â”‚
+â”‚                           - forms (WE SHOULD ADD THIS!)         â”‚
+â”‚                                                                 â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+                              â”‚
+                              â–¼
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚                    NEW: FORM STRUCTURE CACHE                   â”‚
+â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤
+â”‚                                                                 â”‚
+â”‚  When we scan a page, ALSO store:                               â”‚
+â”‚  - Form IDs and names                                           â”‚
+â”‚  - Field labels and types                                       â”‚
+â”‚  - Form structure (what fields belong together)                â”‚
+â”‚                                                                 â”‚
+â”‚  This means NEXT TIME we visit:                                  â”‚
+â”‚  - We already know the form structure!                          â”‚
+â”‚  - No need to re-analyze with AI                                 â”‚
+â”‚  - Just ask: "What's your name?" â†’ fill field #0               â”‚
+â”‚                                                                 â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 ```
 
 ---
@@ -184,7 +184,7 @@ async function onUserVisitsForm() {
     .single();
 
   if (cached?.forms) {
-    // ✅ CACHED! We already know the form structure
+    // âœ… CACHED! We already know the form structure
     console.log('Form structure cached, using cached data');
     startFormFilling(cached.forms);
     return;
@@ -212,34 +212,34 @@ async function onUserVisitsForm() {
 ## The Flow: First Visit vs Subsequent Visits
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                      FIRST VISIT                                 │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  1. User visits safeguarding form                               │
-│  2. Ed: "I see this is a safeguarding concern form"             │
-│  3. Ed: "Let me scan the fields..."                              │
-│     [Uses AI + DOM to understand structure]                     │
-│  4. Ed: "Found 5 fields. Let's start!"                          │
-│  5. [Conversational filling]                                     │
-│  6. [Store structure in database]                               │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚                      FIRST VISIT                                 â”‚
+â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤
+â”‚                                                                 â”‚
+â”‚  1. User visits safeguarding form                               â”‚
+â”‚  2. Ed: "I see this is a safeguarding concern form"             â”‚
+â”‚  3. Ed: "Let me scan the fields..."                              â”‚
+â”‚     [Uses AI + DOM to understand structure]                     â”‚
+â”‚  4. Ed: "Found 5 fields. Let's start!"                          â”‚
+â”‚  5. [Conversational filling]                                     â”‚
+â”‚  6. [Store structure in database]                               â”‚
+â”‚                                                                 â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 
-┌─────────────────────────────────────────────────────────────────┐
-│                     SECOND VISIT (same school)                   │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  1. User visits safeguarding form (same URL)                    │
-│  2. Ed: [Checks database] "I know this form!"                   │
-│  3. Ed: "It's the safeguarding concern form with 5 fields"      │
-│  4. Ed: "What's your name?"                                     │
-│     [No AI needed - uses cached structure]                      │
-│  5. [Conversational filling]                                     │
-│                                                                 │
-│  ⚡ Much faster - no AI classification needed!                  │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚                     SECOND VISIT (same school)                   â”‚
+â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤
+â”‚                                                                 â”‚
+â”‚  1. User visits safeguarding form (same URL)                    â”‚
+â”‚  2. Ed: [Checks database] "I know this form!"                   â”‚
+â”‚  3. Ed: "It's the safeguarding concern form with 5 fields"      â”‚
+â”‚  4. Ed: "What's your name?"                                     â”‚
+â”‚     [No AI needed - uses cached structure]                      â”‚
+â”‚  5. [Conversational filling]                                     â”‚
+â”‚                                                                 â”‚
+â”‚  âš¡ Much faster - no AI classification needed!                  â”‚
+â”‚                                                                 â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 ```
 
 ---
@@ -252,7 +252,7 @@ async function classifyFormType(form: FormInfo): Promise<string> {
   const fieldSummary = form.fields.map(f => `${f.label} (${f.type})`).join(', ');
 
   const response = await openrouter.chat.completions.create({
-    model: 'deepseek/deepseek-chat',  // Fast and cheap
+    model: 'openai/gpt-4o-mini',  // Fast and cheap
     messages: [{
       role: 'system',
       content: `Classify forms into one of these types:
@@ -287,17 +287,17 @@ When a school scans their website, we capture ALL forms:
 School: Rawdon St Peter's
 
 Forms Discovered:
-├── /report-concern (Safeguarding) - 5 fields
-├── /job-application (HR) - 12 fields
-├── /admissions (Registrar) - 8 fields
-├── /free-school-meals (Finance) - 6 fields
-├── /contact-us (General) - 4 fields
-└── /parent-feedback (Survey) - 3 fields
+â”œâ”€â”€ /report-concern (Safeguarding) - 5 fields
+â”œâ”€â”€ /job-application (HR) - 12 fields
+â”œâ”€â”€ /admissions (Registrar) - 8 fields
+â”œâ”€â”€ /free-school-meals (Finance) - 6 fields
+â”œâ”€â”€ /contact-us (General) - 4 fields
+â””â”€â”€ /parent-feedback (Survey) - 3 fields
 
 When ANY parent visits these pages:
-→ Ed already knows the structure!
-→ Ed can help immediately!
-→ No AI classification needed!
+â†’ Ed already knows the structure!
+â†’ Ed can help immediately!
+â†’ No AI classification needed!
 ```
 
 ---
@@ -306,14 +306,15 @@ When ANY parent visits these pages:
 
 | Component | Status | Notes |
 |-----------|--------|-------|
-| `page-reader.ts` | ✅ Exists | Already extracts forms from DOM |
-| `extractForms()` | ✅ Exists | Already finds fields, labels, types |
-| `website-knowledge` table | ✅ Exists | Just need to add `forms` column |
-| Website scanner | ✅ Exists | Just need to extract forms too |
-| Form classification | 🔨 Build | Simple AI call |
-| Form filling logic | 🔨 Build | Uses existing form detection |
+| `page-reader.ts` | âœ… Exists | Already extracts forms from DOM |
+| `extractForms()` | âœ… Exists | Already finds fields, labels, types |
+| `website-knowledge` table | âœ… Exists | Just need to add `forms` column |
+| Website scanner | âœ… Exists | Just need to extract forms too |
+| Form classification | ðŸ”¨ Build | Simple AI call |
+| Form filling logic | ðŸ”¨ Build | Uses existing form detection |
 
 **We're 80% there!** Just need to:
 1. Add form extraction to website scanner
 2. Add `forms` column to database
 3. Connect the pieces together
+

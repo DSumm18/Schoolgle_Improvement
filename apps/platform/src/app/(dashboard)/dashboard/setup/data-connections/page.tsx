@@ -126,6 +126,13 @@ const CATEGORY_CONFIG: Record<
     bgColor: "bg-amber-50 dark:bg-amber-950/20",
     borderColor: "border-amber-200 dark:border-amber-800",
   },
+  energy: {
+    label: "Energy Invoices",
+    icon: File,
+    color: "text-teal-600",
+    bgColor: "bg-teal-50 dark:bg-teal-950/20",
+    borderColor: "border-teal-200 dark:border-teal-800",
+  },
   payroll: {
     label: "Payroll",
     icon: FileSpreadsheet,
@@ -198,6 +205,18 @@ const EXPECTED_FOLDERS = [
         name: "Budget Reports",
         description: "FMS Detailed Cost Centre reports",
         category: "fms",
+      },
+    ],
+  },
+  {
+    name: "Estates & Compliance",
+    icon: Shield,
+    color: "text-teal-600",
+    children: [
+      {
+        name: "Energy Invoices",
+        description: "Supplier PDF invoices for electricity, gas and water",
+        category: "energy",
       },
     ],
   },
@@ -646,7 +665,7 @@ export default function DataConnectionsPage() {
   };
 
   const copyFolderStructure = () => {
-    const structure = `${organization?.name || "Your School"}\n├── MIS Exports\n│   ├── Pupil Data\n│   ├── Attendance\n│   ├── Assessments\n│   ├── Behaviour\n│   └── Staff & HR\n├── Finance Exports\n│   └── Budget Reports\n└── DfE & External Data`;
+    const structure = `${organization?.name || "Your School"}\n├── MIS Exports\n│   ├── Pupil Data\n│   ├── Attendance\n│   ├── Assessments\n│   ├── Behaviour\n│   └── Staff & HR\n├── Finance Exports\n│   └── Budget Reports\n├── Estates & Compliance\n│   └── Energy Invoices\n└── DfE & External Data`;
     navigator.clipboard.writeText(structure);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);

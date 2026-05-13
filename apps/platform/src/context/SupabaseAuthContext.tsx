@@ -418,7 +418,7 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const token = (await supabase.auth.getSession()).data.session?.access_token;
       const response = await fetch(
-        `/api/organizations/accessible?organizationId=${encodeURIComponent(orgId)}`,
+        `/api/organizations/accessible?targetOrganizationId=${encodeURIComponent(orgId)}`,
         {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         },

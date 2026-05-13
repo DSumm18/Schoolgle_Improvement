@@ -35,7 +35,7 @@ export function StaffPicker({
 }: StaffPickerProps) {
   const [query, setQuery] = useState("");
   const [staff, setStaff] = useState<StaffMember[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [externalMode, setExternalMode] = useState(false);
   const [externalName, setExternalName] = useState("");
@@ -47,7 +47,6 @@ export function StaffPicker({
   useEffect(() => {
     if (!organizationId) return;
 
-    setLoading(true);
     fetch(`/api/staff?organizationId=${organizationId}`)
       .then((res) => res.json())
       .then((res) => {
@@ -118,16 +117,16 @@ export function StaffPicker({
     return (
       <div
         ref={containerRef}
-        className="rounded-lg border border-slate-700 bg-slate-800 p-3"
+        className="rounded-2xl border border-blue-100 bg-white p-3 shadow-lg shadow-slate-200/50 dark:border-slate-700 dark:bg-slate-900 dark:shadow-black/20"
       >
         <div className="mb-2 flex items-center justify-between">
-          <span className="text-sm font-medium text-slate-300">
+          <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">
             Add external attendee
           </span>
           <button
             type="button"
             onClick={() => setExternalMode(false)}
-            className="rounded p-1 text-slate-400 hover:bg-slate-700 hover:text-slate-200"
+            className="rounded-lg p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
           >
             <X className="h-4 w-4" />
           </button>
@@ -138,7 +137,7 @@ export function StaffPicker({
             value={externalName}
             onChange={(e) => setExternalName(e.target.value)}
             placeholder="Full name *"
-            className="w-full rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 shadow-sm focus:border-blue-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-100 dark:placeholder-slate-500"
             autoFocus
           />
           <input
@@ -146,20 +145,20 @@ export function StaffPicker({
             value={externalRole}
             onChange={(e) => setExternalRole(e.target.value)}
             placeholder="Role / Job title"
-            className="w-full rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 shadow-sm focus:border-blue-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-100 dark:placeholder-slate-500"
           />
           <input
             type="email"
             value={externalEmail}
             onChange={(e) => setExternalEmail(e.target.value)}
             placeholder="Email (optional)"
-            className="w-full rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 shadow-sm focus:border-blue-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-100 dark:placeholder-slate-500"
           />
           <button
             type="button"
             onClick={handleExternalSubmit}
             disabled={!externalName.trim()}
-            className="w-full rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 hover:from-blue-500 hover:to-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Add attendee
           </button>
@@ -171,7 +170,7 @@ export function StaffPicker({
   return (
     <div ref={containerRef} className="relative">
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-blue-500 dark:text-blue-300" />
         <input
           ref={inputRef}
           type="text"
@@ -182,20 +181,20 @@ export function StaffPicker({
           }}
           onFocus={() => setOpen(true)}
           placeholder={placeholder}
-          className="w-full rounded-md border border-slate-600 bg-slate-800 py-2 pl-9 pr-3 text-sm text-slate-100 placeholder-slate-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-9 pr-3 text-sm text-slate-900 placeholder-slate-400 shadow-sm transition-all focus:border-blue-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-100 dark:placeholder-slate-500"
         />
       </div>
 
       {open && (
-        <div className="absolute z-50 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-slate-700 bg-slate-800 shadow-xl">
+        <div className="absolute z-50 mt-2 max-h-64 w-full overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-200/60 dark:border-slate-700 dark:bg-slate-900 dark:shadow-black/30">
           {loading && (
-            <div className="px-3 py-4 text-center text-sm text-slate-400">
+            <div className="px-3 py-4 text-center text-sm text-slate-500 dark:text-slate-400">
               Loading staff...
             </div>
           )}
 
           {!loading && filtered.length === 0 && (
-            <div className="px-3 py-4 text-center text-sm text-slate-400">
+            <div className="px-3 py-4 text-center text-sm text-slate-500 dark:text-slate-400">
               No staff found
             </div>
           )}
@@ -208,16 +207,16 @@ export function StaffPicker({
                   key={s.id}
                   type="button"
                   onClick={() => handleSelect(s)}
-                  className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-slate-700"
+                  className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-blue-50 dark:hover:bg-slate-800"
                 >
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-700 text-slate-300">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600 dark:bg-blue-500/15 dark:text-blue-300">
                     <User className="h-4 w-4" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-medium text-slate-100">
+                    <div className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
                       {name}
                     </div>
-                    <div className="truncate text-xs text-slate-400">
+                    <div className="truncate text-xs text-slate-500 dark:text-slate-400">
                       {[s.job_title, s.role_category]
                         .filter(Boolean)
                         .join(" · ")}
@@ -233,7 +232,7 @@ export function StaffPicker({
               setExternalMode(true);
               setQuery("");
             }}
-            className="flex w-full items-center gap-2 border-t border-slate-700 px-3 py-2 text-left text-sm text-blue-400 hover:bg-slate-700 hover:text-blue-300"
+            className="flex w-full items-center gap-2 border-t border-slate-100 px-3 py-2.5 text-left text-sm font-semibold text-blue-700 transition-colors hover:bg-blue-50 hover:text-blue-600 dark:border-slate-700 dark:text-blue-300 dark:hover:bg-slate-800 dark:hover:text-blue-200"
           >
             <Plus className="h-4 w-4" />
             Add external attendee

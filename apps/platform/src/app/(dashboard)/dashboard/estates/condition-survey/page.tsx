@@ -15,6 +15,7 @@ import {
   Download,
   Building2,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import {
   type ConditionElement,
   type ConditionGrade,
@@ -33,6 +34,9 @@ import {
   ALL_CATEGORIES,
   generateConditionReport,
 } from "@/lib/condition-survey";
+import { fetcher } from "@/lib/fetchers";
+import { useAuth } from "@/context/SupabaseAuthContext";
+import type { ConditionSurveyLocation } from "@/lib/estates/condition-survey-records";
 
 // ── Grade distribution bar ─────────────────────────────────────
 
@@ -86,7 +90,7 @@ function SummaryCard({
   sub,
   accent,
 }: {
-  icon: React.ElementType;
+  icon: LucideIcon;
   label: string;
   value: string;
   sub?: string;
@@ -169,29 +173,17 @@ function BacklogProjection({ currentBacklog }: { currentBacklog: number }) {
 
 // ── Add assessment form ────────────────────────────────────────
 
-const DEMO_LOCATIONS = [
-  { id: "loc-main-hall", name: "Main Hall" },
-  { id: "loc-kitchen", name: "Kitchen" },
-  { id: "loc-plant-room", name: "Plant Room" },
-  { id: "loc-block-a", name: "Classroom Block A" },
-  { id: "loc-block-b", name: "Classroom Block B" },
-  { id: "loc-roof-main", name: "Main Building Roof" },
-  { id: "loc-toilets", name: "Pupil Toilets (Block A)" },
-  { id: "loc-external", name: "External Areas" },
-  { id: "loc-reception", name: "Reception / Office" },
-  { id: "loc-send-room", name: "SEND Resource Room" },
-  { id: "loc-nursery", name: "Nursery / EYFS" },
-  { id: "loc-staff-room", name: "Staff Room" },
-];
-
 function AddAssessmentForm({
+  locations,
   onSubmit,
   onCancel,
 }: {
-  onSubmit: (el: ConditionElement) => void;
+  locations: ConditionSurveyLocation[];
+  onSubmit: (el: ConditionElement) => Promise<void>;
   onCancel: () => void;
 }) {
   const [locationId, setLocationId] = useState("");
+  const [manualLocationName, setManualLocationName] = useState("");
   const [category, setCategory] = useState<ElementCategory | "">("");
   const [element, setElement] = useState("");
   const [grade, setGrade] = useState<ConditionGrade | "">("");
@@ -200,11 +192,13 @@ function AddAssessmentForm({
   const [priority, setPriority] = useState<ConditionElement["priority"] | "">(
     "",
   );
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (
-      !locationId ||
+      (!locationId && !manualLocationName.trim()) ||
       !category ||
       !element ||
       !grade ||
@@ -213,20 +207,30 @@ function AddAssessmentForm({
     )
       return;
 
-    const loc = DEMO_LOCATIONS.find((l) => l.id === locationId);
-    onSubmit({
-      id: `cs-${Date.now()}`,
-      locationId,
-      locationName: loc?.name || locationId,
-      category: category as ElementCategory,
-      element,
-      grade: grade as ConditionGrade,
-      description,
-      estimatedCost: estimatedCost ? Number(estimatedCost) : undefined,
-      priority: priority as ConditionElement["priority"],
-      surveyedBy: "Current User",
-      surveyedAt: new Date().toISOString().split("T")[0],
-    });
+    const loc = locations.find((l) => l.id === locationId);
+    try {
+      setSubmitting(true);
+      setSubmitError(null);
+      await onSubmit({
+        id: "",
+        locationId: locationId || "new-location",
+        locationName: loc?.name || manualLocationName.trim(),
+        category: category as ElementCategory,
+        element,
+        grade: grade as ConditionGrade,
+        description,
+        estimatedCost: estimatedCost ? Number(estimatedCost) : undefined,
+        priority: priority as ConditionElement["priority"],
+        surveyedBy: "Current User",
+        surveyedAt: new Date().toISOString().split("T")[0],
+      });
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error ? error.message : "Unable to save assessment.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -253,19 +257,35 @@ function AddAssessmentForm({
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Location
           </label>
-          <select
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-            value={locationId}
-            onChange={(e) => setLocationId(e.target.value)}
-            required
-          >
-            <option value="">Select location...</option>
-            {DEMO_LOCATIONS.map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.name}
-              </option>
-            ))}
-          </select>
+          {locations.length > 0 ? (
+            <select
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+              value={locationId}
+              onChange={(e) => setLocationId(e.target.value)}
+              required
+            >
+              <option value="">Select location...</option>
+              {locations.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.name}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              type="text"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+              placeholder="e.g. Plant Room, Main Hall, Playground"
+              value={manualLocationName}
+              onChange={(e) => setManualLocationName(e.target.value)}
+              required
+            />
+          )}
+          {locations.length === 0 && (
+            <p className="mt-1 text-xs text-gray-400">
+              This will create a live estate location for future surveys.
+            </p>
+          )}
         </div>
 
         {/* Category */}
@@ -380,6 +400,9 @@ function AddAssessmentForm({
 
         {/* Submit */}
         <div className="md:col-span-2 lg:col-span-3 flex gap-3 justify-end">
+          {submitError && (
+            <p className="mr-auto text-sm text-red-600">{submitError}</p>
+          )}
           <button
             type="button"
             onClick={onCancel}
@@ -389,9 +412,10 @@ function AddAssessmentForm({
           </button>
           <button
             type="submit"
-            className="px-4 py-2 text-sm text-white bg-teal-600 rounded-lg hover:bg-teal-700 font-medium"
+            disabled={submitting}
+            className="px-4 py-2 text-sm text-white bg-teal-600 rounded-lg hover:bg-teal-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Save Assessment
+            {submitting ? "Saving..." : "Save Assessment"}
           </button>
         </div>
       </form>
@@ -402,8 +426,11 @@ function AddAssessmentForm({
 // ── Main page ──────────────────────────────────────────────────
 
 export default function ConditionSurveyPage() {
+  const { organization, organizationId, loading: authLoading } = useAuth();
   const [elements, setElements] = useState<ConditionElement[]>([]);
+  const [locations, setLocations] = useState<ConditionSurveyLocation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [expandedRooms, setExpandedRooms] = useState<Set<string>>(new Set());
 
@@ -415,14 +442,37 @@ export default function ConditionSurveyPage() {
   const [filterRoom, setFilterRoom] = useState<string>("all");
 
   useEffect(() => {
-    fetch("/api/estates/condition-survey")
-      .then((r) => r.json())
-      .then((data) => {
-        setElements(data.elements || []);
+    if (authLoading) return;
+
+    async function loadConditionSurvey() {
+      if (!organizationId) {
+        setError("Select a school or trust before viewing condition surveys.");
         setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, []);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+        const params = new URLSearchParams({ organizationId });
+        const data = await fetcher(
+          `/api/estates/condition-survey?${params.toString()}`,
+        );
+        setElements(data.elements || []);
+        setLocations(data.locations || []);
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Unable to load condition survey data.",
+        );
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadConditionSurvey();
+  }, [authLoading, organizationId]);
 
   // Derived data
   const summary = useMemo(
@@ -475,13 +525,48 @@ export default function ConditionSurveyPage() {
     });
   };
 
-  const handleAddElement = (el: ConditionElement) => {
-    setElements((prev) => [...prev, el]);
+  const handleAddElement = async (el: ConditionElement) => {
+    if (!organizationId) throw new Error("Missing organization context.");
+
+    const response = await fetcher("/api/estates/condition-survey", {
+      method: "POST",
+      body: JSON.stringify({
+        organizationId,
+      locationId: el.locationId,
+      locationName: el.locationName,
+        category: el.category,
+        element: el.element,
+        grade: el.grade,
+        description: el.description,
+        estimatedCost: el.estimatedCost,
+        priority: el.priority,
+        surveyedBy: el.surveyedBy,
+      }),
+    });
+
+    setElements((prev) => [response.element, ...prev]);
+    if (
+      response.element?.locationId &&
+      response.element?.locationName &&
+      !locations.some((location) => location.id === response.element.locationId)
+    ) {
+      setLocations((prev) => [
+        ...prev,
+        {
+          id: response.element.locationId,
+          name: response.element.locationName,
+          type: "room",
+        },
+      ]);
+    }
     setShowForm(false);
   };
 
   const handleDownloadReport = () => {
-    const report = generateConditionReport(elements, "Aurora Primary School");
+    const report = generateConditionReport(
+      elements,
+      organization?.name ?? "Current school",
+    );
     const blob = new Blob([report], { type: "text/markdown" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -539,6 +624,20 @@ export default function ConditionSurveyPage() {
       </div>
 
       {/* Summary cards */}
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      {!error && elements.length === 0 && (
+        <div className="rounded-xl border border-dashed border-gray-300 bg-white p-6 text-sm text-gray-600">
+          No live condition survey items have been recorded yet. Add an
+          assessment to start building the school backlog, risk view, and estate
+          strategy evidence trail.
+        </div>
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <SummaryCard
           icon={ClipboardCheck}
@@ -581,6 +680,7 @@ export default function ConditionSurveyPage() {
       {/* Add assessment form */}
       {showForm && (
         <AddAssessmentForm
+          locations={locations}
           onSubmit={handleAddElement}
           onCancel={() => setShowForm(false)}
         />

@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   TrendingUp,
   Globe,
+  ClipboardCheck,
 } from "lucide-react";
 import { useAuth } from "@/context/SupabaseAuthContext";
 import { supabase } from "@/lib/supabase";
@@ -18,19 +19,23 @@ import { OfstedOverviewDashboard } from "@/components/ofsted";
 import { OfstedFrameworkView } from "@/components/ofsted";
 import { OfstedEvidenceMatcher } from "@/components/ofsted";
 import { OfstedTrackView } from "@/components/ofsted";
+import { OfstedIntelligenceBrief } from "@/components/ofsted";
 import SafeguardingPanel from "@/components/ofsted/SafeguardingPanel";
 import WebsiteComplianceTab from "@/components/ofsted/WebsiteComplianceTab";
+import OfstedFindingsPanel from "@/components/ofsted/OfstedFindingsPanel";
 import DocumentPresenceChecker from "@/components/ofsted/DocumentPresenceChecker";
 import DriveConnectionPanel from "@/components/ofsted/DriveConnectionPanel";
 import EvidenceChecklist from "@/components/ofsted/EvidenceChecklist";
 import { FrameworkAssessment } from "@/components/framework/types";
 import { ModulePageHeader } from "@/components/ui/module-page-header";
 import { useGoogleDriveAccess } from "@/hooks/useGoogleDriveAccess";
+import AppConnectionStatusCard from "@/components/connectors/AppConnectionStatusCard";
 
 type Tab =
   | "overview"
   | "framework"
   | "track"
+  | "actions"
   | "evidence"
   | "website"
   | "safeguarding";
@@ -124,6 +129,7 @@ export default function OfstedReadinessPage() {
     { id: "overview" as Tab, label: "Overview", icon: BarChart3 },
     { id: "framework" as Tab, label: "Evaluate", icon: BookOpen },
     { id: "track" as Tab, label: "Track", icon: TrendingUp },
+    { id: "actions" as Tab, label: "Actions", icon: ClipboardCheck },
     { id: "evidence" as Tab, label: "Evidence", icon: FileSearch },
     { id: "website" as Tab, label: "Website", icon: Globe },
     { id: "safeguarding" as Tab, label: "Safeguarding", icon: ShieldCheck },
@@ -137,6 +143,12 @@ export default function OfstedReadinessPage() {
         label="Education Inspection Framework"
         title="Ofsted Readiness"
         badge="EIF 2025"
+      />
+
+      <AppConnectionStatusCard
+        appKey="ofsted-readiness"
+        title="Ofsted evidence source"
+        compact
       />
 
       {/* Tab Navigation */}
@@ -231,6 +243,11 @@ export default function OfstedReadinessPage() {
                   organizationId={organizationId}
                   onScanComplete={fetchAssessments}
                 />
+                <OfstedIntelligenceBrief organizationId={organizationId} />
+                <OfstedFindingsPanel
+                  compact
+                  organizationId={organizationId}
+                />
                 <EvidenceChecklist organizationId={organizationId} />
                 <OfstedOverviewDashboard
                   organizationId={organizationId}
@@ -246,6 +263,9 @@ export default function OfstedReadinessPage() {
             )}
             {activeTab === "track" && (
               <OfstedTrackView organizationId={organizationId} />
+            )}
+            {activeTab === "actions" && (
+              <OfstedFindingsPanel organizationId={organizationId} />
             )}
             {activeTab === "evidence" && (
               <div className="space-y-6">

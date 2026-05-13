@@ -1,4 +1,3 @@
-import { NextRequest } from "next/server";
 import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
 import { z } from "zod";
@@ -6,7 +5,7 @@ import { validateBody } from "@/lib/validation";
 
 const assignSchema = z.object({
   staff_id: z.string().uuid(),
-  connector_type_id: z.string().uuid(),
+  connector_type_id: z.string().min(1),
   is_primary: z.boolean().default(true),
   scope: z.string().max(200).default("whole school"),
   scope_type: z.enum([
@@ -53,7 +52,7 @@ export const POST = protectedRoute(
     let status = "active";
     const { data: connectorType } = await supabase
       .from("connector_types")
-      .select("requires_training, auto_tasks, name")
+      .select("requires_training, name")
       .eq("id", data.connector_type_id)
       .single();
 
@@ -61,22 +60,29 @@ export const POST = protectedRoute(
       status = "pending_training";
     }
 
-    // Create the assignment
+    const { data: staffMember } = await supabase
+      .from("staff_directory")
+      .select("first_name, last_name, display_name")
+      .eq("id", data.staff_id)
+      .eq("organization_id", auth.organizationId)
+      .single();
+
+    const staffName =
+      staffMember?.display_name ||
+      `${staffMember?.first_name || ""} ${staffMember?.last_name || ""}`.trim() ||
+      null;
+
+    // Create the assignment using the currently deployed staff_connectors schema.
     const { data: connector, error } = await supabase
       .from("staff_connectors")
       .insert({
         organization_id: auth.organizationId,
         staff_id: data.staff_id,
+        staff_name: staffName,
         connector_type_id: data.connector_type_id,
-        is_primary: data.is_primary,
-        scope: data.scope,
-        scope_type: data.scope_type,
-        training_completed: data.training_completed,
-        training_completed_date: data.training_completed_date,
-        training_expiry_date: data.training_expiry_date,
-        training_certificate_url: data.training_certificate_url,
-        training_provider: data.training_provider,
-        assigned_by: auth.userId,
+        coverage_area: data.scope,
+        training_expires_at: data.training_expiry_date,
+        assigned_at: new Date().toISOString(),
         status,
         notes: data.notes,
       })
@@ -89,36 +95,6 @@ export const POST = protectedRoute(
         return apiError("This staff member already has this connector in this scope", 409);
       }
       return apiError("Failed to assign connector", 500);
-    }
-
-    // Auto-generate tasks from connector type definition
-    if (connectorType?.auto_tasks && Array.isArray(connectorType.auto_tasks)) {
-      const tasks = connectorType.auto_tasks.map((task: any) => ({
-        organization_id: auth.organizationId,
-        staff_connector_id: connector.id,
-        connector_type_id: data.connector_type_id,
-        title: task.name,
-        description: task.description || null,
-        frequency: task.frequency,
-        module: task.module || null,
-        recurrence_config: {
-          day: task.day || null,
-          month: task.month || null,
-        },
-        next_due_date: calculateNextDueDate(task),
-        status: "pending",
-      }));
-
-      if (tasks.length > 0) {
-        const { error: taskError } = await supabase
-          .from("connector_tasks")
-          .insert(tasks);
-
-        if (taskError) {
-          console.error("Error creating auto-tasks:", taskError);
-          // Non-fatal: connector was created, tasks failed
-        }
-      }
     }
 
     // Log the assignment
@@ -229,46 +205,3 @@ export const DELETE = protectedRoute(
 );
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
-
-function calculateNextDueDate(task: any): string {
-  const now = new Date();
-
-  switch (task.frequency) {
-    case "daily":
-      now.setDate(now.getDate() + 1);
-      break;
-    case "weekly": {
-      const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
-      const targetDay = days.indexOf(task.day?.toLowerCase() || "friday");
-      const currentDay = now.getDay();
-      const daysUntil = targetDay > currentDay ? targetDay - currentDay : 7 - (currentDay - targetDay);
-      now.setDate(now.getDate() + daysUntil);
-      break;
-    }
-    case "monthly":
-      now.setMonth(now.getMonth() + 1, 1);
-      break;
-    case "termly":
-      // Approximate: next term boundary
-      if (now.getMonth() < 3) now.setMonth(3, 1);       // Easter
-      else if (now.getMonth() < 6) now.setMonth(6, 20);  // Summer
-      else if (now.getMonth() < 11) now.setMonth(11, 15); // Christmas
-      else { now.setFullYear(now.getFullYear() + 1); now.setMonth(3, 1); }
-      break;
-    case "yearly":
-      if (task.month) {
-        const targetMonth = task.month - 1; // 0-indexed
-        if (now.getMonth() >= targetMonth) {
-          now.setFullYear(now.getFullYear() + 1);
-        }
-        now.setMonth(targetMonth, 1);
-      } else {
-        now.setFullYear(now.getFullYear() + 1);
-      }
-      break;
-    default:
-      now.setMonth(now.getMonth() + 1);
-  }
-
-  return now.toISOString().split("T")[0];
-}

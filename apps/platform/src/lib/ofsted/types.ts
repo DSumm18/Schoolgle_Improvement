@@ -503,6 +503,16 @@ export interface GetOfstedReadinessRequest {
  */
 export interface GetOfstedReadinessResponse {
   overall: OfstedOverallReadiness;
+  assessmentEvidence?: {
+    source: string;
+    caveat: string;
+    batchCount: number;
+    eventCount: number;
+    pupilCount: number;
+    latestSourceLabel: string | null;
+    latestAssessmentPeriod: string | null;
+    latestAcademicYearStart: number | null;
+  };
   snapshots?: OfstedReadinessSnapshot[];
   trends?: {
     score_change: number;

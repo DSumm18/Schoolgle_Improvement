@@ -30,9 +30,55 @@ export const GET = protectedRoute(async (auth, req) => {
     return apiError("Failed to fetch drive connections", 500);
   }
 
+  const { data: connectorConnections, error: connectorError } = await supabase
+    .from("school_data_connections")
+    .select(
+      "id, provider, folder_id, folder_name, connected_at, last_scan_at, is_active, scan_status, scan_error, total_files, total_folders",
+    )
+    .eq("organization_id", organizationId)
+    .eq("is_active", true);
+
+  if (connectorError) {
+    console.error("Error fetching Schoolgle Connector:", connectorError);
+  }
+
+  const sortedConnectorConnections = [...(connectorConnections || [])].sort(
+    (a: any, b: any) => {
+      const aTime = new Date(a.last_scan_at || a.connected_at || 0).getTime();
+      const bTime = new Date(b.last_scan_at || b.connected_at || 0).getTime();
+      return bTime - aTime;
+    },
+  );
+
+  const connectorBackedConnections = sortedConnectorConnections
+    .slice(0, 1)
+    .map(
+    (connection: any) => ({
+      id: connection.id,
+      provider: "google",
+      folder_id: connection.folder_id,
+      folder_name: connection.folder_name || "Schoolgle Connector",
+      connected_at: connection.connected_at || new Date().toISOString(),
+      last_scan_at: connection.last_scan_at,
+      is_active: connection.is_active,
+      scan_frequency: "manual",
+      scan_status:
+        connection.scan_status === "complete"
+          ? "idle"
+          : connection.scan_status || "idle",
+      scan_error: connection.scan_error,
+      total_files_scanned: connection.total_files || 0,
+      total_folders_scanned: connection.total_folders || 0,
+      total_evidence_found: 0,
+      connected_by: null,
+      access_level: "connector",
+      source: "schoolgle_connector",
+    }),
+  );
+
   return apiSuccess({
-    connections: connections || [],
-    total: connections?.length || 0,
+    connections: [...(connections || []), ...connectorBackedConnections],
+    total: (connections?.length || 0) + connectorBackedConnections.length,
   });
 });
 

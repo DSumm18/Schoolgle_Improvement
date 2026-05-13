@@ -12,7 +12,10 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
     const templates = await getTemplates(supabase, {
       category: category || undefined,
     });
-    return apiSuccess({ templates });
+    if (templates.error) {
+      return apiError(templates.error, 500);
+    }
+    return apiSuccess({ templates: templates.templates });
   } catch (err: any) {
     console.error("[SOP Templates] Error listing templates:", err.message);
     return apiError("Failed to list SOP templates", 500);

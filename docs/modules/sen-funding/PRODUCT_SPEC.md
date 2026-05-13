@@ -53,7 +53,7 @@ No existing tool combines SEND management with financial intelligence. The marke
 | **Provision Map** (Tes/EduKey) | £675-795/yr | Market leader, 1000+ targets, costed provisions, parent portal | No EHCP workflow, no funding reconciliation, can't upload multiple files, poor migration support |
 | **Earwig Academic** | £400-2,400/yr | AI timelines, photo/video evidence, strong in special schools | No provision costing, no funding tracking, no EHCP application support |
 | **Educater SENCO** | Unknown | EHCP/IEP workflow, multi-agency collaboration | No provision costing, no funding reconciliation, limited automation |
-| **Senflow** | Unknown | Clean UI, MIS sync via Wonde, annual review management | New entrant, limited features, unclear differentiation |
+| **Senflow** | Unknown | Clean UI, MIS sync via a third-party data broker, annual review management | New entrant, limited features, unclear differentiation |
 | **Blue Hills** | Unknown | Provision mapping, HNF evidence, PP tracking | SIMS-only integration, limited EHCP workflow |
 | **SEN Master** | Unknown | SMART targets, provision mapping | No EHCP workflow, no funding tracking |
 
@@ -83,7 +83,7 @@ No existing tool combines SEND management with financial intelligence. The marke
 #### Module 1: SEND Register & Provision Mapping
 *Replaces: Provision Map (£795/yr), spreadsheets*
 
-- Import SEN register from Arbor/SIMS/Bromcom (CSV, or direct via Wonde API)
+- Import SEN register from Arbor directly where approved, from an Arbor-exported connected sheet, or from CSV
 - Pupil profiles: SEN status (N/K/E), primary/secondary need codes, EHCP dates, funding band
 - Costed provision mapping: staff hours × hourly rate + resources + therapies
 - Intervention library with SMART targets (pre-built, customisable)
@@ -299,7 +299,7 @@ By building SEND Hub now with a flexible, modern architecture:
 ## 9. Build Sequence (Suggested)
 
 ### Phase 1: Foundation (Months 1-2)
-- SEND register with MIS import (Arbor/SIMS CSV)
+- SEND register with Arbor API, Arbor-exported connected sheet or CSV import
 - LA banding configuration (start with Bradford and Leeds)
 - Basic EHCP funding tracker (pupil × band × amount)
 - SEND calendar with annual review due dates
@@ -433,7 +433,7 @@ sen_evidence_files (register_id, file_name, file_type, file_path, professional_n
 
 #### New API Routes Needed
 ```
-/api/send/import             — MIS CSV import (Arbor/SIMS/Bromcom)
+/api/send/import             — Arbor API, connected sheet or CSV import
 /api/send/funding/config     — LA banding configuration CRUD
 /api/send/funding/bands      — Band values per LA per year
 /api/send/funding/schedule   — Import/manage LA funding schedules

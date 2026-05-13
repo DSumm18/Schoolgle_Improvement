@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Model Router
  * Selects the best model for each task using OpenRouter
  */
@@ -23,29 +23,29 @@ import {
  * Ordered by preference (first is optimal, last is fallback)
  */
 const TASK_MODEL_MAP: Record<TaskType, string[]> = {
-  // Fast/cheap for routing — Gemini Flash is reliable and cheap via OpenRouter
+  // Fast/cheap for routing â€” Gemini Flash is reliable and cheap via OpenRouter
   "intent-classification": [
     "google/gemini-2.0-flash-001",
     "google/gemini-2.0-flash-exp",
-    "deepseek/deepseek-chat",
+    "openai/gpt-4o-mini",
   ],
   "work-focus-check": [
     "google/gemini-2.0-flash-001",
     "google/gemini-2.0-flash-exp",
   ],
 
-  // High quality for specialist responses — DeepSeek for reliable function calling
+  // High quality for specialist responses â€” approved providers only
   "specialist-response": [
-    "deepseek/deepseek-chat",
+    "openai/gpt-4o-mini",
     "google/gemini-2.0-flash-001",
     "google/gemini-2.5-pro",
   ],
   "perspective-generation": [
     "google/gemini-2.0-flash-001",
-    "deepseek/deepseek-chat",
+    "openai/gpt-4o-mini",
     "google/gemini-2.0-flash-exp",
   ],
-  synthesis: ["google/gemini-2.0-flash-001", "deepseek/deepseek-chat"],
+  synthesis: ["google/gemini-2.0-flash-001", "openai/gpt-4o-mini"],
 
   // Vision needed
   "ui-analysis": [
@@ -68,18 +68,18 @@ const PLAN_MODEL_CONSTRAINTS: Record<string, string[]> = {
   free: [
     "google/gemini-2.0-flash-001",
     "google/gemini-2.0-flash-exp",
-    "deepseek/deepseek-chat",
+    "openai/gpt-4o-mini",
   ],
   schools: [
     "google/gemini-2.0-flash-001",
     "google/gemini-2.5-pro",
-    "deepseek/deepseek-chat",
+    "openai/gpt-4o-mini",
     "google/gemini-2.0-flash-exp",
   ],
   trusts: [
     "google/gemini-2.0-flash-001",
     "google/gemini-2.5-pro",
-    "deepseek/deepseek-chat",
+    "openai/gpt-4o-mini",
     "anthropic/claude-3.5-sonnet",
   ],
 };
@@ -306,3 +306,4 @@ export function getAllModels(): Record<string, ModelConfig> {
   const router = getModelRouter();
   return router.getAllModels();
 }
+

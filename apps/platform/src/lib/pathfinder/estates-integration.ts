@@ -193,7 +193,7 @@ export function estateAssetToPathfinderAsset(asset: Asset, model?: PathfinderExt
     qrCode: asset.qr_code ?? asset.code ?? undefined,
     wallSide: pin?.wallSide,
     status:
-      pin?.status === "mapped" || pin?.status === "needs_position"
+      pin?.status === "mapped" || pin?.status === "needs_position" || pin?.status === "needs_review"
         ? pin.status
         : isMappedPathfinderPin(pin)
           ? "mapped"

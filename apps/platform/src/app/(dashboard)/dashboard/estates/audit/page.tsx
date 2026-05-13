@@ -2,20 +2,18 @@
 
 import { useState, useMemo } from "react";
 import {
-  Building,
-  Settings,
-  ArrowLeft,
   LayoutDashboard,
   Database,
   Info,
+  ShieldCheck,
+  ClipboardCheck,
+  FileSearch,
 } from "lucide-react";
-import { useGoogleSheetData } from "@/hooks/estates-audit/useGoogleSheetData";
+import { useSearchParams } from "next/navigation";
+import { useAuth } from "@/context/SupabaseAuthContext";
+import { useGemsAuditData } from "@/hooks/estates-audit/useGemsAuditData";
 import SchoolDetailView from "@/components/estates-audit/dashboard/SchoolDetailView";
 import AllSchoolsView from "@/components/estates-audit/dashboard/AllSchoolsView";
-import SettingsModal from "@/components/estates-audit/SettingsModal";
-import { config } from "@/lib/estates-audit/config";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -23,12 +21,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import Link from "next/link";
 
 function DashboardContent() {
-  const { schoolData, loading, error } = useGoogleSheetData();
+  const { organization } = useAuth();
+  const searchParams = useSearchParams();
+  const demoMode = searchParams.get("demo") === "1";
+  const { data, schoolData, loading, error } = useGemsAuditData({
+    organizationId: organization?.id,
+    demo: demoMode,
+  });
   const [selectedSchoolId, setSelectedSchoolId] = useState("all");
-  const [showSettings, setShowSettings] = useState(false);
 
   const selectedSchool = useMemo(() => {
     if (selectedSchoolId === "all") {
@@ -45,35 +47,7 @@ function DashboardContent() {
           <Database className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-6 w-6 text-indigo-600 animate-pulse" />
         </div>
         <div className="text-sm font-bold uppercase tracking-widest text-slate-400">
-          Syncing Estates Data...
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="p-8">
-        <div className="max-w-2xl mx-auto bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-800 rounded-3xl p-8 shadow-xl shadow-rose-200/20">
-          <div className="flex flex-col items-center text-center space-y-6">
-            <div className="bg-rose-100 p-4 rounded-full">
-              <Info className="h-8 w-8 text-rose-600" />
-            </div>
-            <div className="space-y-2">
-              <h2 className="text-2xl font-black text-rose-900 dark:text-rose-100">
-                Configuration Required
-              </h2>
-              <p className="text-rose-700/80 dark:text-rose-400 font-medium">
-                {error}
-              </p>
-            </div>
-            <Button
-              onClick={() => setShowSettings(true)}
-              className="bg-rose-600 hover:bg-rose-700 text-white px-8 h-12 rounded-xl font-bold uppercase tracking-wider shadow-lg shadow-rose-200"
-            >
-              Open Connection Settings
-            </Button>
-          </div>
+          Building GEMS assurance view...
         </div>
       </div>
     );
@@ -81,8 +55,28 @@ function DashboardContent() {
 
   return (
     <div className="p-8 space-y-8 animate-in fade-in duration-500">
-      {/* Demo Mode Banner */}
-      {(config as any).IS_DEMO_MODE && (
+      {error && (
+        <div className="rounded-3xl border border-amber-200 bg-amber-50 p-5 shadow-sm dark:border-amber-900 dark:bg-amber-950/30">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-start gap-3">
+          <div className="rounded-2xl bg-amber-100 p-3 text-amber-700">
+                <Info className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="text-base font-black text-amber-950 dark:text-amber-100">
+                  Unable to build live GEMS audit
+                </h2>
+                <p className="mt-1 text-sm leading-6 text-amber-800 dark:text-amber-200">
+                  {error}. The page will not show sample schools unless demo
+                  mode is explicitly requested with <code>?demo=1</code>.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {demoMode && (
         <div className="relative overflow-hidden bg-amber-500 rounded-2xl p-4 text-white shadow-lg shadow-amber-200">
           <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -91,20 +85,13 @@ function DashboardContent() {
               </div>
               <div>
                 <span className="font-bold text-sm">
-                  Experience Mode: Viewing Demo Data
+                  Demo mode: viewing sample GEMS audit data
                 </span>
                 <p className="text-[10px] uppercase font-black tracking-widest opacity-80 mt-0.5">
-                  Connect your live environment via settings
+                  This mode is only for visual checks and is never used by default
                 </p>
               </div>
             </div>
-            <Button
-              onClick={() => setShowSettings(true)}
-              variant="secondary"
-              className="bg-white text-amber-600 hover:bg-amber-50 h-9 font-bold text-xs uppercase tracking-wider"
-            >
-              Configure Live Sync
-            </Button>
           </div>
           {/* Decorative */}
           <div className="absolute top-0 right-0 h-full w-1/2 bg-gradient-to-l from-white/10 to-transparent skew-x-12 transform translate-x-32" />
@@ -115,14 +102,16 @@ function DashboardContent() {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
         <div className="flex items-center gap-4">
           <div className="bg-indigo-50 p-3 rounded-2xl text-indigo-600">
-            <LayoutDashboard className="h-6 w-6" />
+            <ShieldCheck className="h-6 w-6" />
           </div>
           <div>
             <h1 className="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
-              Estates Audit
+              GEMS Audit
             </h1>
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-              Platform Integration v1.0
+              {data?.organization?.name
+                ? `${data.organization.name} · live DfE Good Estate Management assurance`
+                : "DfE Good Estate Management assurance check"}
             </p>
           </div>
         </div>
@@ -151,21 +140,66 @@ function DashboardContent() {
               </SelectContent>
             </Select>
           </div>
-
-          <Button
-            onClick={() => setShowSettings(true)}
-            variant="ghost"
-            size="icon"
-            className="rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all h-11 w-11"
-          >
-            <Settings className="h-5 w-5" />
-          </Button>
         </div>
       </div>
 
+      <section className="grid gap-4 lg:grid-cols-3">
+        <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+            <ClipboardCheck className="h-5 w-5" />
+          </div>
+          <h2 className="text-base font-black text-slate-950 dark:text-slate-100">
+            What this audits
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+            Checks whether the school has the estate policies, compliance
+            routines, asset data, condition evidence, risks, and strategy that
+            DfE GEMS expects to see.
+          </p>
+        </div>
+        <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-100 text-blue-700">
+            <FileSearch className="h-5 w-5" />
+          </div>
+          <h2 className="text-base font-black text-slate-950 dark:text-slate-100">
+            How Schoolgle uses it
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+            It should review evidence already created in compliance checks,
+            contractors, assets, condition surveys, SOPs, and the estate
+            strategy before asking users for more work.
+          </p>
+        </div>
+        <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
+            <LayoutDashboard className="h-5 w-5" />
+          </div>
+          <h2 className="text-base font-black text-slate-950 dark:text-slate-100">
+            Governance output
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+            Governors and trustees get an assurance view: what is in place,
+            what is partial, what is missing, and which gaps need actions or
+            new mini-app workflows.
+          </p>
+        </div>
+      </section>
+
       {/* Main Content Area */}
       <div className="min-h-[400px]">
-        {selectedSchoolId === "all" ? (
+        {!loading && schoolData.length === 0 ? (
+          <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-8 text-center shadow-sm dark:bg-slate-900">
+            <h2 className="text-xl font-black text-slate-950 dark:text-slate-100">
+              No live school data found
+            </h2>
+            <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+              The audit is connected to the current organisation, but no
+              school records were returned. Once Grove House or the Pennine
+              trust schools are present in the organisation structure, their
+              evidence gaps will appear here.
+            </p>
+          </div>
+        ) : selectedSchoolId === "all" ? (
           <AllSchoolsView
             schoolData={schoolData}
             onSelectSchool={(school) => setSelectedSchoolId(school.id)}
@@ -177,18 +211,6 @@ function DashboardContent() {
           />
         )}
       </div>
-
-      {/* Settings Modal */}
-      {showSettings && (
-        <SettingsModal
-          isOpen={showSettings}
-          onClose={() => setShowSettings(false)}
-          onSave={() => {
-            setShowSettings(false);
-            window.location.reload();
-          }}
-        />
-      )}
     </div>
   );
 }

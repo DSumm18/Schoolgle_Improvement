@@ -1,4 +1,4 @@
-# UK GDPR Compliance Audit Report
+﻿# UK GDPR Compliance Audit Report
 
 **Platform:** Schoolgle - AI-Powered School Improvement Platform
 **Audit Date:** 8 March 2026
@@ -10,7 +10,7 @@
 
 ## Executive Summary
 
-Schoolgle processes personal data of school staff, governors, and — through its compliance module — children's consent records, safeguarding concerns, and DBS/SCR data. The platform sends unmasked personal data to **13+ third-party processors**, predominantly US-based, through AI integrations. While foundational security controls exist (encryption, RLS, GDPR export/delete endpoints), **critical gaps** remain around children's data safeguards, Data Processing Agreements, AI data minimisation, and missing DPIAs.
+Schoolgle processes personal data of school staff, governors, and â€” through its compliance module â€” children's consent records, safeguarding concerns, and DBS/SCR data. The platform sends unmasked personal data to **13+ third-party processors**, predominantly US-based, through AI integrations. While foundational security controls exist (encryption, RLS, GDPR export/delete endpoints), **critical gaps** remain around children's data safeguards, Data Processing Agreements, AI data minimisation, and missing DPIAs.
 
 ### Overall RAG: RED
 
@@ -41,7 +41,7 @@ Schoolgle processes personal data of school staff, governors, and — through it
 ### 2. CRITICAL: Complete DPIAs for High-Risk Processing
 
 - **Risk:** Zero DPIAs exist for: AI document analysis, safeguarding data, children's consent management, SCR/DBS processing, voice transcription
-- **Impact:** Article 35 violation — mandatory DPIAs required for systematic processing of special category data and children's data
+- **Impact:** Article 35 violation â€” mandatory DPIAs required for systematic processing of special category data and children's data
 - **Action:** Commission DPIAs for each high-risk activity (templates provided in this audit package)
 
 ### 3. CRITICAL: Remove China-Based AI Provider (Qwen)
@@ -54,7 +54,7 @@ Schoolgle processes personal data of school staff, governors, and — through it
 ### 4. CRITICAL: Establish Signed DPAs With All Sub-Processors
 
 - **Risk:** DPA template exists (`docs/legal/DATA_PROCESSING_AGREEMENT.md`) but lists only 5 processors. Actual integrations include 13+ services: OpenRouter, DeepSeek, Mistral, Gemini, Deepgram, Fish Audio, Stripe, Firebase, etc.
-- **Impact:** Article 28 violation — processing without binding DPA
+- **Impact:** Article 28 violation â€” processing without binding DPA
 - **Action:** Obtain signed DPAs or verify existing terms for every sub-processor
 
 ### 5. HIGH: Implement Cookie Consent Banner & Children's Data Controls
@@ -143,7 +143,7 @@ Schoolgle processes personal data of school staff, governors, and — through it
 | **Qwen 2.5 VL** (via OpenRouter)      | **China**      | Images, charts                                    | NOT SIGNED                      | CRITICAL |
 | **Google Gemini**                     | US             | Images, chat context, base64 photos               | NOT VERIFIED                    | HIGH     |
 | **Anthropic Claude** (via OpenRouter) | US             | Analysis results, report synthesis                | NOT VERIFIED                    | HIGH     |
-| **Mistral OCR** (via OpenRouter)      | EU→US gateway  | Scanned PDF images                                | NOT VERIFIED                    | HIGH     |
+| **Mistral OCR** (via OpenRouter)      | EUâ†’US gateway  | Scanned PDF images                                | NOT VERIFIED                    | HIGH     |
 | **OpenAI Whisper**                    | US             | Audio recordings with voices                      | NOT VERIFIED                    | HIGH     |
 | **Deepgram**                          | US             | Meeting audio (up to 100MB)                       | NOT SIGNED                      | CRITICAL |
 | **Fish Audio**                        | Unknown        | Text for TTS                                      | NOT SIGNED                      | CRITICAL |
@@ -162,7 +162,7 @@ Schoolgle processes personal data of school staff, governors, and — through it
 **Strengths:**
 
 - Firebase Auth with Google/Microsoft SSO
-- 7-tier role system (admin → viewer)
+- 7-tier role system (admin â†’ viewer)
 - RLS on 40+ tables with organisation-scoped policies
 - GDPR export and delete endpoints implemented
 - Rate limiting on GDPR delete endpoint
@@ -170,13 +170,13 @@ Schoolgle processes personal data of school staff, governors, and — through it
 **Gaps:**
 
 - **7 API routes missing authentication checks:**
-  - `GET /api/estates/assets` — TODO comment in code
-  - `GET/POST /api/estates/evidence` — TODO comment
-  - `GET /api/ed/analytics` — TODO comment
-  - `GET /api/estates/contractors` — org_id param not validated
-  - `POST /api/estates/tasks` — multiple TODO comments
-  - `GET /api/estates/checks/custom` — no auth
-  - `GET/POST /api/estates-compliance/daily-checks` — no validation
+  - `GET /api/estates/assets` â€” TODO comment in code
+  - `GET/POST /api/estates/evidence` â€” TODO comment
+  - `GET /api/ed/analytics` â€” TODO comment
+  - `GET /api/estates/contractors` â€” org_id param not validated
+  - `POST /api/estates/tasks` â€” multiple TODO comments
+  - `GET /api/estates/checks/custom` â€” no auth
+  - `GET/POST /api/estates-compliance/daily-checks` â€” no validation
 - `GET /api/admin/health` returns aggregate data for ALL organisations without auth
 - Service role key (bypasses RLS) used in 22+ API routes
 - GDPR export endpoint has no rate limiting (delete endpoint does)
@@ -223,12 +223,12 @@ Schoolgle processes personal data of school staff, governors, and — through it
 
 ### Critical Risk Flags
 
-1. **Children's data processed without Article 8 compliance** — `compliance_consent_records` stores pupil names and biometric/photo consent types with no parental consent verification mechanism
-2. **Special category data without DPIA** — Low-level concerns (safeguarding), SCR/DBS records, staff health absence reasons, biometric consent tracking
-3. **Data sent to Chinese processor** — Qwen model (Alibaba) via OpenRouter; no adequacy decision for China
-4. **No RLS on users table** — Core `users` table may lack explicit RLS policies
-5. **AI models receiving identifiable personal data** — Full document text with names sent to 6+ US-based providers
-6. **No data deletion mechanism for compliance module** — GDPR delete endpoint covers core tables but not compliance\_\* tables (consent records, SCR, complaints, etc.)
+1. **Children's data processed without Article 8 compliance** â€” `compliance_consent_records` stores pupil names and biometric/photo consent types with no parental consent verification mechanism
+2. **Special category data without DPIA** â€” Low-level concerns (safeguarding), SCR/DBS records, staff health absence reasons, biometric consent tracking
+3. **Data sent to Chinese processor** â€” Qwen model (Alibaba) via OpenRouter; no adequacy decision for China
+4. **No RLS on users table** â€” Core `users` table may lack explicit RLS policies
+5. **AI models receiving identifiable personal data** â€” Full document text with names sent to 6+ US-based providers
+6. **No data deletion mechanism for compliance module** â€” GDPR delete endpoint covers core tables but not compliance\_\* tables (consent records, SCR, complaints, etc.)
 
 ---
 
@@ -250,10 +250,10 @@ Schoolgle processes personal data of school staff, governors, and — through it
 ### Data Minimisation Gaps
 
 1. **AI processing:** Full document text (up to 20,000 chars) sent to models. No PII stripping, no content classification before transmission
-2. **Cloud storage scanning:** Blanket folder access — no file-type filtering, potentially scans HR, payroll, SEND documents
-3. **GDPR export:** Returns `SELECT *` from tables — includes internal IDs and technical fields beyond data subject rights
+2. **Cloud storage scanning:** Blanket folder access â€” no file-type filtering, potentially scans HR, payroll, SEND documents
+3. **GDPR export:** Returns `SELECT *` from tables â€” includes internal IDs and technical fields beyond data subject rights
 4. **Compliance module:** Free-text fields (incident metadata, complaint descriptions, low-level concern context) allow unbounded personal data entry
-5. **Staff absence reason:** Free text field — should be restricted to enum values to prevent health data leaking in
+5. **Staff absence reason:** Free text field â€” should be restricted to enum values to prevent health data leaking in
 
 ### Retention & Deletion Gaps
 
@@ -280,7 +280,7 @@ Schoolgle processes personal data of school staff, governors, and — through it
 | Firebase/Google  | Yes (their standard)        | [REQUIRES HUMAN INPUT]     | Yes                        | Verify signed                        |
 | OpenRouter       | **Unknown**                 | **No**                     | **No**                     | **CRITICAL - establish DPA**         |
 | DeepSeek         | **Unknown**                 | **No**                     | **No**                     | **CRITICAL - China-routed provider** |
-| Qwen/Alibaba     | **None**                    | **No**                     | **No**                     | **CRITICAL - China; no adequacy**    |
+| Qwen-Alibaba     | **None**                    | **No**                     | **No**                     | **CRITICAL - China; no adequacy**    |
 | Google Gemini    | Separate from Workspace DPA | [REQUIRES HUMAN INPUT]     | Likely via Google standard | Verify Gemini-specific DPA           |
 | Anthropic Claude | Available on request        | [REQUIRES HUMAN INPUT]     | Yes (if signed)            | Verify signed                        |
 | Mistral          | Available (EU-based)        | [REQUIRES HUMAN INPUT]     | N/A (EU via OpenRouter US) | Data routes through US               |
@@ -299,7 +299,7 @@ Schoolgle processes personal data of school staff, governors, and — through it
 3. **7 unprotected API routes:** Estates and analytics endpoints accessible without authentication
 4. **No Stripe webhook signature validation** visible in webhook route
 5. **Console.log leaks:** Organisation IDs and user IDs logged in production (e.g., `estates/assets/route.ts` line 34)
-6. **No WAF rules** for GDPR endpoints (export/delete) — only rate limiting on delete
+6. **No WAF rules** for GDPR endpoints (export/delete) â€” only rate limiting on delete
 7. **Audit log not tamper-evident:** No cryptographic signing or append-only guarantees
 
 ### Children's Data Safeguards Assessment
@@ -311,13 +311,13 @@ Schoolgle processes personal data of school staff, governors, and — through it
 | Article 12 - Transparent information (child-friendly) | NOT IMPLEMENTED | No child-facing privacy notice                                 |
 | Article 13/14 - Information duty to children/parents  | NOT IMPLEMENTED | Privacy policy addresses adults only                           |
 | DPA 2018 s.130 - Under-13 consent                     | NOT IMPLEMENTED | No minimum age enforcement                                     |
-| ICO Age Appropriate Design Code                       | NOT ASSESSED    | [REQUIRES HUMAN INPUT] — likely in scope given consent records |
+| ICO Age Appropriate Design Code                       | NOT ASSESSED    | [REQUIRES HUMAN INPUT] â€” likely in scope given consent records |
 
 ### AI/LLM Processing Assessment
 
 | AI Use Case           | Data Sent                                       | Anonymised First?     | Provider                     | Risk       |
 | --------------------- | ----------------------------------------------- | --------------------- | ---------------------------- | ---------- |
-| Evidence matching     | Full document text (school policies, SEF, etc.) | **NO**                | OpenRouter → DeepSeek/Gemini | HIGH       |
+| Evidence matching     | Full document text (school policies, SEF, etc.) | **NO**                | OpenRouter â†’ approved-provider models | HIGH       |
 | Voice-to-observation  | Audio recording of classroom                    | **NO**                | OpenAI Whisper               | HIGH       |
 | Meeting transcription | Full meeting audio                              | **NO**                | Deepgram                     | HIGH       |
 | Room/COSHH scanning   | Photos of school rooms                          | **NO**                | Gemini/Qwen                  | MEDIUM     |
@@ -364,3 +364,6 @@ Schoolgle processes personal data of school staff, governors, and — through it
 **Report Status:** DRAFT - Requires DPO Approval
 **Next Review:** Within 30 days (post-remediation of critical items)
 **Distribution:** DPO, CTO, Legal Counsel (CONFIDENTIAL)
+
+
+

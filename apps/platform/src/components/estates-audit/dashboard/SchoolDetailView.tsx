@@ -13,11 +13,9 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Building,
-  TrendingUp,
   AlertCircle,
   CheckCircle,
   Target,
-  FileText,
   Download,
   ShieldCheck,
   Zap,
@@ -83,7 +81,7 @@ export default function SchoolDetailView({
                   {school.name}
                 </CardTitle>
                 <CardDescription className="font-medium text-slate-500">
-                  Comprehensive Estates Audit Report
+                  Live GEMS assurance report
                 </CardDescription>
               </div>
             </div>
@@ -107,7 +105,7 @@ export default function SchoolDetailView({
               <div className="h-4 w-px bg-slate-200" />
               <div className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
                 <Target className="h-3 w-3" />
-                {totalAssessments} Data Points
+                {totalAssessments} GEMS Checks
               </div>
               <div className="h-4 w-px bg-slate-200" />
               <div className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
@@ -125,7 +123,7 @@ export default function SchoolDetailView({
                 {school.overallScore}%
               </div>
               <div className="text-[10px] uppercase font-black tracking-widest text-slate-400 mt-1">
-                Audit Score
+                Assurance Score
               </div>
             </div>
             <div className="w-px h-12 bg-slate-200" />
@@ -147,8 +145,8 @@ export default function SchoolDetailView({
         <TabsList className="bg-slate-100/80 p-1 rounded-xl h-auto gap-1">
           {[
             { value: "overview", label: "Domain Analysis" },
-            { value: "details", label: "Full Breakdown" },
-            { value: "actions", label: "Required Actions" },
+            { value: "details", label: "Evidence Breakdown" },
+            { value: "actions", label: "Gaps & Actions" },
           ].map((tab) => (
             <TabsTrigger
               key={tab.value}
@@ -172,7 +170,7 @@ export default function SchoolDetailView({
                   Domain Performance
                 </CardTitle>
                 <CardDescription className="text-xs font-medium uppercase tracking-wider text-slate-400">
-                  Scores by administrative area
+                  Scores from live Schoolgle evidence
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -199,7 +197,7 @@ export default function SchoolDetailView({
                     </div>
                     <Progress value={category.average} className="h-2" />
                     <div className="flex justify-between text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                      <span>{category.assessments.length} audited items</span>
+                      <span>{category.assessments.length} GEMS checks</span>
                       <span>Target: 100%</span>
                     </div>
                   </div>
@@ -327,7 +325,7 @@ export default function SchoolDetailView({
                           {category.categoryName}
                         </CardTitle>
                         <CardDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                          {category.assessments.length} Items Audited
+                          {category.assessments.length} GEMS Checks
                         </CardDescription>
                       </div>
                     </div>
@@ -370,8 +368,11 @@ export default function SchoolDetailView({
                         </div>
                         <Progress value={assessment.score} className="h-1.5" />
                         <div className="flex justify-between mt-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                          <span>Progress</span>
-                          <span>{assessment.score}% of 100%</span>
+                          <span>Evidence</span>
+                          <span>
+                            {assessment.evidenceCount ?? 0} record
+                            {(assessment.evidenceCount ?? 0) === 1 ? "" : "s"}
+                          </span>
                         </div>
                       </div>
                     ))}

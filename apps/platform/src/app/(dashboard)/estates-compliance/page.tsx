@@ -36,7 +36,6 @@ import { DailyChecksCard } from "@/components/estates-compliance/DailyChecksCard
 import { SettingsDialog } from "@/components/estates-compliance/SettingsDialog";
 import { FeatureChecklist } from "@/components/ui/feature-discovery";
 import { ESTATES_FEATURES } from "@/lib/feature-definitions";
-import EdWidgetWrapper from "@/components/EdWidgetWrapper";
 import { EdBrowserControlWrapper } from "@/components/estates-compliance/EdBrowserControlWrapper";
 
 // ============================================================================
@@ -205,8 +204,6 @@ export default function EstatesComplianceDashboard() {
   const [notDueExpanded, setNotDueExpanded] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("needs-doing");
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [edOpen, setEdOpen] = useState(false);
-  const [edMinimized, setEdMinimized] = useState(false);
 
   // -------------------------------------------------------------------------
   // DATA FETCHING
@@ -754,7 +751,7 @@ export default function EstatesComplianceDashboard() {
         </div>
 
         {/* ================================================================
-            SETTINGS DIALOG + FEATURE DISCOVERY + ED WIDGET
+            SETTINGS DIALOG + FEATURE DISCOVERY
         ================================================================ */}
         <SettingsDialog
           open={settingsOpen}
@@ -771,14 +768,6 @@ export default function EstatesComplianceDashboard() {
           />
         </div>
 
-        <EdWidgetWrapper
-          isOpen={edOpen}
-          onToggle={() => setEdOpen(!edOpen)}
-          isMinimized={edMinimized}
-          onToggleMinimize={() => setEdMinimized(!edMinimized)}
-          mode="user"
-          organizationId={organizationId ?? undefined}
-        />
       </div>
     </EdBrowserControlWrapper>
   );

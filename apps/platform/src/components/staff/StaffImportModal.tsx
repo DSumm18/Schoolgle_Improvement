@@ -22,6 +22,7 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/lib/supabase';
 
 interface ImportResult {
     success: boolean;
@@ -30,7 +31,7 @@ interface ImportResult {
     archived: number;
     errors: Array<{
         row: number;
-        data: any;
+        data: unknown;
         error: string;
     }>;
     warnings: string[];
@@ -41,6 +42,20 @@ interface StaffImportModalProps {
     onClose: () => void;
     onComplete: (result: ImportResult) => void;
     organizationId: string;
+}
+
+async function getAuthHeaders(contentType?: string): Promise<Record<string, string>> {
+    const {
+        data: { session },
+    } = await supabase.auth.getSession();
+    const headers: Record<string, string> = {};
+    if (contentType) {
+        headers['Content-Type'] = contentType;
+    }
+    if (session?.access_token) {
+        headers.Authorization = `Bearer ${session.access_token}`;
+    }
+    return headers;
 }
 
 export default function StaffImportModal({
@@ -85,7 +100,7 @@ export default function StaffImportModal({
 
     const downloadTemplate = async () => {
         try {
-            const response = await fetch('/api/staff/import?type=template');
+            const response = await fetch('/api/staff/import/template');
             if (response.ok) {
                 const blob = await response.blob();
                 const url = window.URL.createObjectURL(blob);
@@ -104,8 +119,10 @@ export default function StaffImportModal({
 
     const downloadCurrentData = async () => {
         try {
+            const headers = await getAuthHeaders();
             const response = await fetch(
-                `/api/staff/import?type=export&organizationId=${organizationId}`
+                `/api/staff/import?type=export&organizationId=${organizationId}`,
+                { headers }
             );
             if (response.ok) {
                 const blob = await response.blob();
@@ -145,7 +162,7 @@ export default function StaffImportModal({
 
             const response = await fetch('/api/staff/import', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await getAuthHeaders('application/json'),
                 body: JSON.stringify({
                     organizationId,
                     csvData: text,

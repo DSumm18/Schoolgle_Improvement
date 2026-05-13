@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   Shield,
@@ -129,7 +130,7 @@ export default function GDPRDashboard({ organizationId }: GDPRDashboardProps) {
   return (
     <div className="space-y-6">
       {/* Summary cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card
           className="cursor-pointer hover:border-purple-300 transition-all"
           onClick={() => setActiveTab("dpias")}
@@ -196,6 +197,27 @@ export default function GDPRDashboard({ organizationId }: GDPRDashboardProps) {
             </div>
           </CardContent>
         </Card>
+
+        <Link href="/dashboard/compliance/foi" className="block">
+          <Card className="h-full cursor-pointer hover:border-purple-300 transition-all">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-cyan-100 text-cyan-600 dark:bg-cyan-900/30 dark:text-cyan-300">
+                  <FileSearch className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">FOI</p>
+                  <p className="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">
+                    Information Requests
+                  </p>
+                </div>
+              </div>
+              <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
+                Log FOI requests, statutory deadlines and response status.
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       {/* Tabs */}

@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createHmac } from 'crypto';
 import { protectedRoute, apiSuccess, apiError } from '@/lib/api-utils';
+import { buildUnifiedPupilEvidenceTimeline, type TeacherEvidenceEvent } from '@/lib/assessment-intelligence/evidence-timeline';
+import { buildAssessmentIntelligenceReportingSummary } from '@/lib/assessment-intelligence/reporting';
 import { createServiceRoleClient } from '@/lib/supabase-server';
 
 // Generate a friendly pseudonym from a hash — deterministic so same hash = same name
@@ -13,6 +16,57 @@ function pseudonymFromHash(hash: string): string {
   // Append a short numeric suffix from later hash bytes to avoid collisions
   const suffix = parseInt(hash.slice(8, 12), 16) % 100;
   return `${colour} ${animal} ${suffix}`;
+}
+
+type PupilDemographics = {
+  isFsm: boolean;
+  isSend: boolean;
+  isEal: boolean;
+  gender: string;
+  source: string;
+};
+
+type AssessmentRecord = {
+  pupil_hash: string;
+  year_group: number;
+  subject: string;
+  attainment_level: string | null;
+  scaled_score: number | string | null;
+  is_fsm: boolean | null;
+  is_send: boolean | null;
+  is_eal: boolean | null;
+  gender: string | null;
+  academic_year_start: number;
+  assessment_period: string | null;
+};
+
+type LessonStudioPupil = {
+  pupil_ref: string | null;
+  gender: string | null;
+  has_ehcp: boolean | null;
+  has_send_support: boolean | null;
+  is_eal: boolean | null;
+  is_pupil_premium: boolean | null;
+  fsm_eligible?: boolean | null;
+  attainment_reading?: string | null;
+  attainment_writing?: string | null;
+  attainment_maths?: string | null;
+};
+
+function pupilHashForOrg(pupilRef: string, organizationId: string): string {
+  return createHmac('sha256', organizationId)
+    .update(pupilRef.toLowerCase().trim())
+    .digest('hex');
+}
+
+function demographicsFromAssessments(records: AssessmentRecord[], hash: string): PupilDemographics {
+  return {
+    isFsm: records.some((r) => r.pupil_hash === hash && r.is_fsm === true),
+    isSend: records.some((r) => r.pupil_hash === hash && r.is_send === true),
+    isEal: records.some((r) => r.pupil_hash === hash && r.is_eal === true),
+    gender: records.find((r) => r.pupil_hash === hash && r.gender)?.gender ?? 'unknown',
+    source: 'pupil_assessments_pseudo',
+  };
 }
 
 /**
@@ -51,7 +105,104 @@ export const GET = protectedRoute(async (auth, _req: NextRequest) => {
       page++;
     }
 
-    const records = allRecords;
+    const records = allRecords as AssessmentRecord[];
+
+    const { data: pupilProfiles, error: pupilProfilesError } = await supabase
+      .from('ls_pupils')
+      .select('pupil_ref, gender, has_ehcp, has_send_support, is_eal, is_pupil_premium, fsm_eligible, attainment_reading, attainment_writing, attainment_maths')
+      .eq('organization_id', ORG_ID)
+      .limit(5000);
+    if (pupilProfilesError) {
+      console.warn('[trust-analysis/grove-house] ls_pupils enrichment unavailable:', pupilProfilesError.message);
+    }
+
+    const demographicsByHash = new Map<string, PupilDemographics>();
+    const profileRows = (pupilProfiles ?? []) as LessonStudioPupil[];
+    for (const pupil of profileRows) {
+      if (!pupil.pupil_ref) continue;
+      demographicsByHash.set(pupilHashForOrg(pupil.pupil_ref, ORG_ID), {
+        isFsm: pupil.fsm_eligible === true || pupil.is_pupil_premium === true,
+        isSend: pupil.has_ehcp === true || pupil.has_send_support === true,
+        isEal: pupil.is_eal === true,
+        gender: pupil.gender ?? 'unknown',
+        source: 'ls_pupils',
+      });
+    }
+
+    const getDemographics = (hash: string): PupilDemographics => {
+      const profile = demographicsByHash.get(hash);
+      const assessment = demographicsFromAssessments(records, hash);
+      if (!profile) return assessment;
+      return {
+        isFsm: profile.isFsm || assessment.isFsm,
+        isSend: profile.isSend || assessment.isSend,
+        isEal: profile.isEal || assessment.isEal,
+        gender: profile.gender !== 'unknown' ? profile.gender : assessment.gender,
+        source: assessment.source === 'pupil_assessments_pseudo' &&
+          (assessment.isFsm || assessment.isSend || assessment.isEal || assessment.gender !== 'unknown')
+          ? 'ls_pupils + pupil_assessments_pseudo'
+          : 'ls_pupils',
+      };
+    };
+
+    const currentProfileRows = profileRows.filter((pupil) =>
+      pupil.attainment_reading || pupil.attainment_writing || pupil.attainment_maths,
+    );
+    const isAtExpected = (value: string | null | undefined) =>
+      ['EXS', 'GDS', '2', '3', 'ELG', 'M', 'E', 'P'].includes(String(value ?? '').trim().toUpperCase()) ||
+      ['expected', 'greater_depth', 'gd', 'secure'].includes(String(value ?? '').trim().toLowerCase());
+    const profileGroups = {
+      all: currentProfileRows,
+      nonSend: currentProfileRows.filter((pupil) => !(pupil.has_ehcp || pupil.has_send_support)),
+      send: currentProfileRows.filter((pupil) => pupil.has_ehcp || pupil.has_send_support),
+      senSupport: currentProfileRows.filter((pupil) => pupil.has_send_support && !pupil.has_ehcp),
+      ehcp: currentProfileRows.filter((pupil) => pupil.has_ehcp),
+      pp: currentProfileRows.filter((pupil) => pupil.is_pupil_premium || pupil.fsm_eligible),
+      eal: currentProfileRows.filter((pupil) => pupil.is_eal),
+    };
+    const profileCombined = (pupils: LessonStudioPupil[]) => {
+      const combinedCount = pupils.filter((pupil) =>
+        isAtExpected(pupil.attainment_reading) &&
+        isAtExpected(pupil.attainment_writing) &&
+        isAtExpected(pupil.attainment_maths),
+      ).length;
+      return {
+        count: pupils.length,
+        combinedAtExpected: combinedCount,
+        combinedPct: pupils.length > 0 ? Math.round((combinedCount / pupils.length) * 1000) / 10 : null,
+      };
+    };
+    const currentProfileDisaggregation = {
+      source: 'ls_pupils current profile fields: attainment_reading, attainment_writing, attainment_maths, has_send_support, has_ehcp, is_pupil_premium, fsm_eligible, is_eal',
+      caveat: 'This is the current Schoolgle pupil-profile layer. It complements, rather than replaces, the pseudonymised assessment import.',
+      groups: Object.fromEntries(
+        Object.entries(profileGroups).map(([key, pupils]) => [key, profileCombined(pupils)]),
+      ),
+    };
+
+    const assessmentIntelligence = await buildAssessmentIntelligenceReportingSummary(supabase, {
+      organizationId: ORG_ID,
+      includeChildOrganizations: true,
+      limit: 10,
+    });
+
+    const { data: teacherEventRows, error: teacherEventError } = await supabase
+      .from('pupil_assessment_events')
+      .select('pupil_hash, source_kind, source_label, validation_tier, class_name, year_group_at_assessment, current_year_group, academic_year_start, assessment_period, assessment_date, subject, raw_level, canonical_level, is_at_expected, is_greater_depth, scaled_score, teacher_comment, uncertainty_flag, moderation_status, evidence_confidence')
+      .eq('organization_id', ORG_ID)
+      .order('academic_year_start')
+      .order('assessment_date');
+    if (teacherEventError) {
+      console.warn('[trust-analysis/grove-house] assessment intelligence event lookup unavailable:', teacherEventError.message);
+    }
+
+    const unifiedEvidenceTimeline = buildUnifiedPupilEvidenceTimeline({
+      ctfRecords: records,
+      teacherEvents: (teacherEventRows ?? []) as TeacherEvidenceEvent[],
+      getDemographics,
+      pseudonymFromHash,
+      maxPupils: 50,
+    });
 
     // ─── 1. EYFS GLD Trend ───────────────────────────────────────────
     const eyfsYears = [...new Set(records.filter(r => r.year_group === 0).map(r => r.academic_year_start as number))].sort();
@@ -351,15 +502,11 @@ export const GET = protectedRoute(async (auth, _req: NextRequest) => {
         .sort((a, b) => a.year - b.year || a.yearGroup - b.yearGroup);
 
       if (journey.length > 0) {
+        const demographics = getDemographics(hash);
         cohortJourneys.push({
           pupilId: pseudonymFromHash(hash),
           journey,
-          demographics: {
-            isFsm: records.some(r => r.pupil_hash === hash && r.is_fsm === true),
-            isSend: records.some(r => r.pupil_hash === hash && r.is_send === true),
-            isEal: records.some(r => r.pupil_hash === hash && r.is_eal === true),
-            gender: (records.find(r => r.pupil_hash === hash && r.gender)?.gender as string) ?? 'unknown',
-          },
+          demographics,
         });
       }
     }
@@ -377,14 +524,10 @@ export const GET = protectedRoute(async (auth, _req: NextRequest) => {
       const idx = Math.floor(trackableEntries.length / 3);
       const [hash] = trackableEntries[idx];
       const pupilRecords = records.filter(r => r.pupil_hash === hash);
+      const demographics = getDemographics(hash);
       spotlightPupil = {
         pupilId: pseudonymFromHash(hash),
-        demographics: {
-          isFsm: records.some(r => r.pupil_hash === hash && r.is_fsm === true),
-          isSend: records.some(r => r.pupil_hash === hash && r.is_send === true),
-          isEal: records.some(r => r.pupil_hash === hash && r.is_eal === true),
-          gender: (records.find(r => r.pupil_hash === hash && r.gender)?.gender as string) ?? 'unknown',
-        },
+        demographics,
         journey: pupilRecords
           .map(r => ({
             year: (r.academic_year_start as number),
@@ -424,11 +567,16 @@ export const GET = protectedRoute(async (auth, _req: NextRequest) => {
       return result;
     };
 
-    const fsmHashes = latestPupilHashes.filter(h => latestRecords.some(r => r.pupil_hash === h && r.is_fsm === true));
-    const sendHashes = latestPupilHashes.filter(h => latestRecords.some(r => r.pupil_hash === h && r.is_send === true));
-    const ealHashes = latestPupilHashes.filter(h => latestRecords.some(r => r.pupil_hash === h && r.is_eal === true));
+    const fsmHashes = latestPupilHashes.filter(h => getDemographics(h).isFsm);
+    const sendHashes = latestPupilHashes.filter(h => getDemographics(h).isSend);
+    const ealHashes = latestPupilHashes.filter(h => getDemographics(h).isEal);
 
     const demographicDisaggregation = {
+      source: 'pupil_assessments_pseudo enriched from ls_pupils by HMAC-SHA256(pupil_ref, organization_id) where the assessment import has blank characteristic flags',
+      enrichmentCoverage: {
+        assessmentPupils: latestPupilHashes.length,
+        matchedToCurrentProfile: latestPupilHashes.filter((hash) => demographicsByHash.has(hash)).length,
+      },
       all: { count: latestPupilHashes.length, attainment: computeAttainment(latestPupilHashes) },
       withoutFsm: { removed: fsmHashes.length, remaining: latestPupilHashes.length - fsmHashes.length, attainment: computeAttainment(latestPupilHashes.filter(h => !fsmHashes.includes(h))) },
       withoutSend: { removed: sendHashes.length, remaining: latestPupilHashes.length - sendHashes.length, attainment: computeAttainment(latestPupilHashes.filter(h => !sendHashes.includes(h))) },
@@ -553,6 +701,9 @@ export const GET = protectedRoute(async (auth, _req: NextRequest) => {
       cohortTracking,
       cohortMilestones,
       demographicDisaggregation,
+      currentProfileDisaggregation,
+      assessmentIntelligence,
+      unifiedEvidenceTimeline,
     });
   } catch (err) {
     return apiError(err instanceof Error ? err.message : 'Internal server error', 500);

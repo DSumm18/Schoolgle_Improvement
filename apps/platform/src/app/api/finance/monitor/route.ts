@@ -6,6 +6,7 @@ import {
   expectedSpendToDate,
   getSeasonalProfile,
 } from "@/lib/budget-engine/seasonal-profiles";
+import { buildFinanceAssumptionCards } from "@/lib/budget-engine/finance-assumption-cards";
 
 export interface MonitorCFRLine {
   cfr_code: string;
@@ -51,6 +52,7 @@ export interface MonitorData {
   staffing_target: number;
 
   lines: MonitorCFRLine[];
+  assumption_cards?: ReturnType<typeof buildFinanceAssumptionCards>;
 }
 
 // LA financial year: April to March
@@ -552,6 +554,7 @@ function generateDemoData(): MonitorData {
     staffing_target: 78,
 
     lines,
+    assumption_cards: buildFinanceAssumptionCards(lines),
   };
 }
 
@@ -785,6 +788,7 @@ export const GET = protectedRoute(async (auth, request) => {
     staffing_target: 78,
 
     lines,
+    assumption_cards: buildFinanceAssumptionCards(lines),
     data_source: "supabase",
     available_years: availableYears,
 

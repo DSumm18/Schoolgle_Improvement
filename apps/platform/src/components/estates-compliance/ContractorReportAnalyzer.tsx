@@ -18,10 +18,15 @@
 import { useState, useCallback } from "react";
 import {
   Finding,
-  FindingClassification,
   FindingDomain,
   classifyFinding,
 } from "@/lib/estates-compliance/findings-database";
+import {
+  summarizeEstateFindingTriage,
+  triageEstateFinding,
+  type EstateFindingTriage,
+  type EstateFindingTriageSummary,
+} from "@/lib/estates-compliance/finding-triage";
 import { FindingsList } from "./FindingsList";
 
 interface ExtractedFinding extends Finding {
@@ -29,6 +34,7 @@ interface ExtractedFinding extends Finding {
   rawText?: string;
   aiProcessed: boolean;
   confidence: number;
+  estateTriage?: EstateFindingTriage;
 }
 
 interface AnalysisResult {
@@ -39,6 +45,21 @@ interface AnalysisResult {
   suggestionCount: number;
   estimatedTotalCost: number;
   processingTime: number;
+  triageSummary: EstateFindingTriageSummary;
+}
+
+interface AnalyzeFindingsResponse {
+  findings?: AnalyzedFinding[];
+}
+
+interface AnalyzedFinding {
+  assetName?: string;
+  asset?: string;
+  severity?: Finding["severity"];
+  description: string;
+  actionRequired?: string;
+  estimatedCost?: number;
+  rawText?: string;
 }
 
 interface ContractorReportAnalyzerProps {
@@ -131,6 +152,11 @@ export function ContractorReportAnalyzer({
         (sum, f) => sum + (f.estimated_cost || 0),
         0,
       );
+      const triageSummary = summarizeEstateFindingTriage(
+        findings
+          .map((finding) => finding.estateTriage)
+          .filter((triage): triage is EstateFindingTriage => Boolean(triage)),
+      );
 
       const result: AnalysisResult = {
         findings,
@@ -140,13 +166,18 @@ export function ContractorReportAnalyzer({
         suggestionCount,
         estimatedTotalCost,
         processingTime,
+        triageSummary,
       };
 
       setAnalysisResult(result);
       onFindingsExtracted?.(findings);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error processing file:", err);
-      setError(err.message || "Failed to process file. Please try again.");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to process file. Please try again.",
+      );
     } finally {
       setIsProcessing(false);
     }
@@ -169,7 +200,7 @@ export function ContractorReportAnalyzer({
       throw new Error("Failed to extract text from file");
     }
 
-    const data = await response.json();
+    const data = (await response.json()) as { text?: string };
     return data.text || "";
   }
 
@@ -195,15 +226,39 @@ export function ContractorReportAnalyzer({
       throw new Error("Failed to analyze text for findings");
     }
 
-    const data = await response.json();
+    const data = (await response.json()) as AnalyzeFindingsResponse;
 
     // Process and classify each finding
     const findings: ExtractedFinding[] = (data.findings || []).map(
-      (finding: any, index: number) => {
+      (finding, index) => {
         const classification = classifyFinding(
           finding.description,
           domain === "auto" ? undefined : domain,
         );
+
+        const estateTriage = triageEstateFinding({
+          assetName: finding.assetName || finding.asset || undefined,
+          description: finding.description,
+          findings: finding.description,
+          remedialActions: finding.actionRequired
+            ? [finding.actionRequired]
+            : classification.suggestedAction
+              ? [classification.suggestedAction]
+              : [],
+          estimatedCost: finding.estimatedCost || classification.estimatedCost,
+          result:
+            finding.severity === "critical" || finding.severity === "high"
+              ? "fail"
+              : "advisory",
+          urgency:
+            finding.severity === "critical"
+              ? "emergency"
+              : finding.severity === "high"
+                ? "urgent"
+                : "routine",
+          complianceDomain: domain === "auto" ? undefined : domain,
+          isStatutory: classification.classification === "statutory",
+        });
 
         return {
           id: `finding-${Date.now()}-${index}`,
@@ -221,6 +276,7 @@ export function ContractorReportAnalyzer({
           rawText: finding.rawText,
           aiProcessed: true,
           confidence: classification.confidence,
+          estateTriage,
         };
       },
     );
@@ -450,6 +506,47 @@ export function ContractorReportAnalyzer({
           {/* Processing Info */}
           <div className="text-sm text-muted-foreground">
             Processed in {analysisResult.processingTime / 1000} seconds
+          </div>
+
+          <div className="rounded-lg border bg-white p-4">
+            <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+              <div>
+                <h3 className="font-semibold">Risk routing summary</h3>
+                <p className="text-sm text-muted-foreground">
+                  Separates urgent compliance work from strategy, watchlist, and
+                  asset-only updates.
+                </p>
+              </div>
+              <div className="text-sm font-medium">
+                Highest risk {analysisResult.triageSummary.highestRiskScore}/5
+              </div>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+              <div className="rounded-md bg-red-50 p-3">
+                <p className="text-xl font-bold text-red-700">
+                  {analysisResult.triageSummary.tasks}
+                </p>
+                <p className="text-xs text-red-700">Task now</p>
+              </div>
+              <div className="rounded-md bg-orange-50 p-3">
+                <p className="text-xl font-bold text-orange-700">
+                  {analysisResult.triageSummary.risks}
+                </p>
+                <p className="text-xs text-orange-700">Risk review</p>
+              </div>
+              <div className="rounded-md bg-blue-50 p-3">
+                <p className="text-xl font-bold text-blue-700">
+                  {analysisResult.triageSummary.strategyItems}
+                </p>
+                <p className="text-xs text-blue-700">Strategy items</p>
+              </div>
+              <div className="rounded-md bg-gray-50 p-3">
+                <p className="text-xl font-bold text-gray-700">
+                  {analysisResult.triageSummary.watchlistItems}
+                </p>
+                <p className="text-xs text-gray-700">Watchlist</p>
+              </div>
+            </div>
           </div>
 
           {/* Findings List */}

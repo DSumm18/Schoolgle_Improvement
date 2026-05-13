@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
 import { fireTrigger, TRIGGER_EVENTS } from "@/lib/document-engine";
@@ -18,7 +19,7 @@ function getMeetingId(request: Request): string {
  */
 export const POST = protectedRoute(async (auth, request) => {
   const id = getMeetingId(request);
-  const body = await request.json();
+  await request.json().catch(() => ({}));
   // orgId MUST come from authenticated session — never from caller
   const resolvedOrgId = auth.organizationId;
 
@@ -55,6 +56,21 @@ export const POST = protectedRoute(async (auth, request) => {
     .single();
 
   if (error || !meeting) {
+    const { data: existingMeeting } = await supabase
+      .from("meetings")
+      .select("*")
+      .eq("id", id)
+      .eq("organization_id", resolvedOrgId)
+      .maybeSingle();
+
+    if (existingMeeting?.status === "completed") {
+      return apiSuccess({
+        meeting: existingMeeting,
+        compliance_score: existingMeeting.compliance_score ?? score,
+        already_completed: true,
+      });
+    }
+
     return apiError(
       "Meeting not found or cannot be completed (must be in_progress)",
       400,

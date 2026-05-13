@@ -10,8 +10,8 @@ import type { BriefSections, BriefSection } from "./types";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
-// Use DeepSeek for cost-efficiency (matches existing model stack)
-const MODEL = "deepseek/deepseek-chat";
+// Cost-effective approved-provider model for short spoken briefings.
+const MODEL = "openai/gpt-4o-mini";
 
 // ─── AI script generation ───────────────────────────────────────────
 

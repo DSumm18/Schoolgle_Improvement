@@ -1,6 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
+import {
+  buildEmptyStaffImportCsv,
+  buildStaffImportTemplateCsv,
+} from "@/lib/staff-import-template";
 import Papa from "papaparse";
 
 // Valid role categories
@@ -21,7 +25,9 @@ const VALID_ROLE_CATEGORIES = [
 ];
 
 // Normalize boolean values
-const normalizeBoolean = (value: any): boolean => {
+type StaffImportRow = Record<string, string | undefined>;
+
+const normalizeBoolean = (value: unknown): boolean => {
   if (typeof value === "boolean") return value;
   if (typeof value === "string") {
     const lower = value.toLowerCase().trim();
@@ -33,17 +39,17 @@ const normalizeBoolean = (value: any): boolean => {
 };
 
 // Normalize salutation
-const normalizeSalutation = (value: any): string | null => {
+const normalizeSalutation = (value: unknown): string | null => {
   if (!value) return null;
   const valid = ["Mr", "Mrs", "Ms", "Dr", "Prof", "Miss"];
-  const normalized = value.trim();
+  const normalized = String(value).trim();
   return valid.includes(normalized) ? normalized : null;
 };
 
 // Normalize role category
-const normalizeRoleCategory = (value: any): string => {
+const normalizeRoleCategory = (value: unknown): string => {
   if (!value) return "other";
-  const normalized = value.toLowerCase().trim().replace(/[\s-]/g, "_");
+  const normalized = String(value).toLowerCase().trim().replace(/[\s-]/g, "_");
 
   if (VALID_ROLE_CATEGORIES.includes(normalized)) {
     return normalized;
@@ -86,12 +92,24 @@ const normalizeRoleCategory = (value: any): string => {
   return mappings[normalized] || "other";
 };
 
+function normalizeStaffHeader(header: string) {
+  return header.toLowerCase().trim().replace(/\*/g, "").replace(/[\s-]/g, "_");
+}
+
+function findStaffHeaderIndex(lines: string[]) {
+  const index = lines.findIndex((line) => {
+    const headers = line.split(",").map(normalizeStaffHeader);
+    return headers.includes("first_name") && headers.includes("last_name") && headers.includes("job_title");
+  });
+  return index >= 0 ? index : 0;
+}
+
 // POST /api/staff/import - Import staff from CSV
 export const POST = protectedRoute(async (auth, request) => {
   const supabase = createServiceRoleClient();
   const body = await request.json();
 
-  const { csvData, created_by } = body;
+  const { csvData } = body;
   // orgId MUST come from authenticated session — never from caller
   const orgId = auth.organizationId;
 
@@ -104,14 +122,13 @@ export const POST = protectedRoute(async (auth, request) => {
   const dataLines = lines.filter(
     (line: string) => !line.trim().startsWith("#"),
   );
-  const filteredCsvData = dataLines.join("\n");
+  const filteredCsvData = dataLines.slice(findStaffHeaderIndex(dataLines)).join("\n");
 
   // Parse CSV (skipping comment lines)
   const parseResult = Papa.parse(filteredCsvData, {
     header: true,
     skipEmptyLines: true,
-    transformHeader: (header: string) =>
-      header.toLowerCase().trim().replace(/[\s-]/g, "_"),
+    transformHeader: normalizeStaffHeader,
   });
 
   if (parseResult.errors.length > 0) {
@@ -123,13 +140,13 @@ export const POST = protectedRoute(async (auth, request) => {
     );
   }
 
-  const rows = parseResult.data as any[];
+  const rows = parseResult.data as StaffImportRow[];
   const results = {
     success: true,
     imported: 0,
     updated: 0,
     archived: 0,
-    errors: [] as Array<{ row: number; data: any; error: string }>,
+    errors: [] as Array<{ row: number; data: StaffImportRow; error: string }>,
     warnings: [] as string[],
   };
 
@@ -271,11 +288,11 @@ export const POST = protectedRoute(async (auth, request) => {
           results.imported++;
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       results.errors.push({
         row: rowNum,
         data: row,
-        error: err.message || "Unknown error",
+        error: err instanceof Error ? err.message : "Unknown error",
       });
     }
   }
@@ -306,38 +323,6 @@ export const GET = protectedRoute(async (auth, request) => {
   // orgId MUST come from authenticated session — never from caller
   const organizationId = auth.organizationId;
 
-  // Instruction comments to include at the top of CSV
-  const instructions = [
-    "# STAFF DIRECTORY IMPORT/EXPORT",
-    "# ==============================",
-    "#",
-    "# INSTRUCTIONS:",
-    "# 1. Lines starting with # are comments and will be ignored on import",
-    "# 2. Fill in the required fields (marked with *)",
-    '# 3. Use "yes" or "no" for boolean fields (is_super_user, is_active)',
-    '# 4. Action column options: "new" (add), "keep" (no change), "update" (modify), "remove" (archive)',
-    "#",
-    "# FIELD DICTIONARY:",
-    "# salutation     - Title: Mr, Mrs, Ms, Dr, Prof, Miss (leave blank if none)",
-    "# first_name*   - Required: First name",
-    "# last_name*    - Required: Last name",
-    "# email         - Email address (used for matching existing staff)",
-    "# phone         - Contact phone number",
-    "# employee_id   - Staff ID (also used for matching existing staff)",
-    "# job_title*    - Required: Job title or position",
-    "# role_category - Role: headteacher, deputy_headteacher, class_teacher, sendco, etc.",
-    "# is_super_user - yes/no: Has elevated permissions across all modules",
-    "# is_active     - yes/no: Staff member is currently active",
-    "# action        - What to do: new, keep, update, remove",
-    "#",
-    "# ROLE OPTIONS: headteacher, deputy_headteacher, assistant_headteacher,",
-    "#              subject_lead, phase_lead, class_teacher, sendco,",
-    "#              business_manager, site_manager, governor,",
-    "#              teaching_assistant, support_staff, other",
-    "#",
-    "",
-  ].join("\n");
-
   if (type === "export" && organizationId) {
     // Export current staff as CSV for round-trip editing
     const { data: staff } = await supabase
@@ -348,21 +333,7 @@ export const GET = protectedRoute(async (auth, request) => {
 
     if (!staff || staff.length === 0) {
       // Return empty template with instructions
-      const headers = [
-        "salutation",
-        "first_name*",
-        "last_name*",
-        "email",
-        "phone",
-        "employee_id",
-        "job_title*",
-        "role_category",
-        "is_super_user",
-        "is_active",
-        "action",
-      ];
-      const csv = [instructions, headers.join(",")].join("\n");
-      return new NextResponse(csv, {
+      return new NextResponse(buildEmptyStaffImportCsv(), {
         headers: {
           "Content-Type": "text/csv",
           "Content-Disposition": `attachment; filename="staff_directory_${new Date().toISOString().split("T")[0]}.csv"`,
@@ -385,22 +356,8 @@ export const GET = protectedRoute(async (auth, request) => {
       s.is_active ? "keep" : "removed",
     ]);
 
-    const headers = [
-      "salutation",
-      "first_name*",
-      "last_name*",
-      "email",
-      "phone",
-      "employee_id",
-      "job_title*",
-      "role_category",
-      "is_super_user",
-      "is_active",
-      "action",
-    ];
     const csv = [
-      instructions,
-      headers.join(","),
+      buildEmptyStaffImportCsv(),
       ...rows.map((row) => row.map((v) => `"${v}"`).join(",")),
     ].join("\n");
 
@@ -413,95 +370,7 @@ export const GET = protectedRoute(async (auth, request) => {
   }
 
   if (type === "template") {
-    // Return CSV template with instructions, headers, and examples
-    const headers = [
-      "salutation",
-      "first_name*",
-      "last_name*",
-      "email",
-      "phone",
-      "employee_id",
-      "job_title*",
-      "role_category",
-      "is_super_user",
-      "is_active",
-      "action",
-    ];
-    const exampleRows = [
-      [
-        "Mr",
-        "John",
-        "Smith",
-        "john.smith@school.co.uk",
-        "01234 567890",
-        "STF001",
-        "Headteacher",
-        "headteacher",
-        "no",
-        "yes",
-        "new",
-      ],
-      [
-        "Mrs",
-        "Sarah",
-        "Jones",
-        "sarah.jones@school.co.uk",
-        "",
-        "STF002",
-        "Deputy Headteacher",
-        "deputy_headteacher",
-        "no",
-        "yes",
-        "new",
-      ],
-      [
-        "Ms",
-        "Emily",
-        "Brown",
-        "emily.brown@school.co.uk",
-        "",
-        "STF003",
-        "SENCO",
-        "sendco",
-        "no",
-        "yes",
-        "new",
-      ],
-      [
-        "",
-        "David",
-        "Wilson",
-        "david.wilson@school.co.uk",
-        "",
-        "STF004",
-        "Class Teacher",
-        "class_teacher",
-        "no",
-        "yes",
-        "new",
-      ],
-      [
-        "",
-        "Jane",
-        "Doe",
-        "jane.doe@school.co.uk",
-        "",
-        "STF005",
-        "Former Staff",
-        "support_staff",
-        "no",
-        "no",
-        "remove",
-      ],
-    ];
-
-    const csv = [
-      instructions,
-      headers.join(","),
-      ...exampleRows.map((row) => row.map((v) => `"${v}"`).join(",")),
-    ].join("\n");
-
-    return new NextResponse(csv, {
+    return new NextResponse(buildStaffImportTemplateCsv(), {
       headers: {
         "Content-Type": "text/csv",
         "Content-Disposition":

@@ -96,6 +96,7 @@ interface KpiDashboardProps {
   laBenchmarks: LaBenchmarkData;
   demographicCohort?: DemographicCohort | null;
   schoolData: SchoolKpiData;
+  selectedSchoolName?: string | null;
 }
 
 // National benchmarks (IDSR thresholds)
@@ -266,7 +267,7 @@ function KpiCard({
         <div className="grid grid-cols-4 gap-3">
           {/* School */}
           <div className="text-center">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">You</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">School</p>
             <p className={`text-lg font-bold ${getValueColor(schoolValue)}`}>
               {formatValue(schoolValue)}
               {isMetricValue(schoolValue) && <span className="text-xs font-normal text-muted-foreground">{unit}</span>}
@@ -365,7 +366,7 @@ function KpiCard({
 }
 
 // Main Dashboard Component
-export function KpiDashboard({ laBenchmarks, demographicCohort, schoolData }: KpiDashboardProps) {
+export function KpiDashboard({ laBenchmarks, demographicCohort, schoolData, selectedSchoolName }: KpiDashboardProps) {
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
 
   const toggleCard = (id: string) => {
@@ -466,9 +467,9 @@ export function KpiDashboard({ laBenchmarks, demographicCohort, schoolData }: Kp
               School Intelligence Dashboard
             </h2>
             <p className="text-muted-foreground mt-2">
-              Comparing against <strong>{laBenchmarks.school_count}</strong> schools in <strong>{laBenchmarks.la_name}</strong>
+              Selected school: <strong>{selectedSchoolName || "current school"}</strong>. Comparing against <strong>{laBenchmarks.school_count}</strong> open primary schools in <strong>{laBenchmarks.la_name}</strong>
               {demographicCohort && (
-                <> and <strong>{demographicCohort.school_count}</strong> schools with similar intakes</>
+                <> and <strong>{demographicCohort.school_count}</strong> open primary schools nationally with similar FSM/EAL{demographicCohort.sen_band !== "Unavailable" ? "/SEN" : ""} intakes</>
               )}
             </p>
           </div>

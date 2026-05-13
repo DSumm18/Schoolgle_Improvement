@@ -14,10 +14,52 @@ type OrganizationRow = {
   } | null;
 };
 
+type OrganizationMembershipRow = {
+  role: string | null;
+  organization: OrganizationRow | OrganizationRow[] | null;
+};
+
 export const GET = protectedRoute(
   async (auth, req: NextRequest) => {
-    const targetOrganizationId = req.nextUrl.searchParams.get("organizationId");
+    const targetOrganizationId =
+      req.nextUrl.searchParams.get("targetOrganizationId") ??
+      req.nextUrl.searchParams.get("organizationId");
     const supabase = createServiceRoleClient();
+
+    let { data: superAdmin } = await supabase
+      .from("super_admins")
+      .select("user_id")
+      .eq("user_id", auth.userId)
+      .maybeSingle();
+
+    if (!superAdmin && auth.email) {
+      const { data: superAdminByEmail } = await supabase
+        .from("super_admins")
+        .select("user_id")
+        .eq("email", auth.email)
+        .maybeSingle();
+      superAdmin = superAdminByEmail;
+    }
+
+    if (superAdmin) {
+      const { data: allOrganizations, error: allOrganizationsError } = await supabase
+        .from("organizations")
+        .select("id, name, organization_type, parent_organization_id, urn, settings")
+        .order("name", { ascending: true });
+
+      if (allOrganizationsError) return apiError(allOrganizationsError.message, 500);
+
+      let organizations = (allOrganizations ?? []).map((organization) => ({
+        ...(organization as OrganizationRow),
+        role: "admin",
+      }));
+
+      if (targetOrganizationId) {
+        organizations = organizations.filter((org) => org.id === targetOrganizationId);
+      }
+
+      return apiSuccess({ organizations });
+    }
 
     const { data, error } = await supabase
       .from("organization_members")
@@ -40,8 +82,8 @@ export const GET = protectedRoute(
 
     if (error) return apiError(error.message, 500);
 
-    const directMemberships = (data ?? [])
-      .map((membership: any) => {
+    const directMemberships = ((data ?? []) as OrganizationMembershipRow[])
+      .map((membership) => {
         const organization = Array.isArray(membership.organization)
           ? membership.organization[0]
           : membership.organization;

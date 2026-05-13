@@ -15,20 +15,19 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
     .from("compliance_items")
     .select("*")
     .eq("id", id)
+    .eq("organization_id", auth.organizationId)
     .single();
 
   if (error || !item) {
     return apiError("Compliance item not found", 404);
   }
 
-  // Fetch latest version
-  const { data: version } = await supabase
+  // Fetch full version history, newest first
+  const { data: versions } = await supabase
     .from("compliance_versions")
     .select("*")
     .eq("compliance_item_id", id)
-    .order("version_number", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .order("version_number", { ascending: false });
 
   // Fetch review schedule
   const { data: schedule } = await supabase
@@ -47,9 +46,10 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
   return apiSuccess({
     item: {
       ...item,
-      current_version: version,
+      current_version: versions?.[0] || null,
       review_schedule: schedule,
     },
+    versions: versions || [],
     approvals: approvals || [],
   });
 });
@@ -72,6 +72,10 @@ export const PUT = protectedRoute(async (auth, req: NextRequest) => {
     tags,
     confidentiality_level,
     metadata,
+    content_format,
+    content_html,
+    content_md,
+    change_summary,
   } = body;
 
   const updateData: Record<string, any> = {
@@ -90,12 +94,51 @@ export const PUT = protectedRoute(async (auth, req: NextRequest) => {
     .from("compliance_items")
     .update(updateData)
     .eq("id", id)
+    .eq("organization_id", auth.organizationId)
     .select()
     .single();
 
   if (error) {
     console.error("Error updating compliance item:", error);
     return apiError("Failed to update compliance item", 500);
+  }
+
+  let currentVersion = null;
+  if (content_html !== undefined || content_md !== undefined) {
+    const { data: latestVersion } = await supabase
+      .from("compliance_versions")
+      .select("version_number")
+      .eq("compliance_item_id", id)
+      .order("version_number", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const contentHash = content_html
+      ? Buffer.from(content_html).toString("base64").slice(0, 40)
+      : content_md
+        ? Buffer.from(content_md).toString("base64").slice(0, 40)
+        : undefined;
+
+    const { data: version, error: versionError } = await supabase
+      .from("compliance_versions")
+      .insert({
+        compliance_item_id: id,
+        version_number: (latestVersion?.version_number || 0) + 1,
+        content_format: content_format || "html",
+        content_html,
+        content_md,
+        created_by_user_id: auth.userId,
+        change_summary: change_summary || "Updated policy content",
+        content_hash: contentHash,
+      })
+      .select()
+      .single();
+
+    if (versionError) {
+      console.error("Error creating compliance version:", versionError);
+      return apiError("Policy metadata updated, but version history failed", 500);
+    }
+    currentVersion = version;
   }
 
   // Audit log
@@ -108,8 +151,15 @@ export const PUT = protectedRoute(async (auth, req: NextRequest) => {
     metadata: updateData,
   });
 
-  return apiSuccess({ item: data });
+  return apiSuccess({
+    item: {
+      ...data,
+      current_version: currentVersion,
+    },
+  });
 });
+
+export const PATCH = PUT;
 
 /**
  * DELETE /api/compliance/items/[id]
@@ -124,6 +174,7 @@ export const DELETE = protectedRoute(async (auth, req: NextRequest) => {
     .from("compliance_items")
     .update({ status: "archived", updated_at: new Date().toISOString() })
     .eq("id", id)
+    .eq("organization_id", auth.organizationId)
     .select()
     .single();
 

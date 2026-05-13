@@ -1,4 +1,4 @@
-# Model Management with OpenRouter
+﻿# Model Management with OpenRouter
 
 The `@schoolgle/ed-agents` package uses [OpenRouter](https://openrouter.ai/) as its unified model provider. This gives us:
 
@@ -23,7 +23,7 @@ OPENROUTER_API_KEY=sk-or-...
 |----------|----------|----------------|--------------|
 | `anthropic/claude-3.5-sonnet` | Premium specialist responses | ~$3.00 (in) / $15 (out) | Vision, streaming |
 | `openai/gpt-4o` | High quality responses | ~$2.50 / $10.00 | Vision, streaming, JSON mode |
-| `deepseek/deepseek-chat` | Balanced quality/cost | ~$0.27 / $1.10 | Streaming, JSON mode |
+| `openai/gpt-4o-mini` | Balanced quality/cost | ~$0.27 / $1.10 | Streaming, JSON mode |
 | `openai/gpt-4o-mini` | Fast routing/classification | ~$0.15 / $0.60 | Vision, streaming, JSON mode |
 | `google/gemini-2.0-flash-exp` | Ultra-fast, cheap | ~$0.075 | Vision, streaming |
 
@@ -36,7 +36,7 @@ import { MODEL_ALIASES } from '@schoolgle/ed-agents/models';
 
 MODEL_ALIASES.premium      // 'anthropic/claude-3.5-sonnet'
 MODEL_ALIASES.fast        // 'openai/gpt-4o-mini'
-MODEL_ALIASES.cheap        // 'deepseek/deepseek-chat'
+MODEL_ALIASES.cheap        // 'openai/gpt-4o-mini'
 MODEL_ALIASES.gemini       // 'google/gemini-2.0-flash-exp'
 ```
 
@@ -122,7 +122,7 @@ Edit `packages/ed-agents/src/models/router.ts`:
 const TASK_MODEL_MAP: Record<TaskType, string[]> = {
   'specialist-response': [
     'your-new-model-here',    // Just change this!
-    'deepseek/deepseek-chat',  // Fallback
+    'openai/gpt-4o-mini',  // Fallback
     'openai/gpt-4o',          // Another fallback
   ],
   // ...
@@ -194,7 +194,7 @@ const client = createOpenRouterClient();
 // Test two models side-by-side
 const [response1, response2] = await Promise.all([
   client.chatWithSystem('You are Ed...', 'What is RIDDOR?', { model: 'anthropic/claude-3.5-sonnet' }),
-  client.chatWithSystem('You are Ed...', 'What is RIDDOR?', { model: 'deepseek/deepseek-chat' }),
+  client.chatWithSystem('You are Ed...', 'What is RIDDOR?', { model: 'openai/gpt-4o-mini' }),
 ]);
 
 // Compare quality and cost
@@ -223,3 +223,4 @@ const response = await router.chat(
 3. **Test new models** - Before switching defaults
 4. **Use fallbacks** - Always have cheaper fallbacks configured
 5. **Consider latency** - Some models are faster than others
+

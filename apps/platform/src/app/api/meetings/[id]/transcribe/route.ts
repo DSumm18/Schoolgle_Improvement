@@ -1,4 +1,10 @@
 import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
+import {
+  applySpeakerMap,
+  composeTranscriptFullText,
+  extractSpeakerLabels,
+  parseDeepgramUtterances,
+} from "@/lib/meetings";
 import { createServiceRoleClient } from "@/lib/supabase-server";
 
 const DEEPGRAM_API_KEY = process.env.DEEPGRAM_API_KEY;
@@ -22,6 +28,9 @@ export const POST = protectedRoute(async (auth, request) => {
   const id = getMeetingId(request);
   const formData = await request.formData();
   const audioFile = formData.get("audio") as File;
+  const purpose = getFormString(formData, "purpose");
+  const recordingContext = getFormString(formData, "recording_context");
+  const attendeeNotes = getFormString(formData, "attendee_notes");
   // orgId MUST come from authenticated session — never from caller
   const organizationId = auth.organizationId;
 
@@ -85,17 +94,12 @@ export const POST = protectedRoute(async (auth, request) => {
   const dgResult = await dgResponse.json();
 
   // Extract utterances with speaker labels
-  const utterances = dgResult.results?.utterances || [];
-  const chunks = utterances.map((u: any) => ({
-    timestamp: formatSeconds(u.start),
-    speaker: `Speaker ${u.speaker}`,
-    text: u.transcript,
-  }));
-
-  // Build full text with speaker labels
-  const fullText = chunks
-    .map((c: any) => `[${c.timestamp}] ${c.speaker}: ${c.text}`)
-    .join("\n");
+  const chunks = parseDeepgramUtterances(dgResult);
+  const fullText = composeTranscriptFullText(chunks, {
+    purpose,
+    recordingContext,
+    attendeeNotes,
+  });
 
   // Store transcript — upsert in case one already exists
   const { data: existing } = await supabase
@@ -125,21 +129,104 @@ export const POST = protectedRoute(async (auth, request) => {
   }
 
   // Count unique speakers
-  const speakers = new Set(chunks.map((c: any) => c.speaker));
+  const speakers = extractSpeakerLabels(chunks);
 
   return apiSuccess({
     transcript,
     summary: {
       duration_seconds: dgResult.metadata?.duration || 0,
-      speaker_count: speakers.size,
+      speaker_count: speakers.length,
       utterance_count: chunks.length,
       word_count: fullText.split(/\s+/).length,
+      speaker_labels: speakers,
     },
   });
 });
 
-function formatSeconds(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+/**
+ * PATCH /api/meetings/[id]/transcribe
+ * Rename diarised speakers after the transcript is generated.
+ */
+export const PATCH = protectedRoute(async (auth, request) => {
+  const id = getMeetingId(request);
+  const organizationId = auth.organizationId;
+
+  if (!organizationId) {
+    return apiError("Missing organizationId", 400);
+  }
+
+  const body = await request.json();
+  const speakerMap = body.speakerMap as Record<string, string> | undefined;
+
+  if (!speakerMap || Object.keys(speakerMap).length === 0) {
+    return apiError("Missing speaker map", 400);
+  }
+
+  const supabase = createServiceRoleClient();
+
+  const { data: meeting } = await supabase
+    .from("meetings")
+    .select("id")
+    .eq("id", id)
+    .eq("organization_id", organizationId)
+    .single();
+
+  if (!meeting) {
+    return apiError("Meeting not found", 404);
+  }
+
+  const { data: transcript, error: transcriptError } = await supabase
+    .from("meeting_transcripts")
+    .select("*")
+    .eq("meeting_id", id)
+    .maybeSingle();
+
+  if (transcriptError) {
+    console.error("Error fetching transcript:", transcriptError);
+    return apiError("Failed to fetch transcript", 500);
+  }
+
+  if (!transcript) {
+    return apiError("Transcript not found", 404);
+  }
+
+  const chunks = applySpeakerMap(transcript.chunks || [], speakerMap);
+  const fullText = preserveTranscriptContext(
+    transcript.full_text,
+    composeTranscriptFullText(chunks),
+  );
+
+  const { data: updated, error } = await supabase
+    .from("meeting_transcripts")
+    .update({ chunks, full_text: fullText })
+    .eq("id", transcript.id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error updating transcript speakers:", error);
+    return apiError("Failed to update speakers", 500);
+  }
+
+  return apiSuccess({
+    transcript: updated,
+    speaker_labels: extractSpeakerLabels(chunks),
+  });
+});
+
+function getFormString(formData: FormData, key: string): string | null {
+  const value = formData.get(key);
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function preserveTranscriptContext(
+  previousFullText: string | null,
+  transcriptText: string,
+): string {
+  if (!previousFullText?.includes("\n\nTRANSCRIPT:\n")) {
+    return transcriptText;
+  }
+
+  const [context] = previousFullText.split("\n\nTRANSCRIPT:\n");
+  return `${context}\n\nTRANSCRIPT:\n${transcriptText}`;
 }

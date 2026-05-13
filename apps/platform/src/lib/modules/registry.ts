@@ -32,7 +32,6 @@ import {
   Calendar,
   Eye,
   UserCheck,
-  ThumbsUp,
   Scale,
   Accessibility,
   Brain,
@@ -50,6 +49,8 @@ import {
   Newspaper,
   Database,
   Plug,
+  Boxes,
+  type LucideIcon,
 } from "lucide-react";
 
 export type Role =
@@ -65,7 +66,7 @@ export interface ModuleDefinition {
   id: string;
   name: string;
   color: string;
-  icon: any;
+  icon: LucideIcon;
   description: string;
   requiredPermissions: Role[];
   /** When true, module is hidden from pilot navigation. Still accessible for admins via direct URL. */
@@ -79,7 +80,7 @@ export interface AppDefinition {
   moduleId: string;
   name: string;
   route: string;
-  icon: any;
+  icon: LucideIcon;
   shortDescription: string;
   requiredPermissions: Role[];
   /** When true, app is hidden from pilot navigation */
@@ -146,6 +147,15 @@ export const MODULES: ModuleDefinition[] = [
     requiredPermissions: ["admin", "headteacher", "slt"],
   },
   {
+    id: "business",
+    name: "Schoolgle Business",
+    color: "rose",
+    icon: Briefcase,
+    description:
+      "Operational control tower for incidents, assurance, documents and cross-module follow-up.",
+    requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
+  },
+  {
     id: "hr",
     name: "HR & People",
     color: "blue",
@@ -161,6 +171,7 @@ export const MODULES: ModuleDefinition[] = [
     description:
       "Concern logging, DSL triage, chronology, and multi-agency referrals.",
     requiredPermissions: ["admin", "headteacher", "slt"],
+    pilotHidden: true,
   },
   {
     id: "school-intelligence",
@@ -182,11 +193,11 @@ export const MODULES: ModuleDefinition[] = [
   },
   {
     id: "send",
-    name: "SEND",
+    name: "SEND & Inclusion",
     color: "emerald",
     icon: Heart,
     description:
-      "SEN register, graduated approach, provision mapping, and referral tracking.",
+      "SENCO workflows, inclusion oversight, provision, evidence, meetings, and funding.",
     requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
   },
   {
@@ -245,6 +256,24 @@ export const MODULES: ModuleDefinition[] = [
     icon: Plug,
     description:
       "Integrate your school tools — Canva templates, MIS data imports, Google Drive sync, and more.",
+    requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
+  },
+  {
+    id: "toolbox",
+    name: "Toolbox",
+    color: "emerald",
+    icon: Boxes,
+    description:
+      "A store-style library of Schoolgle mini apps and useful school tools.",
+    requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
+  },
+  {
+    id: "documents",
+    name: "Document Management",
+    color: "purple",
+    icon: FileText,
+    description:
+      "Manage school-branded templates, generated letters, review dates and document records.",
     requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
   },
   {
@@ -315,6 +344,7 @@ export const APPS: AppDefinition[] = [
     icon: Target,
     shortDescription: "Track strategic tasks.",
     requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
+    pilotHidden: true,
   },
   {
     id: "siams-readiness",
@@ -376,6 +406,7 @@ export const APPS: AppDefinition[] = [
     icon: BarChart3,
     shortDescription: "AI-powered generative analysis from uploaded spreadsheets.",
     requiredPermissions: ["admin", "headteacher", "slt"],
+    pilotHidden: true,
   },
   {
     id: "trust-assessor",
@@ -421,6 +452,7 @@ export const APPS: AppDefinition[] = [
     icon: BookOpen,
     shortDescription: "AI-powered plans.",
     requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
+    pilotHidden: true,
   },
   {
     id: "resource-generator",
@@ -430,14 +462,53 @@ export const APPS: AppDefinition[] = [
     icon: FilePlus,
     shortDescription: "Worksheets & materials.",
     requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
+    pilotHidden: true,
   },
   {
     id: "assessment-support",
-    moduleId: "teaching-learning",
-    name: "Assessment Support",
-    route: "/dashboard/teaching-learning/assessment-support",
-    icon: CheckSquare,
-    shortDescription: "Marking & feedback.",
+    moduleId: "improvement",
+    name: "Assessment Intelligence",
+    route: "/dashboard/school-improvement/assessment-intelligence",
+    icon: ClipboardCheck,
+    shortDescription: "Teacher judgement snapshots that feed school improvement evidence.",
+    requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
+  },
+  {
+    id: "class-builder",
+    moduleId: "toolbox",
+    name: "Class Builder",
+    route: "/dashboard/toolbox/class-builder",
+    icon: Users,
+    shortDescription: "Collect pupil choices and draft balanced class groups.",
+    requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
+  },
+  {
+    id: "toolbox-home",
+    moduleId: "toolbox",
+    name: "Toolbox",
+    route: "/dashboard/toolbox",
+    icon: Boxes,
+    shortDescription: "Browse and launch Schoolgle mini apps.",
+    requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
+  },
+  {
+    id: "document-management-home",
+    moduleId: "documents",
+    name: "Document Management",
+    route: "/dashboard/documents",
+    icon: FileText,
+    shortDescription:
+      "School-branded templates, generated documents and template maintenance.",
+    requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
+  },
+  {
+    id: "incident-hub",
+    moduleId: "business",
+    name: "Incident Hub",
+    route: "/dashboard/incidents",
+    icon: Siren,
+    shortDescription:
+      "Cross-module incident register with risk scoring, tasks, documents and meetings.",
     requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
   },
   {
@@ -448,6 +519,7 @@ export const APPS: AppDefinition[] = [
     icon: Mail,
     shortDescription: "Draft newsletters & updates.",
     requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
+    pilotHidden: true,
   },
   {
     id: "intervention-notes",
@@ -457,6 +529,7 @@ export const APPS: AppDefinition[] = [
     icon: ClipboardList,
     shortDescription: "Track support impact.",
     requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
+    pilotHidden: true,
   },
   {
     id: "sim-studio",
@@ -466,6 +539,7 @@ export const APPS: AppDefinition[] = [
     icon: Gamepad2,
     shortDescription: "Interactive simulations & assessment quests.",
     requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
+    pilotHidden: true,
   },
 
   // Compliance Apps
@@ -504,15 +578,17 @@ export const APPS: AppDefinition[] = [
     icon: GraduationCap,
     shortDescription: "Staff training compliance.",
     requiredPermissions: ["admin", "headteacher", "slt"],
+    pilotHidden: true,
   },
   {
     id: "compliance-gdpr",
     moduleId: "compliance",
-    name: "GDPR Toolkit",
+    name: "Information Governance",
     route: "/dashboard/compliance/gdpr",
     icon: Lock,
-    shortDescription: "DPIAs, SARs, and breach log.",
+    shortDescription: "DPIAs, SARs, breaches and FOI logs.",
     requiredPermissions: ["admin", "headteacher", "slt"],
+    pilotHidden: true,
   },
   {
     id: "compliance-tasks",
@@ -522,6 +598,7 @@ export const APPS: AppDefinition[] = [
     icon: CheckSquare,
     shortDescription: "Track compliance actions.",
     requiredPermissions: ["admin", "headteacher", "slt"],
+    pilotHidden: true,
   },
   {
     id: "compliance-scr",
@@ -531,6 +608,7 @@ export const APPS: AppDefinition[] = [
     icon: ClipboardList,
     shortDescription: "Digital SCR with DBS and pre-employment checks.",
     requiredPermissions: ["admin", "headteacher", "slt"],
+    pilotHidden: true,
   },
   {
     id: "compliance-complaints",
@@ -540,6 +618,7 @@ export const APPS: AppDefinition[] = [
     icon: Mail,
     shortDescription: "3-stage complaints procedure tracker.",
     requiredPermissions: ["admin", "headteacher", "slt"],
+    pilotHidden: true,
   },
   {
     id: "compliance-concerns",
@@ -549,6 +628,7 @@ export const APPS: AppDefinition[] = [
     icon: ShieldCheck,
     shortDescription: "Confidential low-level concerns log (DSL only).",
     requiredPermissions: ["admin", "headteacher"],
+    pilotHidden: true,
   },
   {
     id: "compliance-consent",
@@ -558,6 +638,7 @@ export const APPS: AppDefinition[] = [
     icon: FileEdit,
     shortDescription: "Photo, trip and medical consent tracking.",
     requiredPermissions: ["admin", "headteacher", "slt"],
+    pilotHidden: true,
   },
   {
     id: "compliance-foi",
@@ -567,6 +648,7 @@ export const APPS: AppDefinition[] = [
     icon: FilePlus,
     shortDescription: "Freedom of Information request tracker.",
     requiredPermissions: ["admin", "headteacher", "slt"],
+    pilotHidden: true,
   },
   {
     id: "compliance-dpo",
@@ -576,6 +658,7 @@ export const APPS: AppDefinition[] = [
     icon: Shield,
     shortDescription: "Outsourced DPO service via Vrisk.",
     requiredPermissions: ["admin", "headteacher"],
+    pilotHidden: true,
   },
   {
     id: "compliance-website",
@@ -627,7 +710,7 @@ export const APPS: AppDefinition[] = [
 
   {
     id: "staff-connectors",
-    moduleId: "estates",
+    moduleId: "hr",
     name: "Staff Connectors",
     route: "/dashboard/connectors/staff",
     icon: Settings,
@@ -658,11 +741,21 @@ export const APPS: AppDefinition[] = [
   {
     id: "estates-audit",
     moduleId: "estates",
-    name: "Estates Audit",
+    name: "GEMS Audit",
     route: "/dashboard/estates/audit",
     icon: ShieldCheck,
-    shortDescription: "Performance audit & compliance.",
+    shortDescription: "DfE GEMS self-assessment and estate assurance check.",
     requiredPermissions: ["admin", "headteacher", "slt", "caretaker"],
+  },
+  {
+    id: "governance-estates-assurance",
+    moduleId: "governance",
+    name: "Estates Assurance",
+    route: "/dashboard/estates/audit",
+    icon: ShieldCheck,
+    shortDescription: "Trustee view of GEMS estate assurance and gaps.",
+    requiredPermissions: ["admin", "headteacher", "slt", "governor"],
+    pilotHidden: true,
   },
   {
     id: "compliance-checks",
@@ -710,6 +803,15 @@ export const APPS: AppDefinition[] = [
     requiredPermissions: ["admin", "headteacher", "slt", "caretaker"],
   },
   {
+    id: "estate-strategy",
+    moduleId: "estates",
+    name: "Estate Strategy",
+    route: "/dashboard/estates/strategy",
+    icon: TrendingUp,
+    shortDescription: "Risk-led 3-year capital strategy for finance and trustees.",
+    requiredPermissions: ["admin", "headteacher", "slt", "governor"],
+  },
+  {
     id: "lettings",
     moduleId: "estates",
     name: "Lettings",
@@ -721,22 +823,23 @@ export const APPS: AppDefinition[] = [
 
   {
     id: "workflows",
-    moduleId: "estates",
+    moduleId: "compliance",
     name: "Workflows",
     route: "/dashboard/workflows",
     icon: ClipboardCheck,
     shortDescription: "Ed-orchestrated multi-step processes and checklists.",
     requiredPermissions: ["admin", "headteacher", "slt", "caretaker"],
+    pilotHidden: true,
   },
 
   {
     id: "sops",
-    moduleId: "estates",
-    name: "Procedures (SOPs)",
-    route: "/dashboard/sops",
+    moduleId: "compliance",
+    name: "SOPs",
+    route: "/dashboard/compliance/sops",
     icon: ClipboardCheck,
     shortDescription:
-      "Step-by-step guided checklists for H&S and compliance procedures.",
+      "Turn policies into local procedures, guided routines and evidence trails.",
     requiredPermissions: [
       "admin",
       "headteacher",
@@ -764,6 +867,7 @@ export const APPS: AppDefinition[] = [
     icon: TrendingUp,
     shortDescription: "AI-powered budget decision cards.",
     requiredPermissions: ["admin", "headteacher", "slt"],
+    pilotHidden: true,
   },
   {
     id: "budget-monitor",
@@ -802,7 +906,7 @@ export const APPS: AppDefinition[] = [
   // Performance Management
   {
     id: "performance-management",
-    moduleId: "estates",
+    moduleId: "hr",
     name: "Performance Management",
     route: "/dashboard/hr/performance",
     icon: Target,
@@ -812,7 +916,7 @@ export const APPS: AppDefinition[] = [
   // Cover Management
   {
     id: "cover-management",
-    moduleId: "estates",
+    moduleId: "hr",
     name: "Cover Management",
     route: "/dashboard/hr/cover",
     icon: UserCheck,
@@ -849,6 +953,7 @@ export const APPS: AppDefinition[] = [
     icon: Users,
     shortDescription: "Admission rounds, applications, and waiting lists.",
     requiredPermissions: ["admin", "headteacher", "slt"],
+    pilotHidden: true,
   },
   // Emergency Planning
   {
@@ -881,6 +986,7 @@ export const APPS: AppDefinition[] = [
     shortDescription:
       "FSM tracking, meal registrations, and dietary management.",
     requiredPermissions: ["admin", "headteacher", "slt"],
+    pilotHidden: true,
   },
 
   // Safeguarding Apps
@@ -892,6 +998,7 @@ export const APPS: AppDefinition[] = [
     icon: Eye,
     shortDescription: "Concern logging, triage, and chronology.",
     requiredPermissions: ["admin", "headteacher", "slt"],
+    pilotHidden: true,
   },
 
   // Attendance Apps
@@ -906,6 +1013,16 @@ export const APPS: AppDefinition[] = [
   },
 
   // SEND Apps
+  {
+    id: "send-inclusion-copilot",
+    moduleId: "send",
+    name: "SEND & Inclusion Copilot",
+    route: "/dashboard/send/copilot",
+    icon: Sparkles,
+    shortDescription:
+      "SENCO command centre for pupils, actions, meetings, evidence, provision, funding, and leadership reporting.",
+    requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
+  },
   {
     id: "send-home",
     moduleId: "send",
@@ -954,6 +1071,7 @@ export const APPS: AppDefinition[] = [
     icon: Video,
     shortDescription: "Google Meet, Teams, and Zoom meetings.",
     requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
+    pilotHidden: true,
   },
   {
     id: "comms-analytics",
@@ -1023,6 +1141,7 @@ export const APPS: AppDefinition[] = [
     icon: BarChart3,
     shortDescription: "Cross-survey analytics and insights.",
     requiredPermissions: ["admin", "headteacher", "slt"],
+    pilotHidden: true,
   },
 
   // Website Builder Apps
@@ -1034,6 +1153,7 @@ export const APPS: AppDefinition[] = [
     icon: Globe,
     shortDescription: "Design and manage your school website.",
     requiredPermissions: ["admin", "headteacher", "slt"],
+    pilotHidden: true,
   },
   {
     id: "website-pages",
@@ -1043,6 +1163,7 @@ export const APPS: AppDefinition[] = [
     icon: FileText,
     shortDescription: "Edit and manage website pages.",
     requiredPermissions: ["admin", "headteacher", "slt"],
+    pilotHidden: true,
   },
   {
     id: "website-design",
@@ -1052,6 +1173,7 @@ export const APPS: AppDefinition[] = [
     icon: Palette,
     shortDescription: "Customise colours, fonts, and layout.",
     requiredPermissions: ["admin", "headteacher", "slt"],
+    pilotHidden: true,
   },
   {
     id: "website-news",
@@ -1061,6 +1183,7 @@ export const APPS: AppDefinition[] = [
     icon: Newspaper,
     shortDescription: "Publish news articles and updates.",
     requiredPermissions: ["admin", "headteacher", "slt"],
+    pilotHidden: true,
   },
   {
     id: "website-media",
@@ -1070,6 +1193,7 @@ export const APPS: AppDefinition[] = [
     icon: FileImage,
     shortDescription: "Upload and manage images and files.",
     requiredPermissions: ["admin", "headteacher", "slt"],
+    pilotHidden: true,
   },
   {
     id: "website-compliance",
@@ -1146,6 +1270,7 @@ export const APPS: AppDefinition[] = [
     icon: Palette,
     shortDescription: "Free, professional templates for schools.",
     requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
+    pilotHidden: true,
   },
 
   // Canvas Apps
@@ -1247,7 +1372,7 @@ export const MODULE_GROUPS: ModuleGroup[] = [
   {
     id: "operations",
     name: "Operations",
-    moduleIds: ["estates", "finance", "hr", "compliance"],
+    moduleIds: ["estates", "finance", "hr", "compliance", "documents"],
   },
   {
     id: "communications",
@@ -1263,11 +1388,11 @@ export const MODULE_GROUPS: ModuleGroup[] = [
 
 export function getModuleByPath(path: string): ModuleDefinition | undefined {
   // Exact module landing pages
-  const module = MODULES.find(
+  const foundModule = MODULES.find(
     (m) =>
       path === `/dashboard/${m.id}` || path.startsWith(`/dashboard/${m.id}/`),
   );
-  if (module) return module;
+  if (foundModule) return foundModule;
 
   // Map apps to modules
   const app = APPS.find(

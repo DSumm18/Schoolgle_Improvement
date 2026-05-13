@@ -4,7 +4,6 @@ import {
   GraduationCap,
   BookOpen,
   FilePlus,
-  CheckSquare,
   Mail,
   ClipboardList,
   Gamepad2,
@@ -47,14 +46,6 @@ const apps = [
     description:
       "Generate worksheets, slides, and activities tailored to your topic and year group in seconds.",
     href: "/dashboard/teaching-learning/resource-generator",
-    status: "Coming Soon",
-  },
-  {
-    icon: CheckSquare,
-    title: "Assessment Support",
-    description:
-      "Create mark schemes, quizzes, and formative assessments with instant AI feedback.",
-    href: "/dashboard/teaching-learning/assessment-support",
     status: "Coming Soon",
   },
   {

@@ -32,7 +32,7 @@ export const PATCH = protectedRoute(
       locationScope: body.siteFeatureId ? "site" : "building",
       confidence: typeof body.confidence === "number" ? body.confidence : 0.9,
       status:
-        typeof body.status === "string"
+        body.status === "needs_review" || body.status === "needs_position" || body.status === "mapped"
           ? body.status
           : body.roomId || body.siteFeatureId || (typeof body.x === "number" && typeof body.y === "number")
             ? "mapped"

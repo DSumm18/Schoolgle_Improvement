@@ -1,6 +1,6 @@
-import { NextRequest } from "next/server";
 import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
+import { ensureStandardDocumentTemplates } from "@/lib/document-engine/standard-templates";
 
 /**
  * GET /api/documents/templates
@@ -11,8 +11,9 @@ import { createServiceRoleClient } from "@/lib/supabase-server";
 export const GET = protectedRoute(async (auth, request) => {
   const supabase = createServiceRoleClient();
   const { searchParams } = new URL(request.url);
+  await ensureStandardDocumentTemplates(supabase);
 
-  const module = searchParams.get("module");
+  const documentModule = searchParams.get("module");
   const category = searchParams.get("category");
   const documentType = searchParams.get("document_type");
   // orgId MUST come from authenticated session — never from caller
@@ -26,7 +27,7 @@ export const GET = protectedRoute(async (auth, request) => {
     .order("module", { ascending: true })
     .order("name", { ascending: true });
 
-  if (module) query = query.eq("module", module);
+  if (documentModule) query = query.eq("module", documentModule);
   if (category) query = query.eq("category", category);
   if (documentType) query = query.eq("document_type", documentType);
   if (search) query = query.ilike("name", `%${search}%`);
@@ -51,7 +52,6 @@ export const POST = protectedRoute(
     const body = await request.json();
 
     const {
-      organizationId,
       name,
       module,
       category,

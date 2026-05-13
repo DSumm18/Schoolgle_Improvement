@@ -1,4 +1,4 @@
-import type { Message, ModelConfig, TaskType, ModelRoutingDecision } from '@schoolgle/shared';
+﻿import type { Message, ModelConfig, TaskType, ModelRoutingDecision } from '@schoolgle/shared';
 
 /**
  * Routes tasks to optimal models based on complexity, cost, and requirements
@@ -82,13 +82,13 @@ export class ModelRouter {
     switch (taskType) {
       case 'vision_analysis':
         selectedModel = {
-          model: 'qwen/qwen-2.5-vl-72b',
+          model: 'google/gemini-2.0-flash-001',
           provider: 'openrouter',
           maxTokens: 1500,
           temperature: 0.3
         };
         reason = 'UI screenshot analysis requires vision model';
-        estimatedCost = 0.0008; // ~£0.0008 per request
+        estimatedCost = 0.0008; // ~Â£0.0008 per request
         break;
         
       case 'ocr':
@@ -115,24 +115,24 @@ export class ModelRouter {
         
       case 'chat_complex':
         selectedModel = {
-          model: 'deepseek/deepseek-chat',
+          model: 'openai/gpt-4o-mini',
           provider: 'openrouter',
           maxTokens: 2000,
           temperature: 0.7
         };
-        reason = 'Complex reasoning task, using DeepSeek V3';
+        reason = 'Complex reasoning task, using approved low-cost model';
         estimatedCost = 0.0012;
         break;
         
       case 'chat_simple':
       default:
         selectedModel = {
-          model: 'deepseek/deepseek-chat',
+          model: 'openai/gpt-4o-mini',
           provider: 'openrouter',
           maxTokens: 1000,
           temperature: 0.7
         };
-        reason = 'Simple query, using DeepSeek (cost-effective & reliable)';
+        reason = 'Simple query, using approved cost-effective model';
         estimatedCost = 0.0012;
         break;
     }
@@ -148,3 +148,6 @@ export class ModelRouter {
 
 // Export singleton instance
 export const modelRouter = new ModelRouter();
+
+
+

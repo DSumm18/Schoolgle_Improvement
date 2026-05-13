@@ -17,7 +17,7 @@ import {
   Info,
   DollarSign,
   Gauge,
-  BarChart3,
+  type LucideIcon,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase";
@@ -26,6 +26,8 @@ import { supabase } from "@/lib/supabase";
 
 interface InvoiceDataTableProps {
   organizationId: string;
+  selectedMeterRef?: string | null;
+  onClearSelectedMeter?: () => void;
 }
 
 interface OtherChargeBreakdown {
@@ -265,7 +267,7 @@ function SummaryCard({
   sub,
   alert,
 }: {
-  icon: any;
+  icon: LucideIcon;
   label: string;
   value: string;
   sub?: string;
@@ -505,19 +507,22 @@ function InvoiceDetail({
 
 // ─── Main Component ──────────────────────────────────────────────────
 
-export function InvoiceDataTable({ organizationId }: InvoiceDataTableProps) {
+export function InvoiceDataTable({
+  organizationId,
+  selectedMeterRef,
+  onClearSelectedMeter,
+}: InvoiceDataTableProps) {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [financeMatches, setFinanceMatches] = useState<FinanceMatch[]>([]);
   const [summary, setSummary] = useState<InvoiceSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [fuelFilter, setFuelFilter] = useState<"electricity" | "gas">(
-    "electricity",
-  );
+  const [fuelFilter, setFuelFilter] = useState<"electricity" | "gas">("gas");
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("invoice_date");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const hasInvoices = invoices.length > 0;
 
   // Authenticated fetch
   const authFetch = useCallback(async (url: string) => {
@@ -549,8 +554,10 @@ export function InvoiceDataTable({ organizationId }: InvoiceDataTableProps) {
         setInvoices(data.invoices ?? []);
         setFinanceMatches(data.finance_matches ?? []);
         setSummary(data.summary ?? null);
-      } catch (e: any) {
-        if (!cancelled) setError(e.message);
+      } catch (e) {
+        if (!cancelled) {
+          setError(e instanceof Error ? e.message : "Failed to load invoices");
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -570,9 +577,37 @@ export function InvoiceDataTable({ organizationId }: InvoiceDataTableProps) {
     return m;
   }, [financeMatches]);
 
+  useEffect(() => {
+    if (invoices.length === 0) return;
+    if (selectedMeterRef) {
+      const selectedInvoice = invoices.find(
+        (inv) => inv.meter_ref === selectedMeterRef,
+      );
+      if (
+        selectedInvoice?.fuel_type === "gas" ||
+        selectedInvoice?.fuel_type === "electricity"
+      ) {
+        setFuelFilter(selectedInvoice.fuel_type);
+        return;
+      }
+    }
+
+    const hasCurrentFuel = invoices.some((inv) => inv.fuel_type === fuelFilter);
+    const hasGas = invoices.some((inv) => inv.fuel_type === "gas");
+    const hasElectricity = invoices.some((inv) => inv.fuel_type === "electricity");
+
+    if (!hasCurrentFuel) {
+      setFuelFilter(hasGas ? "gas" : hasElectricity ? "electricity" : fuelFilter);
+    }
+  }, [fuelFilter, invoices, selectedMeterRef]);
+
   // Filtered + sorted invoices
   const filtered = useMemo(() => {
-    let arr = invoices.filter((inv) => inv.fuel_type === fuelFilter);
+    const arr = invoices.filter(
+      (inv) =>
+        inv.fuel_type === fuelFilter &&
+        (!selectedMeterRef || inv.meter_ref === selectedMeterRef),
+    );
 
     arr.sort((a, b) => {
       let cmp = 0;
@@ -601,7 +636,7 @@ export function InvoiceDataTable({ organizationId }: InvoiceDataTableProps) {
       return sortDir === "asc" ? cmp : -cmp;
     });
     return arr;
-  }, [invoices, fuelFilter, sortKey, sortDir]);
+  }, [invoices, fuelFilter, selectedMeterRef, sortKey, sortDir]);
 
   // Estimated warnings
   const estimatedInvoices = useMemo(
@@ -682,6 +717,29 @@ export function InvoiceDataTable({ organizationId }: InvoiceDataTableProps) {
 
   return (
     <div className="space-y-4 print:space-y-2">
+      {!hasInvoices && (
+        <div className="rounded-xl border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-900/20 p-5">
+          <div className="flex items-start gap-3">
+            <Info className="h-5 w-5 text-teal-600 dark:text-teal-400 mt-0.5 flex-shrink-0" />
+            <div>
+              <h3 className="text-sm font-semibold text-teal-900 dark:text-teal-200">
+                No energy invoices imported yet
+              </h3>
+              <p className="mt-1 text-sm text-teal-800 dark:text-teal-300">
+                Energy becomes useful once invoices or meter readings are in the
+                school record. The extraction route can process an uploaded PDF
+                or a selected Google Drive file, then create the invoice, meter
+                reference, kWh usage, cost and finance reconciliation data.
+              </p>
+              <p className="mt-2 text-xs text-teal-700 dark:text-teal-400">
+                A full private Drive folder connection still needs an authorised
+                Drive picker/sync step, so we should present this as import-first
+                rather than automatic folder monitoring.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
       {/* ═══ Summary Cards ═══ */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <SummaryCard
@@ -813,6 +871,28 @@ export function InvoiceDataTable({ organizationId }: InvoiceDataTableProps) {
         </span>
       </div>
 
+      {selectedMeterRef && (
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-900/20 px-4 py-3">
+          <div>
+            <p className="text-sm font-semibold text-teal-900 dark:text-teal-100">
+              Showing invoice data for meter {selectedMeterRef}
+            </p>
+            <p className="text-xs text-teal-700 dark:text-teal-300">
+              Expand a row to review the extracted charges, reading values and
+              source file.
+            </p>
+          </div>
+          {onClearSelectedMeter && (
+            <button
+              onClick={onClearSelectedMeter}
+              className="rounded-lg border border-teal-200 dark:border-teal-700 px-3 py-1.5 text-xs font-semibold text-teal-700 dark:text-teal-200 hover:bg-white dark:hover:bg-slate-800"
+            >
+              Show all meters
+            </button>
+          )}
+        </div>
+      )}
+
       {/* ═══ Data Table ═══ */}
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden print:border print:rounded-none">
         <div className="overflow-x-auto">
@@ -880,7 +960,15 @@ export function InvoiceDataTable({ organizationId }: InvoiceDataTableProps) {
                     colSpan={18}
                     className="text-center py-12 text-gray-400 dark:text-gray-500"
                   >
-                    No {fuelFilter} invoices found
+                    <div className="flex flex-col items-center gap-2">
+                      <Receipt className="h-8 w-8 text-gray-300 dark:text-gray-600" />
+                      <span>No {fuelFilter} invoices found</span>
+                      <span className="max-w-md text-xs text-gray-400 dark:text-gray-500">
+                        Import supplier PDFs or select invoices from Drive to
+                        populate this table with real costs, meter references
+                        and readings.
+                      </span>
+                    </div>
                   </td>
                 </tr>
               ) : (

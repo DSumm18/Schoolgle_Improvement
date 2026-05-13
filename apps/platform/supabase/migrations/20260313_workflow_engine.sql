@@ -1,4 +1,4 @@
--- ============================================================================
+﻿-- ============================================================================
 -- Workflow Engine
 -- Cross-module orchestration for multi-step processes (inspection remediation,
 -- procurement, onboarding, etc.) with phase gates, step dependencies,
@@ -429,7 +429,7 @@ VALUES (
           "ai_assist_type": "draft_risk_entry",
           "ai_assist_config": {
             "prompt": "Draft a risk register entry for an equipment inspection failure. Include: hazard description, who is affected, current controls, residual risk score, and recommended actions.",
-            "model": "deepseek/deepseek-chat"
+            "model": "openai/gpt-4o-mini"
           },
           "notify_on_actionable": true
         },
@@ -522,7 +522,7 @@ VALUES (
           "ai_assist_type": "repair_vs_replace",
           "ai_assist_config": {
             "prompt": "Analyse repair vs replacement options for the failed equipment. Consider: remaining useful life, repair cost vs replacement cost, compliance requirements, warranty status, and energy efficiency of newer models.",
-            "model": "deepseek/deepseek-chat"
+            "model": "openai/gpt-4o-mini"
           },
           "notify_on_actionable": true
         },
@@ -537,7 +537,7 @@ VALUES (
           "ai_assist_type": "draft_specification",
           "ai_assist_config": {
             "prompt": "Draft a scope of work specification for remediation of the equipment failure. Include: technical requirements, applicable British Standards, site access constraints, and completion criteria.",
-            "model": "deepseek/deepseek-chat"
+            "model": "openai/gpt-4o-mini"
           },
           "notify_on_actionable": true
         },
@@ -593,14 +593,14 @@ VALUES (
           "ai_assist_type": "deal_finder_search",
           "ai_assist_config": {
             "prompt": "Search for relevant framework agreements and deals for this type of equipment or service. Prioritise DfE-recommended frameworks and CPC contracts.",
-            "model": "deepseek/deepseek-chat"
+            "model": "openai/gpt-4o-mini"
           },
           "notify_on_actionable": true
         },
         {
           "step_number": 3,
           "title": "Request minimum 3 quotes",
-          "description": "Send the scope of work to at least 3 suppliers and request itemised quotes with timescales. For amounts over £25k, consider formal tender.",
+          "description": "Send the scope of work to at least 3 suppliers and request itemised quotes with timescales. For amounts over Â£25k, consider formal tender.",
           "owner_role": "business_manager",
           "is_automated": false,
           "is_external": true,
@@ -635,7 +635,7 @@ VALUES (
           "ai_assist_type": "quote_comparison",
           "ai_assist_config": {
             "prompt": "Compare the submitted quotes using a weighted scoring matrix: Price (40%), Quality/Specification (25%), Timescale (20%), Warranty (10%), Past Performance (5%). Recommend the best value option.",
-            "model": "deepseek/deepseek-chat"
+            "model": "openai/gpt-4o-mini"
           },
           "notify_on_actionable": true
         },
@@ -662,14 +662,14 @@ VALUES (
           "ai_assist_type": "draft_approval_request",
           "ai_assist_config": {
             "prompt": "Draft an approval request for expenditure following an equipment inspection failure. Include: background, options considered, recommended supplier with justification, cost breakdown, budget impact, and risk of not proceeding.",
-            "model": "deepseek/deepseek-chat"
+            "model": "openai/gpt-4o-mini"
           },
           "notify_on_actionable": true
         },
         {
           "step_number": 8,
           "title": "Check if value triggers ATH 2025 thresholds",
-          "description": "Verify expenditure against Academy Trust Handbook 2025 thresholds: up to £5k = HT, £5-25k = SLT+HT, £25-100k = CFO/CEO, over £100k = Board approval. Adjust approval routing accordingly.",
+          "description": "Verify expenditure against Academy Trust Handbook 2025 thresholds: up to Â£5k = HT, Â£5-25k = SLT+HT, Â£25-100k = CFO/CEO, over Â£100k = Board approval. Adjust approval routing accordingly.",
           "owner_role": "business_manager",
           "is_automated": true,
           "is_external": false,
@@ -889,7 +889,7 @@ VALUES (
           "ai_assist_type": "update_risk_entry",
           "ai_assist_config": {
             "prompt": "Update the risk register entry to reflect completed remediation. Reduce the risk score, note the controls now in place, set the review date, and close the entry if fully resolved.",
-            "model": "deepseek/deepseek-chat"
+            "model": "openai/gpt-4o-mini"
           },
           "notify_on_actionable": true
         }
@@ -970,7 +970,7 @@ VALUES (
           "ai_assist_type": "warranty_reminder",
           "ai_assist_config": {
             "prompt": "Calculate the warranty expiry date and next inspection due date based on the equipment type and supplier warranty terms. Create a reminder schedule.",
-            "model": "deepseek/deepseek-chat"
+            "model": "openai/gpt-4o-mini"
           }
         }
       ]
@@ -986,3 +986,4 @@ ON CONFLICT (slug) DO UPDATE SET
   total_steps = EXCLUDED.total_steps,
   estimated_days = EXCLUDED.estimated_days,
   updated_at = now();
+

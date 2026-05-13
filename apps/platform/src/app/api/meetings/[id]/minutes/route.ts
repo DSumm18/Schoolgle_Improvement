@@ -1,18 +1,36 @@
-import { ROUTER_MODELS } from "@/lib/ai-openrouter";
-
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
 import OpenAI from "openai";
 import { generateMinutesContent, renderMinutesHtml } from "@/lib/meetings";
+import type { OrganizationBranding } from "@/lib/meetings";
+import {
+  getMeetingDocumentRecipient,
+  mapMeetingTemplateToDocumentModule,
+} from "@/lib/meetings/meeting-document-linking";
 
-const openrouter = new OpenAI({
-  apiKey: process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY,
-  baseURL: "https://openrouter.ai/api/v1",
-  defaultHeaders: {
-    "HTTP-Referer": "https://schoolgle.co.uk",
-    "X-Title": "Schoolgle Meeting Companion",
-  },
-});
+const MEETING_MINUTES_MODEL = "openai/gpt-4o-mini";
+
+interface OrganizationSettings {
+  logo_url?: string | null;
+  trust_logo_url?: string | null;
+  primary_color?: string | null;
+  footer_text?: string | null;
+}
+
+function getOpenRouterClient() {
+  const apiKey = process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY;
+  if (!apiKey) return null;
+
+  return new OpenAI({
+    apiKey,
+    baseURL: "https://openrouter.ai/api/v1",
+    defaultHeaders: {
+      "HTTP-Referer": "https://schoolgle.co.uk",
+      "X-Title": "Schoolgle Meeting Companion",
+    },
+  });
+}
 
 /**
  * Extract meeting ID from the URL pathname.
@@ -24,13 +42,35 @@ function getMeetingId(request: Request): string {
   return segments[3];
 }
 
+function buildOrganizationBranding(
+  organization: {
+    name?: string | null;
+    organization_type?: string | null;
+    settings?: OrganizationSettings | null;
+  } | null,
+): OrganizationBranding {
+  const settings = organization?.settings || {};
+  const isTrustLevel =
+    organization?.organization_type === "trust" ||
+    organization?.organization_type === "local_authority";
+
+  return {
+    logo_url:
+      (isTrustLevel ? settings.trust_logo_url || settings.logo_url : settings.logo_url) ||
+      null,
+    school_name: organization?.name || "Meeting Companion",
+    school_address: null,
+    primary_color: settings.primary_color || null,
+    footer_text: settings.footer_text || null,
+  };
+}
+
 /**
  * GET /api/meetings/[id]/minutes
  * Get minutes for a meeting
  */
 export const GET = protectedRoute(async (auth, request) => {
   const id = getMeetingId(request);
-  const { searchParams } = new URL(request.url);
   // orgId MUST come from authenticated session — never from caller
   const organizationId = auth.organizationId;
 
@@ -70,7 +110,7 @@ export const GET = protectedRoute(async (auth, request) => {
  */
 export const POST = protectedRoute(async (auth, request) => {
   const id = getMeetingId(request);
-  const body = await request.json();
+  await request.json().catch(() => ({}));
   // orgId MUST come from authenticated session — never from caller
   const resolvedOrgId = auth.organizationId;
 
@@ -80,8 +120,8 @@ export const POST = protectedRoute(async (auth, request) => {
 
   const supabase = createServiceRoleClient();
 
-  // Fetch meeting, template, and checklist
-  const [meetingRes, checklistRes] = await Promise.all([
+  // Fetch meeting, template, checklist, and organisation branding
+  const [meetingRes, checklistRes, organizationRes] = await Promise.all([
     supabase
       .from("meetings")
       .select("*")
@@ -93,6 +133,11 @@ export const POST = protectedRoute(async (auth, request) => {
       .select("*")
       .eq("meeting_id", id)
       .order("order_index"),
+    supabase
+      .from("organizations")
+      .select("name, organization_type, settings")
+      .eq("id", resolvedOrgId)
+      .single(),
   ]);
 
   if (meetingRes.error || !meetingRes.data) {
@@ -100,12 +145,16 @@ export const POST = protectedRoute(async (auth, request) => {
   }
 
   const meeting = meetingRes.data;
+  const branding = buildOrganizationBranding(organizationRes.data);
 
-  const { data: template } = await supabase
-    .from("meeting_templates")
-    .select("*")
-    .eq("id", meeting.template_id)
-    .single();
+  const [{ data: template }, { data: attendees }] = await Promise.all([
+    supabase
+      .from("meeting_templates")
+      .select("*")
+      .eq("id", meeting.template_id)
+      .single(),
+    supabase.from("meeting_attendees").select("*").eq("meeting_id", id),
+  ]);
 
   if (!template) {
     return apiError("Template not found", 404);
@@ -128,6 +177,7 @@ export const POST = protectedRoute(async (auth, request) => {
       template,
       checklistRes.data || [],
       transcript.full_text,
+      branding,
     );
     content = aiResult.content;
     html = aiResult.html;
@@ -138,7 +188,7 @@ export const POST = protectedRoute(async (auth, request) => {
       template,
       checklistRes.data || [],
     );
-    html = renderMinutesHtml(content);
+    html = renderMinutesHtml(content, branding);
   }
 
   // Check if minutes already exist for this meeting
@@ -181,8 +231,128 @@ export const POST = protectedRoute(async (auth, request) => {
     minutes = data;
   }
 
+  await upsertMinutesGeneratedDocument(supabase, {
+    organizationId: resolvedOrgId,
+    userId: auth.userId,
+    meeting,
+    template,
+    attendees: attendees || [],
+    minutesHtml: html,
+  });
+
   return apiSuccess({ minutes }, 201);
 });
+
+async function ensureMeetingMinutesTemplate(
+  supabase: any,
+  documentModule: string,
+): Promise<string | null> {
+  const slug = "meeting-minutes-record";
+
+  const { data: existing } = await supabase
+    .from("document_templates")
+    .select("id")
+    .eq("slug", slug)
+    .eq("module", documentModule)
+    .is("organization_id", null)
+    .maybeSingle();
+
+  if (existing?.id) return existing.id;
+
+  const { data: created, error } = await supabase
+    .from("document_templates")
+    .insert({
+      organization_id: null,
+      name: "Meeting Minutes Record",
+      slug,
+      description:
+        "System template used to store meeting minutes generated from Meeting Companion.",
+      module: documentModule,
+      category: "meeting_record",
+      document_type: "minutes",
+      subject_template: "Minutes: {{meeting_title}}",
+      body_template: "{{minutes_html}}",
+      available_placeholders: ["meeting_title", "minutes_html"],
+      data_sources: ["meeting_companion"],
+      is_system: true,
+      tags: ["meeting", "minutes", "evidence"],
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    console.error("Error ensuring meeting minutes document template:", error);
+    return null;
+  }
+
+  return created?.id || null;
+}
+
+async function upsertMinutesGeneratedDocument(
+  supabase: any,
+  input: {
+    organizationId: string;
+    userId: string;
+    meeting: any;
+    template: any;
+    attendees: any[];
+    minutesHtml: string;
+  },
+) {
+  const documentModule = mapMeetingTemplateToDocumentModule(input.template);
+  const templateId = await ensureMeetingMinutesTemplate(
+    supabase,
+    documentModule,
+  );
+  if (!templateId) return;
+
+  const recipient = getMeetingDocumentRecipient({
+    meeting: input.meeting,
+    attendees: input.attendees,
+  });
+
+  const documentRow = {
+    organization_id: input.organizationId,
+    template_id: templateId,
+    module: documentModule,
+    document_type: "minutes",
+    subject: `Minutes: ${input.template.name}`,
+    body_html: input.minutesHtml,
+    placeholder_values: {
+      meeting_id: input.meeting.id,
+      meeting_title: input.template.name,
+    },
+    recipient_type: recipient.recipient_type,
+    recipient_id: recipient.recipient_id,
+    recipient_name: recipient.recipient_name,
+    recipient_email: recipient.recipient_email,
+    context_type: "meeting",
+    context_id: input.meeting.id,
+    status: "draft",
+    created_by: input.userId,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { data: existing } = await supabase
+    .from("generated_documents")
+    .select("id")
+    .eq("organization_id", input.organizationId)
+    .eq("context_type", "meeting")
+    .eq("context_id", input.meeting.id)
+    .eq("document_type", "minutes")
+    .maybeSingle();
+
+  const { error } = existing?.id
+    ? await supabase
+        .from("generated_documents")
+        .update(documentRow)
+        .eq("id", existing.id)
+    : await supabase.from("generated_documents").insert(documentRow);
+
+  if (error) {
+    console.error("Error linking meeting minutes to generated documents:", error);
+  }
+}
 
 /**
  * Generate AI-powered minutes from a diarised transcript.
@@ -192,7 +362,21 @@ async function generateAiMinutes(
   template: any,
   checklistItems: any[],
   transcriptText: string,
+  branding: OrganizationBranding,
 ): Promise<{ content: any; html: string }> {
+  const openrouter = getOpenRouterClient();
+  if (!openrouter) {
+    const fallbackContent = generateMinutesContent(
+      meeting,
+      template,
+      checklistItems,
+    );
+    return {
+      content: fallbackContent,
+      html: renderMinutesHtml(fallbackContent, branding),
+    };
+  }
+
   const checkedItems = checklistItems.filter((i) => i.manually_ticked);
   const uncheckedItems = checklistItems.filter((i) => !i.manually_ticked);
   const criticalMissed = uncheckedItems.filter((i) => i.is_critical);
@@ -252,7 +436,7 @@ Return ONLY valid JSON in this exact format (no markdown, no code fences):
 }`;
 
   const completion = await openrouter.chat.completions.create({
-    model: ROUTER_MODELS.DEFAULT,
+    model: MEETING_MINUTES_MODEL,
     messages: [{ role: "user", content: prompt }],
     temperature: 0.3,
     max_tokens: 4000,
@@ -314,7 +498,7 @@ Return ONLY valid JSON in this exact format (no markdown, no code fences):
     );
   }
 
-  const html = renderMinutesHtml(content);
+  const html = renderMinutesHtml(content, branding);
   return { content, html };
 }
 

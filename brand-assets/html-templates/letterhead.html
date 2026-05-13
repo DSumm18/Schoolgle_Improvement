@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Schoolgle Letterhead</title>
+    <link rel="stylesheet" href="./styles/schoolgle-docs.css?v=accent-3px" />
+  </head>
+  <body>
+    <nav class="template-nav" aria-label="Template previews">
+      <a class="active" href="./letterhead.html">Letterhead</a>
+      <a href="./proposal.html">Proposal</a>
+      <a href="./invoice.html">Invoice</a>
+      <a href="./meeting-notes.html">Meeting Notes</a>
+      <a href="./email-signature.html">Email Signature</a>
+      <a href="./linkedin-advertising.html">LinkedIn Advertising</a>
+      <a href="./index.html">Gallery</a>
+    </nav>
+    <main class="page">
+      <header class="doc-header">
+        <img class="logo" src="./assets/schoolgle-logo-horizontal.png" alt="Schoolgle" />
+        <div class="meta">
+          <strong>{{date}}</strong><br />
+          <a href="https://schoolgle.co.uk">schoolgle.co.uk</a><br />
+          <a href="mailto:david@schoolgle.co.uk">david@schoolgle.co.uk</a>
+        </div>
+      </header>
+
+      <div class="accent-line" aria-hidden="true">
+        <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+      </div>
+
+      <section class="grid-2 letter-recipient-row">
+        <div>
+          <div class="label">To</div>
+          <p>
+            {{recipient_name}}<br />
+            {{recipient_role}}<br />
+            {{organisation_name}}
+          </p>
+          <a class="email-chip" href="mailto:{{recipient_email}}">{{recipient_email}}</a>
+          <p class="screen-only-note">Designed for email delivery. No postal address required.</p>
+        </div>
+        <div class="letter-context-card">
+          <div class="label">Regarding</div>
+          <p>
+            {{letter_context}}<br />
+            <span class="muted">Prepared by David Summerscales, {{sender_role}}</span>
+          </p>
+        </div>
+      </section>
+
+      <section style="margin-top: 34px">
+        <p>Dear {{recipient_salutation}},</p>
+        <h1>{{letter_subject}}</h1>
+        <p>{{opening_paragraph}}</p>
+        <p>{{main_body}}</p>
+        <p>{{next_steps}}</p>
+        <p style="margin-top: 30px">
+          Yours sincerely,<br /><br />
+          <strong>David Summerscales</strong><br />
+          <span class="muted">{{sender_role}}, Schoolgle</span>
+        </p>
+      </section>
+
+      <div class="footer-rule accent-line" aria-hidden="true">
+        <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+      </div>
+      <footer class="doc-footer">
+        <span>Schoolgle · Your school's operating system</span>
+        <span><a href="mailto:david@schoolgle.co.uk">david@schoolgle.co.uk</a> · <a href="https://schoolgle.co.uk">schoolgle.co.uk</a></span>
+      </footer>
+    </main>
+  </body>
+</html>

@@ -19,6 +19,10 @@ import { NextRequest } from "next/server";
 import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { extractContractorReport } from "@/lib/estates-compliance/ai/contractor-report-extractor";
 import { matchAssets } from "@/lib/estates-compliance/ai/asset-matcher";
+import {
+  summarizeEstateFindingTriage,
+  triageEstateFinding,
+} from "@/lib/estates-compliance/finding-triage";
 import { createServiceRoleClient } from "@/lib/supabase-server";
 
 const ALLOWED_TYPES = [
@@ -98,13 +102,27 @@ export const POST = protectedRoute(async (auth, request: NextRequest) => {
 
   // 5. Compute summary actions for each matched asset
   const proposed_actions = matches.map((m) => {
+    const triage = triageEstateFinding({
+      assetName: m.best_match?.asset.name ?? m.extracted.identifier,
+      description: m.extracted.findings,
+      findings: m.extracted.findings,
+      remedialActions: m.extracted.remedial_actions ?? [],
+      estimatedCost: m.extracted.remedial_cost_estimate ?? null,
+      result: m.extracted.result,
+      urgency: m.extracted.urgency ?? null,
+      complianceDomain: complianceDomain ?? extracted.compliance_domain ?? null,
+    });
+
     if (!m.best_match) {
       return {
         type: "no_match" as const,
         extracted: m.extracted,
+        triage,
         message: "Could not match this asset to the register. User may need to create it.",
       };
     }
+
+    const shouldCreateTicket = triage.recommendedRoutes.includes("create_task");
 
     const action: {
       type: "update_asset" | "create_ticket" | "update_and_create_ticket";
@@ -112,6 +130,7 @@ export const POST = protectedRoute(async (auth, request: NextRequest) => {
       asset_code: string | null;
       asset_name: string;
       extracted: typeof m.extracted;
+      triage: typeof triage;
       maintenance_history_entry: {
         date: string;
         action: string;
@@ -129,11 +148,12 @@ export const POST = protectedRoute(async (auth, request: NextRequest) => {
         asset_id: string;
       };
     } = {
-      type: m.extracted.result === "fail" ? "update_and_create_ticket" : "update_asset",
+      type: shouldCreateTicket ? "update_and_create_ticket" : "update_asset",
       asset_id: m.best_match.asset.id,
       asset_code: m.best_match.asset.code,
       asset_name: m.best_match.asset.name,
       extracted: m.extracted,
+      triage,
       maintenance_history_entry: {
         date: extracted.service_date || new Date().toISOString().split("T")[0],
         action: extracted.service_type || "Service",
@@ -143,17 +163,20 @@ export const POST = protectedRoute(async (auth, request: NextRequest) => {
       },
       new_next_inspection_due: extracted.next_service_due ?? null,
       new_last_inspection_date: extracted.service_date ?? null,
-      should_create_ticket: m.extracted.result === "fail",
+      should_create_ticket: shouldCreateTicket,
     };
 
     if (action.should_create_ticket) {
       action.ticket_draft = {
         title: `Remedial: ${m.best_match.asset.name} — ${extracted.service_type || "service"}`,
         description: [
-          `Failed ${extracted.service_type || "service"} carried out by ${extracted.contractor_name || "contractor"} on ${extracted.service_date || "today"}.`,
+          `${triage.classification === "compliance_defect" ? "Urgent remedial issue" : "Remedial issue"} from ${extracted.service_type || "service"} carried out by ${extracted.contractor_name || "contractor"} on ${extracted.service_date || "today"}.`,
           "",
           "Findings:",
           m.extracted.findings,
+          "",
+          "Triage:",
+          triage.reportLine,
           "",
           ...(m.extracted.remedial_actions && m.extracted.remedial_actions.length > 0
             ? ["Remedial actions:", ...m.extracted.remedial_actions.map((a) => `- ${a}`)]
@@ -163,17 +186,23 @@ export const POST = protectedRoute(async (auth, request: NextRequest) => {
             : "",
         ].join("\n"),
         priority:
-          m.extracted.urgency === "emergency"
+          triage.riskScore === 5 || m.extracted.urgency === "emergency"
             ? "critical"
-            : m.extracted.urgency === "urgent"
+            : triage.riskScore === 4 || m.extracted.urgency === "urgent"
               ? "high"
-              : "medium",
+              : triage.riskScore === 3
+                ? "medium"
+                : "low",
         asset_id: m.best_match.asset.id,
       };
     }
 
     return action;
   });
+
+  const triage_summary = summarizeEstateFindingTriage(
+    proposed_actions.map((action) => action.triage),
+  );
 
   const summary_counts = {
     total_assets_in_report: extracted.assets.length,
@@ -186,6 +215,10 @@ export const POST = protectedRoute(async (auth, request: NextRequest) => {
     tickets_to_create: proposed_actions.filter(
       (a) => "should_create_ticket" in a && a.should_create_ticket,
     ).length,
+    risks_to_review: triage_summary.risks,
+    strategy_items_to_review: triage_summary.strategyItems,
+    watchlist_items: triage_summary.watchlistItems,
+    highest_risk_score: triage_summary.highestRiskScore,
   };
 
   return apiSuccess({
@@ -205,6 +238,7 @@ export const POST = protectedRoute(async (auth, request: NextRequest) => {
     matches,
     proposed_actions,
     summary_counts,
+    triage_summary,
     extracted_at: new Date().toISOString(),
   });
 });

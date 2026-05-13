@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Multi-Perspective Generator
  * Generates optimist, critic, and neutral perspectives for balanced responses
  */
@@ -101,7 +101,7 @@ export async function generateMultiPerspectiveResponse(
   };
 }> {
   // Use cheaper model for perspectives (they're shorter, less critical)
-  const perspectiveModelId = "deepseek/deepseek-chat";
+  const perspectiveModelId = "openai/gpt-4o-mini";
   const synthesisModelId = "anthropic/claude-3.5-sonnet";
 
   try {
@@ -365,3 +365,4 @@ export async function generatePerspectivesCached(
 export function clearPerspectiveCache(): void {
   perspectiveCache.clear();
 }
+

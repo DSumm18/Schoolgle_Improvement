@@ -1,8 +1,8 @@
 "use client";
 
 import { useAuth } from "@/context/SupabaseAuthContext";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState, Suspense } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, Suspense } from "react";
 import {
   Settings2,
   Database,
@@ -17,7 +17,10 @@ import {
   Palette,
   Calendar,
   GraduationCap,
+  Upload,
+  Cpu,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -26,7 +29,7 @@ import { Badge } from "@/components/ui/badge";
 interface SettingsTab {
   id: string;
   label: string;
-  icon: any;
+  icon: LucideIcon;
   description: string;
   /** Roles that can see this tab. Empty = everyone. */
   roles: string[];
@@ -93,6 +96,17 @@ const SETTINGS_TABS: SettingsTab[] = [
     bgColor: "bg-teal-50 dark:bg-teal-950/20",
   },
   {
+    id: "data-upload",
+    label: "Data Upload",
+    icon: Upload,
+    description:
+      "Download CSV templates and upload pupils, teachers, and classes cleanly",
+    roles: ["admin", "headteacher", "slt"],
+    href: "/dashboard/settings/data-upload",
+    color: "text-emerald-600",
+    bgColor: "bg-emerald-50 dark:bg-emerald-950/20",
+  },
+  {
     id: "data-connections",
     label: "Data Connections",
     icon: Database,
@@ -124,6 +138,17 @@ const SETTINGS_TABS: SettingsTab[] = [
     href: "/dashboard/settings/skills",
     color: "text-amber-600",
     bgColor: "bg-amber-50 dark:bg-amber-950/20",
+  },
+  {
+    id: "ai-models",
+    label: "AI Model Registry",
+    icon: Cpu,
+    description:
+      "See which approved AI models power each app, skill, and extraction workflow",
+    roles: ["admin", "headteacher", "slt"],
+    href: "/dashboard/settings/ai-models",
+    color: "text-indigo-600",
+    bgColor: "bg-indigo-50 dark:bg-indigo-950/20",
   },
   {
     id: "calendar",
@@ -227,8 +252,6 @@ const ROLE_PRIVILEGES = [
 function SettingsContent() {
   const { user, organization, loading: authLoading } = useAuth();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const showPrivileges = searchParams.get("view") === "privileges";
 
   const userRole = organization?.role || "";
   const isSLT = ["admin", "headteacher", "slt"].includes(userRole);
@@ -288,7 +311,7 @@ function SettingsContent() {
               onClick={() => router.push(tab.href)}
               className={`${tab.bgColor} border rounded-xl p-4 text-left hover:shadow-md hover:scale-[1.005] transition-all group flex items-center gap-4 w-full`}
             >
-              <div className="p-3 bg-white/60 dark:bg-black/20 rounded-xl">
+              <div className="p-3 bg-card/70 rounded-xl">
                 <Icon className={`w-5 h-5 ${tab.color}`} />
               </div>
               <div className="flex-1 min-w-0">

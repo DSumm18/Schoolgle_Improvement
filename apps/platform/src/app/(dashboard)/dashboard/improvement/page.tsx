@@ -8,6 +8,7 @@ import {
   Target,
   Sparkles,
   BarChart3,
+  ClipboardCheck,
 } from "lucide-react";
 import {
   ModulePageHeader,
@@ -60,6 +61,15 @@ const tools = [
     icon: Target,
     href: "/dashboard/action-plan",
     status: "Live",
+  },
+  {
+    id: "assessment-intelligence",
+    title: "Assessment Intelligence",
+    description:
+      "Capture teacher judgement snapshots from imported classes and pupils, then feed Trust Assessor, Ofsted Readiness and school improvement evidence.",
+    icon: ClipboardCheck,
+    href: "/dashboard/school-improvement/assessment-intelligence",
+    status: "Beta",
   },
   {
     id: "trust-analysis",

@@ -1,6 +1,10 @@
-import { NextRequest } from "next/server";
 import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
+import { ensureConnectorFolderStructure } from "@/lib/google-drive-connector";
+import {
+  getGoogleReauthoriseMessage,
+  getValidGoogleAccessToken,
+} from "@/lib/google-oauth-tokens";
 
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 
@@ -32,8 +36,32 @@ export const POST = protectedRoute(async (auth, req) => {
     return apiError("Connection not found", 404);
   }
 
-  if (!GOOGLE_API_KEY) {
-    return apiError("Google API key not configured", 500);
+  let accessToken: string | null = null;
+  try {
+    accessToken = await getValidGoogleAccessToken({
+      supabase,
+      connection: conn,
+    });
+  } catch (err) {
+    const rawMessage =
+      err instanceof Error ? err.message : "Google Drive token refresh failed";
+    const message = rawMessage.includes("invalid_grant")
+      ? getGoogleReauthoriseMessage()
+      : rawMessage;
+
+    await supabase
+      .from("school_data_connections")
+      .update({
+        scan_status: "error",
+        scan_error: message,
+      })
+      .eq("id", connectionId);
+
+    return apiError(message, 401);
+  }
+
+  if (!GOOGLE_API_KEY && !accessToken) {
+    return apiError("Google Drive access is not configured", 500);
   }
 
   // Update status to scanning
@@ -43,8 +71,18 @@ export const POST = protectedRoute(async (auth, req) => {
     .eq("id", connectionId);
 
   try {
-    // Recursively list all files
-    const allFiles = await listAllFiles(conn.folder_id);
+    if (accessToken) {
+      await ensureConnectorFolderStructure(accessToken, conn.folder_id);
+    }
+
+    // Recursively list all visible files and folders
+    const scanContents = await listAllContents(
+      conn.folder_id,
+      "",
+      0,
+      accessToken,
+    );
+    const allFiles = scanContents.files;
 
     // Categorise files by folder path
     const detectedFolders: Record<
@@ -83,26 +121,35 @@ export const POST = protectedRoute(async (auth, req) => {
         last_scan_at: new Date().toISOString(),
         detected_folders: detectedFolders,
         total_files: allFiles.length,
-        total_folders: Object.keys(detectedFolders).length,
+        total_folders: scanContents.folderCount,
         last_modified_file: mostRecent,
       })
       .eq("id", connectionId);
 
     return apiSuccess({
       totalFiles: allFiles.length,
+      totalFolders: scanContents.folderCount,
       detectedFolders,
       lastModified: mostRecent,
     });
-  } catch (err: any) {
+  } catch (err) {
+    const rawMessage = err instanceof Error ? err.message : "Scan failed";
+    const message =
+      rawMessage.includes("insufficient") ||
+      rawMessage.includes("ACCESS_TOKEN_SCOPE_INSUFFICIENT") ||
+      rawMessage.includes("Invalid Credentials") ||
+      rawMessage.includes("UNAUTHENTICATED")
+        ? "This Connector needs to be re-authorised so Schoolgle can create and maintain its dedicated folder structure. Disconnect and connect with Google again."
+        : rawMessage;
     await supabase
       .from("school_data_connections")
       .update({
         scan_status: "error",
-        scan_error: err.message || "Scan failed",
+        scan_error: message,
       })
       .eq("id", connectionId);
 
-    return apiError(err.message || "Scan failed", 500);
+    return apiError(message, 500);
   }
 });
 
@@ -115,26 +162,39 @@ interface DriveFile {
   parentId?: string;
 }
 
-async function listAllFiles(
+type DriveScanContents = {
+  files: DriveFile[];
+  folderCount: number;
+};
+
+async function listAllContents(
   folderId: string,
   folderPath = "",
   depth = 0,
-): Promise<DriveFile[]> {
-  if (!GOOGLE_API_KEY || depth > 4) return [];
+  accessToken?: string | null,
+): Promise<DriveScanContents> {
+  if ((!GOOGLE_API_KEY && !accessToken) || depth > 4) {
+    return { files: [], folderCount: 0 };
+  }
 
   const files: DriveFile[] = [];
+  let folderCount = 0;
 
   try {
+    const params = new URLSearchParams({
+      q: `'${folderId}' in parents and trashed = false`,
+      fields: "files(id,name,mimeType,modifiedTime)",
+      pageSize: "200",
+      supportsAllDrives: "true",
+      includeItemsFromAllDrives: "true",
+    });
+    if (!accessToken && GOOGLE_API_KEY) params.set("key", GOOGLE_API_KEY);
+
     const res = await fetch(
-      `https://www.googleapis.com/drive/v3/files?` +
-        new URLSearchParams({
-          key: GOOGLE_API_KEY,
-          q: `'${folderId}' in parents and trashed = false`,
-          fields: "files(id,name,mimeType,modifiedTime)",
-          pageSize: "200",
-          supportsAllDrives: "true",
-          includeItemsFromAllDrives: "true",
-        }),
+      `https://www.googleapis.com/drive/v3/files?${params}`,
+      accessToken
+        ? { headers: { Authorization: `Bearer ${accessToken}` } }
+        : undefined,
     );
 
     if (!res.ok) return files;
@@ -144,9 +204,16 @@ async function listAllFiles(
 
     for (const item of items) {
       if (item.mimeType === "application/vnd.google-apps.folder") {
+        folderCount += 1;
         const subPath = folderPath ? `${folderPath}/${item.name}` : item.name;
-        const subFiles = await listAllFiles(item.id, subPath, depth + 1);
-        files.push(...subFiles);
+        const subContents = await listAllContents(
+          item.id,
+          subPath,
+          depth + 1,
+          accessToken,
+        );
+        folderCount += subContents.folderCount;
+        files.push(...subContents.files);
       } else {
         files.push({
           ...item,
@@ -159,10 +226,14 @@ async function listAllFiles(
     console.error("[Scan] Error listing files:", err);
   }
 
-  return files;
+  return { files, folderCount };
 }
 
 const FOLDER_PATTERNS: Record<string, string> = {
+  archive: "archive",
+  archived: "archive",
+  superseded: "archive",
+  "do not scan": "archive",
   "pupil data": "pupils",
   "pupil roll": "pupils",
   attendance: "attendance",
@@ -176,6 +247,20 @@ const FOLDER_PATTERNS: Record<string, string> = {
   finance: "fms",
   fms: "fms",
   payroll: "payroll",
+  energy: "energy",
+  utilities: "energy",
+  "utility bills": "energy",
+  "energy invoices": "energy",
+  "electricity invoices": "energy",
+  "gas invoices": "energy",
+  ofsted: "documents",
+  "ofsted readiness": "documents",
+  siams: "documents",
+  "siams readiness": "documents",
+  "religious education": "documents",
+  "collective worship": "documents",
+  trust: "assessments",
+  "trust assessor": "assessments",
   dfe: "dfe",
   external: "dfe",
   document: "documents",

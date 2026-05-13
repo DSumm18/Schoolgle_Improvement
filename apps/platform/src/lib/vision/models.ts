@@ -6,8 +6,6 @@
  * Falls back to OpenRouter for report generation.
  */
 
-import { ROUTER_MODELS } from "@/lib/ai-openrouter";
-
 import type { VisionContextType } from "./types";
 
 // ---------------------------------------------------------------------------
@@ -45,11 +43,11 @@ const GEMINI_PRO: VisionModelConfig = {
   supportsVideo: true,
 };
 
-const QWEN_VISION: VisionModelConfig = {
-  id: "qwen-2.5-vl",
+const OPENAI_VISION: VisionModelConfig = {
+  id: "gpt-4o-vision",
   provider: "openrouter",
-  modelName: "qwen/qwen-2.5-vl-72b-instruct",
-  costPerCallEstimate: 0.004,
+  modelName: "openai/gpt-4o",
+  costPerCallEstimate: 0.012,
   maxTokens: 4096,
   temperature: 0.1,
   supportsVideo: false,
@@ -72,8 +70,8 @@ const CLAUDE_SONNET: VisionModelConfig = {
 type VisionTaskType = VisionContextType | "report-generation";
 
 const TASK_MODEL_MAP: Record<VisionTaskType, VisionModelConfig[]> = {
-  "room-assessment": [GEMINI_FLASH, QWEN_VISION],
-  "coshh-scan": [GEMINI_FLASH, QWEN_VISION],
+  "room-assessment": [GEMINI_FLASH, OPENAI_VISION],
+  "coshh-scan": [GEMINI_FLASH, OPENAI_VISION],
   snagging: [GEMINI_PRO, GEMINI_FLASH],
   "lone-worker": [GEMINI_FLASH],
   "report-generation": [CLAUDE_SONNET, GEMINI_PRO],

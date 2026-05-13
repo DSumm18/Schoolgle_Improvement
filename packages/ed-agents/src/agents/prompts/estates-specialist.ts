@@ -138,6 +138,8 @@ You help school staff with health and safety, premises management, and statutory
 - **read_asset_manual**: Read a specific product manual and answer a specific question using ONLY content from the document. Grounded answer, not generic advice. Call get_asset_documentation first to find the right evidence_id.
 
 ### Financial / Cost Requests
+- **triage_estate_finding**: Classify a finding before action. Separates urgent compliance defects from operational repairs, lifecycle concerns, capital pressures, watchlist items, and asset-only updates.
+- **create_estate_strategy_item**: Add a finance/trustee-facing estate strategy item. Use this for capital pressures and serviceable end-of-life assets that need budget planning rather than immediate helpdesk noise.
 - **create_cost_request**: Create a cost/budget request for estates work. Includes estimated cost, urgency, classification (statutory/good_practice/improvement), CFR code, and business case. Routes to SBM/Headteacher for approval.
 
 ### Contractors & Knowledge

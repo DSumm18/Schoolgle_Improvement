@@ -1,7 +1,11 @@
 import { apiError, apiSuccess, protectedRoute } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
 import { runVisionExtractionAgainstImage } from "@/lib/pathfinder/vision-extractor";
-import type { PathfinderExtractionResult } from "@/lib/pathfinder/prototype";
+import { applyRoomListValidationToExtraction } from "@/lib/pathfinder/room-list";
+import type {
+  PathfinderExtractionResult,
+  PathfinderRoomListEntry,
+} from "@/lib/pathfinder/prototype";
 
 export const runtime = "nodejs";
 
@@ -15,6 +19,28 @@ function numberFrom(value: unknown): number | undefined {
 
 function stringFrom(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function roomListEntriesFrom(value: unknown): PathfinderRoomListEntry[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((entry): PathfinderRoomListEntry | null => {
+      if (!entry || typeof entry !== "object") return null;
+      const record = entry as Record<string, unknown>;
+      const name = stringFrom(record.name);
+      if (!name) return null;
+      return {
+        code: stringFrom(record.code),
+        name,
+        source:
+          record.source === "document" || record.source === "manual"
+            ? record.source
+            : "spreadsheet",
+        sourceLine: numberFrom(record.sourceLine),
+      };
+    })
+    .filter((entry): entry is PathfinderRoomListEntry => Boolean(entry))
+    .slice(0, 300);
 }
 
 export const POST = protectedRoute(
@@ -36,6 +62,7 @@ export const POST = protectedRoute(
     const sourcePageNumber = numberFrom(body?.sourcePageNumber);
     const parentModelId = stringFrom(body?.parentModelId);
     const modelName = stringFrom(body?.name) ?? sourceDocumentName;
+    const roomListEntries = roomListEntriesFrom(body?.roomListEntries);
 
     const supabase = createServiceRoleClient();
 
@@ -60,7 +87,7 @@ export const POST = protectedRoute(
     const extractionTimestamp = new Date().toISOString();
     const extractionMode: string = "vision";
 
-    const extractionResult: PathfinderExtractionResult = await runVisionExtractionAgainstImage({
+    const extracted: PathfinderExtractionResult = await runVisionExtractionAgainstImage({
       image: {
         src: resolvedImageUrl,
         width,
@@ -68,6 +95,10 @@ export const POST = protectedRoute(
         title: sourceDocumentName,
       },
     });
+    const extractionResult =
+      roomListEntries.length > 0
+        ? applyRoomListValidationToExtraction(extracted, roomListEntries)
+        : extracted;
 
     // If vision returned zero rooms, still save the draft row so the UI has
     // something to attach the source document to — the school can re-run

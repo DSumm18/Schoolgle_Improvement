@@ -1,6 +1,10 @@
 # Update .env.local with Supabase Service Role Key
-$envFile = "c:\Git\Schoolgle_Improvement\.env.local"
-$serviceRoleKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlncXV2YXVwdHd5dmxoa3l4a3d5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2Mzk2MTA1NCwiZXhwIjoyMDc5NTM3MDU0fQ.SniWiVIv7QAF_medPRZiamHSRpgCy1N53LGDpQf6TwA"
+$envFile = ".env.local"
+$serviceRoleKey = $env:SUPABASE_SERVICE_ROLE_KEY
+
+if (-not $serviceRoleKey) {
+    throw "Set SUPABASE_SERVICE_ROLE_KEY in your shell before running this local helper."
+}
 
 # Read existing content
 $content = Get-Content $envFile -Raw

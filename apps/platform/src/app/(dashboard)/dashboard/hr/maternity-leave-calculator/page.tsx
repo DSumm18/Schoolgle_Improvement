@@ -35,11 +35,22 @@ export default function MaternityLeaveCalculatorPage() {
   const [results, setResults] = useState<CalculationResults | null>(null);
   const [error, setError] = useState<string>("");
 
-  const handleInputChange = useCallback((event: any) => {
+  type CalculatorInputEvent =
+    | React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    | {
+        target: {
+          name: keyof CalculatorInputs;
+          value: string | Date | undefined;
+          type?: string;
+          checked?: boolean;
+        };
+      };
+
+  const handleInputChange = useCallback((event: CalculatorInputEvent) => {
     const { name, value, type, checked } = event.target || event;
     const isCheckbox = type === "checkbox";
 
-    setInputs((prev: any) => ({
+    setInputs((prev) => ({
       ...prev,
       [name]: isCheckbox ? checked : value,
     }));
@@ -63,8 +74,8 @@ export default function MaternityLeaveCalculatorPage() {
       try {
         const calculatedResults = calculateEntitlements(inputs);
         setResults(calculatedResults);
-      } catch (err: any) {
-        setError(err.message || "Calculation error");
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Calculation error");
       }
     },
     [inputs],
@@ -104,10 +115,10 @@ export default function MaternityLeaveCalculatorPage() {
 
       <div className="max-w-2xl">
         <ModuleFeatureBanner
-          moduleId="hr"
-          title="Important Notice"
-          description="This calculator provides estimates only based on current UK law (April 2024 rates). Always verify calculations with your HR department or payroll provider."
-        />
+        moduleId="hr"
+        title="Important Notice"
+        description="This calculator provides estimates only using 2026/27 statutory parental pay rates from 6 April 2026. Always verify calculations with your HR department or payroll provider."
+      />
       </div>
     </div>
   );

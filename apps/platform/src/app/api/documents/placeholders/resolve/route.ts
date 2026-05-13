@@ -1,6 +1,9 @@
-import { NextRequest } from "next/server";
 import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
+import { ensureStandardDocumentTemplates } from "@/lib/document-engine/standard-templates";
+
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /**
  * POST /api/documents/placeholders/resolve
@@ -31,13 +34,19 @@ export const POST = protectedRoute(async (auth, request) => {
 
   // orgId MUST come from authenticated session — never from caller
   const resolvedOrgId = auth.organizationId;
+  await ensureStandardDocumentTemplates(supabase);
 
   // Fetch the template to know which placeholders are needed
-  const { data: template, error: templateError } = await supabase
+  let templateQuery = supabase
     .from("document_templates")
     .select("available_placeholders")
-    .eq("id", templateId)
-    .single();
+    .or(`organization_id.is.null,organization_id.eq.${resolvedOrgId}`);
+
+  templateQuery = UUID_PATTERN.test(templateId)
+    ? templateQuery.eq("id", templateId)
+    : templateQuery.eq("slug", templateId);
+
+  const { data: template, error: templateError } = await templateQuery.single();
 
   if (templateError || !template) {
     return apiError("Template not found", 404, "NOT_FOUND");
@@ -175,6 +184,25 @@ export const POST = protectedRoute(async (auth, request) => {
         placeholders.meeting_purpose = meeting.purpose || "";
         placeholders.meeting_type = meeting.meeting_templates?.name || "";
         placeholders.attendee_name = meeting.attendee_name || "";
+      }
+
+      const { data: minutes } = await supabase
+        .from("meeting_minutes")
+        .select("content")
+        .eq("meeting_id", meetingId)
+        .maybeSingle();
+
+      const minutesContent = minutes?.content;
+      if (minutesContent && typeof minutesContent === "object") {
+        const notes = Array.isArray(minutesContent.notes)
+          ? minutesContent.notes
+          : [];
+        const closing = Array.isArray(minutesContent.closing)
+          ? minutesContent.closing
+          : [];
+        placeholders.meeting_summary = [...notes, ...closing]
+          .filter(Boolean)
+          .join("\n\n");
       }
     } catch {
       // Non-critical

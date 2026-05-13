@@ -1,6 +1,25 @@
-import { NextRequest } from "next/server";
 import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
+
+type StaffConnectorRow = {
+  id: string;
+  staff_id: string | null;
+  connector_type_id: string;
+  notes?: string | null;
+  training_certificate_url?: string | null;
+  [key: string]: unknown;
+};
+
+type ConnectorTypeRow = {
+  id: string;
+  slug: string;
+  [key: string]: unknown;
+};
+
+type StaffRow = {
+  id: string;
+  [key: string]: unknown;
+};
 
 // GET /api/connectors - List all connectors for the organization with staff + type details
 // Requires teacher role minimum — viewers should not see staff training details
@@ -13,15 +32,7 @@ export const GET = protectedRoute(async (auth, request) => {
 
   let query = supabase
     .from("staff_connectors")
-    .select(`
-      *,
-      connector_types (
-        id, name, slug, description, category, is_statutory,
-        statutory_basis, min_count, requires_training,
-        training_name, training_renewal_months,
-        modules, responsibilities, icon, color, auto_tasks
-      )
-    `)
+    .select("*")
     .eq("organization_id", auth.organizationId)
     .order("created_at", { ascending: false });
 
@@ -40,17 +51,36 @@ export const GET = protectedRoute(async (auth, request) => {
     return apiError("Failed to fetch connectors", 500);
   }
 
-  // If typeSlug filter, post-filter on joined data
-  let filtered = connectors || [];
-  if (typeSlug) {
-    filtered = filtered.filter(
-      (c: any) => c.connector_types?.slug === typeSlug
+  const connectorRows = (connectors || []) as StaffConnectorRow[];
+  const connectorTypeIds = [
+    ...new Set(connectorRows.map((connector) => connector.connector_type_id).filter(Boolean)),
+  ];
+  let typeMap: Record<string, ConnectorTypeRow> = {};
+
+  if (connectorTypeIds.length > 0) {
+    const { data: types, error: typeError } = await supabase
+      .from("connector_types")
+      .select("*")
+      .in("id", connectorTypeIds);
+
+    if (typeError) {
+      console.error("Error fetching connector types:", typeError);
+      return apiError("Failed to fetch connector types", 500);
+    }
+
+    typeMap = Object.fromEntries(
+      ((types || []) as ConnectorTypeRow[]).map((type) => [type.id, type]),
     );
   }
 
+  const filtered = connectorRows.filter((connector) => {
+    const connectorType = typeMap[connector.connector_type_id];
+    return !typeSlug || connectorType?.slug === typeSlug;
+  });
+
   // Fetch staff details for all unique staff_ids
-  const staffIds = [...new Set(filtered.map((c: any) => c.staff_id))];
-  let staffMap: Record<string, any> = {};
+  const staffIds = [...new Set(filtered.map((connector) => connector.staff_id).filter(Boolean))];
+  let staffMap: Record<string, StaffRow> = {};
 
   if (staffIds.length > 0) {
     const { data: staffData } = await supabase
@@ -59,19 +89,20 @@ export const GET = protectedRoute(async (auth, request) => {
       .in("id", staffIds);
 
     if (staffData) {
-      staffMap = Object.fromEntries(staffData.map((s: any) => [s.id, s]));
+      staffMap = Object.fromEntries(
+        (staffData as StaffRow[]).map((staff) => [staff.id, staff]),
+      );
     }
   }
 
   // Strip sensitive fields from response — notes and certificate URLs
   // are only visible in the detail/edit views, not in list responses
-  const enriched = filtered.map((c: any) => ({
-    ...c,
+  const enriched = filtered.map((connector) => ({
+    ...connector,
     notes: undefined, // Do not expose free-text notes in list view
     training_certificate_url: undefined, // Do not expose certificate URLs in list view
-    connector_type: c.connector_types,
-    connector_types: undefined,
-    staff: staffMap[c.staff_id] || null,
+    connector_type: typeMap[connector.connector_type_id] || null,
+    staff: connector.staff_id ? staffMap[connector.staff_id] || null : null,
   }));
 
   return apiSuccess(enriched);

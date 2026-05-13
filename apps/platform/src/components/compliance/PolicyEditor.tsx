@@ -11,6 +11,7 @@ import {
   X,
   ArrowLeft,
   Tag,
+  Maximize2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,6 +54,7 @@ export default function PolicyEditor({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [showFullPreview, setShowFullPreview] = useState(false);
   const [showVersions, setShowVersions] = useState(false);
 
   const [metadata, setMetadata] = useState({
@@ -253,6 +255,14 @@ export default function PolicyEditor({
           >
             <Eye className="w-4 h-4 mr-1" />
             {showPreview ? "Edit" : "Preview"}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowFullPreview(true)}
+          >
+            <Maximize2 className="w-4 h-4 mr-1" />
+            Full Screen
           </Button>
           {itemId && (
             <Button
@@ -534,6 +544,44 @@ export default function PolicyEditor({
           )}
         </div>
       </div>
+
+      {showFullPreview && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/75 p-4 backdrop-blur-md">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mx-auto max-w-5xl overflow-hidden rounded-3xl bg-white shadow-2xl dark:bg-slate-950"
+          >
+            <div className="sticky top-0 z-10 flex flex-col gap-3 border-b bg-white/95 p-4 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-purple-600 dark:text-purple-300">
+                  Policy document preview
+                </p>
+                <h2 className="mt-1 text-xl font-black text-slate-950 dark:text-white">
+                  {metadata.title || "Untitled policy"}
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Clean reading view for leadership review, approval and publication checks.
+                </p>
+              </div>
+              <Button variant="outline" onClick={() => setShowFullPreview(false)}>
+                <X className="w-4 h-4 mr-1" />
+                Close
+              </Button>
+            </div>
+            <div className="p-6">
+              <div
+                className="prose prose-slate max-w-none rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:prose-invert dark:border-slate-800 dark:bg-slate-950"
+                dangerouslySetInnerHTML={{
+                  __html:
+                    content ||
+                    "<p>This policy has no document content yet. Create or import a managed draft first.</p>",
+                }}
+              />
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

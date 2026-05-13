@@ -128,6 +128,27 @@ export async function extractEnergyInvoice(
   const errors: string[] = [];
   const warnings: string[] = [];
 
+  const textInvoice = await extractEngieGasInvoiceFromPdf(pdfBase64).catch(
+    (err: any) => {
+      warnings.push(`Text extraction skipped: ${err.message}`);
+      return undefined;
+    },
+  );
+
+  if (textInvoice) {
+    const confidence = validateExtraction(textInvoice, warnings);
+
+    return {
+      success: true,
+      invoice: textInvoice,
+      confidence: Math.max(confidence, 95),
+      model_used: "pdf-text:engie-gas-v1",
+      errors,
+      warnings,
+      raw_response: JSON.stringify(textInvoice),
+    };
+  }
+
   // Try Gemini Flash first (good at structured extraction from PDFs)
   const primaryModel = "google/gemini-2.0-flash-001";
   const fallbackModel = "mistralai/mistral-ocr-latest";
@@ -215,6 +236,190 @@ export async function extractEnergyInvoice(
     warnings,
     raw_response: rawResponse,
   };
+}
+
+// â”€â”€â”€ Deterministic Text Extraction â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+async function extractPdfText(pdfBase64: string): Promise<string> {
+  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  const data = new Uint8Array(Buffer.from(pdfBase64, "base64"));
+  const loadingTask = pdfjs.getDocument({ data } as any);
+  const doc = await loadingTask.promise;
+  const pages: string[] = [];
+
+  for (let pageNumber = 1; pageNumber <= doc.numPages; pageNumber++) {
+    const page = await doc.getPage(pageNumber);
+    const content = await page.getTextContent();
+    pages.push(content.items.map((item: any) => item.str).join(" "));
+  }
+
+  return pages.join("\n");
+}
+
+async function extractEngieGasInvoiceFromPdf(
+  pdfBase64: string,
+): Promise<ExtractedInvoice | undefined> {
+  const text = normaliseInvoiceText(await extractPdfText(pdfBase64));
+
+  if (!/Your Gas Invoice Summary/i.test(text) || !/ENGIE Gas Limited/i.test(text)) {
+    return undefined;
+  }
+
+  const invoiceNumber = matchText(text, /Invoice Number\s+([0-9-]+)/i);
+  const invoiceDate = toIsoDate(matchText(text, /Date of Invoice\s+(\d{2}\/\d{2}\/\d{4})/i));
+  const dueDate = toIsoDate(matchText(text, /Due Date\s+(\d{2}\/\d{2}\/\d{4})/i));
+  const accountReference = matchText(text, /Your Account Number\s+(\d+)/i);
+  const period = text.match(
+    /Invoice Period\s+(\d{2}\/\d{2}\/\d{4})\s+to\s+(\d{2}\/\d{2}\/\d{4})/i,
+  );
+  const supplyPeriodStart = toIsoDate(period?.[1] ?? null);
+  const supplyPeriodEnd = toIsoDate(period?.[2] ?? null);
+  const supplyDays =
+    supplyPeriodStart && supplyPeriodEnd
+      ? daysInclusive(supplyPeriodStart, supplyPeriodEnd)
+      : 0;
+
+  const netAmount = moneyAfter(text, /Total Excluding VAT/i);
+  const totalAmount = moneyAfter(text, /Total Amount Payable/i);
+  const vatAmount = totalAmount !== null && netAmount !== null
+    ? roundMoney(totalAmount - netAmount)
+    : moneyAfter(text, /Total VAT/i);
+  const totalKwh = numberAfter(text, /Total Gas Consumed/i);
+  const meter = extractEngieGasMeter(text);
+
+  if (
+    !invoiceNumber ||
+    !invoiceDate ||
+    !accountReference ||
+    !supplyPeriodStart ||
+    !supplyPeriodEnd ||
+    !meter
+  ) {
+    return undefined;
+  }
+
+  const meters = [meter];
+  const co2Tonnes = totalKwh ? roundDecimal((totalKwh * 0.183) / 1000, 4) : 0;
+
+  return {
+    supplier_name: "ENGIE Gas Limited",
+    invoice_number: invoiceNumber,
+    invoice_date: invoiceDate,
+    due_date: dueDate || invoiceDate,
+    account_reference: accountReference,
+    supply_period_start: supplyPeriodStart,
+    supply_period_end: supplyPeriodEnd,
+    supply_days: supplyDays,
+    contract_reference: "ENGIE Gas",
+    energy_type: "gas",
+    net_amount: netAmount ?? 0,
+    vat_amount: vatAmount ?? 0,
+    vat_rate:
+      vatAmount !== null && netAmount ? roundDecimal((vatAmount / netAmount) * 100, 2) : 0,
+    total_amount: totalAmount ?? 0,
+    total_kwh: totalKwh ?? meter.kwh_consumed,
+    daily_average_kwh:
+      totalKwh && supplyDays ? roundDecimal(totalKwh / supplyDays, 2) : 0,
+    co2_tonnes: co2Tonnes,
+    meters,
+  };
+}
+
+function extractEngieGasMeter(text: string): ExtractedMeterReading | undefined {
+  const supply = matchText(
+    text,
+    /Supply to:\s+(.+?)\s+Consumption Information/i,
+  );
+  const block = matchText(
+    text,
+    /Consumption Information\s+MPRN\s+Serial No\.\s+Previous Read Previous Read Date Current Read Current Read Date Metered Units Unit Measure Correction Factor Calorific Value Energy Consumed\s+(.+?)\s+Reading Key:/i,
+  );
+
+  if (!block) return undefined;
+
+  const meterMatch = block.match(
+    /(\d{6,10})\s+([A-Z0-9]+)\s+([\d,]+(?:\.\d+)?)\s+[A-Z]+\s+\d{2}\/\d{2}\/\d{4}\s+([\d,]+(?:\.\d+)?)\s+[A-Z]+\s+\d{2}\/\d{2}\/\d{4}\s+([\d,]+(?:\.\d+)?)\s+.+?\s+([\d.]+)\s+([\d.]+)\s+([\d,]+(?:\.\d+)?)\s*kWh/i,
+  );
+
+  if (!meterMatch) return undefined;
+
+  const energyCharge = moneyAfter(text, /Total Consumption Charges/i) ?? 0;
+  const otherCharges = moneyAfter(text, /Total Other Charges and Adjustments/i) ?? 0;
+  const cclCharge = moneyAfter(text, /Total Climate Change Levy/i) ?? 0;
+  const subtotal = moneyAfter(text, /Total Charges Excluding VAT/i) ?? 0;
+  const unitRate = parseNumber(
+    text.match(/Flexible Product Charge\s+.+?\s+([\d.]+)\s+p\/kWh/i)?.[1],
+  );
+  const cclRate = parseNumber(
+    text.match(/Climate Change Levy\s+0\.00%\s+.+?\s+([\d.]+)\s+p\/kWh/i)?.[1],
+  );
+
+  return {
+    meter_location: supply || "",
+    meter_reference: meterMatch[1],
+    serial_number: meterMatch[2],
+    previous_reading: parseNumber(meterMatch[3]) ?? 0,
+    current_reading: parseNumber(meterMatch[4]) ?? 0,
+    units_consumed: parseNumber(meterMatch[5]) ?? 0,
+    kwh_consumed: parseNumber(meterMatch[8]) ?? 0,
+    energy_charge: energyCharge,
+    standing_charge: otherCharges,
+    ccl_charge: cclCharge,
+    subtotal,
+    unit_rate_pence: unitRate ?? 0,
+    standing_rate_pence: 0,
+    ccl_rate_pence: cclRate ?? 0,
+    gas_calorific_value: parseNumber(meterMatch[7]) ?? undefined,
+    gas_correction_factor: parseNumber(meterMatch[6]) ?? undefined,
+  };
+}
+
+function normaliseInvoiceText(text: string) {
+  return text
+    .replace(/\u00a0/g, " ")
+    .replace(/Â£/g, "£")
+    .replace(/\s+/g, " ");
+}
+
+function matchText(text: string, regex: RegExp) {
+  return text.match(regex)?.[1]?.trim() ?? null;
+}
+
+function moneyAfter(text: string, label: RegExp) {
+  const source = label.source;
+  return parseNumber(text.match(new RegExp(`${source}\\s+£?\\s*([\\d,]+\\.\\d{2})`, "i"))?.[1]);
+}
+
+function numberAfter(text: string, label: RegExp) {
+  const source = label.source;
+  return parseNumber(text.match(new RegExp(`${source}\\s+([\\d,]+(?:\\.\\d+)?)`, "i"))?.[1]);
+}
+
+function parseNumber(value?: string | null) {
+  if (!value) return null;
+  const parsed = Number(value.replace(/,/g, ""));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function toIsoDate(value?: string | null) {
+  if (!value) return "";
+  const [day, month, year] = value.split("/");
+  return `${year}-${month}-${day}`;
+}
+
+function daysInclusive(start: string, end: string) {
+  const startDate = new Date(`${start}T00:00:00Z`);
+  const endDate = new Date(`${end}T00:00:00Z`);
+  return Math.round((endDate.getTime() - startDate.getTime()) / 86_400_000) + 1;
+}
+
+function roundMoney(value: number) {
+  return roundDecimal(value, 2);
+}
+
+function roundDecimal(value: number, places: number) {
+  const factor = 10 ** places;
+  return Math.round(value * factor) / factor;
 }
 
 // ─── Parse AI Response ──────────────────────────────────────────────

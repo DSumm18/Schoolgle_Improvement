@@ -1,0 +1,194 @@
+import { describe, expect, it } from "vitest";
+import {
+  buildActionFormFromFinding,
+  buildWebsiteFindingDraft,
+  buildWebsiteFindingSourceKey,
+} from "./findings";
+
+const statutoryRequirement = {
+  key: "safeguarding_policy",
+  name: "Safeguarding / Child Protection Policy",
+  severity: "statutory" as const,
+  category: "safeguarding",
+  legislation: ["Keeping Children Safe in Education 2025"],
+  updateFrequency: "annually" as const,
+  ofstedCategory: "safeguarding",
+  ofstedSubcategory: "safeguarding-policy",
+};
+
+describe("buildWebsiteFindingDraft", () => {
+  it("creates a required action when a statutory requirement is missing", () => {
+    const draft = buildWebsiteFindingDraft({
+      sessionId: "session-1",
+      assessment: {
+        requirement_key: "safeguarding_policy",
+        requirement_name: "Safeguarding / Child Protection Policy",
+        category: "safeguarding",
+        status: "not_found",
+        compliance_score: 0,
+        quality_score: 0,
+        clarity_score: 0,
+        evidence_urls: [],
+        evidence_quotes: [],
+        gaps: ["Safeguarding policy was not found on the school website"],
+        recommendations: ["Publish the safeguarding policy"],
+        red_flags: ["Missing statutory requirement"],
+        confidence: 0.9,
+      },
+      requirement: statutoryRequirement,
+    });
+
+    expect(draft).toMatchObject({
+      title: "Missing: Safeguarding / Child Protection Policy",
+      finding_type: "missing",
+      severity: "critical",
+      action_level: "required_action",
+      status: "identified",
+      source_type: "website_scan",
+      framework_type: "ofsted",
+      category_id: "safeguarding",
+      subcategory_id: "safeguarding-policy",
+      rule_key: "safeguarding_policy",
+      rule_version: "2026.04",
+      recommended_task_title:
+        "Publish or link Safeguarding / Child Protection Policy",
+    });
+    expect(draft.checklist).toContain("Publish the safeguarding policy");
+    expect(draft.source_key).toBe(
+      buildWebsiteFindingSourceKey("session-1", "safeguarding_policy"),
+    );
+  });
+
+  it("creates a recommended action when a present item is weak", () => {
+    const draft = buildWebsiteFindingDraft({
+      sessionId: "session-2",
+      assessment: {
+        requirement_key: "safeguarding_policy",
+        requirement_name: "Safeguarding / Child Protection Policy",
+        category: "safeguarding",
+        status: "partial",
+        compliance_score: 58,
+        quality_score: 2,
+        clarity_score: 3,
+        evidence_urls: ["https://school.example/policies/safeguarding.pdf"],
+        evidence_quotes: ["Policy references KCSIE 2024."],
+        gaps: ["Policy references outdated KCSIE edition"],
+        recommendations: ["Update references to KCSIE 2025"],
+        red_flags: [],
+        confidence: 0.74,
+      },
+      requirement: statutoryRequirement,
+    });
+
+    expect(draft).toMatchObject({
+      title: "Improve: Safeguarding / Child Protection Policy",
+      finding_type: "quality_gap",
+      severity: "high",
+      action_level: "recommended_action",
+      evidence_url: "https://school.example/policies/safeguarding.pdf",
+      recommended_task_title:
+        "Improve Safeguarding / Child Protection Policy for Ofsted readiness",
+    });
+  });
+
+  it("creates a suggested improvement for compliant items with improvement advice", () => {
+    const draft = buildWebsiteFindingDraft({
+      sessionId: "session-3",
+      assessment: {
+        requirement_key: "safeguarding_policy",
+        requirement_name: "Safeguarding / Child Protection Policy",
+        category: "safeguarding",
+        status: "compliant",
+        compliance_score: 88,
+        quality_score: 4,
+        clarity_score: 4,
+        evidence_urls: ["https://school.example/safeguarding"],
+        evidence_quotes: ["DSL and deputy DSLs are named."],
+        gaps: [],
+        recommendations: ["Add a clearer parent reporting route"],
+        red_flags: [],
+        confidence: 0.88,
+      },
+      requirement: statutoryRequirement,
+    });
+
+    expect(draft).toMatchObject({
+      title: "Strengthen: Safeguarding / Child Protection Policy",
+      finding_type: "improvement",
+      severity: "low",
+      action_level: "suggested_improvement",
+    });
+  });
+
+  it("returns null when no action or improvement is needed", () => {
+    const draft = buildWebsiteFindingDraft({
+      sessionId: "session-4",
+      assessment: {
+        requirement_key: "safeguarding_policy",
+        requirement_name: "Safeguarding / Child Protection Policy",
+        category: "safeguarding",
+        status: "compliant",
+        compliance_score: 96,
+        quality_score: 5,
+        clarity_score: 5,
+        evidence_urls: ["https://school.example/safeguarding"],
+        evidence_quotes: [],
+        gaps: [],
+        recommendations: [],
+        red_flags: [],
+        confidence: 0.95,
+      },
+      requirement: statutoryRequirement,
+    });
+
+    expect(draft).toBeNull();
+  });
+});
+
+describe("buildActionFormFromFinding", () => {
+  it("creates a routed Ofsted task linked back to the source finding", () => {
+    const task = buildActionFormFromFinding({
+      id: "finding-123",
+      title: "Missing: Safeguarding / Child Protection Policy",
+      recommended_task_title:
+        "Publish or link Safeguarding / Child Protection Policy",
+      recommended_task_description:
+        "Safeguarding policy was not found. Source guidance: KCSIE 2025.",
+      category_id: "safeguarding",
+      subcategory_id: "safeguarding-policy",
+      severity: "critical",
+      checklist: [
+        "Publish the safeguarding policy",
+        "Check the named DSL is current",
+      ],
+      evidence_url: "https://school.example/safeguarding",
+    });
+
+    expect(task).toMatchObject({
+      title: "Publish or link Safeguarding / Child Protection Policy",
+      description:
+        "Safeguarding policy was not found. Source guidance: KCSIE 2025.",
+      category_id: "safeguarding",
+      subcategory_id: "safeguarding-policy",
+      module: "ofsted-readiness",
+      task_type: "ofsted",
+      priority: "critical",
+      status: "not_started",
+      created_from_finding_id: "finding-123",
+      source_record_id: "finding-123",
+      source_table_name: "ofsted_findings",
+      route_path: "/dashboard/ofsted-readiness?findingId=finding-123",
+    });
+    expect(task.checklist).toEqual([
+      { title: "Publish the safeguarding policy" },
+      { title: "Check the named DSL is current" },
+    ]);
+    expect(task.linked_evidence).toEqual([
+      {
+        type: "url",
+        title: "Source evidence",
+        url: "https://school.example/safeguarding",
+      },
+    ]);
+  });
+});

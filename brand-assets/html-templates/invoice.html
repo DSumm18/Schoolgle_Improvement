@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Schoolgle Invoice</title>
+    <link rel="stylesheet" href="./styles/schoolgle-docs.css?v=accent-3px" />
+  </head>
+  <body>
+    <nav class="template-nav" aria-label="Template previews">
+      <a href="./letterhead.html">Letterhead</a>
+      <a href="./proposal.html">Proposal</a>
+      <a class="active" href="./invoice.html">Invoice</a>
+      <a href="./meeting-notes.html">Meeting Notes</a>
+      <a href="./email-signature.html">Email Signature</a>
+      <a href="./linkedin-advertising.html">LinkedIn Advertising</a>
+      <a href="./index.html">Gallery</a>
+    </nav>
+    <main class="page">
+      <header class="doc-header">
+        <img class="logo" src="./assets/schoolgle-logo-horizontal.png" alt="Schoolgle" />
+        <div class="meta">
+          <h1 style="margin: 0 0 4px">Invoice</h1>
+          # {{invoice_number}}<br />
+          {{invoice_date}}
+        </div>
+      </header>
+
+      <div class="accent-line" aria-hidden="true">
+        <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+      </div>
+
+      <section class="grid-2">
+        <div class="card">
+          <div class="label">From</div>
+          <p>
+            Schoolgle<br />
+            <a href="https://schoolgle.co.uk">schoolgle.co.uk</a><br />
+            <a href="mailto:david@schoolgle.co.uk">david@schoolgle.co.uk</a><br />
+            {{company_number}}
+          </p>
+        </div>
+        <div class="card">
+          <div class="label">Bill To</div>
+          <p>
+            {{customer_name}}<br />
+            {{customer_contact}}<br />
+            <a class="email-chip" href="mailto:{{customer_email}}">{{customer_email}}</a>
+          </p>
+        </div>
+      </section>
+
+      <section class="grid-2" style="margin-top: 18px">
+        <div class="section-card">
+          <div class="label">Due Date</div>
+          <p><strong>{{due_date}}</strong></p>
+        </div>
+        <div class="section-card">
+          <div class="label">Payment Terms</div>
+          <p><strong>{{payment_terms}}</strong></p>
+        </div>
+      </section>
+
+      <section style="margin-top: 20px">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Description</th>
+              <th>Qty</th>
+              <th>Unit Price</th>
+              <th>VAT</th>
+              <th>Line Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>{{item_1_description}}</td>
+              <td>{{item_1_quantity}}</td>
+              <td>{{item_1_unit_price}}</td>
+              <td>{{item_1_vat}}</td>
+              <td><strong>{{item_1_total}}</strong></td>
+            </tr>
+            <tr>
+              <td>{{item_2_description}}</td>
+              <td>{{item_2_quantity}}</td>
+              <td>{{item_2_unit_price}}</td>
+              <td>{{item_2_vat}}</td>
+              <td><strong>{{item_2_total}}</strong></td>
+            </tr>
+            <tr>
+              <td>{{item_3_description}}</td>
+              <td>{{item_3_quantity}}</td>
+              <td>{{item_3_unit_price}}</td>
+              <td>{{item_3_vat}}</td>
+              <td><strong>{{item_3_total}}</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section style="margin-top: 22px">
+        <div class="total-box">
+          <div class="total-row"><span>Subtotal</span><strong>{{subtotal}}</strong></div>
+          <div class="total-row"><span>VAT</span><strong>{{vat_total}}</strong></div>
+          <div class="total-row final"><span>Total Due</span><span>{{total_due}}</span></div>
+        </div>
+      </section>
+
+      <section class="section-card">
+        <div class="label">Payment Details</div>
+        <p>
+          Account name: {{account_name}} · Sort code: {{sort_code}} · Account number:
+          {{account_number}} · Reference: {{invoice_number}}
+        </p>
+      </section>
+
+      <footer class="doc-footer">
+        <span>Schoolgle · <a href="mailto:david@schoolgle.co.uk">david@schoolgle.co.uk</a></span>
+        <span>{{invoice_notes}}</span>
+      </footer>
+    </main>
+  </body>
+</html>

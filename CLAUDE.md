@@ -1,4 +1,4 @@
-# CLAUDE.md
+﻿# CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -7,6 +7,31 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Schoolgle** is an AI-powered school improvement platform for UK schools. The platform automatically scans cloud storage (Google Drive/OneDrive), extracts evidence from documents, and maps them to Ofsted/SIAMS framework requirements using AI. It also includes modules for Estates Compliance, HR & People, Governance, and Teaching & Learning.
 
 This is a **Turborepo monorepo** with the main Next.js 16 application in `apps/platform/` and shared packages in `packages/`.
+
+---
+
+## Schoolgle Operating Memory
+
+Before working on connectors, Ofsted Readiness, SIAMS, Policy Manager, School Improvement, Trust Assessor, or evidence workflows, read these canonical files first. They are the project memory for how the Schoolgle ecosystem is intended to fit together:
+
+- `docs/SCHOOLGLE_APP_CONNECTION_MAP.md` — app-to-folder map, source-of-truth rules, what Drive/SharePoint owns versus what Schoolgle stores.
+- `docs/CLOUD_SOURCE_OF_TRUTH.md` — production cloud/OAuth/connector boundary; Schoolgle folder only, no Drive root fallback.
+- `docs/CONNECTED_DATA_SOURCE_MODEL.md` — five-layer data model: cloud connection, ingest, validated import, Schoolgle-managed workflow, intelligence/reporting.
+- `docs/MODULE_TO_SOURCE_DEPENDENCY_MAP.md` — which modules consume imported, derived, pre-populated, or Schoolgle-managed data.
+- `docs/CROSS_MODULE_CONNECTION_MATRIX.md` — cross-module dependencies, especially documents, tasks, Ed AI and evidence flows.
+- `docs/modules/ofsted-readiness/OFSTED_ECOSYSTEM_LOOP_SPEC.md` — Ofsted Readiness lifecycle: scans create findings, findings create tasks, tasks verify back to evidence.
+- `docs/superpowers/plans/2026-05-01-ofsted-readiness-intelligence-loop.md` — current Ofsted/Trust Assessor integration direction.
+- `apps/platform/src/lib/schoolgle-connector.ts` — executable connector folder/app scope map used by the app.
+
+Key product memory:
+
+- Drive/SharePoint remains the source of truth for original files; Schoolgle stores metadata, extracted checks, findings, tasks, review dates, source references and audit trails.
+- Policy Manager should point to policy files rather than silently copying them into Supabase as canonical documents.
+- Ofsted Readiness and SIAMS Readiness should consume Policy Manager, website scans, evidence folders, School Improvement/Trust Assessor intelligence and unified tasks rather than creating parallel systems.
+- Policy Manager quality checks, enhanced drafts and legislation/source-change monitoring must be productionised as OpenRouter-backed Schoolgle workflows with explicit model registry entries, prompt/rule packs and evaluation tests. Do not assume Codex/Claude session quality will match the live product model.
+- `00 Inbox - To Sort` is a triage drop-zone; Schoolgle may suggest filing actions, but should not silently move/delete school files.
+- `_Archive - Do Not Scan` folders are retained for audit/manual lookup but excluded from normal readiness and compliance scoring.
+- Trust Assessor values must be explicit, validated and labelled. Combined RWM+ means pupils meeting expected+ in Reading, Writing AND Maths together, not an average.
 
 ---
 
@@ -62,7 +87,7 @@ npm run test:formfill:ci      # Run tests with CI reporter
 
 ## MANDATORY Quality Rules (NON-NEGOTIABLE)
 
-Every task — whether done by Jarvis, a worker session, or any Claude Code instance — MUST follow these rules. No exceptions.
+Every task â€” whether done by Jarvis, a worker session, or any Claude Code instance â€” MUST follow these rules. No exceptions.
 
 ### No Hardcoding, No Shortcuts, No Bypassing Product Architecture
 
@@ -72,37 +97,37 @@ Every task — whether done by Jarvis, a worker session, or any Claude Code inst
 
 2. **NEVER save sensitive data (file contents, assessment records, pupil data) to localStorage, session storage, or client-side caches** as a shortcut for proper server-side persistence. If data needs to persist, it goes in Supabase with RLS policies scoping it to the organization.
 
-3. **NEVER bypass authentication or authorization to "make it work".** If an API route requires auth and the page can't call it, fix the auth flow — don't make the route public.
+3. **NEVER bypass authentication or authorization to "make it work".** If an API route requires auth and the page can't call it, fix the auth flow â€” don't make the route public.
 
-4. **Connectors must be real connectors.** If the product says "Connected to Google Drive", it must maintain a live connection to the actual file via the Drive API, not save a cached copy. The user expects that changing the source file updates the report. If a proper connector can't be built yet, say so and get approval for a temporary approach — don't silently implement a fake connector.
+4. **Connectors must be real connectors.** If the product says "Connected to Google Drive", it must maintain a live connection to the actual file via the Drive API, not save a cached copy. The user expects that changing the source file updates the report. If a proper connector can't be built yet, say so and get approval for a temporary approach â€” don't silently implement a fake connector.
 
-5. **Think multi-tenant.** Every feature you build will be used by multiple schools. If you're building something that only works for one specific school, one specific spreadsheet, or one specific file — STOP. Ask yourself: "Would this work if a different school signed up tomorrow?" If the answer is no, redesign it.
+5. **Think multi-tenant.** Every feature you build will be used by multiple schools. If you're building something that only works for one specific school, one specific spreadsheet, or one specific file â€” STOP. Ask yourself: "Would this work if a different school signed up tomorrow?" If the answer is no, redesign it.
 
 6. **If you need to take a shortcut, ASK FIRST.** Explain what the proper approach is, why you want to shortcut it, and what the risks are. David will approve or reject. Do not proceed without approval. This is non-negotiable.
 
-**Why this matters:** Schoolgle handles student PII, SEND status, FSM eligibility, and assessment data. A hardcoded org ID, a cached file in localStorage, or a public API route is not a minor bug — it's a safeguarding failure. Schools trust us with their children's data. We do not cut corners with that trust.
+**Why this matters:** Schoolgle handles student PII, SEND status, FSM eligibility, and assessment data. A hardcoded org ID, a cached file in localStorage, or a public API route is not a minor bug â€” it's a safeguarding failure. Schools trust us with their children's data. We do not cut corners with that trust.
 
 ### Before Claiming ANY Work is Done:
 
-1. **BUILD CHECK** — Run `npm run build` from `apps/platform/`. If it fails, FIX IT before committing. A broken build is never acceptable.
+1. **BUILD CHECK** â€” Run `npm run build` from `apps/platform/`. If it fails, FIX IT before committing. A broken build is never acceptable.
 
-2. **TEST YOUR CHANGES** — If you created an API route, `curl` it and verify the response. If you created a UI component, take a screenshot with Playwright and verify it renders. If you changed auth, test both authenticated and unauthenticated paths. Evidence, not assumption.
+2. **TEST YOUR CHANGES** â€” If you created an API route, `curl` it and verify the response. If you created a UI component, take a screenshot with Playwright and verify it renders. If you changed auth, test both authenticated and unauthenticated paths. Evidence, not assumption.
 
-3. **CHECK THE BROWSER CONSOLE** — If the dev server is running (port 3001), check for console errors. Fix any errors your changes introduced. Pre-existing errors should be noted but not ignored.
+3. **CHECK THE BROWSER CONSOLE** â€” If the dev server is running (port 3001), check for console errors. Fix any errors your changes introduced. Pre-existing errors should be noted but not ignored.
 
-4. **VERIFY API RESPONSES** — Every API endpoint you create or modify must be tested with `curl` showing a successful response. Paste the test command and output in your report.
+4. **VERIFY API RESPONSES** â€” Every API endpoint you create or modify must be tested with `curl` showing a successful response. Paste the test command and output in your report.
 
-5. **NO GUESSING MODEL NAMES** — Before using any AI model (Gemini, Claude, etc.), list available models via the API first. Never guess a model ID. Run: `curl "https://generativelanguage.googleapis.com/v1beta/models?key=$GEMINI_API_KEY"` or equivalent.
+5. **NO GUESSING MODEL NAMES** â€” Before using any AI model (Gemini, Claude, etc.), list available models via the API first. Never guess a model ID. Run: `curl "https://generativelanguage.googleapis.com/v1beta/models?key=$GEMINI_API_KEY"` or equivalent.
 
-6. **NO GUESSING EXPORT NAMES** — Before importing from a module, check what it actually exports. Run `grep "export" <file>` first. Never assume an export exists.
+6. **NO GUESSING EXPORT NAMES** â€” Before importing from a module, check what it actually exports. Run `grep "export" <file>` first. Never assume an export exists.
 
-7. **USE SUPERPOWERS SKILLS** — Every significant task must invoke at least one:
+7. **USE SUPERPOWERS SKILLS** â€” Every significant task must invoke at least one:
    - `systematic-debugging` for bug fixes
    - `verification-before-completion` before claiming done
    - `write-plan` before building anything with 3+ files
    - `test-driven-development` for new features
 
-8. **REPORT WHAT WAS TESTED** — In your chat.md output, include a "Verification" section showing:
+8. **REPORT WHAT WAS TESTED** â€” In your chat.md output, include a "Verification" section showing:
    - Commands run and their output
    - Screenshots taken (with Playwright if available)
    - Endpoints tested with curl
@@ -126,11 +151,11 @@ Every task — whether done by Jarvis, a worker session, or any Claude Code inst
 
 Any task that integrates an external AI model or API (Gemini, OpenRouter, Fish Audio, Firecrawl, DfE GIAS, etc.) is **NOT COMPLETE** until ALL of the following are met:
 
-1. **Real API call made** — with representative, realistic input data (not mocks)
-2. **Output evaluated for accuracy** — does the model return correct, useful results?
-3. **Evidence saved** — JSON dump or screenshot of real results saved to `/tmp/` or Supabase storage
-4. **Sandra test** — honest assessment: would a school business manager find this output useful? If no, the task is NOT done.
-5. **UI verified** — if there's a user-facing page, it must be loaded in a browser with real data and screenshotted
+1. **Real API call made** â€” with representative, realistic input data (not mocks)
+2. **Output evaluated for accuracy** â€” does the model return correct, useful results?
+3. **Evidence saved** â€” JSON dump or screenshot of real results saved to `/tmp/` or Supabase storage
+4. **Sandra test** â€” honest assessment: would a school business manager find this output useful? If no, the task is NOT done.
+5. **UI verified** â€” if there's a user-facing page, it must be loaded in a browser with real data and screenshotted
 
 Mocked unit tests are necessary but NOT sufficient. They prove code structure, not product value.
 
@@ -140,20 +165,20 @@ Mocked unit tests are necessary but NOT sufficient. They prove code structure, n
 
 ```
 apps/
-├── platform/          # Main Next.js web app (schoolgle.co.uk)
-├── ed-parent/         # Parent/teacher dashboard
-└── ed-staff/          # Staff dashboard
+â”œâ”€â”€ platform/          # Main Next.js web app (schoolgle.co.uk)
+â”œâ”€â”€ ed-parent/         # Parent/teacher dashboard
+â””â”€â”€ ed-staff/          # Staff dashboard
 
 packages/
-├── core/              # Core utilities and configs
-├── ed-agents/         # AI agent framework (aliased to @schoolgle/ed-agents)
-├── ed-backend/        # Backend logic for evidence detection
-├── ed-widget/         # Widget components (uses Vite, aliased to stub in marketing routes)
-├── ed-extension/      # Browser extension
-├── form-fill-lab/     # Form automation with Playwright tests
-├── form-skill/        # Form filling skill
-├── mcp-server/        # MCP server implementation
-└── shared/            # Shared types and utilities
+â”œâ”€â”€ core/              # Core utilities and configs
+â”œâ”€â”€ ed-agents/         # AI agent framework (aliased to @schoolgle/ed-agents)
+â”œâ”€â”€ ed-backend/        # Backend logic for evidence detection
+â”œâ”€â”€ ed-widget/         # Widget components (uses Vite, aliased to stub in marketing routes)
+â”œâ”€â”€ ed-extension/      # Browser extension
+â”œâ”€â”€ form-fill-lab/     # Form automation with Playwright tests
+â”œâ”€â”€ form-skill/        # Form filling skill
+â”œâ”€â”€ mcp-server/        # MCP server implementation
+â””â”€â”€ shared/            # Shared types and utilities
 ```
 
 ### Turborepo Pipeline
@@ -187,18 +212,20 @@ packages/
 - **Supabase** (PostgreSQL) for database with Row Level Security (RLS)
 - Auth context: `apps/platform/src/context/SupabaseAuthContext.tsx`
 
-### AI Model Stack (Multi-Model via OpenRouter)
+### AI Model Stack (Approved Providers Only)
+
+**Non-negotiable product rule**: Schoolgle must only send school/customer data to approved provider families: OpenAI, Anthropic, Google, Meta Llama, Mistral, and Microsoft.
 
 Models configured in `apps/platform/src/lib/ai-evidence-matcher.ts`:
 
-| Model                              | Purpose                        | Cost                 |
-| ---------------------------------- | ------------------------------ | -------------------- |
-| `deepseek/deepseek-chat`           | Primary analysis (95% of docs) | $0.24/M input        |
-| `mistral-ocr`                      | Scanned PDFs/images            | ~$0.20-0.40/100 docs |
-| `google/gemini-2.0-flash-lite-001` | Fallback/retry logic           | $0.075/M input       |
-| `qwen/qwen-2.5-vl-72b-instruct`    | Charts/diagrams (optional)     | $0.40/M input        |
+| Model                              | Purpose                       | Cost posture      |
+| ---------------------------------- | ----------------------------- | ----------------- |
+| `google/gemini-2.0-flash-001`      | Primary analysis + vision     | Low-cost default  |
+| `mistralai/mistral-ocr-latest`     | Scanned PDFs/images           | OCR-specific      |
+| `google/gemini-2.0-flash-lite-001` | Fallback/retry logic          | Cheapest fallback |
+| `anthropic/claude-3.5-sonnet`      | Premium synthesis             | Use when justified |
 
-**To change models**: Update `MODEL_CONFIG` in `ai-evidence-matcher.ts` and document rationale in `docs/AI_MODELS.md`.
+**To change models**: Update `apps/platform/src/lib/ai/model-policy.ts`, `MODEL_CONFIG` in `ai-evidence-matcher.ts`, and document rationale in `docs/AI_MODELS.md`.
 
 ### Database
 
@@ -262,7 +289,7 @@ Models configured in `apps/platform/src/lib/ai-evidence-matcher.ts`:
 
 ## Modules (built + specced)
 
-One-line index. Follow the doc link for details — each doc owns its own spec.
+One-line index. Follow the doc link for details â€” each doc owns its own spec.
 
 | Module | Route | API | Docs |
 | --- | --- | --- | --- |
@@ -271,8 +298,8 @@ One-line index. Follow the doc link for details — each doc owns its own spec.
 | Estates Compliance | `/estates-compliance` | `/api/estates/*` | `docs/modules/estates-compliance/SUMMARY.md` |
 | Governance Portal | `/dashboard/governance` | `/api/governance/*` | board, governors, meetings, training, policies, visits |
 | Ed Form Helper | (extension) | `/api/ed/form-helper/*`, `/api/form-templates/*` | `docs/ED_FORM_HELPER_SUMMARY.md` |
-| SEND Hub | `/modules/send` | — | `docs/modules/sen-funding/` (specced, not built) |
-| Staff Connectors | (cross-module) | — | `docs/STAFF_CONNECTORS.md` (specced, not built) |
+| SEND Hub | `/modules/send` | â€” | `docs/modules/sen-funding/` (specced, not built) |
+| Staff Connectors | (cross-module) | â€” | `docs/STAFF_CONNECTORS.md` (specced, not built) |
 | Website Builder | `/dashboard/website` | `/api/website/*` | Firecrawl compliance, 15 expert assessors |
 | Intelligence Engine | `/dashboard/intelligence` | `/api/intelligence/*` | `@schoolgle/core-ai` pkg; HMAC-SHA256 pupil pseudonymisation; cohort/EEF/DfE |
 | Trust Assessor | `/dashboard/school-improvement/trust-assessor` | `/api/trust-analysis/*` | `docs/TRUST_ASSESSOR_KNOWLEDGE_BASE.md` |
@@ -286,18 +313,18 @@ Intelligence Engine key facts: KS2 filter `breakdown_topic = 'All pupils'`; coho
 
 Ed = multi-specialist chatbot in `packages/ed-agents/` (aliased `@schoolgle/ed-agents`).
 
-**Pipeline:** User → Intent Classifier → Agent Router → Specialist → `SchoolDataGuardian` (PII scrub) → OpenRouter LLM → Guardrails → Response. Skills call `/api/skills/invoke`.
+**Pipeline:** User â†’ Intent Classifier â†’ Agent Router â†’ Specialist â†’ `SchoolDataGuardian` (PII scrub) â†’ OpenRouter LLM â†’ Guardrails â†’ Response. Skills call `/api/skills/invoke`.
 
 **Key files in `packages/ed-agents/src/`:**
-- `orchestrator/` — orchestrator, agent-router, intent-classifier, context-loader
-- `agents/agents.ts` — 14 specialist registry; prompts in `agents/prompts/`
-- `models/` — OpenRouter only (no direct provider calls)
-- `guardrails/pipeline.ts` — response safety
-- `credit/manager.ts` — token/cost tracking
+- `orchestrator/` â€” orchestrator, agent-router, intent-classifier, context-loader
+- `agents/agents.ts` â€” 14 specialist registry; prompts in `agents/prompts/`
+- `models/` â€” OpenRouter only (no direct provider calls)
+- `guardrails/pipeline.ts` â€” response safety
+- `credit/manager.ts` â€” token/cost tracking
 
 **Zero-trust rule (April 2026 migration):** ALL LLM calls route through OpenRouter AND `SchoolDataGuardian`. Never add direct provider SDK calls or bypass PII scrub. New AI features = formal Skills in `ed-agents` or go through `routeToSpecialist`.
 
-**14 specialists + feature access by plan + full skill list:** see `docs/AGENT_DEFINITIONS.md` (single source of truth — update that file when changing any agent).
+**14 specialists + feature access by plan + full skill list:** see `docs/AGENT_DEFINITIONS.md` (single source of truth â€” update that file when changing any agent).
 
 **API:** `/api/ed/chat`, `/api/ed/knowledge`, `/api/ed/analytics`, `/api/ed/embed`, `/api/ed/website-chat`, `/api/skills/invoke` (POST invoke, GET discovery).
 
@@ -326,7 +353,7 @@ OPENROUTER_API_KEY=
 NEXT_PUBLIC_GOOGLE_CLIENT_ID=
 NEXT_PUBLIC_MICROSOFT_CLIENT_ID=
 
-# Firecrawl (Website Crawling — used by website compliance scanner & Ofsted readiness)
+# Firecrawl (Website Crawling â€” used by website compliance scanner & Ofsted readiness)
 # If set, uses Firecrawl API for faster, more reliable website crawling
 # If not set, falls back to Playwright-based crawler
 FIRECRAWL_API_KEY=
@@ -336,7 +363,7 @@ FIRECRAWL_API_KEY=
 
 ## Testing
 
-- **Vitest** for unit/integration tests (`vitest.config.ts`, jsdom, `@` → `src/`)
+- **Vitest** for unit/integration tests (`vitest.config.ts`, jsdom, `@` â†’ `src/`)
 - **Playwright** for form-fill E2E (`packages/form-fill-lab/`)
 - Test files: `*.test.ts` or `*.spec.ts`
 - Integration Test Gate for external AI/API models: see MANDATORY Quality Rules above
@@ -345,13 +372,13 @@ FIRECRAWL_API_KEY=
 
 ## Skills System
 
-- Definitions: `.agent/skills/<name>/SKILL.md` — register in `.agent/skills/INDEX.md`
-- Schemas/handlers: `apps/platform/src/lib/skills/` — registry at `school-skills-registry.ts` (STAFF 6, ACTIONS 6, ESTATES 8, ESTATES_SPATIAL 6, INTELLIGENCE 6, RISK 6, DOCUMENT 7)
+- Definitions: `.agent/skills/<name>/SKILL.md` â€” register in `.agent/skills/INDEX.md`
+- Schemas/handlers: `apps/platform/src/lib/skills/` â€” registry at `school-skills-registry.ts` (STAFF 6, ACTIONS 6, ESTATES 8, ESTATES_SPATIAL 6, INTELLIGENCE 6, RISK 6, DOCUMENT 7)
 - API: `POST /api/skills/invoke` (execute), `GET /api/skills/invoke` (discover)
 - Docs: `docs/SKILLS_SYSTEM.md`
-- **Adding a new skill:** create SKILL.md → add to INDEX.md → schemas in `src/lib/skills/` → API route → test via invoke endpoint
+- **Adding a new skill:** create SKILL.md â†’ add to INDEX.md â†’ schemas in `src/lib/skills/` â†’ API route â†’ test via invoke endpoint
 
-Skills Lab (prototyping sandbox): `skills-lab/` — knowledge bases, TS prototypes, example conversations.
+Skills Lab (prototyping sandbox): `skills-lab/` â€” knowledge bases, TS prototypes, example conversations.
 
 Module registry: `apps/platform/src/lib/modules/registry.ts` (defines modules, apps, role-based access).
 
@@ -421,7 +448,7 @@ The API is organized by domain under `apps/platform/src/app/api/`:
 
 ## NotebookLM Integration
 
-Internal tooling only (training podcasts, research, newsletter content) — **NOT for production Schoolgle features**. Uses undocumented Google APIs; dedicated account, not primary. 2s delays between batch ops.
+Internal tooling only (training podcasts, research, newsletter content) â€” **NOT for production Schoolgle features**. Uses undocumented Google APIs; dedicated account, not primary. 2s delays between batch ops.
 
 See `tools/notebooklm/README.md` for setup, scripts (`youtube_fetcher.py`, `scheduler.py`), notebook IDs, and workflows. Claude Code skill: `/notebooklm`.
 
@@ -464,7 +491,7 @@ See `tools/notebooklm/README.md` for setup, scripts (`youtube_fetcher.py`, `sche
 
 ## Schoolgle-Specific Conventions
 
-**API Route Auth** — all routes must use `protectedRoute` wrapper unless intentionally public:
+**API Route Auth** â€” all routes must use `protectedRoute` wrapper unless intentionally public:
 
 ```typescript
 import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
@@ -481,11 +508,11 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
 - Intentionally public: webhooks, OAuth callbacks, DfE lookups, survey submissions, ed embed/website-chat
 - Coverage: ~95% of routes (310+/325)
 
-**Layout** — route groups `(dashboard)/`, `(marketing)/`, `(auth)/`. API by domain `/api/{domain}/*`. Components in `src/components/{domain}/`, business logic in `src/lib/`.
+**Layout** â€” route groups `(dashboard)/`, `(marketing)/`, `(auth)/`. API by domain `/api/{domain}/*`. Components in `src/components/{domain}/`, business logic in `src/lib/`.
 
-**Stack** — Next.js 16 Server Components by default (mark `"use client"` only when needed). Radix UI + Tailwind + class-variance-authority + Lucide. SWR for remote state. Supabase `@supabase/ssr` server-side, `@supabase/supabase-js` client-side. RLS enabled on every table with org-based policies. Migrations timestamp-prefixed.
+**Stack** â€” Next.js 16 Server Components by default (mark `"use client"` only when needed). Radix UI + Tailwind + class-variance-authority + Lucide. SWR for remote state. Supabase `@supabase/ssr` server-side, `@supabase/supabase-js` client-side. RLS enabled on every table with org-based policies. Migrations timestamp-prefixed.
 
-**Git** — `feature/` branches, Conventional Commits, PR required before main merge.
+**Git** â€” `feature/` branches, Conventional Commits, PR required before main merge.
 
 ---
 
@@ -499,17 +526,17 @@ All marketing docs live in `docs/marketing/`:
 | `AI-IN-SCHOOLS-GUIDE.md`            | Plain English AI guide for school leaders (GDPR, safety, practical advice)                                               |
 | `COMPETITIVE-ANALYSIS.md`           | Competitor landscape analysis                                                                                            |
 | `LA-SCHOOLS-STRATEGY.md`            | Local Authority targeting strategy                                                                                       |
-| `UPSELL-STRATEGY.md`                | Upsell playbook (free → paid → trust)                                                                                    |
+| `UPSELL-STRATEGY.md`                | Upsell playbook (free â†’ paid â†’ trust)                                                                                    |
 | `demo-scripts/LA-HEADS-BRIEFING.md` | Demo script for LA headteacher briefings                                                                                 |
 | `modules/01-11`                     | Per-module pitch sheets (Ofsted, Estates, HR, Governance, Actions, Intelligence, Ed, Risk, Meetings, Documents, Surveys) |
-| `modules/07a-ed-vs-staff-cost.md`   | Ed vs staff cost comparison — the "11p/hour" pitch                                                                       |
+| `modules/07a-ed-vs-staff-cost.md`   | Ed vs staff cost comparison â€” the "11p/hour" pitch                                                                       |
 | `pitch-deck/school-in-a-box.html`   | 14-slide pitch deck (open in browser, F11 for fullscreen)                                                                |
 
 ### Pricing Model
 
-- **Ed AI Assistant**: Two products — Ed In-School (£500/yr) and Ed Website Chat (£500/yr)
+- **Ed AI Assistant**: Two products â€” Ed In-School (Â£500/yr) and Ed Website Chat (Â£500/yr)
 - **Foundation tiers**: 1/2/3 year contracts, LA vs Academy financial year alignment
-- **Key pitch**: "20% of your problems consume 80% of your time" — systems expertise angle
+- **Key pitch**: "20% of your problems consume 80% of your time" â€” systems expertise angle
 
 ---
 
@@ -542,20 +569,20 @@ All marketing docs live in `docs/marketing/`:
 
 ## Marketing Idea Auto-Capture
 
-**IMPORTANT**: During any conversation, if the user mentions something that is clearly a marketing idea, campaign concept, competitive insight, sales angle, content idea, or positioning thought — even if they're talking about something else — Claude MUST:
+**IMPORTANT**: During any conversation, if the user mentions something that is clearly a marketing idea, campaign concept, competitive insight, sales angle, content idea, or positioning thought â€” even if they're talking about something else â€” Claude MUST:
 
-1. **Recognise it** — marketing ideas often come up naturally during technical or strategic conversations
-2. **Capture it** — create a new file in `docs/marketing/ideas/NNN-idea-name.md` using the template from `docs/marketing/ideas/INDEX.md`
-3. **Update the index** — add it to the pipeline table in `docs/marketing/ideas/INDEX.md`
-4. **Acknowledge briefly** — mention "Captured that as idea #NNN" so the user knows it's been filed
-5. **Continue the conversation** — don't derail the current task
+1. **Recognise it** â€” marketing ideas often come up naturally during technical or strategic conversations
+2. **Capture it** â€” create a new file in `docs/marketing/ideas/NNN-idea-name.md` using the template from `docs/marketing/ideas/INDEX.md`
+3. **Update the index** â€” add it to the pipeline table in `docs/marketing/ideas/INDEX.md`
+4. **Acknowledge briefly** â€” mention "Captured that as idea #NNN" so the user knows it's been filed
+5. **Continue the conversation** â€” don't derail the current task
 
 **Examples of things to capture:**
-- "We should position this as..." → capture as positioning idea
-- "That's like how [competitor] does..." → capture as competitive insight
-- "Schools would love it if we showed..." → capture as content/visual idea
-- "What if we did a LinkedIn post about..." → capture as content idea
-- "The motorway sign thing could also work for..." → capture as campaign extension
+- "We should position this as..." â†’ capture as positioning idea
+- "That's like how [competitor] does..." â†’ capture as competitive insight
+- "Schools would love it if we showed..." â†’ capture as content/visual idea
+- "What if we did a LinkedIn post about..." â†’ capture as content idea
+- "The motorway sign thing could also work for..." â†’ capture as campaign extension
 - Anything mentioning: LinkedIn, pitch, demo, campaign, messaging, branding, website copy, sales, pricing angle
 
 **What NOT to capture:**
@@ -600,3 +627,5 @@ Grep with pattern="<search term>" path="C:\Git\Schoolgle_Improvement/" glob="*.j
 ```
 
 ---
+
+

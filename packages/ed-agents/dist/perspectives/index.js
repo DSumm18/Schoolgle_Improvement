@@ -1,4 +1,4 @@
-"use strict";
+﻿"use strict";
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
@@ -176,10 +176,10 @@ var OPENROUTER_MODELS = {
       jsonMode: true
     }
   },
-  "deepseek/deepseek-chat": {
-    id: "deepseek/deepseek-chat",
+  "openai/gpt-4o-mini": {
+    id: "openai/gpt-4o-mini",
     provider: "openrouter",
-    model: "deepseek/deepseek-chat",
+    model: "openai/gpt-4o-mini",
     costPerMillionTokens: 0.27,
     // Input, output is ~$1.10
     capabilities: {
@@ -188,10 +188,10 @@ var OPENROUTER_MODELS = {
       jsonMode: true
     }
   },
-  "deepseek/deepseek-chat-v3-0324": {
-    id: "deepseek/deepseek-chat-v3-0324",
+  "openai/gpt-4o-mini": {
+    id: "openai/gpt-4o-mini",
     provider: "openrouter",
-    model: "deepseek/deepseek-chat-v3-0324",
+    model: "openai/gpt-4o-mini",
     costPerMillionTokens: 0.27,
     capabilities: {
       vision: false,
@@ -199,10 +199,10 @@ var OPENROUTER_MODELS = {
       jsonMode: true
     }
   },
-  "deepseek/deepseek-r1": {
-    id: "deepseek/deepseek-r1",
+  "openai/o3-mini": {
+    id: "openai/o3-mini",
     provider: "openrouter",
-    model: "deepseek/deepseek-r1",
+    model: "openai/o3-mini",
     costPerMillionTokens: 0.55,
     // Reasoning model
     capabilities: {
@@ -248,10 +248,10 @@ var OPENROUTER_MODELS = {
     }
   },
   // ========== REASONING MODELS ==========
-  "deepseek/deepseek-r1": {
-    id: "deepseek/deepseek-r1",
+  "openai/o3-mini": {
+    id: "openai/o3-mini",
     provider: "openrouter",
-    model: "deepseek/deepseek-r1",
+    model: "openai/o3-mini",
     costPerMillionTokens: 0.55,
     capabilities: {
       vision: false,
@@ -264,14 +264,14 @@ var MODEL_ALIASES = {
   // Primary models
   "premium": "anthropic/claude-3.5-sonnet",
   "fast": "openai/gpt-4o-mini",
-  "cheap": "deepseek/deepseek-chat",
+  "cheap": "openai/gpt-4o-mini",
   // Specific model aliases
   "claude": "anthropic/claude-3.5-sonnet",
   "gpt4": "openai/gpt-4o",
   "gpt4-mini": "openai/gpt-4o-mini",
   "gemini": "google/gemini-2.5-flash-thinking-exp",
-  "deepseek": "deepseek/deepseek-chat",
-  "deepseek-r1": "deepseek/deepseek-r1"
+  "deepseek": "openai/gpt-4o-mini",
+  "deepseek-r1": "openai/o3-mini"
 };
 var OpenRouterClient = class {
   constructor(config) {
@@ -439,21 +439,21 @@ function createOpenRouterClient() {
 // src/models/router.ts
 var TASK_MODEL_MAP = {
   // Fast/cheap for routing
-  "intent-classification": ["openai/gpt-4o-mini", "google/gemini-2.0-flash-exp", "deepseek/deepseek-chat"],
+  "intent-classification": ["openai/gpt-4o-mini", "google/gemini-2.0-flash-exp", "openai/gpt-4o-mini"],
   "work-focus-check": ["openai/gpt-4o-mini", "google/gemini-2.0-flash-exp"],
   // High quality for specialist responses
-  "specialist-response": ["anthropic/claude-3.5-sonnet", "deepseek/deepseek-chat", "openai/gpt-4o"],
-  "perspective-generation": ["deepseek/deepseek-chat", "openai/gpt-4o-mini", "google/gemini-2.0-flash-exp"],
-  "synthesis": ["anthropic/claude-3.5-sonnet", "deepseek/deepseek-chat"],
+  "specialist-response": ["anthropic/claude-3.5-sonnet", "openai/gpt-4o-mini", "openai/gpt-4o"],
+  "perspective-generation": ["openai/gpt-4o-mini", "openai/gpt-4o-mini", "google/gemini-2.0-flash-exp"],
+  "synthesis": ["anthropic/claude-3.5-sonnet", "openai/gpt-4o-mini"],
   // Vision needed
   "ui-analysis": ["anthropic/claude-3.5-sonnet", "openai/gpt-4o", "google/gemini-2.5-pro"],
   // Fast/cheap for actions
   "action-planning": ["openai/gpt-4o-mini", "google/gemini-2.0-flash-exp"]
 };
 var PLAN_MODEL_CONSTRAINTS = {
-  "free": ["openai/gpt-4o-mini", "google/gemini-2.0-flash-exp", "deepseek/deepseek-chat"],
-  "schools": ["anthropic/claude-3.5-sonnet", "deepseek/deepseek-chat", "openai/gpt-4o", "google/gemini-2.0-flash-exp"],
-  "trusts": ["anthropic/claude-3.5-sonnet", "deepseek/deepseek-r1", "openai/gpt-4o"]
+  "free": ["openai/gpt-4o-mini", "google/gemini-2.0-flash-exp", "openai/gpt-4o-mini"],
+  "schools": ["anthropic/claude-3.5-sonnet", "openai/gpt-4o-mini", "openai/gpt-4o", "google/gemini-2.0-flash-exp"],
+  "trusts": ["anthropic/claude-3.5-sonnet", "openai/o3-mini", "openai/gpt-4o"]
 };
 var ModelRouter = class {
   constructor() {
@@ -587,7 +587,7 @@ Create a response that:
 
 Be concise but comprehensive. Use markdown formatting for readability.`;
 async function generateMultiPerspectiveResponse(question, specialistResponse, context) {
-  const perspectiveModelId = "deepseek/deepseek-chat";
+  const perspectiveModelId = "openai/gpt-4o-mini";
   const synthesisModelId = "anthropic/claude-3.5-sonnet";
   try {
     const [optimist, critic, neutral] = await Promise.all([

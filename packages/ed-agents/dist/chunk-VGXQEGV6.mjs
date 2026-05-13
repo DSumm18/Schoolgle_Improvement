@@ -1,4 +1,4 @@
-import {
+﻿import {
   getModelRouter
 } from "./chunk-XCFC4OXF.mjs";
 
@@ -55,7 +55,7 @@ Create a response that:
 
 Be concise but comprehensive. Use markdown formatting for readability.`;
 async function generateMultiPerspectiveResponse(question, specialistResponse, context) {
-  const perspectiveModelId = "deepseek/deepseek-chat";
+  const perspectiveModelId = "openai/gpt-4o-mini";
   const synthesisModelId = "anthropic/claude-3.5-sonnet";
   try {
     const [optimist, critic, neutral] = await Promise.all([

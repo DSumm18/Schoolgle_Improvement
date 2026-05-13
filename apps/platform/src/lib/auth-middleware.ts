@@ -52,6 +52,12 @@ function hasMinimumRole(
   );
 }
 
+function normalizeRole(role: string | null | undefined): AuthContext["role"] {
+  return ROLE_HIERARCHY.includes(role as AuthContext["role"])
+    ? (role as AuthContext["role"])
+    : "viewer";
+}
+
 /**
  * Resolve the authenticated Supabase user from the request.
  * Tries cookie-based session first (SSR), then falls back to
@@ -152,21 +158,82 @@ export async function withAuth(
     const adminClient = createServiceRoleClient();
 
     if (organizationId) {
+      let hasOrganizationAccess = false;
       const { data: membership, error: memberError } = await adminClient
         .from("organization_members")
         .select("role")
         .eq("user_id", user.id)
         .eq("organization_id", organizationId)
-        .single();
+        .maybeSingle();
 
-      if (memberError || !membership) {
+      if (memberError) {
+        return NextResponse.json(
+          { error: "Unable to verify organization membership", code: "MEMBERSHIP_CHECK_FAILED" },
+          { status: 500 },
+        );
+      }
+
+      if (membership) {
+        hasOrganizationAccess = true;
+        role = normalizeRole(membership.role);
+      } else {
+        let { data: superAdmin } = await adminClient
+          .from("super_admins")
+          .select("user_id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (!superAdmin && user.email) {
+          const { data: superAdminByEmail } = await adminClient
+            .from("super_admins")
+            .select("user_id")
+            .eq("email", user.email)
+            .maybeSingle();
+          superAdmin = superAdminByEmail;
+        }
+
+        if (superAdmin) {
+          const { data: targetOrg } = await adminClient
+            .from("organizations")
+            .select("id")
+            .eq("id", organizationId)
+            .maybeSingle();
+
+          if (targetOrg) {
+            hasOrganizationAccess = true;
+            role = "admin";
+          }
+        }
+      }
+
+      if (!hasOrganizationAccess) {
+        const { data: targetOrg } = await adminClient
+          .from("organizations")
+          .select("parent_organization_id")
+          .eq("id", organizationId)
+          .maybeSingle();
+
+        if (targetOrg?.parent_organization_id) {
+          const { data: parentMembership } = await adminClient
+            .from("organization_members")
+            .select("role")
+            .eq("user_id", user.id)
+            .eq("organization_id", targetOrg.parent_organization_id)
+            .maybeSingle();
+
+          if (parentMembership) {
+            hasOrganizationAccess = true;
+            role = normalizeRole(parentMembership.role);
+          }
+        }
+      }
+
+      if (!hasOrganizationAccess) {
         return NextResponse.json(
           { error: "Not a member of this organization", code: "FORBIDDEN" },
           { status: 403 },
         );
       }
-
-      role = membership.role as AuthContext["role"];
     }
 
     // Check role requirement
@@ -185,8 +252,11 @@ export async function withAuth(
     };
 
     return await handler(auth, request);
-  } catch (error: any) {
-    console.error("[withAuth] Error:", error.message);
+  } catch (error: unknown) {
+    console.error(
+      "[withAuth] Error:",
+      error instanceof Error ? error.message : error,
+    );
     return NextResponse.json(
       { error: "Authentication error", code: "AUTH_ERROR" },
       { status: 500 },

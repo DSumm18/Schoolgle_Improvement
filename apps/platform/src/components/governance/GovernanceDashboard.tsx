@@ -14,7 +14,10 @@ import {
   Plus,
   AlertTriangle,
   CheckCircle,
+  ShieldCheck,
+  ArrowRight,
 } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -287,10 +290,7 @@ export default function GovernanceDashboard({
         </TabsList>
 
         <TabsContent value="overview" className="mt-6">
-          <OverviewTab
-            organizationId={organizationId}
-            statistics={statistics}
-          />
+          <OverviewTab statistics={statistics} />
         </TabsContent>
 
         <TabsContent value="governors" className="mt-6">
@@ -359,10 +359,8 @@ export default function GovernanceDashboard({
 
 // Overview Tab Component
 function OverviewTab({
-  organizationId,
   statistics,
 }: {
-  organizationId: string;
   statistics: GovernanceStatistics | null;
 }) {
   return (
@@ -460,7 +458,36 @@ function OverviewTab({
                   All caught up! No urgent items.
                 </p>
               </div>
-            )}
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Cross-module assurance */}
+      <Card className="lg:col-span-2 overflow-hidden border-emerald-200 bg-gradient-to-br from-emerald-50 to-slate-50 dark:border-emerald-900 dark:from-emerald-950/30 dark:to-slate-900">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <ShieldCheck className="h-5 w-5 text-emerald-600" />
+            Estates Assurance
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="max-w-3xl">
+            <p className="text-sm leading-6 text-slate-700 dark:text-slate-300">
+              Review the DfE GEMS estate assurance position: what is in place,
+              what is partial, what is missing, and which gaps need trustee
+              visibility or investment decisions.
+            </p>
+            <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+              Pulls evidence from estates compliance, assets, contractors,
+              condition survey, SOPs, risk register, and estate strategy.
+            </p>
+          </div>
+          <Button asChild className="bg-emerald-600 hover:bg-emerald-700">
+            <Link href="/dashboard/estates/audit">
+              Open GEMS Audit
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
         </CardContent>
       </Card>
     </div>

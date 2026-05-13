@@ -31,6 +31,7 @@ import {
   Clock,
   ArrowLeft,
   Table2,
+  ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,6 +39,12 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/context/SupabaseAuthContext";
 import { supabase } from "@/lib/supabase";
 import { DataFreshnessBadge } from "@/components/ui/DataSourceBadge";
+import {
+  CONNECTOR_BRAND,
+  CONNECTOR_SECURITY_COPY,
+  SCHOOLGLE_CONNECTOR_FOLDERS,
+  getConnectorFolderStructureText,
+} from "@/lib/schoolgle-connector";
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
   const {
@@ -130,6 +137,13 @@ const CATEGORY_CONFIG: Record<
     bgColor: "bg-amber-50 dark:bg-amber-950/20",
     borderColor: "border-amber-200 dark:border-amber-800",
   },
+  energy: {
+    label: "Energy Invoices",
+    icon: FileText,
+    color: "text-teal-600",
+    bgColor: "bg-teal-50 dark:bg-teal-950/20",
+    borderColor: "border-teal-200 dark:border-teal-800",
+  },
   payroll: {
     label: "Payroll",
     icon: FileSpreadsheet,
@@ -160,58 +174,14 @@ const CATEGORY_CONFIG: Record<
   },
 };
 
-const EXPECTED_FOLDERS = [
-  {
-    name: "MIS Exports",
-    icon: Database,
-    color: "text-blue-600",
-    children: [
-      {
-        name: "Pupil Data",
-        description: "Pupil roll, SEN register",
-        category: "pupils",
-      },
-      {
-        name: "Attendance",
-        description: "Termly attendance exports",
-        category: "attendance",
-      },
-      {
-        name: "Assessments",
-        description: "Statutory results, tracker exports",
-        category: "assessments",
-      },
-      {
-        name: "Behaviour",
-        description: "Behaviour incident logs",
-        category: "behaviour",
-      },
-      {
-        name: "Staff & HR",
-        description: "Staff list, teacher history",
-        category: "staff",
-      },
-    ],
-  },
-  {
-    name: "Finance Exports",
-    icon: PoundSterling,
-    color: "text-amber-600",
-    children: [
-      {
-        name: "Budget Reports",
-        description: "FMS Detailed Cost Centre reports",
-        category: "fms",
-      },
-    ],
-  },
-  {
-    name: "DfE & External Data",
-    icon: BarChart3,
-    color: "text-green-600",
-    children: [],
-  },
-];
+const CONNECTOR_FOLDER_ICONS = {
+  barChart: BarChart3,
+  clipboard: ClipboardList,
+  database: Database,
+  fileText: FileText,
+  pound: PoundSterling,
+  shield: Shield,
+};
 
 function extractFolderId(input: string): string | null {
   const trimmed = input.trim();
@@ -237,6 +207,18 @@ function formatDate(dateStr: string | undefined): string {
     month: "short",
     year: "numeric",
   });
+}
+
+function getConnectorErrorCopy(scanError: string): string {
+  if (
+    scanError.includes("Invalid Credentials") ||
+    scanError.includes("UNAUTHENTICATED") ||
+    scanError.includes("invalid_grant") ||
+    scanError.includes("ACCESS_TOKEN_SCOPE_INSUFFICIENT")
+  ) {
+    return "This Connector needs to be re-authorised so Schoolgle can refresh secure Google Drive access and maintain the dedicated Schoolgle folder structure.";
+  }
+  return scanError;
 }
 
 // ─── Provider Logos ──────────────────────────────────────
@@ -539,7 +521,7 @@ function FileBrowserPanel({
             </div>
           </div>
           <Badge variant="outline" className="text-[10px]">
-            <Eye className="w-3 h-3 mr-1" /> READ-ONLY
+            <Eye className="w-3 h-3 mr-1" /> SCAN ACCESS
           </Badge>
         </div>
       </div>
@@ -635,6 +617,13 @@ function isTextMime(mime: string): boolean {
   ].includes(mime);
 }
 
+function isWordMime(mime: string): boolean {
+  return [
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/msword",
+  ].includes(mime);
+}
+
 const CATEGORY_CONNECT_ACTIONS: Record<
   string,
   { label: string; moduleLabel: string; href: string; apiAction?: string }
@@ -656,6 +645,12 @@ const CATEGORY_CONNECT_ACTIONS: Record<
     moduleLabel: "Finance",
     href: "/dashboard/finance",
     apiAction: "finance",
+  },
+  energy: {
+    label: "Sync energy invoices",
+    moduleLabel: "Energy & Utilities",
+    href: "/dashboard/estates/energy",
+    apiAction: "energy",
   },
   attendance: {
     label: "Connect to Attendance",
@@ -737,7 +732,18 @@ function DataPreviewPanel({
           const bytes = Uint8Array.from(decoded, (c) => c.charCodeAt(0));
           const text = new TextDecoder("utf-8").decode(bytes);
           setTextContent(text);
-        } else {
+        } else if (isWordMime(file.mimeType) || isWordMime(contentType)) {
+          const mammoth = await import("mammoth/mammoth.browser");
+          const binary = atob(result.content);
+          const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+          const extracted = await mammoth.extractRawText({
+            arrayBuffer: bytes.buffer,
+          });
+          setTextContent(
+            extracted.value.trim() ||
+              "No readable text was found in this Word document.",
+          );
+        } else if (isSpreadsheetMime(file.mimeType) || isSpreadsheetMime(contentType)) {
           // Spreadsheet content (xlsx, csv, Google Sheets exported as xlsx)
           const XLSX = await import("xlsx");
           const buffer = Uint8Array.from(atob(result.content), (c) =>
@@ -753,6 +759,10 @@ function DataPreviewPanel({
             setColumns(Object.keys(rows[0]));
           }
           setData(rows.slice(0, 100));
+        } else {
+          setError(
+            `Preview is not available for this file type yet (${contentType}).`,
+          );
         }
       } catch (err: any) {
         setError(err.message);
@@ -1004,6 +1014,14 @@ export default function DataConnectionsPage() {
     fetchConnection();
   }, [fetchConnection]);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const connectorError = params.get("connector_error");
+    if (connectorError) {
+      setError(decodeURIComponent(connectorError));
+    }
+  }, []);
+
   const handleConnect = async () => {
     setError(null);
     const folderId = extractFolderId(folderLink);
@@ -1032,6 +1050,34 @@ export default function DataConnectionsPage() {
       setFolderLink("");
     } catch (err: any) {
       setError(err.message || "Failed to connect");
+    } finally {
+      setConnecting(false);
+    }
+  };
+
+  const handleGoogleOAuthConnect = async () => {
+    if (!orgId) {
+      setError("Please select a school before connecting Google Drive");
+      return;
+    }
+
+    setError(null);
+    setConnecting(true);
+    try {
+      const callbackUrl = `${window.location.origin}/api/data-connections/oauth/callback`;
+      const params = new URLSearchParams({
+        redirect: "1",
+        organizationId: orgId,
+        userId: user?.id || "",
+        redirect_uri: callbackUrl,
+      });
+      window.location.assign(`/api/drive/auth?${params.toString()}`);
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to start Google Drive sign-in",
+      );
     } finally {
       setConnecting(false);
     }
@@ -1107,7 +1153,42 @@ export default function DataConnectionsPage() {
         body = { csv: csvContent, organizationId: orgId };
       } else if (category === "fms") {
         endpoint = "/api/finance/import";
-        body = { csv: csvContent, organizationId: orgId, dry_run: false };
+        const now = new Date();
+        const fyStart =
+          now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+        const formData = new FormData();
+        formData.append(
+          "file",
+          new File([csvContent], "schoolgle-finance-export.csv", {
+            type: "text/csv",
+          }),
+        );
+        formData.append("financial_year", `${fyStart}-${String(fyStart + 1).slice(2)}`);
+        formData.append("dry_run", "false");
+
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers: authHeaders,
+          body: formData,
+        });
+        const result = await res.json();
+
+        if (!res.ok) {
+          setConnectResult({
+            success: false,
+            message: result.error || "Finance import failed",
+          });
+          setConnectingModule(null);
+          return;
+        }
+
+        const data = result.data || result;
+        setConnectResult({
+          success: true,
+          message: `Connected ${data.transactions_imported || data.rows_imported || 0} finance transaction${(data.transactions_imported || data.rows_imported || 0) !== 1 ? "s" : ""} to Budget Monitor.`,
+        });
+        setConnectingModule(null);
+        return;
       } else if (category === "attendance") {
         // Parse CSV into attendance marks format and POST
         endpoint = "/api/attendance/registers";
@@ -1286,7 +1367,9 @@ export default function DataConnectionsPage() {
   };
 
   const copyFolderStructure = () => {
-    const structure = `${organization?.name || "Your School"}\n├── MIS Exports\n│   ├── Pupil Data\n│   ├── Attendance\n│   ├── Assessments\n│   ├── Behaviour\n│   └── Staff & HR\n├── Finance Exports\n│   └── Budget Reports\n└── DfE & External Data`;
+    const structure = getConnectorFolderStructureText(
+      organization?.name || "Your School",
+    );
     navigator.clipboard.writeText(structure);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -1512,11 +1595,10 @@ export default function DataConnectionsPage() {
     <div className="max-w-5xl mx-auto p-6 space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold">Connected Data Sources</h1>
+        <h1 className="text-2xl font-bold">{CONNECTOR_BRAND.name}</h1>
         <p className="text-muted-foreground mt-1">
-          Link your school&apos;s data sources so Schoolgle can power your
-          modules. You stay in control — connect, refresh, or disconnect at any
-          time.
+          Connect Schoolgle to your school&apos;s approved Drive or SharePoint
+          folders once, then let each module use the evidence and data it needs.
         </p>
       </div>
 
@@ -1532,18 +1614,18 @@ export default function DataConnectionsPage() {
             {[
               {
                 step: "1",
-                title: "Share your folder",
-                desc: "Share your school data folder in Google Drive with a view-only link",
+                title: "Approve the Connector",
+                desc: "Use Google or Microsoft sign-in to approve Drive scanning without making folders public",
               },
               {
                 step: "2",
-                title: "Schoolgle reads it",
-                desc: "We detect your files by type — staff, pupils, finance, attendance — and show you what we found",
+                title: "Use one Schoolgle folder",
+                desc: `Keep evidence and exports under the ${CONNECTOR_BRAND.homeFolderName} folder so every app knows where to look`,
               },
               {
                 step: "3",
                 title: "Connect to modules",
-                desc: "Preview any file and connect it to the right module with one click. Refresh anytime.",
+                desc: "Ofsted Readiness, Trust Assessor, Compliance and Finance each read their own approved folder.",
               },
             ].map((s) => (
               <div key={s.step} className="flex items-start gap-3">
@@ -1567,7 +1649,7 @@ export default function DataConnectionsPage() {
       {/* Security badges */}
       <div className="flex flex-wrap gap-3">
         <div className="flex items-center gap-1.5 text-xs text-slate-600 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-full">
-          <Eye className="w-3.5 h-3.5" /> Read-only — we never change your files
+          <Eye className="w-3.5 h-3.5" /> Enhanced folder scanning
         </div>
         <div className="flex items-center gap-1.5 text-xs text-slate-600 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-full">
           <Lock className="w-3.5 h-3.5" /> Your data stays in your Drive
@@ -1582,7 +1664,7 @@ export default function DataConnectionsPage() {
         <CardHeader className="pb-3">
           <CardTitle className="text-lg flex items-center gap-2">
             <GoogleDriveLogo className="w-5 h-5" />
-            Google Drive Connection
+            Google Drive Connector
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -1590,31 +1672,49 @@ export default function DataConnectionsPage() {
             <div className="space-y-4">
               <div className="bg-slate-50 dark:bg-slate-900 rounded-xl p-4 space-y-3">
                 <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-                  To connect your Google Drive:
+                  Recommended: connect with Google sign-in
                 </p>
                 <ol className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
                   <li className="flex items-start gap-2">
                     <span className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
                       1
                     </span>
-                    Open Google Drive and find your school data folder
+                    Sign in with the Google account that can access the school
+                    evidence folder
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
                       2
                     </span>
-                    Right-click the folder → <strong>Share</strong> → set to{" "}
-                    <strong>&quot;Anyone with the link&quot;</strong> (Viewer)
+                    Approve <strong>{CONNECTOR_BRAND.name}</strong> to create
+                    and use its own Drive folder
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
                       3
                     </span>
-                    Copy the link and paste it below
+                    Schoolgle creates the app folder structure and only scans
+                    inside that folder boundary
                   </li>
                 </ol>
+                <Button
+                  onClick={handleGoogleOAuthConnect}
+                  disabled={connecting}
+                  className="bg-blue-600 hover:bg-blue-700 gap-2"
+                >
+                  {connecting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <GoogleDriveLogo className="w-4 h-4" />
+                  )}
+                  Connect with Google
+                </Button>
               </div>
 
+              <div className="border-t pt-4">
+                <p className="text-xs font-semibold text-muted-foreground mb-2">
+                  Fallback for development or a pre-approved folder link
+                </p>
               <div className="flex gap-2 max-w-xl">
                 <div className="relative flex-1">
                   <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -1625,7 +1725,7 @@ export default function DataConnectionsPage() {
                       setFolderLink(e.target.value);
                       setError(null);
                     }}
-                    placeholder="Paste your Google Drive folder link here..."
+                    placeholder="Paste approved Google Drive folder link..."
                     className="w-full pl-10 pr-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                     onKeyDown={(e) => e.key === "Enter" && handleConnect()}
                   />
@@ -1643,15 +1743,15 @@ export default function DataConnectionsPage() {
                   {connecting ? "Checking..." : "Connect"}
                 </Button>
               </div>
+              </div>
               {error && (
                 <p className="text-sm text-red-600 flex items-start gap-1.5">
                   <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" /> {error}
                 </p>
               )}
               <p className="text-xs text-muted-foreground">
-                Schoolgle will read the folder structure to detect your school
-                data files. We only look — we never modify, move, or delete
-                anything in your Drive.
+                {CONNECTOR_SECURITY_COPY[1]} Contact identity:{" "}
+                {CONNECTOR_BRAND.supportIdentity}.
               </p>
 
               {/* Reconnect shortcut */}
@@ -1695,7 +1795,7 @@ export default function DataConnectionsPage() {
                       className="text-[10px] text-slate-500"
                     >
                       <Eye className="w-3 h-3 mr-1" />
-                      READ-ONLY
+                      SCAN ACCESS
                     </Badge>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
@@ -1723,6 +1823,29 @@ export default function DataConnectionsPage() {
                   )}
                   {scanning ? "Scanning..." : "Rescan"}
                 </Button>
+                <Button asChild size="sm" variant="ghost">
+                  <a
+                    href={`https://drive.google.com/drive/folders/${connection.folder_id}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <ExternalLink className="w-4 h-4 mr-1" />
+                    Open folder
+                  </a>
+                </Button>
+                <Button
+                  onClick={handleGoogleOAuthConnect}
+                  disabled={connecting}
+                  size="sm"
+                  variant="outline"
+                >
+                  {connecting ? (
+                    <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                  ) : (
+                    <RefreshCw className="w-4 h-4 mr-1" />
+                  )}
+                  Re-authorise
+                </Button>
                 <Button
                   onClick={() => setShowDisconnectConfirm(true)}
                   variant="ghost"
@@ -1732,6 +1855,17 @@ export default function DataConnectionsPage() {
                 >
                   <X className="w-4 h-4" />
                 </Button>
+              </div>
+            </div>
+          )}
+          {connection?.scan_status === "error" && connection.scan_error && (
+            <div className="mt-3 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-300">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              <div>
+                <p className="font-semibold">Connector needs attention</p>
+                <p className="text-xs">
+                  {getConnectorErrorCopy(connection.scan_error)}
+                </p>
               </div>
             </div>
           )}
@@ -1812,11 +1946,11 @@ export default function DataConnectionsPage() {
       {/* Data Source Cards — clickable when connected */}
       {connection && Object.keys(detectedCategories).length > 0 && (
         <div>
-          <h2 className="text-lg font-bold mb-1">Your Connected Data</h2>
+          <h2 className="text-lg font-bold mb-1">Connector Data Detected</h2>
           <p className="text-sm text-muted-foreground mb-4">
-            These data sources were detected in your Drive. Click any category
-            to browse files, preview contents, and connect them to Schoolgle
-            modules.
+            These sources were detected inside the connected Schoolgle folder.
+            Click any category to browse files, preview contents, and connect
+            them to Schoolgle modules.
           </p>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             {Object.entries(detectedCategories).map(([category, count]) => {
@@ -1872,21 +2006,30 @@ export default function DataConnectionsPage() {
         <CardHeader className="pb-3">
           <CardTitle className="text-lg flex items-center gap-2">
             <FolderOpen className="w-5 h-5" />
-            Expected Folder Structure
+            Schoolgle Connector Folder Structure
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="bg-slate-50 dark:bg-slate-900 rounded-xl p-5 border font-mono text-sm">
-            {EXPECTED_FOLDERS.map((folder, i) => (
+            <div className="mb-3 flex items-center gap-2">
+              <span className="text-slate-400">└──</span>
+              <FolderOpen className="w-4 h-4 text-blue-600" />
+              <span className="font-semibold">
+                {CONNECTOR_BRAND.homeFolderName}
+              </span>
+            </div>
+            {SCHOOLGLE_CONNECTOR_FOLDERS.map((folder, i) => {
+              const FolderIcon = CONNECTOR_FOLDER_ICONS[folder.iconKey];
+              return (
               <div key={folder.name} className="mb-3 last:mb-0">
-                <div className="flex items-center gap-2">
+                <div className="ml-8 flex items-center gap-2">
                   <span className="text-slate-400">
-                    {i === EXPECTED_FOLDERS.length - 1 ? "└──" : "├──"}
+                    {i === SCHOOLGLE_CONNECTOR_FOLDERS.length - 1 ? "└──" : "├──"}
                   </span>
-                  <folder.icon className={`w-4 h-4 ${folder.color}`} />
+                  <FolderIcon className={`w-4 h-4 ${folder.color}`} />
                   <span className="font-semibold">{folder.name}</span>
                   {connection &&
-                    folder.children.some(
+                    folder.children?.some(
                       (c) => detectedCategories[c.category],
                     ) && (
                       <Badge
@@ -1897,15 +2040,18 @@ export default function DataConnectionsPage() {
                       </Badge>
                     )}
                 </div>
-                {folder.children.map((child, j) => {
+                <span className="ml-16 text-xs text-slate-400 block">
+                  — {folder.description}
+                </span>
+                {(folder.children || []).map((child, j) => {
                   const fileCount = detectedCategories[child.category] || 0;
                   return (
                     <div
                       key={child.name}
-                      className="ml-8 flex items-center gap-2 mt-1"
+                      className="ml-16 flex items-center gap-2 mt-1"
                     >
                       <span className="text-slate-400">
-                        {j === folder.children.length - 1 ? "└──" : "├──"}
+                        {j === (folder.children || []).length - 1 ? "└──" : "├──"}
                       </span>
                       <FolderOpen className="w-3.5 h-3.5 text-slate-400" />
                       <span>{child.name}</span>
@@ -1921,7 +2067,8 @@ export default function DataConnectionsPage() {
                   );
                 })}
               </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="flex items-center gap-3 mt-4">

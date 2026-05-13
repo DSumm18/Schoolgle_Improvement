@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Ed Orchestrator - Main entry point for processing user questions through the agent framework
  */
 
@@ -237,7 +237,7 @@ export class EdOrchestrator {
       this.totalTokensUsed += 200; // Rough estimate for guardrails checks
 
       // Step 5: Strip any thinking/reasoning text from the response
-      // Some models (DeepSeek, etc.) include chain-of-thought in their output
+      // Some models may include chain-of-thought in their output
       let cleanedResponse = guardedResponse.response || finalContent;
       // Remove <think>...</think> blocks
       cleanedResponse = cleanedResponse.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
@@ -363,7 +363,7 @@ export class EdOrchestrator {
   }
 
   /**
-   * Handle greeting — conversation-aware
+   * Handle greeting â€” conversation-aware
    *
    * Checks how many times this user has chatted today.
    * First visit: "Hi David, what can I help you with?"
@@ -433,10 +433,10 @@ export class EdOrchestrator {
   }
 
   /**
-   * Redirect non-work queries — short, no capability list
+   * Redirect non-work queries â€” short, no capability list
    */
   private getWorkFocusRedirect(): string {
-    return "I'm set up to help with school work — what do you need?";
+    return "I'm set up to help with school work â€” what do you need?";
   }
 
   /**
@@ -523,3 +523,4 @@ export function createTestOrchestrator(
     ...overrides,
   });
 }
+

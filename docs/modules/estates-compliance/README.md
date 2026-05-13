@@ -1,4 +1,4 @@
-# Estates Compliance Module - Summary & Next Actions
+﻿# Estates Compliance Module - Summary & Next Actions
 
 **Status:** Planning Complete
 **Date:** 2026-01-23
@@ -12,16 +12,16 @@
 
 | Document | Purpose | Status |
 |----------|---------|--------|
-| `implementation-plan.md` | Comprehensive implementation plan with database schema, phases, file structure | ✅ Complete |
-| `architecture-diagram.md` | Visual representations of architecture, data flows, user journeys | ✅ Complete |
-| `20260123_estates_compliance_phase1.sql` | Database migration for Phase 1 (shared infrastructure) | ✅ Complete |
-| `feature-description.md` | **Marketing-ready product descriptions** - accurate to what we're building | ✅ Complete |
-| `statutory-vs-good-practice.md` | **Critical differentiator** - distinguishing statutory from good practice | ✅ Complete |
-| `estates-strategy-budget-planning.md` | **Budget planning & estates strategy** - 3-year planning horizon | ✅ Complete |
-| `market-research-template.md` | Template for competitive analysis | ✅ Complete |
-| `market-research-findings.md` | Actual research findings (Every, Parago, iAM Compliant) | ✅ Complete |
-| `domain-mapping.md` | All 9 compliance domains mapped with skill requirements | ✅ Complete |
-| `workflows-and-integration.md` | Detailed workflows, contractor management, role-based auth | ✅ Complete |
+| `implementation-plan.md` | Comprehensive implementation plan with database schema, phases, file structure | âœ… Complete |
+| `architecture-diagram.md` | Visual representations of architecture, data flows, user journeys | âœ… Complete |
+| `20260123_estates_compliance_phase1.sql` | Database migration for Phase 1 (shared infrastructure) | âœ… Complete |
+| `feature-description.md` | **Marketing-ready product descriptions** - accurate to what we're building | âœ… Complete |
+| `statutory-vs-good-practice.md` | **Critical differentiator** - distinguishing statutory from good practice | âœ… Complete |
+| `estates-strategy-budget-planning.md` | **Budget planning & estates strategy** - 3-year planning horizon | âœ… Complete |
+| `market-research-template.md` | Template for competitive analysis | âœ… Complete |
+| `market-research-findings.md` | Actual research findings (Every, Parago, iAM Compliant) | âœ… Complete |
+| `domain-mapping.md` | All 9 compliance domains mapped with skill requirements | âœ… Complete |
+| `workflows-and-integration.md` | Detailed workflows, contractor management, role-based auth | âœ… Complete |
 
 ---
 
@@ -89,16 +89,16 @@
 
 | Table | Purpose | Shared? |
 |-------|---------|---------|
-| `estates_assets` | Asset register | ✅ Yes |
-| `estates_contractors` | Contractor register | ✅ Yes |
-| `estates_contracts` | Contract register | ✅ Yes |
-| `estates_user_qualifications` | Qualification tracking | ✅ Yes |
-| `estates_delegations` | Delegation management | ✅ Yes |
-| `estates_compliance_tasks` | All tasks across domains | ✅ Yes |
-| `estates_helpdesk_tickets` | Unified ticket system | ✅ Yes |
-| `estates_helpdesk_comments` | Ticket comments | ✅ Yes |
-| `estates_helpdesk_activity` | Ticket activity log | ✅ Yes |
-| `estates_notification_templates` | Notification templates | ✅ Yes |
+| `estates_assets` | Asset register | âœ… Yes |
+| `estates_contractors` | Contractor register | âœ… Yes |
+| `estates_contracts` | Contract register | âœ… Yes |
+| `estates_user_qualifications` | Qualification tracking | âœ… Yes |
+| `estates_delegations` | Delegation management | âœ… Yes |
+| `estates_compliance_tasks` | All tasks across domains | âœ… Yes |
+| `estates_helpdesk_tickets` | Unified ticket system | âœ… Yes |
+| `estates_helpdesk_comments` | Ticket comments | âœ… Yes |
+| `estates_helpdesk_activity` | Ticket activity log | âœ… Yes |
+| `estates_notification_templates` | Notification templates | âœ… Yes |
 
 ### Storage Buckets
 
@@ -134,7 +134,7 @@
 - Outlet registration with QR codes
 - Weekly flush flow (mobile-first, Ed guided)
 - Monthly inspection contractor workflow
-- Temperature recording with validation (cold <20°C, hot >50°C)
+- Temperature recording with validation (cold <20Â°C, hot >50Â°C)
 - Authorization checks (delegations, qualifications)
 - Risk assessment
 - Findings detection and management
@@ -148,37 +148,37 @@
 ## How Modules Link Together
 
 ```
-Assets ←───────────────────────────────┐
-        │                               │
-        │ asset_id                      │ linked_task_id
-        ▼                               │
-Tasks ──────────────────────────┐      │
-        │                       │      │
-        │ assigned_to           │      │
-        ▼                       │      │
-Users (auth.users)              │      │
-        │                       │      │
-        │ user_id               │      │
-        ▼                       │      │
-Qualifications                  │      │
-Delegations                      │      │
-                                 │      │
-                                 │      │
-Contractors ─────────────────────┘      │
-        │                              │
-        │ contractor_id                │
-        ▼                              │
-Contracts ──────────────────────┐      │
-        │                       │      │
-        │ asset_ids[]           │      │
-        └───────────────────────┘      │
-                                       │
-Helpdesk Tickets ──────────────────────┘
-        │
-        ├─ asset_id
-        ├─ task_id
-        ├─ contractor_id
-        └─ contract_id
+Assets â†â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+        â”‚                               â”‚
+        â”‚ asset_id                      â”‚ linked_task_id
+        â–¼                               â”‚
+Tasks â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”      â”‚
+        â”‚                       â”‚      â”‚
+        â”‚ assigned_to           â”‚      â”‚
+        â–¼                       â”‚      â”‚
+Users (auth.users)              â”‚      â”‚
+        â”‚                       â”‚      â”‚
+        â”‚ user_id               â”‚      â”‚
+        â–¼                       â”‚      â”‚
+Qualifications                  â”‚      â”‚
+Delegations                      â”‚      â”‚
+                                 â”‚      â”‚
+                                 â”‚      â”‚
+Contractors â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜      â”‚
+        â”‚                              â”‚
+        â”‚ contractor_id                â”‚
+        â–¼                              â”‚
+Contracts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”      â”‚
+        â”‚                       â”‚      â”‚
+        â”‚ asset_ids[]           â”‚      â”‚
+        â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜      â”‚
+                                       â”‚
+Helpdesk Tickets â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+        â”‚
+        â”œâ”€ asset_id
+        â”œâ”€ task_id
+        â”œâ”€ contractor_id
+        â””â”€ contract_id
 ```
 
 ---
@@ -274,7 +274,7 @@ Helpdesk Tickets ─────────────────────
 
 ### Week 7+: Phase 4 Additional Domains
 
-**Sequence:** Asbestos → Electrical → Mechanical → Water → Lift/LOLER → Playground → Accessibility
+**Sequence:** Asbestos â†’ Electrical â†’ Mechanical â†’ Water â†’ Lift/LOLER â†’ Playground â†’ Accessibility
 
 ---
 
@@ -284,7 +284,7 @@ Helpdesk Tickets ─────────────────────
 
 | Differentiator | What It Means | Why It Matters |
 |----------------|---------------|----------------|
-| **Statutory vs Good Practice** | Every finding classified as 🔴 Statutory, 🟡 Good Practice, or 🔵 Optional | Schools only spend on what's legally required. Budgets go further. |
+| **Statutory vs Good Practice** | Every finding classified as ðŸ”´ Statutory, ðŸŸ¡ Good Practice, or ðŸ”µ Optional | Schools only spend on what's legally required. Budgets go further. |
 | **Source Attribution** | Every requirement cites its source (HSE L8, RRO 2005, etc.) | Not "fluffy" advice - actual legislation with links. |
 | **Estates Strategy & Budget Planning** | Day-to-day findings feed into 3-5 year budget plans | No more surprise expenditures. Evidence-based budgeting. |
 | **Contractor Validation** | AI checks contractor reports against actual regulations | Catch upselling. Make informed decisions. |
@@ -293,17 +293,17 @@ Helpdesk Tickets ─────────────────────
 
 | Feature | Competitors | Schoolgle |
 |---------|-------------|-----------|
-| Statutory vs Good Practice | ❌ Not distinguished | ✅ Clearly separated |
-| Source Attribution | ❌ Rarely shown | ✅ Always cited (HSE, legislation) |
-| Budget Planning | ❌ Not included | ✅ Built-in 3-year planning |
-| Mobile app | ❌ Web-only or poor apps | ✅ Native iOS/Android with offline |
-| Logbook export | ❌ Digital-only | ✅ Print/export for physical logbook |
-| Expert guidance | ❌ Limited help files | ✅ Ed AI expert always available |
-| Authorization | ❌ No qualification tracking | ✅ Role-based authorization checks |
-| Contractors | ❌ Manual coordination | ✅ End-to-end workflow with AI |
-| Helpdesk | ❌ Module-specific | ✅ Unified across ALL modules |
-| Voice input | ❌ No | ✅ Edwina voice support |
-| QR scanning | ❌ Limited | ✅ Full QR/barcode support |
+| Statutory vs Good Practice | âŒ Not distinguished | âœ… Clearly separated |
+| Source Attribution | âŒ Rarely shown | âœ… Always cited (HSE, legislation) |
+| Budget Planning | âŒ Not included | âœ… Built-in 3-year planning |
+| Mobile app | âŒ Web-only or poor apps | âœ… Native iOS/Android with offline |
+| Logbook export | âŒ Digital-only | âœ… Print/export for physical logbook |
+| Expert guidance | âŒ Limited help files | âœ… Ed AI expert always available |
+| Authorization | âŒ No qualification tracking | âœ… Role-based authorization checks |
+| Contractors | âŒ Manual coordination | âœ… End-to-end workflow with AI |
+| Helpdesk | âŒ Module-specific | âœ… Unified across ALL modules |
+| Voice input | âŒ No | âœ… Edwina voice support |
+| QR scanning | âŒ Limited | âœ… Full QR/barcode support |
 
 ---
 
@@ -344,48 +344,48 @@ Helpdesk Tickets ─────────────────────
 
 ```
 apps/platform/src/
-├── app/(dashboard)/estates-compliance/
-│   ├── page.tsx                          # Dashboard
-│   ├── layout.tsx
-│   ├── assets/
-│   │   ├── page.tsx
-│   │   └── new/page.tsx
-│   ├── contractors/
-│   │   ├── page.tsx
-│   │   └── new/page.tsx
-│   ├── tasks/
-│   │   ├── page.tsx
-│   │   └── [id]/page.tsx
-│   └── helpdesk/
-│       ├── page.tsx
-│       └── new/page.tsx
-│
-├── components/estates-compliance/
-│   ├── shared/
-│   │   ├── AssetCard.tsx
-│   │   ├── AssetRegister.tsx
-│   │   ├── TaskCard.tsx
-│   │   └── RAGStatusBadge.tsx
-│   └── legionella/
-│       └── (Phase 2)
-│
-└── lib/estates-compliance/
-    ├── database/
-    │   ├── assets.ts
-    │   ├── contractors.ts
-    │   └── tasks.ts
-    └── services/
-        ├── AssetService.ts
-        └── ContractorService.ts
+â”œâ”€â”€ app/(dashboard)/estates-compliance/
+â”‚   â”œâ”€â”€ page.tsx                          # Dashboard
+â”‚   â”œâ”€â”€ layout.tsx
+â”‚   â”œâ”€â”€ assets/
+â”‚   â”‚   â”œâ”€â”€ page.tsx
+â”‚   â”‚   â””â”€â”€ new/page.tsx
+â”‚   â”œâ”€â”€ contractors/
+â”‚   â”‚   â”œâ”€â”€ page.tsx
+â”‚   â”‚   â””â”€â”€ new/page.tsx
+â”‚   â”œâ”€â”€ tasks/
+â”‚   â”‚   â”œâ”€â”€ page.tsx
+â”‚   â”‚   â””â”€â”€ [id]/page.tsx
+â”‚   â””â”€â”€ helpdesk/
+â”‚       â”œâ”€â”€ page.tsx
+â”‚       â””â”€â”€ new/page.tsx
+â”‚
+â”œâ”€â”€ components/estates-compliance/
+â”‚   â”œâ”€â”€ shared/
+â”‚   â”‚   â”œâ”€â”€ AssetCard.tsx
+â”‚   â”‚   â”œâ”€â”€ AssetRegister.tsx
+â”‚   â”‚   â”œâ”€â”€ TaskCard.tsx
+â”‚   â”‚   â””â”€â”€ RAGStatusBadge.tsx
+â”‚   â””â”€â”€ legionella/
+â”‚       â””â”€â”€ (Phase 2)
+â”‚
+â””â”€â”€ lib/estates-compliance/
+    â”œâ”€â”€ database/
+    â”‚   â”œâ”€â”€ assets.ts
+    â”‚   â”œâ”€â”€ contractors.ts
+    â”‚   â””â”€â”€ tasks.ts
+    â””â”€â”€ services/
+        â”œâ”€â”€ AssetService.ts
+        â””â”€â”€ ContractorService.ts
 
 packages/skills-estates-compliance/
-├── skill-legionella/
-│   ├── package.json
-│   ├── mcp-tools.ts
-│   └── knowledge-pack.ts
-└── shared-skills/
-    ├── skill-compliance-basics/
-    └── skill-contractor-management/
+â”œâ”€â”€ skill-legionella/
+â”‚   â”œâ”€â”€ package.json
+â”‚   â”œâ”€â”€ mcp-tools.ts
+â”‚   â””â”€â”€ knowledge-pack.ts
+â””â”€â”€ shared-skills/
+    â”œâ”€â”€ skill-compliance-basics/
+    â””â”€â”€ skill-contractor-management/
 ```
 
 ---
@@ -394,7 +394,7 @@ packages/skills-estates-compliance/
 
 1. **Mobile App Framework:** Confirm React Native with Expo is acceptable (or prefer something else?)
 
-2. **AI Model Selection:** Current stack uses OpenRouter with DeepSeek/Mistral. Should we use same for Estates Compliance?
+2. **AI Model Selection:** Current stack uses OpenRouter with approved-provider models. Should we use same for Estates Compliance?
 
 3. **Email Integration:** For helpdesk email-to-ticket, do we have email infrastructure or need to set up?
 
@@ -443,3 +443,5 @@ packages/skills-estates-compliance/
 - `estates-strategy-budget-planning.md` for budget planning features
 - `workflows-and-integration.md` for workflow details
 - `market-research-findings.md` for competitor analysis
+
+

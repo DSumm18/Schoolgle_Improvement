@@ -19,6 +19,7 @@ export type SchoolEventSeverity = 'info' | 'low' | 'medium' | 'high' | 'critical
 export type SchoolEventSource =
   | 'trust-assessor'
   | 'ofsted-readiness'
+  | 'assessment-intelligence'
   | 'lesson-studio'
   | 'school-intelligence'
   | 'governance'
@@ -150,6 +151,15 @@ export const EVENT_TYPES: Record<string, EventTypeDef> = {
     icon: 'FileCheck',
   },
 
+  'assessment.snapshot-locked': {
+    id: 'assessment.snapshot-locked',
+    category: 'assessment',
+    defaultSeverity: 'info',
+    label: 'Assessment Snapshot Locked',
+    description: 'A teacher-locked assessment judgement snapshot has been added to the Assessment Intelligence spine.',
+    icon: 'ClipboardCheck',
+  },
+
   // ── Lesson Studio ──────────────────────────────────────────────────────────
 
   'lesson.observation-completed': {
@@ -254,6 +264,7 @@ export const SEVERITY_COLORS: Record<SchoolEventSeverity, {
 export const SOURCE_LABELS: Record<SchoolEventSource, string> = {
   'trust-assessor':     'Trust Assessor',
   'ofsted-readiness':   'Ofsted Readiness',
+  'assessment-intelligence': 'Assessment Intelligence',
   'lesson-studio':      'Lesson Studio',
   'school-intelligence':'Intelligence',
   'governance':         'Governance',

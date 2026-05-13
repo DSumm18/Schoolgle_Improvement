@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+﻿#!/usr/bin/env node
 /**
  * Seed realistic energy data for Aurora Primary School.
  *
@@ -27,9 +27,9 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY,
 );
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Constants
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const ORG_ID = "c64ed86b-9eab-49ee-9829-0706ff371083"; // Aurora Primary
 
@@ -37,7 +37,7 @@ const ELEC_METER = {
   meter_type: "electricity",
   meter_reference: "03-801-110-13-0000-6945-816",
   serial_number: "E22K04872",
-  location: "Main intake cupboard — ground floor corridor",
+  location: "Main intake cupboard â€” ground floor corridor",
   description: "Main electricity supply (MPAN)",
 };
 
@@ -45,7 +45,7 @@ const GAS_METER = {
   meter_type: "gas",
   meter_reference: "3574829103",
   serial_number: "G4S19837264",
-  location: "External meter box — boiler room wall",
+  location: "External meter box â€” boiler room wall",
   description: "Main gas supply (MPRN)",
 };
 
@@ -56,14 +56,14 @@ const ELEC_CCL_RATE = 0.775; // p/kWh (Climate Change Levy 2024/25)
 const GAS_UNIT_RATE = 7.12; // p/kWh
 const GAS_STANDING_CHARGE = 28.0; // p/day
 const GAS_CCL_RATE = 0.568; // p/kWh
-const GAS_CALORIFIC_VALUE = 39.5; // MJ/m³
+const GAS_CALORIFIC_VALUE = 39.5; // MJ/mÂ³
 const GAS_CORRECTION_FACTOR = 1.02264;
-const GAS_VOLUME_CORRECTION = 3.6; // kWh per m³ (approx from CV)
+const GAS_VOLUME_CORRECTION = 3.6; // kWh per mÂ³ (approx from CV)
 const VAT_RATE = 5.0; // % (reduced rate for schools)
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Monthly kWh targets — realistic seasonal patterns for a 2FE primary
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Monthly kWh targets â€” realistic seasonal patterns for a 2FE primary
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 // Electricity: ~150,000 kWh/year, slight summer dip, winter bump for lighting
 const ELEC_MONTHLY_KWH = {
@@ -97,12 +97,12 @@ const GAS_MONTHLY_KWH = {
   12: 50000,
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// UK School Term Dates — 2 academic years
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// UK School Term Dates â€” 2 academic years
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const TERM_DATES = [
-  // 2023-24 (partial — we only need summer term for Apr-Jul 2024)
+  // 2023-24 (partial â€” we only need summer term for Apr-Jul 2024)
   {
     academic_year: "2023-24",
     term_name: "Summer 1",
@@ -211,9 +211,9 @@ const INSET_DAYS = [
   "2026-07-21",
 ];
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Helpers
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function daysInMonth(year, month) {
   return new Date(year, month, 0).getDate();
@@ -269,10 +269,10 @@ function classifyDay(ds) {
   };
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Half-hourly electricity profiles (48 slots per day)
 // Based on real UK primary school HH data
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function electricityProfile(dayType) {
   if (dayType === "weekday_term") {
@@ -313,9 +313,9 @@ function electricityProfile(dayType) {
   return new Array(48).fill(2.9);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Anomalies to inject into HH data
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const ANOMALIES_DEF = [
   {
@@ -323,13 +323,13 @@ const ANOMALIES_DEF = [
     type: "weekend_usage",
     title: "Lights and ICT left on after Christmas break",
     description:
-      "Electricity usage 2.5x normal weekend levels — hall lights, ICT suite, and interactive whiteboards left powered on after last day of term (20 Dec). Caretaker confirmed systems were not shut down before building was locked.",
+      "Electricity usage 2.5x normal weekend levels â€” hall lights, ICT suite, and interactive whiteboards left powered on after last day of term (20 Dec). Caretaker confirmed systems were not shut down before building was locked.",
     multiplier: 2.5,
   },
   {
     dateRange: ["2025-02-15", "2025-02-16"],
     type: "weekend_usage",
-    title: "High weekend electricity — no lettings booked",
+    title: "High weekend electricity â€” no lettings booked",
     description:
       "Saturday and Sunday consumption 3x normal baseload. Kitchen extraction fans and corridor lights found running on Monday. No lettings or events scheduled.",
     multiplier: 3.0,
@@ -345,7 +345,7 @@ const ANOMALIES_DEF = [
   {
     dateRange: ["2025-10-28", "2025-10-31"],
     type: "holiday_heating",
-    title: "October half-term — heating schedule not adjusted",
+    title: "October half-term â€” heating schedule not adjusted",
     description:
       "BMS heating schedule was not updated for half-term break. Heating circulation pumps and corridor lighting ran on full term-time schedule for 4 days with no occupants.",
     multiplier: 2.0,
@@ -353,7 +353,7 @@ const ANOMALIES_DEF = [
   {
     dateRange: ["2026-01-17", "2026-01-17"],
     type: "overnight_excess",
-    title: "Overnight electricity spike — possible immersion heater fault",
+    title: "Overnight electricity spike â€” possible immersion heater fault",
     description:
       "Electricity consumption 4x normal baseload between midnight and 5am on Saturday 17 Jan. Pattern consistent with immersion heater thermostat failure or stuck relay. Returned to normal by 06:00 suggesting automatic trip/reset.",
     multiplier: 4.0,
@@ -370,9 +370,9 @@ function getAnomalyMultiplier(ds, slot) {
   return 1.0;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Invoice generation
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function generateInvoices(meterType, meterRef, meterId, monthlyKwh) {
   const invoices = [];
@@ -404,7 +404,7 @@ function generateInvoices(meterType, meterRef, meterId, monthlyKwh) {
     const periodStart = dateStr(year, month, 1);
     const periodEnd = dateStr(year, month, days);
 
-    // Target kWh with small YoY variation (year 2 slightly higher — price inflation response)
+    // Target kWh with small YoY variation (year 2 slightly higher â€” price inflation response)
     const baseKwh = monthlyKwh[month];
     const yearFactor = year >= 2025 && month >= 4 ? 1.02 : 1.0; // slight increase in Y2
     const kwh = Math.round(addNoise(baseKwh * yearFactor, 0.08));
@@ -414,7 +414,7 @@ function generateInvoices(meterType, meterRef, meterId, monthlyKwh) {
     let closingReading;
 
     if (meterType === "gas") {
-      // Gas meters read in m³, convert to kWh
+      // Gas meters read in mÂ³, convert to kWh
       const m3consumed =
         kwh / ((GAS_CALORIFIC_VALUE / 3.6) * GAS_CORRECTION_FACTOR);
       closingReading = Math.round((openingReading + m3consumed) * 10) / 10;
@@ -472,13 +472,13 @@ function generateInvoices(meterType, meterRef, meterId, monthlyKwh) {
       total_amount: totalAmount,
       energy_type: meterType,
       source_file_name: `${supplier.replace(/ /g, "_")}_${invoiceNum}_${periodStart.replace(/-/g, "")}.pdf`,
-      extraction_model: "deepseek/deepseek-chat",
+      extraction_model: "openai/gpt-4o-mini",
       extraction_confidence: confidence,
       extraction_status: "verified",
       raw_extraction: {
         extraction_source: "ai_scan",
         scanned_at: new Date().toISOString(),
-        model: "deepseek/deepseek-chat",
+        model: "openai/gpt-4o-mini",
         pages: 2,
         fields_extracted: 18,
         fields_confident: Math.floor((confidence / 100) * 18),
@@ -518,9 +518,9 @@ function generateInvoices(meterType, meterRef, meterId, monthlyKwh) {
   return { invoices, readings };
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Monthly meter readings (for energy_meter_readings table)
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function generateMeterReadings(invoiceReadings, meterId) {
   return invoiceReadings.map((r) => ({
@@ -535,16 +535,16 @@ function generateMeterReadings(invoiceReadings, meterId) {
   }));
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Half-hourly electricity data generation
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function generateHHData(meterId, invoiceReadings) {
   const allReadings = [];
 
   for (const inv of invoiceReadings) {
     const startDate = new Date(inv.reading_date);
-    // Period is the full month — use previous_reading date to get start
+    // Period is the full month â€” use previous_reading date to get start
     // Actually we have the kwh_consumed per month, let's distribute
     const year = parseInt(inv.reading_date.slice(0, 4));
     const month = parseInt(inv.reading_date.slice(5, 7));
@@ -588,7 +588,7 @@ function generateHHData(meterId, invoiceReadings) {
         const min = (slot % 2) * 30;
         const ts = `${day.ds}T${String(hour).padStart(2, "0")}:${String(min).padStart(2, "0")}:00+00:00`;
 
-        // Add ±10% noise for realism
+        // Add Â±10% noise for realism
         const noise = 1 + (Math.random() - 0.5) * 0.2;
         const kwh = Math.max(
           0.001,
@@ -612,9 +612,9 @@ function generateHHData(meterId, invoiceReadings) {
   return allReadings;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Anomaly records
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function generateAnomalyRecords(elecMeterId) {
   const elecRate = ELEC_UNIT_RATE;
@@ -653,21 +653,21 @@ function generateAnomalyRecords(elecMeterId) {
   });
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Main
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 async function main() {
   console.log(
-    "════════════════════════════════════════════════════════════════",
+    "â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•",
   );
-  console.log("  ENERGY DATA SEEDER — Aurora Primary School");
+  console.log("  ENERGY DATA SEEDER â€” Aurora Primary School");
   console.log("  24 months of invoices + half-hourly electricity data");
   console.log(
-    "════════════════════════════════════════════════════════════════\n",
+    "â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•\n",
   );
 
-  // ── Step 0: Verify org exists ──
+  // â”€â”€ Step 0: Verify org exists â”€â”€
   console.log("Step 0: Verifying Aurora Primary organization...");
   const { data: org, error: orgErr } = await supabase
     .from("organizations")
@@ -684,7 +684,7 @@ async function main() {
   }
   console.log(`  Found: ${org.name} (${org.id})\n`);
 
-  // ── Step 1: Upsert meters ──
+  // â”€â”€ Step 1: Upsert meters â”€â”€
   console.log("Step 1: Creating/updating energy meters...");
 
   const { data: elecMeterData, error: elecMeterErr } = await supabase
@@ -721,7 +721,7 @@ async function main() {
   const gasMeterId = gasMeterData.id;
   console.log(`  Gas meter: ${gasMeterId} (${GAS_METER.meter_reference})\n`);
 
-  // ── Step 2: Clean existing data ──
+  // â”€â”€ Step 2: Clean existing data â”€â”€
   console.log("Step 2: Cleaning existing data for Aurora Primary...");
 
   const tables = [
@@ -746,7 +746,7 @@ async function main() {
   }
   console.log();
 
-  // ── Step 3: Store term dates ──
+  // â”€â”€ Step 3: Store term dates â”€â”€
   console.log("Step 3: Inserting school term dates...");
 
   const termRecords = TERM_DATES.map((t) => ({
@@ -765,12 +765,12 @@ async function main() {
 
   if (termErr) {
     console.log(`  Warning: Term dates insert failed: ${termErr.message}`);
-    console.log("  (Table may not exist yet — run the migration first)");
+    console.log("  (Table may not exist yet â€” run the migration first)");
   } else {
     console.log(`  Inserted ${termRecords.length} term date ranges\n`);
   }
 
-  // ── Step 4: Generate and insert invoices ──
+  // â”€â”€ Step 4: Generate and insert invoices â”€â”€
   console.log("Step 4: Generating monthly invoices...");
 
   const elecResult = generateInvoices(
@@ -839,7 +839,7 @@ async function main() {
     `  Inserted ${readingsWithInvoiceId.length} invoice line-item readings\n`,
   );
 
-  // ── Step 5: Monthly meter readings ──
+  // â”€â”€ Step 5: Monthly meter readings â”€â”€
   console.log("Step 5: Inserting monthly meter readings...");
 
   const elecMeterReadings = generateMeterReadings(
@@ -863,7 +863,7 @@ async function main() {
   }
   console.log(`  Inserted ${allMeterReadings.length} meter readings\n`);
 
-  // ── Step 6: Half-hourly electricity data ──
+  // â”€â”€ Step 6: Half-hourly electricity data â”€â”€
   console.log("Step 6: Generating half-hourly electricity data...");
   console.log("  This will generate ~35,000 readings across 24 months...");
 
@@ -897,7 +897,7 @@ async function main() {
       .insert(batch);
     if (hhErr) {
       console.error(`  HH batch ${i} error:`, hhErr.message);
-      console.log("  (Table may not exist yet — run the migration first)");
+      console.log("  (Table may not exist yet â€” run the migration first)");
       break;
     }
     hhInserted += batch.length;
@@ -909,7 +909,7 @@ async function main() {
   }
   console.log(`\n  Completed HH data insertion\n`);
 
-  // ── Step 7: Anomalies ──
+  // â”€â”€ Step 7: Anomalies â”€â”€
   console.log("Step 7: Inserting energy anomaly records...");
 
   const anomalyRecords = generateAnomalyRecords(elecMeterId);
@@ -924,13 +924,13 @@ async function main() {
   }
   console.log();
 
-  // ── Summary ──
+  // â”€â”€ Summary â”€â”€
   console.log(
-    "════════════════════════════════════════════════════════════════",
+    "â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•",
   );
   console.log("  SUMMARY");
   console.log(
-    "════════════════════════════════════════════════════════════════",
+    "â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•",
   );
 
   const elecTotalKwh = elecResult.readings.reduce(
@@ -955,16 +955,16 @@ async function main() {
   );
 
   console.log(`  Organization:       ${org.name}`);
-  console.log(`  Period:             April 2024 — March 2026 (24 months)`);
+  console.log(`  Period:             April 2024 â€” March 2026 (24 months)`);
   console.log();
   console.log(`  ELECTRICITY (EDF Energy)`);
   console.log(`    Meter:            ${ELEC_METER.meter_reference}`);
   console.log(`    Invoices:         ${elecResult.invoices.length}`);
   console.log(`    Total kWh:        ${elecTotalKwh.toLocaleString()}`);
   console.log(
-    `    Total cost:       £${elecTotalCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+    `    Total cost:       Â£${elecTotalCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
   );
-  console.log(`    Avg monthly:      £${(elecTotalCost / 24).toFixed(2)}`);
+  console.log(`    Avg monthly:      Â£${(elecTotalCost / 24).toFixed(2)}`);
   console.log(`    HH readings:      ${hhInserted.toLocaleString()}`);
   console.log();
   console.log(`  GAS (British Gas)`);
@@ -972,13 +972,13 @@ async function main() {
   console.log(`    Invoices:         ${gasResult.invoices.length}`);
   console.log(`    Total kWh:        ${gasTotalKwh.toLocaleString()}`);
   console.log(
-    `    Total cost:       £${gasTotalCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+    `    Total cost:       Â£${gasTotalCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
   );
-  console.log(`    Avg monthly:      £${(gasTotalCost / 24).toFixed(2)}`);
+  console.log(`    Avg monthly:      Â£${(gasTotalCost / 24).toFixed(2)}`);
   console.log();
   console.log(`  COMBINED`);
   console.log(
-    `    Total cost:       £${(elecTotalCost + gasTotalCost).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+    `    Total cost:       Â£${(elecTotalCost + gasTotalCost).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
   );
   console.log(
     `    Total kWh:        ${(elecTotalKwh + gasTotalKwh).toLocaleString()}`,
@@ -989,7 +989,7 @@ async function main() {
   console.log();
   console.log(`  ANOMALIES`);
   console.log(`    Records:          ${anomalyRecords.length}`);
-  console.log(`    Est. waste cost:  £${totalWaste.toFixed(2)}`);
+  console.log(`    Est. waste cost:  Â£${totalWaste.toFixed(2)}`);
   console.log();
   console.log(`  TERM DATES`);
   console.log(`    Ranges:           ${termRecords.length}`);
@@ -999,7 +999,7 @@ async function main() {
   console.log(`    Monthly readings: ${allMeterReadings.length}`);
   console.log();
 
-  // ── Verify DB counts ──
+  // â”€â”€ Verify DB counts â”€â”€
   console.log("  DB VERIFICATION:");
   for (const table of [
     "energy_meters",
@@ -1025,7 +1025,7 @@ async function main() {
     "\n  Done. Run the script again to refresh all data (idempotent).",
   );
   console.log(
-    "════════════════════════════════════════════════════════════════",
+    "â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•",
   );
 }
 
@@ -1033,3 +1033,4 @@ main().catch((err) => {
   console.error("Fatal error:", err);
   process.exit(1);
 });
+

@@ -150,6 +150,9 @@ export interface ActionLinkedEvidence {
   documentId: string;
   documentName: string;
   matchedAt: string;
+  type?: "document" | "url";
+  title?: string;
+  url?: string;
 }
 
 /**
@@ -208,6 +211,13 @@ export interface ActionForm {
   siams_question_id?: string;
   parent_task_id?: string;
   recurrence_rule?: RecurrenceRule;
+  framework_type?: string | null;
+  source?: string | null;
+  route_path?: string | null;
+  source_record_id?: string | null;
+  source_table_name?: string | null;
+  created_from_finding_id?: string | null;
+  linked_evidence?: Partial<ActionLinkedEvidence>[];
 }
 
 /**
@@ -586,6 +596,12 @@ export interface UnifiedTask {
   recurrence_id: string | null;
   siams_strand_id: string | null;
   siams_question_id: string | null;
+  framework_type?: string | null;
+  source?: string | null;
+  route_path?: string | null;
+  source_record_id?: string | null;
+  source_table_name?: string | null;
+  created_from_finding_id?: string | null;
   created_at: string;
   updated_at: string;
 }

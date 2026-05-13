@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useAuth } from "@/context/SupabaseAuthContext";
 import {
   Radio,
   Video,
@@ -86,17 +87,39 @@ interface DashboardFeedProps {
 }
 
 export function DashboardFeed({ className = "" }: DashboardFeedProps) {
+  const { session, loading: authLoading, organizationId } = useAuth();
   const [notices, setNotices] = useState<FeedNotice[]>([]);
   const [liveRooms, setLiveRooms] = useState<FeedVideoRoom[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (authLoading) return;
+
+    if (!session?.access_token || !organizationId) {
+      setNotices([]);
+      setLiveRooms([]);
+      setLoading(false);
+      return;
+    }
+
+    const authHeaders = {
+      Authorization: `Bearer ${session.access_token}`,
+    };
+    const withOrganization = (url: string) => {
+      const separator = url.includes("?") ? "&" : "?";
+      return `${url}${separator}organizationId=${encodeURIComponent(organizationId)}`;
+    };
+
+    const fetchJson = async <T,>(url: string, fallback: T): Promise<T> => {
+      const response = await fetch(withOrganization(url), { headers: authHeaders });
+      if (!response.ok) return fallback;
+      return response.json() as Promise<T>;
+    };
+
     Promise.all([
-      fetch("/api/notices?limit=12")
-        .then((r) => r.json())
+      fetchJson("/api/notices?limit=12", { notices: [] })
         .catch(() => ({ notices: [] })),
-      fetch("/api/video-rooms?limit=5")
-        .then((r) => r.json())
+      fetchJson("/api/video-rooms?limit=5", { rooms: [] })
         .catch(() => ({ rooms: [] })),
     ]).then(([noticeData, roomData]) => {
       setNotices(noticeData.notices || []);
@@ -106,18 +129,16 @@ export function DashboardFeed({ className = "" }: DashboardFeedProps) {
 
     // Refresh every 60 seconds
     const interval = setInterval(() => {
-      fetch("/api/notices?limit=12")
-        .then((r) => r.json())
+      fetchJson("/api/notices?limit=12", { notices: [] })
         .then((d) => setNotices(d.notices || []))
         .catch(() => {});
-      fetch("/api/video-rooms?limit=5")
-        .then((r) => r.json())
+      fetchJson("/api/video-rooms?limit=5", { rooms: [] })
         .then((d) => setLiveRooms((d.rooms || []).filter((r: FeedVideoRoom) => r.status === "live" || r.status === "scheduled")))
         .catch(() => {});
     }, 60000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [authLoading, session?.access_token, organizationId]);
 
   if (loading) {
     return (

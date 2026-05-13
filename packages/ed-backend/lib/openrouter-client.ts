@@ -1,4 +1,4 @@
-import type { Message, ModelConfig, ModelUsage } from '@schoolgle/shared';
+﻿import type { Message, ModelConfig, ModelUsage } from '@schoolgle/shared';
 
 export interface ChatCompletionRequest {
   model: string;
@@ -154,7 +154,7 @@ export class OpenRouterClient {
   async testConnection(): Promise<boolean> {
     try {
       const response = await this.chatCompletion({
-        model: 'deepseek/deepseek-chat',
+        model: 'openai/gpt-4o-mini',
         messages: [{ role: 'user', content: 'Hello' }],
         maxTokens: 10
       });
@@ -165,3 +165,4 @@ export class OpenRouterClient {
     }
   }
 }
+

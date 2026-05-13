@@ -1,9 +1,10 @@
-/**
+﻿/**
  * OpenRouter Client
  * Unified model access via OpenRouter API
  */
 
 import type { ModelConfig, TokenUsage } from "../types";
+import { assertApprovedModelId } from "./model-policy";
 
 // ============================================================================
 // Configuration
@@ -136,35 +137,11 @@ export const OPENROUTER_MODELS: Record<string, ModelConfig> = {
     },
   },
 
-  "deepseek/deepseek-chat": {
-    id: "deepseek/deepseek-chat",
+  "meta-llama/llama-3.3-70b-instruct": {
+    id: "meta-llama/llama-3.3-70b-instruct",
     provider: "openrouter",
-    model: "deepseek/deepseek-chat",
-    costPerMillionTokens: 0.27, // Input, output is ~$1.10
-    capabilities: {
-      vision: false,
-      streaming: true,
-      jsonMode: true,
-    },
-  },
-
-  "deepseek/deepseek-chat-v3-0324": {
-    id: "deepseek/deepseek-chat-v3-0324",
-    provider: "openrouter",
-    model: "deepseek/deepseek-chat-v3-0324",
-    costPerMillionTokens: 0.27,
-    capabilities: {
-      vision: false,
-      streaming: true,
-      jsonMode: true,
-    },
-  },
-
-  "deepseek/deepseek-r1": {
-    id: "deepseek/deepseek-r1",
-    provider: "openrouter",
-    model: "deepseek/deepseek-r1",
-    costPerMillionTokens: 0.55, // Reasoning model
+    model: "meta-llama/llama-3.3-70b-instruct",
+    costPerMillionTokens: 0.59,
     capabilities: {
       vision: false,
       streaming: true,
@@ -180,7 +157,7 @@ export const OPENROUTER_MODELS: Record<string, ModelConfig> = {
   // (claude-3.5-sonnet, gpt-4o, gemini-2.0-flash-exp already defined above)
 
   // ========== REASONING MODELS ==========
-  // (deepseek-r1 already defined above)
+  // Reasoning models are approved-provider only.
 };
 
 /**
@@ -190,15 +167,14 @@ export const MODEL_ALIASES: Record<string, string> = {
   // Primary models
   premium: "anthropic/claude-3.5-sonnet",
   fast: "openai/gpt-4o-mini",
-  cheap: "deepseek/deepseek-chat",
+  cheap: "openai/gpt-4o-mini",
 
   // Specific model aliases
   claude: "anthropic/claude-3.5-sonnet",
   gpt4: "openai/gpt-4o",
   "gpt4-mini": "openai/gpt-4o-mini",
   gemini: "google/gemini-2.5-flash-thinking-exp",
-  deepseek: "deepseek/deepseek-chat",
-  "deepseek-r1": "deepseek/deepseek-r1",
+  llama: "meta-llama/llama-3.3-70b-instruct",
   vision: "google/gemini-2.5-flash-preview",
   "gemini-flash": "google/gemini-2.5-flash-preview",
 };
@@ -268,6 +244,7 @@ export class OpenRouterClient {
     options: ChatOptions = {},
   ): Promise<ChatResponse> {
     const model = options.model || "anthropic/claude-3.5-sonnet";
+    assertApprovedModelId(model);
 
     const requestBody = {
       model,
@@ -355,6 +332,7 @@ export class OpenRouterClient {
     options: ChatOptions = {},
   ): AsyncGenerator<string, void, unknown> {
     const model = options.model || "anthropic/claude-3.5-sonnet";
+    assertApprovedModelId(model);
 
     const requestBody = {
       model,
@@ -496,3 +474,4 @@ export function calculateTokenCost(
 
   return inputCost + outputCost;
 }
+

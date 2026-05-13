@@ -22,11 +22,15 @@ import {
 } from "@/lib/estates-compliance/findings-database";
 import {
   getClassificationBadgeClasses,
-  formatClassification,
 } from "@/lib/estates-compliance/findings-database";
+import type { EstateFindingTriage } from "@/lib/estates-compliance/finding-triage";
+
+type FindingWithEstateTriage = Finding & {
+  estateTriage?: EstateFindingTriage;
+};
 
 interface FindingsListProps {
-  findings: Finding[];
+  findings: FindingWithEstateTriage[];
   onApprove?: (findingId: string) => void;
   onDecline?: (findingId: string) => void;
   onDefer?: (findingId: string, deferUntil: Date) => void;
@@ -75,7 +79,8 @@ export function FindingsList({
 }: FindingsListProps) {
   const [filter, setFilter] = useState<FindingClassification | "all">("all");
   const [expandedFinding, setExpandedFinding] = useState<string | null>(null);
-  const [selectedFinding, setSelectedFinding] = useState<Finding | null>(null);
+  const [selectedFinding, setSelectedFinding] =
+    useState<FindingWithEstateTriage | null>(null);
 
   // Filter findings by classification
   const filteredFindings = findings.filter((finding) => {
@@ -200,7 +205,7 @@ export function FindingsList({
 }
 
 interface FindingCardProps {
-  finding: Finding;
+  finding: FindingWithEstateTriage;
   isExpanded: boolean;
   onToggle: () => void;
   onDecisionClick: () => void;
@@ -299,6 +304,13 @@ function FindingCard({
                 )}
               </div>
             )}
+
+            {finding.estateTriage && (
+              <div className="mt-2 inline-flex items-center rounded-full bg-white px-2.5 py-1 text-xs font-medium text-gray-700 ring-1 ring-gray-200">
+                Risk {finding.estateTriage.riskScore}/5 ·{" "}
+                {finding.estateTriage.classification.replace(/_/g, " ")}
+              </div>
+            )}
           </div>
 
           {/* Right: Actions */}
@@ -333,6 +345,21 @@ function FindingCard({
               <div>
                 <h4 className="text-sm font-medium mb-1">Suggested action:</h4>
                 <p className="text-sm">{finding.suggested_action}</p>
+              </div>
+            )}
+
+            {finding.estateTriage && (
+              <div className="rounded-md bg-white p-3 text-sm ring-1 ring-gray-200">
+                <h4 className="font-medium mb-1">Risk-led routing:</h4>
+                <p className="text-muted-foreground">
+                  {finding.estateTriage.reportLine}
+                </p>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Suggested destination:{" "}
+                  {finding.estateTriage.recommendedRoutes
+                    .map((route) => route.replace(/_/g, " "))
+                    .join(", ")}
+                </p>
               </div>
             )}
 
@@ -377,7 +404,7 @@ function FindingCard({
 }
 
 interface DecisionSupportModalProps {
-  finding: Finding;
+  finding: FindingWithEstateTriage;
   onClose: () => void;
   onApprove: () => void;
   onDecline: () => void;

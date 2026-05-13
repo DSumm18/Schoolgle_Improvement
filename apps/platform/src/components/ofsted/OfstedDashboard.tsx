@@ -34,6 +34,16 @@ interface OfstedDashboardProps {
 interface ReadinessData {
     overall_score: number;
     overall_rating: string;
+    assessmentEvidence?: {
+        source: string;
+        caveat: string;
+        batchCount: number;
+        eventCount: number;
+        pupilCount: number;
+        latestSourceLabel: string | null;
+        latestAssessmentPeriod: string | null;
+        latestAcademicYearStart: number | null;
+    };
     categories?: Array<{
         category_id: string;
         average_score: number;
@@ -78,7 +88,7 @@ export default function OfstedDashboard({ organizationId }: OfstedDashboardProps
 
             if (response.ok) {
                 const data = await response.json();
-                setReadiness(data.current || data);
+                setReadiness(data.overall ? { ...data.overall, assessmentEvidence: data.assessmentEvidence } : data.current || data);
             }
         } catch (error: any) {
             if (error.name === 'AbortError') {
@@ -223,6 +233,41 @@ export default function OfstedDashboard({ organizationId }: OfstedDashboardProps
                     </div>
                 </CardContent>
             </Card>
+
+            {readiness?.assessmentEvidence && readiness.assessmentEvidence.eventCount > 0 && (
+                <Card className="border-sky-200 bg-sky-50/70 dark:bg-sky-900/20">
+                    <CardContent className="p-5">
+                        <div className="flex flex-wrap items-start justify-between gap-4">
+                            <div>
+                                <p className="text-xs font-bold uppercase text-sky-700">Assessment Intelligence Evidence</p>
+                                <h3 className="mt-1 font-bold text-slate-900 dark:text-slate-100">
+                                    Teacher-locked assessment evidence is feeding this readiness view
+                                </h3>
+                                <p className="mt-1 text-sm text-sky-800 dark:text-sky-200">
+                                    {readiness.assessmentEvidence.latestSourceLabel}
+                                </p>
+                            </div>
+                            <div className="grid grid-cols-3 gap-3 text-center">
+                                <div className="rounded-lg border border-sky-200 bg-white/80 px-3 py-2 dark:bg-slate-900/40">
+                                    <div className="text-lg font-black text-sky-900 dark:text-sky-100">{readiness.assessmentEvidence.batchCount}</div>
+                                    <div className="text-[10px] font-semibold uppercase text-sky-600">Snapshots</div>
+                                </div>
+                                <div className="rounded-lg border border-sky-200 bg-white/80 px-3 py-2 dark:bg-slate-900/40">
+                                    <div className="text-lg font-black text-sky-900 dark:text-sky-100">{readiness.assessmentEvidence.eventCount}</div>
+                                    <div className="text-[10px] font-semibold uppercase text-sky-600">Judgements</div>
+                                </div>
+                                <div className="rounded-lg border border-sky-200 bg-white/80 px-3 py-2 dark:bg-slate-900/40">
+                                    <div className="text-lg font-black text-sky-900 dark:text-sky-100">{readiness.assessmentEvidence.pupilCount}</div>
+                                    <div className="text-[10px] font-semibold uppercase text-sky-600">Pupils</div>
+                                </div>
+                            </div>
+                        </div>
+                        <p className="mt-3 text-xs text-sky-700 dark:text-sky-300">
+                            Source: {readiness.assessmentEvidence.source}. {readiness.assessmentEvidence.caveat}
+                        </p>
+                    </CardContent>
+                </Card>
+            )}
 
             {/* Welcome Card */}
             <Card>

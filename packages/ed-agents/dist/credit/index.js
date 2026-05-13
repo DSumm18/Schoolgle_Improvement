@@ -1,4 +1,4 @@
-"use strict";
+﻿"use strict";
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
@@ -124,10 +124,10 @@ var OPENROUTER_MODELS = {
       jsonMode: true
     }
   },
-  "deepseek/deepseek-chat": {
-    id: "deepseek/deepseek-chat",
+  "openai/gpt-4o-mini": {
+    id: "openai/gpt-4o-mini",
     provider: "openrouter",
-    model: "deepseek/deepseek-chat",
+    model: "openai/gpt-4o-mini",
     costPerMillionTokens: 0.27,
     // Input, output is ~$1.10
     capabilities: {
@@ -136,10 +136,10 @@ var OPENROUTER_MODELS = {
       jsonMode: true
     }
   },
-  "deepseek/deepseek-chat-v3-0324": {
-    id: "deepseek/deepseek-chat-v3-0324",
+  "openai/gpt-4o-mini": {
+    id: "openai/gpt-4o-mini",
     provider: "openrouter",
-    model: "deepseek/deepseek-chat-v3-0324",
+    model: "openai/gpt-4o-mini",
     costPerMillionTokens: 0.27,
     capabilities: {
       vision: false,
@@ -147,10 +147,10 @@ var OPENROUTER_MODELS = {
       jsonMode: true
     }
   },
-  "deepseek/deepseek-r1": {
-    id: "deepseek/deepseek-r1",
+  "openai/o3-mini": {
+    id: "openai/o3-mini",
     provider: "openrouter",
-    model: "deepseek/deepseek-r1",
+    model: "openai/o3-mini",
     costPerMillionTokens: 0.55,
     // Reasoning model
     capabilities: {
@@ -196,10 +196,10 @@ var OPENROUTER_MODELS = {
     }
   },
   // ========== REASONING MODELS ==========
-  "deepseek/deepseek-r1": {
-    id: "deepseek/deepseek-r1",
+  "openai/o3-mini": {
+    id: "openai/o3-mini",
     provider: "openrouter",
-    model: "deepseek/deepseek-r1",
+    model: "openai/o3-mini",
     costPerMillionTokens: 0.55,
     capabilities: {
       vision: false,

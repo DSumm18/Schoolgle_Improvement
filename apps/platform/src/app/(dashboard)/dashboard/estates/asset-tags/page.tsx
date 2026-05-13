@@ -1,178 +1,60 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { QrCode, Smartphone, Info } from "lucide-react";
+import Link from "next/link";
+import { AlertCircle, QrCode, Smartphone } from "lucide-react";
 import QRCodeGenerator from "@/components/estates/QRCodeGenerator";
 import { useAuth } from "@/context/SupabaseAuthContext";
+import { fetcher } from "@/lib/fetchers";
+import { mapAssetsToTagAssets, type TagAsset } from "@/lib/estates/asset-tags";
+import type { Asset as EstatesAsset } from "@/types/estates-compliance";
 
-interface Asset {
-  id: string;
-  name: string;
-  location?: string;
-  assetType?: string;
-  qrCodeId?: string;
+interface AssetsResponse {
+  assets?: EstatesAsset[];
+  data?: EstatesAsset[];
 }
 
-const DEMO_ASSETS: Asset[] = [
-  {
-    id: "fe-001",
-    name: "Fire Extinguisher - CO2",
-    location: "Main Hall",
-    assetType: "Fire Safety",
-    qrCodeId: "fe-001",
-  },
-  {
-    id: "fe-002",
-    name: "Fire Extinguisher - Foam",
-    location: "Kitchen",
-    assetType: "Fire Safety",
-    qrCodeId: "fe-002",
-  },
-  {
-    id: "fe-003",
-    name: "Fire Extinguisher - Water",
-    location: "Reception",
-    assetType: "Fire Safety",
-    qrCodeId: "fe-003",
-  },
-  {
-    id: "boiler-01",
-    name: "Main Boiler",
-    location: "Plant Room",
-    assetType: "Heating",
-    qrCodeId: "boiler-01",
-  },
-  {
-    id: "boiler-02",
-    name: "Secondary Boiler",
-    location: "Annexe Plant Room",
-    assetType: "Heating",
-    qrCodeId: "boiler-02",
-  },
-  {
-    id: "elec-db-01",
-    name: "Distribution Board A",
-    location: "Main Building Intake",
-    assetType: "Electrical",
-    qrCodeId: "elec-db-01",
-  },
-  {
-    id: "elec-db-02",
-    name: "Distribution Board B",
-    location: "Annexe Intake",
-    assetType: "Electrical",
-    qrCodeId: "elec-db-02",
-  },
-  {
-    id: "leg-01",
-    name: "Water Tank (Cold)",
-    location: "Roof Space",
-    assetType: "Legionella",
-    qrCodeId: "leg-01",
-  },
-  {
-    id: "leg-02",
-    name: "Calorifier",
-    location: "Plant Room",
-    assetType: "Legionella",
-    qrCodeId: "leg-02",
-  },
-  {
-    id: "asb-01",
-    name: "Asbestos Register Location A",
-    location: "Ceiling Tiles - Staff Room",
-    assetType: "Asbestos",
-    qrCodeId: "asb-01",
-  },
-  {
-    id: "alarm-01",
-    name: "Fire Alarm Panel",
-    location: "Main Entrance",
-    assetType: "Fire Safety",
-    qrCodeId: "alarm-01",
-  },
-  {
-    id: "hvac-01",
-    name: "Air Handling Unit",
-    location: "Hall Roof",
-    assetType: "HVAC",
-    qrCodeId: "hvac-01",
-  },
-  {
-    id: "lift-01",
-    name: "Passenger Lift",
-    location: "Main Stairwell",
-    assetType: "Accessibility",
-    qrCodeId: "lift-01",
-  },
-  {
-    id: "gen-01",
-    name: "Emergency Generator",
-    location: "External Compound",
-    assetType: "Electrical",
-    qrCodeId: "gen-01",
-  },
-  {
-    id: "pat-lab",
-    name: "PAT Testing Station",
-    location: "IT Suite",
-    assetType: "Electrical",
-    qrCodeId: "pat-lab",
-  },
-  {
-    id: "gutter-01",
-    name: "Guttering - South Block",
-    location: "South Building Exterior",
-    assetType: "Building Fabric",
-    qrCodeId: "gutter-01",
-  },
-];
-
 export default function AssetTagsPage() {
-  const { organization } = useAuth();
-  const [assets, setAssets] = useState<Asset[]>([]);
+  const { organizationId, loading: authLoading } = useAuth();
+  const [assets, setAssets] = useState<TagAsset[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isDemo, setIsDemo] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchAssets() {
-      try {
-        const orgId = organization?.id;
-        if (!orgId) {
-          setAssets(DEMO_ASSETS);
-          setIsDemo(true);
-          setLoading(false);
-          return;
-        }
+    if (authLoading) return;
 
-        const res = await fetch(`/api/estates/tasks?organizationId=${orgId}`);
-        if (res.ok) {
-          const data = await res.json();
-          const mapped: Asset[] = (data.tasks || data || []).map((t: any) => ({
-            id: t.id,
-            name: t.title || t.name || "Unnamed Asset",
-            location: t.location || t.area || undefined,
-            assetType: t.category || t.asset_type || undefined,
-            qrCodeId: t.qr_code_id || t.id,
-          }));
-          if (mapped.length > 0) {
-            setAssets(mapped);
-          } else {
-            setAssets(DEMO_ASSETS);
-            setIsDemo(true);
-          }
-        } else {
-          setAssets(DEMO_ASSETS);
-          setIsDemo(true);
-        }
-      } catch {
-        setAssets(DEMO_ASSETS);
-        setIsDemo(true);
+    async function fetchAssets() {
+      if (!organizationId) {
+        setAssets([]);
+        setError("Select a school or trust before generating asset tags.");
+        setLoading(false);
+        return;
       }
-      setLoading(false);
+
+      try {
+        setLoading(true);
+        setError(null);
+        const params = new URLSearchParams({
+          organizationId,
+          page_size: "200",
+        });
+        const data = (await fetcher(
+          `/api/estates/assets?${params.toString()}`,
+        )) as AssetsResponse;
+        setAssets(mapAssetsToTagAssets(data.assets ?? data.data ?? []));
+      } catch (err) {
+        setAssets([]);
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Unable to load the asset register.",
+        );
+      } finally {
+        setLoading(false);
+      }
     }
     fetchAssets();
-  }, [organization?.id]);
+  }, [authLoading, organizationId]);
 
   return (
     <div className="p-6 md:p-8 space-y-6 min-h-screen max-w-[1600px] mx-auto">
@@ -192,30 +74,58 @@ export default function AssetTagsPage() {
         </div>
       </div>
 
-      {/* Demo banner */}
-      {isDemo && (
-        <div className="flex items-start gap-3 p-4 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
-          <Info className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+      {error && (
+        <div className="flex items-start gap-3 p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+          <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
-              Demo Mode
+            <p className="text-sm font-medium text-red-800 dark:text-red-200">
+              Asset register unavailable
             </p>
-            <p className="text-sm text-amber-700 dark:text-amber-300">
-              Showing sample assets. Connect your estates data to generate real
-              asset tags.
+            <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+          </div>
+        </div>
+      )}
+
+      {!loading && !error && assets.length === 0 && (
+        <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 p-8 text-center">
+          <QrCode className="mx-auto h-10 w-10 text-gray-400" />
+          <h2 className="mt-4 text-lg font-semibold dark:text-white">
+            No assets ready for tags yet
+          </h2>
+          <p className="mx-auto mt-2 max-w-2xl text-sm text-gray-600 dark:text-gray-400">
+            Add boilers, fire equipment, water systems, electrical panels, and
+            other estate assets to the live asset register first. Asset tags
+            will then generate directly from those records.
+          </p>
+          <Link
+            href="/estates-compliance/assets"
+            className="mt-5 inline-flex items-center rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700"
+          >
+            Open Asset Register
+          </Link>
+        </div>
+      )}
+
+      {!loading && !error && assets.length > 0 && (
+        <div className="rounded-lg border border-teal-200 dark:border-teal-900 bg-teal-50 dark:bg-teal-900/20 p-4">
+          <div className="flex items-start gap-3">
+            <QrCode className="w-5 h-5 text-teal-600 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-teal-800 dark:text-teal-200">
+              Showing {assets.length} live asset
+              {assets.length === 1 ? "" : "s"} from the school asset register.
+              No demo data is being used.
             </p>
           </div>
         </div>
       )}
 
-      {/* Loading */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600" />
         </div>
-      ) : (
+      ) : assets.length > 0 ? (
         <QRCodeGenerator assets={assets} />
-      )}
+      ) : null}
 
       {/* NFC section */}
       <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-5 bg-gray-50 dark:bg-gray-800/50">

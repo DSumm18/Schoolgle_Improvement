@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Schoolgle Meeting Notes</title>
+    <link rel="stylesheet" href="./styles/schoolgle-docs.css?v=accent-3px" />
+  </head>
+  <body>
+    <nav class="template-nav" aria-label="Template previews">
+      <a href="./letterhead.html">Letterhead</a>
+      <a href="./proposal.html">Proposal</a>
+      <a href="./invoice.html">Invoice</a>
+      <a class="active" href="./meeting-notes.html">Meeting Notes</a>
+      <a href="./email-signature.html">Email Signature</a>
+      <a href="./linkedin-advertising.html">LinkedIn Advertising</a>
+      <a href="./index.html">Gallery</a>
+    </nav>
+    <main class="page">
+      <header class="doc-header">
+        <img class="logo" src="./assets/schoolgle-logo-horizontal.png" alt="Schoolgle" />
+        <div class="meta">
+          {{date}}<br />
+          Prepared by {{prepared_by}}<br />
+          <a href="mailto:david@schoolgle.co.uk">david@schoolgle.co.uk</a>
+        </div>
+      </header>
+
+      <div class="accent-line" aria-hidden="true">
+        <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+      </div>
+
+      <section>
+        <div class="label">Meeting / Report</div>
+        <h1>{{title}}</h1>
+        <p class="muted">{{purpose}}</p>
+      </section>
+
+      <section class="grid-2">
+        <div class="card">
+          <div class="label">Organisation</div>
+          <p>{{organisation_name}}</p>
+        </div>
+        <div class="card">
+          <div class="label">Attendees</div>
+          <p>{{attendees}}</p>
+        </div>
+      </section>
+
+      <section>
+        <h2>Summary</h2>
+        <p>{{summary}}</p>
+        <h2>Key Points</h2>
+        <ol>
+          <li>{{key_point_1}}</li>
+          <li>{{key_point_2}}</li>
+          <li>{{key_point_3}}</li>
+        </ol>
+      </section>
+
+      <section>
+        <h2>Decisions</h2>
+        <table class="table">
+          <thead>
+            <tr><th>Decision</th><th>Owner</th><th>Date Agreed</th><th>Follow-up</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>{{decision_1}}</td><td>{{decision_owner_1}}</td><td>{{decision_date_1}}</td><td>{{decision_follow_up_1}}</td></tr>
+            <tr><td>{{decision_2}}</td><td>{{decision_owner_2}}</td><td>{{decision_date_2}}</td><td>{{decision_follow_up_2}}</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>Actions</h2>
+        <table class="table">
+          <thead>
+            <tr><th>Action</th><th>Owner</th><th>Due Date</th><th>Status</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>{{action_1}}</td><td>{{action_owner_1}}</td><td>{{action_due_1}}</td><td>{{action_status_1}}</td></tr>
+            <tr><td>{{action_2}}</td><td>{{action_owner_2}}</td><td>{{action_due_2}}</td><td>{{action_status_2}}</td></tr>
+            <tr><td>{{action_3}}</td><td>{{action_owner_3}}</td><td>{{action_due_3}}</td><td>{{action_status_3}}</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <footer class="doc-footer">
+        <span>{{organisation_name}} · {{module_focus}}</span>
+        <span>Next review: {{next_review_date}} · <a href="mailto:david@schoolgle.co.uk">Email owner</a></span>
+      </footer>
+    </main>
+  </body>
+</html>

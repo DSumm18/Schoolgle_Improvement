@@ -1,4 +1,4 @@
-# Ed Form Helper - Universal Form Detection
+﻿# Ed Form Helper - Universal Form Detection
 
 ## Problem: How to fill ANY form, not just pre-coded ones?
 
@@ -9,24 +9,24 @@ The test uses hardcoded field mappings. Real solution: **AI-powered form analysi
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                     UNIVERSAL FORM FILLING                      │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  1. DETECT        2. ANALYZE        3. CONVERSE       4. FILL   │
-│  ────────         ─────────         ───────────        ─────    │
-│                                                                 │
-│  ┌─────────┐     ┌─────────┐       ┌─────────┐       ┌─────────┐│
-│  │ Vision  │     │   AI    │       │  Chat   │       │ Action  ││
-│  │ Model   │───>│ Mapping │──────>│ with    │──────>│ Execute ││
-│  │         │     │         │       │ User    │       │         ││
-│  └─────────┘     └─────────┘       └─────────┘       └─────────┘│
-│     │              │                  │                 │        │
-│     ▼              ▼                  ▼                 ▼        │
-│  Screenshot   Field Labels    "What's your   Type into  │
-│  / DOM Scan   + Types         name?"      →   the field  │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚                     UNIVERSAL FORM FILLING                      â”‚
+â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤
+â”‚                                                                 â”‚
+â”‚  1. DETECT        2. ANALYZE        3. CONVERSE       4. FILL   â”‚
+â”‚  â”€â”€â”€â”€â”€â”€â”€â”€         â”€â”€â”€â”€â”€â”€â”€â”€â”€         â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€        â”€â”€â”€â”€â”€    â”‚
+â”‚                                                                 â”‚
+â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”     â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”       â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”       â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”â”‚
+â”‚  â”‚ Vision  â”‚     â”‚   AI    â”‚       â”‚  Chat   â”‚       â”‚ Action  â”‚â”‚
+â”‚  â”‚ Model   â”‚â”€â”€â”€>â”‚ Mapping â”‚â”€â”€â”€â”€â”€â”€>â”‚ with    â”‚â”€â”€â”€â”€â”€â”€>â”‚ Execute â”‚â”‚
+â”‚  â”‚         â”‚     â”‚         â”‚       â”‚ User    â”‚       â”‚         â”‚â”‚
+â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜     â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜       â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜       â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜â”‚
+â”‚     â”‚              â”‚                  â”‚                 â”‚        â”‚
+â”‚     â–¼              â–¼                  â–¼                 â–¼        â”‚
+â”‚  Screenshot   Field Labels    "What's your   Type into  â”‚
+â”‚  / DOM Scan   + Types         name?"      â†’   the field  â”‚
+â”‚                                                                 â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 ```
 
 ---
@@ -83,7 +83,7 @@ function findLabel(element): string {
 // Use Qwen2.5-VL or Gemini 2.0 Flash to analyze screenshot
 async function detectFormsByVision(screenshot: string): Promise<FormField[]> {
   const response = await openrouter.chat.completions.create({
-    model: 'qwen/qwen-2.5-vl-72b-instruct',
+    model: 'google/gemini-2.0-flash-001',
     messages: [{
       role: 'user',
       content: [
@@ -121,7 +121,7 @@ When Ed sees a form, he needs to understand:
 async function analyzeFormAndGenerateQuestions(fields: FormField[], userLanguage: string) {
   // Send field list to AI for analysis
   const response = await openrouter.chat.completions.create({
-    model: 'deepseek/deepseek-chat',
+    model: 'openai/gpt-4o-mini',
     messages: [{
       role: 'system',
       content: `You are Ed, a form-filling assistant. Analyze forms and generate natural questions.
@@ -285,19 +285,19 @@ async function detectFormType(fields: FormField[]): Promise<FormType> {
 
 ```
 1. User navigates to ANY web page with a form
-                ↓
+                â†“
 2. Extension detects: "Found a form with 6 fields"
-                ↓
+                â†“
 3. AI analyzes: "This is a safeguarding concern form"
-                ↓
+                â†“
 4. Ed says: "I can help you fill this safeguarding form. What's your name?"
-                ↓
+                â†“
 5. User speaks/types answer
-                ↓
+                â†“
 6. Ed fills first field, asks next question
-                ↓
+                â†“
 7. Repeat until all fields filled
-                ↓
+                â†“
 8. Ed: "All done! Please check and submit."
 ```
 
@@ -307,8 +307,8 @@ async function detectFormType(fields: FormField[]): Promise<FormType> {
 
 ```typescript
 class UniversalFormHelper {
-  private visionModel = 'qwen/qwen-2.5-vl-72b-instruct';
-  private chatModel = 'deepseek/deepseek-chat';
+  private visionModel = 'google/gemini-2.0-flash-001';
+  private chatModel = 'openai/gpt-4o-mini';
 
   async start() {
     // 1. Detect form on page
@@ -376,3 +376,4 @@ We need:
 4. **Human-like filling** - Type at reasonable speed, show what's happening
 
 The test page was just a simulation. Real implementation would be truly universal.
+

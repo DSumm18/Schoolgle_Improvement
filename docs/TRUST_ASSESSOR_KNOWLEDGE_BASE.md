@@ -2,7 +2,7 @@
 
 **Single source of truth for Trust Assessor. Any Claude session / developer working on this product must start here.**
 
-Last updated: 2026-04-18 (condensed)
+Last updated: 2026-04-24 (KPI Dashboard added)
 Product lead: David Summerscales
 Context: Schoolgle → School Improvement module → Trust Assessor
 
@@ -164,7 +164,7 @@ Hover = status + last sync. Locked = grey with "unlock with" tooltip.
 
 ---
 
-## 8. What's built (as of 2026-04-18)
+## 8. What's built (as of 2026-04-24)
 
 ### UI components
 - At-a-glance summary, forensic verdict, national percentile, predictive accuracy
@@ -173,6 +173,14 @@ Hover = status + last sync. Locked = grey with "unlock with" tooltip.
 - Per-pupil card grid (year-group filter), Grove House deep dive
 - School events timeline (embed + full page `/timeline`)
 - Governor Assessment Report (HTML 4-page A4, interactive: present + edit + export)
+
+### KPI Dashboard (2026-04-24 — PARTIAL, see handover)
+- **File:** `apps/platform/src/components/intelligence/KpiDashboard.tsx`
+- **Status:** Component built, integrated, but visibility varies by school (BUG)
+- **Features:** 6 expandable cards with LA/cohort/national comparisons
+- **Cards:** KS2 Combined, Reading Progress, Maths Progress, Attendance, Persistent Absence, Disadvantaged Gap
+- **Known Issue:** Shows for Grove House but NOT Rawdon St Peter's — needs investigation
+- **Handover:** `docs/trust-assessor/HANDOVER_KPI_DASHBOARD.md`
 
 ### Infrastructure
 - 5-tab layout: Overview / Forensic Review / Cohort Pathway / Pupil Level / Evidence
@@ -226,7 +234,7 @@ Hover = status + last sync. Locked = grey with "unlock with" tooltip.
 
 ### Code
 - Page: `apps/platform/src/app/(dashboard)/dashboard/school-improvement/trust-assessor/page.tsx`
-- API: `apps/platform/src/app/api/trust-analysis/` + `/api/trust-assessor/`
+- API: `apps/platform/src/app/api/trust-analysis/` + `/api/trust-assessor/` + `/api/intelligence/`
 - Helpers: `apps/platform/src/lib/trust-analysis/`
   - `types.ts` — PENNINE_SCHOOLS, URN_PREDECESSORS
   - `demographic-expectations.ts` — prediction model
@@ -235,6 +243,7 @@ Hover = status + last sync. Locked = grey with "unlock with" tooltip.
 - Components: `apps/platform/src/components/trust-assessor/`
   - `SchoolTabTabs.tsx`, `EditableText.tsx`, `HideableCard.tsx`
   - `CohortPassport.tsx`, `PupilCardGrid.tsx`
+- KPI Dashboard: `apps/platform/src/components/intelligence/KpiDashboard.tsx`
 - Timeline: `apps/platform/src/components/school-events/Timeline.tsx`
 - Intelligence Brain: `apps/platform/src/lib/intelligence-brain/skills.ts`
 - GIAS import: `scripts/import-gias-school-history.mjs`

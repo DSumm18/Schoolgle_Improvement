@@ -7,7 +7,6 @@ import {
   FileText,
   Plus,
   Send,
-  Clock,
   LayoutTemplate,
   Sparkles,
   Search,
@@ -22,8 +21,10 @@ import { useAuth } from "@/context/SupabaseAuthContext";
 
 interface DocumentSummary {
   id: string;
-  title: string;
-  template_name: string;
+  title?: string;
+  subject?: string;
+  template_name?: string;
+  document_templates?: { name?: string };
   status: "draft" | "finalised" | "sent" | "archived";
   recipient_name?: string;
   created_at: string;
@@ -35,7 +36,11 @@ interface DocumentTemplate {
   name: string;
   description: string;
   category: string;
+  module?: string;
+  document_type?: string;
+  is_system?: boolean;
   created_at: string;
+  updated_at?: string;
 }
 
 type TabKey = "documents" | "templates";
@@ -70,7 +75,7 @@ function DocumentStatusBadge({ status }: { status: string }) {
 }
 
 export default function DocumentProductionPage() {
-  const { user, organization } = useAuth();
+  const { organization } = useAuth();
   const organizationId = organization?.id || "";
 
   const [activeTab, setActiveTab] = useState<TabKey>("documents");
@@ -91,28 +96,35 @@ export default function DocumentProductionPage() {
   // Fetch documents
   useEffect(() => {
     if (!organizationId) return;
-    setLoading(true);
     fetch(`/api/documents?organizationId=${organizationId}`)
       .then((r) => r.json())
       .then((data) => {
         const docs = Array.isArray(data)
           ? data
           : data.documents || data.data || [];
-        setDocuments(docs);
+        const normalisedDocs = docs.map((doc: DocumentSummary) => ({
+          ...doc,
+          title: doc.title || doc.subject || "Untitled document",
+          template_name:
+            doc.template_name ||
+            doc.document_templates?.name ||
+            "Document template",
+        }));
+        setDocuments(normalisedDocs);
 
         const now = new Date();
         const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-        const drafts = docs.filter(
+        const drafts = normalisedDocs.filter(
           (d: DocumentSummary) => d.status === "draft",
         ).length;
-        const sentThisMonth = docs.filter(
+        const sentThisMonth = normalisedDocs.filter(
           (d: DocumentSummary) =>
             d.status === "sent" && new Date(d.updated_at) >= monthStart,
         ).length;
 
         setCounts((prev) => ({
           ...prev,
-          total: docs.length,
+          total: normalisedDocs.length,
           drafts,
           sent_this_month: sentThisMonth,
         }));
@@ -124,7 +136,6 @@ export default function DocumentProductionPage() {
   // Fetch templates
   useEffect(() => {
     if (!organizationId) return;
-    setLoadingTemplates(true);
     fetch(`/api/documents/templates?organizationId=${organizationId}`)
       .then((r) => r.json())
       .then((data) => {
@@ -144,7 +155,7 @@ export default function DocumentProductionPage() {
   const filteredDocuments = documents.filter((doc) => {
     const matchesSearch =
       !search ||
-      doc.title.toLowerCase().includes(search.toLowerCase()) ||
+      (doc.title || "").toLowerCase().includes(search.toLowerCase()) ||
       (doc.recipient_name || "").toLowerCase().includes(search.toLowerCase()) ||
       (doc.template_name || "").toLowerCase().includes(search.toLowerCase());
     const matchesStatus = statusFilter === "all" || doc.status === statusFilter;
@@ -173,13 +184,13 @@ export default function DocumentProductionPage() {
         <div>
           <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400 font-semibold text-xs uppercase tracking-[0.2em] mb-1">
             <Sparkles size={14} className="animate-pulse" />
-            Document Production
+            Document Management
           </div>
           <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
-            Document Production
+            Document Management
           </h1>
           <p className="text-slate-500 dark:text-slate-400 mt-1">
-            Create, manage and send documents across all modules
+            Manage school-branded templates, generated documents and review maintenance across all modules
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -480,11 +491,32 @@ export default function DocumentProductionPage() {
                       {tmpl.description}
                     </p>
                   )}
-                  {tmpl.category && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400">
-                      {tmpl.category}
+                  <div className="flex flex-wrap gap-1.5">
+                    {tmpl.module && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-300">
+                        {tmpl.module.replace(/_/g, " ")}
+                      </span>
+                    )}
+                    {tmpl.category && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400">
+                        {tmpl.category.replace(/_/g, " ")}
+                      </span>
+                    )}
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-300">
+                      {tmpl.is_system ? "Schoolgle standard" : "School custom"}
                     </span>
-                  )}
+                  </div>
+                  <div className="mt-4 border-t border-slate-100 dark:border-slate-700 pt-3 text-[11px] text-slate-500 dark:text-slate-400 space-y-1">
+                    <p>
+                      Last updated:{" "}
+                      {new Date(tmpl.updated_at || tmpl.created_at).toLocaleDateString("en-GB", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </p>
+                    <p>Review check: standard template, school can clone and maintain</p>
+                  </div>
                 </Link>
               ))}
             </div>

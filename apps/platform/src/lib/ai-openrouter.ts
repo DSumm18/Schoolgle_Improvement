@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { assertApprovedModelId } from "@/lib/ai/model-policy";
 
 export const ROUTER_MODELS = {
   DEFAULT: "google/gemini-2.5-flash",
@@ -23,3 +24,17 @@ export const openrouter = new OpenAI({
     "X-Title": "Schoolgle",
   },
 });
+
+const originalCreate = openrouter.chat.completions.create.bind(
+  openrouter.chat.completions,
+);
+
+type ChatCompletionCreateArgs = Parameters<typeof originalCreate>;
+
+openrouter.chat.completions.create = ((...args: ChatCompletionCreateArgs) => {
+  const request = args[0] as { model?: string };
+  if (request.model) {
+    assertApprovedModelId(request.model);
+  }
+  return originalCreate(...args);
+}) as typeof openrouter.chat.completions.create;

@@ -7,10 +7,8 @@ import {
   Loader2,
   Lock,
   ArrowLeft,
-  ChevronDown,
   Check,
   AlertTriangle,
-  Save,
   Search,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,16 +17,6 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/context/SupabaseAuthContext";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
-
-async function getAuthHeaders(): Promise<Record<string, string>> {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  if (session?.access_token) {
-    return { Authorization: `Bearer ${session.access_token}` };
-  }
-  return {};
-}
 
 interface OrgMember {
   user_id: string;
@@ -137,8 +125,8 @@ export default function PrivilegesPage() {
       }));
 
       setMembers(enriched);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to load members");
     } finally {
       setLoading(false);
     }
@@ -161,8 +149,8 @@ export default function PrivilegesPage() {
 
       if (error) throw error;
       await fetchMembers();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to update role");
     } finally {
       setSaving(null);
     }
@@ -270,14 +258,14 @@ export default function PrivilegesPage() {
                       {member.email.charAt(0).toUpperCase()}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-medium truncate flex items-center gap-1.5">
+                      <div className="text-sm font-medium truncate flex items-center gap-1.5">
                         {member.email}
                         {isYou && (
                           <Badge className="text-[9px] bg-blue-100 text-blue-600">
                             YOU
                           </Badge>
                         )}
-                      </p>
+                      </div>
                       <p className="text-xs text-muted-foreground">
                         {currentRole?.desc}
                       </p>

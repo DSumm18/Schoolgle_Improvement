@@ -1,337 +1,308 @@
 /**
- * Simple Supabase MCP Server for Schoolgle
+ * Schoolgle Supabase audit MCP server.
  *
- * Provides direct database access tools for Supabase
+ * This server is intentionally metadata-only. It does not use a Supabase
+ * service-role API key and does not expose tools that return application rows.
  */
 
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
-} from '@modelcontextprotocol/sdk/types.js';
-import { createClient } from '@supabase/supabase-js';
+} from "@modelcontextprotocol/sdk/types.js";
+import { Pool } from "pg";
 
-// Environment variables
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://ygquvauptwyvlhkyxkwy.supabase.co';
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlncXV2YXVwdHd5dmxoa3l4a3d5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2Mzk2MTA1NCwiZXhwIjoyMDc5NTM3MDU0fQ.SniWiVIv7QAF_medPRZiamHSRpgCy1N53LGDpQf6TwA';
+const CONNECTION_STRING =
+  process.env.SUPABASE_DB_URL ||
+  process.env.DATABASE_URL ||
+  process.env.POSTGRES_URL;
 
-// Create Supabase client
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+if (!CONNECTION_STRING) {
+  throw new Error(
+    "Missing read-only database connection. Set SUPABASE_DB_URL, DATABASE_URL, or POSTGRES_URL.",
+  );
+}
 
-// Create MCP server
+const pool = new Pool({
+  connectionString: CONNECTION_STRING,
+  ssl:
+    process.env.PGSSLMODE === "disable"
+      ? false
+      : { rejectUnauthorized: process.env.PGSSL_REJECT_UNAUTHORIZED === "true" },
+});
+
 const server = new Server(
   {
-    name: 'schoolgle-supabase-mcp-server',
-    version: '1.0.0'
+    name: "schoolgle-supabase-audit-mcp-server",
+    version: "1.1.0",
   },
   {
     capabilities: {
       tools: {},
-    }
-  }
+    },
+  },
 );
 
-// List available tools
-server.setRequestHandler(ListToolsRequestSchema, async () => {
+async function runAuditQuery<T extends Record<string, unknown>>(
+  sql: string,
+  params: unknown[] = [],
+): Promise<T[]> {
+  const client = await pool.connect();
+  try {
+    await client.query("begin read only");
+    await client.query("set local statement_timeout = '10s'");
+    const result = await client.query<T>(sql, params);
+    await client.query("commit");
+    return result.rows;
+  } catch (error) {
+    await client.query("rollback").catch(() => undefined);
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+function asJson(data: unknown) {
   return {
-    tools: [
+    content: [
       {
-        name: 'query_database',
-        description: 'Execute a SQL query on the Supabase database. Use SELECT statements only. Returns rows as JSON.',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            query: {
-              type: 'string',
-              description: 'SQL SELECT query to execute (e.g., "SELECT * FROM estates_statutory_completions LIMIT 10")',
-            },
-          },
-          required: ['query'],
-        },
-      },
-      {
-        name: 'get_table_info',
-        description: 'Get information about a specific table including column names and types',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            table_name: {
-              type: 'string',
-              description: 'Name of the table (e.g., "estates_statutory_completions")',
-            },
-          },
-          required: ['table_name'],
-        },
-      },
-      {
-        name: 'list_tables',
-        description: 'List all tables in the public schema',
-        inputSchema: {
-          type: 'object',
-          properties: {},
-        },
-      },
-      {
-        name: 'get_user_completions',
-        description: 'Get statutory completions for a specific user and domain',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            email: {
-              type: 'string',
-              description: 'User email address (e.g., "admin@schoolgle.co.uk")',
-            },
-            domain: {
-              type: 'string',
-              description: 'Compliance domain (e.g., "legionella")',
-            },
-          },
-          required: ['email'],
-        },
-      },
-      {
-        name: 'check_recent_completion',
-        description: 'Check if there are any recent completions (last 24 hours)',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            organization_id: {
-              type: 'string',
-              description: 'Organization UUID (optional, defaults to Aurora Academy)',
-            },
-          },
-        },
+        type: "text",
+        text: JSON.stringify(data, null, 2),
       },
     ],
   };
-});
+}
 
-// Handle tool calls
+async function getRlsStatus() {
+  return runAuditQuery(`
+    select
+      n.nspname as schema_name,
+      c.relname as table_name,
+      c.relrowsecurity as rls_enabled,
+      c.relforcerowsecurity as rls_forced,
+      coalesce(s.n_live_tup, 0) as estimated_rows,
+      obj_description(c.oid, 'pg_class') as table_comment
+    from pg_class c
+    join pg_namespace n on n.oid = c.relnamespace
+    left join pg_stat_user_tables s on s.relid = c.oid
+    where c.relkind in ('r', 'p')
+      and n.nspname in ('public', 'storage')
+    order by n.nspname, c.relname
+    limit 500
+  `);
+}
+
+async function getPolicies() {
+  return runAuditQuery(`
+    select
+      schemaname as schema_name,
+      tablename as table_name,
+      policyname as policy_name,
+      permissive,
+      roles,
+      cmd,
+      qual as using_expression,
+      with_check as with_check_expression
+    from pg_policies
+    where schemaname in ('public', 'storage')
+    order by schemaname, tablename, policyname
+    limit 1000
+  `);
+}
+
+async function getTablePrivileges() {
+  return runAuditQuery(`
+    select
+      table_schema,
+      table_name,
+      grantee,
+      privilege_type
+    from information_schema.table_privileges
+    where table_schema in ('public', 'storage')
+      and grantee in ('anon', 'authenticated', 'service_role', 'public')
+    order by table_schema, table_name, grantee, privilege_type
+    limit 1000
+  `);
+}
+
+async function getSensitiveColumns() {
+  return runAuditQuery(`
+    select
+      table_schema,
+      table_name,
+      column_name,
+      data_type,
+      is_nullable
+    from information_schema.columns
+    where table_schema in ('public', 'storage')
+      and column_name ~* '(email|name|pupil|child|children|parent|phone|address|postcode|dob|birth|medical|health|safeguard|send|dbs|token|secret|key|password|refresh|access|credential|transcript|recording|voice|photo|image)'
+    order by table_schema, table_name, ordinal_position
+    limit 1000
+  `);
+}
+
+async function getStorageBuckets() {
+  return runAuditQuery(`
+    select
+      id,
+      name,
+      public,
+      file_size_limit,
+      allowed_mime_types,
+      created_at,
+      updated_at
+    from storage.buckets
+    order by public desc, name
+    limit 200
+  `);
+}
+
+async function getFunctionSecurity() {
+  return runAuditQuery(`
+    select
+      n.nspname as schema_name,
+      p.proname as function_name,
+      pg_get_function_identity_arguments(p.oid) as arguments,
+      p.prosecdef as security_definer,
+      p.provolatile as volatility,
+      coalesce(array_agg(distinct acl.grantee::text) filter (where acl.grantee is not null), '{}') as execute_grantees
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    left join aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) acl on true
+    where n.nspname in ('public', 'storage')
+    group by n.nspname, p.proname, p.oid
+    order by n.nspname, p.proname
+    limit 1000
+  `);
+}
+
+async function getOverview() {
+  const [rls, policies, privileges, sensitiveColumns, buckets, functions] =
+    await Promise.all([
+      getRlsStatus(),
+      getPolicies(),
+      getTablePrivileges(),
+      getSensitiveColumns(),
+      getStorageBuckets(),
+      getFunctionSecurity(),
+    ]);
+
+  const tablesWithoutRls = rls.filter((row) => row.rls_enabled === false);
+  const publicBuckets = buckets.filter((row) => row.public === true);
+  const securityDefinerFunctions = functions.filter(
+    (row) => row.security_definer === true,
+  );
+
+  return {
+    checkedAt: new Date().toISOString(),
+    summary: {
+      tablesChecked: rls.length,
+      tablesWithoutRls: tablesWithoutRls.length,
+      policiesChecked: policies.length,
+      relevantPrivileges: privileges.length,
+      sensitiveColumnsFound: sensitiveColumns.length,
+      storageBucketsChecked: buckets.length,
+      publicStorageBuckets: publicBuckets.length,
+      securityDefinerFunctions: securityDefinerFunctions.length,
+    },
+    findingsToReview: {
+      tablesWithoutRls,
+      publicBuckets,
+      securityDefinerFunctions,
+    },
+  };
+}
+
+server.setRequestHandler(ListToolsRequestSchema, async () => ({
+  tools: [
+    {
+      name: "get_security_overview",
+      description:
+        "Return a metadata-only summary of RLS, policies, privileges, sensitive columns, storage buckets, and security-definer functions.",
+      inputSchema: { type: "object", properties: {} },
+    },
+    {
+      name: "list_rls_status",
+      description:
+        "List public/storage tables and whether Row Level Security is enabled. Returns estimated row counts only.",
+      inputSchema: { type: "object", properties: {} },
+    },
+    {
+      name: "list_policies",
+      description: "List RLS policies for public and storage schemas.",
+      inputSchema: { type: "object", properties: {} },
+    },
+    {
+      name: "list_table_privileges",
+      description:
+        "List table privileges granted to anon, authenticated, service_role, or public roles.",
+      inputSchema: { type: "object", properties: {} },
+    },
+    {
+      name: "list_sensitive_columns",
+      description:
+        "List likely sensitive columns by name pattern without returning row data.",
+      inputSchema: { type: "object", properties: {} },
+    },
+    {
+      name: "list_storage_buckets",
+      description:
+        "List Supabase storage bucket configuration, including public/private status.",
+      inputSchema: { type: "object", properties: {} },
+    },
+    {
+      name: "list_function_security",
+      description:
+        "List public/storage functions, security-definer status, and execute grantees without function bodies.",
+      inputSchema: { type: "object", properties: {} },
+    },
+  ],
+}));
+
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  const { name: toolName, arguments: toolArgs } = request.params;
-
   try {
-    switch (toolName) {
-      case 'query_database': {
-        const { query } = toolArgs as { query: string };
-
-        // Only allow SELECT queries for safety
-        if (!query.trim().toUpperCase().startsWith('SELECT')) {
-          throw new Error('Only SELECT queries are allowed for safety');
-        }
-
-        const { data, error } = await supabase.rpc('exec_sql', {
-          sql_query: query
-        });
-
-        if (error) {
-          // Try using direct table query instead
-          const tableMatch = query.match(/FROM\s+(\w+)/i);
-          if (tableMatch) {
-            const tableName = tableMatch[1];
-            const { data: tableData, error: tableError } = await supabase
-              .from(tableName)
-              .select('*');
-
-            if (tableError) {
-              throw new Error(`Query failed: ${tableError.message}`);
-            }
-
-            return {
-              content: [{
-                type: 'text',
-                text: JSON.stringify({
-                  success: true,
-                  query,
-                  rows: tableData,
-                  count: tableData?.length || 0
-                }, null, 2)
-              }]
-            };
-          }
-          throw new Error(`Query failed: ${error.message}`);
-        }
-
-        return {
-          content: [{
-            type: 'text',
-            text: JSON.stringify({
-              success: true,
-              query,
-              result: data
-            }, null, 2)
-          }]
-        };
-      }
-
-      case 'get_table_info': {
-        const { table_name } = toolArgs as { table_name: string };
-
-        const { data, error } = await supabase
-          .from(table_name)
-          .select('*')
-          .limit(1);
-
-        if (error) {
-          throw new Error(`Error accessing table: ${error.message}`);
-        }
-
-        // Get column info from the data
-        if (data && data.length > 0) {
-          const columns = Object.keys(data[0]);
-          return {
-            content: [{
-              type: 'text',
-              text: JSON.stringify({
-                table: table_name,
-                columns,
-                sample_row: data[0],
-                has_data: true
-              }, null, 2)
-            }]
-          };
-        }
-
-        return {
-          content: [{
-            type: 'text',
-            text: JSON.stringify({
-              table: table_name,
-              columns: [],
-              message: 'Table exists but is empty',
-              has_data: false
-            }, null, 2)
-          }]
-        };
-      }
-
-      case 'list_tables': {
-        // Query to get all tables in public schema
-        const { data, error } = await supabase
-          .from('information_schema.tables')
-          .select('table_name')
-          .eq('table_schema', 'public')
-          .eq('table_type', 'BASE TABLE');
-
-        if (error) {
-          throw new Error(`Error listing tables: ${error.message}`);
-        }
-
-        const tables = data?.map((t: any) => t.table_name) || [];
-
-        return {
-          content: [{
-            type: 'text',
-            text: JSON.stringify({
-              tables,
-              count: tables.length
-            }, null, 2)
-          }]
-        };
-      }
-
-      case 'get_user_completions': {
-        const { email, domain } = toolArgs as { email: string; domain?: string };
-
-        // First get the user's auth_id
-        const { data: user, error: userError } = await supabase
-          .from('users')
-          .select('*')
-          .eq('email', email)
-          .maybeSingle();
-
-        if (userError || !user) {
-          throw new Error(`User not found: ${email}`);
-        }
-
-        // Get completions
-        let query = supabase
-          .from('estates_statutory_completions')
-          .select('*')
-          .eq('organization_id', 'c64ed86b-9eab-49ee-9829-0706ff371083') // Aurora Academy
-          .order('completed_at', { ascending: false, nullsFirst: false });
-
-        if (domain) {
-          query = query.eq('compliance_domain', domain);
-        }
-
-        const { data: completions, error: completionError } = await query;
-
-        if (completionError) {
-          throw new Error(`Error fetching completions: ${completionError.message}`);
-        }
-
-        return {
-          content: [{
-            type: 'text',
-            text: JSON.stringify({
-              user: {
-                email: user.email,
-                auth_id: user.auth_id,
-              },
-              domain,
-              completions,
-              count: completions?.length || 0
-            }, null, 2)
-          }]
-        };
-      }
-
-      case 'check_recent_completion': {
-        const { organization_id = 'c64ed86b-9eab-49ee-9829-0706ff371083' } = toolArgs as { organization_id?: string };
-
-        const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-
-        const { data: completions, error } = await supabase
-          .from('estates_statutory_completions')
-          .select('*')
-          .eq('organization_id', organization_id)
-          .gte('created_at', yesterday)
-          .order('created_at', { ascending: false });
-
-        if (error) {
-          throw new Error(`Error fetching recent completions: ${error.message}`);
-        }
-
-        return {
-          content: [{
-            type: 'text',
-            text: JSON.stringify({
-              recent_completions: completions,
-              count: completions?.length || 0,
-              checked_after: yesterday
-            }, null, 2)
-          }]
-        };
-      }
-
+    switch (request.params.name) {
+      case "get_security_overview":
+        return asJson(await getOverview());
+      case "list_rls_status":
+        return asJson(await getRlsStatus());
+      case "list_policies":
+        return asJson(await getPolicies());
+      case "list_table_privileges":
+        return asJson(await getTablePrivileges());
+      case "list_sensitive_columns":
+        return asJson(await getSensitiveColumns());
+      case "list_storage_buckets":
+        return asJson(await getStorageBuckets());
+      case "list_function_security":
+        return asJson(await getFunctionSecurity());
       default:
-        throw new Error(`Unknown tool: ${toolName}`);
+        throw new Error(`Unknown audit tool: ${request.params.name}`);
     }
   } catch (error) {
     return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify({
-          error: error instanceof Error ? error.message : 'Unknown error',
-          tool: toolName
-        }, null, 2)
-      }],
-      isError: true
+      ...asJson({
+        error: error instanceof Error ? error.message : "Unknown error",
+        tool: request.params.name,
+      }),
+      isError: true,
     };
   }
 });
 
-// Start server
 async function main() {
-  console.error('Schoolgle Supabase MCP Server starting...');
-  console.error(`Connected to Supabase: ${SUPABASE_URL}`);
-
+  console.error("Schoolgle Supabase audit MCP server starting...");
   const transport = new StdioServerTransport();
   await server.connect(transport);
-
-  console.error('Schoolgle Supabase MCP Server running...');
+  console.error("Schoolgle Supabase audit MCP server running.");
 }
 
-main().catch(console.error);
+main()
+  .catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  })
+  .finally(async () => {
+    await pool.end().catch(() => undefined);
+  });

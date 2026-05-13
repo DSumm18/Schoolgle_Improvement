@@ -492,7 +492,8 @@ export class SchoolIntelligenceEngine {
       .from("schools")
       .select("urn")
       .eq("la_code", school.la_code)
-      .eq("phase_name", "Primary") as any;
+      .eq("phase_name", "Primary")
+      .eq("status_name", "Open") as any;
 
     if (!laSchools || laSchools.length === 0) return null;
 
@@ -756,12 +757,14 @@ export class SchoolIntelligenceEngine {
 
     const fsm = schoolCensus.fsm_pct || 0;
     const eal = schoolCensus.eal_pct || 0;
-    const sen = schoolCensus.sen_pct || 0;
+    const sen = schoolCensus.sen_pct;
 
     // Define demographic bands (based on national distribution)
     const fsmBand = fsm < 10 ? "Low (<10%)" : fsm < 20 ? "Medium (10-20%)" : fsm < 30 ? "High (20-30%)" : "Very High (30%+)";
     const ealBand = eal < 10 ? "Low (<10%)" : eal < 25 ? "Medium (10-25%)" : "High (25%+)";
-    const senBand = sen < 10 ? "Low (<10%)" : sen < 20 ? "Medium (10-20%)" : "High (20%+)";
+    const senBand = sen === null || sen === undefined
+      ? "Unavailable"
+      : sen < 10 ? "Low (<10%)" : sen < 20 ? "Medium (10-20%)" : "High (20%+)";
 
     // 2. Find schools with similar demographics
     const fsmMin = fsm - 10, fsmMax = fsm + 10;
@@ -774,11 +777,27 @@ export class SchoolIntelligenceEngine {
       .lte("fsm_pct", Math.min(100, fsmMax))
       .gte("eal_pct", Math.max(0, ealMin))
       .lte("eal_pct", Math.min(100, ealMax))
-      .gte("academic_year_start", new Date().getFullYear() - yearsBack);
+      .gte("academic_year_start", new Date().getFullYear() - yearsBack)
+      .limit(10000);
 
     if (!cohortSchools || cohortSchools.length < 3) return null; // Need at least 3 schools
 
-    const cohortUrns = [...new Set(cohortSchools.map((c: any) => c.urn))];
+    type CohortCensusRow = { urn: number; sen_pct: number | null };
+    const candidateUrns = [...new Set((cohortSchools as CohortCensusRow[])
+      .filter((c) => sen === null || sen === undefined || c.sen_pct === null || c.sen_pct === undefined || Math.abs(c.sen_pct - sen) <= 6)
+      .map((c) => c.urn))];
+    if (candidateUrns.length < 3) return null;
+
+    const { data: candidateProfiles } = await this.supabase
+      .from("schools")
+      .select("urn, phase_name, status_name")
+      .in("urn", candidateUrns)
+      .eq("phase_name", "Primary")
+      .eq("status_name", "Open")
+      .limit(10000);
+
+    const cohortUrns = [...new Set(((candidateProfiles || []) as Array<{ urn: number }>).map((school) => school.urn))];
+    if (cohortUrns.length < 3) return null;
     const minYear = new Date().getFullYear() - yearsBack - 1;
 
     // 3. Calculate cohort averages. Keep each KPI query scoped so one missing

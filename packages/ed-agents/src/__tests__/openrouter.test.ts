@@ -1,4 +1,4 @@
-/**
+﻿/**
  * OpenRouter Integration Tests
  *
  * These tests verify the OpenRouter integration works correctly.
@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, beforeAll } from 'vitest';
-import { createOpenRouterClient, getModelRouter, MODEL_ALIASES } from '../models';
+import { createOpenRouterClient, ModelRouter, MODEL_ALIASES } from '../models';
 
 describe('OpenRouter Integration', () => {
   let client: ReturnType<typeof createOpenRouterClient>;
@@ -21,15 +21,17 @@ describe('OpenRouter Integration', () => {
   });
 
   describe('Model Catalog', () => {
+    const getTestRouter = () => new ModelRouter(createOpenRouterClient('test-key'));
+
     it('should have model aliases defined', () => {
       expect(MODEL_ALIASES.premium).toBe('anthropic/claude-3.5-sonnet');
       expect(MODEL_ALIASES.fast).toBe('openai/gpt-4o-mini');
-      expect(MODEL_ALIASES.cheap).toBe('deepseek/deepseek-chat');
-      expect(MODEL_ALIASES.gemini).toBe('google/gemini-2.0-flash-exp');
+      expect(MODEL_ALIASES.cheap).toBe('openai/gpt-4o-mini');
+      expect(MODEL_ALIASES.gemini).toBe('google/gemini-2.5-flash-thinking-exp');
     });
 
     it('should resolve model aliases', () => {
-      const router = getModelRouter();
+      const router = getTestRouter();
 
       expect(router.getModel('premium')?.id).toBe('anthropic/claude-3.5-sonnet');
       expect(router.getModel('claude')?.id).toBe('anthropic/claude-3.5-sonnet');
@@ -38,7 +40,7 @@ describe('OpenRouter Integration', () => {
     });
 
     it('should have vision capabilities defined', () => {
-      const router = getModelRouter();
+      const router = getTestRouter();
 
       const claude = router.getModel('anthropic/claude-3.5-sonnet');
       expect(claude?.capabilities.vision).toBe(true);
@@ -46,8 +48,8 @@ describe('OpenRouter Integration', () => {
       const gpt4 = router.getModel('openai/gpt-4o');
       expect(gpt4?.capabilities.vision).toBe(true);
 
-      const deepseek = router.getModel('deepseek/deepseek-chat');
-      expect(deepseek?.capabilities.vision).toBe(false);
+      const fastText = router.getModel('openai/gpt-4o-mini');
+      expect(fastText?.capabilities.vision).toBe(true);
     });
   });
 
@@ -65,7 +67,7 @@ describe('OpenRouter Integration', () => {
     });
 
     it('should support different models', async () => {
-      const models = ['openai/gpt-4o-mini', 'deepseek/deepseek-chat'];
+      const models = ['openai/gpt-4o-mini', 'google/gemini-2.0-flash-001'];
 
       for (const model of models) {
         const response = await client.chatWithSystem(
@@ -103,8 +105,10 @@ Question: What temperature should cold water outlets be?`;
 });
 
 describe('Model Router', () => {
+  const getTestRouter = () => new ModelRouter(createOpenRouterClient('test-key'));
+
   it('should select models based on task', () => {
-    const router = getModelRouter();
+    const router = getTestRouter();
 
     const mockContext = {
       userId: 'test',
@@ -119,14 +123,14 @@ describe('Model Router', () => {
     };
 
     const classificationModel = router.selectModel('intent-classification', mockContext);
-    expect(classificationModel.id).toBe('openai/gpt-4o-mini');
+    expect(classificationModel.id).toBe('google/gemini-2.0-flash-001');
 
     const specialistModel = router.selectModel('specialist-response', mockContext);
-    expect(specialistModel.id).toBe('anthropic/claude-3.5-sonnet');
+    expect(specialistModel.id).toBe('openai/gpt-4o-mini');
   });
 
   it('should select cheaper models when credits are low', () => {
-    const router = getModelRouter();
+    const router = getTestRouter();
 
     const lowCreditsContext = {
       userId: 'test',
@@ -142,11 +146,11 @@ describe('Model Router', () => {
 
     const model = router.selectModel('specialist-response', lowCreditsContext);
     // Should select cheapest option
-    expect(['deepseek/deepseek-chat', 'openai/gpt-4o-mini']).toContain(model.id);
+    expect(model.id).toBe('google/gemini-2.0-flash-001');
   });
 
   it('should respect plan constraints', () => {
-    const router = getModelRouter();
+    const router = getTestRouter();
 
     const freeContext = {
       userId: 'test',
@@ -165,3 +169,7 @@ describe('Model Router', () => {
     expect(model.id).not.toBe('anthropic/claude-3.5-sonnet');
   });
 });
+
+
+
+

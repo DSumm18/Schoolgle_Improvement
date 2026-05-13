@@ -1,4 +1,4 @@
-# Schoolgle Vision AI -- Technical Brief
+﻿# Schoolgle Vision AI -- Technical Brief
 
 **Prepared for:** David Summerscales, Schoolgle Ltd
 **Date:** March 2026
@@ -13,8 +13,8 @@ Schoolgle Vision AI turns a phone camera into an intelligent compliance sensor. 
 
 The core commercial value is **litigation-proof premises evidence**. Unlike tick-box checklists, timestamped visual evidence with AI assessment, device GPS, and tamper-proof locking is defensible against personal injury claims, HSE investigations, and Ofsted scrutiny.
 
-**Pricing model:** Per-pupil (matching RPA/Zurich convention). ~£2-3/pupil/year.
-**AI cost per school:** ~£8-25/month. **Margin: 85-95%.**
+**Pricing model:** Per-pupil (matching RPA/Zurich convention). ~Â£2-3/pupil/year.
+**AI cost per school:** ~Â£8-25/month. **Margin: 85-95%.**
 **Ship Sentinel MVP: ~2 weeks.**
 
 ---
@@ -243,7 +243,7 @@ This is the killer value proposition. A tick box on a checklist proves someone c
 
 ### School Insurance Context
 
-- **RPA (Risk Protection Arrangement):** Government-backed mutual pool for academies/MATs. ~£25-30/pupil flat rate. No individual risk discount.
+- **RPA (Risk Protection Arrangement):** Government-backed mutual pool for academies/MATs. ~Â£25-30/pupil flat rate. No individual risk discount.
 - **Zurich Municipal:** Main commercial alternative for maintained schools.
 
 You can't negotiate down RPA premiums with better evidence. But:
@@ -463,11 +463,11 @@ One click. Sent to the insurer. Case closed.
 
 | Context                          | Primary Model               | Method                   | Fallback                        | Cost/call |
 | -------------------------------- | --------------------------- | ------------------------ | ------------------------------- | --------- |
-| **Room assessment** (default)    | `google/gemini-2.5-flash`   | 8-12 keyframes from spin | `qwen/qwen-2.5-vl-72b-instruct` | ~$0.03    |
-| **COSHH scan** (chemical labels) | `google/gemini-2.5-flash`   | Single image, high OCR   | `qwen/qwen-2.5-vl-72b-instruct` | ~$0.003   |
+| **Room assessment** (default)    | `google/gemini-2.5-flash`   | 8-12 keyframes from spin | `google/gemini-2.0-flash-001` | ~$0.03    |
+| **COSHH scan** (chemical labels) | `google/gemini-2.5-flash`   | Single image, high OCR   | `google/gemini-2.0-flash-001` | ~$0.003   |
 | **Snagging** (before/after)      | `google/gemini-2.5-pro`     | Multi-image comparison   | `openai/gpt-4o`                 | ~$0.01    |
 | **Lone worker** (person check)   | `google/gemini-2.5-flash`   | Periodic single frame    | On-device ML (future)           | ~$0.002   |
-| **Report generation**            | `anthropic/claude-sonnet-4` | Structured JSON -> prose | `deepseek/deepseek-chat`        | ~$0.008   |
+| **Report generation**            | `anthropic/claude-sonnet-4` | Structured JSON -> prose | `openai/gpt-4o-mini`        | ~$0.008   |
 
 ### Monthly Cost Per School
 
@@ -487,11 +487,11 @@ Extend `packages/ed-agents/src/models/router.ts`:
 
 ```typescript
 // Add to TASK_MODEL_MAP:
-'vision-room': ['google/gemini-2.5-flash', 'qwen/qwen-2.5-vl-72b-instruct'],
-'vision-coshh': ['google/gemini-2.5-flash', 'qwen/qwen-2.5-vl-72b-instruct'],
+'vision-room': ['google/gemini-2.5-flash', 'google/gemini-2.0-flash-001'],
+'vision-coshh': ['google/gemini-2.5-flash', 'google/gemini-2.0-flash-001'],
 'vision-snagging': ['google/gemini-2.5-pro', 'openai/gpt-4o'],
 'vision-lone-worker': ['google/gemini-2.5-flash'],
-'vision-report': ['anthropic/claude-sonnet-4', 'deepseek/deepseek-chat'],
+'vision-report': ['anthropic/claude-sonnet-4', 'openai/gpt-4o-mini'],
 ```
 
 **Use direct Gemini API** for all vision tasks (following screen-analyzer.ts pattern). Lower latency, native video support. OpenRouter only for report generation.
@@ -506,16 +506,16 @@ Schools think in per-pupil costs. RPA is per-pupil. Zurich is per-pupil. Schoolg
 
 | Tier                   | Price                    | Target                           | Revenue example                 |
 | ---------------------- | ------------------------ | -------------------------------- | ------------------------------- |
-| **Standalone school**  | £3/pupil/year (min £500) | Individual primaries/secondaries | 400-pupil primary = £1,200/year |
-| **MAT (5-15 schools)** | £2.50/pupil/year         | Small-medium trusts              | 5,000 pupils = £12,500/year     |
-| **MAT (15+ schools)**  | £2/pupil/year            | Large trusts                     | 15,000 pupils = £30,000/year    |
+| **Standalone school**  | Â£3/pupil/year (min Â£500) | Individual primaries/secondaries | 400-pupil primary = Â£1,200/year |
+| **MAT (5-15 schools)** | Â£2.50/pupil/year         | Small-medium trusts              | 5,000 pupils = Â£12,500/year     |
+| **MAT (15+ schools)**  | Â£2/pupil/year            | Large trusts                     | 15,000 pupils = Â£30,000/year    |
 
 ### Unit Economics
 
 |                | Primary (400 pupils) | Secondary (1,200 pupils) | 10-school MAT (5,000 pupils) |
 | -------------- | -------------------- | ------------------------ | ---------------------------- |
-| Annual revenue | £1,200               | £3,600                   | £12,500                      |
-| Annual AI cost | ~£170                | ~£580                    | ~£2,400                      |
+| Annual revenue | Â£1,200               | Â£3,600                   | Â£12,500                      |
+| Annual AI cost | ~Â£170                | ~Â£580                    | ~Â£2,400                      |
 | Gross margin   | **86%**              | **84%**                  | **81%**                      |
 
 ### Who Buys
@@ -523,7 +523,7 @@ Schools think in per-pupil costs. RPA is per-pupil. Zurich is per-pupil. Schoolg
 | Buyer                       | Why they pay                                                                             | Evidence they need                                 |
 | --------------------------- | ---------------------------------------------------------------------------------------- | -------------------------------------------------- |
 | **School Business Manager** | Personal professional liability. HSE investigation = they need to prove systems existed. | Defensible evidence chain                          |
-| **Trust COO/CFO**           | Claims across 10-20 schools compound. One bad claim = £50-100k+ legal fees.              | Consistent standard across all trust schools       |
+| **Trust COO/CFO**           | Claims across 10-20 schools compound. One bad claim = Â£50-100k+ legal fees.              | Consistent standard across all trust schools       |
 | **Headteacher**             | Ofsted asks "how do you ensure premises safety?" Needs more than "Dave checks."          | Something they can show an inspector in 30 seconds |
 | **Trust Board/Governors**   | Corporate directors' liability for H&S failures.                                         | Assurance that due diligence is happening          |
 
@@ -990,3 +990,4 @@ Evidence locked: 2026-03-04 06:42:15 GMT (auto-locked)
 ---
 [Next check...]
 ```
+

@@ -18,9 +18,33 @@ import {
 import type {
   Asset,
   AssetInput,
+  AssetType,
   AssetFilters,
   PaginatedResponse,
 } from "@/types/estates-compliance";
+
+const VALID_ASSET_TYPES: AssetType[] = [
+  "building",
+  "room",
+  "outlet",
+  "equipment",
+  "fire_extinguisher",
+  "emergency_light",
+  "lift",
+  "playground_equipment",
+  "accessibility_equipment",
+  "vehicle",
+  "furniture",
+  "it_equipment",
+  "kitchen_equipment",
+  "av_equipment",
+  "musical_instrument",
+  "sports_equipment",
+  "grounds_equipment",
+  "teaching_resource",
+  "signage",
+  "security_equipment",
+];
 
 /**
  * Asset Service class
@@ -52,20 +76,7 @@ export class AssetService {
     input: AssetInput,
   ): Promise<Asset> {
     // Validate asset type
-    const validAssetTypes = [
-      "building",
-      "room",
-      "outlet",
-      "equipment",
-      "fire_extinguisher",
-      "emergency_light",
-      "lift",
-      "playground_equipment",
-      "accessibility_equipment",
-      "vehicle",
-    ];
-
-    if (!validAssetTypes.includes(input.asset_type)) {
+    if (!VALID_ASSET_TYPES.includes(input.asset_type)) {
       throw new Error(`Invalid asset_type: ${input.asset_type}`);
     }
 
@@ -315,6 +326,16 @@ export class AssetService {
       playground_equipment: "PGE",
       accessibility_equipment: "ACE",
       vehicle: "VHC",
+      furniture: "FUR",
+      it_equipment: "IT",
+      kitchen_equipment: "KIT",
+      av_equipment: "AV",
+      musical_instrument: "MUS",
+      sports_equipment: "SPT",
+      grounds_equipment: "GRD",
+      teaching_resource: "TR",
+      signage: "SGN",
+      security_equipment: "SEC",
     };
 
     return prefixes[assetType] || "AST";

@@ -1,343 +1,98 @@
 # AI Model Configuration Guide
 
-## Current Setup
+## Non-Negotiable Provider Policy
 
-### Active Models (as of 2025-01-26)
+Schoolgle must only process school, pupil, staff, finance, estates, safeguarding, HR, governance or customer data with approved AI provider families:
 
-1. **Primary**: DeepSeek V3 (`deepseek/deepseek-chat`)
-2. **OCR**: Mistral OCR (`mistral-ocr`)
-3. **Vision**: Qwen 2.5 VL 72B (`qwen/qwen-2.5-vl-72b-instruct`)
-4. **Fallback**: Gemini 2.0 Flash Lite (`google/gemini-2.0-flash-lite-001`)
+- OpenAI
+- Anthropic
+- Google
+- Meta Llama
+- Mistral
+- Microsoft
 
----
+Do not add another provider family unless the product owner has explicitly approved the change after a documented GDPR, DPA, data-transfer and regional-processing review.
 
-## Configuration Files
+The runtime guardrail lives in `apps/platform/src/lib/ai/model-policy.ts`. The Ed agent package has the same policy in `packages/ed-agents/src/models/model-policy.ts`.
 
-### Location
-`/src/lib/ai-evidence-matcher.ts`
+## Central Model Registry
 
-### Model Configuration Object
+The maintained source of truth is `apps/platform/src/lib/ai/model-registry.ts`.
 
-```typescript
+Admins can view it in the product at `/dashboard/settings/ai-models`. The page shows the application or skill, primary model, fallback models, route, provider families, cost tier, quality tier, data classification, source files and review date.
+
+When a new AI-powered feature is added, add a registry entry in the same change. The registry is covered by `apps/platform/src/lib/ai/model-registry.test.ts`, which checks that every listed primary and fallback model is from an approved provider family.
+
+## Cost/Quality Selection Rule
+
+Pick the cheapest approved model that can reliably do the job:
+
+| Job Type | Default Model | Escalate To | Notes |
+| --- | --- | --- | --- |
+| Routing, classification, short summaries | `openai/gpt-4o-mini` | `google/gemini-2.0-flash-001` | Keep cheap and fast. |
+| Document/evidence extraction | `google/gemini-2.0-flash-001` | `anthropic/claude-3.5-sonnet` | Escalate only for poor extraction or high-value synthesis. |
+| OCR/scanned PDFs | `mistralai/mistral-ocr-latest` | `google/gemini-2.0-flash-001` | OCR-specific work only. |
+| Vision/screenshots/site photos | `google/gemini-2.5-flash` or `google/gemini-2.0-flash-001` | `openai/gpt-4o` | Use direct Gemini first where available. |
+| Final reports/trustee-ready synthesis | `anthropic/claude-3.5-sonnet` | `openai/gpt-4o` | Higher-cost models require user value justification. |
+
+## Policy Manager Production Rule
+
+Policy Manager policy scoring, enhanced draft generation, source-backed explanation and legislation/source-change monitoring must run through Schoolgle's OpenRouter integration, not through an interactive coding assistant session. Codex/Claude outputs can prototype the workflow, rule packs and UI, but the live product must have:
+
+1. A model registry entry in `apps/platform/src/lib/ai/model-registry.ts` for each Policy Manager AI job.
+2. A prompt/rule-pack definition that explicitly lists the policy type, approved sources, expected output schema and advisory-only limits.
+3. Evaluation tests using known-good Schoolgle templates, weak/partial sample policies and missing-policy cases.
+4. A cost/latency check before defaulting to a premium model.
+5. A fallback path that never invents legislation, sources, review dates or compliance findings when the model is uncertain.
+
+For policy generation specifically, the target behaviour is: generate an in-system Schoolgle draft with source references, assumptions and human approval status; export to HTML/PDF/Word only as publishing or handoff outputs.
+
+## Current Core Models
+
+Models configured in `apps/platform/src/lib/ai-evidence-matcher.ts`:
+
+```ts
 export const MODEL_CONFIG = {
-    primary: {
-        id: 'deepseek/deepseek-chat',
-        name: 'DeepSeek V3',
-        costPerRequest: 0.0008,
-        useFor: ['docx', 'xlsx', 'txt', 'google-docs', 'text-pdf'],
-        maxTokens: 8000
-    },
-    
-    ocr: {
-        id: 'mistral-ocr',
-        name: 'Mistral OCR',
-        costPerRequest: 0.002,
-        useFor: ['scanned-pdf', 'image', 'jpg', 'png', 'jpeg'],
-        maxTokens: 4000
-    },
-    
-    vision: {
-        id: 'qwen/qwen-2.5-vl-72b-instruct',
-        name: 'Qwen 2.5 VL 72B',
-        costPerRequest: 0.001,
-        useFor: ['charts', 'diagrams', 'visual-reports'],
-        maxTokens: 6000
-    },
-    
-    fallback: {
-        id: 'google/gemini-2.0-flash-lite-001',
-        name: 'Gemini 2.0 Flash Lite',
-        costPerRequest: 0.0003,
-        useFor: ['retry', 'json-parsing-failed'],
-        maxTokens: 8000
-    }
+  primary: {
+    id: "google/gemini-2.0-flash-001",
+    name: "Gemini 2.0 Flash",
+    useFor: ["docx", "xlsx", "txt", "google-docs", "text-pdf"],
+  },
+  ocr: {
+    id: "mistralai/mistral-ocr-latest",
+    name: "Mistral OCR",
+    useFor: ["scanned-pdf", "image", "jpg", "png", "jpeg"],
+  },
+  vision: {
+    id: "google/gemini-2.0-flash-001",
+    name: "Gemini 2.0 Flash",
+    useFor: ["charts", "diagrams", "visual-reports"],
+  },
+  fallback: {
+    id: "google/gemini-2.0-flash-lite-001",
+    name: "Gemini 2.0 Flash Lite",
+    useFor: ["retry", "json-parsing-failed"],
+  },
+  premium: {
+    id: "anthropic/claude-3.5-sonnet",
+    name: "Claude 3.5 Sonnet",
+    useFor: ["sef-generation", "final-synthesis"],
+  },
 };
 ```
 
----
-
-## How to Change Models
-
-### Step 1: Check Available Models
-Visit [OpenRouter Models](https://openrouter.ai/models) to browse available options.
-
-**Filter by:**
-- Cost (sort by cheapest)
-- Context length
-- Capabilities (chat, instruct, vision)
-- Provider (OpenAI, Anthropic, Google, etc.)
-
-### Step 2: Update Configuration
-
-Edit `/src/lib/ai-evidence-matcher.ts`:
-
-```typescript
-// Example: Switch to Gemini 2.5 Flash
-primary: {
-    id: 'google/gemini-2.5-flash',  // NEW MODEL ID
-    name: 'Gemini 2.5 Flash',         // UPDATE NAME
-    costPerRequest: 0.0001,           // UPDATE COST
-    useFor: ['docx', 'xlsx', 'txt', 'google-docs', 'text-pdf'],
-    maxTokens: 8000
-}
-```
-
-### Step 3: Test the Change
-
-```bash
-# Run development server
-npm run dev
-
-# Test document scanning
-# Navigate to http://localhost:3000/dashboard
-# Go to Ofsted Framework tab
-# Click "Scan Evidence" button
-# Check console for model being used
-```
-
-### Step 4: Monitor Performance
-
-Check for:
-- ✅ Successful matching (check console logs)
-- ✅ JSON parsing (no errors)
-- ✅ Confidence scores (should be 0.5-1.0)
-- ✅ Rationale quality (makes sense)
-- ✅ Cost per document (reasonable)
-
-### Step 5: Document the Change
-
-Update the following files:
-1. `README.md` - Model Change History section
-2. `.env.local` - Add any new API keys needed
-3. This file (`AI_MODELS.md`) - Update current setup
-
----
-
-## Model Selection Logic
-
-The system automatically selects models based on document type:
-
-```typescript
-function selectModel(metadata: DocumentMetadata): string {
-    // Scanned documents → OCR model
-    if (mimeType.includes('image') || filename.includes('scan')) {
-        return MODEL_CONFIG.ocr.id;
-    }
-    
-    // Visual documents → Vision model
-    if (filename.includes('chart') || filename.includes('diagram')) {
-        return MODEL_CONFIG.vision.id;
-    }
-    
-    // Default → Primary model
-    return MODEL_CONFIG.primary.id;
-}
-```
-
-**To modify routing logic:**
-Edit the `selectModel()` function in `/src/lib/ai-evidence-matcher.ts`
-
----
-
-## Cost Management
-
-### Current Estimated Costs
-
-**Small School (100 docs/month):**
-- DeepSeek V3: ~$0.40
-- Mistral OCR: ~$0.20
-- Total: **~$0.60/month**
-
-**Medium School (500 docs/month):**
-- DeepSeek V3: ~$2.00
-- Mistral OCR: ~$1.00
-- Total: **~$3.00/month**
-
-### Cost Optimization Tips
-
-1. **Cache results**: Don't re-scan unchanged documents
-2. **Batch processing**: Send multiple docs in one request (if model supports)
-3. **Truncate long documents**: Only send first 10K chars
-4. **Use cheaper models for simple tasks**: e.g., Gemini Flash for basic classification
-
-### Monitoring Costs
-
-Add logging to track costs:
-
-```typescript
-let totalCost = 0;
-
-function logCost(modelId: string, tokens: number) {
-    const costPerToken = MODEL_CONFIG.primary.costPerRequest / 10000; // Estimate
-    const cost = tokens * costPerToken;
-    totalCost += cost;
-    
-    console.log(`[Cost] ${modelId}: $${cost.toFixed(4)} (Total: $${totalCost.toFixed(4)})`);
-}
-```
-
----
-
-## Recommended Alternative Models
-
-### For Cost Savings
-
-1. **Gemini 2.5 Flash** (if available)
-   - ID: `google/gemini-2.5-flash`
-   - Cost: $0.003 / $0.25 per 1M tokens
-   - **80x cheaper input than DeepSeek!**
-
-2. **Llama 3.3 70B**
-   - ID: `meta-llama/llama-3.3-70b-instruct`
-   - Cost: Often has free tier on OpenRouter
-   - Good for development/testing
-
-### For Maximum Accuracy
-
-1. **GPT-4o**
-   - ID: `openai/gpt-4o`
-   - Cost: $2.50 / $10 per 1M tokens
-   - Best JSON output, most reliable
-   - Use for critical documents only
-
-2. **Claude 3.5 Sonnet**
-   - ID: `anthropic/claude-3.5-sonnet`
-   - Cost: $3 / $15 per 1M tokens
-   - Excellent reasoning
-   - Good for complex document analysis
-
-### For Specific Use Cases
-
-**OCR (Scanned Docs):**
-- Mistral OCR ✅ (current)
-- DeepSeek-OCR
-- GPT-4o with vision
-
-**Vision (Charts/Diagrams):**
-- Qwen 2.5 VL 72B ✅ (current)
-- GPT-4o
-- Claude 3.5 Sonnet
-
-**Fast Processing:**
-- Gemini 2.0 Flash Lite ✅ (current)
-- Gemini 2.5 Flash
-- GPT-3.5 Turbo
-
----
-
-## Troubleshooting
-
-### Model Returns Empty Response
-
-**Possible causes:**
-- API key issue
-- Model not available on OpenRouter
-- Rate limiting
-
-**Solution:**
-```typescript
-// Check fallback is working
-if (!responseText) {
-    console.error('Empty response - trying fallback');
-    return matchDocumentToEvidenceRequirements(
-        documentText,
-        documentMetadata,
-        MODEL_CONFIG.fallback.id
-    );
-}
-```
-
-### JSON Parsing Errors
-
-**Possible causes:**
-- Model returning markdown code blocks
-- Model not following JSON format
-
-**Solution:**
-1. Update prompt to be more explicit about JSON format
-2. Add code block removal in parsing:
-```typescript
-// Remove markdown code blocks
-if (jsonText.startsWith('```json')) {
-    jsonText = jsonText.replace(/```json\n?/g, '').replace(/```\n?/g, '');
-}
-```
-
-### Low Confidence Scores
-
-**Possible causes:**
-- Model being too conservative
-- Document quality poor
-- Prompt not clear enough
-
-**Solution:**
-1. Adjust confidence threshold in prompt
-2. Provide more context about what constitutes a match
-3. Add few-shot examples to prompt
-
-### Rate Limiting
-
-**Possible causes:**
-- Too many requests too quickly
-- Free tier limits reached
-
-**Solution:**
-```typescript
-// Add delay between requests
-await new Promise(resolve => setTimeout(resolve, 500));
-```
-
----
-
-## Performance Benchmarks
-
-### DeepSeek V3 (Current Primary)
-
-| Metric | Value |
-|--------|-------|
-| Avg Response Time | 2-4 seconds |
-| JSON Parse Success | ~95% |
-| Avg Confidence Score | 0.75 |
-| Cost per 100 docs | $0.40 |
-| Accuracy (manual review) | ~85% |
-
-### Gemini 2.0 Flash Lite (Fallback)
-
-| Metric | Value |
-|--------|-------|
-| Avg Response Time | 1-2 seconds |
-| JSON Parse Success | ~98% |
-| Avg Confidence Score | 0.80 |
-| Cost per 100 docs | $0.15 |
-| Accuracy (manual review) | ~88% |
-
-*Benchmarks based on 100 sample school documents*
-
----
-
-## Future Improvements
-
-1. **Multi-model voting**: Have 2-3 models analyze same document, combine results
-2. **Confidence calibration**: Fine-tune confidence thresholds based on validation data
-3. **Custom fine-tuning**: Train a custom model on school documents
-4. **Streaming responses**: Get partial results as they're generated
-5. **Caching layer**: Store common document patterns to reduce API calls
-
----
-
-## Change Log
-
-### 2025-01-26: Initial Setup
-- Primary: DeepSeek V3
-- OCR: Mistral OCR
-- Vision: Qwen 2.5 VL 72B
-- Fallback: Gemini 2.0 Flash Lite
-- Rationale: Cost optimization while maintaining quality
-
-### Future Changes
-Document all model changes here with:
-- Date
-- Old model → New model
-- Rationale for change
-- Performance impact
-- Cost impact
+## Required Checks Before Adding/Changing a Model
+
+1. Confirm the model provider family is approved in `apps/platform/src/lib/ai/model-policy.ts`.
+2. Confirm a DPA/privacy position exists for the provider route being used.
+3. Confirm the model is the cheapest approved model that can do the job.
+4. Add or update the entry in `apps/platform/src/lib/ai/model-registry.ts`.
+5. Add or update tests so disallowed providers cannot re-enter source/docs.
+6. Document the rationale and expected cost impact here.
+
+## Enforcement
+
+- `apps/platform/src/lib/ai-openrouter.ts` blocks non-approved model IDs before OpenRouter requests are sent.
+- `packages/ed-agents/src/models/openrouter.ts` blocks non-approved Ed model IDs before Ed agent requests are sent.
+- `apps/platform/src/lib/ai/model-policy-source-scan.test.ts` scans product source and docs for disallowed model identifiers.
+- `apps/platform/src/lib/ai/model-registry.test.ts` keeps the admin model registry aligned with the approved-provider rule.

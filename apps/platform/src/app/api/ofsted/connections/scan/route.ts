@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
+import {
+  getGoogleReauthoriseMessage,
+  getValidGoogleAccessToken,
+} from "@/lib/google-oauth-tokens";
+import { ensureConnectorFolderStructure } from "@/lib/google-drive-connector";
 
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
@@ -251,6 +256,13 @@ interface EvidenceMatch {
   modifiedTime?: string;
 }
 
+interface ScanConnection {
+  id: string | null;
+  folderId: string;
+  source: "schoolgle_connector" | "ofsted_drive_connection";
+  accessToken: string | null;
+}
+
 /**
  * Match a name against all evidence categories.
  * Returns array of matches (a name can match multiple categories).
@@ -293,6 +305,97 @@ function matchName(
   return matches;
 }
 
+function detectFolderCategory(folderPath: string): string {
+  const lower = folderPath.toLowerCase();
+  if (
+    lower.includes("archive") ||
+    lower.includes("archived") ||
+    lower.includes("superseded") ||
+    lower.includes("do not scan")
+  ) {
+    return "archive";
+  }
+  if (lower.includes("assessment") || lower.includes("outcomes")) {
+    return "assessments";
+  }
+  if (lower.includes("attendance") || lower.includes("behaviour")) {
+    return "attendance";
+  }
+  return "documents";
+}
+
+async function resolveScanConnection({
+  supabase,
+  orgId,
+  connectionId,
+  folderId,
+}: {
+  supabase: ReturnType<typeof createServiceRoleClient>;
+  orgId: string;
+  connectionId?: string | null;
+  folderId?: string | null;
+}): Promise<ScanConnection> {
+  let connectorQuery = supabase
+    .from("school_data_connections")
+    .select("*")
+    .eq("organization_id", orgId)
+    .eq("is_active", true);
+
+  connectorQuery = connectionId
+    ? connectorQuery.eq("id", connectionId)
+    : connectorQuery.order("last_scan_at", { ascending: false }).limit(1);
+
+  const { data: connector } = await connectorQuery.maybeSingle();
+
+  if (connector) {
+    let accessToken: string | null = null;
+    try {
+      accessToken = await getValidGoogleAccessToken({
+        supabase,
+        connection: connector,
+      });
+    } catch (err) {
+      const rawMessage =
+        err instanceof Error ? err.message : "Google Drive token refresh failed";
+      throw new Error(
+        rawMessage.includes("invalid_grant")
+          ? getGoogleReauthoriseMessage()
+          : rawMessage,
+      );
+    }
+
+    return {
+      id: connector.id,
+      folderId: folderId || connector.folder_id,
+      source: "schoolgle_connector",
+      accessToken,
+    };
+  }
+
+  let legacyQuery = supabase
+    .from("ofsted_drive_connections")
+    .select("*")
+    .eq("organization_id", orgId)
+    .eq("provider", "google")
+    .eq("is_active", true);
+
+  legacyQuery = connectionId
+    ? legacyQuery.eq("id", connectionId)
+    : legacyQuery.order("connected_at", { ascending: false }).limit(1);
+
+  const { data: legacy } = await legacyQuery.maybeSingle();
+  if (!legacy) {
+    throw new Error("No active Google Drive connector found");
+  }
+
+  return {
+    id: legacy.id,
+    folderId: folderId || legacy.folder_id,
+    source: "ofsted_drive_connection",
+    accessToken: legacy.access_token_encrypted || null,
+  };
+}
+
 /**
  * POST /api/ofsted/connections/scan
  * Scan a connected Google Drive folder for Ofsted evidence.
@@ -305,21 +408,41 @@ export const POST = protectedRoute(async (auth, req) => {
   // orgId MUST come from authenticated session — never from caller
   const orgId = auth.organizationId;
 
-  if (!orgId || !folderId) {
-    return apiError("Missing organizationId or folderId", 400);
-  }
-
-  if (!GOOGLE_API_KEY) {
-    return apiError("Google Drive not configured", 500);
+  if (!orgId) {
+    return apiError("Missing organizationId", 400);
   }
 
   const supabase = createServiceRoleClient();
+  let scanConnection: ScanConnection;
 
-  if (connectionId) {
+  try {
+    scanConnection = await resolveScanConnection({
+      supabase,
+      orgId,
+      connectionId,
+      folderId,
+    });
+  } catch (err) {
+    return apiError(
+      err instanceof Error ? err.message : "No active Google Drive connector found",
+      404,
+    );
+  }
+
+  if (!GOOGLE_API_KEY && !scanConnection.accessToken) {
+    return apiError("Google Drive access is not configured", 500);
+  }
+
+  if (scanConnection.id) {
+    const statusTable =
+      scanConnection.source === "schoolgle_connector"
+        ? "school_data_connections"
+        : "ofsted_drive_connections";
+
     await supabase
-      .from("ofsted_drive_connections")
+      .from(statusTable)
       .update({ scan_status: "scanning", scan_error: null })
-      .eq("id", connectionId);
+      .eq("id", scanConnection.id);
   }
 
   const encoder = new TextEncoder();
@@ -338,12 +461,26 @@ export const POST = protectedRoute(async (auth, req) => {
           evidenceFound: 0,
         });
 
+        if (
+          scanConnection.source === "schoolgle_connector" &&
+          scanConnection.accessToken
+        ) {
+          await ensureConnectorFolderStructure(
+            scanConnection.accessToken,
+            scanConnection.folderId,
+          );
+        }
+
         // Walk the entire folder tree, collecting both folders and files
         const allMatches: EvidenceMatch[] = [];
         const foldersToScan: Array<{ id: string; path: string }> = [
-          { id: folderId, path: "" },
+          { id: scanConnection.folderId, path: "" },
         ];
         const scannedFolders = new Set<string>();
+        const detectedFolders: Record<
+          string,
+          { category: string; files: number; folderId: string }
+        > = {};
         let realFiles = 0;
 
         while (foldersToScan.length > 0) {
@@ -354,17 +491,26 @@ export const POST = protectedRoute(async (auth, req) => {
           let pageToken: string | undefined;
           do {
             const params = new URLSearchParams({
-              key: GOOGLE_API_KEY!,
               q: `'${currentFolder}' in parents and trashed = false`,
               fields: "nextPageToken,files(id,name,mimeType,modifiedTime,size)",
               pageSize: "100",
               supportsAllDrives: "true",
               includeItemsFromAllDrives: "true",
             });
+            if (!scanConnection.accessToken && GOOGLE_API_KEY) {
+              params.set("key", GOOGLE_API_KEY);
+            }
             if (pageToken) params.set("pageToken", pageToken);
 
             const res = await fetch(
               `https://www.googleapis.com/drive/v3/files?${params}`,
+              scanConnection.accessToken
+                ? {
+                    headers: {
+                      Authorization: `Bearer ${scanConnection.accessToken}`,
+                    },
+                  }
+                : undefined,
             );
             if (!res.ok) {
               const err = await res.json().catch(() => ({}));
@@ -391,6 +537,15 @@ export const POST = protectedRoute(async (auth, req) => {
                 if (SKIP_FILES.has(item.name.toLowerCase())) continue;
 
                 realFiles++;
+                const folderPath = currentPath || "root";
+                if (!detectedFolders[folderPath]) {
+                  detectedFolders[folderPath] = {
+                    category: detectFolderCategory(folderPath),
+                    files: 0,
+                    folderId: currentFolder,
+                  };
+                }
+                detectedFolders[folderPath].files++;
 
                 // Match file name against evidence categories
                 const fileMatches = matchName(item.name);
@@ -489,7 +644,10 @@ export const POST = protectedRoute(async (auth, req) => {
             .upsert(
               {
                 organization_id: orgId,
-                connection_id: connectionId || null,
+                connection_id:
+                  scanConnection.source === "ofsted_drive_connection"
+                    ? scanConnection.id
+                    : null,
                 evaluation_area: match.category,
                 expected_document: match.matchedKeywords.join(", "),
                 found: true,
@@ -589,17 +747,31 @@ export const POST = protectedRoute(async (auth, req) => {
         }
 
         // Update connection stats
-        if (connectionId) {
-          await supabase
-            .from("ofsted_drive_connections")
-            .update({
-              scan_status: "idle",
-              scan_error: null,
-              last_scan_at: new Date().toISOString(),
-              total_files_scanned: realFiles,
-              total_evidence_found: dedupedMatches.length,
-            })
-            .eq("id", connectionId);
+        if (scanConnection.id) {
+          if (scanConnection.source === "schoolgle_connector") {
+            await supabase
+              .from("school_data_connections")
+              .update({
+                scan_status: "complete",
+                scan_error: null,
+                last_scan_at: new Date().toISOString(),
+                total_files: realFiles,
+                total_folders: scannedFolders.size,
+                detected_folders: detectedFolders,
+              })
+              .eq("id", scanConnection.id);
+          } else {
+            await supabase
+              .from("ofsted_drive_connections")
+              .update({
+                scan_status: "idle",
+                scan_error: null,
+                last_scan_at: new Date().toISOString(),
+                total_files_scanned: realFiles,
+                total_evidence_found: dedupedMatches.length,
+              })
+              .eq("id", scanConnection.id);
+          }
         }
 
         const skippedCount = savedRecords.filter(
@@ -617,14 +789,19 @@ export const POST = protectedRoute(async (auth, req) => {
       } catch (err: any) {
         console.error("[Scan] Error:", err);
 
-        if (connectionId) {
+        if (scanConnection.id) {
+          const statusTable =
+            scanConnection.source === "schoolgle_connector"
+              ? "school_data_connections"
+              : "ofsted_drive_connections";
+
           await supabase
-            .from("ofsted_drive_connections")
+            .from(statusTable)
             .update({
               scan_status: "error",
               scan_error: err.message || "Scan failed",
             })
-            .eq("id", connectionId);
+            .eq("id", scanConnection.id);
         }
 
         send({

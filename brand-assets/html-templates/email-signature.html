@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Schoolgle Email Signature</title>
+    <link rel="stylesheet" href="./styles/schoolgle-docs.css?v=accent-3px" />
+  </head>
+  <body>
+    <nav class="template-nav" aria-label="Template previews">
+      <a href="./letterhead.html">Letterhead</a>
+      <a href="./proposal.html">Proposal</a>
+      <a href="./invoice.html">Invoice</a>
+      <a href="./meeting-notes.html">Meeting Notes</a>
+      <a class="active" href="./email-signature.html">Email Signature</a>
+      <a href="./linkedin-advertising.html">LinkedIn Advertising</a>
+      <a href="./index.html">Gallery</a>
+    </nav>
+    <main class="signature-page">
+      <section class="page-title">
+        <h1>Email Signatures</h1>
+        <p class="muted">Copy the relevant compact block into Gmail or Outlook. These are not full-page documents.</p>
+      </section>
+
+      <section class="signature-card" data-signature-id="david">
+        <button class="copy-signature" type="button" data-copy-signature="david">Copy David Signature</button>
+        <div class="signature-inner">
+          <div class="signature-logo-preview" data-logo-preview="large" aria-label="Schoolgle"></div>
+          <div class="signature-divider"></div>
+          <div>
+            <p class="signature-name">David Summerscales</p>
+            <p class="signature-role">CEO &amp; Founder</p>
+            <p class="signature-contact">
+              <!-- Optional phone line: add <span class="optional-phone">{{business_phone_optional}}</span> before the email if needed later. -->
+              <a href="mailto:david@schoolgle.co.uk">david@schoolgle.co.uk</a><br />
+              <a href="https://schoolgle.co.uk"><strong style="color: var(--sg-blue)">schoolgle.co.uk</strong></a>
+            </p>
+            <p class="signature-tagline">Your school's operating system</p>
+          </div>
+        </div>
+        <div class="accent-line" style="margin: 24px 0 0" aria-hidden="true">
+          <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+        </div>
+      </section>
+
+      <section class="signature-variants">
+        <article class="alias-card" data-signature-id="finance">
+          <button class="copy-signature small-copy" type="button" data-copy-signature="finance">Copy</button>
+          <div class="signature-logo-preview small-preview" data-logo-preview="small" aria-label="Schoolgle"></div>
+          <div>
+            <p class="alias-name">Schoolgle Finance</p>
+            <p class="signature-role">Billing &amp; payments</p>
+            <p class="signature-contact">
+              <a href="mailto:finance@schoolgle.co.uk">finance@schoolgle.co.uk</a><br />
+              <a href="https://schoolgle.co.uk">schoolgle.co.uk</a>
+            </p>
+          </div>
+        </article>
+
+        <article class="alias-card" data-signature-id="admin">
+          <button class="copy-signature small-copy" type="button" data-copy-signature="admin">Copy</button>
+          <div class="signature-logo-preview small-preview" data-logo-preview="small" aria-label="Schoolgle"></div>
+          <div>
+            <p class="alias-name">Schoolgle Admin</p>
+            <p class="signature-role">General enquiries</p>
+            <p class="signature-contact">
+              <a href="mailto:admin@schoolgle.co.uk">admin@schoolgle.co.uk</a><br />
+              <a href="https://schoolgle.co.uk">schoolgle.co.uk</a>
+            </p>
+          </div>
+        </article>
+
+        <article class="alias-card" data-signature-id="support">
+          <button class="copy-signature small-copy" type="button" data-copy-signature="support">Copy</button>
+          <div class="signature-logo-preview small-preview" data-logo-preview="small" aria-label="Schoolgle"></div>
+          <div>
+            <p class="alias-name">Schoolgle Support</p>
+            <p class="signature-role">Product help &amp; customer support</p>
+            <p class="signature-contact">
+              <a href="mailto:support@schoolgle.co.uk">support@schoolgle.co.uk</a><br />
+              <a href="https://schoolgle.co.uk">schoolgle.co.uk</a>
+            </p>
+          </div>
+        </article>
+      </section>
+    </main>
+
+    <script>
+      const logoAssetUrl = "./assets/schoolgle-logo-horizontal.png";
+      let cachedLogoDataUri = "";
+
+      const signatureHtml = {
+        david: `
+<table cellpadding="0" cellspacing="0" role="presentation" style="font-family: Arial, Helvetica, sans-serif; color: #0b1320;">
+  <tr>
+    <td style="padding: 0 22px 0 0; vertical-align: middle;">
+      ${logoLockupHtml(180)}
+    </td>
+    <td style="width:1px; background:#e5e7eb;"></td>
+    <td style="padding: 0 0 0 22px; vertical-align: middle;">
+      <div style="font-size:18px; font-weight:800; line-height:1.25;">David Summerscales</div>
+      <div style="font-size:13px; color:#667085; margin:4px 0 14px;">CEO &amp; Founder</div>
+      <div style="font-size:13px; line-height:1.6;">
+        <a href="mailto:david@schoolgle.co.uk" style="color:#0b1320; font-weight:700; text-decoration:none;">david@schoolgle.co.uk</a><br />
+        <a href="https://schoolgle.co.uk" style="color:#3b82f6; font-weight:700; text-decoration:none;">schoolgle.co.uk</a>
+      </div>
+      <div style="font-size:12px; color:#667085; margin-top:8px;">Your school's operating system</div>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="3" style="padding-top:18px;">
+      ${accentLineHtml()}
+    </td>
+  </tr>
+</table>`,
+        finance: aliasSignature("Schoolgle Finance", "Billing &amp; payments", "finance@schoolgle.co.uk"),
+        admin: aliasSignature("Schoolgle Admin", "General enquiries", "admin@schoolgle.co.uk"),
+        support: aliasSignature("Schoolgle Support", "Product help &amp; customer support", "support@schoolgle.co.uk")
+      };
+
+      function aliasSignature(name, role, email) {
+        return `
+<table cellpadding="0" cellspacing="0" role="presentation" style="font-family: Arial, Helvetica, sans-serif; color: #0b1320;">
+  <tr>
+    <td style="padding: 0 18px 0 0; vertical-align: middle;">
+      ${logoLockupHtml(145)}
+    </td>
+    <td style="vertical-align: middle;">
+      <div style="font-size:16px; font-weight:800; line-height:1.25;">${name}</div>
+      <div style="font-size:12px; color:#667085; margin:4px 0 10px;">${role}</div>
+      <div style="font-size:12px; line-height:1.6;">
+        <a href="mailto:${email}" style="color:#0b1320; font-weight:700; text-decoration:none;">${email}</a><br />
+        <a href="https://schoolgle.co.uk" style="color:#3b82f6; font-weight:700; text-decoration:none;">schoolgle.co.uk</a>
+      </div>
+    </td>
+  </tr>
+</table>`;
+      }
+
+      function logoLockupHtml(width) {
+        return `<img src="${logoAssetUrl}" alt="Schoolgle" width="${width}" style="display:block; width:${width}px; max-width:${width}px; height:auto; border:0; outline:0; text-decoration:none;" />`;
+      }
+
+      document.querySelectorAll("[data-logo-preview]").forEach((preview) => {
+        preview.innerHTML = logoLockupHtml(preview.dataset.logoPreview === "large" ? 180 : 145);
+      });
+
+      function accentLineHtml() {
+        return `
+<table cellpadding="0" cellspacing="0" role="presentation" style="width:100%; border-collapse:collapse; line-height:0; font-size:0;">
+  <tr>
+    <td style="height:3px; background:#6b7280;"></td><td style="height:3px; background:#f59e0b;"></td><td style="height:3px; background:#3b82f6;"></td><td style="height:3px; background:#9f1239;"></td><td style="height:3px; background:#f97316;"></td><td style="height:3px; background:#a78bfa;"></td><td style="height:3px; background:#06b6d4;"></td>
+  </tr>
+</table>`;
+      }
+
+      function plainTextFromHtml(html) {
+        const container = document.createElement("div");
+        container.innerHTML = html;
+        return container.innerText.trim();
+      }
+
+      async function getLogoDataUri() {
+        if (cachedLogoDataUri) {
+          return cachedLogoDataUri;
+        }
+        const response = await fetch(logoAssetUrl);
+        const blob = await response.blob();
+        cachedLogoDataUri = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+        return cachedLogoDataUri;
+      }
+
+      async function copyVisibleSignature(id) {
+        const logoDataUri = await getLogoDataUri();
+        const html = signatureHtml[id].replaceAll(logoAssetUrl, logoDataUri);
+        if (navigator.clipboard && window.ClipboardItem) {
+          try {
+            await navigator.clipboard.write([
+              new ClipboardItem({
+                "text/html": new Blob([html], { type: "text/html" }),
+                "text/plain": new Blob([plainTextFromHtml(html)], { type: "text/plain" })
+              })
+            ]);
+            return;
+          } catch (error) {
+            // Fall back to the selection-based copy path below.
+          }
+        }
+
+        const container = document.createElement("div");
+        container.contentEditable = "true";
+        container.style.position = "fixed";
+        container.style.left = "0";
+        container.style.top = "0";
+        container.style.opacity = "0";
+        container.style.pointerEvents = "none";
+        container.style.background = "#ffffff";
+        container.innerHTML = html;
+        document.body.appendChild(container);
+
+        const range = document.createRange();
+        range.selectNodeContents(container);
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+        const ok = document.execCommand("copy");
+        selection.removeAllRanges();
+        container.remove();
+
+        if (!ok) {
+          throw new Error("Browser copy command failed");
+        }
+      }
+
+      document.querySelectorAll("[data-copy-signature]").forEach((button) => {
+        button.addEventListener("click", async () => {
+          const id = button.dataset.copySignature;
+          const original = button.textContent;
+          try {
+            await copyVisibleSignature(id);
+            button.textContent = "Copied";
+            button.classList.add("copied");
+            setTimeout(() => {
+              button.textContent = original;
+              button.classList.remove("copied");
+            }, 1800);
+          } catch (error) {
+            button.textContent = "Select manually";
+            setTimeout(() => (button.textContent = original), 2200);
+          }
+        });
+      });
+    </script>
+  </body>
+</html>

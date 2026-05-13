@@ -1,4 +1,4 @@
-import { addWeeks, differenceInCalendarWeeks, formatISO, parseISO, startOfWeek, subWeeks } from 'date-fns';
+import { addWeeks, formatISO, parseISO, startOfWeek, subWeeks } from 'date-fns';
 
 // --- Types ---
 export interface CalculatorInputs {
@@ -67,8 +67,8 @@ export interface CalculationResults {
 }
 
 // Constants
-const STATUTORY_RATE = 187.18;
-const LOWER_EARNINGS_LIMIT = 123;
+const STATUTORY_RATE = 194.32;
+const LOWER_EARNINGS_LIMIT = 129;
 const WEEKS_IN_YEAR = 52.14;
 const TOTAL_LEAVE_WEEKS = 52;
 const STATUTORY_PAY_WEEKS_MAT_ADOPT = 39;
@@ -76,9 +76,6 @@ const COMPULSORY_MATERNITY_LEAVE_WEEKS = 2;
 const SMP_SAP_INITIAL_WEEKS = 6;
 const SPP_WEEKS = 2;
 const SPL_MAX_SHARED_LEAVE_WEEKS = TOTAL_LEAVE_WEEKS - COMPULSORY_MATERNITY_LEAVE_WEEKS;
-const SPL_MAX_SHARED_PAY_WEEKS = STATUTORY_PAY_WEEKS_MAT_ADOPT - COMPULSORY_MATERNITY_LEAVE_WEEKS;
-const KIT_DAYS = 10;
-const SPLIT_DAYS = 20;
 
 // Helper Functions
 const calculateAWE = (annualSalary: number | string): number => {
@@ -98,7 +95,7 @@ const safeParseDate = (dateString: string): Date | null => {
         const date = parseISO(dateString);
         if (isNaN(date.getTime())) return null;
         return date;
-    } catch (e) {
+    } catch {
         return null;
     }
 };

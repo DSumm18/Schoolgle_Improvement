@@ -1,4 +1,4 @@
-# Schoolgle - Improvement
+﻿# Schoolgle - Improvement
 
 > AI-Powered Ofsted & SIAMS Framework Evidence Management System
 
@@ -7,13 +7,13 @@
 Schoolgle helps schools prepare for Ofsted and SIAMS inspections by automatically scanning their Google Drive folders, extracting evidence from documents, and mapping them to specific framework requirements using AI.
 
 **Key Features:**
-- 🔍 **AI-Powered Document Analysis**: Automatically identifies which Ofsted/SIAMS evidence requirements your documents satisfy
-- 📊 **Dual Rating System**: Compare school self-assessments with AI-based evidence analysis
-- 📁 **Recursive Folder Scanning**: Scans entire folder structures in Google Drive/OneDrive
-- 📝 **Multi-Format Support**: DOCX, PDF, XLSX, images, Google Docs, Google Sheets
-- 🔗 **Evidence Linking**: Direct links to documents in their original cloud locations
-- ✅ **Action Management**: Track improvement actions with Gantt charts and timelines
-- 🎯 **Readiness Scoring**: Real-time assessment of inspection readiness
+- ðŸ” **AI-Powered Document Analysis**: Automatically identifies which Ofsted/SIAMS evidence requirements your documents satisfy
+- ðŸ“Š **Dual Rating System**: Compare school self-assessments with AI-based evidence analysis
+- ðŸ“ **Recursive Folder Scanning**: Scans entire folder structures in Google Drive/OneDrive
+- ðŸ“ **Multi-Format Support**: DOCX, PDF, XLSX, images, Google Docs, Google Sheets
+- ðŸ”— **Evidence Linking**: Direct links to documents in their original cloud locations
+- âœ… **Action Management**: Track improvement actions with Gantt charts and timelines
+- ðŸŽ¯ **Readiness Scoring**: Real-time assessment of inspection readiness
 
 ---
 
@@ -23,11 +23,11 @@ Schoolgle helps schools prepare for Ofsted and SIAMS inspections by automaticall
 
 We use a **multi-model approach** via [OpenRouter](https://openrouter.ai) to optimize for both quality and cost:
 
-#### 1. **Primary Model: DeepSeek V3** 🏆
-- **Model ID**: `deepseek/deepseek-chat`
+#### 1. **Primary Model: Gemini 2.0 Flash** ðŸ†
+- **Model ID**: `openai/gpt-4o-mini`
 - **Cost**: $0.24/M input, $0.84/M output tokens
 - **Use Case**: 95% of documents (general text analysis, DOCX, Google Docs, text-based PDFs)
-- **Why**: Best value for money - 10-20x cheaper than GPT-4o-mini with comparable quality
+- **Why**: Approved-provider default with strong quality/cost balance
 - **Strengths**: Excellent instruction following, structured JSON output, strong reasoning
 
 #### 2. **OCR Model: Mistral OCR**
@@ -44,17 +44,17 @@ We use a **multi-model approach** via [OpenRouter](https://openrouter.ai) to opt
 - **Why**: Highly reliable, superior JSON output, fast inference
 - **Strengths**: 1.05M token context window, excellent instruction following
 
-#### 4. **Vision Model: Qwen 2.5 VL 72B** (Optional)
-- **Model ID**: `qwen/qwen-2.5-vl-72b-instruct`
+#### 4. **Vision Model: Gemini 2.0 Flash** (Optional)
+- **Model ID**: `google/gemini-2.0-flash-001`
 - **Cost**: $0.40/M input, $0.80/M output tokens
 - **Use Case**: Documents with charts, diagrams, infographics
-- **Why**: Best open-source vision-language model, competitive with GPT-4o
+- **Why**: Approved-provider vision model with reliable structured extraction
 - **Strengths**: Complex visual understanding, 75% accuracy on JSON extraction benchmarks
 
 ### Cost Estimates
 
 **Scanning 100 Documents (avg 5KB each):**
-- DeepSeek V3: ~$0.08-0.15
+- Gemini/OpenAI approved-provider stack: budgeted per current provider pricing
 - GPT-4o-mini (comparison): ~$0.40-0.80
 - **Savings: 5-10x cheaper!**
 
@@ -77,9 +77,9 @@ Models are configured in `/src/lib/ai-evidence-matcher.ts`:
 
 ```typescript
 const MODEL_CONFIG = {
-  primary: 'deepseek/deepseek-chat',      // Main analysis
+  primary: 'openai/gpt-4o-mini',      // Main analysis
   ocr: 'mistral-ocr',                      // Scanned documents
-  vision: 'qwen/qwen-2.5-vl-72b-instruct', // Visual content
+  vision: 'google/gemini-2.0-flash-001', // Visual content
   fallback: 'google/gemini-2.0-flash-lite-001' // Retry logic
 };
 ```
@@ -102,11 +102,11 @@ const MODEL_CONFIG = {
 ### Model Selection Logic
 
 ```
-Document → Check File Type →
-  ├─ Scanned PDF/Image → Mistral OCR (extract text) → DeepSeek (analyze)
-  ├─ Visual Content (charts/diagrams) → Qwen 2.5 VL
-  ├─ Text Document → DeepSeek V3
-  └─ Failure/Retry → Gemini 2.0 Flash Lite
+Document â†’ Check File Type â†’
+  â”œâ”€ Scanned PDF/Image â†’ Mistral OCR (extract text) â†’ Gemini/OpenAI approved model (analyze)
+  â”œâ”€ Visual Content (charts/diagrams) â†’ Gemini vision
+  â”œâ”€ Text Document â†’ Gemini 2.0 Flash
+  â””â”€ Failure/Retry â†’ Gemini 2.0 Flash Lite
 ```
 
 ---
@@ -127,7 +127,7 @@ Document → Check File Type →
 
 ### AI & Document Processing
 - **LLM Provider**: OpenRouter (multi-model)
-- **Primary Model**: DeepSeek V3
+- **Primary Model**: Gemini 2.0 Flash / GPT-4o-mini by task
 - **OCR**: Mistral OCR
 - **Embeddings**: OpenAI text-embedding-3-small
 - **Document Parsers**: 
@@ -216,30 +216,30 @@ supabase db push
 
 ```
 src/
-├── app/                    # Next.js app directory
-│   ├── api/               # API routes
-│   │   ├── scan/         # Document scanning endpoint
-│   │   └── search/       # Semantic search endpoint
-│   ├── dashboard/        # Main dashboard page
-│   └── login/           # Authentication page
-│
-├── components/           # React components
-│   ├── OfstedFrameworkView.tsx    # Main Ofsted UI
-│   ├── ActionsDashboard.tsx        # Action management
-│   ├── ActionsGanttChart.tsx       # Timeline view
-│   └── ...
-│
-├── lib/                  # Utility libraries
-│   ├── ofsted-framework.ts        # Framework data & logic
-│   ├── ai-evidence-matcher.ts     # AI matching engine (NEW)
-│   ├── cloud-service.ts           # Google Drive/OneDrive API
-│   ├── extractors.ts             # Document text extraction
-│   ├── embeddings.ts             # Vector embeddings
-│   └── assessment-updater.ts      # Auto-update assessments (NEW)
-│
-└── context/             # React contexts
-    ├── AuthContext.tsx  # Firebase authentication
-    └── ThemeContext.tsx # Dark mode (coming soon)
+â”œâ”€â”€ app/                    # Next.js app directory
+â”‚   â”œâ”€â”€ api/               # API routes
+â”‚   â”‚   â”œâ”€â”€ scan/         # Document scanning endpoint
+â”‚   â”‚   â””â”€â”€ search/       # Semantic search endpoint
+â”‚   â”œâ”€â”€ dashboard/        # Main dashboard page
+â”‚   â””â”€â”€ login/           # Authentication page
+â”‚
+â”œâ”€â”€ components/           # React components
+â”‚   â”œâ”€â”€ OfstedFrameworkView.tsx    # Main Ofsted UI
+â”‚   â”œâ”€â”€ ActionsDashboard.tsx        # Action management
+â”‚   â”œâ”€â”€ ActionsGanttChart.tsx       # Timeline view
+â”‚   â””â”€â”€ ...
+â”‚
+â”œâ”€â”€ lib/                  # Utility libraries
+â”‚   â”œâ”€â”€ ofsted-framework.ts        # Framework data & logic
+â”‚   â”œâ”€â”€ ai-evidence-matcher.ts     # AI matching engine (NEW)
+â”‚   â”œâ”€â”€ cloud-service.ts           # Google Drive/OneDrive API
+â”‚   â”œâ”€â”€ extractors.ts             # Document text extraction
+â”‚   â”œâ”€â”€ embeddings.ts             # Vector embeddings
+â”‚   â””â”€â”€ assessment-updater.ts      # Auto-update assessments (NEW)
+â”‚
+â””â”€â”€ context/             # React contexts
+    â”œâ”€â”€ AuthContext.tsx  # Firebase authentication
+    â””â”€â”€ ThemeContext.tsx # Dark mode (coming soon)
 ```
 
 ---
@@ -280,7 +280,7 @@ src/
 ### How It Works
 
 1. **Document Extraction**: Extract text from DOCX, PDF, XLSX, images
-2. **AI Analysis**: Send to DeepSeek V3 with Ofsted framework context
+2. **AI Analysis**: Send to Gemini 2.0 Flash with Ofsted framework context
 3. **Evidence Mapping**: AI identifies which requirements the document satisfies
 4. **Confidence Scoring**: Each match gets a 0-1 confidence score
 5. **Quote Extraction**: Key relevant sections are extracted
@@ -299,10 +299,10 @@ Content: [truncated document text]
 
 Framework Evidence Requirements:
 - Quality of Education > Curriculum Intent
-  ├─ Curriculum policy documents
-  ├─ Subject progression maps
-  ├─ SEND provision maps
-  └─ Curriculum rationale
+  â”œâ”€ Curriculum policy documents
+  â”œâ”€ Subject progression maps
+  â”œâ”€ SEND provision maps
+  â””â”€ Curriculum rationale
 
 Return JSON with matches, confidence scores, and relevant quotes.
 ```
@@ -331,7 +331,7 @@ Return JSON with matches, confidence scores, and relevant quotes.
 
 ## Roadmap
 
-### Completed ✅
+### Completed âœ…
 - [x] Firebase authentication (Google, Microsoft)
 - [x] Ofsted Framework UI with all categories
 - [x] Dual rating system
@@ -341,13 +341,13 @@ Return JSON with matches, confidence scores, and relevant quotes.
 - [x] Basic document scanning
 - [x] Multi-format text extraction
 
-### In Progress 🚧
+### In Progress ðŸš§
 - [ ] AI evidence matching (implementing now)
 - [ ] Recursive folder scanning
 - [ ] Assessment auto-updates
 - [ ] Evidence linking
 
-### Planned 📋
+### Planned ðŸ“‹
 - [ ] Dark mode
 - [ ] PDF extraction improvements
 - [ ] SEF (Self Evaluation Form) auto-generation
@@ -361,7 +361,7 @@ Return JSON with matches, confidence scores, and relevant quotes.
 ## Model Change History
 
 ### 2025-01-26: Initial Multi-Model Setup
-**Decision**: Use DeepSeek V3 as primary model  
+**Decision**: Use Gemini 2.0 Flash as primary model  
 **Rationale**:
 - 10-20x cheaper than GPT-4o-mini ($0.24/M vs $2.50/M input)
 - Excellent instruction following and JSON output
@@ -375,7 +375,7 @@ Return JSON with matches, confidence scores, and relevant quotes.
 
 ### Future Considerations
 - If Gemini 2.5 Flash becomes available ($0.003/M input), consider switching primary
-- Monitor DeepSeek V3 accuracy - may need occasional GPT-4o verification
+- Monitor Gemini 2.0 Flash accuracy - may need occasional GPT-4o verification
 - Watch for new models on OpenRouter (updated monthly)
 
 ---
@@ -411,3 +411,5 @@ For questions or issues:
 - OpenRouter for multi-model AI access
 - Supabase for backend infrastructure
 - Next.js team for the amazing framework
+
+

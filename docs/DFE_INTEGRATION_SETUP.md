@@ -9,7 +9,7 @@ Add to `apps/platform/.env.local`:
 ```env
 # DfE Data Warehouse (separate Supabase project)
 DFE_SUPABASE_URL=https://ygquvauptwyvlhkyxkwy.supabase.co
-DFE_SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlncXV2YXVwdHd5dmxoa3l4a3d5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2Mzk2MTA1NCwiZXhwIjoyMDc5NTM3MDU0fQ.SniWiVIv7QAF_medPRZiamHSRpgCy1N53LGDpQf6TwA
+DFE_SUPABASE_SERVICE_ROLE_KEY=your-dfe-supabase-service-role-key
 ```
 
 ### 2. Verify Connection
@@ -77,6 +77,25 @@ Expected response:
 | **Religious Character** | Not reliably in DfE data | SIAMS, CSI, Section 48 |
 | **Faith Designation** | May be missing/outdated | Determines faith framework |
 | **Storage Preference** | User choice | Google Drive vs OneDrive |
+
+---
+
+## GIAS Extended SEN Provision Profiles
+
+Schoolgle stores provision-specific GIAS fields in `school_gias_extended_profiles`, keyed by URN.
+
+Source priority:
+
+1. Official GIAS bulk/export data when available.
+2. Live GIAS establishment page scrape for fields not present in the current warehouse import.
+3. DfE SEN school-level underlying data for validation of SEN unit/RP flags.
+4. Manual verification only with explicit source URL and confidence status.
+
+Trust Assessor must not infer provision type from pupil need counts alone. Provision claims must show confidence status and source.
+
+Stored fields include SEN provision type, resourced provision type, resourced provision roll/capacity, SEN unit roll/capacity, GIAS last confirmed date, source metadata, validation notes, and confidence status.
+
+Missing profiles mean "not imported yet", not "no provision". Conflicting profiles should be labelled and reviewed rather than silently resolved.
 
 ---
 
@@ -216,4 +235,3 @@ Run the verification script to check:
 - This is expected if field doesn't exist in DfE data
 - User will be prompted to confirm faith designation
 - This is the correct behavior
-

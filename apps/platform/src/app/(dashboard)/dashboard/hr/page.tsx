@@ -9,7 +9,7 @@ import {
   Shield,
   Thermometer,
   UserCog,
-  GraduationCap,
+  BookOpenCheck,
 } from "lucide-react";
 import {
   ModulePageHeader,
@@ -33,6 +33,14 @@ const tools = [
     status: "Live" as const,
     href: "/dashboard/hr/maternity-leave-calculator",
     icon: Calculator,
+  },
+  {
+    title: "Training Compliance",
+    description:
+      "Mandatory training dashboard for safeguarding, Prevent, first aid, fire safety, GDPR and H&S refresh cycles.",
+    status: "Live" as const,
+    href: "/dashboard/hr/training-compliance",
+    icon: BookOpenCheck,
   },
   {
     title: "Meeting Companion",
@@ -62,7 +70,7 @@ const tools = [
     title: "Performance Review",
     description:
       "Appraisal cycles, objectives, mid/end-year reviews, pay recommendations.",
-    status: "Live" as const,
+    status: "Beta" as const,
     href: "/dashboard/hr/performance",
     icon: TrendingUp,
   },
@@ -70,7 +78,7 @@ const tools = [
     title: "Cover Management",
     description:
       "Internal/supply cover arrangements, daily rates, cost tracking.",
-    status: "Live" as const,
+    status: "Pilot" as const,
     href: "/dashboard/hr/cover",
     icon: UserCog,
   },

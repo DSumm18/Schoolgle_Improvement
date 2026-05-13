@@ -29,10 +29,10 @@ export default function GDPRPage() {
         <div>
           <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400 font-semibold text-xs uppercase tracking-[0.2em] mb-1">
             <Sparkles size={14} className="animate-pulse" />
-            Data Protection
+            Data Protection & FOI
           </div>
           <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
-            GDPR Toolkit
+            Information Governance
           </h1>
         </div>
       </motion.div>

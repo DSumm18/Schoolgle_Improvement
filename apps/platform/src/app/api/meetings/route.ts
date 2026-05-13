@@ -2,6 +2,15 @@ import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
 import { v4 as uuidv4 } from "uuid";
 
+interface MeetingAttendeeInput {
+  staff_id?: string | null;
+  user_id?: string | null;
+  attendee_name: string;
+  attendee_role?: string | null;
+  attendee_email?: string | null;
+  is_primary?: boolean;
+}
+
 /**
  * GET /api/meetings
  * List meetings for an organization
@@ -68,11 +77,13 @@ export const POST = protectedRoute(async (auth, request) => {
   const {
     leaderId,
     template_id,
+    templateId,
     attendee_name,
     attendee_role,
     attendees,
     purpose,
     scheduled_at,
+    scheduledAt,
     location,
   } = body;
 
@@ -83,21 +94,26 @@ export const POST = protectedRoute(async (auth, request) => {
   const resolvedLeaderId = leaderId || auth.userId || null;
 
   // Determine the primary attendee name for backwards-compat on the meetings row
-  const hasAttendeesArray = Array.isArray(attendees) && attendees.length > 0;
+  const attendeeInputs: MeetingAttendeeInput[] = Array.isArray(attendees)
+    ? attendees
+    : [];
+  const hasAttendeesArray = attendeeInputs.length > 0;
   const primaryAttendee = hasAttendeesArray
-    ? attendees.find((a: any) => a.is_primary) || attendees[0]
+    ? attendeeInputs.find((attendee) => attendee.is_primary) || attendeeInputs[0]
     : null;
   const resolvedAttendeeName =
     attendee_name || (primaryAttendee ? primaryAttendee.attendee_name : null);
   const resolvedAttendeeRole =
     attendee_role || (primaryAttendee ? primaryAttendee.attendee_role : null);
+  const resolvedTemplateId = template_id || templateId;
+  const resolvedScheduledAt = scheduled_at || scheduledAt;
 
   if (
     !resolvedOrgId ||
     !resolvedLeaderId ||
-    !template_id ||
+    !resolvedTemplateId ||
     !resolvedAttendeeName ||
-    !scheduled_at
+    !resolvedScheduledAt
   ) {
     return apiError(
       "Missing required fields: organizationId, leaderId (or x-user-id header), template_id, attendee_name (or attendees array), scheduled_at",
@@ -111,7 +127,7 @@ export const POST = protectedRoute(async (auth, request) => {
   const { data: template, error: templateError } = await supabase
     .from("meeting_templates")
     .select("*")
-    .eq("id", template_id)
+    .eq("id", resolvedTemplateId)
     .single();
 
   if (templateError || !template) {
@@ -125,13 +141,13 @@ export const POST = protectedRoute(async (auth, request) => {
     .from("meetings")
     .insert({
       id: meetingId,
-      template_id,
+      template_id: resolvedTemplateId,
       organization_id: resolvedOrgId,
       leader_id: resolvedLeaderId,
       attendee_name: resolvedAttendeeName,
       attendee_role: resolvedAttendeeRole || null,
       purpose: purpose || null,
-      scheduled_at,
+      scheduled_at: resolvedScheduledAt,
       location: location || null,
       status: "scheduled",
       notes: [],
@@ -145,19 +161,19 @@ export const POST = protectedRoute(async (auth, request) => {
   }
 
   // Insert attendees into meeting_attendees table
-  let insertedAttendees: any[] = [];
+  let insertedAttendees: unknown[] = [];
 
   if (hasAttendeesArray) {
     // New format: batch insert from attendees array
-    const attendeeRows = attendees.map((a: any) => ({
+    const attendeeRows = attendeeInputs.map((attendee) => ({
       id: uuidv4(),
       meeting_id: meetingId,
-      staff_id: a.staff_id || null,
-      user_id: a.user_id || null,
-      attendee_name: a.attendee_name,
-      attendee_role: a.attendee_role || null,
-      attendee_email: a.attendee_email || null,
-      is_primary: a.is_primary ?? false,
+      staff_id: attendee.staff_id || null,
+      user_id: attendee.user_id || null,
+      attendee_name: attendee.attendee_name,
+      attendee_role: attendee.attendee_role || null,
+      attendee_email: attendee.attendee_email || null,
+      is_primary: attendee.is_primary ?? false,
     }));
 
     const { data: attendeesData, error: attendeesError } = await supabase

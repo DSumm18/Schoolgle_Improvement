@@ -1,4 +1,4 @@
-/**
+﻿/**
  * School Intelligence Engine
  *
  * Cross-references ALL data sources to produce research-backed analysis:
@@ -8,7 +8,7 @@
  * - Cross-module signals (HR absence, estates disruption, compliance events)
  * - EEF Teaching & Learning Toolkit (33 strategies with evidence ratings)
  *
- * The engine doesn't just report what happened — it explains WHY,
+ * The engine doesn't just report what happened â€” it explains WHY,
  * correlates events with outcomes, and recommends EEF-backed interventions
  * specific to each cohort's needs.
  */
@@ -62,9 +62,9 @@ export interface DfETrendData {
     year: number;
     subject: string;
     breakdown: string;
-    expected_standard_pct: number;
-    higher_standard_pct: number;
-    progress_measure_score: number;
+    expected_standard_pct: number | null;
+    higher_standard_pct: number | null;
+    progress_measure_score: number | null;
     progress_description: string;
   }[];
   workforce: {
@@ -90,6 +90,27 @@ export interface LaBenchmarkData {
     year: number;
     expected_standard_pct: number;
   }[];
+  ks2_reading: {
+    year: number;
+    expected_standard_pct: number;
+    progress_score: number | null;
+  }[];
+  ks2_writing: {
+    year: number;
+    expected_standard_pct: number;
+    progress_score: number | null;
+  }[];
+  ks2_maths: {
+    year: number;
+    expected_standard_pct: number;
+    progress_score: number | null;
+  }[];
+  disadvantaged_gap: {
+    year: number;
+    all_pupils_pct: number;
+    disadvantaged_pct: number;
+    gap_pp: number;
+  }[];
   attendance: {
     year: number;
     overall_pct: number;
@@ -99,6 +120,27 @@ export interface LaBenchmarkData {
     year: number;
     pct: number;
   }[];
+  three_year_trend: {
+    ks2_combined_avg: number;
+    attendance_avg: number;
+    direction: "improving" | "stable" | "declining";
+  } | null;
+}
+
+/**
+ * Demographic cohort for fair comparison
+ * Schools with similar intakes should be compared
+ */
+export interface DemographicCohort {
+  id: string;
+  name: string;
+  fsm_band: string;
+  eal_band: string;
+  sen_band: string;
+  school_count: number;
+  comparison_urns: number[];
+  avg_ks2_combined: number;
+  avg_attendance: number;
 }
 
 export interface ContextualFactor {
@@ -241,14 +283,21 @@ export interface SuggestedAction {
 
 export class SchoolIntelligenceEngine {
   private supabase: SupabaseClient;
-  private openai: OpenAI;
+  private openai: OpenAI | null = null;
 
   constructor() {
     this.supabase = createClient(supabaseUrl, supabaseServiceKey);
+  }
+
+  private getOpenAI(): OpenAI {
+    if (this.openai) return this.openai;
+
     this.openai = new OpenAI({
       baseURL: "https://openrouter.ai/api/v1",
       apiKey: process.env.OPENROUTER_API_KEY,
     });
+
+    return this.openai;
   }
 
   /**
@@ -383,18 +432,56 @@ export class SchoolIntelligenceEngine {
 
   /**
    * Get LA (Local Authority) benchmark data for comparison
-   * Aggregates data across all schools in the same LA
+   * Aggregates data across all schools in the same LA with FULL KPI set
    */
   async getLaBenchmarks(
     urn: number,
     yearsBack: number = 5,
   ): Promise<LaBenchmarkData | null> {
-    // 1. Get this school's LA code
-    const { data: school } = await this.supabase
+    // 1. Get this school's LA code. Some academised schools have current
+    // performance rows under the new URN before our local GIAS snapshot has
+    // the successor establishment row, so fall back by org postcode/name.
+    let { data: school } = await this.supabase
       .from("schools")
-      .select("la_name, la_code")
+      .select("la_name, la_code, phase_name")
       .eq("urn", urn)
-      .single();
+      .maybeSingle();
+
+    if (!school?.la_code) {
+      const { data: organization } = await this.supabase
+        .from("organizations")
+        .select("name,address,local_authority")
+        .eq("urn", String(urn))
+        .maybeSingle();
+
+      const postcode = organization?.address?.postcode;
+      const orgTown = organization?.address?.town;
+      const orgLa = organization?.local_authority || orgTown;
+
+      if (postcode) {
+        const { data: postcodeMatches } = await this.supabase
+          .from("schools")
+          .select("la_name, la_code, phase_name, name, postcode")
+          .eq("postcode", postcode)
+          .limit(10);
+
+        school =
+          (postcodeMatches || []).find((candidate: any) => candidate.phase_name === "Primary") ||
+          postcodeMatches?.[0] ||
+          null;
+      }
+
+      if (!school?.la_code && orgLa) {
+        const { data: laMatch } = await this.supabase
+          .from("schools")
+          .select("la_name, la_code, phase_name")
+          .eq("la_name", orgLa)
+          .eq("phase_name", "Primary")
+          .limit(1)
+          .maybeSingle();
+        school = laMatch || school;
+      }
+    }
 
     if (!school?.la_code) return null;
 
@@ -403,16 +490,23 @@ export class SchoolIntelligenceEngine {
       .from("schools")
       .select("urn")
       .eq("la_code", school.la_code)
-      .eq("phase_name", "Primary") as any; // Primary phase comparison
+      .eq("phase_name", "Primary") as any;
 
     if (!laSchools || laSchools.length === 0) return null;
 
     const urns = laSchools.map((s: any) => s.urn);
     const minYear = new Date().getFullYear() - yearsBack - 1;
 
-    // 3. Fetch LA-wide data
-    const [laKs2, laAttendance] = await Promise.all([
-      // KS2 Combined (RWM +) for this LA
+    // 3. Fetch ALL LA-wide data for comprehensive KPI set
+    const [
+      laKs2All,
+      laKs2Reading,
+      laKs2Writing,
+      laKs2Maths,
+      laKs2Fsm,
+      laAttendance,
+    ] = await Promise.all([
+      // KS2 Combined (RWM)
       this.supabase
         .from("ks2_results")
         .select("academic_year_start, expected_standard_pct")
@@ -421,7 +515,43 @@ export class SchoolIntelligenceEngine {
         .eq("subject", "Reading, writing and maths")
         .eq("breakdown_topic", "All pupils"),
 
-      // Attendance data for this LA
+      // KS2 Reading with progress
+      this.supabase
+        .from("ks2_results")
+        .select("academic_year_start, expected_standard_pct, progress_measure_score")
+        .in("urn", urns)
+        .gte("academic_year_start", minYear)
+        .eq("subject", "Reading")
+        .eq("breakdown_topic", "All pupils"),
+
+      // KS2 Writing with progress
+      this.supabase
+        .from("ks2_results")
+        .select("academic_year_start, expected_standard_pct, progress_measure_score")
+        .in("urn", urns)
+        .gte("academic_year_start", minYear)
+        .eq("subject", "Writing")
+        .eq("breakdown_topic", "All pupils"),
+
+      // KS2 Maths with progress
+      this.supabase
+        .from("ks2_results")
+        .select("academic_year_start, expected_standard_pct, progress_measure_score")
+        .in("urn", urns)
+        .gte("academic_year_start", minYear)
+        .eq("subject", "Mathematics")
+        .eq("breakdown_topic", "All pupils"),
+
+      // KS2 FSM for disadvantaged gap analysis
+      this.supabase
+        .from("ks2_results")
+        .select("academic_year_start, expected_standard_pct, breakdown_topic, breakdown")
+        .in("urn", urns)
+        .gte("academic_year_start", minYear)
+        .eq("subject", "Reading, writing and maths")
+        .in("breakdown_topic", ["All pupils", "Disadvantaged status"]),
+
+      // Attendance data
       this.supabase
         .from("attendance")
         .select("academic_year_start, overall_attendance_pct, persistent_absence_pct")
@@ -429,16 +559,16 @@ export class SchoolIntelligenceEngine {
         .gte("academic_year_start", minYear),
     ]);
 
-    // 4. Aggregate by year (calculate LA averages)
-    const aggregateByYear = <T extends { academic_year_start: number; value: number }>(
+    // 4. Aggregate by year with proper null handling
+    const aggregateByYear = <T extends { academic_year_start: number }>(
       data: T[],
-      valueSelector: (d: T) => number,
-    ): { year: number; value: number }[] => {
+      valueSelector: (d: T) => number | null | undefined,
+    ): { year: number; value: number; count: number }[] => {
       const byYear: Record<number, { sum: number; count: number }> = {};
       data.forEach((d) => {
         const year = d.academic_year_start;
         const value = valueSelector(d);
-        if (value !== null && value !== undefined) {
+        if (value !== null && value !== undefined && !isNaN(value)) {
           if (!byYear[year]) byYear[year] = { sum: 0, count: 0 };
           byYear[year].sum += value;
           byYear[year].count += 1;
@@ -447,25 +577,129 @@ export class SchoolIntelligenceEngine {
       return Object.entries(byYear)
         .map(([year, { sum, count }]) => ({
           year: parseInt(year),
-          value: Math.round((sum / count) * 10) / 10, // Round to 1 decimal
+          value: Math.round((sum / count) * 10) / 10,
+          count,
         }))
         .sort((a, b) => a.year - b.year);
     };
 
+    // KS2 Combined
     const ks2Combined = aggregateByYear(
-      laKs2.data || [],
+      laKs2All.data || [],
       (d: any) => d.expected_standard_pct,
     );
 
+    // KS2 by subject with progress scores
+    const ks2Reading = aggregateByYear(
+      laKs2Reading.data || [],
+      (d: any) => d.expected_standard_pct,
+    );
+    const readingProgress = aggregateByYear(
+      laKs2Reading.data || [],
+      (d: any) => d.progress_measure_score,
+    );
+
+    const ks2Writing = aggregateByYear(
+      laKs2Writing.data || [],
+      (d: any) => d.expected_standard_pct,
+    );
+    const writingProgress = aggregateByYear(
+      laKs2Writing.data || [],
+      (d: any) => d.progress_measure_score,
+    );
+
+    const ks2Maths = aggregateByYear(
+      laKs2Maths.data || [],
+      (d: any) => d.expected_standard_pct,
+    );
+    const mathsProgress = aggregateByYear(
+      laKs2Maths.data || [],
+      (d: any) => d.progress_measure_score,
+    );
+
+    // Attendance
     const attendanceOverall = aggregateByYear(
       laAttendance.data || [],
       (d: any) => d.overall_attendance_pct,
     );
-
     const persistentAbsence = aggregateByYear(
       laAttendance.data || [],
       (d: any) => d.persistent_absence_pct,
     );
+
+    // Disadvantaged gap calculation
+    const disadvantagedGap: { year: number; all_pupils_pct: number; disadvantaged_pct: number; gap_pp: number }[] = [];
+    const byYearAll = new Map<number, number[]>();
+    const byYearFsm = new Map<number, number[]>();
+
+    (laKs2Fsm.data || []).forEach((d: any) => {
+      const year = d.academic_year_start;
+      const val = d.expected_standard_pct;
+      if (val !== null && val !== undefined && !isNaN(val)) {
+        if (d.breakdown_topic === "All pupils") {
+          if (!byYearAll.has(year)) byYearAll.set(year, []);
+          byYearAll.get(year)!.push(val);
+        } else if (
+          d.breakdown_topic === "Disadvantaged status" &&
+          String(d.breakdown || "").toLowerCase() === "disadvantaged"
+        ) {
+          if (!byYearFsm.has(year)) byYearFsm.set(year, []);
+          byYearFsm.get(year)!.push(val);
+        }
+      }
+    });
+
+    // Calculate gap per year
+    byYearAll.forEach((allVals, year) => {
+      const fsmVals = byYearFsm.get(year) || [];
+      if (fsmVals.length > 0) {
+        const allAvg = allVals.reduce((a, b) => a + b, 0) / allVals.length;
+        const fsmAvg = fsmVals.reduce((a, b) => a + b, 0) / fsmVals.length;
+        disadvantagedGap.push({
+          year,
+          all_pupils_pct: Math.round(allAvg),
+          disadvantaged_pct: Math.round(fsmAvg),
+          gap_pp: Math.round(allAvg - fsmAvg),
+        });
+      }
+    });
+
+    // 3-year trend analysis
+    let threeYearTrend: LaBenchmarkData["three_year_trend"] = null;
+    const recentYears = ks2Combined.slice(-3);
+    if (recentYears.length >= 2) {
+      const ks2Avg = recentYears.reduce((sum, d) => sum + d.value, 0) / recentYears.length;
+      const attRecent = attendanceOverall.slice(-3);
+      const attAvg = attRecent.length > 0
+        ? attRecent.reduce((sum, d) => sum + d.value, 0) / attRecent.length
+        : 0;
+
+      // Determine trend direction
+      const oldestKs2 = recentYears[0]?.value || 0;
+      const newestKs2 = recentYears[recentYears.length - 1]?.value || 0;
+      let direction: "improving" | "stable" | "declining" = "stable";
+      if (newestKs2 - oldestKs2 > 3) direction = "improving";
+      else if (oldestKs2 - newestKs2 > 3) direction = "declining";
+
+      threeYearTrend = {
+        ks2_combined_avg: Math.round(ks2Avg),
+        attendance_avg: Math.round(attAvg),
+        direction,
+      };
+    }
+
+    // Merge attainment and progress data by year
+    const mergeWithProgress = (
+      attainment: typeof ks2Reading,
+      progress: typeof readingProgress,
+    ) => {
+      const progressMap = new Map(progress.map((p) => [p.year, p.value]));
+      return attainment.map((a) => ({
+        year: a.year,
+        expected_standard_pct: Math.round(a.value),
+        progress_score: progressMap.get(a.year) ?? null,
+      }));
+    };
 
     return {
       la_name: school.la_name,
@@ -475,15 +709,112 @@ export class SchoolIntelligenceEngine {
         year: d.year,
         expected_standard_pct: Math.round(d.value),
       })),
+      ks2_reading: mergeWithProgress(ks2Reading, readingProgress),
+      ks2_writing: mergeWithProgress(ks2Writing, writingProgress),
+      ks2_maths: mergeWithProgress(ks2Maths, mathsProgress),
+      disadvantaged_gap: disadvantagedGap,
       attendance: attendanceOverall.map((d) => ({
         year: d.year,
         overall_pct: Math.round(d.value),
-        persistent_absence_pct: 0, // Will be filled separately if needed
+        persistent_absence_pct: 0,
       })),
       persistent_absence: persistentAbsence.map((d) => ({
         year: d.year,
         pct: Math.round(d.value * 10) / 10,
       })),
+      three_year_trend: threeYearTrend,
+    };
+  }
+
+  /**
+   * Get demographic cohort for fair comparison
+   * Groups schools with similar FSM%, EAL%, SEN% profiles
+   */
+  async getDemographicCohort(
+    urn: number,
+    yearsBack: number = 3,
+  ): Promise<DemographicCohort | null> {
+    // 1. Get this school's demographics
+    const { data: schoolCensus } = await this.supabase
+      .from("census")
+      .select("fsm_pct, eal_pct, sen_pct, academic_year_start")
+      .eq("urn", urn)
+      .gte("academic_year_start", new Date().getFullYear() - yearsBack)
+      .order("academic_year_start", { ascending: false })
+      .limit(1)
+      .single();
+
+    if (!schoolCensus) return null;
+
+    const fsm = schoolCensus.fsm_pct || 0;
+    const eal = schoolCensus.eal_pct || 0;
+    const sen = schoolCensus.sen_pct || 0;
+
+    // Define demographic bands (based on national distribution)
+    const fsmBand = fsm < 10 ? "Low (<10%)" : fsm < 20 ? "Medium (10-20%)" : fsm < 30 ? "High (20-30%)" : "Very High (30%+)";
+    const ealBand = eal < 10 ? "Low (<10%)" : eal < 25 ? "Medium (10-25%)" : "High (25%+)";
+    const senBand = sen < 10 ? "Low (<10%)" : sen < 20 ? "Medium (10-20%)" : "High (20%+)";
+
+    // 2. Find schools with similar demographics
+    const fsmMin = fsm - 10, fsmMax = fsm + 10;
+    const ealMin = eal - 15, ealMax = eal + 15;
+
+    const { data: cohortSchools } = await this.supabase
+      .from("census")
+      .select("urn, fsm_pct, eal_pct, sen_pct")
+      .gte("fsm_pct", Math.max(0, fsmMin))
+      .lte("fsm_pct", Math.min(100, fsmMax))
+      .gte("eal_pct", Math.max(0, ealMin))
+      .lte("eal_pct", Math.min(100, ealMax))
+      .gte("academic_year_start", new Date().getFullYear() - yearsBack);
+
+    if (!cohortSchools || cohortSchools.length < 3) return null; // Need at least 3 schools
+
+    const cohortUrns = [...new Set(cohortSchools.map((c: any) => c.urn))];
+    const minYear = new Date().getFullYear() - yearsBack - 1;
+
+    // 3. Calculate cohort averages
+    const [cohortKs2, cohortAtt] = await Promise.all([
+      this.supabase
+        .from("ks2_results")
+        .select("expected_standard_pct")
+        .in("urn", cohortUrns)
+        .gte("academic_year_start", minYear)
+        .eq("subject", "Reading, writing and maths")
+        .eq("breakdown_topic", "All pupils"),
+
+      this.supabase
+        .from("attendance")
+        .select("overall_attendance_pct")
+        .in("urn", cohortUrns)
+        .gte("academic_year_start", minYear),
+    ]);
+
+    const validKs2Values = (cohortKs2.data || [])
+      .map((d: any) => d.expected_standard_pct)
+      .filter((value: unknown): value is number => typeof value === "number" && value >= 0 && value <= 100);
+    const validAttendanceValues = (cohortAtt.data || [])
+      .map((d: any) => d.overall_attendance_pct)
+      .filter((value: unknown): value is number => typeof value === "number" && value >= 50 && value <= 100);
+
+    const avgKs2 = validKs2Values.length > 0
+      ? validKs2Values.reduce((sum: number, value: number) => sum + value, 0) / validKs2Values.length
+      : 0;
+
+    const avgAtt = validAttendanceValues.length > 0
+      ? validAttendanceValues.reduce((sum: number, value: number) => sum + value, 0) / validAttendanceValues.length
+      : 0;
+
+    return {
+      id: `cohort-${fsmBand}-${ealBand}-${senBand}`.replace(/\s+/g, "-").toLowerCase(),
+      name: `Similar Schools (${fsmBand} FSM, ${ealBand} EAL)`,
+      fsm_band: fsmBand,
+      eal_band: ealBand,
+      sen_band: senBand,
+      school_count: cohortUrns.length,
+      comparison_urns: cohortUrns,
+      avg_ks2_combined: Math.round(avgKs2),
+      avg_attendance: Math.round(avgAtt),
     };
   }
 
@@ -630,7 +961,7 @@ export class SchoolIntelligenceEngine {
       const allMatches = new Map<string, EEFStrategy>();
       [...matched, ...areaMatches].forEach((s) => allMatches.set(s.id, s));
 
-      // Sort by impact (months progress) × evidence strength
+      // Sort by impact (months progress) Ã— evidence strength
       const sorted = Array.from(allMatches.values()).sort(
         (a, b) =>
           b.monthsProgress * b.evidenceStrength -
@@ -685,7 +1016,7 @@ export class SchoolIntelligenceEngine {
 
   /**
    * Run full intelligence analysis for a school
-   * This is the main entry point — connects everything
+   * This is the main entry point â€” connects everything
    */
   async runFullAnalysis(
     organizationId: string,
@@ -701,13 +1032,14 @@ export class SchoolIntelligenceEngine {
       new Date().getFullYear() - (new Date().getMonth() < 8 ? 1 : 0);
 
     // 1. Gather all data in parallel
-    const [profile, trends, factors, outcomes, signals, laBenchmarks] = await Promise.all([
+    const [profile, trends, factors, outcomes, signals, laBenchmarks, demographicCohort] = await Promise.all([
       this.getSchoolProfile(urn),
       this.getDfETrends(urn, 5),
       this.getContextualFactors(organizationId),
       this.getCohortOutcomes(organizationId),
       this.getCrossModuleSignals(organizationId),
       this.getLaBenchmarks(urn, 5),
+      this.getDemographicCohort(urn, 3),
     ]);
 
     // 2. Build the comprehensive analysis prompt
@@ -720,11 +1052,12 @@ export class SchoolIntelligenceEngine {
       currentYear,
       options,
       laBenchmarks,
+      demographicCohort,
     );
 
     // 3. Send to AI for deep analysis
-    const completion = await this.openai.chat.completions.create({
-      model: "deepseek/deepseek-chat",
+    const completion = await this.getOpenAI().chat.completions.create({
+      model: "openai/gpt-4o-mini",
       messages: [
         {
           role: "system",
@@ -736,13 +1069,13 @@ export class SchoolIntelligenceEngine {
 - How contextual factors (staff absence, curriculum changes, demographics) affect cohort outcomes
 
 Your analysis must:
-1. CROSS-REFERENCE data — don't just report numbers, explain WHY they are what they are
-2. CORRELATE events with outcomes — if Year 3 teacher was sick for 6 months, what happened to that cohort's progress?
+1. CROSS-REFERENCE data â€” don't just report numbers, explain WHY they are what they are
+2. CORRELATE events with outcomes â€” if Year 3 teacher was sick for 6 months, what happened to that cohort's progress?
 3. RECOMMEND specific EEF strategies backed by evidence strength ratings
 4. DISTINGUISH between what the school can control and external factors
-5. IDENTIFY both positive impacts ("new phonics scheme → +12% Y1 phonics pass") and negative ("teacher turnover → below expected progress in Y4")
+5. IDENTIFY both positive impacts ("new phonics scheme â†’ +12% Y1 phonics pass") and negative ("teacher turnover â†’ below expected progress in Y4")
 6. Be SPECIFIC about which cohorts need which interventions
-7. Consider VALUE-ADDED — a school with 45% FSM achieving national average is performing strongly
+7. Consider VALUE-ADDED â€” a school with 45% FSM achieving national average is performing strongly
 
 Return ONLY valid JSON matching this exact structure:
 {
@@ -902,7 +1235,7 @@ Return ONLY valid JSON matching this exact structure:
         : "",
       factors.length > 0
         ? `${factors.length} contextual factors logged (${factors.filter((f) => f.impact_direction === "positive").length} positive, ${factors.filter((f) => f.impact_direction === "negative").length} negative).`
-        : "No contextual factors logged yet — add events to enable impact analysis.",
+        : "No contextual factors logged yet â€” add events to enable impact analysis.",
       positiveCount > 0
         ? `${positiveCount} positive impact${positiveCount > 1 ? "s" : ""} identified.`
         : "",
@@ -937,7 +1270,7 @@ Return ONLY valid JSON matching this exact structure:
     ];
 
     const result: IntelligenceAnalysis = {
-      title: `School Intelligence Analysis — ${profile?.name || urn}`,
+      title: `School Intelligence Analysis â€” ${profile?.name || urn}`,
       executive_summary: summary,
       detailed_analysis: {
         cohort_analyses: aiAnalysis.cohort_analyses || [],
@@ -971,6 +1304,7 @@ Return ONLY valid JSON matching this exact structure:
     currentYear: number,
     options: { focusAreas?: string[]; focusYearGroups?: number[] },
     laBenchmarks: LaBenchmarkData | null,
+    demographicCohort: DemographicCohort | null,
   ): string {
     const sections: string[] = [];
 
@@ -1015,13 +1349,28 @@ ${trends.census
 IMPORTANT: High FSM% means value-added analysis matters more than raw attainment.`);
     }
 
-    // LA Benchmarks (for local comparison)
+    // LA Benchmarks (extended with progress scores and disadvantaged gap)
     if (laBenchmarks) {
+      const ks2CombinedLines = laBenchmarks.ks2_combined.map(k => `${k.year}/${k.year + 1}: ${k.expected_standard_pct}%`).join("\n") || "No data";
+      const readingLines = laBenchmarks.ks2_reading?.map(k => `${k.year}/${k.year + 1}: ${k.expected_standard_pct}% (progress: ${k.progress_score > 0 ? '+' : ''}${k.progress_score})`).join("\n") || "No data";
+      const mathsLines = laBenchmarks.ks2_maths?.map(k => `${k.year}/${k.year + 1}: ${k.expected_standard_pct}% (progress: ${k.progress_score > 0 ? '+' : ''}${k.progress_score})`).join("\n") || "No data";
+      const gapLines = laBenchmarks.disadvantaged_gap?.map(g => `${g.year}/${g.year + 1}: All ${g.all_pupils_pct}% vs FSM ${g.disadvantaged_pct}% = ${g.gap_pp}pp gap`).join("\n") || "No data";
+
       sections.push(`=== LOCAL AUTHORITY BENCHMARKS ===
 LA: ${laBenchmarks.la_name} (${laBenchmarks.school_count} primary schools)
+${laBenchmarks.three_year_trend ? `3-Year Trend: ${laBenchmarks.three_year_trend.direction} (KS2 avg: ${laBenchmarks.three_year_trend.ks2_combined_avg}%, Attendance avg: ${laBenchmarks.three_year_trend.attendance_avg}%)` : ""}
 
 KS2 Combined (LA average):
-${laBenchmarks.ks2_combined.map(k => `${k.year}/${k.year + 1}: ${k.expected_standard_pct}%`).join("\n") || "No data"}
+${ks2CombinedLines}
+
+KS2 Reading (LA average):
+${readingLines}
+
+KS2 Maths (LA average):
+${mathsLines}
+
+Disadvantaged Gap (LA average):
+${gapLines}
 
 Attendance (LA average):
 ${laBenchmarks.attendance.map(a => `${a.year}/${a.year + 1}: ${a.overall_pct}% overall`).join("\n") || "No data"}
@@ -1029,7 +1378,19 @@ ${laBenchmarks.attendance.map(a => `${a.year}/${a.year + 1}: ${a.overall_pct}% o
 Persistent Absence (LA average):
 ${laBenchmarks.persistent_absence.map(p => `${p.year}/${p.year + 1}: ${p.pct}%`).join("\n") || "No data"}
 
-IMPORTANT: Compare school performance to BOTH national averages AND LA averages. Schools should contextualise themselves against local comparators, not just national benchmarks.`);
+IMPORTANT: Compare school performance to BOTH national averages AND LA averages. Schools should contextualise themselves against local comparators, not just national benchmarks.
+IDSR Thresholds: KS2 floor standard = 60%, Attendance < 95% = Ofsted concern, Persistent absence > 10% = DfE concern.`);
+    }
+
+    // Demographic Cohort for fair comparison
+    if (demographicCohort) {
+      sections.push(`=== DEMOGRAPHIC COHORT (Similar Schools) ===
+${demographicCohort.name}
+Comparison group: ${demographicCohort.school_count} schools with similar intakes
+FSM Band: ${demographicCohort.fsm_band} | EAL Band: ${demographicCohort.eal_band} | SEN Band: ${demographicCohort.sen_band}
+Cohort Averages: KS2 Combined ${demographicCohort.avg_ks2_combined}%, Attendance ${demographicCohort.avg_attendance}%
+
+This comparison group enables fair assessment against schools with similar demographic challenges. A school achieving national average despite high FSM% is performing ABOVE expectations in value-added terms.`);
     }
 
     // KS2 Results
@@ -1075,7 +1436,7 @@ Look for: Rising vacancy rate, declining teacher numbers, high PTR.`);
 ${trends.exclusions.map((e) => `${e.year}/${e.year + 1}: ${e.total} exclusions`).join("\n")}`);
     }
 
-    // Contextual factors — THE KEY DIFFERENTIATOR
+    // Contextual factors â€” THE KEY DIFFERENTIATOR
     if (factors.length > 0) {
       sections.push(`=== CONTEXTUAL FACTORS (School-entered) ===
 These are events the school has logged that may explain data patterns.
@@ -1095,7 +1456,7 @@ ${factors
     const eef = f.eef_strategy_id
       ? `\n  EEF Strategy: ${f.eef_strategy_id} (expected +${(f as any).eef_expected_months_progress} months)`
       : "";
-    return `• [${f.factor_type.toUpperCase()}] ${f.title}
+    return `â€¢ [${f.factor_type.toUpperCase()}] ${f.title}
   Affects: ${yearGroups} | Period: ${duration}
   ${f.description || ""}
   Rationale: ${f.rationale || "Not provided"}
@@ -1141,7 +1502,7 @@ ${highImpact
   .slice(0, 5)
   .map(
     (s) =>
-      `• ${s.name}: +${s.monthsProgress} months, cost ${s.costRating}/5, evidence ${s.evidenceStrength}/5`,
+      `â€¢ ${s.name}: +${s.monthsProgress} months, cost ${s.costRating}/5, evidence ${s.evidenceStrength}/5`,
   )
   .join("\n")}
 
@@ -1155,7 +1516,7 @@ ${options.focusYearGroups?.length ? `Focus year groups: ${options.focusYearGroup
     }
 
     sections.push(`=== ANALYSIS INSTRUCTIONS ===
-1. Cross-reference contextual factors with DfE data — explain causation, not just correlation
+1. Cross-reference contextual factors with DfE data â€” explain causation, not just correlation
 2. For each cohort, trace their journey through year groups and identify what events impacted them
 3. Where COVID affected specific cohorts (e.g. Year 6 2024 were in Year 2 during first lockdown), calculate which learning stages were disrupted
 4. For curriculum changes, assess whether the rationale was sound and whether outcomes improved
@@ -1314,7 +1675,7 @@ ${options.focusYearGroups?.length ? `Focus year groups: ${options.focusYearGroup
       lines.push(`\nActive contextual factors:`);
       activeFactors.forEach((f) => {
         lines.push(
-          `  • [${f.factor_type}] ${f.title} — ${f.whole_school ? "whole school" : `Y${f.affected_year_groups.join(",")}`}`,
+          `  â€¢ [${f.factor_type}] ${f.title} â€” ${f.whole_school ? "whole school" : `Y${f.affected_year_groups.join(",")}`}`,
         );
       });
     }
@@ -1327,15 +1688,15 @@ ${options.focusYearGroups?.length ? `Focus year groups: ${options.focusYearGroup
     ) {
       lines.push(`\nCross-module alerts:`);
       if (signals.estatesOverdueTasks > 0)
-        lines.push(`  ⚠ ${signals.estatesOverdueTasks} overdue estates tasks`);
-      if (signals.scrGaps > 0) lines.push(`  ⚠ ${signals.scrGaps} SCR gaps`);
+        lines.push(`  âš  ${signals.estatesOverdueTasks} overdue estates tasks`);
+      if (signals.scrGaps > 0) lines.push(`  âš  ${signals.scrGaps} SCR gaps`);
       if (signals.safeguardingConcerns > 0)
         lines.push(
-          `  ⚠ ${signals.safeguardingConcerns} low-level concerns (12 months)`,
+          `  âš  ${signals.safeguardingConcerns} low-level concerns (12 months)`,
         );
       if (signals.trainingComplianceRate < 90)
         lines.push(
-          `  ⚠ Training compliance: ${signals.trainingComplianceRate}%`,
+          `  âš  Training compliance: ${signals.trainingComplianceRate}%`,
         );
     }
 
@@ -1343,7 +1704,7 @@ ${options.focusYearGroups?.length ? `Focus year groups: ${options.focusYearGroup
   }
 
   /**
-   * Build a cohort journey — trace the SAME group of children across years.
+   * Build a cohort journey â€” trace the SAME group of children across years.
    *
    * A child in Year 6 in 2024 was in Year 2 in 2020 (first COVID lockdown).
    * cohort_reception_year = academic_year - year_group
@@ -1466,15 +1827,15 @@ ${options.focusYearGroups?.length ? `Focus year groups: ${options.focusYearGroup
         yearInFirstLockdown === 0
           ? "Reception (critical early learning disrupted)"
           : yearInFirstLockdown === 1
-            ? "Year 1 (phonics screening year — many missed it)"
+            ? "Year 1 (phonics screening year â€” many missed it)"
             : yearInFirstLockdown === 2
-              ? "Year 2 (KS1 SATs year — assessments cancelled)"
+              ? "Year 2 (KS1 SATs year â€” assessments cancelled)"
               : yearInFirstLockdown <= 4
                 ? `Year ${yearInFirstLockdown} (key fluency-building years disrupted)`
                 : yearInFirstLockdown === 5
                   ? "Year 5 (pre-SATs preparation disrupted)"
                   : yearInFirstLockdown === 6
-                    ? "Year 6 (SATs cancelled — no statutory data for this cohort)"
+                    ? "Year 6 (SATs cancelled â€” no statutory data for this cohort)"
                     : `Year ${yearInFirstLockdown}`;
 
       covidImpact = `This cohort was in ${stage} during the first national lockdown (March 2020). `;
@@ -1503,3 +1864,4 @@ export function getIntelligenceEngine(): SchoolIntelligenceEngine {
   }
   return _engine;
 }
+

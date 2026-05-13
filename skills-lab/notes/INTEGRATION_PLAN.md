@@ -1,4 +1,4 @@
-# Skills Integration Plan
+﻿# Skills Integration Plan
 
 ## Goal
 Integrate Wave 1 skills into Ed's chatbot so they can be automatically triggered and used based on conversation context.
@@ -7,17 +7,17 @@ Integrate Wave 1 skills into Ed's chatbot so they can be automatically triggered
 
 ```
 User Query
-    ↓
+    â†“
 EdChatbot.tsx (UI)
-    ↓
+    â†“
 API Call to OpenRouter
-    ↓
+    â†“
 ModelRouter.ts (selects model)
-    ↓
+    â†“
 PromptBuilder.ts (builds system prompt)
-    ↓
-OpenRouter API (DeepSeek/Qwen/etc.)
-    ↓
+    â†“
+OpenRouter API (approved-provider models)
+    â†“
 Response streamed back
 ```
 
@@ -95,25 +95,25 @@ Now respond to the user's query using this specialized knowledge.`;
 
 ```
 User Query
-    ↓
+    â†“
 SkillRouter.routeToSkill()
-    ↓
-    ├─ Skill Match Found?
-    │   ├─ YES: Load skill prompt + knowledge base
-    │   │       ↓
-    │   │   Inject into system prompt
-    │   │       ↓
-    │   │   ModelRouter (select model - may prefer different model for skills)
-    │   │       ↓
-    │   │   OpenRouter API with enhanced prompt
-    │   │       ↓
-    │   │   Skill-enhanced response
-    │   │
-    │   └─ NO: Proceed with normal Ed prompt
-    │           ↓
-    │       ModelRouter (standard model selection)
-    │           ↓
-    │       Normal Ed response
+    â†“
+    â”œâ”€ Skill Match Found?
+    â”‚   â”œâ”€ YES: Load skill prompt + knowledge base
+    â”‚   â”‚       â†“
+    â”‚   â”‚   Inject into system prompt
+    â”‚   â”‚       â†“
+    â”‚   â”‚   ModelRouter (select model - may prefer different model for skills)
+    â”‚   â”‚       â†“
+    â”‚   â”‚   OpenRouter API with enhanced prompt
+    â”‚   â”‚       â†“
+    â”‚   â”‚   Skill-enhanced response
+    â”‚   â”‚
+    â”‚   â””â”€ NO: Proceed with normal Ed prompt
+    â”‚           â†“
+    â”‚       ModelRouter (standard model selection)
+    â”‚           â†“
+    â”‚       Normal Ed response
 ```
 
 ## Implementation Steps
@@ -145,7 +145,7 @@ export const AVAILABLE_SKILLS: Skill[] = [
     },
     knowledgeBasePath: 'skills-lab/knowledge/pupil-premium-eef-toolkit.md',
     promptPath: 'skills-lab/skills/pupil-premium-planner.ts', // Extract prompt from here
-    preferredModel: 'deepseek/deepseek-chat', // Good at reasoning through evidence
+    preferredModel: 'openai/gpt-4o-mini', // Good at reasoning through evidence
   },
   {
     name: 'website_compliance_checker',
@@ -156,7 +156,7 @@ export const AVAILABLE_SKILLS: Skill[] = [
     },
     knowledgeBasePath: 'skills-lab/knowledge/website-compliance-requirements.md',
     promptPath: 'skills-lab/skills/website-compliance-checker.ts',
-    preferredModel: 'deepseek/deepseek-chat',
+    preferredModel: 'openai/gpt-4o-mini',
   },
   {
     name: 'ht_report_generator',
@@ -167,7 +167,7 @@ export const AVAILABLE_SKILLS: Skill[] = [
     },
     knowledgeBasePath: 'skills-lab/knowledge/headteacher-report-templates.md',
     promptPath: 'skills-lab/skills/ht-report-generator.ts',
-    preferredModel: 'deepseek/deepseek-chat', // Good at structured writing
+    preferredModel: 'openai/gpt-4o-mini', // Good at structured writing
   },
 ];
 ```
@@ -291,7 +291,7 @@ export class ModelRouter {
 
     if (skillRouting.shouldUseSkill && skillRouting.skill) {
       // Use skill's preferred model if specified
-      const model = skillRouting.skill.preferredModel || 'deepseek/deepseek-chat';
+      const model = skillRouting.skill.preferredModel || 'openai/gpt-4o-mini';
 
       return {
         taskType: 'skill_usage',
@@ -343,19 +343,19 @@ PERSONALITY:
   if (skillContext) {
     return `${basePrompt}
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🔧 SKILL ACTIVATED: ${skillContext.skillName}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”
+ðŸ”§ SKILL ACTIVATED: ${skillContext.skillName}
+â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”
 
 ${skillContext.skillPrompt}
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📚 KNOWLEDGE BASE
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”
+ðŸ“š KNOWLEDGE BASE
+â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”
 
 ${skillContext.knowledgeBase}
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”
 
 Now respond to the user's query using this specialized knowledge and skill guidance.`;
   }
@@ -435,7 +435,7 @@ Test full conversation flow with skill activation:
 ```typescript
 // Test: Pupil Premium conversation
 const conversation = [
-  { role: 'user', content: 'We have £50k pupil premium. What should we spend it on?' },
+  { role: 'user', content: 'We have Â£50k pupil premium. What should we spend it on?' },
 ];
 
 const response = await chat(conversation, { product: 'schoolgle-platform' });
@@ -448,7 +448,7 @@ expect(response).toContain('metacognition');
 
 ## Deployment Phases
 
-### Phase 1: Skills Lab Only (✅ COMPLETE)
+### Phase 1: Skills Lab Only (âœ… COMPLETE)
 - Knowledge bases created
 - Skill prototypes defined
 - Example conversations documented
@@ -481,11 +481,11 @@ expect(response).toContain('metacognition');
 
 ## Success Criteria
 
-✅ **Skill activation works**: When user mentions "pupil premium", PP skill activates
-✅ **Knowledge injection works**: Responses cite EEF evidence accurately
-✅ **Fallback works**: Non-skill queries work as before
-✅ **Quality improvement**: Skill responses demonstrably better than general Ed
-✅ **Performance acceptable**: Skill activation adds <500ms latency
+âœ… **Skill activation works**: When user mentions "pupil premium", PP skill activates
+âœ… **Knowledge injection works**: Responses cite EEF evidence accurately
+âœ… **Fallback works**: Non-skill queries work as before
+âœ… **Quality improvement**: Skill responses demonstrably better than general Ed
+âœ… **Performance acceptable**: Skill activation adds <500ms latency
 
 ## Monitoring
 
@@ -511,14 +511,16 @@ Track skill usage to understand value:
 
 ## Next Steps
 
-1. ✅ Complete Wave 1 skills documentation (DONE)
-2. 🔄 Implement SkillRouter (NEXT - do this now)
-3. 🔄 Update ModelRouter to use SkillRouter
-4. 🔄 Update PromptBuilder to inject skill context
-5. 🔄 Test with example conversations
-6. 🔄 Deploy to platform
-7. 🔄 Monitor usage and iterate
+1. âœ… Complete Wave 1 skills documentation (DONE)
+2. ðŸ”„ Implement SkillRouter (NEXT - do this now)
+3. ðŸ”„ Update ModelRouter to use SkillRouter
+4. ðŸ”„ Update PromptBuilder to inject skill context
+5. ðŸ”„ Test with example conversations
+6. ðŸ”„ Deploy to platform
+7. ðŸ”„ Monitor usage and iterate
 
 ---
 
 **Ready to implement?** The foundation is solid - let's build the integration next!
+
+

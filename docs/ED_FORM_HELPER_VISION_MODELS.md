@@ -1,4 +1,4 @@
-# Ed Form Helper - Advanced Vision Models
+﻿# Ed Form Helper - Advanced Vision Models
 
 ## Using Meta & Other Models for Form Understanding
 
@@ -21,23 +21,23 @@ You're right - Meta's models and others are excellent at this now.
 ## Strategy: Use Multiple Models in Pipeline
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    MULTI-MODE PIPELINE                           │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  1. FAST DETECT (Llama 3.2-Vision on Groq)                      │
-│     "Is there a form? How many fields?"                          │
-│              ↓                                                  │
-│  2. FIELD EXTRACTION (Qwen2.5-VL)                               │
-│     "Extract all field labels and types"                         │
-│              ↓                                                  │
-│  3. FORM UNDERSTANDING (Claude 3.5 Sonnet)                      │
-│     "What type of form is this? What questions to ask?"         │
-│              ↓                                                  │
-│  4. CONVERSATION (DeepSeek Chat)                                │
-│     Chat with user to get values                                │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚                    MULTI-MODE PIPELINE                           â”‚
+â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤
+â”‚                                                                 â”‚
+â”‚  1. FAST DETECT (Llama 3.2-Vision on Groq)                      â”‚
+â”‚     "Is there a form? How many fields?"                          â”‚
+â”‚              â†“                                                  â”‚
+â”‚  2. FIELD EXTRACTION (Qwen2.5-VL)                               â”‚
+â”‚     "Extract all field labels and types"                         â”‚
+â”‚              â†“                                                  â”‚
+â”‚  3. FORM UNDERSTANDING (Claude 3.5 Sonnet)                      â”‚
+â”‚     "What type of form is this? What questions to ask?"         â”‚
+â”‚              â†“                                                  â”‚
+â”‚  4. CONVERSATION (DeepSeek Chat)                                â”‚
+â”‚     Chat with user to get values                                â”‚
+â”‚                                                                 â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 ```
 
 ---
@@ -66,7 +66,7 @@ const VISION_MODELS: Record<string, VisionModel> = {
   field_extract: {
     name: 'Qwen2.5-VL-72B',
     provider: 'openrouter',
-    model: 'qwen/qwen-2.5-vl-72b-instruct',
+    model: 'google/gemini-2.0-flash-001',
     costPerInput: 0.0004, // per 1M tokens
     maxTokens: 8192,
     supportsStreaming: true,
@@ -137,7 +137,7 @@ Once we know there's a form, extract detailed field info:
 ```typescript
 async function extractFieldsQwen(screenshot: string): Promise<FormField[]> {
   const response = await openrouter.chat.completions.create({
-    model: 'qwen/qwen-2.5-vl-72b-instruct',
+    model: 'google/gemini-2.0-flash-001',
     messages: [{
       role: 'user',
       content: [
@@ -206,7 +206,7 @@ async function understandFormClaude(fields: FormField[], userLanguage: string): 
           {
             "fieldIndex": 0,
             "question": "What is your full name?",
-            "questionInUserLanguage": "آپ کا پورا نام کیا ہے؟",
+            "questionInUserLanguage": "Ø¢Ù¾ Ú©Ø§ Ù¾ÙˆØ±Ø§ Ù†Ø§Ù… Ú©ÛŒØ§ ÛÛ’ØŸ",
             "example": "Ahmed Ali",
             "helpText": "Please say your first and last name"
           }
@@ -339,17 +339,17 @@ async function analyzeWithLlama(screenshot: string) {
 ```typescript
 class SmartFormDetector {
   async detectAndAnalyze(screenshot: string, userLanguage: string) {
-    console.log('🔍 Detecting form with Llama (fast)...');
+    console.log('ðŸ” Detecting form with Llama (fast)...');
     const hasForm = await this.quickDetect(screenshot);
 
     if (!hasForm) {
       return { detected: false };
     }
 
-    console.log('✅ Form found! Extracting fields with Qwen...');
+    console.log('âœ… Form found! Extracting fields with Qwen...');
     const fields = await this.extractFields(screenshot);
 
-    console.log('📝 Understanding form with Claude...');
+    console.log('ðŸ“ Understanding form with Claude...');
     const plan = await this.createPlan(fields, userLanguage);
 
     return {
@@ -391,3 +391,4 @@ class SmartFormDetector {
 | **Converse** | DeepSeek Chat | Fast, cheap | ~$0.0002 | ~500ms |
 
 **Total per form**: ~$0.01, ~4 seconds, excellent accuracy
+

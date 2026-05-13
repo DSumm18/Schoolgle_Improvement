@@ -1,0 +1,615 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Schoolgle Motion Concept — Ofsted Readiness</title>
+    <style>
+      :root {
+        --navy: #0b1320;
+        --text: #111827;
+        --muted: #667085;
+        --line: #e5e7eb;
+        --school-improvement: #6b7280;
+        --governance: #f59e0b;
+        --business-ops: #3b82f6;
+        --compliance: #9f1239;
+        --communications: #f97316;
+        --intelligence: #a78bfa;
+        --teaching: #06b6d4;
+        --ofsted: #0ea5e9;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        color: var(--text);
+        font-family: Inter, "Segoe UI", Arial, sans-serif;
+        background:
+          radial-gradient(circle at 18% 20%, rgb(14 165 233 / 0.13), transparent 32%),
+          radial-gradient(circle at 88% 72%, rgb(167 139 250 / 0.16), transparent 30%),
+          linear-gradient(135deg, #f8fafc 0%, #eef4fb 100%);
+      }
+
+      .template-nav {
+        position: sticky;
+        z-index: 20;
+        top: 14px;
+        display: flex;
+        width: fit-content;
+        margin: 18px auto 0;
+        padding: 8px;
+        gap: 6px;
+        background: rgb(255 255 255 / 0.86);
+        border: 1px solid rgb(255 255 255 / 0.75);
+        border-radius: 999px;
+        box-shadow: 0 18px 50px rgb(15 23 42 / 0.12);
+        backdrop-filter: blur(18px);
+      }
+
+      .template-nav a {
+        padding: 9px 16px;
+        color: #536179;
+        font-size: 14px;
+        font-weight: 800;
+        text-decoration: none;
+        border-radius: 999px;
+      }
+
+      .template-nav a.active {
+        color: #ffffff;
+        background: var(--navy);
+      }
+
+      .wrap {
+        width: min(1180px, calc(100vw - 48px));
+        margin: 26px auto 60px;
+      }
+
+      .intro {
+        margin-bottom: 22px;
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        color: var(--navy);
+        font-size: clamp(32px, 5vw, 56px);
+        letter-spacing: -0.055em;
+      }
+
+      .intro p {
+        max-width: 760px;
+        margin: 0;
+        color: var(--muted);
+        font-size: 17px;
+        line-height: 1.55;
+      }
+
+      .stage {
+        position: relative;
+        display: grid;
+        min-height: 610px;
+        grid-template-columns: 0.9fr 1.1fr;
+        gap: 34px;
+        align-items: center;
+        overflow: hidden;
+        padding: 56px;
+        background: rgb(255 255 255 / 0.82);
+        border: 1px solid rgb(255 255 255 / 0.75);
+        border-radius: 36px;
+        box-shadow: 0 24px 80px rgb(15 23 42 / 0.14);
+      }
+
+      .stage::before {
+        content: "";
+        position: absolute;
+        inset: 36px;
+        pointer-events: none;
+        border: 1px solid rgb(226 232 240 / 0.8);
+        border-radius: 28px;
+      }
+
+      .wheel-area {
+        position: relative;
+        display: grid;
+        min-height: 420px;
+        place-items: center;
+      }
+
+      .logo-lockup {
+        --mark-size: 122px;
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: calc(var(--mark-size) * 0.24);
+        animation: lockupSettle 720ms ease 5.35s forwards;
+      }
+
+      .wheel-label {
+        position: absolute;
+        bottom: 18px;
+        left: 50%;
+        padding: 9px 14px;
+        color: #475569;
+        font-size: 13px;
+        font-weight: 900;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        background: #f8fafc;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        opacity: 0;
+        transform: translateX(-50%) translateY(12px);
+        animation: labelIn 700ms ease 5.6s forwards;
+      }
+
+      .wheel {
+        position: relative;
+        flex: 0 0 auto;
+        width: var(--mark-size);
+        height: var(--mark-size);
+        border-radius: 50%;
+        animation: spinAndStop 5.4s cubic-bezier(0.12, 0.82, 0.18, 1) 0.75s forwards;
+      }
+
+      .orbit {
+        position: absolute;
+        inset: calc(var(--mark-size) * 0.16);
+        border: 1px dashed rgb(100 116 139 / 0);
+        border-radius: 50%;
+        opacity: 0;
+        animation: orbitFade 750ms ease 6.15s forwards;
+      }
+
+      .dot {
+        --angle: 0deg;
+        --size: calc(var(--mark-size) * 0.24);
+        --orbit-radius: calc(var(--mark-size) * 0.34);
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: var(--size);
+        height: var(--size);
+        margin: calc(var(--size) / -2);
+        background: var(--colour);
+        border-radius: 50%;
+        box-shadow:
+          0 10px 22px rgb(15 23 42 / 0.14),
+          inset 0 0 0 2px rgb(255 255 255 / 0.6);
+        transform: rotate(var(--angle)) translateX(var(--orbit-radius)) rotate(calc(var(--angle) * -1));
+        animation: fadeNonSelected 600ms ease 6.2s forwards;
+      }
+
+      .dot.selected {
+        animation:
+          selectedPop 900ms ease 6.15s forwards,
+          selectedPulse 1.5s ease-in-out 6.75s infinite;
+      }
+
+      .dot:nth-child(2) {
+        --angle: -64.2857deg;
+        --colour: var(--governance);
+      }
+
+      .dot:nth-child(3) {
+        --angle: -12.8571deg;
+        --colour: var(--business-ops);
+      }
+
+      .dot:nth-child(4) {
+        --angle: 38.5715deg;
+        --colour: var(--teaching);
+      }
+
+      .dot:nth-child(5) {
+        --angle: 90deg;
+        --colour: var(--intelligence);
+      }
+
+      .dot:nth-child(6) {
+        --angle: 141.4286deg;
+        --colour: var(--communications);
+      }
+
+      .dot:nth-child(7) {
+        --angle: 192.8571deg;
+        --colour: var(--compliance);
+      }
+
+      .dot:nth-child(8) {
+        --angle: 244.2857deg;
+        --colour: var(--school-improvement);
+      }
+
+      .wordmark {
+        position: relative;
+        z-index: 1;
+        color: var(--navy);
+        font-size: 58px;
+        font-weight: 900;
+        letter-spacing: -0.06em;
+        opacity: 1;
+        transform: translateY(0);
+        animation: wordmarkOut 500ms ease 5.7s forwards;
+      }
+
+      .module-panel {
+        position: relative;
+        z-index: 2;
+        max-width: 560px;
+        opacity: 0;
+        transform: translateX(38px);
+        animation: panelIn 780ms cubic-bezier(0.16, 1, 0.3, 1) 6.45s forwards;
+      }
+
+      .module-kicker {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 16px;
+        padding: 9px 13px;
+        color: #475569;
+        font-size: 12px;
+        font-weight: 900;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        background: #f8fafc;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+      }
+
+      .module-kicker i {
+        width: 10px;
+        height: 10px;
+        background: var(--school-improvement);
+        border-radius: 50%;
+      }
+
+      .module-panel h2 {
+        margin: 0 0 12px;
+        color: var(--navy);
+        font-size: clamp(38px, 5vw, 66px);
+        line-height: 0.96;
+        letter-spacing: -0.06em;
+      }
+
+      .module-path {
+        display: grid;
+        gap: 8px;
+        margin: 0 0 18px;
+        color: #64748b;
+        font-size: 13px;
+        font-weight: 900;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .module-path span {
+        display: inline-flex;
+        width: fit-content;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 10px;
+        background: #f8fafc;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+      }
+
+      .module-path strong {
+        color: var(--navy);
+      }
+
+      .module-panel .lead {
+        max-width: 520px;
+        margin: 0 0 24px;
+        color: #475569;
+        font-size: 19px;
+        line-height: 1.45;
+      }
+
+      .mock-ui {
+        display: grid;
+        gap: 10px;
+        padding: 18px;
+        background: #ffffff;
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        box-shadow: 0 18px 45px rgb(15 23 42 / 0.1);
+      }
+
+      .mock-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .mock-top strong {
+        color: var(--navy);
+        font-size: 15px;
+      }
+
+      .badge {
+        padding: 6px 9px;
+        color: #0369a1;
+        font-size: 11px;
+        font-weight: 900;
+        background: #e0f2fe;
+        border-radius: 999px;
+      }
+
+      .mock-row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 14px;
+        align-items: center;
+        padding: 13px 14px;
+        background: #f8fafc;
+        border: 1px solid #eef2f7;
+        border-radius: 14px;
+      }
+
+      .mock-row span {
+        color: #334155;
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .progress {
+        position: relative;
+        width: 126px;
+        height: 8px;
+        overflow: hidden;
+        background: #e5e7eb;
+        border-radius: 999px;
+      }
+
+      .progress::before {
+        content: "";
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: var(--value);
+        background: var(--ofsted);
+        border-radius: inherit;
+      }
+
+      .accent-line {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 5px;
+        width: min(100%, 520px);
+        margin-top: 24px;
+      }
+
+      .accent-line span {
+        height: 5px;
+        border-radius: 999px;
+        background: var(--colour);
+      }
+
+      .controls {
+        display: flex;
+        gap: 10px;
+        margin-top: 18px;
+      }
+
+      .controls button,
+      .controls a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 38px;
+        padding: 9px 14px;
+        color: #ffffff;
+        font: inherit;
+        font-size: 13px;
+        font-weight: 900;
+        text-decoration: none;
+        background: var(--navy);
+        border: 0;
+        border-radius: 999px;
+        cursor: pointer;
+      }
+
+      .controls a {
+        color: var(--navy);
+        background: #ffffff;
+        border: 1px solid var(--line);
+      }
+
+      @keyframes spinAndStop {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(3715.7143deg);
+        }
+      }
+
+      @keyframes fadeNonSelected {
+        to {
+          opacity: 0.1;
+          filter: grayscale(0.7);
+          transform: rotate(var(--angle)) translateX(calc(var(--orbit-radius) * 0.82)) rotate(calc(var(--angle) * -1))
+            scale(0.68);
+        }
+      }
+
+      @keyframes selectedPop {
+        to {
+          opacity: 1;
+          transform: rotate(var(--angle)) translateX(calc(var(--orbit-radius) * 1.1)) rotate(calc(var(--angle) * -1))
+            scale(1.22);
+        }
+      }
+
+      @keyframes lockupSettle {
+        to {
+          transform: translateX(-18px);
+        }
+      }
+
+      @keyframes selectedPulse {
+        0%,
+        100% {
+          box-shadow:
+            0 0 0 0 rgb(107 114 128 / 0.24),
+            0 10px 22px rgb(15 23 42 / 0.14),
+            inset 0 0 0 2px rgb(255 255 255 / 0.6);
+        }
+        50% {
+          box-shadow:
+            0 0 0 18px rgb(107 114 128 / 0),
+            0 10px 22px rgb(15 23 42 / 0.14),
+            inset 0 0 0 2px rgb(255 255 255 / 0.6);
+        }
+      }
+
+      @keyframes orbitFade {
+        to {
+          opacity: 0;
+          transform: scale(0.75);
+        }
+      }
+
+      @keyframes wordmarkOut {
+        to {
+          opacity: 0;
+          transform: translateY(-8px);
+        }
+      }
+
+      @keyframes panelIn {
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+
+      @keyframes labelIn {
+        to {
+          opacity: 1;
+          transform: translateX(-50%) translateY(0);
+        }
+      }
+
+      @media (max-width: 840px) {
+        .stage {
+          grid-template-columns: 1fr;
+          padding: 34px;
+        }
+
+        .wheel-area {
+          min-height: 330px;
+        }
+
+        .logo-lockup {
+          --mark-size: 108px;
+        }
+
+        .wordmark {
+          font-size: 44px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="template-nav" aria-label="Template previews">
+      <a href="./letterhead.html">Letterhead</a>
+      <a href="./proposal.html">Proposal</a>
+      <a href="./invoice.html">Invoice</a>
+      <a href="./meeting-notes.html">Meeting Notes</a>
+      <a href="./email-signature.html">Email Signature</a>
+      <a href="./linkedin-advertising.html">LinkedIn Advertising</a>
+      <a class="active" href="./motion-ofsted-readiness.html">Motion Concept</a>
+      <a href="./index.html">Gallery</a>
+    </nav>
+
+    <main class="wrap">
+      <section class="intro">
+        <h1>Ofsted Readiness Motion Concept</h1>
+        <p>
+          Prototype for a reusable module advert: the Schoolgle wheel spins, stops on School Improvement,
+          then shows the path from module to app: School Improvement → Ofsted Readiness.
+        </p>
+      </section>
+
+      <section class="stage" id="stage" aria-label="Schoolgle Ofsted Readiness motion concept">
+        <div class="wheel-area">
+          <div class="logo-lockup">
+            <div class="wheel" aria-hidden="true">
+              <div class="orbit"></div>
+              <span class="dot"></span>
+              <span class="dot"></span>
+              <span class="dot"></span>
+              <span class="dot"></span>
+              <span class="dot"></span>
+              <span class="dot"></span>
+              <span class="dot selected"></span>
+            </div>
+            <div class="wordmark">Schoolgle</div>
+          </div>
+          <div class="wheel-label">School Improvement</div>
+        </div>
+
+        <div class="module-panel">
+          <div class="module-kicker"><i></i>School Improvement module</div>
+          <div class="module-path">
+            <span>Module family</span>
+            <span><strong>School Improvement</strong> apps</span>
+          </div>
+          <h2>Ofsted Readiness</h2>
+          <p class="lead">
+            A focused School Improvement app that maps evidence, surfaces gaps early, and keeps inspection
+            readiness moving without the last-minute scramble.
+          </p>
+
+          <div class="mock-ui" aria-label="Mock Ofsted Readiness dashboard card">
+            <div class="mock-top">
+              <strong>Inspection evidence map</strong>
+              <span class="badge">Live readiness</span>
+            </div>
+            <div class="mock-row">
+              <span>Evidence connected</span>
+              <div class="progress" style="--value: 82%"></div>
+            </div>
+            <div class="mock-row">
+              <span>Actions routed</span>
+              <div class="progress" style="--value: 68%"></div>
+            </div>
+            <div class="mock-row">
+              <span>SEF draft ready</span>
+              <div class="progress" style="--value: 76%"></div>
+            </div>
+          </div>
+
+          <div class="accent-line" aria-hidden="true">
+            <span style="--colour: var(--school-improvement)"></span>
+            <span style="--colour: var(--governance)"></span>
+            <span style="--colour: var(--business-ops)"></span>
+            <span style="--colour: var(--compliance)"></span>
+            <span style="--colour: var(--communications)"></span>
+            <span style="--colour: var(--intelligence)"></span>
+            <span style="--colour: var(--teaching)"></span>
+          </div>
+        </div>
+      </section>
+
+      <div class="controls">
+        <button type="button" id="replay">Replay animation</button>
+        <a href="./index.html">Back to asset gallery</a>
+      </div>
+    </main>
+
+    <script>
+      document.getElementById("replay").addEventListener("click", () => {
+        const stage = document.getElementById("stage");
+        const clone = stage.cloneNode(true);
+        stage.replaceWith(clone);
+      });
+    </script>
+  </body>
+</html>

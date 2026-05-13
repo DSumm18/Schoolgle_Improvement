@@ -1,4 +1,4 @@
-# DPO Action Checklist — Schoolgle Ltd
+﻿# DPO Action Checklist â€” Schoolgle Ltd
 
 **DPO:** David (dpo@schoolgle.co.uk)
 **Date:** 9 March 2026
@@ -9,11 +9,11 @@ This is your personal to-do list. Everything technical has been implemented. The
 
 ## 1. ICO Registration (Do First)
 
-- [ ] **Pay ICO data protection fee** — £40/year for micro organisations
+- [ ] **Pay ICO data protection fee** â€” Â£40/year for micro organisations
   - Go to: https://ico.org.uk/for-organisations/data-protection-fee/
-  - Select: "Data controller" → answer the questions about Schoolgle
+  - Select: "Data controller" â†’ answer the questions about Schoolgle
   - Pay online (card or direct debit)
-  - You'll get a registration number (e.g., ZA123456) — add it to the privacy policy footer
+  - You'll get a registration number (e.g., ZA123456) â€” add it to the privacy policy footer
 
 - [ ] **Register your DPO with the ICO**
   - After paying the fee, log into your ICO account
@@ -32,22 +32,22 @@ These are the Data Processing Agreements you need with each sub-processor. Most 
 | -------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **OpenRouter** | Email support@openrouter.ai   | Request their DPA. If they don't have one, ask for their standard T&Cs with data processing clauses. Attach a UK IDTA addendum.                        |
 | **Deepgram**   | https://deepgram.com/dpa      | Sign their standard DPA online. Request UK IDTA addendum.                                                                                              |
-| **Fish Audio** | Unknown — email their support | Try to verify their legal entity and location. If unverifiable, **switch to Azure TTS only** (already integrated, UK-hosted, Microsoft DPA covers it). |
+| **Fish Audio** | Unknown â€” email their support | Try to verify their legal entity and location. If unverifiable, **switch to Azure TTS only** (already integrated, UK-hosted, Microsoft DPA covers it). |
 
 ### Important (sign within 30 days)
 
 | Provider                  | Where to find DPA                                       | What to do                                                                                                                                           |
 | ------------------------- | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Google Cloud (Gemini)** | https://cloud.google.com/terms/data-processing-addendum | Accept their DPA in the Google Cloud Console. This covers Firebase + Gemini. Includes SCCs automatically.                                            |
-| **OpenAI**                | https://openai.com/policies/dpa                         | Sign online. Includes SCCs. Note: they may retain audio for 90 days for abuse monitoring — acceptable but disclose in privacy policy (already done). |
+| **OpenAI**                | https://openai.com/policies/dpa                         | Sign online. Includes SCCs. Note: they may retain audio for 90 days for abuse monitoring â€” acceptable but disclose in privacy policy (already done). |
 | **Anthropic**             | Email privacy@anthropic.com                             | Request DPA. They have a standard one. Attach UK IDTA.                                                                                               |
-| **Vercel**                | https://vercel.com/legal/dpa                            | Accept in Vercel dashboard under Settings → Legal.                                                                                                   |
+| **Vercel**                | https://vercel.com/legal/dpa                            | Accept in Vercel dashboard under Settings â†’ Legal.                                                                                                   |
 
 ### Already Covered (verify only)
 
 | Provider            | Action                                                                                            |
 | ------------------- | ------------------------------------------------------------------------------------------------- |
-| **Supabase**        | Check your Supabase dashboard → Settings → Legal. Their T&Cs include a DPA. Verify it's accepted. |
+| **Supabase**        | Check your Supabase dashboard â†’ Settings â†’ Legal. Their T&Cs include a DPA. Verify it's accepted. |
 | **Stripe**          | Included in standard Stripe T&Cs. DPF participant. No action needed.                              |
 | **Microsoft Azure** | Covered by Microsoft Online Services DPA. Verify in Azure portal.                                 |
 
@@ -57,7 +57,7 @@ These are the Data Processing Agreements you need with each sub-processor. Most 
 
 For every US-based provider, you need either:
 
-- A **UK International Data Transfer Addendum (IDTA)** — ICO template at https://ico.org.uk/for-organisations/guide-to-data-protection/guide-to-the-general-data-protection-regulation-gdpr/international-data-transfer-agreement-and-guidance/
+- A **UK International Data Transfer Addendum (IDTA)** â€” ICO template at https://ico.org.uk/for-organisations/guide-to-data-protection/guide-to-the-general-data-protection-regulation-gdpr/international-data-transfer-agreement-and-guidance/
 - Or **Standard Contractual Clauses (SCCs)** with a UK addendum
 
 Most large providers (Google, OpenAI, Stripe) include SCCs in their standard DPA. For smaller ones (OpenRouter, Deepgram), you may need to attach the ICO's IDTA template yourself.
@@ -92,7 +92,7 @@ Fish Audio's legal entity and data location are unverified. You have two options
 - **Option A:** Email Fish Audio, ask for their registered company name, data processing location, and DPA. If satisfactory, sign DPA and keep using them.
 - **Option B (recommended):** Remove Fish Audio entirely and use Azure TTS (already integrated, UK-hosted, Microsoft DPA covers it). This removes the unknown from your sub-processor list.
 
-To implement Option B, just remove the `FISH_AUDIO_API_KEY` from your environment variables — the code already requires it to be set and will return a 500 if missing, effectively disabling Fish Audio.
+To implement Option B, just remove the `FISH_AUDIO_API_KEY` from your environment variables â€” the code already requires it to be set and will return a 500 if missing, effectively disabling Fish Audio.
 
 ---
 
@@ -113,10 +113,10 @@ Set these reminders:
 
 ## 7. What's Already Done (Technical)
 
-These are implemented in code — no action needed from you:
+These are implemented in code â€” no action needed from you:
 
 - [x] PII masking before all AI calls (`pii-masker.ts`)
-- [x] DeepSeek and Qwen/Alibaba removed from model config
+- [x] non-approved provider families removed from model config
 - [x] Gemini Flash as primary model (cost-effective, Google DPA)
 - [x] All API routes authenticated (no more `'demo'` fallbacks)
 - [x] GDPR delete endpoint covers all tables including compliance module
@@ -139,14 +139,16 @@ A DPO or ICO auditor will typically check:
 | ------------------------------------- | ------------------------------------------------------ |
 | ICO registration and fee paid         | **YOU NEED TO DO THIS**                                |
 | DPO appointed and registered          | **YOU NEED TO DO THIS**                                |
-| Privacy policy publicly accessible    | ✅ `/privacy`                                          |
-| Cookie consent mechanism              | ✅ Banner with essential/analytics choice              |
-| Article 30 ROPA (processing register) | ✅ `/gdpr/DATA_PROCESSING_REGISTER.md`                 |
-| Sub-processor list with DPAs          | ✅ List done, **DPAs need signing**                    |
-| International transfer safeguards     | ✅ Documented, **IDTAs need signing**                  |
-| DPIAs for high-risk processing        | ✅ Written, **need your sign-off**                     |
-| Data subject rights mechanism         | ✅ Export + delete endpoints working                   |
-| Retention schedule                    | ✅ Documented (automated enforcement planned)          |
-| Security measures                     | ✅ Auth on all routes, PII masking, encryption at rest |
+| Privacy policy publicly accessible    | âœ… `/privacy`                                          |
+| Cookie consent mechanism              | âœ… Banner with essential/analytics choice              |
+| Article 30 ROPA (processing register) | âœ… `/gdpr/DATA_PROCESSING_REGISTER.md`                 |
+| Sub-processor list with DPAs          | âœ… List done, **DPAs need signing**                    |
+| International transfer safeguards     | âœ… Documented, **IDTAs need signing**                  |
+| DPIAs for high-risk processing        | âœ… Written, **need your sign-off**                     |
+| Data subject rights mechanism         | âœ… Export + delete endpoints working                   |
+| Retention schedule                    | âœ… Documented (automated enforcement planned)          |
+| Security measures                     | âœ… Auth on all routes, PII masking, encryption at rest |
 
 **Bottom line:** The technical and documentation work is done. You need to pay the ICO fee, sign ~6 DPAs online, and sign off the DPIAs. That's a couple of hours of work.
+
+

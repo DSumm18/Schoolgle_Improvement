@@ -129,7 +129,7 @@ export const POST = protectedRoute(
 
     return apiSuccess(staff, 201);
   },
-  { requiredRole: "slt" },
+  { requiredRole: "slt", rateLimit: false },
 );
 
 // PUT /api/staff - Update a staff member

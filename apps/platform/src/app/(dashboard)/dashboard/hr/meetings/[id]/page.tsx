@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
@@ -25,6 +25,7 @@ import {
   MeetingStatusBadge,
   MeetingPreparationPack,
   MeetingDocUpload,
+  MeetingRecordingUpload,
 } from "@/components/meetings";
 import { PostMeetingActions } from "@/components/meetings";
 import type {
@@ -33,13 +34,34 @@ import type {
   MeetingChecklistItem,
   MeetingAction,
   MeetingAttendee,
+  MeetingMinutes,
 } from "@/lib/meetings";
+
+interface MeetingPrepContext {
+  summary: string;
+  extracted_facts: {
+    label: string;
+    value: string;
+    source: string;
+  }[];
+  placeholder_replacements: Record<string, string>;
+  concerns: string[];
+  context_notes: string[];
+  suggested_opening?: string;
+}
+
+interface GeneratedMeetingDocument {
+  id: string;
+  subject: string | null;
+  status: "draft" | "finalised" | "sent" | string;
+  created_at: string;
+}
 
 export default function MeetingDetailPage() {
   const router = useRouter();
   const params = useParams();
   const meetingId = params.id as string;
-  const { organization } = useAuth();
+  const { session, organization } = useAuth();
   const organizationId = organization?.id || "";
 
   const [meeting, setMeeting] = useState<Meeting | null>(null);
@@ -47,15 +69,19 @@ export default function MeetingDetailPage() {
   const [checklistItems, setChecklistItems] = useState<MeetingChecklistItem[]>(
     [],
   );
-  const [minutes, setMinutes] = useState<any>(null);
+  const [minutes, setMinutes] = useState<MeetingMinutes | null>(null);
   const [attendees, setAttendees] = useState<MeetingAttendee[]>([]);
-  const [prepContext, setPrepContext] = useState<any>(null);
+  const [prepContext, setPrepContext] = useState<MeetingPrepContext | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
   const [generatingMinutes, setGeneratingMinutes] = useState(false);
 
   // Documents & Actions state
-  const [meetingDocuments, setMeetingDocuments] = useState<any[]>([]);
+  const [meetingDocuments, setMeetingDocuments] = useState<
+    GeneratedMeetingDocument[]
+  >([]);
   const [meetingActions, setMeetingActions] = useState<MeetingAction[]>([]);
   const [loadingDocs, setLoadingDocs] = useState(false);
   const [loadingActions, setLoadingActions] = useState(false);
@@ -70,9 +96,19 @@ export default function MeetingDetailPage() {
     priority: "medium" as "low" | "medium" | "high" | "urgent",
   });
 
+  const requestHeaders = useMemo(
+    () =>
+      session?.access_token
+        ? { Authorization: `Bearer ${session.access_token}` }
+        : {},
+    [session?.access_token],
+  );
+
   useEffect(() => {
-    if (!organizationId || !meetingId) return;
-    fetch(`/api/meetings/${meetingId}?organizationId=${organizationId}`)
+    if (!organizationId || !meetingId || !session?.access_token) return;
+    fetch(`/api/meetings/${meetingId}?organizationId=${organizationId}`, {
+      headers: requestHeaders,
+    })
       .then((r) => r.json())
       .then((data) => {
         setMeeting(data.meeting);
@@ -84,14 +120,15 @@ export default function MeetingDetailPage() {
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [organizationId, meetingId]);
+  }, [organizationId, meetingId, requestHeaders, session?.access_token]);
 
   // Fetch documents generated for this meeting
   useEffect(() => {
-    if (!organizationId || !meetingId) return;
+    if (!organizationId || !meetingId || !session?.access_token) return;
     setLoadingDocs(true);
     fetch(
       `/api/documents?organizationId=${organizationId}&contextType=meeting&contextId=${meetingId}`,
+      { headers: requestHeaders },
     )
       .then((r) => r.json())
       .then((data) => {
@@ -99,27 +136,32 @@ export default function MeetingDetailPage() {
       })
       .catch(console.error)
       .finally(() => setLoadingDocs(false));
-  }, [organizationId, meetingId]);
+  }, [organizationId, meetingId, requestHeaders, session?.access_token]);
 
   // Fetch actions linked to this meeting
   useEffect(() => {
-    if (!organizationId || !meetingId) return;
+    if (!organizationId || !meetingId || !session?.access_token) return;
     setLoadingActions(true);
-    fetch(`/api/meetings/${meetingId}/actions?organizationId=${organizationId}`)
+    fetch(`/api/meetings/${meetingId}/actions?organizationId=${organizationId}`, {
+      headers: requestHeaders,
+    })
       .then((r) => r.json())
       .then((data) => {
         setMeetingActions(data.actions || []);
       })
       .catch(console.error)
       .finally(() => setLoadingActions(false));
-  }, [organizationId, meetingId]);
+  }, [organizationId, meetingId, requestHeaders, session?.access_token]);
 
   const handleStartMeeting = async () => {
     setStarting(true);
     try {
       const res = await fetch(`/api/meetings/${meetingId}/start`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...requestHeaders,
+        },
         body: JSON.stringify({ organizationId }),
       });
       if (res.ok) {
@@ -137,7 +179,10 @@ export default function MeetingDetailPage() {
     try {
       const res = await fetch(`/api/meetings/${meetingId}/minutes`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...requestHeaders,
+        },
         body: JSON.stringify({ organizationId }),
       });
       if (res.ok) {
@@ -157,7 +202,10 @@ export default function MeetingDetailPage() {
     try {
       const res = await fetch(`/api/meetings/${meetingId}/actions`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...requestHeaders,
+        },
         body: JSON.stringify({
           organizationId,
           title: actionForm.title,
@@ -367,6 +415,17 @@ export default function MeetingDetailPage() {
             existingPrep={prepContext}
           />
 
+          {/* Existing recording upload */}
+          <MeetingRecordingUpload
+            meetingId={meetingId}
+            organizationId={organizationId}
+            defaultPurpose={meeting.purpose}
+            attendees={attendees}
+            onMinutesGenerated={() =>
+              router.push(`/dashboard/hr/meetings/${meetingId}/minutes`)
+            }
+          />
+
           {/* Start meeting button */}
           <Button
             onClick={handleStartMeeting}
@@ -482,7 +541,7 @@ export default function MeetingDetailPage() {
           </div>
         ) : meetingDocuments.length > 0 ? (
           <div className="space-y-2">
-            {meetingDocuments.map((doc: any) => (
+            {meetingDocuments.map((doc) => (
               <Link
                 key={doc.id}
                 href={`/dashboard/documents/${doc.id}`}
@@ -664,7 +723,7 @@ export default function MeetingDetailPage() {
                   onChange={(e) =>
                     setActionForm((prev) => ({
                       ...prev,
-                      priority: e.target.value as any,
+                      priority: e.target.value as typeof actionForm.priority,
                     }))
                   }
                   className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500/40"

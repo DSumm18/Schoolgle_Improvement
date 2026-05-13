@@ -14,6 +14,10 @@ import {
   createHelpdeskTicket,
   updateHelpdeskTicket,
 } from "@/lib/skills";
+import type {
+  StrategicPlanDbRow,
+  StrategicPlanItemDbRow,
+} from "@/lib/estate-strategy";
 
 /**
  * POST /api/skills/invoke
@@ -123,6 +127,8 @@ const SKILL_MODULE_MAP: Record<string, string> = {
   "read_asset_manual": "estates_management",
   "log_service_visit": "estates_management",
   "find_bundling_opportunities": "estates_management",
+  "triage_estate_finding": "estates_management",
+  "create_estate_strategy_item": "estates_management",
 
   "run_intelligence_analysis": "insights_pro",
   "get_cohort_journey": "insights_pro",
@@ -969,6 +975,175 @@ Question: ${question}`;
             },
           };
         }
+        break;
+      }
+
+      case "triage_estate_finding": {
+        const { triageEstateFinding } = await import(
+          "@/lib/estates-compliance/finding-triage"
+        );
+        const triage = triageEstateFinding({
+          assetName: parameters.title,
+          title: parameters.title,
+          description: parameters.description,
+          estimatedCost:
+            typeof parameters.estimated_cost === "number"
+              ? parameters.estimated_cost
+              : null,
+          result: parameters.result,
+          urgency: parameters.urgency,
+          priority: parameters.priority,
+          conditionGrade: parameters.condition_grade,
+          complianceDomain: parameters.compliance_domain,
+        });
+
+        result = {
+          success: true,
+          data: {
+            triage,
+            user_message: triage.reportLine,
+          },
+        };
+        break;
+      }
+
+      case "create_estate_strategy_item": {
+        const { createServiceRoleClient } = await import(
+          "@/lib/supabase-server"
+        );
+        const {
+          buildStrategicPlanInsert,
+          buildStrategicPlanItemInsert,
+          mapStrategicPlanForUi,
+          mapStrategicPlanItemForUi,
+        } = await import("@/lib/estate-strategy");
+
+        if (!parameters.title || typeof parameters.estimated_cost !== "number") {
+          result = {
+            success: false,
+            error: "title and estimated_cost are required",
+          };
+          break;
+        }
+
+        const strategyDb = createServiceRoleClient();
+        let planId = parameters.plan_id as string | undefined;
+        let planRecord: Record<string, unknown> | null = null;
+
+        if (planId) {
+          const { data: existingPlan, error: existingPlanError } =
+            await strategyDb
+              .from("strategic_plans")
+              .select("*")
+              .eq("id", planId)
+              .eq("organization_id", orgId)
+              .single();
+
+          if (existingPlanError || !existingPlan) {
+            result = {
+              success: false,
+              error: "Estate strategy plan not found in your organization",
+            };
+            break;
+          }
+
+          planRecord = existingPlan;
+        } else {
+          const { data: existingPlan } = await strategyDb
+            .from("strategic_plans")
+            .select("*")
+            .eq("organization_id", orgId)
+            .eq("plan_type", "estates")
+            .in("status", ["draft", "active", "approved"])
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (existingPlan) {
+            planRecord = existingPlan;
+            planId = existingPlan.id;
+          } else {
+            const currentYear = new Date().getMonth() >= 8
+              ? new Date().getFullYear()
+              : new Date().getFullYear() - 1;
+            const { data: createdPlan, error: planError } = await strategyDb
+              .from("strategic_plans")
+              .insert(
+                buildStrategicPlanInsert({
+                  organizationId: orgId,
+                  title: "Three-Year Estate Strategy",
+                  description:
+                    "Finance-facing estate strategy generated from estates risks, condition findings, and capital pressures.",
+                  planType: "estates",
+                  academicYearStart: `${currentYear}/${currentYear + 1}`,
+                  durationYears: 3,
+                }),
+              )
+              .select()
+              .single();
+
+            if (planError || !createdPlan) {
+              result = {
+                success: false,
+                error: planError?.message || "Failed to create estate strategy",
+              };
+              break;
+            }
+
+            planRecord = createdPlan;
+            planId = createdPlan.id;
+          }
+        }
+
+        const itemInsert = buildStrategicPlanItemInsert({
+          organizationId: orgId,
+          planId,
+          title: parameters.title as string,
+          description: parameters.description as string | undefined,
+          category: "estates",
+          year:
+            typeof parameters.year === "number"
+              ? parameters.year
+              : Number(parameters.year || 1),
+          estimatedCost: parameters.estimated_cost as number,
+          priorityBand: parameters.priority_band,
+          riskScore:
+            typeof parameters.risk_score === "number"
+              ? parameters.risk_score
+              : undefined,
+          isStatutory: Boolean(parameters.is_statutory),
+          riskRegisterId: parameters.risk_register_id,
+          cfrCode: parameters.cfr_code || "E13",
+          sourceModule: "estates",
+          sourceEntityId: parameters.source_entity_id,
+          consequenceIfUnfunded: parameters.consequence_if_unfunded,
+        });
+
+        const { data: item, error: itemError } = await strategyDb
+          .from("strategic_plan_items")
+          .insert(itemInsert)
+          .select()
+          .single();
+
+        if (itemError || !item) {
+          result = {
+            success: false,
+            error: itemError?.message || "Failed to create estate strategy item",
+          };
+          break;
+        }
+
+        result = {
+          success: true,
+          data: {
+            plan: mapStrategicPlanForUi(
+              planRecord as StrategicPlanDbRow,
+              [item as StrategicPlanItemDbRow],
+            ),
+            item: mapStrategicPlanItemForUi(item as StrategicPlanItemDbRow),
+            message: `Added "${parameters.title}" to the estate strategy for year ${item.year}. Estimated cost £${Number(item.estimated_cost || 0).toLocaleString()}.`,
+          },
+        };
         break;
       }
 

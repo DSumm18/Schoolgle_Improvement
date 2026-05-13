@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { X, Save } from "lucide-react";
+import { Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -135,11 +134,14 @@ export default function StaffModal({
 
     setSaving(true);
     try {
-      await onSave({
+      const payload: Partial<StaffMember> = {
+        id: mode === "edit" ? staff?.id : undefined,
         ...formData,
         organization_id: organizationId,
-        salutation: (formData.salutation || null) as any,
-      } as any);
+        salutation: (formData.salutation ||
+          null) as StaffMember["salutation"],
+      };
+      await onSave(payload);
       onClose();
     } catch (error) {
       console.error("Error saving staff:", error);
@@ -166,8 +168,8 @@ export default function StaffModal({
           </DialogTitle>
           <DialogDescription>
             {mode === "create"
-              ? "Add a new staff member to the directory."
-              : "Update staff member details and permissions."}
+              ? "Add a new staff member to the directory. This feeds responsibilities, documents, incidents, and HR workflows."
+              : "Update staff member details, module tags, and responsibility routing."}
           </DialogDescription>
         </DialogHeader>
 
@@ -305,6 +307,10 @@ export default function StaffModal({
             {/* Module Access */}
             <div className="md:col-span-2 space-y-2">
               <Label>Module Access</Label>
+              <p className="text-xs text-slate-500">
+                These tags help route staff into module workflows. Login roles
+                and platform privileges are managed separately in Settings.
+              </p>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                 {MODULE_OPTIONS.map((module) => (
                   <div

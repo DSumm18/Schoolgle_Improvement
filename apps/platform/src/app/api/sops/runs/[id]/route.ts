@@ -19,13 +19,13 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
 
   try {
     const supabase = createServiceRoleClient();
-    const run = await getSopRun(supabase, runId, auth.organizationId);
+    const result = await getSopRun(supabase, runId, auth.organizationId);
 
-    if (!run) {
+    if (result.error || !result.run) {
       return apiError("SOP run not found", 404, "NOT_FOUND");
     }
 
-    return apiSuccess({ run });
+    return apiSuccess({ run: result.run, template: result.template });
   } catch (err: any) {
     console.error("[SOP Run] Error fetching run:", err.message);
     return apiError("Failed to fetch SOP run", 500);
@@ -61,11 +61,11 @@ export const PATCH = protectedRoute(async (auth, req: NextRequest) => {
       completionNotes: completion_notes || undefined,
     });
 
-    if (!run) {
+    if (run.error || !run.run) {
       return apiError("SOP run not found", 404, "NOT_FOUND");
     }
 
-    return apiSuccess({ run });
+    return apiSuccess({ run: run.run });
   } catch (err: any) {
     console.error("[SOP Run] Error updating run:", err.message);
     return apiError("Failed to update SOP run", 500);

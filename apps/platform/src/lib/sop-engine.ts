@@ -12,6 +12,11 @@
  */
 
 import { SupabaseClient } from "@supabase/supabase-js";
+import {
+  getBuiltInSopTemplate,
+  mergeBuiltInSopTemplates,
+  toSopTemplateSeed,
+} from "./sop-starter-library";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -89,6 +94,34 @@ export interface SopTemplate {
   estimated_time_minutes: number;
   owner_role: string;
   is_active: boolean;
+  source?: "database" | "schoolgle_builtin";
+  linked_policy_requirement_ids?: string[];
+  recommended_modules?: string[];
+  setup_questions?: Array<{
+    id: string;
+    question: string;
+    why: string;
+    fieldHint: string;
+  }>;
+  source_refs?: Array<{
+    title: string;
+    publisher: string;
+    url: string;
+    authority: string;
+    lastChecked: string;
+  }>;
+  visual_flow?: Array<{
+    label: string;
+    detail: string;
+  }>;
+  document_resources?: Array<{
+    title: string;
+    type: "form" | "template" | "policy" | "guidance" | "register" | "system";
+    description: string;
+    action: string;
+    locationHint: string;
+  }>;
+  ed_prompt?: string;
 }
 
 /** SOP run (matches sop_runs table) */
@@ -108,6 +141,8 @@ export interface SopRun {
   linked_module: string | null;
   linked_entity_id: string | null;
 }
+
+export type SopSetupAnswers = Record<string, string>;
 
 /** SOP reminder (matches sop_reminders table) */
 export interface SopReminder {
@@ -147,6 +182,54 @@ function initRunSteps(templateSteps: SopStep[]): SopRunStep[] {
     }));
 }
 
+function applySetupAnswersToRunSteps(
+  template: SopTemplate | null,
+  stepsData: SopRunStep[],
+  setupAnswers?: SopSetupAnswers,
+): SopRunStep[] {
+  const entries = Object.entries(setupAnswers || {}).filter(([, answer]) =>
+    answer.trim(),
+  );
+
+  if (!template?.setup_questions?.length || entries.length === 0) {
+    return stepsData;
+  }
+
+  const answerLines = template.setup_questions
+    .map((questionItem) => {
+      const answer = setupAnswers?.[questionItem.id]?.trim();
+      if (!answer) return null;
+      return `• ${questionItem.question} ${answer}`;
+    })
+    .filter(Boolean)
+    .join("\n");
+
+  return [
+    {
+      step_id: "local_setup_answers",
+      order: 0,
+      title: "Confirm local setup answers",
+      instruction: [
+        "These local answers personalise this Schoolgle starter into this school's working procedure.",
+        answerLines,
+        "Check these are accurate before staff use the SOP as approved practice.",
+      ]
+        .filter(Boolean)
+        .join("\n\n"),
+      evidence_required: false,
+      evidence_types: ["note"],
+      evidence_guidance:
+        "If anything is wrong, abandon this run and create a new personalised SOP with corrected answers.",
+      status: "pending",
+      completed_at: null,
+      completed_by: null,
+      evidence: [],
+      notes: null,
+    },
+    ...stepsData,
+  ];
+}
+
 // ---------------------------------------------------------------------------
 // Core functions
 // ---------------------------------------------------------------------------
@@ -165,6 +248,7 @@ export async function startSopRun(
     linkedIncidentId?: string;
     linkedModule?: string;
     linkedEntityId?: string;
+    setupAnswers?: SopSetupAnswers;
   },
 ): Promise<{ run: SopRun; error?: string }> {
   // 1. Fetch the template
@@ -176,16 +260,47 @@ export async function startSopRun(
     .single();
 
   if (tErr || !template) {
-    return {
-      run: null as unknown as SopRun,
-      error:
-        tErr?.message ??
-        `Template '${params.templateId}' not found or inactive`,
-    };
+    const builtInTemplate = getBuiltInSopTemplate(params.templateId);
+
+    if (!builtInTemplate) {
+      return {
+        run: null as unknown as SopRun,
+        error:
+          tErr?.message ??
+          `Template '${params.templateId}' not found or inactive`,
+      };
+    }
+
+    const { error: seedError } = await supabase
+      .from("sop_templates")
+      .upsert(toSopTemplateSeed(builtInTemplate), {
+        onConflict: "template_id",
+      });
+
+    if (seedError) {
+      return {
+        run: null as unknown as SopRun,
+        error: seedError.message,
+      };
+    }
+
+    return startSopRun(supabase, params);
   }
 
   // 2. Initialise steps_data from template steps
-  const stepsData = initRunSteps(template.steps as SopStep[]);
+  const builtInMetadata = getBuiltInSopTemplate(params.templateId);
+  const templateWithMetadata = builtInMetadata
+    ? {
+        ...builtInMetadata,
+        ...(template as SopTemplate),
+        setup_questions: builtInMetadata.setup_questions,
+      }
+    : (template as SopTemplate);
+  const stepsData = applySetupAnswersToRunSteps(
+    templateWithMetadata,
+    initRunSteps(template.steps as SopStep[]),
+    params.setupAnswers,
+  );
 
   // 3. Insert the run
   const now = new Date().toISOString();
@@ -257,9 +372,25 @@ export async function getSopRun(
     };
   }
 
+  const builtInTemplate = getBuiltInSopTemplate(run.template_id);
+
   return {
     run: run as SopRun,
-    template: template as SopTemplate,
+    template: builtInTemplate
+      ? {
+          ...builtInTemplate,
+          ...(template as SopTemplate),
+          source: "schoolgle_builtin",
+          linked_policy_requirement_ids:
+            builtInTemplate.linked_policy_requirement_ids,
+          recommended_modules: builtInTemplate.recommended_modules,
+          setup_questions: builtInTemplate.setup_questions,
+          source_refs: builtInTemplate.source_refs,
+          visual_flow: builtInTemplate.visual_flow,
+          document_resources: builtInTemplate.document_resources,
+          ed_prompt: builtInTemplate.ed_prompt,
+        }
+      : (template as SopTemplate),
   };
 }
 
@@ -402,13 +533,17 @@ export async function completeSopRun(
 export async function getActiveRuns(
   supabase: SupabaseClient,
   organizationId: string,
-  options?: { templateId?: string; linkedModule?: string },
+  options?: {
+    status?: SopRunStatus;
+    templateId?: string;
+    linkedModule?: string;
+  },
 ): Promise<{ runs: SopRun[]; error?: string }> {
   let query = supabase
     .from("sop_runs")
     .select("*")
     .eq("organization_id", organizationId)
-    .eq("status", "in_progress")
+    .eq("status", options?.status || "in_progress")
     .order("started_at", { ascending: false });
 
   if (options?.templateId) {
@@ -453,7 +588,9 @@ export async function getTemplates(
     return { templates: [], error: error.message };
   }
 
-  return { templates: (data ?? []) as SopTemplate[] };
+  return {
+    templates: mergeBuiltInSopTemplates((data ?? []) as SopTemplate[]),
+  };
 }
 
 // ---------------------------------------------------------------------------

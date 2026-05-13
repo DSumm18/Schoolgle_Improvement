@@ -68,11 +68,11 @@ export const PATCH = protectedRoute(async (auth, req: NextRequest) => {
       evidence: evidence || undefined,
     });
 
-    if (!run) {
+    if (run.error || !run.run) {
       return apiError("SOP run or step not found", 404, "NOT_FOUND");
     }
 
-    return apiSuccess({ run });
+    return apiSuccess({ run: run.run });
   } catch (err: any) {
     console.error("[SOP Step] Error updating step:", err.message);
     return apiError("Failed to update SOP step", 500);

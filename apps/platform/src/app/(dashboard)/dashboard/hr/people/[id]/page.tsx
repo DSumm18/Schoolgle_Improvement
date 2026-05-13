@@ -1,5 +1,6 @@
 "use client";
 
+import type { ComponentType, ReactNode } from "react";
 import { useParams, useRouter } from "next/navigation";
 import useSWR from "swr";
 import { motion } from "framer-motion";
@@ -7,19 +8,14 @@ import {
   ArrowLeft,
   User,
   Phone,
-  Mail,
-  MapPin,
   Shield,
   GraduationCap,
   BookOpen,
   Heart,
-  FileText,
   AlertTriangle,
   CheckCircle2,
   Clock,
   Briefcase,
-  Calendar,
-  Building2,
   BadgeCheck,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -34,8 +30,8 @@ function Section({
   color = "bg-slate-100 text-slate-600",
 }: {
   title: string;
-  icon: any;
-  children: React.ReactNode;
+  icon: ComponentType<{ className?: string }>;
+  children: ReactNode;
   color?: string;
 }) {
   return (
@@ -117,6 +113,51 @@ function formatCurrency(n: number | null | undefined): string {
   return `£${n.toLocaleString("en-GB")}`;
 }
 
+type EmergencyContact = {
+  id: string;
+  contact_name?: string | null;
+  is_next_of_kin?: boolean | null;
+  relationship?: string | null;
+  phone_primary?: string | null;
+};
+
+type ConnectorType = {
+  name?: string | null;
+  category?: string | null;
+  ratio_label?: string | null;
+  statutory_basis?: string | null;
+};
+
+type StaffConnector = {
+  id: string;
+  connector_type_id?: string | null;
+  connector_type?: ConnectorType | null;
+  coverage_area?: string | null;
+  status?: string | null;
+  training_expires_at?: string | null;
+  training_expiry_date?: string | null;
+};
+
+type Qualification = {
+  id: string;
+  qualification_name?: string | null;
+  qualification_type?: string | null;
+  awarding_body?: string | null;
+  date_achieved?: string | null;
+  expiry_date?: string | null;
+  is_verified?: boolean | null;
+};
+
+type TrainingRecord = {
+  id: string;
+  training_name?: string | null;
+  training_category?: string | null;
+  provider?: string | null;
+  completion_date?: string | null;
+  expiry_date?: string | null;
+  is_mandatory?: boolean | null;
+};
+
 export default function StaffPersonnelPage() {
   const params = useParams();
   const router = useRouter();
@@ -133,12 +174,13 @@ export default function StaffPersonnelPage() {
 
   const staff = data?.staff;
   const contract = data?.contract;
-  const emergencyContacts = data?.emergency_contacts || [];
+  const emergencyContacts = (data?.emergency_contacts || []) as EmergencyContact[];
   const dbs = data?.dbs;
-  const qualifications = data?.qualifications || [];
-  const training = data?.training || [];
+  const qualifications = (data?.qualifications || []) as Qualification[];
+  const training = (data?.training || []) as TrainingRecord[];
   const rightToWork = data?.right_to_work;
   const medical = data?.medical;
+  const connectors = (data?.connectors || []) as StaffConnector[];
 
   if (isLoading) {
     return (
@@ -327,7 +369,7 @@ export default function StaffPersonnelPage() {
         >
           {emergencyContacts.length > 0 ? (
             <div className="space-y-3">
-              {emergencyContacts.map((c: any) => (
+              {emergencyContacts.map((c) => (
                 <div
                   key={c.id}
                   className="flex items-start justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50"
@@ -355,6 +397,80 @@ export default function StaffPersonnelPage() {
             <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
               <AlertTriangle className="w-4 h-4" />
               <p className="text-sm">No emergency contacts recorded</p>
+            </div>
+          )}
+        </Section>
+
+        {/* Roles & Responsibilities */}
+        <Section
+          title="Roles & Responsibilities"
+          icon={Briefcase}
+          color="bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"
+        >
+          {connectors.length > 0 ? (
+            <div className="space-y-3">
+              {connectors.map((connector) => {
+                const type = connector.connector_type;
+                const expiresAt =
+                  connector.training_expires_at ||
+                  connector.training_expiry_date ||
+                  null;
+                const expired = expiresAt && new Date(expiresAt) < now;
+
+                return (
+                  <div
+                    key={connector.id}
+                    className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/50"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-bold text-slate-900 dark:text-white">
+                          {type?.name || connector.connector_type_id}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                          {(type?.category || "responsibility").replace(
+                            /_/g,
+                            " ",
+                          )}
+                          {connector.coverage_area
+                            ? ` · ${connector.coverage_area}`
+                            : ""}
+                        </p>
+                      </div>
+                      <Badge
+                        text={connector.status || "active"}
+                        variant={expired ? "danger" : "success"}
+                      />
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 gap-3">
+                      <Field
+                        label="Requirement"
+                        value={type?.ratio_label || "School-defined"}
+                      />
+                      <Field
+                        label="Training expiry"
+                        value={expiresAt ? formatDate(expiresAt) : "Not set"}
+                      />
+                    </div>
+                    {type?.statutory_basis ? (
+                      <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
+                        Based on {type.statutory_basis}
+                      </p>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-sm text-slate-500">
+                No responsibilities have been assigned to this staff member yet.
+              </p>
+              <p className="text-xs text-slate-400">
+                Assign roles such as DSL, DPO, SENCO, First Aider or Fire Marshal
+                from Staff Connectors so Incident Hub, policies and Ed can route
+                work to the right person.
+              </p>
             </div>
           )}
         </Section>
@@ -523,7 +639,7 @@ export default function StaffPersonnelPage() {
                 </tr>
               </thead>
               <tbody>
-                {qualifications.map((q: any) => {
+                {qualifications.map((q) => {
                   const expired =
                     q.expiry_date && new Date(q.expiry_date) < now;
                   return (
@@ -609,7 +725,7 @@ export default function StaffPersonnelPage() {
                 </tr>
               </thead>
               <tbody>
-                {training.map((t: any) => {
+                {training.map((t) => {
                   const expired =
                     t.expiry_date && new Date(t.expiry_date) < now;
                   return (

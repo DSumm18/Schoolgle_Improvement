@@ -1,4 +1,4 @@
-# Schoolgle LLM Model Strategy
+﻿# Schoolgle LLM Model Strategy
 
 **Version:** 1.0
 **Date:** 2026-01-23
@@ -37,7 +37,7 @@ This document defines which AI models are used for which tasks across all School
 
 ---
 
-## Task → Model Mapping
+## Task â†’ Model Mapping
 
 ### Evidence & Document Processing
 
@@ -57,7 +57,7 @@ This document defines which AI models are used for which tasks across all School
 | Screen snapshot analysis | Gemini 3 Flash | Gemini Pro Vision | $0.001/page | HIGH |
 | Action planning | Gemini 3 Flash | Claude 3.5 Sonnet | $0.001/plan | HIGH |
 | Form understanding | DeepSeek V3 | Gemini 2.0 Flash Lite | $0.0008/form | HIGH |
-| Translation (Native ↔ EN) | DeepSeek V3 | Gemini 2.0 Flash Lite | $0.0008/translation | MEDIUM |
+| Translation (Native â†” EN) | DeepSeek V3 | Gemini 2.0 Flash Lite | $0.0008/translation | MEDIUM |
 | Language detection | Rule-based (free) | DeepSeek V3 | $0 | MEDIUM |
 | Conversational chat | DeepSeek V3 | Claude 3.5 Sonnet | $0.0008/msg | HIGH |
 | Approval prompt generation | DeepSeek V3 | - | $0.0008 | LOW |
@@ -95,18 +95,18 @@ This document defines which AI models are used for which tasks across all School
 ### 1. Tiered Processing Pipeline
 
 ```
-Document Upload → DeepSeek V3 (Fast, Cheap)
-                    ↓
-              Success? → Done
-                    ↓
+Document Upload â†’ DeepSeek V3 (Fast, Cheap)
+                    â†“
+              Success? â†’ Done
+                    â†“
                Failure
-                    ↓
+                    â†“
           Gemini 2.0 Flash Lite (Fallback, Cheap)
-                    ↓
-              Success? → Done
-                    ↓
+                    â†“
+              Success? â†’ Done
+                    â†“
                Failure
-                    ↓
+                    â†“
            Claude 3.5 Sonnet (Premium, Reliable)
 ```
 
@@ -208,21 +208,21 @@ export const AUTOMATION_MODELS = {
   PLANNING: 'gemini-3-flash',
 
   // Form understanding (can use cheaper model)
-  FORM_UNDERSTANDING: 'deepseek/deepseek-chat',
+  FORM_UNDERSTANDING: 'openai/gpt-4o-mini',
 
   // Conversational chat
-  CHAT: 'deepseek/deepseek-chat',
+  CHAT: 'openai/gpt-4o-mini',
 
   // Translation (bidirectional)
-  TRANSLATION: 'deepseek/deepseek-chat',
+  TRANSLATION: 'openai/gpt-4o-mini',
 
   // Approval prompt generation
-  APPROVAL: 'deepseek/deepseek-chat',
+  APPROVAL: 'openai/gpt-4o-mini',
 } as const;
 
 // Cost tracking
 export const MODEL_COSTS = {
-  'deepseek/deepseek-chat': { input: 0.00024, output: 0.00096 }, // per token
+  'openai/gpt-4o-mini': { input: 0.00024, output: 0.00096 }, // per token
   'gemini-3-flash': { input: 0.0001, output: 0.0001 }, // estimated
   'claude-3.5-sonnet': { input: 0.003, output: 0.015 }, // per token
 } as const;
@@ -273,8 +273,8 @@ OPENROUTER_SMART_MODEL=anthropic/claude-3.5-sonnet
 OPENROUTER_VISION_MODEL=google/gemini-pro-vision
 
 # For Ed's Browser Capabilities
-OPENROUTER_BROWSER_MODEL=deepseek/deepseek-chat
-OPENROUTER_TRANSLATION_MODEL=deepseek/deepseek-chat
+OPENROUTER_BROWSER_MODEL=openai/gpt-4o-mini
+OPENROUTER_TRANSLATION_MODEL=openai/gpt-4o-mini
 ```
 
 ---
@@ -303,3 +303,4 @@ This is the correct terminology. The system previously used "RIDA" which has bee
 
 **Document Status:** Draft - Ready for Review
 **Last Updated:** 2026-01-23
+

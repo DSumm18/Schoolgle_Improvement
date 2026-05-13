@@ -8,6 +8,10 @@
  */
 
 import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
+import {
+  mapStrategicPlanItemForUi,
+  type StrategicPlanItemDbRow,
+} from "@/lib/estate-strategy";
 import { createServiceRoleClient } from "@/lib/supabase-server";
 import { prioritiseCompetingDemands } from "@/lib/risk-engine";
 
@@ -26,6 +30,7 @@ export const POST = protectedRoute(async (auth, request) => {
     .from("strategic_plans")
     .select("id, organization_id")
     .eq("id", planId)
+    .eq("organization_id", auth.organizationId)
     .single();
 
   if (planError || !plan) {
@@ -36,7 +41,8 @@ export const POST = protectedRoute(async (auth, request) => {
   const { data: items, error: itemsError } = await supabase
     .from("strategic_plan_items")
     .select("*")
-    .eq("plan_id", planId);
+    .eq("strategic_plan_id", planId)
+    .eq("organization_id", auth.organizationId);
 
   if (itemsError) {
     console.error("Error fetching plan items:", itemsError);
@@ -52,11 +58,12 @@ export const POST = protectedRoute(async (auth, request) => {
   }
 
   // For items linked to the risk register, fetch their live risk scores
-  const riskLinkedIds = items
-    .filter((item: any) => item.risk_register_id)
-    .map((item: any) => item.risk_register_id);
+  const typedItems = (items || []) as StrategicPlanItemDbRow[];
+  const riskLinkedIds = typedItems
+    .filter((item) => item.risk_register_id)
+    .map((item) => item.risk_register_id as string);
 
-  let riskScores: Record<string, number> = {};
+  const riskScores: Record<string, number> = {};
 
   if (riskLinkedIds.length > 0) {
     const { data: risks } = await supabase
@@ -78,13 +85,13 @@ export const POST = protectedRoute(async (auth, request) => {
   }
 
   // Build input for prioritisation engine
-  const demandItems = items.map((item: any) => ({
+  const demandItems = typedItems.map((item) => ({
     ...item,
     // Use live risk score from risk_register if linked, otherwise use stored score
     risk_score: item.risk_register_id
       ? (riskScores[item.risk_register_id] ?? item.risk_score ?? 0)
       : (item.risk_score ?? 0),
-    cost: item.cost ?? 0,
+    cost: item.estimated_cost ?? 0,
     is_statutory: item.is_statutory ?? false,
   }));
 
@@ -116,14 +123,25 @@ export const POST = protectedRoute(async (auth, request) => {
   let totalBudget = 0;
 
   for (const item of prioritised) {
-    const cost = item.cost ?? 0;
+    const cost = item.estimated_cost ?? 0;
     totalBudget += cost;
     budgetByBand[item.priority_band] =
       (budgetByBand[item.priority_band] || 0) + cost;
   }
 
+  const uiItems = prioritised.map((item) =>
+    mapStrategicPlanItemForUi({ ...item, priority_rank: item.rank }),
+  );
+
   return apiSuccess({
-    items: prioritised,
+    items: uiItems,
+    summary: {
+      must_total: budgetByBand.must,
+      should_total: budgetByBand.should,
+      could_total: budgetByBand.could,
+      wont_total: budgetByBand.wont,
+      total_cost: totalBudget,
+    },
     budget_by_band: budgetByBand,
     total_budget: totalBudget,
   });

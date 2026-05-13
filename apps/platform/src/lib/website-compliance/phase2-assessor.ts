@@ -17,6 +17,7 @@ import { createHash } from "crypto";
 import { MODEL_CONFIG } from "../ai-evidence-matcher";
 import { maskPII } from "../pii-masker";
 import { createServiceRoleClient } from "@/lib/supabase-server";
+import { buildWebsiteFindingDraft } from "@/lib/ofsted-readiness/findings";
 import {
   type ComplianceRequirement,
   type RequirementCategory,
@@ -453,6 +454,12 @@ export async function assessScrapedWebsite(
   // ─── Store Ofsted evidence from compliant/partial assessments ─────
 
   await storeOfstedEvidence(supabase, session.organization_id, assessments);
+  await storeOfstedFindings(
+    supabase,
+    session.organization_id,
+    sessionId,
+    assessments,
+  );
 
   // ─── Store Ed knowledge Q&A pairs ──────────────────────────────────
 
@@ -998,6 +1005,82 @@ async function storeOfstedEvidence(
 }
 
 // ─── Helper: Store expert findings as Ed knowledge Q&A pairs ──────────
+
+async function storeOfstedFindings(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  organizationId: string,
+  sessionId: string,
+  assessments: StorableAssessment[],
+): Promise<void> {
+  try {
+    const rows = assessments
+      .map((assessment) => {
+        const requirement = WEBSITE_COMPLIANCE_REQUIREMENTS.find(
+          (item) => item.key === assessment.requirement_key,
+        );
+        if (!requirement) return null;
+
+        const draft = buildWebsiteFindingDraft({
+          sessionId,
+          assessment: {
+            requirement_key: assessment.requirement_key,
+            requirement_name: assessment.requirement_name,
+            category: assessment.category,
+            status: assessment.status,
+            compliance_score: assessment.compliance_score,
+            quality_score: assessment.quality_score,
+            clarity_score: assessment.clarity_score,
+            evidence_urls: assessment.evidence_urls,
+            evidence_quotes: assessment.evidence_quotes,
+            gaps: assessment.gaps,
+            recommendations: assessment.recommendations,
+            red_flags: assessment.red_flags,
+            confidence: assessment.confidence,
+          },
+          requirement,
+        });
+
+        if (!draft) return null;
+
+        return {
+          organization_id: organizationId,
+          ...draft,
+          source_url: draft.evidence_url,
+          updated_at: new Date().toISOString(),
+        };
+      })
+      .filter(Boolean);
+
+    if (rows.length === 0) return;
+
+    const { data, error } = await supabase
+      .from("ofsted_findings")
+      .upsert(rows, { onConflict: "organization_id,source_key" })
+      .select("id, status, source_key, source_type");
+
+    if (error) {
+      console.error("[Assessor] Failed to store Ofsted findings:", error);
+      return;
+    }
+
+    if (data && data.length > 0) {
+      await supabase.from("ofsted_finding_events").insert(
+        data.map((finding: any) => ({
+          organization_id: organizationId,
+          finding_id: finding.id,
+          event_type: "scan_upserted",
+          new_status: finding.status,
+          metadata: {
+            source_key: finding.source_key,
+            source_type: finding.source_type,
+          },
+        })),
+      );
+    }
+  } catch (error) {
+    console.error("[Assessor] Error storing Ofsted findings:", error);
+  }
+}
 
 /**
  * Converts V2 assessment findings into structured Q&A pairs that Ed can

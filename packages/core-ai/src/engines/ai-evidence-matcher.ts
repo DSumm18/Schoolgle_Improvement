@@ -1,25 +1,25 @@
-import OpenAI from "openai";
+﻿import OpenAI from "openai";
 import { OFSTED_FRAMEWORK_DATA, type Category } from "./ofsted/framework-data";
 import { maskPII } from "./pii-masker";
 
 // --- Configuration ---
 
 /**
- * AI Model Configuration — GDPR-Safe Providers Only
+ * AI Model Configuration â€” GDPR-Safe Providers Only
  *
  * All models selected for UK GDPR compliance:
  * - Google Gemini: US-based with UK IDTA/SCCs + Data Privacy Framework (primary)
  * - Mistral: EU-based (Paris), GDPR DPA available (OCR only)
  * - Anthropic Claude: US-based with DPA and SCCs available (premium only)
  *
- * All calls routed via OpenRouter (US) — OpenRouter DPA required.
+ * All calls routed via OpenRouter (US) â€” OpenRouter DPA required.
  *
  * REMOVED (non-compliant):
- * - DeepSeek (China/US, no DPA, no adequacy decision)
- * - Qwen/Alibaba (China, no UK adequacy decision — Schrems II risk)
+ * - Non-approved provider families without agreed Schoolgle DPA/transfer review
+ 
  */
 export const MODEL_CONFIG = {
-  // Primary model — Gemini 2.0 Flash (Google, US with DPF + SCCs)
+  // Primary model â€” Gemini 2.0 Flash (Google, US with DPF + SCCs)
   // Best cost/quality ratio; requires signed Google Cloud DPA + UK IDTA
   primary: {
     id: "google/gemini-2.0-flash-001",
@@ -29,7 +29,7 @@ export const MODEL_CONFIG = {
     maxTokens: 8000,
   },
 
-  // OCR model — Mistral OCR (EU-based, Paris — no international transfer needed)
+  // OCR model â€” Mistral OCR (EU-based, Paris â€” no international transfer needed)
   ocr: {
     id: "mistralai/mistral-ocr-latest",
     name: "Mistral OCR (EU)",
@@ -38,7 +38,7 @@ export const MODEL_CONFIG = {
     maxTokens: 4000,
   },
 
-  // Vision model — Gemini Flash (same provider as primary, single DPA)
+  // Vision model â€” Gemini Flash (same provider as primary, single DPA)
   vision: {
     id: "google/gemini-2.0-flash-001",
     name: "Gemini 2.0 Flash",
@@ -47,7 +47,7 @@ export const MODEL_CONFIG = {
     maxTokens: 6000,
   },
 
-  // Fallback model — Gemini Flash Lite (Google, cheapest option)
+  // Fallback model â€” Gemini Flash Lite (Google, cheapest option)
   fallback: {
     id: "google/gemini-2.0-flash-lite-001",
     name: "Gemini 2.0 Flash Lite",
@@ -56,7 +56,7 @@ export const MODEL_CONFIG = {
     maxTokens: 8000,
   },
 
-  // Premium model — Claude Sonnet (Anthropic, US with DPA + SCCs)
+  // Premium model â€” Claude Sonnet (Anthropic, US with DPA + SCCs)
   premium: {
     id: "anthropic/claude-3.5-sonnet",
     name: "Claude 3.5 Sonnet",
@@ -150,7 +150,7 @@ export function selectModel(metadata: DocumentMetadata): string {
     return MODEL_CONFIG.vision.id;
   }
 
-  // Default to DeepSeek V3 for text processing
+  // Default to the approved primary text model for processing
   return MODEL_CONFIG.primary.id;
 }
 
@@ -488,3 +488,8 @@ export function matchDocumentToCategories(text: string): {
 
   return matches;
 }
+
+
+
+
+

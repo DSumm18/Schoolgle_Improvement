@@ -82,7 +82,7 @@ export interface PathfinderAssetDraft {
   locationScope?: "building" | "site";
   qrCode?: string;
   wallSide?: "north" | "east" | "south" | "west" | "ceiling" | "floor" | "external";
-  status?: "mapped" | "needs_position" | "service_due" | "issue_open";
+  status?: "mapped" | "needs_position" | "needs_review" | "service_due" | "issue_open";
   sourceTable?: "estates_assets";
   sourceId?: string;
   serviceDue?: string;
@@ -200,6 +200,7 @@ export interface PathfinderExtractionResult {
   musterPoints: PathfinderMusterPointDraft[];
   siteContext: PathfinderSiteContextDraft;
   warnings: string[];
+  roomListValidation?: PathfinderRoomListValidationSummary;
   metrics: {
     roomCount: number;
     corridorCount: number;
@@ -208,6 +209,34 @@ export interface PathfinderExtractionResult {
     assetCount: number;
     doorCandidateCount: number;
   };
+}
+
+export interface PathfinderRoomListEntry {
+  code?: string;
+  name: string;
+  source: "spreadsheet" | "document" | "manual";
+  sourceLine?: number;
+}
+
+export interface PathfinderRoomListMatch {
+  reference: PathfinderRoomListEntry;
+  roomId?: string;
+  roomLabel?: string;
+  confidence: number;
+  reason: "code" | "name" | "partial" | "unmatched";
+}
+
+export interface PathfinderRoomListValidationSummary {
+  referenceRoomCount: number;
+  detectedRoomCount: number;
+  matchedCount: number;
+  missingFromPlan: PathfinderRoomListEntry[];
+  unmatchedDetectedRooms: Array<{
+    id: string;
+    label: string;
+    roomCode?: string;
+  }>;
+  matches: PathfinderRoomListMatch[];
 }
 
 const PATHFINDER_OPERATIONAL_ASSET_SEEDS: Array<Omit<PathfinderAssetDraft, "linkedRoomId">> = [

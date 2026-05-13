@@ -171,6 +171,23 @@ function formatSkillSuccessResponse(
     };
   }
 
+  if (functionName === "triage_estate_finding") {
+    const triage = result.data?.triage;
+    return {
+      success: true,
+      response: `🧭 **Finding Triaged**\n\n**Classification:** ${triage?.classification?.replace(/_/g, " ") || "review required"}\n**Risk:** ${triage?.riskScore || "?"}/5\n**Route:** ${(triage?.recommendedRoutes || []).map((route: string) => route.replace(/_/g, " ")).join(", ") || "manual review"}\n\n${result.data?.user_message || "I've classified the finding so it can be routed without creating unnecessary noise."}`,
+      data: result.data,
+    };
+  }
+
+  if (functionName === "create_estate_strategy_item") {
+    return {
+      success: true,
+      response: `✅ **Estate Strategy Item Added**\n\n**Item:** ${result.data?.item?.title || "Estate strategy item"}\n**Year:** ${result.data?.item?.year || "planned"}\n**Estimated cost:** £${Number(result.data?.item?.estimated_cost || 0).toLocaleString()}\n\n${result.data?.message || "I've added this to the finance-facing estate strategy so it can be reviewed and prioritised."}`,
+      data: result.data,
+    };
+  }
+
   // Search Contractors
   if (functionName === "search_contractors") {
     const count = result.data?.length || 0;

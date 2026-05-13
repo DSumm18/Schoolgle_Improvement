@@ -13,8 +13,6 @@ import { Progress } from "@/components/ui/progress";
 import {
   Building,
   TrendingUp,
-  AlertCircle,
-  CheckCircle,
   Target,
   School,
   ArrowRight,
@@ -57,14 +55,14 @@ export default function AllSchoolsView({
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
             <Badge className="bg-white/20 hover:bg-white/30 text-white border-0 transition-colors uppercase tracking-wider text-[10px] font-bold px-3 py-1">
-              Portfolio Performance
+              Live Assurance
             </Badge>
             <h2 className="text-3xl font-extrabold tracking-tight">
-              Trust Estates Audit
+              GEMS Assurance Audit
             </h2>
             <p className="text-teal-100/80 max-w-md">
-              Monitoring health and safety, energy efficiency, and maintenance
-              across {schoolsCount} educational facilities.
+              Reviewing live estate evidence and DfE GEMS gaps across{" "}
+              {schoolsCount} school{schoolsCount === 1 ? "" : "s"}.
             </p>
           </div>
 
@@ -72,13 +70,13 @@ export default function AllSchoolsView({
             <div className="text-center">
               <div className="text-4xl font-black">{averageScore}%</div>
               <div className="text-[10px] uppercase font-bold tracking-widest text-teal-200 mt-1">
-                Global Average
+                Assurance Score
               </div>
             </div>
             <div className="w-px h-12 bg-white/20" />
             <div className="space-y-1">
               <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider">
-                <span>Health</span>
+                <span>Assurance</span>
                 <span
                   className={
                     averageScore >= 80 ? "text-emerald-400" : "text-amber-400"
@@ -109,28 +107,28 @@ export default function AllSchoolsView({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           {
-            label: "Total Schools",
+            label: "Schools",
             value: schoolsCount,
             icon: School,
             color: "text-blue-600",
             bg: "bg-blue-50",
           },
           {
-            label: "Assessments",
+            label: "GEMS Checks",
             value: totalAssessments,
             icon: Target,
             color: "text-teal-600",
             bg: "bg-teal-50",
           },
           {
-            label: "Avg score",
+            label: "Assurance",
             value: `${averageScore}%`,
             icon: TrendingUp,
             color: "text-emerald-600",
             bg: "bg-emerald-50",
           },
           {
-            label: "KPI Groups",
+            label: "GEMS Domains",
             value: categoriesCount,
             icon: Building,
             color: "text-amber-600",
@@ -164,10 +162,10 @@ export default function AllSchoolsView({
       <div className="flex items-center justify-between mt-12 mb-4">
         <div>
           <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">
-            School Performance
+            School Assurance
           </h3>
           <p className="text-sm text-slate-500">
-            Individual scores and assessment progress
+            Live evidence position and gaps by school
           </p>
         </div>
         <Button
@@ -210,7 +208,7 @@ export default function AllSchoolsView({
                       {school.name}
                     </CardTitle>
                     <CardDescription className="text-xs font-medium">
-                      {schoolAssessments} points audited
+                      {schoolAssessments} GEMS checks reviewed
                     </CardDescription>
                   </div>
                   <div
@@ -224,7 +222,7 @@ export default function AllSchoolsView({
                 <div className="space-y-2">
                   <div className="flex justify-between items-end">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                      Health Progress
+                      Assurance Coverage
                     </span>
                   </div>
                   <Progress
@@ -248,14 +246,10 @@ export default function AllSchoolsView({
                   </div>
                   <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
                     <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                      Risk Level
+                      Gaps
                     </div>
                     <div className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase">
-                      {school.overallScore >= 80
-                        ? "Low"
-                        : school.overallScore >= 60
-                          ? "Mid"
-                          : "High"}
+                      {school.gaps?.length ?? 0}
                     </div>
                   </div>
                 </div>
@@ -266,7 +260,7 @@ export default function AllSchoolsView({
                   className="w-full flex items-center justify-between group/btn hover:bg-teal-50 hover:text-teal-600 p-0 h-auto py-2"
                 >
                   <span className="text-xs font-bold uppercase tracking-widest pl-2">
-                    Full Audit Report
+                    Open GEMS Report
                   </span>
                   <div className="bg-slate-100 group-hover/btn:bg-teal-100 p-2 rounded-lg transition-colors">
                     <ArrowRight className="h-4 w-4" />
@@ -283,7 +277,7 @@ export default function AllSchoolsView({
         <CardHeader className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg font-bold">
-              Audit Domain Summary
+              GEMS Domain Summary
             </CardTitle>
             <Button
               variant="ghost"
@@ -323,7 +317,7 @@ export default function AllSchoolsView({
                           {category.categoryName}
                         </h4>
                         <p className="text-xs text-slate-500 font-medium">
-                          Aggregated across all school departments
+                          Built from live evidence in connected Schoolgle modules
                         </p>
                       </div>
                     </div>

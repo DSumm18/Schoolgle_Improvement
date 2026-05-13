@@ -2120,6 +2120,8 @@ export default function PathfinderPrototype({
     async (asset: PathfinderAssetDraft) => {
       if (!estatesMode || !organizationId) return;
       if (asset.sourceTable !== "estates_assets" || !asset.sourceId) return;
+      const linkedRoom = data?.rooms.find((room) => room.id === asset.linkedRoomId);
+      const nextStatus = asset.linkedRoomId || asset.linkedSiteFeatureId ? "mapped" : "needs_position";
 
       try {
         const modelId = estatesModelId ?? (await saveEstatesModel("school_review"));
@@ -2145,7 +2147,9 @@ export default function PathfinderPrototype({
             wallSide: asset.wallSide,
             confidence: asset.confidence,
             locationScope: asset.locationScope,
-            status: asset.linkedRoomId || asset.linkedSiteFeatureId ? "mapped" : "needs_position",
+            status: nextStatus,
+            room: linkedRoom?.roomCode ?? linkedRoom?.label,
+            building: linkedRoom?.block,
           }),
         });
         if (!response.ok) {
@@ -2153,7 +2157,7 @@ export default function PathfinderPrototype({
           return;
         }
         updateAssetPlacement(asset.id, {
-          status: asset.linkedRoomId || asset.linkedSiteFeatureId ? "mapped" : "needs_position",
+          status: nextStatus,
           confidence: Math.max(asset.confidence, 0.92),
         });
         setStatus(`Saved pin for ${asset.label}.`);
@@ -2169,6 +2173,7 @@ export default function PathfinderPrototype({
       estatesModelId,
       saveEstatesModel,
       updateAssetPlacement,
+      data?.rooms,
     ],
   );
 
@@ -2613,6 +2618,19 @@ export default function PathfinderPrototype({
           </div>
         </div>
         <p className="mt-2 text-sm text-[#4c5854]">{status}</p>
+        {data?.roomListValidation ? (
+          <div className="mt-3 flex flex-wrap gap-2 text-xs">
+            <span className="rounded-md bg-[#e6f4ef] px-2 py-1 font-semibold text-[#216e60]">
+              Room list: {data.roomListValidation.matchedCount}/{data.roomListValidation.referenceRoomCount} matched
+            </span>
+            <span className="rounded-md bg-[#fff7ed] px-2 py-1 font-semibold text-[#9a3412]">
+              {data.roomListValidation.missingFromPlan.length} listed rooms need checking
+            </span>
+            <span className="rounded-md bg-[#eef2ff] px-2 py-1 font-semibold text-[#3730a3]">
+              {data.roomListValidation.unmatchedDetectedRooms.length} detected spaces need naming
+            </span>
+          </div>
+        ) : null}
       </div>
 
       {data && (

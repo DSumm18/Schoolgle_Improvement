@@ -22,7 +22,7 @@ import {
 // Types
 // ---------------------------------------------------------------------------
 
-type PlanType = "capital" | "improvement" | "financial";
+type PlanType = "capital" | "improvement" | "financial" | "estates";
 type MoscowBand = "must" | "should" | "could" | "wont";
 type ItemStatus =
   | "draft"
@@ -116,12 +116,15 @@ const STATUS_COLORS: Record<ItemStatus, string> = {
 
 const PLAN_TYPE_LABELS: Record<PlanType, string> = {
   capital: "Capital",
+  estates: "Estates",
   improvement: "Improvement",
   financial: "Financial",
 };
 
 const PLAN_TYPE_COLORS: Record<PlanType, string> = {
   capital: "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300",
+  estates:
+    "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300",
   improvement: "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300",
   financial:
     "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
@@ -254,6 +257,7 @@ function CreatePlanForm({
               className="w-full bg-transparent border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             >
               <option value="capital">Capital</option>
+              <option value="estates">Estates</option>
               <option value="improvement">Improvement</option>
               <option value="financial">Financial</option>
             </select>

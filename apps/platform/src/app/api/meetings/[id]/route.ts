@@ -17,7 +17,6 @@ function getMeetingId(request: Request): string {
  */
 export const GET = protectedRoute(async (auth, request) => {
   const id = getMeetingId(request);
-  const { searchParams } = new URL(request.url);
   // orgId MUST come from authenticated session — never from caller
   const organizationId = auth.organizationId;
 
@@ -75,7 +74,7 @@ export const GET = protectedRoute(async (auth, request) => {
  */
 export const PATCH = protectedRoute(async (auth, request) => {
   const id = getMeetingId(request);
-  const body = await request.json();
+  const body = (await request.json()) as Record<string, unknown>;
   const { ...updates } = body;
 
   // orgId MUST come from authenticated session — never from caller
@@ -94,8 +93,10 @@ export const PATCH = protectedRoute(async (auth, request) => {
     "location",
     "status",
     "notes",
+    "recording_consent",
+    "recording_consent_at",
   ];
-  const safeUpdates: Record<string, any> = {};
+  const safeUpdates: Record<string, unknown> = {};
   for (const key of allowedFields) {
     if (key in updates) safeUpdates[key] = updates[key];
   }
@@ -125,7 +126,6 @@ export const PATCH = protectedRoute(async (auth, request) => {
  */
 export const DELETE = protectedRoute(async (auth, request) => {
   const id = getMeetingId(request);
-  const { searchParams } = new URL(request.url);
   // orgId MUST come from authenticated session — never from caller
   const organizationId = auth.organizationId;
 

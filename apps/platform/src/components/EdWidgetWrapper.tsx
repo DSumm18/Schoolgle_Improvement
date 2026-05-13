@@ -36,6 +36,7 @@ export default function EdWidgetWrapper({
   const edInstanceRef = useRef<any>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const initLockRef = useRef(false); // Prevent double initialization
+  const ownsInstanceRef = useRef(false);
 
   useEffect(() => {
     // Initialize Ed widget once
@@ -45,13 +46,28 @@ export default function EdWidgetWrapper({
       typeof window !== "undefined"
     ) {
       initLockRef.current = true; // Lock immediately to prevent race
+      const win = window as any;
 
       // Check if already initialized globally
-      if ((window as any).__ED_INSTANCE__) {
+      if (win.__ED_INSTANCE__) {
         console.log("[EdWidgetWrapper] Ed widget already initialized globally");
-        edInstanceRef.current = (window as any).__ED_INSTANCE__;
+        edInstanceRef.current = win.__ED_INSTANCE__;
         setIsInitialized(true);
         initLockRef.current = false;
+        return;
+      }
+
+      if (win.__ED_INIT_PROMISE__) {
+        win.__ED_INIT_PROMISE__
+          .then((ed: any) => {
+            if (ed) {
+              edInstanceRef.current = ed;
+              setIsInitialized(true);
+            }
+          })
+          .finally(() => {
+            initLockRef.current = false;
+          });
         return;
       }
 
@@ -81,13 +97,14 @@ export default function EdWidgetWrapper({
               "[EdWidgetWrapper] Ed widget not available (this is OK for marketing pages)",
             );
             initLockRef.current = false;
-            return;
+            return null;
           }
         }
 
         if (!EdWidget || !EdWidget.init) {
           console.error("[EdWidgetWrapper] ❌ EdWidget.init is not available");
-          return;
+          initLockRef.current = false;
+          return null;
         }
 
         try {
@@ -183,7 +200,8 @@ export default function EdWidgetWrapper({
 
           const ed = EdWidget.init(config);
           edInstanceRef.current = ed;
-          (window as any).__ED_INSTANCE__ = ed; // Store globally to prevent duplicates
+          ownsInstanceRef.current = true;
+          win.__ED_INSTANCE__ = ed; // Store globally to prevent duplicates
           setIsInitialized(true);
 
           console.log(
@@ -208,10 +226,18 @@ export default function EdWidgetWrapper({
             initError,
           );
           initLockRef.current = false; // Release lock on error
+          return null;
         }
+
+        initLockRef.current = false;
+        return edInstanceRef.current;
       };
 
-      initEdWidget();
+      win.__ED_INIT_PROMISE__ = initEdWidget().finally(() => {
+        if (win.__ED_INIT_PROMISE__) {
+          delete win.__ED_INIT_PROMISE__;
+        }
+      });
     }
   }, [isInitialized, mode]);
 
@@ -228,13 +254,19 @@ export default function EdWidgetWrapper({
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (edInstanceRef.current && typeof window !== "undefined") {
+      if (
+        edInstanceRef.current &&
+        ownsInstanceRef.current &&
+        typeof window !== "undefined"
+      ) {
         try {
           const EdWidget = (window as any).EdWidget;
           if (EdWidget && EdWidget.destroy) {
             EdWidget.destroy();
           }
+          delete (window as any).__ED_INSTANCE__;
           edInstanceRef.current = null;
+          ownsInstanceRef.current = false;
           setIsInitialized(false);
         } catch (error) {
           console.error("[EdWidgetWrapper] Error destroying Ed widget:", error);

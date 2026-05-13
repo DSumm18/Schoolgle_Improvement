@@ -22,25 +22,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { supabase } from "@/lib/supabase";
+import {
+  normalizeFoiRequest,
+  type FoiRequestViewModel,
+} from "@/lib/compliance/foi-tracker";
 
 interface FOITrackerProps {
   organizationId: string;
 }
 
-interface FOIRequest {
-  id: string;
-  reference: string;
-  requester_name: string;
-  requester_email?: string;
-  subject: string;
-  description: string;
-  date_received: string;
-  deadline: string;
-  status: "received" | "in_progress" | "responded" | "refused";
-  response_date?: string;
-  refusal_reason?: string;
-  notes?: string;
-}
+type FOIRequest = FoiRequestViewModel;
 
 const STATUS_CONFIG: Record<
   FOIRequest["status"],
@@ -64,18 +56,32 @@ export default function FOITracker({ organizationId }: FOITrackerProps) {
   });
 
   useEffect(() => {
+    if (!organizationId) return;
     fetchRequests();
   }, [organizationId]);
+
+  const authFetch = async (url: string, options?: RequestInit) => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const headers: Record<string, string> = {
+      ...(options?.headers as Record<string, string>),
+    };
+    if (session?.access_token) {
+      headers.Authorization = `Bearer ${session.access_token}`;
+    }
+    return fetch(url, { ...options, headers });
+  };
 
   const fetchRequests = async () => {
     setLoading(true);
     try {
-      const response = await fetch(
+      const response = await authFetch(
         `/api/compliance/foi?organizationId=${organizationId}`,
       );
       if (response.ok) {
         const data = await response.json();
-        setRequests(data.requests || []);
+        setRequests((data.requests || []).map(normalizeFoiRequest));
       }
     } catch (error) {
       console.error("Failed to fetch FOI requests:", error);
@@ -127,12 +133,16 @@ export default function FOITracker({ organizationId }: FOITrackerProps) {
   const handleCreateRequest = async () => {
     if (!newRequest.requester_name.trim() || !newRequest.subject.trim()) return;
     try {
-      const response = await fetch(
+      const response = await authFetch(
         `/api/compliance/foi?organizationId=${organizationId}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(newRequest),
+          body: JSON.stringify({
+            ...newRequest,
+            description: newRequest.subject,
+            information_requested: newRequest.description,
+          }),
         },
       );
       if (response.ok) {

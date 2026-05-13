@@ -1,5 +1,6 @@
 export { default as ComplianceDashboard } from "./ComplianceDashboard";
 export { default as PolicyList } from "./PolicyList";
+export { default as PolicyRequirementMatchPanel } from "./PolicyRequirementMatchPanel";
 export { default as PolicyEditor } from "./PolicyEditor";
 export { default as ApprovalWorkflow } from "./ApprovalWorkflow";
 export { default as TrainingDashboard } from "./TrainingDashboard";

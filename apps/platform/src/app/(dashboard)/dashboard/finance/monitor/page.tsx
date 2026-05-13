@@ -115,6 +115,7 @@ interface MonitorData {
   data_source?: "demo" | "supabase";
   data_provenance?: DataProvenance;
   available_years?: string[];
+  assumption_cards?: AssumptionCard[];
 }
 
 interface Transaction {
@@ -142,6 +143,46 @@ interface ExpectedIncomeItem {
   confidence: "confirmed" | "highly_likely" | "likely" | "uncertain";
   expected_date: string;
   source: string;
+  status?: string;
+  cfr_code?: string;
+  received?: number;
+}
+
+interface ExpectedIncomeApiItem {
+  id: string;
+  description: string;
+  cfr_code: string;
+  total_expected: number | string;
+  amount_received: number | string;
+  amount_outstanding?: number | string;
+  confidence: "confirmed" | "highly_likely" | "likely" | "uncertain";
+  expected_dates?: Array<{ date: string; amount?: number; status?: string }>;
+  source?: string;
+  source_reference?: string;
+  status?: string;
+}
+
+interface ExpectedIncomeApiResponse {
+  data?: {
+    items: ExpectedIncomeApiItem[];
+    summary: {
+      total_outstanding: number;
+      conservative_add: number;
+      realistic_add: number;
+      optimistic_add: number;
+      overdue_count: number;
+      overdue_amount: number;
+    };
+  };
+}
+
+interface AssumptionCard {
+  cfr_code: string;
+  title: string;
+  profile_name: string;
+  annual_budget: number;
+  rationale: string;
+  source_note: string;
 }
 
 // =====================================================
@@ -1677,8 +1718,42 @@ function DfEGuidanceBanner({ data }: { data: MonitorData }) {
 // =====================================================
 
 function ExpectedIncomeOverlay({ data }: { data: MonitorData }) {
+  const { organization } = useAuth();
   const [showDetails, setShowDetails] = useState(false);
-  const expectedItems = useMemo(() => getSampleExpectedIncome(), []);
+  const expectedIncomeUrl = organization?.id
+    ? `/api/finance/expected-income?organizationId=${organization.id}&financial_year=${data.financial_year}`
+    : null;
+  const { data: expectedResponse } = useSWR<ExpectedIncomeApiResponse>(
+    expectedIncomeUrl,
+    fetcher,
+    { revalidateOnFocus: false, dedupingInterval: 30_000 },
+  );
+  const apiItems = expectedResponse?.data?.items ?? [];
+  const expectedItems = useMemo<ExpectedIncomeItem[]>(() => {
+    if (apiItems.length === 0) return getSampleExpectedIncome();
+
+    return apiItems.map((item) => {
+      const outstanding =
+        Number(item.amount_outstanding) ||
+        Number(item.total_expected || 0) - Number(item.amount_received || 0);
+      const nextDate =
+        item.expected_dates?.find((date) => date.status !== "received") ||
+        item.expected_dates?.[0];
+
+      return {
+        id: item.id,
+        description: item.description,
+        amount: Math.max(0, outstanding),
+        confidence: item.confidence,
+        expected_date: nextDate?.date || data.as_at_date,
+        source: item.source_reference || item.source || "Expected income log",
+        status: item.status,
+        cfr_code: item.cfr_code,
+        received: Number(item.amount_received || 0),
+      };
+    });
+  }, [apiItems, data.as_at_date]);
+  const isSampleIncome = apiItems.length === 0;
 
   const byConfidence = useMemo(() => {
     const result: Record<
@@ -1719,7 +1794,9 @@ function ExpectedIncomeOverlay({ data }: { data: MonitorData }) {
               Expected Income &amp; True Position
             </h3>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              Known income not yet posted to the ledger
+              {isSampleIncome
+                ? "Example holding income not yet posted to the ledger"
+                : "Expected income not yet posted to the ledger"}
             </p>
           </div>
         </div>
@@ -1756,7 +1833,8 @@ function ExpectedIncomeOverlay({ data }: { data: MonitorData }) {
             {fmt(totalExpected)}
           </p>
           <p className="text-[10px] text-gray-400 dark:text-gray-500">
-            {expectedItems.length} items pending
+            {expectedItems.length} {isSampleIncome ? "example" : "live"} items
+            pending
           </p>
         </div>
         <div className="rounded-lg border-2 border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/30 p-4">
@@ -1767,7 +1845,7 @@ function ExpectedIncomeOverlay({ data }: { data: MonitorData }) {
             {fmt(truePosition)}
           </p>
           <p className="text-[10px] text-emerald-600/80 dark:text-emerald-400/60">
-            Conservative: {fmt(conservativePosition)}
+            Realistic: {fmt(conservativePosition)}
           </p>
         </div>
       </div>
@@ -1778,7 +1856,7 @@ function ExpectedIncomeOverlay({ data }: { data: MonitorData }) {
           (conf) => {
             const amount = byConfidence[conf]?.total ?? 0;
             if (amount === 0) return null;
-            const width = (amount / totalExpected) * 100;
+            const width = totalExpected > 0 ? (amount / totalExpected) * 100 : 0;
             const colors = {
               confirmed: "bg-emerald-500",
               highly_likely: "bg-blue-500",
@@ -1853,7 +1931,15 @@ function ExpectedIncomeOverlay({ data }: { data: MonitorData }) {
                         className="border-b border-gray-50 dark:border-gray-800"
                       >
                         <td className="px-4 py-2.5 text-gray-700 dark:text-gray-300">
-                          {item.description}
+                          <div>
+                            <p>{item.description}</p>
+                            {item.cfr_code && (
+                              <p className="mt-0.5 text-[10px] text-gray-400">
+                                {item.cfr_code}
+                                {item.status ? ` - ${item.status}` : ""}
+                              </p>
+                            )}
+                          </div>
                         </td>
                         <td className="px-4 py-2.5 text-right font-medium text-gray-900 dark:text-white tabular-nums">
                           {fmt(item.amount)}
@@ -1897,6 +1983,67 @@ function ExpectedIncomeOverlay({ data }: { data: MonitorData }) {
           </motion.div>
         )}
       </AnimatePresence>
+    </motion.div>
+  );
+}
+
+function SeasonalityAssumptions({ cards }: { cards?: AssumptionCard[] }) {
+  if (!cards || cards.length === 0) return null;
+
+  return (
+    <motion.div
+      variants={sectionVariants}
+      initial="hidden"
+      animate="visible"
+      className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900"
+    >
+      <div className="mb-4 flex items-start justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <div className="rounded-lg bg-blue-500/10 p-2">
+            <Calculator className="h-4 w-4 text-blue-500" />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+              Forecast Assumptions
+            </h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Profiled monthly weighting by CFR line, not a flat twelfth
+            </p>
+          </div>
+        </div>
+        <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-medium text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
+          SFVS / ICFP ready
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {cards.map((card) => (
+          <div
+            key={`${card.cfr_code}:${card.profile_name}`}
+            className="rounded-lg border border-gray-100 bg-gray-50/70 p-4 dark:border-gray-800 dark:bg-gray-950/40"
+          >
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold text-gray-900 dark:text-white">
+                  {card.title}
+                </p>
+                <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                  {card.cfr_code} - {card.profile_name}
+                </p>
+              </div>
+              <span className="text-xs font-bold tabular-nums text-gray-900 dark:text-white">
+                {fmt(card.annual_budget)}
+              </span>
+            </div>
+            <p className="text-xs leading-5 text-gray-600 dark:text-gray-300">
+              {card.rationale}
+            </p>
+            <p className="mt-2 text-[10px] leading-4 text-gray-400 dark:text-gray-500">
+              {card.source_note}
+            </p>
+          </div>
+        ))}
+      </div>
     </motion.div>
   );
 }
@@ -2197,6 +2344,7 @@ export default function BudgetMonitorPage() {
     month: "long",
     year: "numeric",
   });
+  const displaySchoolName = organization?.name || data.school_name;
 
   return (
     <div className="mx-auto max-w-[1400px] space-y-6 px-4 py-6 sm:px-6">
@@ -2216,7 +2364,7 @@ export default function BudgetMonitorPage() {
                 Budget Monitor
               </h1>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                {data.school_name} &middot; {data.financial_year} &middot;{" "}
+                {displaySchoolName} &middot; {data.financial_year} &middot;{" "}
                 {data.pupil_count} pupils &middot; As at {asAtDate}
               </p>
             </div>
@@ -2255,6 +2403,13 @@ export default function BudgetMonitorPage() {
             {data.budget_cycle === "la" ? "LA Maintained" : "Academy"}
           </span>
           <Link
+            href={`/dashboard/finance/governor-report?financial_year=${encodeURIComponent(data.financial_year)}`}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-4 py-2 text-xs font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
+          >
+            <FileText className="h-3.5 w-3.5 text-[#FFAA4C]" />
+            Governor Report
+          </Link>
+          <Link
             href="/dashboard/finance/import"
             className="inline-flex items-center gap-1.5 rounded-lg bg-[#FFAA4C] px-4 py-2 text-xs font-medium text-white shadow-sm hover:bg-[#e99a3f] transition-colors"
           >
@@ -2287,6 +2442,8 @@ export default function BudgetMonitorPage() {
           />
         </div>
       </div>
+
+      <SeasonalityAssumptions cards={data.assumption_cards} />
 
       {/* ── 7. EXPECTED INCOME OVERLAY ── */}
       <ExpectedIncomeOverlay data={data} />

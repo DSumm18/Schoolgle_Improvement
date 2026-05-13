@@ -2,7 +2,11 @@
 
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { AuthContext } from "@/context/SupabaseAuthContext";
-import type { PathfinderExtractionResult } from "@/lib/pathfinder/prototype";
+import { extractRoomListFromText } from "@/lib/pathfinder/room-list";
+import type {
+  PathfinderExtractionResult,
+  PathfinderRoomListEntry,
+} from "@/lib/pathfinder/prototype";
 
 // pdfjs-dist is loaded lazily on the client only.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -66,6 +70,7 @@ interface PathfinderSourceIntakeProps {
 type IntakeStage =
   | "idle"
   | "loading-pdf"
+  | "reading-room-list"
   | "choose-page"
   | "rasterising"
   | "uploading"
@@ -77,6 +82,8 @@ function stageLabel(stage: IntakeStage): string {
   switch (stage) {
     case "loading-pdf":
       return "Reading the PDF...";
+    case "reading-room-list":
+      return "Reading the room list...";
     case "choose-page":
       return "Pick the page you want to use.";
     case "rasterising":
@@ -156,6 +163,51 @@ async function requestUploadUrl(
   return (await response.json()) as UploadUrlResponse;
 }
 
+async function extractTextFromPdf(file: File): Promise<string> {
+  const pdfjs = await getPdfjs();
+  const buffer = await file.arrayBuffer();
+  const loadingTask = pdfjs.getDocument({ data: new Uint8Array(buffer) });
+  const pdf = await loadingTask.promise;
+  const pageCount = Math.min(pdf.numPages, 25);
+  const chunks: string[] = [];
+
+  for (let pageNumber = 1; pageNumber <= pageCount; pageNumber += 1) {
+    const page = await pdf.getPage(pageNumber);
+    const content = await page.getTextContent();
+    const text = content.items
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .map((item: any) => (typeof item.str === "string" ? item.str : ""))
+      .filter(Boolean)
+      .join(" ");
+    chunks.push(text);
+  }
+
+  return chunks.join("\n");
+}
+
+async function extractTextFromSpreadsheet(file: File): Promise<string> {
+  const XLSX = await import("xlsx");
+  const buffer = await file.arrayBuffer();
+  const workbook = XLSX.read(buffer, { type: "array" });
+  const sheetName = workbook.SheetNames[0];
+  const sheet = sheetName ? workbook.Sheets[sheetName] : null;
+  if (!sheet) return "";
+  return XLSX.utils.sheet_to_csv(sheet);
+}
+
+async function extractRoomListEntriesFromFile(file: File): Promise<PathfinderRoomListEntry[]> {
+  const lowerName = file.name.toLowerCase();
+  const isSpreadsheet = lowerName.endsWith(".xlsx") || lowerName.endsWith(".xls");
+  const isPdf = file.type === "application/pdf" || lowerName.endsWith(".pdf");
+  const text = isSpreadsheet
+    ? await extractTextFromSpreadsheet(file)
+    : isPdf
+      ? await extractTextFromPdf(file)
+      : await file.text();
+
+  return extractRoomListFromText(text, isPdf ? "document" : "spreadsheet");
+}
+
 export default function PathfinderSourceIntake({
   parentModelId,
   onIntakeComplete,
@@ -169,6 +221,8 @@ export default function PathfinderSourceIntake({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [rawImageFile, setRawImageFile] = useState<File | null>(null);
+  const [roomListFileName, setRoomListFileName] = useState<string | null>(null);
+  const [roomListEntries, setRoomListEntries] = useState<PathfinderRoomListEntry[]>([]);
   const [thumbnails, setThumbnails] = useState<PageThumbnail[]>([]);
   const [selectedPage, setSelectedPage] = useState<number | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -179,6 +233,8 @@ export default function PathfinderSourceIntake({
     setErrorMessage(null);
     setPdfFile(null);
     setRawImageFile(null);
+    setRoomListFileName(null);
+    setRoomListEntries([]);
     setThumbnails([]);
     setSelectedPage(null);
     pdfDocRef.current = null;
@@ -235,6 +291,25 @@ export default function PathfinderSourceIntake({
     },
     [],
   );
+
+  const onRoomListSelected = useCallback(async (file: File) => {
+    setErrorMessage(null);
+    setStage("reading-room-list");
+    try {
+      const entries = await extractRoomListEntriesFromFile(file);
+      setRoomListFileName(file.name);
+      setRoomListEntries(entries);
+      setStage(pdfFile || rawImageFile ? "choose-page" : "idle");
+      if (entries.length === 0) {
+        setErrorMessage("We could not find clear room names or room codes in that file. You can continue without it, or try a room schedule, condition survey, CSV, Excel file, or text PDF.");
+        setStage("error");
+      }
+    } catch (err) {
+      console.error("Failed to read room list:", err);
+      setErrorMessage(err instanceof Error ? err.message : "Could not read that room list.");
+      setStage("error");
+    }
+  }, [pdfFile, rawImageFile]);
 
   const runExtraction = useCallback(async () => {
     if (!accessToken) {
@@ -322,6 +397,7 @@ export default function PathfinderSourceIntake({
           sourceDocumentId,
           sourceDocumentPath,
           sourcePageNumber: pdfFile ? selectedPage : undefined,
+          roomListEntries,
           parentModelId: parentModelId ?? undefined,
           name: sourceDocumentName,
         }),
@@ -330,6 +406,15 @@ export default function PathfinderSourceIntake({
         throw new Error(`Extraction failed with HTTP ${extractResponse.status}`);
       }
       const result = (await extractResponse.json()) as PathfinderSourceIntakeResult;
+      if (!result.extractionResult?.rooms?.length) {
+        setErrorMessage(
+          roomListEntries.length > 0
+            ? "We saved the upload, but could not detect room shapes from this plan. Try a clearer floor-plan page, or use a plan with stronger walls/room outlines. Your room list was read and can be uploaded again."
+            : "We saved the upload, but could not detect room shapes from this plan. Try a clearer floor-plan page, or add a room schedule so Pathfinder has more context.",
+        );
+        setStage("error");
+        return;
+      }
       setStage("done");
       onIntakeComplete(result);
     } catch (err) {
@@ -337,10 +422,10 @@ export default function PathfinderSourceIntake({
       setErrorMessage(err instanceof Error ? err.message : "Extraction failed.");
       setStage("error");
     }
-  }, [accessToken, pdfFile, rawImageFile, selectedPage, parentModelId, onIntakeComplete]);
+  }, [accessToken, pdfFile, rawImageFile, selectedPage, roomListEntries, parentModelId, onIntakeComplete]);
 
   const isBusy = useMemo(
-    () => ["loading-pdf", "rasterising", "uploading", "extracting"].includes(stage),
+    () => ["loading-pdf", "reading-room-list", "rasterising", "uploading", "extracting"].includes(stage),
     [stage],
   );
 
@@ -380,11 +465,26 @@ export default function PathfinderSourceIntake({
         ) : null}
       </div>
 
-      <div className="mt-5 grid gap-4 md:grid-cols-[1fr_auto]">
+      <div className="mt-5 grid gap-3 md:grid-cols-4">
+        {[
+          ["1", "Upload plan", "Choose the PDF/image page that shows the building or site."],
+          ["2", "Add room list", "Optional, but useful if you have a room schedule, condition survey, or spreadsheet."],
+          ["3", "Check draft", "Pathfinder will show what it found and what needs your review."],
+          ["4", "Publish", "Only approved rooms and asset pins become the live school map."],
+        ].map(([number, title, copy]) => (
+          <div key={number} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Step {number}</p>
+            <p className="mt-1 text-sm font-semibold text-slate-900">{title}</p>
+            <p className="mt-1 text-xs leading-5 text-slate-600">{copy}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-5 grid gap-4 md:grid-cols-[1fr_1fr]">
         <div className="flex flex-col gap-3">
           <label className="flex flex-col gap-2">
             <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
-              Upload PDF or image
+              Step 1: upload PDF or image
             </span>
             <input
               type="file"
@@ -405,8 +505,27 @@ export default function PathfinderSourceIntake({
 
         <div className="flex flex-col items-start gap-2">
           <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
-            Or connect a source
+            Step 2: add room list context
           </span>
+          <input
+            type="file"
+            accept=".csv,.tsv,.txt,.xlsx,.xls,application/pdf,text/csv,text/plain"
+            disabled={isBusy}
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) void onRoomListSelected(file);
+            }}
+            className="w-full text-sm text-slate-700 file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-white file:px-3 file:py-2 file:text-xs file:font-medium file:text-slate-700 file:ring-1 file:ring-slate-300 hover:file:bg-slate-50"
+          />
+          <p className="text-xs leading-5 text-slate-500">
+            Optional. Upload a room schedule, council condition survey, CSV, Excel sheet, or text PDF.
+          </p>
+          {roomListFileName ? (
+            <div className="rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+              <span className="font-semibold">{roomListEntries.length} room references found</span>
+              <span className="block truncate">{roomListFileName}</span>
+            </div>
+          ) : null}
           <button
             type="button"
             disabled
@@ -462,6 +581,16 @@ export default function PathfinderSourceIntake({
           ) : null}
         </div>
       ) : null}
+
+      <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <h3 className="text-sm font-semibold text-slate-900">Before Pathfinder moves on</h3>
+        <ul className="mt-2 space-y-1 text-xs leading-5 text-slate-600">
+          <li>- You will see the draft rooms before anything is published.</li>
+          <li>- Anything uncertain will stay marked for review.</li>
+          <li>- Your Asset Register remains the source of truth for assets.</li>
+          <li>- Publishing only affects this signed-in school organisation.</li>
+        </ul>
+      </div>
 
       <div className="mt-6 flex items-center justify-between gap-3">
         <button

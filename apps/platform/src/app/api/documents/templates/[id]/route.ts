@@ -1,6 +1,9 @@
-import { NextRequest } from "next/server";
 import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
+import { ensureStandardDocumentTemplates } from "@/lib/document-engine/standard-templates";
+
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /**
  * GET /api/documents/templates/[id]
@@ -9,16 +12,22 @@ import { createServiceRoleClient } from "@/lib/supabase-server";
 export const GET = protectedRoute(async (auth, request) => {
   const supabase = createServiceRoleClient();
   const id = request.nextUrl.pathname.split("/").at(-1);
+  await ensureStandardDocumentTemplates(supabase);
 
   if (!id) {
     return apiError("Template ID is required", 400, "MISSING_ID");
   }
 
-  const { data: template, error } = await supabase
+  let templateQuery = supabase
     .from("document_templates")
     .select("*")
-    .eq("id", id)
-    .single();
+    .or(`organization_id.is.null,organization_id.eq.${auth.organizationId}`);
+
+  templateQuery = UUID_PATTERN.test(id)
+    ? templateQuery.eq("id", id)
+    : templateQuery.eq("slug", id);
+
+  const { data: template, error } = await templateQuery.single();
 
   if (error) {
     console.error("Error fetching document template:", error);
@@ -85,7 +94,7 @@ export const PUT = protectedRoute(
       tags,
     } = body;
 
-    const updateData: Record<string, any> = {
+    const updateData: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
     };
     if (name !== undefined) {

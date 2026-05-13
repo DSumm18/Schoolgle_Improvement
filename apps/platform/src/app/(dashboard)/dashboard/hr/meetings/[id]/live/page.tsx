@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -12,7 +12,6 @@ import {
   Check,
   MessageSquare,
   Mic,
-  MicOff,
   Pause,
   Play,
   ChevronRight,
@@ -22,7 +21,6 @@ import {
   Plus,
   Shield,
   Download,
-  X,
   AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -36,11 +34,48 @@ import type {
 
 type FocusMode = "opening" | "item" | "closing";
 
+interface LivePrepContext {
+  placeholder_replacements?: Record<string, string>;
+  extracted_facts?: {
+    label: string;
+    value: string;
+    source?: string;
+  }[];
+}
+
+interface SpeechRecognitionResultLike {
+  isFinal: boolean;
+  0: {
+    transcript: string;
+  };
+}
+
+interface SpeechRecognitionEventLike {
+  results: ArrayLike<SpeechRecognitionResultLike>;
+}
+
+interface SpeechRecognitionLike {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
+  onerror: (() => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+}
+
+type WindowWithSpeechRecognition = Window &
+  typeof globalThis & {
+    SpeechRecognition?: new () => SpeechRecognitionLike;
+    webkitSpeechRecognition?: new () => SpeechRecognitionLike;
+  };
+
 export default function MeetingLivePage() {
   const router = useRouter();
   const params = useParams();
   const meetingId = params.id as string;
-  const { organization } = useAuth();
+  const { session, organization } = useAuth();
   const organizationId = organization?.id || "";
 
   const [meeting, setMeeting] = useState<Meeting | null>(null);
@@ -51,8 +86,9 @@ export default function MeetingLivePage() {
   const [notes, setNotes] = useState<MeetingNote[]>([]);
   const [loading, setLoading] = useState(true);
   const [ending, setEnding] = useState(false);
+  const [endError, setEndError] = useState("");
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [prepContext, setPrepContext] = useState<any>(null);
+  const [prepContext, setPrepContext] = useState<LivePrepContext | null>(null);
 
   // Focus state
   const [focusMode, setFocusMode] = useState<FocusMode>("opening");
@@ -64,6 +100,7 @@ export default function MeetingLivePage() {
 
   // Recording state
   const [recordingConsent, setRecordingConsent] = useState(false);
+  const [recordingDeclined, setRecordingDeclined] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [recDuration, setRecDuration] = useState(0);
@@ -76,7 +113,7 @@ export default function MeetingLivePage() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const recTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const detectedPhrasesRef = useRef<Set<string>>(new Set());
   const transcriptRef = useRef("");
 
@@ -84,6 +121,14 @@ export default function MeetingLivePage() {
   const [elapsed, setElapsed] = useState(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<number>(Date.now());
+
+  const requestHeaders = useMemo(
+    () =>
+      session?.access_token
+        ? { Authorization: `Bearer ${session.access_token}` }
+        : {},
+    [session?.access_token],
+  );
 
   useEffect(() => {
     startTimeRef.current = Date.now();
@@ -98,9 +143,9 @@ export default function MeetingLivePage() {
   // Web Speech API
   useEffect(() => {
     if (typeof window === "undefined") return;
+    const speechWindow = window as WindowWithSpeechRecognition;
     const SpeechRecognition =
-      (window as any).SpeechRecognition ||
-      (window as any).webkitSpeechRecognition;
+      speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition;
     if (!SpeechRecognition) return;
 
     const recognition = new SpeechRecognition();
@@ -108,7 +153,7 @@ export default function MeetingLivePage() {
     recognition.interimResults = true;
     recognition.lang = "en-GB";
 
-    recognition.onresult = (event: any) => {
+    recognition.onresult = (event: SpeechRecognitionEventLike) => {
       let finalised = "";
       for (let i = 0; i < event.results.length; i++) {
         const result = event.results[i];
@@ -176,7 +221,6 @@ export default function MeetingLivePage() {
 
       if (words.length === 0) continue;
 
-      const phraseKey = words.join(" ").toLowerCase();
       if (detectedPhrasesRef.current.has(item.id)) continue;
 
       // Check if enough key words are mentioned
@@ -191,10 +235,17 @@ export default function MeetingLivePage() {
   }, [fullTranscript, checklistItems]);
 
   useEffect(() => {
-    if (!organizationId || !meetingId) return;
-    fetch(`/api/meetings/${meetingId}?organizationId=${organizationId}`)
+    if (!organizationId || !meetingId || !session?.access_token) return;
+    fetch(`/api/meetings/${meetingId}?organizationId=${organizationId}`, {
+      headers: requestHeaders,
+    })
       .then((r) => r.json())
       .then((data) => {
+        if (data.meeting?.status === "completed") {
+          router.replace(`/dashboard/hr/meetings/${meetingId}/minutes`);
+          return;
+        }
+        setRecordingConsent(Boolean(data.meeting?.recording_consent));
         setMeeting(data.meeting);
         setTemplate(data.template);
         setChecklistItems(data.checklist_items || []);
@@ -203,7 +254,7 @@ export default function MeetingLivePage() {
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [organizationId, meetingId]);
+  }, [organizationId, meetingId, requestHeaders, router, session?.access_token]);
 
   const handleAddNote = useCallback(
     async (text: string) => {
@@ -212,11 +263,14 @@ export default function MeetingLivePage() {
       setNotes(updated);
       await fetch(`/api/meetings/${meetingId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...requestHeaders,
+        },
         body: JSON.stringify({ organizationId, notes: updated }),
       });
     },
-    [notes, meetingId, organizationId],
+    [notes, meetingId, organizationId, requestHeaders],
   );
 
   const handleToggleItem = useCallback(
@@ -241,7 +295,10 @@ export default function MeetingLivePage() {
       try {
         await fetch(`/api/meetings/${meetingId}/checklist`, {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...requestHeaders,
+          },
           body: JSON.stringify({
             organizationId,
             items: [{ id: itemId, manually_ticked: newTicked }],
@@ -251,37 +308,84 @@ export default function MeetingLivePage() {
         console.error("Failed to save checklist item:", err);
       }
     },
-    [checklistItems, meetingId, organizationId],
+    [checklistItems, meetingId, organizationId, requestHeaders],
   );
 
   const handleEndMeeting = async () => {
     setEnding(true);
+    setEndError("");
     try {
       // Stop recording if active
       if (isRecording) stopRecording();
 
       const res = await fetch(`/api/meetings/${meetingId}/complete`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...requestHeaders,
+        },
         body: JSON.stringify({ organizationId }),
       });
-      if (res.ok) {
-        await fetch(`/api/meetings/${meetingId}/minutes`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ organizationId }),
-        });
-        router.push(`/dashboard/hr/meetings/${meetingId}/minutes`);
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || "Unable to complete the meeting.");
       }
+
+      const minutesRes = await fetch(`/api/meetings/${meetingId}/minutes`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...requestHeaders,
+        },
+        body: JSON.stringify({ organizationId }),
+      });
+
+      if (!minutesRes.ok) {
+        const data = await minutesRes.json().catch(() => null);
+        throw new Error(data?.error || "Meeting ended, but minutes failed.");
+      }
+
+      router.push(`/dashboard/hr/meetings/${meetingId}/minutes`);
     } catch (err) {
       console.error("Failed to end meeting:", err);
+      setEndError(
+        err instanceof Error
+          ? err.message
+          : "Something went wrong ending the meeting.",
+      );
     } finally {
       setEnding(false);
     }
   };
 
+  const handleConfirmRecordingConsent = useCallback(async () => {
+    setRecordingConsent(true);
+    setRecordingDeclined(false);
+    try {
+      await fetch(`/api/meetings/${meetingId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...requestHeaders,
+        },
+        body: JSON.stringify({
+          organizationId,
+          recording_consent: true,
+          recording_consent_at: new Date().toISOString(),
+        }),
+      });
+    } catch (err) {
+      console.error("Failed to save recording consent:", err);
+    }
+  }, [meetingId, organizationId, requestHeaders]);
+
   // Recording functions
   const startRecording = useCallback(async () => {
+    if (!recordingConsent) {
+      setEndError("Confirm recording consent before starting the recorder.");
+      return;
+    }
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream, {
@@ -317,7 +421,7 @@ export default function MeetingLivePage() {
     } catch (err) {
       console.error("Failed to start recording:", err);
     }
-  }, []);
+  }, [recordingConsent]);
 
   const pauseRecording = useCallback(() => {
     const mr = mediaRecorderRef.current;
@@ -368,6 +472,29 @@ export default function MeetingLivePage() {
     } catch {}
     setLiveCaption("");
   }, []);
+
+  const handleUseNotesOnly = useCallback(async () => {
+    setRecordingConsent(false);
+    setRecordingDeclined(true);
+    if (isRecording) stopRecording();
+
+    try {
+      await fetch(`/api/meetings/${meetingId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...requestHeaders,
+        },
+        body: JSON.stringify({
+          organizationId,
+          recording_consent: false,
+          recording_consent_at: null,
+        }),
+      });
+    } catch (err) {
+      console.error("Failed to save notes-only recording choice:", err);
+    }
+  }, [isRecording, meetingId, organizationId, requestHeaders, stopRecording]);
 
   const downloadRecording = useCallback(() => {
     if (!recordingBlob) return;
@@ -493,12 +620,103 @@ export default function MeetingLivePage() {
                 </h1>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   with {meeting.attendee_name}
-                  {meeting.attendee_role && ` · ${meeting.attendee_role}`}
+                  {meeting.attendee_role && ` . ${meeting.attendee_role}`}
                 </p>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
+              {/* Persistent recording controls */}
+              {!recordingConsent ? (
+                <div className="hidden xl:flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 dark:border-indigo-800 dark:bg-indigo-900/20">
+                  <Mic size={14} className="text-indigo-500" />
+                  <div className="leading-tight">
+                    <p className="text-xs font-bold text-indigo-800 dark:text-indigo-200">
+                      {recordingDeclined ? "Notes only mode" : "Recording consent"}
+                    </p>
+                    <p className="text-[11px] text-indigo-600/70 dark:text-indigo-300/70">
+                      {recordingDeclined
+                        ? "Recording is off"
+                        : "Ask before recording"}
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={handleConfirmRecordingConsent}
+                    className="h-8 rounded-lg bg-indigo-600 px-3 text-xs font-semibold text-white hover:bg-indigo-700"
+                  >
+                    Consent confirmed
+                  </Button>
+                  {!recordingDeclined && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleUseNotesOnly}
+                      className="h-8 rounded-lg px-3 text-xs font-semibold"
+                    >
+                      Notes only
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div
+                  className={`hidden xl:flex items-center gap-2 rounded-xl border px-3 py-2 ${
+                    isRecording && !isPaused
+                      ? "border-red-200 bg-red-50 dark:border-red-900/60 dark:bg-red-950/30"
+                      : "border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800"
+                  }`}
+                >
+                  <Mic
+                    size={14}
+                    className={
+                      isRecording && !isPaused
+                        ? "text-red-500 animate-pulse"
+                        : "text-slate-400"
+                    }
+                  />
+                  <div className="leading-tight">
+                    <p className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                      {isRecording
+                        ? isPaused
+                          ? "Recording paused"
+                          : "Recording"
+                        : hasStopped
+                          ? "Recording stopped"
+                          : "Ready to record"}
+                    </p>
+                    <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
+                      {isRecording || hasStopped
+                        ? formatTimer(recDuration)
+                        : "Consent confirmed"}
+                    </p>
+                  </div>
+                  {isRecording && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={isPaused ? resumeRecording : pauseRecording}
+                      className="h-8 rounded-lg px-3 text-xs font-semibold gap-1.5"
+                    >
+                      {isPaused ? <Play size={13} /> : <Pause size={13} />}
+                      {isPaused ? "Resume recording" : "Pause recording"}
+                    </Button>
+                  )}
+                  {!hasStopped && (
+                    <Button
+                      size="sm"
+                      onClick={isRecording ? stopRecording : startRecording}
+                      className={`h-8 rounded-lg px-3 text-xs font-semibold ${
+                        isRecording
+                          ? "bg-red-500 text-white hover:bg-red-600"
+                          : "bg-indigo-600 text-white hover:bg-indigo-700"
+                      }`}
+                    >
+                      {isRecording ? "Stop recording" : "Start recording"}
+                    </Button>
+                  )}
+                </div>
+              )}
+
               {/* Timer */}
               <div
                 className={`flex items-center gap-1.5 rounded-lg px-3 py-2 transition-colors ${isRecording && !isPaused ? "bg-red-50 dark:bg-red-900/20" : "bg-slate-100 dark:bg-slate-800"}`}
@@ -580,6 +798,12 @@ export default function MeetingLivePage() {
               </Button>
             </div>
           </div>
+          {endError && (
+            <div className="mt-3 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200">
+              <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+              <p>{endError}</p>
+            </div>
+          )}
 
           {/* Progress bar */}
           <div className="mt-2.5">
@@ -701,7 +925,14 @@ export default function MeetingLivePage() {
                       </p>
                       <div className="space-y-2">
                         {prepContext.extracted_facts.map(
-                          (fact: any, i: number) => (
+                          (
+                            fact: {
+                              label: string;
+                              value: string;
+                              source?: string;
+                            },
+                            i: number,
+                          ) => (
                             <div
                               key={i}
                               className="flex items-start gap-2 text-sm"
@@ -1003,6 +1234,12 @@ export default function MeetingLivePage() {
                     </>
                   )}
                 </Button>
+                {endError && (
+                  <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200">
+                    <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+                    <p>{endError}</p>
+                  </div>
+                )}
               </motion.div>
             )}
           </div>
@@ -1017,7 +1254,7 @@ export default function MeetingLivePage() {
                     Compliance Tracker
                   </h2>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    {tickedCount} of {totalCount} covered · {progress}%
+                    {tickedCount} of {totalCount} covered . {progress}%
                   </p>
                 </div>
 
@@ -1166,7 +1403,7 @@ export default function MeetingLivePage() {
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
             <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800">
               <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100">
-                Compliance Tracker · {tickedCount}/{totalCount}
+                Compliance Tracker . {tickedCount}/{totalCount}
               </h2>
             </div>
             <div className="divide-y divide-slate-50 dark:divide-slate-800/50">
@@ -1224,29 +1461,59 @@ export default function MeetingLivePage() {
       {/* -- Fixed Bottom Bar: Recording + Captions ------------------------ */}
       <div className="sticky bottom-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-t border-slate-200 dark:border-slate-800">
         <div className="max-w-[1400px] mx-auto px-4 py-3">
-          {/* GDPR consent gate */}
+          {/* Recording consent gate */}
           {!recordingConsent ? (
-            <div className="flex items-center gap-4">
-              <div className="flex-1 flex items-center gap-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl px-4 py-3 border border-indigo-200 dark:border-indigo-800">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+              <div className="flex-1 flex items-start gap-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl px-4 py-3 border border-indigo-200 dark:border-indigo-800">
                 <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center shrink-0">
                   <Mic size={18} className="text-indigo-500" />
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-indigo-800 dark:text-indigo-200">
-                    Enable Speech Recognition
+                    {recordingDeclined
+                      ? "Recording off - manual notes mode"
+                      : "Ask for recording consent before you start"}
+                  </p>
+                  {recordingDeclined ? (
+                    <p className="text-xs text-indigo-600/70 dark:text-indigo-400/70 mt-1">
+                      Recording is disabled for this meeting. Use the checklist
+                      prompts and meeting notes panel to capture the discussion.
+                    </p>
+                  ) : (
+                    <p className="text-xs text-indigo-600/70 dark:text-indigo-400/70 mt-1">
+                      Suggested wording: &quot;To make sure the minutes are
+                      accurate and nothing important is missed, I would like to
+                      record this meeting for transcription and minute-taking
+                      only. The recording is used to create the notes and can be
+                      removed afterwards. Are you happy for me to start
+                      recording?&quot;
+                    </p>
+                  )}
+                  <p className="text-[11px] text-indigo-500/80 dark:text-indigo-300/80 mt-1">
+                    If consent is not given, continue with manual notes and
+                    checklist prompts.
                   </p>
                   <p className="text-xs text-indigo-600/70 dark:text-indigo-400/70 mt-0.5">
-                    Auto-ticks checklist items as you speak · Audio stays on
-                    your device only
+                    Auto-ticks checklist items as you speak. Audio stays on
+                    this device unless the school chooses to upload it for
+                    transcription.
                   </p>
                 </div>
                 <button
-                  onClick={() => setRecordingConsent(true)}
+                  onClick={handleConfirmRecordingConsent}
                   className="shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm px-5 py-2.5 rounded-lg transition-colors flex items-center gap-2"
                 >
                   <Shield size={14} />
-                  Both Parties Consent
+                  Consent confirmed
                 </button>
+                {!recordingDeclined && (
+                  <button
+                    onClick={handleUseNotesOnly}
+                    className="shrink-0 bg-white hover:bg-slate-50 text-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 font-semibold text-sm px-4 py-2.5 rounded-lg transition-colors"
+                  >
+                    Notes only
+                  </button>
+                )}
               </div>
             </div>
           ) : (
@@ -1302,9 +1569,10 @@ export default function MeetingLivePage() {
                 {isRecording && (
                   <button
                     onClick={isPaused ? resumeRecording : pauseRecording}
-                    className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                    className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
                   >
                     {isPaused ? <Play size={14} /> : <Pause size={14} />}
+                    {isPaused ? "Resume" : "Pause"}
                   </button>
                 )}
                 {!hasStopped && (
@@ -1342,7 +1610,7 @@ export default function MeetingLivePage() {
                 ) : isRecording ? (
                   <p className="text-xs text-slate-400 flex items-center gap-1.5">
                     <Shield size={12} className="text-emerald-500" />
-                    Listening · Audio stays on your device
+                    Listening . Audio stays on your device
                   </p>
                 ) : (
                   <p className="text-xs text-slate-400">

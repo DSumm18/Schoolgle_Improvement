@@ -9,6 +9,17 @@ import { NextRequest } from "next/server";
 import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
 
+type StaffConnectorRow = {
+  id: string;
+  connector_type_id: string;
+  [key: string]: unknown;
+};
+
+type ConnectorTypeRow = {
+  id: string;
+  [key: string]: unknown;
+};
+
 export const GET = protectedRoute(async (auth, req: NextRequest) => {
   const supabase = createServiceRoleClient();
   const segments = req.nextUrl.pathname.split("/");
@@ -36,6 +47,7 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
     rightToWork,
     medical,
     contract,
+    connectors,
   ] = await Promise.all([
     supabase
       .from("staff_emergency_contacts")
@@ -75,7 +87,33 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
       .eq("staff_id", staffId)
       .eq("is_current", true)
       .limit(1),
+    supabase
+      .from("staff_connectors")
+      .select("*")
+      .eq("organization_id", auth.organizationId)
+      .eq("staff_id", staffId)
+      .eq("status", "active"),
   ]);
+
+  const connectorRows = (connectors.data || []) as StaffConnectorRow[];
+  const connectorTypeIds = [
+    ...new Set(connectorRows.map((connector) => connector.connector_type_id).filter(Boolean)),
+  ];
+  let connectorTypeMap: Record<string, ConnectorTypeRow> = {};
+
+  if (connectorTypeIds.length > 0) {
+    const { data: connectorTypes } = await supabase
+      .from("connector_types")
+      .select("*")
+      .in("id", connectorTypeIds);
+
+    connectorTypeMap = Object.fromEntries(
+      ((connectorTypes || []) as ConnectorTypeRow[]).map((connectorType) => [
+        connectorType.id,
+        connectorType,
+      ]),
+    );
+  }
 
   return apiSuccess({
     staff,
@@ -86,5 +124,9 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
     training: training.data || [],
     right_to_work: rightToWork.data?.[0] || null,
     medical: medical.data?.[0] || null,
+    connectors: connectorRows.map((connector) => ({
+      ...connector,
+      connector_type: connectorTypeMap[connector.connector_type_id] || null,
+    })),
   });
 });

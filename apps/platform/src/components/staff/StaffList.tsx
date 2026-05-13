@@ -5,19 +5,15 @@ import { motion } from "framer-motion";
 import {
   Search,
   Plus,
-  Filter,
   MoreVertical,
   Mail,
   Phone,
   Shield,
-  ShieldCheck,
-  UserPlus,
   Download,
   Upload,
   Edit,
   Trash2,
   UserX,
-  CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,12 +39,12 @@ import { DataSourceBadge } from "@/components/ui/DataSourceBadge";
 
 interface StaffListProps {
   staff: StaffMember[];
-  organizationId: string;
   onAddStaff: () => void;
   onEditStaff: (staff: StaffMember) => void;
   onDeleteStaff: (staffId: string) => void;
   onImport: () => void;
   onExport: () => void;
+  showBulkActions?: boolean;
 }
 
 const ROLE_LABELS: Record<StaffRoleCategory, string> = {
@@ -97,12 +93,12 @@ const MODULE_LABELS: Record<string, string> = {
 
 export default function StaffList({
   staff,
-  organizationId,
   onAddStaff,
   onEditStaff,
   onDeleteStaff,
   onImport,
   onExport,
+  showBulkActions = true,
 }: StaffListProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
@@ -140,24 +136,28 @@ export default function StaffList({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onExport}
-            title="Download current staff as CSV - edit offline and re-upload"
-          >
-            <Download className="w-4 h-4 mr-2" />
-            Export
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onImport}
-            title="Import from CSV - add, update, or remove staff in bulk"
-          >
-            <Upload className="w-4 h-4 mr-2" />
-            Import CSV
-          </Button>
+          {showBulkActions && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onExport}
+                title="Download current staff as CSV - edit offline and re-upload"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Export
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onImport}
+                title="Import from CSV - add, update, or remove staff in bulk"
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                Import CSV
+              </Button>
+            </>
+          )}
           <Button
             size="sm"
             className="bg-blue-600 hover:bg-blue-700 text-white"
@@ -219,15 +219,19 @@ export default function StaffList({
             </h3>
             <p className="text-slate-500 mb-4">
               {staff.length === 0
-                ? "Get started by adding staff members or importing from CSV."
+                ? showBulkActions
+                  ? "Get started by adding staff members or importing from CSV."
+                  : "Get started by adding staff manually, or ask an admin to bulk import staff in Settings > Data Upload."
                 : "Try adjusting your search or filters."}
             </p>
             {staff.length === 0 && (
               <div className="flex justify-center gap-2">
-                <Button variant="outline" onClick={onImport}>
-                  <Upload className="w-4 h-4 mr-2" />
-                  Import CSV
-                </Button>
+                {showBulkActions && (
+                  <Button variant="outline" onClick={onImport}>
+                    <Upload className="w-4 h-4 mr-2" />
+                    Import CSV
+                  </Button>
+                )}
                 <Button onClick={onAddStaff}>
                   <Plus className="w-4 h-4 mr-2" />
                   Add Staff Member

@@ -5,6 +5,8 @@ export { default as OfstedFrameworkView } from "./OfstedFrameworkView";
 export { default as OfstedEvidenceMatcher } from "./OfstedEvidenceMatcher";
 export { default as OfstedReadinessReport } from "./OfstedReadinessReport";
 export { default as OfstedTrackView } from "./OfstedTrackView";
+export { default as OfstedFindingsPanel } from "./OfstedFindingsPanel";
+export { default as OfstedIntelligenceBrief } from "./OfstedIntelligenceBrief";
 export { default as SafeguardingPanel } from "./SafeguardingPanel";
 export { default as DocumentPresenceChecker } from "./DocumentPresenceChecker";
 export { default as ScoreRing } from "./ScoreRing";

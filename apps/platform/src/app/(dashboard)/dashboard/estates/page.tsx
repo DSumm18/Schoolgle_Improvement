@@ -10,23 +10,20 @@ import {
   Hammer,
   ShieldCheck,
   Zap,
-  Accessibility,
   Sparkles,
   Map,
   QrCode,
   ClipboardCheck,
   Calendar,
   AlertTriangle,
-  Workflow,
-  ListChecks,
 } from "lucide-react";
 
 const apps = [
   {
     icon: Building2,
-    title: "Building Audit",
+    title: "GEMS Audit",
     description:
-      "Structural integrity, heating, plumbing and electrical infrastructure health assessments.",
+      "DfE Good Estate Management self-assessment, assurance gaps, and trustee-ready evidence.",
     href: "/dashboard/estates/audit",
     status: "Live",
   },
@@ -55,16 +52,8 @@ const apps = [
     status: "Preview",
   },
   {
-    icon: ShieldCheck,
-    title: "Health & Safety",
-    description:
-      "Fire safety, asbestos, legionella, and statutory compliance monitoring.",
-    href: "/estates-compliance",
-    status: "Live",
-  },
-  {
     icon: Map,
-    title: "Floor Plan",
+    title: "Show Me Site Map",
     description:
       "Interactive building map with 9 data overlays. Pin assets, track issues, and plan routes.",
     href: "/dashboard/estates/floor-plan",
@@ -102,30 +91,6 @@ const apps = [
     href: "/dashboard/estates/incidents",
     status: "Live",
   },
-  {
-    icon: Workflow,
-    title: "Workflows",
-    description:
-      "Ed-orchestrated multi-step processes. Equipment failure, incident response, and onboarding workflows.",
-    href: "/dashboard/workflows",
-    status: "Live",
-  },
-  {
-    icon: ListChecks,
-    title: "Procedures (SOPs)",
-    description:
-      "Step-by-step guided checklists for H&S, fire safety, premises checks, and incident response procedures.",
-    href: "/dashboard/sops",
-    status: "Live",
-  },
-  {
-    icon: Accessibility,
-    title: "Accessibility",
-    description:
-      "Equality Act compliance, DDA requirements, and inclusive environment audits.",
-    href: "#",
-    status: "Coming Soon",
-  },
 ];
 
 export default function EstatesPage() {
@@ -136,7 +101,7 @@ export default function EstatesPage() {
         icon={Building2}
         label="Estates Management"
         title="Estates & Facilities"
-        description="Automate compliance tracking, energy optimization, and maintenance schedules across your entire educational portfolio."
+        description="Live estate assurance, statutory compliance, assets, maintenance, incidents, lettings, energy, and condition planning for each school."
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -158,7 +123,7 @@ export default function EstatesPage() {
         moduleId="estates"
         icon={Sparkles}
         title="Ready to modernise your estates management?"
-        description="Connect your existing spreadsheets or use our intelligent templates to start getting live insights in minutes. Schoolgle automates compliance tracking so your team can focus on what matters."
+        description="Use live asset, contractor, compliance, helpdesk, and risk data to remove admin friction while keeping schools audit-ready."
       />
     </div>
   );
