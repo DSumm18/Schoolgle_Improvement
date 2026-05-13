@@ -119,3 +119,10 @@ compliance-*.md
 # Temporary GIAS download workspace (never commit 500MB CSVs)
 /tmp/gias_work/
 apps/platform/scripts-import-gias.mjs
+
+# Local Codex/generated Schoolgle artefacts
+.codex_artifacts/
+.codex/send-import-workbook/
+analysis_outputs/
+outputs/
+tmp/
