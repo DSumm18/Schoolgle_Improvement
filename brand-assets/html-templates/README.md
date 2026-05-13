@@ -13,12 +13,15 @@ This folder contains the visual-first Schoolgle business template pack.
 ## Shared Assets
 
 - `assets/schoolgle-logo-horizontal.png`
+- `assets/schoolgle-logo-horizontal-dark.png`
 - `assets/schoolgle-logo-mark.png`
 - `styles/schoolgle-docs.css`
 
 Keep template assets inside `assets/` so the pack can be moved or uploaded without
 breaking document logos. For production email signatures, host the same horizontal
-logo on `schoolgle.co.uk` and point Gmail at the HTTPS version.
+logo on `schoolgle.co.uk` and point Gmail at the HTTPS version. Use the dark
+horizontal variant only on dark website or slide backgrounds; email signatures
+should use the standard horizontal logo.
 
 ## Recommendation
 

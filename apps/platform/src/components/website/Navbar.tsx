@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import Image from "next/image";
 import {
   Menu,
   X,
@@ -17,11 +18,8 @@ import {
   TrendingUp,
   FlaskConical,
   Mail,
-  Wrench,
 } from "lucide-react";
 import ThemeToggle from "@/components/effects/ThemeToggle";
-import SchoolglePlanetMark from "@/components/brand/SchoolglePlanetMark";
-import SchoolgleAnimatedLogo from "@/components/SchoolgleAnimatedLogo";
 
 const modules = [
   {
@@ -311,11 +309,26 @@ const Navbar = () => {
         {/* Logo */}
         <Link
           href="/"
-          className="flex items-center gap-3 group transition-transform hover:scale-105 active:scale-95"
+          className="group block transition-transform hover:scale-105 active:scale-95"
+          aria-label="Schoolgle home"
         >
-          <SchoolglePlanetMark size={36} className="flex-shrink-0" />
-          <span className="text-xl font-black tracking-tight text-foreground hidden sm:block">
-            Schoolgle
+          <span className="relative block h-12 w-[160px]">
+            <Image
+              src="/schoolgle-approved-horizontal-lockup.png"
+              alt="Schoolgle"
+              fill
+              sizes="160px"
+              className="object-contain dark:hidden"
+              priority
+            />
+            <Image
+              src="/schoolgle-approved-horizontal-lockup-dark.png"
+              alt="Schoolgle"
+              fill
+              sizes="160px"
+              className="hidden object-contain dark:block"
+              priority
+            />
           </span>
         </Link>
 
