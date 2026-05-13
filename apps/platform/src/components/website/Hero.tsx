@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useSyncExternalStore } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Monitor, MessageCircle, Eye } from "lucide-react";
 import SchoolgleAnimatedLogo from "@/components/SchoolgleAnimatedLogo";
@@ -8,11 +8,14 @@ import SchoolglePlanetMark from "@/components/brand/SchoolglePlanetMark";
 import HeroShowcase from "@/components/website/HeroShowcase";
 import Link from "next/link";
 
-const ROTATING_WORDS = [
-  "Inspection",
-  "Compliance",
-  "Governance",
-  "Safeguarding",
+const HERO_MODULES = [
+  { label: "School Improvement", color: "#6B7280" },
+  { label: "Governance", color: "#F59E0B" },
+  { label: "Business Operations", color: "#3B82F6" },
+  { label: "Compliance & Safeguarding", color: "#9F1239" },
+  { label: "Communications", color: "#F97316" },
+  { label: "Intelligence", color: "#A78BFA" },
+  { label: "Teaching & Learning", color: "#06B6D4" },
 ];
 
 const ED_CAPABILITIES = [
@@ -21,22 +24,34 @@ const ED_CAPABILITIES = [
   { icon: Monitor, text: "Works with Arbor, SIMS, Bromcom & more" },
 ];
 
+const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
+
+const subscribeToReducedMotion = (callback: () => void) => {
+  if (typeof window === "undefined") return () => {};
+
+  const mediaQuery = window.matchMedia(REDUCED_MOTION_QUERY);
+  mediaQuery.addEventListener("change", callback);
+
+  return () => mediaQuery.removeEventListener("change", callback);
+};
+
+const getReducedMotionSnapshot = () =>
+  typeof window !== "undefined" &&
+  window.matchMedia(REDUCED_MOTION_QUERY).matches;
+
 const Hero = () => {
   const [wordIndex, setWordIndex] = useState(0);
-  const [reducedMotion, setReducedMotion] = useState(false);
-
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReducedMotion(mq.matches);
-    const handler = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
-  }, []);
+  const reducedMotion = useSyncExternalStore(
+    subscribeToReducedMotion,
+    getReducedMotionSnapshot,
+    () => false,
+  );
+  const activeModule = HERO_MODULES[wordIndex];
 
   useEffect(() => {
     if (reducedMotion) return;
     const interval = setInterval(() => {
-      setWordIndex((i) => (i + 1) % ROTATING_WORDS.length);
+      setWordIndex((i) => (i + 1) % HERO_MODULES.length);
     }, 3000);
     return () => clearInterval(interval);
   }, [reducedMotion]);
@@ -54,13 +69,13 @@ const Hero = () => {
               ? { duration: 0 }
               : { duration: 1.2, ease: [0.16, 1, 0.3, 1] }
           }
-          className="mb-6"
+          className="mb-3 md:mb-4"
         >
           {reducedMotion ? (
             <SchoolglePlanetMark size={140} className="mx-auto" />
           ) : (
             <SchoolgleAnimatedLogo
-              size={180}
+              size={168}
               showText={false}
               className="mx-auto"
             />
@@ -73,8 +88,18 @@ const Hero = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.3 }}
         >
-          <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-semibold uppercase tracking-widest border border-primary/20">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span
+            className="inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-semibold uppercase tracking-widest transition-colors duration-500"
+            style={{
+              backgroundColor: `${activeModule.color}14`,
+              borderColor: `${activeModule.color}33`,
+              color: activeModule.color,
+            }}
+          >
+            <span
+              className="w-1.5 h-1.5 rounded-full animate-pulse"
+              style={{ backgroundColor: activeModule.color }}
+            />
             Built by school leaders, for school leaders
           </span>
         </motion.div>
@@ -84,25 +109,29 @@ const Hero = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.5 }}
-          className="mt-8 text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight text-foreground text-center leading-[0.95] max-w-5xl"
+          className="mt-7 text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight text-foreground text-center leading-[0.95] max-w-6xl"
         >
           Always ready for{" "}
           <span className="relative inline-block">
             {reducedMotion ? (
-              <span className="text-primary inline-block">
-                {ROTATING_WORDS[0]}.
+              <span
+                className="inline-block"
+                style={{ color: HERO_MODULES[0].color }}
+              >
+                {HERO_MODULES[0].label}.
               </span>
             ) : (
               <AnimatePresence mode="wait">
                 <motion.span
-                  key={wordIndex}
+                  key={activeModule.label}
                   initial={{ y: 40, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   exit={{ y: -40, opacity: 0 }}
                   transition={{ duration: 0.4, ease: "easeInOut" }}
-                  className="text-primary inline-block"
+                  className="inline-block transition-colors duration-500"
+                  style={{ color: activeModule.color }}
                 >
-                  {ROTATING_WORDS[wordIndex]}.
+                  {activeModule.label}.
                 </motion.span>
               </AnimatePresence>
             )}

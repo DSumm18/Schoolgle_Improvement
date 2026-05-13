@@ -15,13 +15,13 @@ import { motion } from "framer-motion";
 // ✅ SOLAR SYSTEM PHYSICS - Inner planets orbit faster (like real solar system)
 // Planets orbit around center "Schoolgle" like planets around the sun
 const planets = [
-  { name: "HR",         color: "#ADD8E6", size: 12, duration: 12, radius: 70,  start: 35 },    // Inner - fastest
-  { name: "Finance",    color: "#FFAA4C", size: 14, duration: 18, radius: 90,  start: 120 },  // Fast
-  { name: "Estates",    color: "#00D4D4", size: 16, duration: 25, radius: 110, start: 210 },  // Medium-fast
-  { name: "Compliance", color: "#E6C3FF", size: 14, duration: 32, radius: 130, start: 300 },  // Medium
-  { name: "Teaching",   color: "#FFB6C1", size: 16, duration: 40, radius: 150, start: 20 },   // Medium-slow
-  { name: "SEND",       color: "#98FF98", size: 14, duration: 55, radius: 170, start: 95 },   // Slow
-  { name: "Governance", color: "#FFD700", size: 18, duration: 75, radius: 190, start: 335 }  // Outer - slowest
+  { name: "School Improvement", color: "#6B7280", size: 12, duration: 12, radius: 70, start: 35 },
+  { name: "Governance", color: "#F59E0B", size: 14, duration: 18, radius: 90, start: 120 },
+  { name: "Business Operations", color: "#3B82F6", size: 16, duration: 25, radius: 110, start: 210 },
+  { name: "Compliance & Safeguarding", color: "#9F1239", size: 14, duration: 32, radius: 130, start: 300 },
+  { name: "Communications", color: "#F97316", size: 16, duration: 40, radius: 150, start: 20 },
+  { name: "Intelligence", color: "#A78BFA", size: 14, duration: 55, radius: 170, start: 95 },
+  { name: "Teaching & Learning", color: "#06B6D4", size: 18, duration: 75, radius: 190, start: 335 }
 ];
 
 interface SchoolgleAnimatedLogoProps {
@@ -117,4 +117,3 @@ export default function SchoolgleAnimatedLogo({
  * - Hover effects on planets
  * - Accessible (title attributes)
  */
-
