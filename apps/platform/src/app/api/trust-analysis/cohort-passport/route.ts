@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { protectedRoute, apiSuccess, apiError } from '@/lib/api-utils';
 import { createServiceRoleClient } from '@/lib/supabase-server';
 import type { Checkpoint, CohortPathway, CohortPassportData, CheckpointStatus } from '@/components/trust-assessor/CohortPassport';
+import { resolveTrustAnalysisAccess } from '@/lib/trust-analysis/organization-access';
 
 /**
  * GET /api/trust-analysis/cohort-passport?urn=148201
@@ -21,7 +22,7 @@ import type { Checkpoint, CohortPathway, CohortPassportData, CheckpointStatus } 
  *   'no-data'      — data should exist but isn't available for any reason
  *   'future'       — cohort hasn't reached this checkpoint yet
  */
-export const GET = protectedRoute(async (_auth, req: NextRequest) => {
+export const GET = protectedRoute(async (auth, req: NextRequest) => {
   const urn = Number(req.nextUrl.searchParams.get('urn') ?? '');
   if (!urn || !Number.isFinite(urn)) {
     return apiError('urn query parameter is required', 400);
@@ -29,26 +30,32 @@ export const GET = protectedRoute(async (_auth, req: NextRequest) => {
 
   const supabase = createServiceRoleClient();
 
-  // ── Resolve organization_id for this URN ──────────────────────────────────
-  // We look up the org that has CTF data for this URN via the dfe_data.schools table
-  // and then cross-reference with organizations that have uploaded CTF data.
-  // For now: resolve org by checking which orgs have pupil_assessments_pseudo data
-  // scoped to this URN's school. We use a lookup from dfe_data.schools → organizations.
-  // Fallback: no org found → phonics/KS1 shows 'locked' (Tier 3 upsell).
+  // Resolve the Schoolgle organization for this URN and verify that it sits
+  // inside the caller's own trust/LA scope before touching private CTF data.
+
+  const { data: orgMapping } = await supabase
+    .from('organizations')
+    .select('id, urn, parent_organization_id')
+    .eq('urn', urn)
+    .maybeSingle();
+
+  const access = resolveTrustAnalysisAccess({
+    authOrganizationId: auth.organizationId,
+    requestedOrganization: orgMapping
+      ? {
+          id: orgMapping.id,
+          parent_organization_id: orgMapping.parent_organization_id,
+        }
+      : null,
+  });
+
+  if (!access.allowed) {
+    return apiError('You do not have access to this school', 403);
+  }
 
   let ctfOrgId: string | null = null;
 
   try {
-    // Find the organization that has uploaded CTF data that likely belongs to this URN.
-    // We detect this by joining schools.urn against a known mapping.
-    // In production, schools would register their URN when onboarding.
-    // For the demo: Grove House URN 148201 maps to org d9d1ac2c-5eff-4043-98f4-e1c43f616fd3.
-    const { data: orgMapping } = await supabase
-      .from('organizations')
-      .select('id, urn')
-      .eq('urn', urn)
-      .maybeSingle();
-
     if (orgMapping?.id) {
       // Org has registered this URN — check if they have CTF data
       const { count } = await supabase

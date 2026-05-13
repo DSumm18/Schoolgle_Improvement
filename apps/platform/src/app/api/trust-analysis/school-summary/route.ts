@@ -5,20 +5,19 @@
 import { NextRequest } from 'next/server';
 import { protectedRoute, apiSuccess, apiError } from '@/lib/api-utils';
 import { createServiceRoleClient } from '@/lib/supabase-server';
+import { resolveRequestedTrustAnalysisOrganization } from '@/lib/trust-analysis/organization-access';
 
 export const GET = protectedRoute(async (auth, req: NextRequest) => {
   const orgId = req.nextUrl.searchParams.get('organizationId') || auth.organizationId;
   if (!orgId) return apiError('organizationId required', 400);
 
   const supabase = createServiceRoleClient();
-  // Verify membership
-  const { data: mem } = await supabase
-    .from('organization_members')
-    .select('role')
-    .eq('auth_id', auth.userId)
-    .eq('organization_id', orgId)
-    .maybeSingle();
-  if (!mem) return apiError('Not a member of this organization', 403);
+  const access = await resolveRequestedTrustAnalysisOrganization(
+    supabase,
+    auth.organizationId,
+    orgId,
+  );
+  if (!access.allowed) return apiError('Not a member of this organization', 403);
 
   const { data, error } = await supabase
     .from('school_data_summaries')
@@ -41,13 +40,12 @@ export const POST = protectedRoute(async (auth, req: NextRequest) => {
   }
 
   const supabase = createServiceRoleClient();
-  const { data: mem } = await supabase
-    .from('organization_members')
-    .select('role')
-    .eq('auth_id', auth.userId)
-    .eq('organization_id', orgId)
-    .maybeSingle();
-  if (!mem) return apiError('Not a member of this organization', 403);
+  const access = await resolveRequestedTrustAnalysisOrganization(
+    supabase,
+    auth.organizationId,
+    orgId,
+  );
+  if (!access.allowed) return apiError('Not a member of this organization', 403);
 
   const { error } = await supabase
     .from('school_data_summaries')
@@ -68,13 +66,12 @@ export const DELETE = protectedRoute(async (auth, req: NextRequest) => {
   if (!orgId) return apiError('organizationId required', 400);
 
   const supabase = createServiceRoleClient();
-  const { data: mem } = await supabase
-    .from('organization_members')
-    .select('role')
-    .eq('auth_id', auth.userId)
-    .eq('organization_id', orgId)
-    .maybeSingle();
-  if (!mem) return apiError('Not a member of this organization', 403);
+  const access = await resolveRequestedTrustAnalysisOrganization(
+    supabase,
+    auth.organizationId,
+    orgId,
+  );
+  if (!access.allowed) return apiError('Not a member of this organization', 403);
 
   const { error } = await supabase
     .from('school_data_summaries')

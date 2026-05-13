@@ -15,6 +15,7 @@ import {
   expandUrnsWithLineage,
   resolveUrnLineage,
 } from '@/lib/trust-analysis/urn-lineage';
+import { resolveRequestedTrustAnalysisOrganization } from '@/lib/trust-analysis/organization-access';
 
 /**
  * GET /api/trust-analysis
@@ -32,7 +33,16 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
   // Previously hardcoded to one trust's URNs — meant every trust saw another
   // organisation's data. Now we resolve the org tree: the caller's own
   // org + all its direct children, with any known predecessor URNs mixed in.
-  const orgId = req.nextUrl.searchParams.get('organizationId') || auth.organizationId;
+  const access = await resolveRequestedTrustAnalysisOrganization(
+    supabase,
+    auth.organizationId,
+    req.nextUrl.searchParams.get('organizationId'),
+  );
+  if (!access.allowed) {
+    return apiError('You do not have access to this trust or school', 403);
+  }
+
+  const orgId = access.organizationId;
   const currentUrns = new Set<number>();
 
   if (orgId) {
@@ -213,7 +223,7 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
     shadowComparison = buildShadowComparison({
       route: 'trust-analysis',
       mode: brainMode,
-      organizationId: auth.organizationId ?? 'trust-level-aggregate',
+      organizationId: orgId,
       candidateVersion: 'current-urn-scope-v1',
       baseline: {
         ks2_rows: ks2Results.length,

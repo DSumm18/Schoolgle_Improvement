@@ -6,6 +6,7 @@ import {
   expandUrnsWithLineage,
   resolveUrnLineage,
 } from '@/lib/trust-analysis/urn-lineage';
+import { resolveRequestedTrustAnalysisOrganization } from '@/lib/trust-analysis/organization-access';
 import { computeStaffingRatios } from '@/lib/trust-analysis/staffing-ratios';
 
 /**
@@ -22,7 +23,16 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
   const supabase = createServiceRoleClient();
 
   // Resolve which URNs this caller's org actually covers.
-  const orgId = req.nextUrl.searchParams.get('organizationId') || auth.organizationId;
+  const access = await resolveRequestedTrustAnalysisOrganization(
+    supabase,
+    auth.organizationId,
+    req.nextUrl.searchParams.get('organizationId'),
+  );
+  if (!access.allowed) {
+    return apiError('You do not have access to this trust or school', 403);
+  }
+
+  const orgId = access.organizationId;
   const currentUrns = new Set<number>();
 
   if (orgId) {
