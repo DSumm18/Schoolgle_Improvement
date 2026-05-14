@@ -27,6 +27,14 @@ interface PupilRecord {
   journey: JourneyEntry[];
 }
 
+interface SubjectSummary {
+  subject: string;
+  label: string;
+  shortLabel: string;
+  latestLevel: string;
+  entries: JourneyEntry[];
+}
+
 interface PupilCardGridProps {
   pupils: PupilRecord[];
   spotlightPupilId?: string | null;
@@ -40,6 +48,7 @@ export interface PupilRegisterRow {
   reading: string;
   writing: string;
   maths: string;
+  subjectLevels: SubjectSummary[];
   expectedCount: number;
   totalSubjects: number;
   trend: "improving" | "declining" | "stable" | "insufficient";
@@ -57,6 +66,48 @@ type YGOption = (typeof YG_OPTIONS)[number];
 
 function ygLabel(yg: number): string {
   return yg === 0 ? "EYFS" : `Y${yg}`;
+}
+
+const SUBJECT_LABELS: Record<string, { label: string; shortLabel: string; order: number }> = {
+  reading: { label: "Reading", shortLabel: "R", order: 10 },
+  writing: { label: "Writing", shortLabel: "W", order: 20 },
+  maths: { label: "Maths", shortLabel: "M", order: 30 },
+  phonics: { label: "Phonics", shortLabel: "Ph", order: 40 },
+  literacy: { label: "Literacy", shortLabel: "Lit", order: 50 },
+  communication_and_language: { label: "Communication & language", shortLabel: "CL", order: 60 },
+  personal_social_emotional: { label: "Personal, social & emotional", shortLabel: "PSED", order: 70 },
+  physical_development: { label: "Physical development", shortLabel: "PD", order: 80 },
+  understanding_the_world: { label: "Understanding the world", shortLabel: "UW", order: 90 },
+  exp: { label: "Expressive arts", shortLabel: "Exp", order: 100 },
+  science: { label: "Science", shortLabel: "Sci", order: 110 },
+};
+
+const EYFS_SUBJECT_ORDER: Record<string, number> = {
+  communication_and_language: 10,
+  personal_social_emotional: 20,
+  physical_development: 30,
+  literacy: 40,
+  maths: 50,
+  understanding_the_world: 60,
+  exp: 70,
+};
+
+function subjectMeta(subject: string): { label: string; shortLabel: string; order: number } {
+  return SUBJECT_LABELS[subject] ?? {
+    label: subject
+      .split("_")
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" "),
+    shortLabel: subject.slice(0, 3).toUpperCase(),
+    order: 999,
+  };
+}
+
+function subjectOrder(subject: string, yearGroup: number): number {
+  if (yearGroup === 0 && EYFS_SUBJECT_ORDER[subject] !== undefined) {
+    return EYFS_SUBJECT_ORDER[subject];
+  }
+  return subjectMeta(subject).order;
 }
 
 function levelValue(level: string): number {
@@ -99,13 +150,35 @@ function latestEntryForSubject(pupil: PupilRecord, subject: string): JourneyEntr
     .sort((a, b) => b.year - a.year || b.yearGroup - a.yearGroup)[0];
 }
 
+function subjectSummariesForPupil(pupil: PupilRecord): SubjectSummary[] {
+  const yearGroup = latestYearGroup(pupil);
+  const subjects = [...new Set(pupil.journey.map((entry) => entry.subject))]
+    .sort((a, b) => subjectOrder(a, yearGroup) - subjectOrder(b, yearGroup) || a.localeCompare(b));
+
+  return subjects.map((subject) => {
+    const entries = pupil.journey
+      .filter((entry) => entry.subject === subject)
+      .sort((a, b) => a.year - b.year || a.yearGroup - b.yearGroup);
+    const latest = [...entries].sort((a, b) => b.year - a.year || b.yearGroup - a.yearGroup)[0];
+    const meta = subjectMeta(subject);
+    return {
+      subject,
+      label: meta.label,
+      shortLabel: meta.shortLabel,
+      latestLevel: latest?.level ?? "â€”",
+      entries,
+    };
+  });
+}
+
 function latestYearGroup(pupil: PupilRecord): number {
   if (pupil.journey.length === 0) return 0;
   return Math.max(...pupil.journey.map((entry) => entry.yearGroup));
 }
 
 function weakestSubject(journey: JourneyEntry[]): { subject: string; avgLevel: number } | null {
-  const subjects = [...new Set(journey.map((entry) => entry.subject).filter((subject) => ["reading", "writing", "maths"].includes(subject)))];
+  const subjects = [...new Set(journey.map((entry) => entry.subject))]
+    .filter((subject) => SUBJECT_LABELS[subject]);
   if (subjects.length === 0) return null;
 
   const scored = subjects.map((subject) => {
@@ -158,7 +231,10 @@ export function buildPupilRegisterGroups(pupils: PupilRecord[]): PupilRegisterGr
     const reading = latestEntryForSubject(pupil, "reading")?.level ?? "—";
     const writing = latestEntryForSubject(pupil, "writing")?.level ?? "—";
     const maths = latestEntryForSubject(pupil, "maths")?.level ?? "—";
-    const levels = [reading, writing, maths].filter((level) => level !== "—");
+    const subjectLevels = subjectSummariesForPupil(pupil);
+    const levels = subjectLevels
+      .map((subject) => subject.latestLevel)
+      .filter((level) => level !== "—");
     const yearGroup = latestYearGroup(pupil);
 
     return {
@@ -169,6 +245,7 @@ export function buildPupilRegisterGroups(pupils: PupilRecord[]): PupilRegisterGr
       reading,
       writing,
       maths,
+      subjectLevels,
       expectedCount: levels.filter((level) => ["EXS", "GDS", "2"].includes(level)).length,
       totalSubjects: levels.length,
       trend: overallTrend(pupil.journey),
@@ -196,9 +273,9 @@ function PupilDetailPanel({ pupil, onClose }: { pupil: PupilRecord | null; onClo
     return (
       <aside className="rounded-2xl border border-border bg-muted/20 p-5 min-h-[320px] flex items-center justify-center text-center">
         <div>
-          <div className="text-sm font-semibold text-foreground">Select a pupil</div>
+          <div className="text-sm font-semibold text-foreground">Select a pupil alias</div>
           <p className="text-xs text-muted-foreground mt-1 max-w-xs">
-            Choose a row to view the journey, flags and suggested focus without cluttering the register.
+            Choose a pseudonymised row to view the journey, flags and suggested focus without exposing names.
           </p>
         </div>
       </aside>
@@ -208,15 +285,10 @@ function PupilDetailPanel({ pupil, onClose }: { pupil: PupilRecord | null; onClo
   const flags = vulnerabilityFlags(pupil.demographics);
   const trend = overallTrend(pupil.journey);
   const weak = weakestSubject(pupil.journey);
-  const subjectsByYear = ["reading", "writing", "maths"].map((subject) => ({
-    subject,
-    entries: pupil.journey
-      .filter((entry) => entry.subject === subject)
-      .sort((a, b) => a.yearGroup - b.yearGroup || a.year - b.year),
-  }));
+  const subjectSummaries = subjectSummariesForPupil(pupil);
 
   const edPrompt = weak
-    ? `Create an intervention plan for pupil ${pupil.pupilId} who needs focus on ${weak.subject}. Demographics: ${flags.join(", ") || "no additional flags"}. Use EEF-evidenced strategies and produce a 6-week plan with weekly check-ins.`
+    ? `Create an intervention plan for pupil ${pupil.pupilId} who needs focus on ${subjectMeta(weak.subject).label}. Demographics: ${flags.join(", ") || "no additional flags"}. Use EEF-evidenced strategies and produce a 6-week plan with weekly check-ins.`
     : null;
 
   return (
@@ -228,6 +300,9 @@ function PupilDetailPanel({ pupil, onClose }: { pupil: PupilRecord | null; onClo
           </div>
           <div className="min-w-0">
             <h4 className="text-sm font-semibold text-foreground truncate">{pupil.pupilId}</h4>
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mt-0.5">
+              Pseudonymised pupil alias
+            </p>
             <div className="flex items-center gap-1 mt-1 flex-wrap">
               {flags.length === 0 ? (
                 <span className="text-[10px] px-1.5 py-0.5 rounded-full border border-border bg-background text-muted-foreground">No flags</span>
@@ -252,15 +327,15 @@ function PupilDetailPanel({ pupil, onClose }: { pupil: PupilRecord | null; onClo
         </div>
         <div className="rounded-xl border border-border bg-background p-3">
           <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">Focus</div>
-          <div className="text-sm font-bold text-foreground mt-1">{weak?.subject ?? "Review"}</div>
+          <div className="text-sm font-bold text-foreground mt-1">{weak ? subjectMeta(weak.subject).label : "Review"}</div>
         </div>
       </div>
 
       <div className="space-y-3 mb-5">
         <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Assessment journey</div>
-        {subjectsByYear.map(({ subject, entries }) => (
+        {subjectSummaries.map(({ subject, label, entries }) => (
           <div key={subject} className="rounded-xl border border-border bg-background p-3">
-            <div className="text-xs font-semibold text-muted-foreground uppercase mb-2">{subject}</div>
+            <div className="text-xs font-semibold text-muted-foreground uppercase mb-2">{label}</div>
             {entries.length === 0 ? (
               <span className="text-xs text-muted-foreground">No data</span>
             ) : (
@@ -289,7 +364,7 @@ function PupilDetailPanel({ pupil, onClose }: { pupil: PupilRecord | null; onClo
         <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3">
           <div className="text-xs font-semibold text-amber-700 dark:text-amber-300 mb-1">Suggested focus area</div>
           <p className="text-xs text-amber-800 dark:text-amber-100 leading-relaxed">
-            {weak.subject.charAt(0).toUpperCase() + weak.subject.slice(1)} has the lowest average across recorded assessments.
+            {subjectMeta(weak.subject).label} has the lowest average across recorded assessments.
           </p>
           {edPrompt && (
             <button
@@ -338,7 +413,7 @@ function PupilRegisterTable({
         <table className="w-full text-sm">
           <thead className="bg-muted/20 text-[11px] uppercase tracking-wide text-muted-foreground">
             <tr>
-              <th className="text-left font-semibold px-4 py-2">Pupil</th>
+              <th className="text-left font-semibold px-4 py-2">Pupil alias</th>
               <th className="text-left font-semibold px-3 py-2">Flags</th>
               <th className="text-left font-semibold px-3 py-2">Levels</th>
               <th className="text-center font-semibold px-3 py-2">Expected+</th>
@@ -361,7 +436,7 @@ function PupilRegisterTable({
                   >
                     <td className="px-4 py-3">
                       <div className="font-semibold text-foreground">{row.pupilId}</div>
-                      <div className="text-xs text-muted-foreground">{row.className}</div>
+                      <div className="text-xs text-muted-foreground">{row.className} · pseudonymised</div>
                     </td>
                     <td className="px-3 py-3">
                       <div className="flex flex-wrap gap-1">
@@ -376,9 +451,11 @@ function PupilRegisterTable({
                     </td>
                     <td className="px-3 py-3">
                       <div className="flex flex-wrap gap-1.5">
-                        <LevelBadge label="R" value={row.reading} />
-                        <LevelBadge label="W" value={row.writing} />
-                        <LevelBadge label="M" value={row.maths} />
+                        {row.subjectLevels.length > 0 ? row.subjectLevels.map((subject) => (
+                          <LevelBadge key={subject.subject} label={subject.shortLabel} value={subject.latestLevel} />
+                        )) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
                       </div>
                     </td>
                     <td className="px-3 py-3 text-center">
@@ -398,12 +475,9 @@ function PupilRegisterTable({
   );
 }
 
-export function PupilCardGrid({ pupils, spotlightPupilId }: PupilCardGridProps) {
+export function PupilCardGrid({ pupils, spotlightPupilId: _spotlightPupilId }: PupilCardGridProps) {
   const [selectedYg, setSelectedYg] = useState<YGOption | "all">("all");
-  const visiblePupils = useMemo(
-    () => spotlightPupilId ? pupils.filter((pupil) => pupil.pupilId !== spotlightPupilId) : pupils,
-    [pupils, spotlightPupilId],
-  );
+  const visiblePupils = useMemo(() => pupils, [pupils]);
   const groups = useMemo(() => buildPupilRegisterGroups(visiblePupils), [visiblePupils]);
   const filteredGroups = selectedYg === "all" ? groups : groups.filter((group) => group.yearGroup === selectedYg);
   const firstPupil = filteredGroups[0]?.rows[0]?.pupil ?? null;
@@ -438,6 +512,11 @@ export function PupilCardGrid({ pupils, spotlightPupilId }: PupilCardGridProps) 
             </button>
           );
         })}
+      </div>
+
+      <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-xs text-sky-900">
+        Pupil rows use deterministic aliases generated from secure hashes. Real names and raw MIS identifiers are not
+        shown in this demo view; the purpose is to evidence cohort patterns, gaps and intervention prompts safely.
       </div>
 
       {visiblePupils.length === 0 ? (

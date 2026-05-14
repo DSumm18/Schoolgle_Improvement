@@ -1,364 +1,247 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, Globe, BarChart3, ChevronRight } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  ArrowRight,
+  CalendarClock,
+  CheckCircle2,
+  HeartHandshake,
+  Layers3,
+  PoundSterling,
+  ShieldCheck,
+} from "lucide-react";
 
-interface ShowcaseScene {
+interface ScreenshotScene {
   id: string;
   label: string;
-  icon: React.ElementType;
-  accentColor: string;
   title: string;
   subtitle: string;
-  messages: { role: "user" | "ed"; text: string; delay: number }[];
-  dashboardContent?: React.ReactNode;
+  image: string;
+  icon: React.ElementType;
+  color: string;
+  callouts: {
+    label: string;
+    detail: string;
+    tone: "green" | "amber" | "blue" | "purple";
+  }[];
 }
 
-const scenes: ShowcaseScene[] = [
+const scenes: ScreenshotScene[] = [
   {
-    id: "staff",
-    label: "Ed for Staff",
-    icon: MessageCircle,
-    accentColor: "text-blue-400",
-    title: "Arbor MIS",
-    subtitle: "Ed guides you through any system",
-    messages: [
+    id: "finance",
+    label: "Finance",
+    title: "Budget Monitor",
+    subtitle: "A live finance view built from budget lines, actuals and commitments",
+    image: "/marketing/screenshots/finance-budget-monitor.png",
+    icon: PoundSterling,
+    color: "#FFAA4C",
+    callouts: [
       {
-        role: "user",
-        text: "How do I run an attendance report for Year 3 this term?",
-        delay: 0,
+        label: "Projected year-end",
+        detail: "+£26,447 after known commitments",
+        tone: "green",
       },
       {
-        role: "ed",
-        text: "I can see you're in Arbor. Click 'Students' in the left menu, then 'Attendance' > 'Reports'. I'll highlight the button for you.",
-        delay: 1.2,
+        label: "Staffing risk",
+        detail: "78.3% of income, just above ICFP target",
+        tone: "amber",
       },
       {
-        role: "user",
-        text: "Found it! But which date range do I pick?",
-        delay: 3,
-      },
-      {
-        role: "ed",
-        text: "Select 'This Academic Term' from the dropdown. I can see it on your screen — it's the third option. Want me to click it for you?",
-        delay: 4.2,
+        label: "Governor-ready",
+        detail: "Report output generated from the same live view",
+        tone: "blue",
       },
     ],
   },
   {
-    id: "parent",
-    label: "Ed for Parents",
-    icon: Globe,
-    accentColor: "text-emerald-400",
-    title: "School Website",
-    subtitle: "24/7 support for parents",
-    messages: [
+    id: "send",
+    label: "SEND",
+    title: "SEND Management",
+    subtitle: "A SENCO view of register, EHCPs, provision and review deadlines",
+    image: "/marketing/screenshots/send-inclusion-hub.png",
+    icon: HeartHandshake,
+    color: "#10B981",
+    callouts: [
       {
-        role: "user",
-        text: "What time does the school open for breakfast club?",
-        delay: 0,
+        label: "20 EHCPs",
+        detail: "Annual reviews due this term",
+        tone: "purple",
       },
       {
-        role: "ed",
-        text: "Breakfast club runs from 7:45am to 8:30am. It costs \u00a32.50 per session. You can book through the school office or via ParentPay.",
-        delay: 1.2,
+        label: "84 pupils",
+        detail: "Register visible as a living workload",
+        tone: "green",
       },
       {
-        role: "user",
-        text: "Is there space available this week?",
-        delay: 3,
-      },
-      {
-        role: "ed",
-        text: "Let me check... Yes, there are spaces available on Wednesday and Thursday. Shall I send a booking request to the office for you?",
-        delay: 4.2,
+        label: "Next actions",
+        detail: "Reviews, provision gaps and referrals surfaced together",
+        tone: "blue",
       },
     ],
-  },
-  {
-    id: "ofsted",
-    label: "Inspection Ready",
-    icon: BarChart3,
-    accentColor: "text-amber-400",
-    title: "Ofsted Readiness",
-    subtitle: "Always prepared, never scrambling",
-    messages: [],
   },
 ];
 
-const TypingIndicator = () => (
-  <div className="flex items-center gap-1 px-3 py-2">
-    {[0, 1, 2].map((i) => (
-      <motion.div
-        key={i}
-        className="w-1.5 h-1.5 rounded-full bg-primary/40"
-        animate={{ opacity: [0.3, 1, 0.3] }}
-        transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.15 }}
-      />
-    ))}
-  </div>
-);
-
-const ChatMessage = ({
-  role,
-  text,
-  isVisible,
-}: {
-  role: "user" | "ed";
-  text: string;
-  isVisible: boolean;
-}) => {
-  const [showText, setShowText] = useState(false);
-  const [showTyping, setShowTyping] = useState(false);
-
-  useEffect(() => {
-    if (isVisible && role === "ed") {
-      setShowTyping(true);
-      const timer = setTimeout(() => {
-        setShowTyping(false);
-        setShowText(true);
-      }, 800);
-      return () => clearTimeout(timer);
-    } else if (isVisible) {
-      setShowText(true);
-    }
-  }, [isVisible, role]);
-
-  if (!isVisible) return null;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-      className={`flex ${role === "user" ? "justify-end" : "justify-start"}`}
-    >
-      {role === "ed" && !showText && showTyping && (
-        <div className="max-w-[80%] rounded-2xl bg-primary/10 border border-primary/20">
-          <TypingIndicator />
-        </div>
-      )}
-      {showText && (
-        <div
-          className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-xs leading-relaxed ${
-            role === "user"
-              ? "bg-foreground/10 text-foreground/80"
-              : "bg-primary/10 text-foreground/90 border border-primary/20"
-          }`}
-        >
-          {role === "ed" && (
-            <span className="text-primary font-bold text-[10px] uppercase tracking-wider block mb-1">
-              Ed
-            </span>
-          )}
-          {text}
-        </div>
-      )}
-    </motion.div>
-  );
+const toneClasses = {
+  green: "border-emerald-100 bg-emerald-50 text-emerald-800",
+  amber: "border-amber-100 bg-amber-50 text-amber-800",
+  blue: "border-sky-100 bg-sky-50 text-sky-800",
+  purple: "border-violet-100 bg-violet-50 text-violet-800",
 };
-
-const OfstedDashboard = () => (
-  <div className="p-4 space-y-3">
-    {/* Readiness score */}
-    <div className="flex items-center justify-between">
-      <span className="text-xs font-bold text-foreground/70">
-        Overall Readiness
-      </span>
-      <span className="text-lg font-black text-emerald-400">87%</span>
-    </div>
-    <div className="w-full h-2 rounded-full bg-foreground/5 overflow-hidden">
-      <motion.div
-        className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400"
-        initial={{ width: 0 }}
-        animate={{ width: "87%" }}
-        transition={{ duration: 1.5, ease: "easeOut" }}
-      />
-    </div>
-
-    {/* Judgement areas */}
-    <div className="grid grid-cols-2 gap-2 mt-3">
-      {[
-        { area: "Quality of Education", score: 92, color: "bg-emerald-400" },
-        {
-          area: "Behaviour & Attitudes",
-          score: 85,
-          color: "bg-emerald-400",
-        },
-        { area: "Personal Development", score: 88, color: "bg-emerald-400" },
-        {
-          area: "Leadership & Mgmt",
-          score: 78,
-          color: "bg-amber-400",
-        },
-      ].map((item, i) => (
-        <motion.div
-          key={i}
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.5 + i * 0.15 }}
-          className="p-3 rounded-xl bg-foreground/[0.03] border border-border"
-        >
-          <div className="text-[10px] font-semibold text-muted-foreground mb-1.5 leading-tight">
-            {item.area}
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="flex-1 h-1.5 rounded-full bg-foreground/5 overflow-hidden">
-              <motion.div
-                className={`h-full rounded-full ${item.color}`}
-                initial={{ width: 0 }}
-                animate={{ width: `${item.score}%` }}
-                transition={{ duration: 1, delay: 0.8 + i * 0.15 }}
-              />
-            </div>
-            <span className="text-xs font-bold text-foreground/70">
-              {item.score}%
-            </span>
-          </div>
-        </motion.div>
-      ))}
-    </div>
-
-    {/* Recent evidence */}
-    <div className="mt-2 space-y-1.5">
-      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-        Recent Evidence
-      </span>
-      {[
-        "Pupil progress meeting notes uploaded",
-        "Safeguarding audit completed",
-        "CPD log updated for 12 staff",
-      ].map((item, i) => (
-        <motion.div
-          key={i}
-          initial={{ opacity: 0, x: -10 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 1.5 + i * 0.2 }}
-          className="flex items-center gap-2 text-[11px] text-foreground/60"
-        >
-          <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-          {item}
-        </motion.div>
-      ))}
-    </div>
-  </div>
-);
 
 const HeroShowcase = () => {
   const [activeScene, setActiveScene] = useState(0);
-  const [visibleMessages, setVisibleMessages] = useState<number[]>([]);
 
-  // Auto-rotate scenes
   useEffect(() => {
     const interval = setInterval(() => {
-      setActiveScene((prev) => (prev + 1) % scenes.length);
-    }, 10000);
+      setActiveScene((previous) => (previous + 1) % scenes.length);
+    }, 9000);
+
     return () => clearInterval(interval);
   }, []);
 
-  // Animate messages appearing
-  useEffect(() => {
-    setVisibleMessages([]);
-    const scene = scenes[activeScene];
-    if (scene.messages.length === 0) return;
-
-    const timers = scene.messages.map((msg, i) =>
-      setTimeout(
-        () => setVisibleMessages((prev) => [...prev, i]),
-        msg.delay * 1000,
-      ),
-    );
-    return () => timers.forEach(clearTimeout);
-  }, [activeScene]);
-
   const currentScene = scenes[activeScene];
+  const SceneIcon = currentScene.icon;
 
   return (
-    <div className="w-full max-w-3xl mx-auto">
-      {/* Scene tabs */}
-      <div className="flex items-center justify-center gap-2 mb-4">
-        {scenes.map((scene, i) => (
+    <div className="mx-auto w-full max-w-6xl">
+      <div className="mb-4 flex flex-wrap items-center justify-center gap-2">
+        {scenes.map((scene, index) => (
           <button
             key={scene.id}
-            onClick={() => setActiveScene(i)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all ${
-              i === activeScene
-                ? "bg-primary/15 text-primary border border-primary/30"
-                : "text-muted-foreground hover:text-foreground hover:bg-foreground/5"
+            onClick={() => setActiveScene(index)}
+            className={`flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all ${
+              index === activeScene
+                ? "border-transparent bg-foreground text-background shadow-lg"
+                : "border-border bg-card/60 text-muted-foreground hover:text-foreground"
             }`}
           >
-            <scene.icon size={14} />
+            <scene.icon
+              size={14}
+              style={{ color: index === activeScene ? scene.color : undefined }}
+            />
             {scene.label}
           </button>
         ))}
       </div>
 
-      {/* Showcase window */}
       <motion.div
         layout
-        className="rounded-2xl border border-border bg-card/80 backdrop-blur-sm overflow-hidden shadow-2xl shadow-black/10"
+        className="overflow-hidden rounded-[1.75rem] border border-border bg-card/90 shadow-2xl shadow-black/10 backdrop-blur-sm"
       >
-        {/* Window chrome */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-foreground/[0.02]">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between border-b border-border bg-foreground/[0.02] px-4 py-3">
+          <div className="flex items-center gap-3">
             <div className="flex gap-1.5">
-              <div className="w-3 h-3 rounded-full bg-red-400/60" />
-              <div className="w-3 h-3 rounded-full bg-amber-400/60" />
-              <div className="w-3 h-3 rounded-full bg-emerald-400/60" />
+              <div className="h-3 w-3 rounded-full bg-red-400/60" />
+              <div className="h-3 w-3 rounded-full bg-amber-400/60" />
+              <div className="h-3 w-3 rounded-full bg-emerald-400/60" />
             </div>
-            <div className="ml-3 flex items-center gap-2 px-3 py-1 rounded-md bg-foreground/5 text-[11px] text-muted-foreground">
-              <currentScene.icon
-                size={12}
-                className={currentScene.accentColor}
-              />
-              <span className="font-medium">{currentScene.title}</span>
+            <div className="ml-2 flex items-center gap-2 rounded-lg bg-foreground/5 px-3 py-1 text-[11px] text-muted-foreground">
+              <SceneIcon size={13} style={{ color: currentScene.color }} />
+              <span className="font-bold text-foreground">
+                {currentScene.title}
+              </span>
             </div>
           </div>
-          <span className="text-[10px] text-muted-foreground/50 font-medium">
-            {currentScene.subtitle}
-          </span>
+          <div className="hidden items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground/60 md:flex">
+            <ShieldCheck size={12} />
+            Actual Schoolgle app screenshot
+          </div>
         </div>
 
-        {/* Content area */}
-        <div className="min-h-[320px] relative">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentScene.id}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-            >
-              {currentScene.id === "ofsted" ? (
-                <OfstedDashboard />
-              ) : (
-                <div className="p-4 space-y-3">
-                  {currentScene.messages.map((msg, i) => (
-                    <ChatMessage
-                      key={`${currentScene.id}-${i}`}
-                      role={msg.role}
-                      text={msg.text}
-                      isVisible={visibleMessages.includes(i)}
-                    />
+        <div className="grid gap-0 lg:grid-cols-[1fr_300px]">
+          <div className="relative min-h-[430px] overflow-hidden bg-slate-50">
+            <AnimatePresence mode="wait">
+              <motion.img
+                key={currentScene.id}
+                src={currentScene.image}
+                alt={`${currentScene.title} screenshot`}
+                initial={{ opacity: 0, scale: 1.015 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.99 }}
+                transition={{ duration: 0.45 }}
+                className="h-full min-h-[430px] w-full object-cover object-left-top"
+              />
+            </AnimatePresence>
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-white/90 to-transparent" />
+          </div>
+
+          <aside className="border-t border-border bg-white/90 p-5 lg:border-l lg:border-t-0">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentScene.id}
+                initial={{ opacity: 0, x: 12 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -12 }}
+                transition={{ duration: 0.3 }}
+              >
+                <div
+                  className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-2xl"
+                  style={{
+                    backgroundColor: `${currentScene.color}18`,
+                    color: currentScene.color,
+                  }}
+                >
+                  <SceneIcon size={22} />
+                </div>
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">
+                  Real product view
+                </p>
+                <h3 className="mt-2 text-2xl font-black leading-tight text-foreground">
+                  {currentScene.title}
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  {currentScene.subtitle}
+                </p>
+
+                <div className="mt-5 space-y-3">
+                  {currentScene.callouts.map((callout, index) => (
+                    <motion.div
+                      key={callout.label}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.12 + index * 0.08 }}
+                      className={`rounded-2xl border p-3 ${toneClasses[callout.tone]}`}
+                    >
+                      <div className="flex items-start gap-2">
+                        {index === 0 ? (
+                          <CalendarClock size={15} className="mt-0.5" />
+                        ) : (
+                          <CheckCircle2 size={15} className="mt-0.5" />
+                        )}
+                        <div>
+                          <p className="text-sm font-black">{callout.label}</p>
+                          <p className="mt-0.5 text-xs leading-relaxed opacity-80">
+                            {callout.detail}
+                          </p>
+                        </div>
+                      </div>
+                    </motion.div>
                   ))}
                 </div>
-              )}
-            </motion.div>
-          </AnimatePresence>
+              </motion.div>
+            </AnimatePresence>
+          </aside>
         </div>
 
-        {/* Progress bar */}
         <div className="h-1 bg-foreground/5">
           <motion.div
-            className="h-full bg-primary/30"
+            key={activeScene}
+            className="h-full"
+            style={{ backgroundColor: currentScene.color }}
             initial={{ width: "0%" }}
             animate={{ width: "100%" }}
-            transition={{ duration: 10, ease: "linear" }}
-            key={activeScene}
+            transition={{ duration: 9, ease: "linear" }}
           />
         </div>
       </motion.div>
+
+      <div className="mt-4 flex items-center justify-center gap-2 text-xs font-semibold text-muted-foreground">
+        <Layers3 size={14} />
+        Real screens from the app - connected data turned into operational
+        decisions.
+        <ArrowRight size={13} />
+      </div>
     </div>
   );
 };

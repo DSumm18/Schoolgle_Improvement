@@ -404,9 +404,15 @@ export default function DataUploadPage() {
   }
 
   async function downloadLocationExport() {
+    if (!organizationId) {
+      toast.error("Choose a school before downloading locations");
+      return;
+    }
+
     const filename = "schoolgle-locations-current.xlsx";
     try {
-      const res = await fetch("/api/data-upload/locations/export", {
+      const params = new URLSearchParams({ organizationId });
+      const res = await fetch(`/api/data-upload/locations/export?${params.toString()}`, {
         headers: await authHeaders(),
       });
       if (!res.ok) {

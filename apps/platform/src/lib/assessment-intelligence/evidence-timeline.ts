@@ -99,6 +99,7 @@ export interface UnifiedEvidenceTimeline {
   evidencePoints: number;
   sourceCounts: Record<string, number>;
   aggregateSeries: AggregateEvidenceSeries[];
+  priorityPupilCount: number;
   priorityPupils: PupilEvidenceTimeline[];
   pupilTimelines: PupilEvidenceTimeline[];
   researchNotes: {
@@ -140,6 +141,9 @@ export function buildUnifiedPupilEvidenceTimeline(input: {
     return acc;
   }, {});
 
+  const priorityPupils = pupilTimelines.filter((pupil) => pupil.latestStatus !== "secure");
+  const maxPupils = input.maxPupils ?? pupilTimelines.length;
+
   return {
     source: "pupil_assessments_pseudo + assessment_source_batches + pupil_assessment_events",
     caveat: "This joins imported CTF/pseudonymised assessment evidence with teacher-locked Schoolgle assessment snapshots. DfE public outcomes remain cohort-level context and are not treated as named pupil records.",
@@ -147,8 +151,9 @@ export function buildUnifiedPupilEvidenceTimeline(input: {
     evidencePoints: points.length,
     sourceCounts,
     aggregateSeries: buildAggregateSeries(points),
-    priorityPupils: pupilTimelines.filter((pupil) => pupil.latestStatus !== "secure").slice(0, 12),
-    pupilTimelines: pupilTimelines.slice(0, input.maxPupils ?? 50),
+    priorityPupilCount: priorityPupils.length,
+    priorityPupils: priorityPupils.slice(0, 12),
+    pupilTimelines: pupilTimelines.slice(0, maxPupils),
     researchNotes: [
       {
         label: "SEND and adaptive teaching",

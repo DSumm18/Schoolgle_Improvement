@@ -179,17 +179,17 @@ export default function PrivacyPolicyPage() {
           instructions.
         </p>
         <p className="text-muted-foreground leading-relaxed mb-4">
-          Our Data Protection Officer (DPO) can be contacted at{" "}
+          Our privacy lead can be contacted at{" "}
           <a
-            href="mailto:admin@schoolgle.co.uk"
+            href="mailto:privacy@schoolgle.co.uk"
             className="text-primary underline"
           >
-            admin@schoolgle.co.uk
+            privacy@schoolgle.co.uk
           </a>
           .
         </p>
         <p className="text-muted-foreground leading-relaxed">
-          ICO Registration: Pending (Application C1888815)
+          ICO Registration: ZC103199
         </p>
 
         {/* 2. Data we collect */}
@@ -279,16 +279,17 @@ export default function PrivacyPolicyPage() {
           3. Data we do NOT collect
         </SectionHeading>
         <p className="text-muted-foreground leading-relaxed mb-4">
-          Schoolgle is designed for school leaders and staff. We do not collect
-          or process the following data categories:
+          Schoolgle is designed for school leaders and staff. We minimise
+          personal data and do not collect or process the following categories
+          unless a school-controlled workflow specifically requires them:
         </p>
         <ul className="list-disc list-inside space-y-2 text-muted-foreground mb-4">
           <li>
             <strong className="text-foreground">
-              Pupil names or identifiable pupil data
+              Unnecessary identifiable pupil data
             </strong>{" "}
-            &mdash; the platform operates at the school/evidence level, not
-            individual pupil level
+            &mdash; evidence and intelligence workflows should use school-level,
+            cohort-level or pseudonymised data wherever possible
           </li>
           <li>
             <strong className="text-foreground">
@@ -675,12 +676,12 @@ export default function PrivacyPolicyPage() {
             How to exercise your rights
           </h3>
           <p className="text-sm text-muted-foreground">
-            Contact our DPO at{" "}
+            Contact our privacy lead at{" "}
             <a
-              href="mailto:admin@schoolgle.co.uk"
+              href="mailto:privacy@schoolgle.co.uk"
               className="text-primary underline"
             >
-              admin@schoolgle.co.uk
+              privacy@schoolgle.co.uk
             </a>{" "}
             with your request. We will respond within one month. If your request
             is complex, we may extend this by a further two months, and we will
@@ -737,12 +738,12 @@ export default function PrivacyPolicyPage() {
         <SectionHeading id="complaints">12. Complaints</SectionHeading>
         <p className="text-muted-foreground leading-relaxed mb-4">
           If you have a concern about how we handle personal data, please
-          contact our DPO first at{" "}
+          contact our privacy lead first at{" "}
           <a
-            href="mailto:admin@schoolgle.co.uk"
+            href="mailto:privacy@schoolgle.co.uk"
             className="text-primary underline"
           >
-            admin@schoolgle.co.uk
+            privacy@schoolgle.co.uk
           </a>
           . We take all complaints seriously and will aim to resolve them
           promptly.
@@ -789,14 +790,14 @@ export default function PrivacyPolicyPage() {
         </p>
         <div className="p-6 rounded-2xl border border-border bg-muted/30">
           <p className="text-sm text-muted-foreground">
-            <strong className="text-foreground">Data Protection Officer</strong>
+            <strong className="text-foreground">Privacy contact</strong>
             <br />
             Email:{" "}
             <a
-              href="mailto:admin@schoolgle.co.uk"
+              href="mailto:privacy@schoolgle.co.uk"
               className="text-primary underline"
             >
-              admin@schoolgle.co.uk
+              privacy@schoolgle.co.uk
             </a>
             <br />
             Website:{" "}

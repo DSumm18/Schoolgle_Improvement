@@ -2,7 +2,7 @@ import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
 import { NextRequest } from "next/server";
 import OpenAI from "openai";
-import type { DifferentiationGroup, SENDAdaptation, WorksheetQuestion } from "@/types/lesson-studio";
+import type { DifferentiationGroup, WorksheetQuestion } from "@/types/lesson-studio";
 
 const openai = new OpenAI({
   baseURL: "https://openrouter.ai/api/v1",
@@ -52,9 +52,9 @@ function buildGradingPrompt(
       ? context.successCriteria.map((c, i) => `${i + 1}. ${c}`).join("\n")
       : "Not specified";
 
-  return `You are grading ${context.subject} work for a UK primary/secondary school pupil.
+  return `You are providing advisory feedback on ${context.subject} work for a UK primary/secondary school pupil.
 
-Pupil: ${context.pupilName} (Year ${context.yearGroup})
+Pupil: pseudonymised learner (Year ${context.yearGroup})
 Group: ${context.groupKey}
 Learning objective: ${context.learningObjective}
 Success criteria:
@@ -63,7 +63,8 @@ ${criteria}
 Questions and pupil answers (total marks available: ${totalMarks}):
 ${qAndA}
 
-Grade each answer carefully. Award marks fairly — partial marks are allowed. Then provide an overall assessment.
+Provide suggested marks and feedback carefully. Partial marks are allowed. This is advisory only: the teacher must review, edit and confirm any final assessment outcome.
+Do not describe the output as a final grade, final judgement or automated decision.
 
 Return ONLY valid JSON in exactly this structure (no markdown, no explanation outside the JSON):
 {
@@ -82,7 +83,7 @@ Return ONLY valid JSON in exactly this structure (no markdown, no explanation ou
   "nextSteps": "One or two specific things the pupil can do to improve."
 }
 
-Grade mapping for overallGrade: 0–60% = WTS, 61–80% = EXS, 81–100% = GDS.
+Suggested band mapping for overallGrade: 0-60% = WTS, 61-80% = EXS, 81-100% = GDS.
 misconceptions array can be empty [].
 Be encouraging and age-appropriate in feedback.`;
 }
@@ -271,6 +272,8 @@ export const POST = protectedRoute(async (auth, req: NextRequest) => {
   // 8. Return grading results to pupil
   return apiSuccess({
     success: true,
+    advisoryOnly: true,
+    reviewRequired: true,
     score: gradingResult.totalScore,
     totalMarks: gradingResult.totalMarks,
     percentage: gradingResult.percentage,

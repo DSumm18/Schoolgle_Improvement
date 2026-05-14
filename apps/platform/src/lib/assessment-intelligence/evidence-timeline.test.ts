@@ -72,4 +72,28 @@ describe("buildUnifiedPupilEvidenceTimeline", () => {
     expect(timeline.pupilsAnalysed).toBe(0);
     expect(timeline.caveat).toContain("DfE public outcomes remain cohort-level context");
   });
+
+  it("keeps the full pupil register by default while summarising priority pupils separately", () => {
+    const ctfRecords = Array.from({ length: 60 }, (_, index) => ({
+      pupil_hash: `hash-${index}`,
+      year_group: 6,
+      subject: "reading",
+      attainment_level: index < 20 ? "WTS" : "EXS",
+      scaled_score: null,
+      academic_year_start: 2025,
+      assessment_period: "Autumn",
+    }));
+
+    const timeline = buildUnifiedPupilEvidenceTimeline({
+      ctfRecords,
+      teacherEvents: [],
+      getDemographics: () => ({ ...demographics, isFsm: false, isSend: false }),
+      pseudonymFromHash: (hash) => hash.replace("hash-", "Pupil "),
+    });
+
+    expect(timeline.pupilsAnalysed).toBe(60);
+    expect(timeline.pupilTimelines).toHaveLength(60);
+    expect(timeline.priorityPupilCount).toBe(20);
+    expect(timeline.priorityPupils).toHaveLength(12);
+  });
 });

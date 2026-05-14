@@ -223,4 +223,23 @@ describe('buildPupilRegisterGroups', () => {
     });
     expect(groups[1].rows[0].flags).toEqual(['SEND']);
   });
+
+  it('shows EYFS-specific subjects instead of hiding them behind R/W/M only', () => {
+    const groups = buildPupilRegisterGroups([
+      {
+        pupilId: 'Amber Jay 76',
+        demographics: { isFsm: false, isSend: true, isEal: true, gender: 'M' },
+        journey: [
+          { year: 2025, yearGroup: 0, subject: 'literacy', level: '2' },
+          { year: 2025, yearGroup: 0, subject: 'maths', level: '2' },
+          { year: 2025, yearGroup: 0, subject: 'communication_and_language', level: '1' },
+        ],
+      },
+    ]);
+
+    expect(groups[0].label).toBe('EYFS cohort');
+    expect(groups[0].rows[0].subjectLevels.map((subject) => subject.shortLabel)).toEqual(['CL', 'Lit', 'M']);
+    expect(groups[0].rows[0].expectedCount).toBe(2);
+    expect(groups[0].rows[0].totalSubjects).toBe(3);
+  });
 });

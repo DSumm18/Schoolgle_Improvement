@@ -33,6 +33,11 @@ export default function CookiePolicyPage() {
           Schoolgle uses a minimal number of cookies. We believe in collecting
           only what is necessary to provide a secure, functional service.
         </p>
+        <p className="text-muted-foreground leading-relaxed mb-4">
+          PECR also covers similar storage and access technologies, including
+          local storage, scripts, tags and tracking pixels. We treat those
+          technologies in the same cautious way as cookies.
+        </p>
 
         {/* Essential cookies */}
         <h2 className="text-2xl font-bold text-foreground mt-12 mb-4">
@@ -90,31 +95,37 @@ export default function CookiePolicyPage() {
           Regulations (PECR), strictly necessary cookies do not require consent.
         </p>
 
+        <h2 className="text-2xl font-bold text-foreground mt-12 mb-4">
+          Local storage and similar technologies
+        </h2>
+        <p className="text-muted-foreground leading-relaxed mb-4">
+          The Schoolgle platform may use essential browser storage for secure
+          sessions, user preferences, fraud prevention, form protection or
+          remembering privacy choices. We do not use local storage or similar
+          technologies for advertising tracking.
+        </p>
+        <p className="text-muted-foreground leading-relaxed mb-4">
+          Any non-essential storage or access technology, including analytics
+          tags or tracking pixels, should only be introduced after this policy
+          is updated and valid consent is requested where required.
+        </p>
+
         {/* Analytics cookies */}
         <h2 className="text-2xl font-bold text-foreground mt-12 mb-4">
           Analytics cookies
         </h2>
         <p className="text-muted-foreground leading-relaxed mb-4">
-          We may use analytics cookies to understand how visitors interact with
-          our website. These cookies are{" "}
-          <strong className="text-foreground">
-            only set with your explicit consent
-          </strong>{" "}
-          via our cookie consent banner.
+          Schoolgle does not currently use third-party analytics cookies on the
+          marketing website. We do not use advertising cookies, tracking pixels,
+          or cross-site advertising identifiers.
         </p>
         <div className="p-6 rounded-2xl border border-border bg-muted/30 mb-6">
           <h3 className="font-semibold text-foreground mb-2">
-            What analytics data is collected
+            If analytics are introduced later
           </h3>
-          <ul className="list-disc list-inside space-y-2 text-sm text-muted-foreground">
-            <li>Pages visited and time spent on each page</li>
-            <li>Browser type and device category (desktop, mobile, tablet)</li>
-            <li>Approximate geographic region (country level only)</li>
-            <li>Referral source (how you found us)</li>
-          </ul>
           <p className="text-sm text-muted-foreground mt-3">
-            Analytics data is fully anonymised and cannot be used to identify
-            individual users. We use this data solely to improve the service.
+            If we introduce non-essential analytics cookies in future, we will
+            update this policy and ask for consent before setting them.
           </p>
         </div>
 
@@ -122,14 +133,9 @@ export default function CookiePolicyPage() {
         <h2 className="text-2xl font-bold text-foreground mt-12 mb-4">
           How to control cookies
         </h2>
-        <h3 className="text-lg font-semibold text-foreground mb-2">
-          Our cookie consent banner
-        </h3>
         <p className="text-muted-foreground leading-relaxed mb-4">
-          When you first visit Schoolgle, you will see a cookie consent banner.
-          You can choose to accept or decline analytics cookies. You can change
-          your preference at any time by clearing your cookies and revisiting
-          the site.
+          Because Schoolgle currently uses only essential cookies, there are no
+          optional analytics or advertising cookies to switch on or off.
         </p>
 
         <h3 className="text-lg font-semibold text-foreground mb-2">
@@ -178,19 +184,19 @@ export default function CookiePolicyPage() {
           Contact
         </h2>
         <p className="text-muted-foreground leading-relaxed mb-4">
-          If you have questions about our use of cookies, contact our Data
-          Protection Officer:
+          If you have questions about our use of cookies or similar
+          technologies, contact our privacy team:
         </p>
         <div className="p-6 rounded-2xl border border-border bg-muted/30">
           <p className="text-sm text-muted-foreground">
-            <strong className="text-foreground">Data Protection Officer</strong>
+            <strong className="text-foreground">Privacy contact</strong>
             <br />
             Email:{" "}
             <a
-              href="mailto:dpo@schoolgle.co.uk"
+              href="mailto:privacy@schoolgle.co.uk"
               className="text-primary underline"
             >
-              dpo@schoolgle.co.uk
+              privacy@schoolgle.co.uk
             </a>
             <br />
             Website:{" "}

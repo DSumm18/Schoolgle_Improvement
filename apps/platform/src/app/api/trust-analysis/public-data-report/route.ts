@@ -153,6 +153,30 @@ function latestByUrn<T extends { urn: number; academic_year_end: number }>(rows:
   return byUrn;
 }
 
+function parseAcademicYearEnd(value: string | null) {
+  if (!value) return null;
+  const year = Number.parseInt(value, 10);
+  return Number.isFinite(year) && year >= 2000 && year <= 2100 ? year : null;
+}
+
+function academicYearsFromRows<T extends { urn: number; academic_year_end: number }>(
+  rows: T[],
+  urns: Set<number>,
+) {
+  return Array.from(
+    new Set(
+      rows
+        .filter((row) => urns.has(Number(row.urn)) && Number.isFinite(Number(row.academic_year_end)))
+        .map((row) => Number(row.academic_year_end)),
+    ),
+  ).sort((a, b) => b - a);
+}
+
+function rowsForAcademicYear<T extends { academic_year_end: number }>(rows: T[], academicYearEnd: number | null) {
+  if (!academicYearEnd) return rows;
+  return rows.filter((row) => Number(row.academic_year_end) === academicYearEnd);
+}
+
 function latestValueByUrn<T extends { urn: number; academic_year_end: number }>(
   rows: T[],
   hasValue: (row: T) => boolean,
@@ -421,6 +445,9 @@ function buildNarrative(args: {
 export const GET = protectedRoute(async (auth, req: NextRequest) => {
   const organizationId = req.nextUrl.searchParams.get('organizationId') || auth.organizationId;
   if (!organizationId) return apiError('organizationId required', 400);
+  const requestedAcademicYearEnd = parseAcademicYearEnd(
+    req.nextUrl.searchParams.get('academicYearEnd') || req.nextUrl.searchParams.get('dfeYear'),
+  );
 
   const supabase = createServiceRoleClient();
 
@@ -516,8 +543,9 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
   const urnLineage = await resolveUrnLineage(supabase, currentComparisonUrns);
   const oldToNew = buildOldToCurrentUrnMap(urnLineage);
   const comparisonUrns = expandUrnsWithLineage(currentComparisonUrns, urnLineage);
+  const reportComparisonUrns = expandUrnsWithLineage(urns, urnLineage);
 
-  const [censusResult, attendanceResult, ks2Result, ks4Result, provisionResult] = await Promise.all([
+  const [censusResult, attendanceResult, ks2Result, reportKs2Result, ks4Result, provisionResult] = await Promise.all([
     supabase
       .from('census')
       .select('urn, academic_year_end, number_on_roll, fsm_pct, eal_pct, sen_pct')
@@ -540,6 +568,17 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
       .order('urn', { ascending: true })
       .order('academic_year_end', { ascending: false }),
     supabase
+      .from('ks2_results')
+      .select('urn, academic_year_end, subject, expected_standard_pct, progress_measure_score')
+      .in('urn', reportComparisonUrns)
+      .eq('breakdown_topic', 'All pupils')
+      .eq('breakdown', 'Total')
+      .in('subject', ['Reading, writing and maths', 'Reading', 'Writing', 'Maths'])
+      .not('expected_standard_pct', 'is', null)
+      .limit(5000)
+      .order('urn', { ascending: true })
+      .order('academic_year_end', { ascending: false }),
+    supabase
       .from('ks4_results')
       .select('urn, academic_year_end, time_period, breakdown_topic, breakdown, t_pupils, avg_att8, avg_p8score, pt_5em_94, pt_ebacc_e_ptq_ee, avg_ebaccaps, is_suppressed')
       .in('urn', comparisonUrns)
@@ -557,12 +596,14 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
   if (censusResult.error) return apiError(censusResult.error.message, 500);
   if (attendanceResult.error) return apiError(attendanceResult.error.message, 500);
   if (ks2Result.error) return apiError(ks2Result.error.message, 500);
+  if (reportKs2Result.error) return apiError(reportKs2Result.error.message, 500);
   if (ks4Result.error) return apiError(ks4Result.error.message, 500);
   const provisionTableMissing = Boolean(provisionResult.error);
 
   const rawCensusRows = (censusResult.data ?? []) as CensusRow[];
   const rawAttendanceRows = (attendanceResult.data ?? []) as AttendanceRow[];
   const rawKs2Rows = (ks2Result.data ?? []) as Ks2Row[];
+  const rawReportKs2Rows = (reportKs2Result.data ?? []) as Ks2Row[];
   const rawKs4Rows = (ks4Result.data ?? []) as Ks4Row[];
 
   const censusRows = rawCensusRows.map((row) => ({
@@ -573,7 +614,7 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
     ...row,
     urn: oldToNew.get(Number(row.urn)) ?? Number(row.urn),
   }));
-  const ks2Rows = rawKs2Rows.map((row) => ({
+  const ks2Rows = [...rawKs2Rows, ...rawReportKs2Rows].map((row) => ({
     ...row,
     urn: oldToNew.get(Number(row.urn)) ?? Number(row.urn),
   }));
@@ -582,26 +623,107 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
     urn: oldToNew.get(Number(row.urn)) ?? Number(row.urn),
   }));
 
-  const latestCensus = latestByUrn(censusRows);
-  const latestAttendance = latestValueByUrn(attendanceRows, (row) =>
+  const reportUrnSet = new Set(urns);
+  const availableAcademicYearEnds = Array.from(new Set([
+    ...academicYearsFromRows(censusRows, reportUrnSet),
+    ...academicYearsFromRows(attendanceRows, reportUrnSet),
+    ...academicYearsFromRows(ks2Rows, reportUrnSet),
+    ...academicYearsFromRows(ks4Rows, reportUrnSet),
+  ])).sort((a, b) => b - a);
+  const selectedAcademicYearEnd = requestedAcademicYearEnd ?? availableAcademicYearEnds[0] ?? null;
+  const selectedCensusRows = rowsForAcademicYear(censusRows, selectedAcademicYearEnd);
+  const selectedAttendanceRows = rowsForAcademicYear(attendanceRows, selectedAcademicYearEnd);
+  const selectedKs2Rows = rowsForAcademicYear(ks2Rows, selectedAcademicYearEnd);
+  const selectedKs4Rows = rowsForAcademicYear(ks4Rows, selectedAcademicYearEnd);
+
+  const latestCensus = latestByUrn(selectedCensusRows);
+  const latestAttendance = latestValueByUrn(selectedAttendanceRows, (row) =>
     row.overall_attendance_pct !== null || row.overall_absence_pct !== null,
   );
-  const latestPersistentAbsence = latestValueByUrn(attendanceRows, (row) =>
+  const latestPersistentAbsence = latestValueByUrn(selectedAttendanceRows, (row) =>
     row.persistent_absence_pct !== null && row.persistent_absence_pct !== undefined,
   );
-  const latestKs2 = latestKs2ByUrnAndSubject(ks2Rows);
-  const latestKs4 = latestKs4ByUrn(ks4Rows);
+  const latestKs2 = latestKs2ByUrnAndSubject(selectedKs2Rows);
+  const latestKs4 = latestKs4ByUrn(selectedKs4Rows);
   const provisionByUrn = new Map(
     (((provisionResult.error ? [] : provisionResult.data) ?? []) as GiasExtendedProfileRow[])
       .map((profile) => [Number(profile.urn), profile] as const),
   );
 
-  const laCombinedValues = laUrns.map((urn) => latestKs2.get(urn)?.['Reading, writing and maths']?.expected_standard_pct);
+  const { data: nationalPrimaryRaw } = await supabase
+    .from('schools')
+    .select('urn')
+    .eq('phase_name', 'Primary')
+    .eq('status_name', 'Open')
+    .limit(30000);
+  const nationalPrimaryUrns = new Set(
+    ((nationalPrimaryRaw ?? []) as Array<{ urn: number | string | null }>)
+      .map((row) => asUrn(row.urn))
+      .filter((urn): urn is number => urn !== null),
+  );
+
+  const [nationalCensusResult, nationalAttendanceResult, nationalPaResult, nationalKs2Result] = selectedAcademicYearEnd
+    ? await Promise.all([
+        supabase
+          .from('census')
+          .select('urn, academic_year_end, number_on_roll, fsm_pct, eal_pct, sen_pct')
+          .eq('academic_year_end', selectedAcademicYearEnd)
+          .limit(50000),
+        supabase
+          .from('attendance')
+          .select('urn, academic_year_end, overall_attendance_pct, overall_absence_pct, persistent_absence_pct')
+          .eq('academic_year_end', selectedAcademicYearEnd)
+          .limit(50000),
+        supabase
+          .from('attendance')
+          .select('urn, academic_year_end, overall_attendance_pct, overall_absence_pct, persistent_absence_pct')
+          .eq('academic_year_end', selectedAcademicYearEnd)
+          .not('persistent_absence_pct', 'is', null)
+          .limit(50000),
+        supabase
+          .from('ks2_results')
+          .select('urn, academic_year_end, subject, expected_standard_pct, progress_measure_score')
+          .eq('academic_year_end', selectedAcademicYearEnd)
+          .eq('breakdown_topic', 'All pupils')
+          .eq('breakdown', 'Total')
+          .in('subject', ['Reading, writing and maths', 'Reading', 'Writing', 'Maths'])
+          .not('expected_standard_pct', 'is', null)
+          .limit(50000),
+      ])
+    : [null, null, null, null];
+
+  const nationalCensusRows = (((nationalCensusResult && !nationalCensusResult.error ? nationalCensusResult.data : []) ?? []) as CensusRow[])
+    .filter((row) => nationalPrimaryUrns.has(Number(row.urn)));
+  const nationalAttendanceRows = (((nationalAttendanceResult && !nationalAttendanceResult.error ? nationalAttendanceResult.data : []) ?? []) as AttendanceRow[])
+    .filter((row) => nationalPrimaryUrns.has(Number(row.urn)));
+  const nationalPaRows = (((nationalPaResult && !nationalPaResult.error ? nationalPaResult.data : []) ?? []) as AttendanceRow[])
+    .filter((row) => nationalPrimaryUrns.has(Number(row.urn)));
+  const nationalKs2Rows = (((nationalKs2Result && !nationalKs2Result.error ? nationalKs2Result.data : []) ?? []) as Ks2Row[])
+    .filter((row) => nationalPrimaryUrns.has(Number(row.urn)));
+  const nationalKs2 = latestKs2ByUrnAndSubject(nationalKs2Rows);
+  const nationalCensus = latestByUrn(nationalCensusRows);
+  const nationalAttendance = latestValueByUrn(nationalAttendanceRows, (row) =>
+    row.overall_attendance_pct !== null || row.overall_absence_pct !== null,
+  );
+  const nationalPersistentAbsence = latestValueByUrn(nationalPaRows, (row) =>
+    row.persistent_absence_pct !== null && row.persistent_absence_pct !== undefined,
+  );
+
+  const laSubjectValues = (subject: 'Reading, writing and maths' | 'Reading' | 'Writing' | 'Maths') =>
+    laUrns.map((urn) => latestKs2.get(urn)?.[subject]?.expected_standard_pct);
+  const nationalSubjectValues = (subject: 'Reading, writing and maths' | 'Reading' | 'Writing' | 'Maths') =>
+    Array.from(nationalPrimaryUrns).map((urn) => nationalKs2.get(urn)?.[subject]?.expected_standard_pct);
+  const laCombinedValues = laSubjectValues('Reading, writing and maths');
   const laAttendanceValues = laUrns.map((urn) => getAttendancePct(latestAttendance.get(urn)));
   const laPaValues = laUrns.map((urn) => latestPersistentAbsence.get(urn)?.persistent_absence_pct);
   const laFsmValues = laUrns.map((urn) => latestCensus.get(urn)?.fsm_pct);
   const laSenValues = laUrns.map((urn) => latestCensus.get(urn)?.sen_pct);
   const laEalValues = laUrns.map((urn) => latestCensus.get(urn)?.eal_pct);
+  const nationalAttendanceValues = Array.from(nationalPrimaryUrns).map((urn) => getAttendancePct(nationalAttendance.get(urn)));
+  const nationalPaValues = Array.from(nationalPrimaryUrns).map((urn) => nationalPersistentAbsence.get(urn)?.persistent_absence_pct);
+  const nationalFsmValues = Array.from(nationalPrimaryUrns).map((urn) => nationalCensus.get(urn)?.fsm_pct);
+  const nationalSenValues = Array.from(nationalPrimaryUrns).map((urn) => nationalCensus.get(urn)?.sen_pct);
+  const nationalEalValues = Array.from(nationalPrimaryUrns).map((urn) => nationalCensus.get(urn)?.eal_pct);
 
   const laBenchmarks = {
     la_name: laName,
@@ -610,11 +732,27 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
     maintained_primary_count: laMaintained.length,
     academy_primary_count: Math.max(0, laPrimary.length - laMaintained.length),
     ks2_combined_avg: average(laCombinedValues),
+    reading_avg: average(laSubjectValues('Reading')),
+    writing_avg: average(laSubjectValues('Writing')),
+    maths_avg: average(laSubjectValues('Maths')),
     attendance_avg: average(laAttendanceValues),
     persistent_absence_avg: average(laPaValues),
     fsm_avg: average(laFsmValues),
     sen_avg: average(laSenValues),
     eal_avg: average(laEalValues),
+  };
+  const nationalBenchmarks = {
+    academic_year_end: selectedAcademicYearEnd,
+    primary_count: nationalPrimaryUrns.size,
+    ks2_combined_avg: average(nationalSubjectValues('Reading, writing and maths')),
+    reading_avg: average(nationalSubjectValues('Reading')),
+    writing_avg: average(nationalSubjectValues('Writing')),
+    maths_avg: average(nationalSubjectValues('Maths')),
+    attendance_avg: average(nationalAttendanceValues),
+    persistent_absence_avg: average(nationalPaValues),
+    fsm_avg: average(nationalFsmValues),
+    sen_avg: average(nationalSenValues),
+    eal_avg: average(nationalEalValues),
   };
 
   const schools = reportOrgRows.map((org) => {
@@ -629,7 +767,7 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
           predecessorUrn: lineage.predecessorUrn,
           censusRows: rawCensusRows,
           attendanceRows: rawAttendanceRows,
-          ks2Rows: rawKs2Rows,
+          ks2Rows: [...rawKs2Rows, ...rawReportKs2Rows],
         }),
         conversionDate: lineage.convertedDate,
         currentUrn: urn,
@@ -644,7 +782,7 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
     const persistentAbsence = urn ? latestPersistentAbsence.get(urn) : undefined;
     const ks2 = urn ? latestKs2.get(urn) : undefined;
     const ks4 = urn ? latestKs4.get(urn) : undefined;
-    const fsmPct = round(census?.fsm_pct ?? profile?.percentage_fsm ?? null);
+    const fsmPct = round(census?.fsm_pct ?? (selectedAcademicYearEnd ? null : profile?.percentage_fsm ?? null));
     const senPct = round(census?.sen_pct ?? null);
     const ealPct = round(census?.eal_pct ?? null);
 
@@ -871,15 +1009,23 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
       onboarded_maintained_coverage: laMaintained.length > 0 ? `${registeredOrgRows.length}/${laMaintained.length}` : null,
     },
     laBenchmarks,
+    nationalBenchmarks,
     secondaryBenchmarks,
     phaseSummary,
     dataCoverage,
+    yearSelection: {
+      selectedAcademicYearEnd,
+      requestedAcademicYearEnd,
+      availableAcademicYearEnds,
+    },
     schools,
     prioritySchools: ranked.slice(0, 6),
     dataQuality: [
       'This report uses live Schoolgle organisation URNs plus the DfE warehouse; it does not use another organisation’s data.',
       'Academy predecessor URNs are resolved from DfE school identity fields (LAESTAB, establishment number, postcode, name and conversion dates), then historic rows are mapped back onto the current URN.',
-      'Persistent absence is selected from the latest attendance row with a PA value, so blank term/annual rows cannot mask a populated DfE PA row.',
+      selectedAcademicYearEnd
+        ? `Headline KS2, attendance, persistent absence, FSM, SEND and EAL columns are aligned to DfE academic year ${selectedAcademicYearEnd - 1}/${String(selectedAcademicYearEnd).slice(-2)} where that dataset exists for the school.`
+        : 'No DfE academic year could be selected from the scoped school rows, so the report falls back to latest available values by dataset.',
       provisionTableMissing
         ? 'Provision-specific fields such as VI/HI/ASD resource bases require the GIAS extended provision import; the table is not available in this environment yet.'
         : 'Provision-specific fields such as VI/HI/ASD resource bases are read from school_gias_extended_profiles when imported, with source and confidence labels.',

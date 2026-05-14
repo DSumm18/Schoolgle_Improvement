@@ -111,7 +111,7 @@ export function buildEmptyStaffImportCsv() {
 export function buildStaffImportExcelHtml() {
   return buildStyledTemplateExcelHtml({
     title: "Schoolgle Staff Upload Template",
-    guidance: "Row 1 explains the columns. Row 2 is the exact import header. Start real staff data on row 3.",
+    guidance: "Rows 1-3 are guidance, row 4 explains the columns, row 5 is the exact import header. Start real staff data on row 6.",
     tip: "Tip: upload staff first, then upload classes to connect teachers and TAs to classes.",
     descriptions: STAFF_IMPORT_DESCRIPTIONS,
     headers: STAFF_IMPORT_HEADERS,

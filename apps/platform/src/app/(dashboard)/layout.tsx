@@ -582,7 +582,7 @@ export default function DashboardLayout({
             )}
           </div>
 
-          {user && isSidebarExpanded && !isSingleAppMode && (
+          {user && isSidebarExpanded && (
             <div className="p-4 border-b border-border">
               <OrgSwitcher
                 currentOrgId={

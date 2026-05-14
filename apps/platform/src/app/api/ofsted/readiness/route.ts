@@ -1,6 +1,8 @@
+import { createHmac } from "crypto";
 import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
 import { buildAssessmentIntelligenceReportingSummary } from "@/lib/assessment-intelligence/reporting";
+import { buildCohortGapLens } from "@/lib/trust-assessor/cohort-gap-lens";
 import type {
   OfstedCategoryId,
   OfstedRating,
@@ -18,6 +20,7 @@ import {
   persistShadowComparison,
 } from "@/lib/intelligence-brain/orchestrator";
 import { buildOfstedShadowCandidate } from "@/lib/intelligence-brain/ofsted-shadow-candidate";
+import { resolveRequestedTrustAnalysisOrganization } from "@/lib/trust-analysis/organization-access";
 
 /**
  * Helper: Calculate readiness score from rating
@@ -40,8 +43,7 @@ function ratingToScore(rating: OfstedRating | "not_assessed"): number {
  */
 export const GET = protectedRoute(async (auth, req) => {
   const { searchParams } = new URL(req.url);
-  // orgId MUST come from authenticated session — never from caller
-  const organizationId = auth.organizationId;
+  const requestedOrganizationId = searchParams.get("organizationId");
   const includeGaps = searchParams.get("include_gaps") === "true";
   const includeHistory = searchParams.get("include_history") === "true";
   const debugBrain =
@@ -49,11 +51,22 @@ export const GET = protectedRoute(async (auth, req) => {
     isDebugBrainRequest(req.headers.get("x-schoolgle-debug-brain"));
   const brainMode = getIntelligenceBrainMode("ofsted-readiness");
 
-  if (!organizationId) {
+  if (!auth.organizationId) {
     return apiError("Missing organizationId from session", 400);
   }
 
   const supabase = createServiceRoleClient();
+  const access = await resolveRequestedTrustAnalysisOrganization(
+    supabase,
+    auth.organizationId,
+    requestedOrganizationId,
+  );
+
+  if (!access.allowed || !access.organizationId) {
+    return apiError("You do not have access to this Ofsted readiness scope", 403);
+  }
+
+  const organizationId = access.organizationId;
 
   // Fetch all assessments
   const { data: assessments, error: assessmentsError } = await supabase
@@ -277,6 +290,10 @@ export const GET = protectedRoute(async (auth, req) => {
     includeChildOrganizations: true,
     limit: 10,
   });
+  const cohortGapEvidence = await buildReadinessCohortGapEvidence(
+    supabase,
+    organizationId,
+  );
 
   const response: GetOfstedReadinessResponse = {
     overall,
@@ -290,6 +307,7 @@ export const GET = protectedRoute(async (auth, req) => {
       latestAssessmentPeriod: assessmentEvidence.latestAssessmentPeriod,
       latestAcademicYearStart: assessmentEvidence.latestAcademicYearStart,
     },
+    cohortGapEvidence,
     snapshots,
     trends,
   };
@@ -336,6 +354,197 @@ export const GET = protectedRoute(async (auth, req) => {
 
   return apiSuccess(response);
 });
+
+type OfstedScopedOrgRow = {
+  id: string;
+  name: string | null;
+};
+
+type OfstedAssessmentRecord = {
+  organization_id: string;
+  pupil_hash: string;
+  year_group: number | null;
+  subject: string;
+  attainment_level: string | null;
+  academic_year_start: number;
+  assessment_period: string | null;
+  is_fsm: boolean | null;
+  is_send: boolean | null;
+  is_eal: boolean | null;
+};
+
+type OfstedPupilProfile = {
+  organization_id: string;
+  pupil_ref: string | null;
+  has_ehcp: boolean | null;
+  has_send_support: boolean | null;
+  is_eal: boolean | null;
+  is_pupil_premium: boolean | null;
+  fsm_eligible?: boolean | null;
+};
+
+async function buildReadinessCohortGapEvidence(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  organizationId: string,
+): Promise<GetOfstedReadinessResponse["cohortGapEvidence"]> {
+  const { data: orgRows, error: orgError } = await supabase
+    .from("organizations")
+    .select("id,name")
+    .or(`id.eq.${organizationId},parent_organization_id.eq.${organizationId}`);
+
+  if (orgError) {
+    console.error("[Ofsted Readiness] Cohort-gap organization scope failed:", orgError);
+    return undefined;
+  }
+
+  const organizations = ((orgRows || []) as OfstedScopedOrgRow[]).filter(
+    (row) => row.id,
+  );
+  const orgIds = organizations.map((row) => row.id);
+  if (orgIds.length === 0) return undefined;
+
+  const [{ data: profileRows, error: profileError }, records] =
+    await Promise.all([
+      supabase
+        .from("ls_pupils")
+        .select("organization_id,pupil_ref,has_ehcp,has_send_support,is_eal,is_pupil_premium")
+        .in("organization_id", orgIds)
+        .limit(10000),
+      fetchAssessmentRowsForOrganizations(supabase, orgIds),
+    ]);
+
+  if (profileError) {
+    console.warn("[Ofsted Readiness] Cohort-gap profile enrichment unavailable:", profileError.message);
+  }
+
+  if (records.length === 0) return undefined;
+
+  const profilesByOrgAndHash = new Map<string, OfstedPupilProfile>();
+  for (const profile of (profileRows || []) as OfstedPupilProfile[]) {
+    if (!profile.pupil_ref) continue;
+    profilesByOrgAndHash.set(
+      `${profile.organization_id}:${pupilHashForOrg(profile.pupil_ref, profile.organization_id)}`,
+      profile,
+    );
+  }
+
+  const comparisons = organizations.flatMap((organization) => {
+    const orgRecords = records.filter(
+      (record) => record.organization_id === organization.id,
+    );
+    if (orgRecords.length === 0) return [];
+
+    const lens = buildCohortGapLens({
+      records: orgRecords.map((record) => ({
+        pupilHash: record.pupil_hash,
+        subject: record.subject,
+        attainmentLevel: record.attainment_level,
+        academicYearStart: Number(record.academic_year_start),
+        yearGroup: record.year_group,
+        assessmentPeriod: record.assessment_period,
+      })),
+      getDemographics: (hash) => {
+        const profile = profilesByOrgAndHash.get(`${organization.id}:${hash}`);
+        return {
+          isFsm:
+            profile?.fsm_eligible === true ||
+            profile?.is_pupil_premium === true ||
+            orgRecords.some((record) => record.pupil_hash === hash && record.is_fsm === true),
+          isSend:
+            profile?.has_ehcp === true ||
+            profile?.has_send_support === true ||
+            orgRecords.some((record) => record.pupil_hash === hash && record.is_send === true),
+          isEal:
+            profile?.is_eal === true ||
+            orgRecords.some((record) => record.pupil_hash === hash && record.is_eal === true),
+        };
+      },
+      source:
+        "pupil_assessments_pseudo selected complete RWM cohort enriched from ls_pupils profile flags where available",
+    });
+
+    return lens.comparisons
+      .filter(
+        (comparison) =>
+          comparison.confidence !== "unavailable" &&
+          Math.abs(comparison.combinedGapPp ?? 0) >= 8,
+      )
+      .map((comparison) => ({
+        organizationId: organization.id,
+        schoolName: organization.name || "This school",
+        key: comparison.key,
+        groupLabel: comparison.groupLabel,
+        comparatorLabel: comparison.comparatorLabel,
+        groupCount: comparison.groupCount,
+        comparatorCount: comparison.comparatorCount,
+        combinedGapPp: comparison.combinedGapPp,
+        confidence: comparison.confidence,
+        narrative: comparison.narrative,
+        ofstedArea: comparison.ofstedArea,
+        academicYearStart: lens.latestYear,
+        yearGroupLabel: lens.yearGroupLabel,
+        assessmentPeriod: lens.assessmentPeriod,
+      }));
+  });
+
+  if (comparisons.length === 0) return undefined;
+
+  const comparisonYears = comparisons
+    .map((comparison) => comparison.academicYearStart)
+    .filter((year): year is number => typeof year === "number");
+
+  return {
+    source:
+      "Trust Assessor Cohort Gap Lens: pupil_assessments_pseudo + ls_pupils enrichment",
+    caveat:
+      "Cohort gaps explain patterns for Ofsted evidence conversations. They do not judge pupils, and small groups must be triangulated with books, provision records and teacher assessment.",
+    latestYear:
+      comparisonYears.length > 0
+        ? Math.max(...comparisonYears)
+        : null,
+    organizationCount: organizations.length,
+    comparisons: comparisons
+      .sort((a, b) => Math.abs(b.combinedGapPp ?? 0) - Math.abs(a.combinedGapPp ?? 0))
+      .slice(0, 6),
+  };
+}
+
+async function fetchAssessmentRowsForOrganizations(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  organizationIds: string[],
+): Promise<OfstedAssessmentRecord[]> {
+  const rows: OfstedAssessmentRecord[] = [];
+  const pageSize = 1000;
+
+  for (const organizationId of organizationIds) {
+    for (let page = 0; ; page++) {
+      const { data, error } = await supabase
+        .from("pupil_assessments_pseudo")
+        .select("organization_id,pupil_hash,year_group,subject,attainment_level,academic_year_start,assessment_period,is_fsm,is_send,is_eal")
+        .eq("organization_id", organizationId)
+        .range(page * pageSize, (page + 1) * pageSize - 1);
+
+      if (error) {
+        console.error(
+          "[Ofsted Readiness] Cohort-gap assessment fetch failed:",
+          error,
+        );
+        break;
+      }
+
+      rows.push(...((data || []) as OfstedAssessmentRecord[]));
+      if (!data || data.length < pageSize) break;
+    }
+  }
+
+  return rows;
+}
+
+function pupilHashForOrg(pupilRef: string, organizationId: string): string {
+  return createHmac("sha256", organizationId)
+    .update(pupilRef.toLowerCase().trim())
+    .digest("hex");
+}
 
 /**
  * POST /api/ofsted/readiness

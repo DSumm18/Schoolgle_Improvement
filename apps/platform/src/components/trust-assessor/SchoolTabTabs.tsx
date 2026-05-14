@@ -37,7 +37,8 @@ interface SchoolTabTabsProps {
 export function SchoolTabTabs({ school, children }: SchoolTabTabsProps) {
   const [activeTab, setActiveTab] = useState<SchoolTabId>(() => {
     if (typeof window === "undefined") return "overview";
-    return (localStorage.getItem(`ta-active-tab-${school}`) as SchoolTabId) ?? "overview";
+    const storedTab = localStorage.getItem(`ta-active-tab-${school}`) as SchoolTabId | null;
+    return TABS.some((tab) => tab.id === storedTab) ? storedTab : "overview";
   });
 
   // Persist active tab

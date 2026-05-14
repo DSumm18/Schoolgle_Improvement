@@ -47,6 +47,29 @@ describe("pupil pass utilities", () => {
     });
   });
 
+  it("parses completed styled Excel template rows with guidance above the header", () => {
+    const parsed = parsePupilUploadCsv(
+      [
+        "Schoolgle Pupil Upload Template",
+        "Rows 1-3 are guidance, row 4 explains the columns, row 5 is the exact import header. Start real pupil data on row 6.",
+        "Tip: keep pupil_id stable.",
+        "Unique ID,First name,Last name,Year group,Current class,Pass colour,Pass animal",
+        "pupil_id,first_name,last_name,year_group,current_class,pass_colour,pass_animal",
+        "P2,Mia,Bell,Year 4,4A,Pink,Lion",
+      ].join("\n"),
+    );
+
+    expect(parsed.errors).toEqual([]);
+    expect(parsed.pupils[0]).toMatchObject({
+      pupil_id: "P2",
+      first_name: "Mia",
+      last_name: "Bell",
+      current_class: "4A",
+      pass_colour: "Pink",
+      pass_animal: "Lion",
+    });
+  });
+
   it("normalises messy pupil import fields", () => {
     const parsed = parsePupilUploadCsv(
       [

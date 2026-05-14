@@ -72,7 +72,7 @@ export function locationUploadExcelTemplate() {
   const { descriptions, fields, examples } = getLocationUploadTemplateRows();
   return buildStyledTemplateExcelHtml({
     title: "Schoolgle Locations Upload Template",
-    guidance: "Row 1 explains the columns. Row 2 is the exact import header. Start real location data on row 3.",
+    guidance: "Rows 1-3 are guidance, row 4 explains the columns, row 5 is the exact import header. Start real location data on row 6.",
     tip: "Tip: location_type is controlled. Use Classroom, Office, Hall, Kitchen, Toilet or TBC / Other; names can be specific, e.g. Headteacher Office.",
     descriptions,
     headers: fields,
@@ -85,7 +85,7 @@ export async function locationUploadXlsxTemplate(locationRows?: string[][]) {
   const { descriptions, fields, examples } = getLocationUploadTemplateRows();
   const rows = [
     [`Schoolgle Locations Upload Template`],
-    [`Row 1 explains the columns. Row 2 is the exact import header. Start real location data on row 3.`],
+    [`Rows 1-3 are guidance, row 4 explains the columns, row 5 is the exact import header. Start real location data on row 6.`],
     [`Tip: location_type is controlled. Use the dropdown in column C. Blank or odd values import as TBC / Other.`],
     descriptions,
     fields,

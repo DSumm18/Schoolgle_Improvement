@@ -123,19 +123,7 @@ export function parsePupilUploadCsv(csvText: string) {
   if (lines.length < 2) return { pupils: [] as PupilUploadRow[], errors: ["CSV needs a header row and at least one pupil row."] };
 
   const required = ["pupil_id", "first_name", "last_name", "year_group", "current_class"];
-  let headerIndex = 0;
-  let headers = splitCsvLine(lines[headerIndex]).map((header) => normaliseHeader(header));
-  let missing = required.filter((field) => !headers.includes(field));
-
-  if (missing.length > 0 && lines.length > 2) {
-    const secondRowHeaders = splitCsvLine(lines[1]).map((header) => normaliseHeader(header));
-    const secondRowMissing = required.filter((field) => !secondRowHeaders.includes(field));
-    if (secondRowMissing.length === 0) {
-      headerIndex = 1;
-      headers = secondRowHeaders;
-      missing = [];
-    }
-  }
+  const { headers, headerIndex, missing } = findHeader(lines, required);
 
   if (missing.length > 0) return { pupils: [] as PupilUploadRow[], errors: [`Missing required columns: ${missing.join(", ")}`] };
 
@@ -186,7 +174,7 @@ export function pupilUploadExcelTemplate() {
   const { descriptions, fields, examples } = getPupilUploadTemplateRows();
   return buildStyledTemplateExcelHtml({
     title: "Schoolgle Pupil Upload Template",
-    guidance: "Row 1 explains the columns. Row 2 is the exact import header. Start real pupil data on row 3.",
+    guidance: "Rows 1-3 are guidance, row 4 explains the columns, row 5 is the exact import header. Start real pupil data on row 6.",
     tip: "Tip: keep pupil_id stable. It protects QR passes, Class Builder responses and future assessment history.",
     descriptions,
     headers: fields,
@@ -274,6 +262,17 @@ function normaliseChoice(value: string | null | undefined, allowed: string[]) {
 
 function normaliseHeader(header: string) {
   return header.toLowerCase().trim().replace(/[\s-]+/g, "_");
+}
+
+function findHeader(lines: string[], required: string[]) {
+  for (let index = 0; index < Math.min(lines.length, 8); index += 1) {
+    const headers = splitCsvLine(lines[index]).map((header) => normaliseHeader(header));
+    const missing = required.filter((field) => !headers.includes(field));
+    if (missing.length === 0) return { headers, headerIndex: index, missing };
+  }
+
+  const headers = splitCsvLine(lines[0]).map((header) => normaliseHeader(header));
+  return { headers, headerIndex: 0, missing: required.filter((field) => !headers.includes(field)) };
 }
 
 function toBool(value: string | boolean | undefined) {

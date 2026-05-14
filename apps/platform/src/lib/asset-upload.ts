@@ -50,7 +50,7 @@ export function assetUploadExcelTemplate() {
   const { descriptions, fields, examples } = getAssetUploadTemplateRows();
   return buildStyledTemplateExcelHtml({
     title: "Schoolgle Assets Upload Template",
-    guidance: "Row 1 explains the columns. Row 2 is the exact import header. Start real asset data on row 3.",
+    guidance: "Rows 1-3 are guidance, row 4 explains the columns, row 5 is the exact import header. Start real asset data on row 6.",
     tip: "Tip: upload locations first, then use location_code to place each asset in the right room or area.",
     descriptions,
     headers: fields,

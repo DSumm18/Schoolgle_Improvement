@@ -1,8 +1,16 @@
-import { NextResponse } from "next/server";
-import { aiRoute, apiSuccess, apiError } from "@/lib/api-utils";
+import { aiRoute, apiSuccess } from "@/lib/api-utils";
+
+interface MockInspectorRequest {
+  schoolData?: {
+    name?: string;
+  };
+  assessments?: Record<string, { schoolRating?: string }>;
+  persona?: string;
+}
 
 export const POST = aiRoute(async (auth, request) => {
-  const { schoolData, assessments, persona } = await request.json();
+  const { schoolData, assessments, persona } =
+    (await request.json()) as MockInspectorRequest;
 
   const apiKey = process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY;
   const baseUrl = process.env.OPENROUTER_API_KEY
@@ -12,9 +20,9 @@ export const POST = aiRoute(async (auth, request) => {
   // Identify weak areas from assessments
   const weakAreas = Object.entries(assessments || {})
     .filter(
-      ([_, a]: [string, any]) =>
-        a.schoolRating === "needs_attention" ||
-        a.schoolRating === "urgent_improvement",
+      ([, assessment]) =>
+        assessment.schoolRating === "needs_attention" ||
+        assessment.schoolRating === "urgent_improvement",
     )
     .map(([key]) => key.replace(/-/g, " "));
 
@@ -29,10 +37,19 @@ export const POST = aiRoute(async (auth, request) => {
       eyfs: "You are an EYFS expert, focusing on early years provision, learning through play, and child development.",
     };
 
-    const prompt = `${personaPrompts[persona] || personaPrompts.lead}
+    const selectedPersonaPrompt =
+      persona && personaPrompts[persona] ? personaPrompts[persona] : personaPrompts.lead;
 
-Generate a realistic mock Ofsted inspection simulation for ${schoolData?.name || "the school"}.
+    const prompt = `${selectedPersonaPrompt}
+
+Generate a realistic mock Ofsted inspection preparation simulation for ${schoolData?.name || "the school"}.
 Based on self-assessment, these areas may need attention: ${weakAreas.join(", ") || "None identified"}.
+
+AI governance rules:
+- This is preparation support only, not an inspection prediction.
+- Do not predict, imply or assign Ofsted grades, sub-grades or inspection outcomes.
+- Do not state what Ofsted will decide.
+- Frame outputs as questions to prepare for, evidence to review and advisory notes for human staff.
 
 Return JSON with:
 1. greeting: Opening statement (2-3 sentences, professional but human)
@@ -46,7 +63,7 @@ Return JSON with:
    - redFlags: Array of 2-3 things that would concern an inspector
 3. challengeAreas: Array of specific areas this school should prepare for
 4. tips: Array of 5 practical tips for inspection day
-5. overallReadiness: Brief assessment based on the data provided
+5. overallReadiness: Brief advisory preparation note based on the data provided, explicitly not a grade or prediction
 
 Return ONLY valid JSON.`;
 
@@ -84,7 +101,10 @@ Return ONLY valid JSON.`;
   return apiSuccess(generateDefaultSimulation(schoolData, weakAreas));
 });
 
-function generateDefaultSimulation(schoolData: any, weakAreas: string[]) {
+function generateDefaultSimulation(
+  schoolData: MockInspectorRequest["schoolData"],
+  weakAreas: string[],
+) {
   return {
     greeting: `Good morning. I'm the Lead Inspector for today's inspection of ${schoolData?.name || "your school"}. We'll be spending time looking at the quality of education, behaviour, personal development, and leadership. Let's begin.`,
     questions: [
@@ -187,6 +207,6 @@ function generateDefaultSimulation(schoolData: any, weakAreas: string[]) {
       "Ensure all staff can articulate the school vision",
     ],
     overallReadiness:
-      "Continue to prepare - practice articulating your strengths with evidence",
+      "Advisory preparation note only: continue to organise evidence and practise explaining strengths and development areas. This is not an inspection grade or outcome prediction.",
   };
 }

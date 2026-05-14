@@ -33,13 +33,13 @@ const SafeAIList = () => (
         <div className="bg-emerald-50/50 dark:bg-emerald-500/5 p-10 rounded-[2.5rem] border border-emerald-100 dark:border-emerald-500/20">
             <h3 className="text-xl font-black text-emerald-900 dark:text-emerald-400 uppercase tracking-tight mb-8 flex items-center gap-3">
                 <CheckCircle2 className="text-emerald-500" />
-                The Do's
+                The Do&apos;s
             </h3>
             <ul className="space-y-4">
                 {[
                     "Use Ed to summarize meeting notes",
                     "Draft policy updates with DfE guidance",
-                    "Organize evidence for Ofsted judgements",
+                    "Organise evidence for inspection framework areas",
                     "Generate first drafts of parent comms",
                     "Analyze trends in anonymized attendance"
                 ].map((item, i) => (
@@ -54,12 +54,12 @@ const SafeAIList = () => (
         <div className="bg-rose-50/50 dark:bg-rose-500/5 p-10 rounded-[2.5rem] border border-rose-100 dark:border-rose-500/20">
             <h3 className="text-xl font-black text-rose-900 dark:text-rose-400 uppercase tracking-tight mb-8 flex items-center gap-3">
                 <XCircle className="text-rose-500" />
-                The Don'ts
+                The Don&apos;ts
             </h3>
             <ul className="space-y-4">
                 {[
                     "Ask AI to make final SEND decisions",
-                    "Input raw, unencrypted pupil data",
+                    "Input unnecessary identifiable pupil data",
                     "Rely on AI for legal advice",
                     "Let AI send emails without human review",
                     "Use public, un-guarded AI tools for school tasks"
@@ -131,7 +131,9 @@ const TrustPage = () => {
                 <div className="max-w-4xl mx-auto space-y-8">
                     <div className="w-16 h-1 bg-slate-100 dark:bg-white/10 mx-auto" />
                     <p className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight italic">
-                        "Schoolgle doesn't aim to replace school leadership. It aims to liberate it from the burden of manual process."
+                        &quot;Schoolgle doesn&apos;t aim to replace school
+                        leadership. It aims to liberate it from the burden of
+                        manual process.&quot;
                     </p>
                     <div className="text-slate-400 dark:text-slate-600 font-bold uppercase tracking-[0.2em] text-[10px]">
                         The Schoolgle Governance Principles
@@ -144,14 +146,14 @@ const TrustPage = () => {
                 <div className="max-w-3xl mx-auto space-y-12">
                     <h2 className="text-5xl font-black uppercase tracking-tighter leading-none">
                         Questions about <br />
-                        <span className="text-slate-500 dark:text-slate-400">your school's data?</span>
+                        <span className="text-slate-500 dark:text-slate-400">your school&apos;s data?</span>
                     </h2>
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
                         <Link href="/early-access" className="px-12 py-5 bg-white dark:bg-slate-900 text-slate-900 dark:text-white rounded-full font-black text-xs uppercase tracking-widest hover:scale-105 transition-all shadow-xl">
                             Book a demo
                         </Link>
                         <a href="mailto:trust@schoolgle.co.uk" className="text-xs font-black uppercase tracking-widest text-slate-400 dark:text-slate-600 hover:text-white dark:hover:text-slate-900 transition-colors">
-                            Talk to our DPO →
+                            Talk to our privacy team -&gt;
                         </a>
                     </div>
                 </div>

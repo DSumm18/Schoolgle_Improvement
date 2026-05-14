@@ -17,7 +17,7 @@ const Footer = () => {
             </p>
           </div>
 
-          <div className="flex gap-8 text-sm">
+          <div className="grid gap-8 text-sm sm:grid-cols-3">
             <div className="space-y-2">
               <p className="font-bold text-foreground text-xs uppercase tracking-wider">
                 Product
@@ -43,6 +43,35 @@ const Footer = () => {
             </div>
             <div className="space-y-2">
               <p className="font-bold text-foreground text-xs uppercase tracking-wider">
+                Trust
+              </p>
+              <Link
+                href="/legal"
+                className="block text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Legal Hub
+              </Link>
+              <Link
+                href="/trust"
+                className="block text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Trust Centre
+              </Link>
+              <Link
+                href="/ai-governance"
+                className="block text-muted-foreground hover:text-foreground transition-colors"
+              >
+                AI Governance
+              </Link>
+              <Link
+                href="/security"
+                className="block text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Security
+              </Link>
+            </div>
+            <div className="space-y-2">
+              <p className="font-bold text-foreground text-xs uppercase tracking-wider">
                 Legal
               </p>
               <Link
@@ -57,13 +86,31 @@ const Footer = () => {
               >
                 Cookie Policy
               </Link>
+              <Link
+                href="/terms"
+                className="block text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Website Terms
+              </Link>
+              <Link
+                href="/dpa"
+                className="block text-muted-foreground hover:text-foreground transition-colors"
+              >
+                DPA
+              </Link>
+              <Link
+                href="/sub-processors"
+                className="block text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Sub-processors
+              </Link>
             </div>
             <div className="space-y-2">
               <p className="font-bold text-foreground text-xs uppercase tracking-wider">
                 Contact
               </p>
               <p className="text-muted-foreground">admin@schoolgle.co.uk</p>
-              <p className="text-muted-foreground">dpo@schoolgle.co.uk</p>
+              <p className="text-muted-foreground">privacy@schoolgle.co.uk</p>
             </div>
           </div>
         </div>
@@ -71,7 +118,7 @@ const Footer = () => {
         <div className="mt-10 pt-6 border-t border-border text-xs text-muted-foreground/60">
           <p>
             Schoolgle Limited 2025. All rights reserved. Registered in England
-            &amp; Wales. Company No. 16776489. ICO Registration Pending.
+            &amp; Wales. Company No. 16776489. ICO Registration ZC103199.
           </p>
         </div>
       </div>

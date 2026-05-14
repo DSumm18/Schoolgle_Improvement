@@ -513,6 +513,28 @@ export interface GetOfstedReadinessResponse {
     latestAssessmentPeriod: string | null;
     latestAcademicYearStart: number | null;
   };
+  cohortGapEvidence?: {
+    source: string;
+    caveat: string;
+    latestYear: number | null;
+    organizationCount: number;
+    comparisons: Array<{
+      organizationId: string;
+      schoolName: string;
+      key: "fsm" | "send" | "eal";
+      groupLabel: string;
+      comparatorLabel: string;
+      groupCount: number;
+      comparatorCount: number;
+      combinedGapPp: number | null;
+      confidence: "strong" | "limited" | "unavailable";
+      narrative: string;
+      ofstedArea: "Quality of Education" | "Leadership and Management";
+      academicYearStart: number | null;
+      yearGroupLabel: string;
+      assessmentPeriod: string | null;
+    }>;
+  };
   snapshots?: OfstedReadinessSnapshot[];
   trends?: {
     score_change: number;

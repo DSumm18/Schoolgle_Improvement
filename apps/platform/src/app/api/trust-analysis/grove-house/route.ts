@@ -1,9 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { createHmac } from 'crypto';
 import { protectedRoute, apiSuccess, apiError } from '@/lib/api-utils';
 import { buildUnifiedPupilEvidenceTimeline, type TeacherEvidenceEvent } from '@/lib/assessment-intelligence/evidence-timeline';
 import { buildAssessmentIntelligenceReportingSummary } from '@/lib/assessment-intelligence/reporting';
 import { createServiceRoleClient } from '@/lib/supabase-server';
+import { buildCohortGapLens } from '@/lib/trust-assessor/cohort-gap-lens';
+import { resolveRequestedTrustAnalysisOrganization } from '@/lib/trust-analysis/organization-access';
 
 // Generate a friendly pseudonym from a hash — deterministic so same hash = same name
 const COLOURS = ['Red', 'Blue', 'Green', 'Gold', 'Silver', 'Amber', 'Coral', 'Jade', 'Rose', 'Sage', 'Teal', 'Plum', 'Ruby', 'Onyx', 'Fern', 'Dove', 'Wren', 'Lark', 'Clay', 'Dusk'];
@@ -72,14 +74,24 @@ function demographicsFromAssessments(records: AssessmentRecord[], hash: string):
 /**
  * GET /api/trust-analysis/grove-house
  * Authenticated route — returns per-pupil aggregated analytics from CTF assessment data.
- * Scoped to the logged-in user's organization.
+ * Scoped to the requested school organization when the caller has access through
+ * their current organization tree. The route name is legacy; the implementation
+ * is generic for any school with per-pupil assessment data.
  * All data is pseudonymised — no PII returned.
  */
-export const GET = protectedRoute(async (auth, _req: NextRequest) => {
+export const GET = protectedRoute(async (auth, req: NextRequest) => {
   try {
     const supabase = createServiceRoleClient();
-    // Use the authenticated user's organization, not a hardcoded ID
-    const ORG_ID = auth.organizationId;
+    const access = await resolveRequestedTrustAnalysisOrganization(
+      supabase,
+      auth.organizationId,
+      req.nextUrl.searchParams.get('organizationId'),
+    );
+    if (!access.allowed || !access.organizationId) {
+      return apiError('You do not have access to this school assessment data', 403);
+    }
+
+    const ORG_ID = access.organizationId;
 
     // Paginated fetch — override default 1000-row Supabase limit
     let allRecords: Record<string, unknown>[] = [];
@@ -109,7 +121,7 @@ export const GET = protectedRoute(async (auth, _req: NextRequest) => {
 
     const { data: pupilProfiles, error: pupilProfilesError } = await supabase
       .from('ls_pupils')
-      .select('pupil_ref, gender, has_ehcp, has_send_support, is_eal, is_pupil_premium, fsm_eligible, attainment_reading, attainment_writing, attainment_maths')
+      .select('pupil_ref, gender, has_ehcp, has_send_support, is_eal, is_pupil_premium, attainment_reading, attainment_writing, attainment_maths')
       .eq('organization_id', ORG_ID)
       .limit(5000);
     if (pupilProfilesError) {
@@ -173,7 +185,7 @@ export const GET = protectedRoute(async (auth, _req: NextRequest) => {
       };
     };
     const currentProfileDisaggregation = {
-      source: 'ls_pupils current profile fields: attainment_reading, attainment_writing, attainment_maths, has_send_support, has_ehcp, is_pupil_premium, fsm_eligible, is_eal',
+      source: 'ls_pupils current profile fields: attainment_reading, attainment_writing, attainment_maths, has_send_support, has_ehcp, is_pupil_premium, is_eal',
       caveat: 'This is the current Schoolgle pupil-profile layer. It complements, rather than replaces, the pseudonymised assessment import.',
       groups: Object.fromEntries(
         Object.entries(profileGroups).map(([key, pupils]) => [key, profileCombined(pupils)]),
@@ -201,7 +213,6 @@ export const GET = protectedRoute(async (auth, _req: NextRequest) => {
       teacherEvents: (teacherEventRows ?? []) as TeacherEvidenceEvent[],
       getDemographics,
       pseudonymFromHash,
-      maxPupils: 50,
     });
 
     // ─── 1. EYFS GLD Trend ───────────────────────────────────────────
@@ -488,8 +499,7 @@ export const GET = protectedRoute(async (auth, _req: NextRequest) => {
       journey: { year: number; yearGroup: number; subject: string; level: string }[];
     }[] = [];
 
-    for (const [hash, info] of pupilYears.entries()) {
-      if (info.years.length < 2) continue;
+    for (const [hash] of pupilYears.entries()) {
       const pupilRecords = records.filter(r => r.pupil_hash === hash);
       const journey = pupilRecords
         .filter(r => ['reading', 'writing', 'maths', 'phonics', 'literacy'].includes(r.subject as string))
@@ -571,12 +581,26 @@ export const GET = protectedRoute(async (auth, _req: NextRequest) => {
     const sendHashes = latestPupilHashes.filter(h => getDemographics(h).isSend);
     const ealHashes = latestPupilHashes.filter(h => getDemographics(h).isEal);
 
+    const cohortGapLens = buildCohortGapLens({
+      records: records.map((record) => ({
+        pupilHash: record.pupil_hash as string,
+        subject: record.subject as string,
+        attainmentLevel: record.attainment_level as string | null,
+        academicYearStart: record.academic_year_start as number,
+        yearGroup: record.year_group as number | null,
+        assessmentPeriod: record.assessment_period as string | null,
+      })),
+      getDemographics,
+      source: 'pupil_assessments_pseudo selected complete RWM cohort enriched from ls_pupils by HMAC-SHA256(pupil_ref, organization_id)',
+    });
+
     const demographicDisaggregation = {
       source: 'pupil_assessments_pseudo enriched from ls_pupils by HMAC-SHA256(pupil_ref, organization_id) where the assessment import has blank characteristic flags',
       enrichmentCoverage: {
         assessmentPupils: latestPupilHashes.length,
         matchedToCurrentProfile: latestPupilHashes.filter((hash) => demographicsByHash.has(hash)).length,
       },
+      cohortGapLens,
       all: { count: latestPupilHashes.length, attainment: computeAttainment(latestPupilHashes) },
       withoutFsm: { removed: fsmHashes.length, remaining: latestPupilHashes.length - fsmHashes.length, attainment: computeAttainment(latestPupilHashes.filter(h => !fsmHashes.includes(h))) },
       withoutSend: { removed: sendHashes.length, remaining: latestPupilHashes.length - sendHashes.length, attainment: computeAttainment(latestPupilHashes.filter(h => !sendHashes.includes(h))) },
@@ -690,12 +714,17 @@ export const GET = protectedRoute(async (auth, _req: NextRequest) => {
         yearsSpan: yearsSpan.map(y => y),
         trackablePupils: trackablePupilsCount,
       },
+      privacy: {
+        pupilIdentifiers: 'deterministic_aliases_from_pupil_hash',
+        piiReturned: false,
+        note: 'Real pupil names and raw MIS identifiers are not returned by this route.',
+      },
       eyfsGld,
       eyfsAreas,
       ks1Data,
       ks1Movement,
       phonicsData,
-      cohortJourneys: cohortJourneys.slice(0, 50),
+      cohortJourneys,
       spotlightPupil,
       spreadsheetComparison,
       cohortTracking,

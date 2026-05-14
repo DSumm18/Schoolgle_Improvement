@@ -28,7 +28,7 @@ export function classUploadExcelTemplate() {
   const { descriptions, fields, examples } = getClassUploadTemplateRows();
   return buildStyledTemplateExcelHtml({
     title: "Schoolgle Classes Upload Template",
-    guidance: "Row 1 explains the columns. Row 2 is the exact import header. Start real class data on row 3.",
+    guidance: "Rows 1-3 are guidance, row 4 explains the columns, row 5 is the exact import header. Start real class data on row 6.",
     tip: "Tip: upload staff first so teacher_email, teacher_employee_id, ta_email and ta_employee_id can link staff to classes.",
     descriptions,
     headers: fields,
@@ -75,19 +75,7 @@ export function parseClassUploadCsv(csvText: string) {
   if (lines.length < 2) return { classes: [] as ClassUploadRow[], errors: ["CSV needs a header row and at least one class row."] };
 
   const required = ["year_group", "class_name"];
-  let headerIndex = 0;
-  let headers = splitCsvLine(lines[headerIndex]).map(normaliseHeader);
-  let missing = required.filter((field) => !headers.includes(field));
-
-  if (missing.length > 0 && lines.length > 2) {
-    const secondRowHeaders = splitCsvLine(lines[1]).map(normaliseHeader);
-    const secondRowMissing = required.filter((field) => !secondRowHeaders.includes(field));
-    if (secondRowMissing.length === 0) {
-      headerIndex = 1;
-      headers = secondRowHeaders;
-      missing = [];
-    }
-  }
+  const { headers, headerIndex, missing } = findHeader(lines, required);
 
   if (missing.length > 0) return { classes: [] as ClassUploadRow[], errors: [`Missing required columns: ${missing.join(", ")}`] };
 
@@ -144,6 +132,17 @@ function normaliseEmail(value: string | null | undefined) {
 
 function normaliseHeader(header: string) {
   return header.toLowerCase().trim().replace(/\*/g, "").replace(/[\s-]+/g, "_");
+}
+
+function findHeader(lines: string[], required: string[]) {
+  for (let index = 0; index < Math.min(lines.length, 8); index += 1) {
+    const headers = splitCsvLine(lines[index]).map(normaliseHeader);
+    const missing = required.filter((field) => !headers.includes(field));
+    if (missing.length === 0) return { headers, headerIndex: index, missing };
+  }
+
+  const headers = splitCsvLine(lines[0]).map(normaliseHeader);
+  return { headers, headerIndex: 0, missing: required.filter((field) => !headers.includes(field)) };
 }
 
 function toCsvRow(values: string[]) {

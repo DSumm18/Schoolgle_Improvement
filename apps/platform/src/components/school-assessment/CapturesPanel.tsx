@@ -30,6 +30,7 @@ export interface CapturesPanelProps {
   schoolName?: string;
   authHeaders: HeadersInit;
   compact?: boolean;  // when true, render as a horizontal strip; when false, full panel
+  emptyStateNote?: string;
 }
 
 function fmtDate(iso: string): string {
@@ -42,7 +43,7 @@ function todayISO(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-export function CapturesPanel({ organizationId, schoolName, authHeaders, compact = false }: CapturesPanelProps) {
+export function CapturesPanel({ organizationId, schoolName, authHeaders, compact = false, emptyStateNote }: CapturesPanelProps) {
   const [captures, setCaptures] = useState<Capture[]>([]);
   const [loading, setLoading] = useState(true);
   const [openCaptureId, setOpenCaptureId] = useState<string | null>(null);
@@ -89,6 +90,9 @@ export function CapturesPanel({ organizationId, schoolName, authHeaders, compact
           <div className="px-5 py-6 text-center text-sm text-gray-500">
             No captures yet. Click <strong>New capture</strong> to add your school&apos;s first snapshot.
             You can backdate captures to load historical data.
+            {emptyStateNote && (
+              <div className="mt-2 text-xs text-gray-400">{emptyStateNote}</div>
+            )}
           </div>
         )}
 

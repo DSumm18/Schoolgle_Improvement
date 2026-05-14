@@ -365,9 +365,42 @@ function KpiCard({
   );
 }
 
+export function normalizeKpiDashboardInputs(
+  laBenchmarks: KpiDashboardProps["laBenchmarks"],
+  schoolData: KpiDashboardProps["schoolData"],
+) {
+  return {
+    laBenchmarks: {
+      ...laBenchmarks,
+      la_name: laBenchmarks.la_name ?? "local authority",
+      la_code: laBenchmarks.la_code ?? "",
+      school_count: laBenchmarks.school_count ?? 0,
+      ks2_combined: Array.isArray(laBenchmarks.ks2_combined) ? laBenchmarks.ks2_combined : [],
+      ks2_reading: Array.isArray(laBenchmarks.ks2_reading) ? laBenchmarks.ks2_reading : [],
+      ks2_writing: Array.isArray(laBenchmarks.ks2_writing) ? laBenchmarks.ks2_writing : [],
+      ks2_maths: Array.isArray(laBenchmarks.ks2_maths) ? laBenchmarks.ks2_maths : [],
+      disadvantaged_gap: Array.isArray(laBenchmarks.disadvantaged_gap) ? laBenchmarks.disadvantaged_gap : [],
+      attendance: Array.isArray(laBenchmarks.attendance) ? laBenchmarks.attendance : [],
+      persistent_absence: Array.isArray(laBenchmarks.persistent_absence) ? laBenchmarks.persistent_absence : [],
+      three_year_trend: laBenchmarks.three_year_trend ?? null,
+    },
+    schoolData: {
+      ...schoolData,
+      ks2_combined: Array.isArray(schoolData.ks2_combined) ? schoolData.ks2_combined : [],
+      ks2_reading: Array.isArray(schoolData.ks2_reading) ? schoolData.ks2_reading : [],
+      ks2_writing: Array.isArray(schoolData.ks2_writing) ? schoolData.ks2_writing : [],
+      ks2_maths: Array.isArray(schoolData.ks2_maths) ? schoolData.ks2_maths : [],
+      disadvantaged_gap: Array.isArray(schoolData.disadvantaged_gap) ? schoolData.disadvantaged_gap : [],
+      attendance: Array.isArray(schoolData.attendance) ? schoolData.attendance : [],
+      persistent_absence: Array.isArray(schoolData.persistent_absence) ? schoolData.persistent_absence : [],
+    },
+  };
+}
+
 // Main Dashboard Component
 export function KpiDashboard({ laBenchmarks, demographicCohort, schoolData, selectedSchoolName }: KpiDashboardProps) {
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+  ({ laBenchmarks, schoolData } = normalizeKpiDashboardInputs(laBenchmarks, schoolData));
 
   const toggleCard = (id: string) => {
     setExpandedCards((prev) => {
