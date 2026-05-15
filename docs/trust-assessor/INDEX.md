@@ -1,16 +1,22 @@
 # Trust Assessor Documentation
 
-**Last Updated:** 2026-04-24
+**Last Updated:** 2026-05-15
 
 ## Quick Links
 
 | Document | Purpose |
 |----------|---------|
 | [TRUST_ASSESSOR_KNOWLEDGE_BASE.md](../TRUST_ASSESSOR_KNOWLEDGE_BASE.md) | **START HERE** — Product knowledge base, single source of truth |
+| [HANDOVER_2026-05-15_LIVE_DEPLOYMENT_AND_DATA_INTEGRITY.md](HANDOVER_2026-05-15_LIVE_DEPLOYMENT_AND_DATA_INTEGRITY.md) | **LATEST HANDOVER** - live deployment, Alex access, data-integrity rules |
 | [HANDOVER_KPI_DASHBOARD.md](HANDOVER_KPI_DASHBOARD.md) | KPI Dashboard handover (April 2026) |
 | [PROMPT_CONTINUE_KPI_DASHBOARD.md](PROMPT_CONTINUE_KPI_DASHBOARD.md) | Agent prompt to continue KPI work |
 
 ## Recent Changes
+
+### 2026-05-15: Live Deployment and Data Integrity Handover
+- Deployed `c84c0cf5` to production and verified the live Vercel deployment is ready.
+- Aligned Alex Summerscales access so Alex accounts see PAYMAT/Pennine Academies Yorkshire and its schools only.
+- Locked a stronger rule: no artificial pupil/evidence caps in calculations, no hidden filters, and every metric must show source/scope/date.
 
 ### 2026-04-24: KPI Dashboard Integration
 - Created `KpiDashboard` component with 6 KPI cards

@@ -1,6 +1,6 @@
 # Trust Assessor data dictionary
 
-Last reviewed: 14 May 2026
+Last reviewed: 15 May 2026
 
 This document explains what each Trust Assessor layer is using, where the data comes from, what it populates, and what a school/trust needs to provide to unlock the richer analysis. It exists because Trust Assessor must be demoable and auditable: every number needs a labelled source, and no school should be judged from hidden, hard-coded, or mixed-year assumptions.
 
@@ -13,6 +13,22 @@ Trust Assessor has three distinct lenses:
 3. **Per-pupil MIS/CTF lens** — granular pupil-level journey and demographic analysis. This is the strongest layer for explaining gaps, cohorts and Ofsted readiness, but only appears when the school has uploaded/connected pupil-level data.
 
 These lenses should be shown together, but not blended silently. A public 2024/25 KS2 value, a 2025/26 mid-year spreadsheet value, and a pupil-level CTF/MIS value are different evidence types.
+
+## Non-negotiable data integrity rule
+
+Do not cap, suppress, sample, or otherwise limit pupil records or evidence records in a way that changes headline counts, calculations, charts, or analysis.
+
+Display limits are allowed only for usability, for example pagination, virtualised tables, or collapsed sections. If a view only renders part of a dataset it must still calculate from the full validated source and clearly say what is being shown, e.g. "showing 50 of 473 pupils".
+
+If counts differ across the product, explain the source and scope difference instead of forcing them to match:
+
+- DfE census roll is not the same as a school-submitted assessment capture count.
+- A trust spreadsheet cohort count is not the same as the current pseudonymised pupil profile layer.
+- Evidence points are not pupils.
+- Pupil records with usable assessment evidence are not necessarily the full school roll.
+
+Earlier prototype display caps were introduced to keep screens responsive/readable during development. They must not be treated as product logic. The product must show the data as it is, with labels and caveats.
+
 
 ## Confirmed PAYMAT data currently stored
 

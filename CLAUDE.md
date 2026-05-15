@@ -21,6 +21,7 @@ Before working on connectors, Ofsted Readiness, SIAMS, Policy Manager, School Im
 - `docs/CROSS_MODULE_CONNECTION_MATRIX.md` — cross-module dependencies, especially documents, tasks, Ed AI and evidence flows.
 - `docs/modules/ofsted-readiness/OFSTED_ECOSYSTEM_LOOP_SPEC.md` — Ofsted Readiness lifecycle: scans create findings, findings create tasks, tasks verify back to evidence.
 - `docs/superpowers/plans/2026-05-01-ofsted-readiness-intelligence-loop.md` — current Ofsted/Trust Assessor integration direction.
+- `docs/trust-assessor/HANDOVER_2026-05-15_LIVE_DEPLOYMENT_AND_DATA_INTEGRITY.md` - latest live deployment, Alex access and Trust Assessor data-integrity handover.
 - `apps/platform/src/lib/schoolgle-connector.ts` — executable connector folder/app scope map used by the app.
 
 Key product memory:
@@ -32,6 +33,7 @@ Key product memory:
 - `00 Inbox - To Sort` is a triage drop-zone; Schoolgle may suggest filing actions, but should not silently move/delete school files.
 - `_Archive - Do Not Scan` folders are retained for audit/manual lookup but excluded from normal readiness and compliance scoring.
 - Trust Assessor values must be explicit, validated and labelled. Combined RWM+ means pupils meeting expected+ in Reading, Writing AND Maths together, not an average.
+- Trust Assessor must never use artificial caps, hidden sampling, or display limits for totals/calculations/analysis. UI pagination or virtualisation is fine, but calculations must use the full validated source dataset and labels must explain source, date and scope. If DfE, spreadsheet, pupil profile and evidence-event counts differ, explain the lineage rather than forcing numbers to match.
 
 ---
 

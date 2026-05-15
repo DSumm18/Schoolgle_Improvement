@@ -2,7 +2,7 @@
 
 **Single source of truth for Trust Assessor. Any Claude session / developer working on this product must start here.**
 
-Last updated: 2026-04-24 (KPI Dashboard added)
+Last updated: 2026-05-15 (live deployment and data-integrity handover added)
 Product lead: David Summerscales
 Context: Schoolgle → School Improvement module → Trust Assessor
 
@@ -269,6 +269,8 @@ Hover = status + last sync. Locked = grey with "unlock with" tooltip.
 8. JSONB filters: use `.contains('metadata', {key:val})` — NOT `.eq()` (broken)
 9. Always pass `organizationId` on `/api/events` GET
 10. Use dev auth test user for screenshots; don't ask David to log in
+11. Do not use artificial caps/limits/sampling for calculations, counts or analysis. UI pagination/virtualisation is fine, but totals must use the full validated source dataset and label the source/scope/date.
+12. If pupil counts differ between DfE, trust spreadsheets, `ls_pupils`, `pupil_assessments_pseudo`, and evidence events, explain the lineage rather than hiding rows or forcing the numbers to match.
 
 ---
 
@@ -278,6 +280,7 @@ Hover = status + last sync. Locked = grey with "unlock with" tooltip.
 - **2026-04-18 (morning):** Full DfE audit — 21 unused tables; DfE doesn't publish phonics/MTC/KS1 per school confirmed
 - **2026-04-18 (afternoon):** 5-tab layout + track-changes editing delivered; customer sensitivity principle locked in
 - **2026-04-18 (evening):** GIAS history imported across 52k schools; Grove House phonics surfaced; Cohort Passport wired
+- **2026-05-15:** Production deployment confirmed live. Alex Summerscales access aligned to PAYMAT-only. Data-integrity rule strengthened: no hidden caps, no display-limit calculations, and all figures must be source/scope/date labelled. Latest handover: `docs/trust-assessor/HANDOVER_2026-05-15_LIVE_DEPLOYMENT_AND_DATA_INTEGRITY.md`.
 
 ---
 
