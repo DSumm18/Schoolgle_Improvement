@@ -3,6 +3,8 @@
 import React from "react";
 import Link from "next/link";
 
+import { schoolgleCompanyDetails } from "@/lib/company-details";
+
 const Footer = () => {
   return (
     <footer className="py-12 border-t border-border">
@@ -109,16 +111,26 @@ const Footer = () => {
               <p className="font-bold text-foreground text-xs uppercase tracking-wider">
                 Contact
               </p>
-              <p className="text-muted-foreground">admin@schoolgle.co.uk</p>
-              <p className="text-muted-foreground">privacy@schoolgle.co.uk</p>
+              <p className="text-muted-foreground">
+                {schoolgleCompanyDetails.adminEmail}
+              </p>
+              <p className="text-muted-foreground">
+                {schoolgleCompanyDetails.privacyEmail}
+              </p>
+              <p className="text-muted-foreground">
+                {schoolgleCompanyDetails.dpoEmail}
+              </p>
             </div>
           </div>
         </div>
 
         <div className="mt-10 pt-6 border-t border-border text-xs text-muted-foreground/60">
           <p>
-            Schoolgle Limited 2025. All rights reserved. Registered in England
-            &amp; Wales. Company No. 16776489. ICO Registration ZC103199.
+            {schoolgleCompanyDetails.legalName}. All rights reserved. Registered
+            in {schoolgleCompanyDetails.registeredJurisdiction}. Company No.{" "}
+            {schoolgleCompanyDetails.companyNumber}. Registered office:{" "}
+            {schoolgleCompanyDetails.registeredOffice}. ICO Registration{" "}
+            {schoolgleCompanyDetails.icoRegistration}.
           </p>
         </div>
       </div>

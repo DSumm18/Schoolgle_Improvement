@@ -1,6 +1,8 @@
 import { Metadata } from "next";
 import Link from "next/link";
 
+import { schoolgleCompanyDetails } from "@/lib/company-details";
+
 export const metadata: Metadata = {
   title: "Privacy Policy | Schoolgle",
   description:
@@ -34,7 +36,7 @@ export default function PrivacyPolicyPage() {
             Privacy Policy
           </h1>
           <p className="text-muted-foreground">
-            Last updated: March 2026 &middot; Version 2.0
+            Last updated: May 2026 &middot; Version 2.1
           </p>
         </div>
 
@@ -181,15 +183,27 @@ export default function PrivacyPolicyPage() {
         <p className="text-muted-foreground leading-relaxed mb-4">
           Our privacy lead can be contacted at{" "}
           <a
-            href="mailto:privacy@schoolgle.co.uk"
+            href={`mailto:${schoolgleCompanyDetails.privacyEmail}`}
             className="text-primary underline"
           >
-            privacy@schoolgle.co.uk
+            {schoolgleCompanyDetails.privacyEmail}
+          </a>
+          . Data-protection queries may also be sent to{" "}
+          <a
+            href={`mailto:${schoolgleCompanyDetails.dpoEmail}`}
+            className="text-primary underline"
+          >
+            {schoolgleCompanyDetails.dpoEmail}
           </a>
           .
         </p>
+        <p className="text-muted-foreground leading-relaxed mb-2">
+          Company number: {schoolgleCompanyDetails.companyNumber}. Registered in{" "}
+          {schoolgleCompanyDetails.registeredJurisdiction}. Registered office:{" "}
+          {schoolgleCompanyDetails.registeredOffice}.
+        </p>
         <p className="text-muted-foreground leading-relaxed">
-          ICO Registration: ZC103199
+          ICO Registration: {schoolgleCompanyDetails.icoRegistration}
         </p>
 
         {/* 2. Data we collect */}
@@ -260,6 +274,20 @@ export default function PrivacyPolicyPage() {
                   Compliance tracking, maintenance scheduling
                 </td>
               </tr>
+              <tr className="border-b border-border">
+                <td className="p-3 font-medium text-foreground">
+                  Product-scoped pupil data
+                </td>
+                <td className="p-3">
+                  Pupil names, references, year/class, characteristics and
+                  preferences where required by a subscribed product such as
+                  Class Builder
+                </td>
+                <td className="p-3">
+                  Product delivery, school-controlled analysis and staff review
+                  of outputs
+                </td>
+              </tr>
               <tr>
                 <td className="p-3 font-medium text-foreground">Usage data</td>
                 <td className="p-3">
@@ -294,7 +322,9 @@ export default function PrivacyPolicyPage() {
           <li>
             <strong className="text-foreground">
               Medical or health records
-            </strong>
+            </strong>{" "}
+            &mdash; unless the subscribed product schedule explicitly requires
+            them and the school has approved that processing
           </li>
           <li>
             <strong className="text-foreground">Financial data</strong> &mdash;
@@ -306,8 +336,9 @@ export default function PrivacyPolicyPage() {
           </li>
           <li>
             <strong className="text-foreground">Special category data</strong>{" "}
-            &mdash; unless incidentally present in documents uploaded by the
-            school, in which case Guardian Mode redacts it before AI processing
+            &mdash; unless a product schedule or DPIA covers the purpose, or it
+            is incidentally present in school-controlled documents or evidence
+            uploaded by the school
           </li>
         </ul>
 
@@ -407,8 +438,9 @@ export default function PrivacyPolicyPage() {
             </li>
             <li>
               For US-hosted providers, we have Standard Contractual Clauses
-              (SCCs) or UK International Data Transfer Agreements (IDTAs) in
-              place
+              (SCCs), UK International Data Transfer Agreement/Addendum terms or
+              another appropriate transfer safeguard documented in the
+              applicable sub-processor/DPA review
             </li>
             <li>
               Guardian Mode automatically detects and redacts personally
@@ -454,7 +486,10 @@ export default function PrivacyPolicyPage() {
               </tr>
               <tr className="border-b border-border">
                 <td className="p-3">Analytics cookies</td>
-                <td className="p-3">Article 6(1)(a) &mdash; consent</td>
+                <td className="p-3">
+                  Article 6(1)(a) &mdash; consent, if optional analytics are
+                  introduced in future
+                </td>
               </tr>
               <tr>
                 <td className="p-3">Responding to legal obligations</td>
@@ -584,8 +619,9 @@ export default function PrivacyPolicyPage() {
           </li>
         </ul>
         <p className="text-muted-foreground leading-relaxed">
-          We conduct Transfer Impact Assessments (TIAs) for all US-based
-          sub-processors and review them annually.
+          We conduct Transfer Impact Assessments (TIAs) for US-based
+          sub-processors where required and review transfer safeguards when
+          providers, regions or processing purposes change.
         </p>
 
         {/* 8. Data retention */}
@@ -633,9 +669,12 @@ export default function PrivacyPolicyPage() {
           </table>
         </div>
         <p className="text-muted-foreground leading-relaxed">
-          When a school requests account deletion, all personal data is removed
-          within 30 days. Anonymised, aggregated analytics data may be retained
-          indefinitely for service improvement.
+          When a school requests account deletion or contract-end deletion,
+          active personal data is normally removed within 30 days unless a
+          longer legal, audit, support or contractual retention period applies.
+          Backups expire according to the backup retention period above.
+          Anonymised, aggregated analytics or operational metrics may be
+          retained indefinitely for service improvement.
         </p>
 
         {/* 9. Your rights */}
@@ -678,11 +717,11 @@ export default function PrivacyPolicyPage() {
           <p className="text-sm text-muted-foreground">
             Contact our privacy lead at{" "}
             <a
-              href="mailto:privacy@schoolgle.co.uk"
-              className="text-primary underline"
-            >
-              privacy@schoolgle.co.uk
-            </a>{" "}
+            href={`mailto:${schoolgleCompanyDetails.privacyEmail}`}
+            className="text-primary underline"
+          >
+            {schoolgleCompanyDetails.privacyEmail}
+          </a>{" "}
             with your request. We will respond within one month. If your request
             is complex, we may extend this by a further two months, and we will
             let you know within the first month.
@@ -702,11 +741,14 @@ export default function PrivacyPolicyPage() {
           platform is not intended for, or directed at, children under 18.
         </p>
         <p className="text-muted-foreground leading-relaxed">
-          The Compliance module may store limited consent records relating to
-          children (e.g., photography consent, trip consent) as entered by
-          school staff. In these cases, the school remains the Data Controller
-          and is responsible for obtaining appropriate parental consent under
-          Article 8 of UK GDPR.
+          Some subscribed products may process children&apos;s data where the
+          school chooses to use them. For example, Class Builder may store named
+          pupil records, year/class, characteristics and preference/session data
+          so authorised school staff can review proposed class groupings. Other
+          modules may contain pupil references incidentally in evidence, tickets
+          or uploaded documents. In these cases, the school remains the Data
+          Controller and Schoolgle processes the data under the DPA, product
+          schedule and any relevant DPIA/product annex.
         </p>
 
         {/* 11. Cookies */}
@@ -722,8 +764,9 @@ export default function PrivacyPolicyPage() {
           </li>
           <li>
             <strong className="text-foreground">Analytics cookies</strong>{" "}
-            &mdash; only set with your explicit consent via our cookie banner.
-            Used for anonymous usage statistics to improve the service.
+            &mdash; not currently used on the marketing website. If optional
+            analytics cookies are introduced later, we will update the Cookie
+            Policy and request consent before setting them.
           </li>
         </ul>
         <p className="text-muted-foreground leading-relaxed">
@@ -740,10 +783,10 @@ export default function PrivacyPolicyPage() {
           If you have a concern about how we handle personal data, please
           contact our privacy lead first at{" "}
           <a
-            href="mailto:privacy@schoolgle.co.uk"
+            href={`mailto:${schoolgleCompanyDetails.privacyEmail}`}
             className="text-primary underline"
           >
-            privacy@schoolgle.co.uk
+            {schoolgleCompanyDetails.privacyEmail}
           </a>
           . We take all complaints seriously and will aim to resolve them
           promptly.
@@ -794,10 +837,18 @@ export default function PrivacyPolicyPage() {
             <br />
             Email:{" "}
             <a
-              href="mailto:privacy@schoolgle.co.uk"
+              href={`mailto:${schoolgleCompanyDetails.privacyEmail}`}
               className="text-primary underline"
             >
-              privacy@schoolgle.co.uk
+              {schoolgleCompanyDetails.privacyEmail}
+            </a>
+            <br />
+            DPO/data protection:{" "}
+            <a
+              href={`mailto:${schoolgleCompanyDetails.dpoEmail}`}
+              className="text-primary underline"
+            >
+              {schoolgleCompanyDetails.dpoEmail}
             </a>
             <br />
             Website:{" "}
@@ -814,7 +865,7 @@ export default function PrivacyPolicyPage() {
 
         {/* Footer note */}
         <p className="text-xs text-muted-foreground mt-12 pt-8 border-t border-border">
-          This policy was last reviewed in March 2026. We will review it at
+          This policy was last reviewed in May 2026. We will review it at
           least annually or when there are significant changes to our processing
           activities. Any material changes will be communicated to account
           holders by email.

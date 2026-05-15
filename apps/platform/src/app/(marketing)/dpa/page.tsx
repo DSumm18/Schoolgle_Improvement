@@ -5,6 +5,7 @@ import {
   LegalPageShell,
   LegalSection,
 } from "@/components/website/LegalPage";
+import { schoolgleCompanyDetails } from "@/lib/company-details";
 
 export const metadata: Metadata = {
   title: "Data Processing Agreement | Schoolgle",
@@ -159,8 +160,9 @@ export default function DpaPage() {
         <p>
           The public template is being kept under version control and should be
           reviewed for each school or trust before signature. To request the
-          current DPA pack, contact admin@schoolgle.co.uk or
-          privacy@schoolgle.co.uk.
+          current DPA pack, contact {schoolgleCompanyDetails.adminEmail},{" "}
+          {schoolgleCompanyDetails.privacyEmail} or{" "}
+          {schoolgleCompanyDetails.dpoEmail}.
         </p>
         <p>
           If your trust or local authority has its own processor terms, send
