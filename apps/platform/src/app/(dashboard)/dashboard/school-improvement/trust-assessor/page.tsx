@@ -230,6 +230,27 @@ interface QualityFlag {
   severity: "warning" | "error";
 }
 
+type CapturePeriod = "autumn_term" | "mid_year" | "end_of_year" | "summer_term";
+
+type SchoolAssessmentCaptureRow = {
+  id: string;
+  capture_name?: string | null;
+  capture_period?: string | null;
+  academic_year?: string | null;
+  capture_date?: string | null;
+  status?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  locked_at?: string | null;
+};
+
+type SchoolAssessmentCellRow = {
+  year_group: string;
+  section: string;
+  metric: string;
+  value: number | null;
+};
+
 interface DfEData {
   ks2Results: KS2Result[];
   census: CensusRecord[];
@@ -282,6 +303,87 @@ function scopeParsedSpreadsheet(
     data,
     totalDataPoints: countSpreadsheetDataPoints(data),
     qualityFlags: parsed.qualityFlags.filter((flag) => allowed.has(flag.school)),
+  };
+}
+
+function normaliseAssessmentYearGroup(value: string): YearGroup | null {
+  const normalised = value.trim().toLowerCase().replace(/[_-]+/g, " ");
+  if (["eyfs", "reception", "rec", "early years"].includes(normalised)) return "EYFS";
+  const match = normalised.match(/^y(?:ear)?\s*([1-6])$/);
+  if (match) return `Year ${match[1]}` as YearGroup;
+  if (YEAR_GROUPS.includes(value as YearGroup)) return value as YearGroup;
+  return null;
+}
+
+function inferAssessmentCapturePeriod(capture: SchoolAssessmentCaptureRow): CapturePeriod {
+  const raw = `${capture.capture_period ?? ""} ${capture.capture_name ?? ""} ${capture.capture_date ?? ""}`.toLowerCase();
+  if (raw.includes("autumn") || raw.includes("nov")) return "autumn_term";
+  if (raw.includes("summer")) return "summer_term";
+  if (raw.includes("end") || raw.includes("eoy")) return "end_of_year";
+  return "mid_year";
+}
+
+function createEmptySchoolYearData(): SchoolYearData {
+  return {
+    cohort: {
+      number_in_cohort: null,
+      number_send: null,
+      ehcp: null,
+      number_fsm: null,
+    },
+    all_pupils: {},
+    fsm6: {},
+    not_fsm6: {},
+  };
+}
+
+function buildParsedFromSchoolAssessmentCapture(
+  schoolAbbrev: string,
+  capture: SchoolAssessmentCaptureRow,
+  cells: SchoolAssessmentCellRow[],
+): ParsedSpreadsheet {
+  const data: ParsedSpreadsheet["data"] = { [schoolAbbrev]: {} };
+  const qualityFlags: QualityFlag[] = [];
+
+  for (const cell of cells) {
+    const yearGroup = normaliseAssessmentYearGroup(cell.year_group);
+    if (!yearGroup) continue;
+
+    if (!data[schoolAbbrev][yearGroup]) {
+      data[schoolAbbrev][yearGroup] = createEmptySchoolYearData();
+    }
+
+    const yearData = data[schoolAbbrev][yearGroup];
+    const value = typeof cell.value === "number" && Number.isFinite(cell.value) ? cell.value : null;
+
+    if (cell.section === "cohort" && cell.metric in yearData.cohort) {
+      yearData.cohort[cell.metric as keyof SchoolYearData["cohort"]] = value;
+      continue;
+    }
+
+    if (cell.section === "all_pupils" || cell.section === "fsm6" || cell.section === "not_fsm6") {
+      const section = yearData[cell.section] as Record<string, number | null>;
+      section[cell.metric] = value;
+      if (value !== null && value > 100) {
+        qualityFlags.push({
+          school: schoolAbbrev,
+          yearGroup,
+          field: `${cell.section}.${cell.metric}`,
+          issue: `${capture.capture_name ?? "School assessment capture"} has a percentage above 100.`,
+          severity: "error",
+        });
+      }
+    }
+  }
+
+  const yearGroups = YEAR_GROUPS.filter((yearGroup) => Boolean(data[schoolAbbrev][yearGroup]));
+
+  return {
+    schools: [schoolAbbrev],
+    yearGroups,
+    data,
+    totalDataPoints: countSpreadsheetDataPoints(data),
+    qualityFlags,
   };
 }
 
@@ -7207,7 +7309,6 @@ export default function TrustAssessorPage() {
   const [fileName, setFileName] = useState<string | null>(null);
   // Full capture map so the KS2 chart can plot Autumn + Mid-Year side-by-side.
   // Key = capture_period ('autumn_term' | 'mid_year' | 'end_of_year' | 'summer_term').
-  type CapturePeriod = 'autumn_term' | 'mid_year' | 'end_of_year' | 'summer_term';
   const [capturesByPeriod, setCapturesByPeriod] = useState<Partial<Record<CapturePeriod, CaptureSnapshot | null>>>({});
   const [currentCapturePeriod, setCurrentCapturePeriod] = useState<CapturePeriod | null>(null);
   const selfReportLabels: SelfReportLabels = useMemo(() => ({
@@ -8032,10 +8133,9 @@ export default function TrustAssessorPage() {
     })();
   }, [organizationId, accessToken, authHeaders]);
 
-  // Load persisted trust spreadsheet on mount / org change (resolves parent trust automatically server-side)
   const trustSpreadsheetLoadedRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!organizationId || !accessToken) return;
+    if (!organizationId || !accessToken || !isTrustLevel) return;
     if (trustSpreadsheetLoadedRef.current === organizationId) return;
     trustSpreadsheetLoadedRef.current = organizationId;
     setParsed(null);
@@ -8070,7 +8170,70 @@ export default function TrustAssessorPage() {
         console.warn('[trust-spreadsheet] load failed:', e);
       }
     })();
-  }, [organizationId, accessToken, authHeaders]);
+  }, [organizationId, accessToken, authHeaders, isTrustLevel]);
+
+  const schoolAssessmentCapturesLoadedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!organizationId || !accessToken || isTrustLevel || scopedSchools.length !== 1) return;
+
+    const schoolAbbrev = abbreviateSchoolName(scopedSchools[0].name);
+    const loadKey = `${organizationId}:${schoolAbbrev}`;
+    if (schoolAssessmentCapturesLoadedRef.current === loadKey) return;
+    schoolAssessmentCapturesLoadedRef.current = loadKey;
+
+    setParsed(null);
+    setFileName(null);
+    setCapturesByPeriod({});
+    setCurrentCapturePeriod(null);
+
+    (async () => {
+      try {
+        const listRes = await fetch(`/api/school-assessment/captures?organizationId=${organizationId}`, { headers: authHeaders });
+        if (!listRes.ok) return;
+
+        const captures = await listRes.json() as SchoolAssessmentCaptureRow[];
+        if (!Array.isArray(captures) || captures.length === 0) return;
+
+        const details = await Promise.all(
+          captures.map(async (capture) => {
+            const detailRes = await fetch(`/api/school-assessment/captures/${capture.id}`, { headers: authHeaders });
+            if (!detailRes.ok) return null;
+            const detail = await detailRes.json() as { capture?: SchoolAssessmentCaptureRow; cells?: SchoolAssessmentCellRow[] };
+            return {
+              capture: { ...capture, ...(detail.capture ?? {}) },
+              cells: Array.isArray(detail.cells) ? detail.cells : [],
+            };
+          }),
+        );
+
+        const nextCaptures: Partial<Record<CapturePeriod, CaptureSnapshot | null>> = {};
+        for (const detail of details) {
+          if (!detail || detail.cells.length === 0) continue;
+          const period = inferAssessmentCapturePeriod(detail.capture);
+          if (nextCaptures[period]) continue;
+          nextCaptures[period] = {
+            parsed_data: buildParsedFromSchoolAssessmentCapture(schoolAbbrev, detail.capture, detail.cells),
+            file_name: detail.capture.capture_name ?? "School assessment capture",
+            capture_name: detail.capture.capture_name ?? undefined,
+            created_at: detail.capture.capture_date ?? detail.capture.created_at ?? undefined,
+          };
+        }
+
+        const priority: CapturePeriod[] = ["mid_year", "end_of_year", "summer_term", "autumn_term"];
+        const currentPeriod = priority.find((period) => Boolean(nextCaptures[period]?.parsed_data)) ?? null;
+        setCapturesByPeriod(nextCaptures);
+        setCurrentCapturePeriod(currentPeriod);
+
+        if (currentPeriod && nextCaptures[currentPeriod]?.parsed_data) {
+          const current = nextCaptures[currentPeriod]!;
+          setParsed(current.parsed_data);
+          setFileName(current.capture_name ?? current.file_name ?? "School assessment capture");
+        }
+      } catch (e) {
+        console.warn('[school-assessment-captures] load failed:', e);
+      }
+    })();
+  }, [organizationId, accessToken, authHeaders, isTrustLevel, scopedSchools]);
 
   const handleSummaryFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

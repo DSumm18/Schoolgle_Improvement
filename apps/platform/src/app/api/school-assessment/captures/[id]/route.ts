@@ -17,7 +17,7 @@ function extractId(req: NextRequest): string | null {
 async function assertMembership(supabase: ReturnType<typeof createServiceRoleClient>, captureId: string, userId: string) {
   const { data: capture } = await supabase
     .from('school_assessment_captures')
-    .select('id, organization_id, status')
+    .select('id, organization_id, capture_name, capture_period, academic_year, capture_date, status, notes, created_at, updated_at, locked_at')
     .eq('id', captureId)
     .maybeSingle();
   if (!capture) return { capture: null, error: 'Capture not found' as const, status: 404 };

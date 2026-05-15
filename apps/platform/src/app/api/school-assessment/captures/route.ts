@@ -26,7 +26,7 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
 
   const { data, error } = await supabase
     .from('school_assessment_captures')
-    .select('id, capture_name, capture_date, status, notes, created_at, updated_at, locked_at')
+    .select('id, capture_name, capture_period, academic_year, capture_date, status, notes, created_at, updated_at, locked_at')
     .eq('organization_id', orgId)
     .order('capture_date', { ascending: false });
 
