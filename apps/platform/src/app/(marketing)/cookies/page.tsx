@@ -1,6 +1,8 @@
 import { Metadata } from "next";
 import Link from "next/link";
 
+import { schoolgleCompanyDetails } from "@/lib/company-details";
+
 export const metadata: Metadata = {
   title: "Cookie Policy | Schoolgle",
   description:
@@ -16,7 +18,7 @@ export default function CookiePolicyPage() {
           <h1 className="text-4xl font-bold tracking-tight mb-4">
             Cookie Policy
           </h1>
-          <p className="text-muted-foreground">Last updated: March 2026</p>
+          <p className="text-muted-foreground">Last updated: May 2026</p>
         </div>
 
         {/* What are cookies */}
@@ -193,10 +195,18 @@ export default function CookiePolicyPage() {
             <br />
             Email:{" "}
             <a
-              href="mailto:privacy@schoolgle.co.uk"
+              href={`mailto:${schoolgleCompanyDetails.privacyEmail}`}
               className="text-primary underline"
             >
-              privacy@schoolgle.co.uk
+              {schoolgleCompanyDetails.privacyEmail}
+            </a>
+            <br />
+            DPO/data protection:{" "}
+            <a
+              href={`mailto:${schoolgleCompanyDetails.dpoEmail}`}
+              className="text-primary underline"
+            >
+              {schoolgleCompanyDetails.dpoEmail}
             </a>
             <br />
             Website:{" "}
@@ -213,7 +223,7 @@ export default function CookiePolicyPage() {
 
         {/* Footer note */}
         <p className="text-xs text-muted-foreground mt-12 pt-8 border-t border-border">
-          This cookie policy was last reviewed in March 2026 and will be updated
+          This cookie policy was last reviewed in May 2026 and will be updated
           if our use of cookies changes.
         </p>
       </div>

@@ -126,6 +126,11 @@ export const legalPageLinks: LegalPageLink[] = [
     description: "How personal data is handled.",
   },
   {
+    href: "/data-protection",
+    label: "Data protection",
+    description: "DPO-ready summary and links to key data protection pages.",
+  },
+  {
     href: "/cookies",
     label: "Cookie policy",
     description: "What cookies are used and why.",

@@ -6,6 +6,7 @@ import {
   LegalPageShell,
   LegalSection,
 } from "@/components/website/LegalPage";
+import { schoolgleCompanyDetails } from "@/lib/company-details";
 
 export const metadata: Metadata = {
   title: "Trust Centre | Schoolgle",
@@ -22,9 +23,13 @@ export default function TrustCentrePage() {
     >
       <div className="grid gap-4 md:grid-cols-2">
         <LegalCard title="Registered organisation">
-          <p>Schoolgle Limited is registered in England and Wales.</p>
-          <p>Company No. 16776489.</p>
-          <p>ICO registration: ZC103199.</p>
+          <p>
+            {schoolgleCompanyDetails.legalName} is registered in{" "}
+            {schoolgleCompanyDetails.registeredJurisdiction}.
+          </p>
+          <p>Company No. {schoolgleCompanyDetails.companyNumber}.</p>
+          <p>Registered office: {schoolgleCompanyDetails.registeredOffice}.</p>
+          <p>ICO registration: {schoolgleCompanyDetails.icoRegistration}.</p>
         </LegalCard>
         <LegalCard title="Controller and processor roles">
           <p>
