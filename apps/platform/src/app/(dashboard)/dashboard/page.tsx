@@ -6,10 +6,7 @@ import useSWR, { mutate } from "swr";
 import { useAuth } from "@/context/SupabaseAuthContext";
 import { fetcher } from "@/lib/fetchers";
 import {
-  MODULES,
   APPS,
-  MODULE_GROUPS,
-  canUserAccess,
   Role,
 } from "@/lib/modules/registry";
 import { useSubscriptionState } from "@/hooks/useSubscriptionState";
@@ -32,12 +29,10 @@ import {
   ClipboardList,
   Link as LinkIcon,
   Plus,
-  ChevronRight,
   Sun,
   Sunrise,
   Moon,
   Users,
-  LayoutGrid,
   AlertCircle,
   Sparkles,
   X,
@@ -579,19 +574,6 @@ export default function DashboardPage() {
 
   const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
   const [showEventModal, setShowEventModal] = useState(false);
-  const [setupComplete, setSetupComplete] = useState<boolean | null>(null);
-
-  // Check if basic setup is done (staff connected)
-  // If not, show a prominent Show Me card
-  const { data: staffCheck } = useSWR(
-    organizationId ? `/api/staff?organizationId=${organizationId}` : null,
-    fetcher,
-  );
-  const staffCount =
-    (staffCheck as any)?.staff?.length ||
-    (staffCheck as any)?.data?.length ||
-    0;
-  const isSetupIncomplete = staffCount === 0;
 
   const displayName =
     authDisplayName ||
@@ -637,11 +619,6 @@ export default function DashboardPage() {
     },
     {},
   );
-
-  // Get accessible modules — show all if no role set yet (new user)
-  const accessibleModules = userRole
-    ? MODULES.filter((m) => canUserAccess(m.requiredPermissions, userRole))
-    : MODULES;
 
   const currentDate = new Date().toLocaleDateString("en-GB", {
     weekday: "long",
@@ -696,38 +673,6 @@ export default function DashboardPage() {
           </p>
         </div>
       </motion.div>
-
-      {/* Show Me: Setup Card — shown when setup is incomplete */}
-      {isSetupIncomplete && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.03 }}
-        >
-          <Link href="/dashboard/show-me">
-            <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-50 dark:from-sky-950/30 dark:via-blue-950/20 dark:to-indigo-950/10 border border-sky-200 dark:border-sky-800 p-6 hover:shadow-lg hover:border-sky-300 dark:hover:border-sky-700 transition-all cursor-pointer">
-              <div className="absolute top-3 right-3">
-                <Sparkles className="w-5 h-5 text-sky-400 opacity-50" />
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-xl bg-sky-100 dark:bg-sky-900/30">
-                  <Sparkles className="w-6 h-6 text-sky-600 dark:text-sky-400" />
-                </div>
-                <div className="flex-1">
-                  <h2 className="text-lg font-bold text-sky-900 dark:text-sky-100">
-                    Show Me: Get your school set up
-                  </h2>
-                  <p className="text-sm text-sky-700 dark:text-sky-300 mt-0.5">
-                    See what data is connected, what modules are active, and
-                    what to do next.
-                  </p>
-                </div>
-                <ChevronRight className="w-5 h-5 text-sky-400 group-hover:translate-x-1 transition-transform" />
-              </div>
-            </div>
-          </Link>
-        </motion.div>
-      )}
 
       {/* My Tasks Widget */}
       <motion.div
@@ -989,89 +934,6 @@ export default function DashboardPage() {
             className="bg-card border border-border rounded-2xl overflow-hidden p-4"
           >
             <DashboardFeed className="w-full" />
-          </motion.div>
-
-          {/* My Modules */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.25 }}
-            className="bg-card border border-border rounded-2xl overflow-hidden"
-          >
-            <div className="p-5 border-b border-border flex items-center gap-2">
-              <LayoutGrid className="w-5 h-5 text-primary" />
-              <h2 className="font-bold text-lg">My Modules</h2>
-            </div>
-
-            <div className="p-3 space-y-4">
-              {MODULE_GROUPS.map((group) => {
-                const groupModules = group.moduleIds
-                  .map((id) => accessibleModules.find((m) => m.id === id))
-                  .filter(Boolean);
-
-                if (groupModules.length === 0) return null;
-
-                const colorMap: Record<string, string> = {
-                  rose: "bg-rose-500",
-                  blue: "bg-blue-500",
-                  teal: "bg-teal-500",
-                  purple: "bg-purple-500",
-                  amber: "bg-amber-500",
-                  indigo: "bg-indigo-500",
-                  gray: "bg-slate-500",
-                  sky: "bg-sky-500",
-                  violet: "bg-violet-500",
-                  emerald: "bg-emerald-500",
-                  orange: "bg-orange-500",
-                  red: "bg-red-500",
-                  pink: "bg-pink-500",
-                  cyan: "bg-cyan-500",
-                  fuchsia: "bg-fuchsia-500",
-                };
-
-                return (
-                  <div key={group.id}>
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider px-3 mb-1">
-                      {group.name}
-                    </p>
-                    <div className="space-y-0.5">
-                      {groupModules.map((module) => {
-                        if (!module) return null;
-                        const moduleApps = APPS.filter(
-                          (a) =>
-                            a.moduleId === module.id &&
-                            canUserAccess(a.requiredPermissions, userRole),
-                        );
-
-                        return (
-                          <Link
-                            key={module.id}
-                            href={`/dashboard/${module.id}`}
-                            className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-accent transition-colors group"
-                          >
-                            <div
-                              className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${colorMap[module.color] || "bg-primary"} text-white`}
-                            >
-                              <module.icon className="w-4 h-4" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-bold truncate">
-                                {module.name}
-                              </p>
-                              <p className="text-[10px] text-muted-foreground">
-                                {moduleApps.length} app
-                                {moduleApps.length !== 1 ? "s" : ""}
-                              </p>
-                            </div>
-                            <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
           </motion.div>
 
           {/* Today's Quick Stats */}

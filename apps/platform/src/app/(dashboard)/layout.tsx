@@ -70,6 +70,7 @@ function getPlanetByPath(path: string): (typeof PLANET_GROUPS)[number] | undefin
 
 // Module IDs that are hidden from pilot
 const HIDDEN_MODULE_IDS = new Set(MODULES.filter((m) => m.pilotHidden).map((m) => m.id));
+const HIDDEN_WORKSPACE_ITEM_IDS = new Set(["tasks", "calendar", "show-me"]);
 
 const TRUST_ASSESSOR_APP_ID = "trust-assessor";
 const TRUST_ASSESSOR_ROUTE = "/dashboard/school-improvement/trust-assessor";
@@ -324,7 +325,8 @@ export default function DashboardLayout({
       items: section.items
         .filter(
           (item) =>
-            !hasRole || canUserAccess(item.permissions as Role[], userRole),
+            !HIDDEN_WORKSPACE_ITEM_IDS.has(item.id) &&
+            (!hasRole || canUserAccess(item.permissions as Role[], userRole)),
         )
         .map((item) => ({
           id: item.id,

@@ -490,6 +490,7 @@ export const APPS: AppDefinition[] = [
     icon: Boxes,
     shortDescription: "Browse and launch Schoolgle mini apps.",
     requiredPermissions: ["admin", "headteacher", "slt", "teacher"],
+    pilotHidden: true,
   },
   {
     id: "document-management-home",
