@@ -132,31 +132,32 @@ export default function DashboardLayout({
   const subscriptionActive = subscription?.isActive ?? true; // default to allow-all if unknown
   const hasSubscriptionRecord = subscription?.status !== 'none' && subscription !== null;
   const explicitlyEnabledApps = APPS.filter((app) => enabledModuleSet.has(app.id));
-  const hasAppLevelRestrictions = hasSubscriptionRecord && subscriptionActive && explicitlyEnabledApps.length > 0;
-  const singleEnabledApp = explicitlyEnabledApps.length === 1 ? explicitlyEnabledApps[0] : null;
+  const explicitlyEnabledModules = MODULES.filter((module) => enabledModuleSet.has(module.id));
+  const singleEnabledApp =
+    explicitlyEnabledModules.length === 0 && explicitlyEnabledApps.length === 1
+      ? explicitlyEnabledApps[0]
+      : null;
   const isSingleAppMode = singleEnabledApp?.id === TRUST_ASSESSOR_APP_ID;
 
   const isAppEnabledBySubscription = useCallback(
     (app: (typeof APPS)[number]) => {
       if (!hasSubscriptionRecord) return true;
       if (!subscriptionActive) return false;
-      if (enabledModuleSet.has(app.id)) return true;
-      if (hasAppLevelRestrictions) return false;
-      return enabledModuleSet.has(app.moduleId);
+      return enabledModuleSet.has(app.moduleId) || enabledModuleSet.has(app.id);
     },
-    [enabledModuleSet, hasAppLevelRestrictions, hasSubscriptionRecord, subscriptionActive],
+    [enabledModuleSet, hasSubscriptionRecord, subscriptionActive],
   );
 
   const isModuleEnabledBySubscription = useCallback(
     (moduleId: string) => {
       if (!hasSubscriptionRecord) return true;
       if (!subscriptionActive) return false;
-      if (hasAppLevelRestrictions) {
-        return APPS.some((app) => app.moduleId === moduleId && enabledModuleSet.has(app.id));
-      }
-      return enabledModuleSet.has(moduleId);
+      return (
+        enabledModuleSet.has(moduleId) ||
+        APPS.some((app) => app.moduleId === moduleId && enabledModuleSet.has(app.id))
+      );
     },
-    [enabledModuleSet, hasAppLevelRestrictions, hasSubscriptionRecord, subscriptionActive],
+    [enabledModuleSet, hasSubscriptionRecord, subscriptionActive],
   );
 
   // Color name → hex lookup
