@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Camera, CheckCircle2, Heart, Loader2, Sparkles, Star, Users, X } from "lucide-react";
+import { Camera, CheckCircle2, Heart, Loader2, RotateCcw, Sparkles, Star, Users, X } from "lucide-react";
 
 type Pupil = {
   id: string;
@@ -26,6 +26,9 @@ type Session = {
   status: "draft" | "open" | "closed";
   year_group: string;
   current_class: string | null;
+  school_name?: string | null;
+  logo_url?: string | null;
+  primary_color?: string | null;
 };
 
 type DetectedBarcode = { rawValue?: string };
@@ -50,6 +53,8 @@ export default function ClassBuilderSurveyPage() {
   const [errors, setErrors] = useState<string[]>([]);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [scannerMessage, setScannerMessage] = useState("");
+  const [choiceMessage, setChoiceMessage] = useState("");
+  const choiceMessageTimerRef = useRef<number | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const scanStreamRef = useRef<MediaStream | null>(null);
   const scanTimerRef = useRef<number | null>(null);
@@ -82,6 +87,10 @@ export default function ClassBuilderSurveyPage() {
       }
       scanStreamRef.current?.getTracks().forEach((track) => track.stop());
       scanStreamRef.current = null;
+      if (choiceMessageTimerRef.current) {
+        window.clearTimeout(choiceMessageTimerRef.current);
+        choiceMessageTimerRef.current = null;
+      }
     },
     [],
   );
@@ -92,6 +101,19 @@ export default function ClassBuilderSurveyPage() {
   );
   const choiceCount = friendshipIds.length + workWellIds.length;
   const selectedPupil = pupils.find((pupil) => pupil.id === pupilId);
+  const schoolName = session?.school_name || "Rawdon St Peter's C of E Primary School";
+  const surveyLabel = session ? cohortLabel(session.title, session.year_group) : "";
+
+  function showChoiceMessage() {
+    setChoiceMessage(choiceCount === 0 ? "Lovely choice!" : "Choice saved!");
+    if (choiceMessageTimerRef.current) {
+      window.clearTimeout(choiceMessageTimerRef.current);
+    }
+    choiceMessageTimerRef.current = window.setTimeout(() => {
+      setChoiceMessage("");
+      choiceMessageTimerRef.current = null;
+    }, 1300);
+  }
 
   async function submit() {
     setErrors([]);
@@ -112,6 +134,10 @@ export default function ClassBuilderSurveyPage() {
       return;
     }
     setSubmitted(true);
+  }
+
+  function resetForNextPupil() {
+    window.location.href = `/class-builder/s/${code}`;
   }
 
   async function startScanner() {
@@ -203,10 +229,11 @@ export default function ClassBuilderSurveyPage() {
 
   if (submitted) {
     return (
-      <Message
-        title="Brilliant, all done!"
-        text="Thank you for helping your teacher. You can close this page now."
-        done
+      <SuccessScreen
+        schoolName={schoolName}
+        logoUrl={session.logo_url}
+        pupilName={selectedPupil ? nameOf(selectedPupil) : "pupil"}
+        onReset={resetForNextPupil}
       />
     );
   }
@@ -216,16 +243,30 @@ export default function ClassBuilderSurveyPage() {
       <FloatingSparkles />
       <div className="relative z-10 max-w-3xl mx-auto space-y-5">
         <div className="text-center pt-6">
-          <div className="mx-auto w-16 h-16 rounded-3xl bg-white flex items-center justify-center shadow-sm mb-3 rotate-3">
-            <Users className="w-7 h-7 text-sky-600" />
+          <div className="mx-auto mb-3 flex h-20 w-20 items-center justify-center rounded-[2rem] bg-white p-2 shadow-lg shadow-sky-100 rotate-3">
+            {session.logo_url ? (
+              <img
+                src={session.logo_url}
+                alt={`${schoolName} logo`}
+                className="h-full w-full object-contain"
+              />
+            ) : (
+              <Users className="w-8 h-8 text-sky-600" />
+            )}
           </div>
           <h1 className="text-2xl md:text-3xl font-black text-slate-900">
-            {session.title}
+            {schoolName} Class Builder
           </h1>
+          {surveyLabel && (
+            <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-white/80 px-4 py-2 text-sm font-black text-sky-700 shadow-sm ring-1 ring-sky-100">
+              <Sparkles className="h-4 w-4 text-amber-400" />
+              {surveyLabel}
+            </div>
+          )}
           <p className="text-slate-600 mt-1">
             {selectedPupil
               ? `Hi ${selectedPupil.first_name}. Pick the people who help you feel happy and ready to learn.`
-              : "Your teacher can scan your pupil pass, or help you choose your name if needed."}
+              : "Take turns at the teacher device. Choose your name, make your choices, then press send."}
           </p>
         </div>
 
@@ -250,18 +291,39 @@ export default function ClassBuilderSurveyPage() {
               <div className="rounded-2xl bg-sky-50 p-4 ring-1 ring-sky-100">
                 <label className="flex items-center gap-2 text-base font-bold text-slate-800">
                   <StepBubble number={1} />
-                  Scan your pupil QR pass
+                  Choose your name
                 </label>
                 <p className="mt-1 text-sm text-slate-600">
-                  Use the camera on this device. If scanning is not available, choose the pupil name below.
+                  Names are in first-name order. If you have a pupil QR pass, the teacher can scan it instead.
                 </p>
+                <Select
+                  value={pupilId}
+                  onValueChange={(value) => {
+                    setPupilId(value);
+                    setFriendshipIds((ids) => ids.filter((id) => id !== value));
+                    setWorkWellIds((ids) => ids.filter((id) => id !== value));
+                  }}
+                >
+                  <SelectTrigger className="mt-2 h-12 bg-white">
+                    <SelectValue placeholder="Find your name" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {pupils.map((pupil) => (
+                      <SelectItem key={pupil.id} value={pupil.id}>
+                        {nameOf(pupil)}
+                        {submittedPupilIds.includes(pupil.id) ? " (already done)" : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <Button
                   type="button"
+                  variant="outline"
                   onClick={startScanner}
-                  className="mt-3 h-12 w-full rounded-2xl bg-sky-600 text-base font-black"
+                  className="mt-3 h-11 w-full rounded-2xl border-sky-200 bg-white text-sm font-black text-sky-700"
                 >
-                  <Camera className="mr-2 h-5 w-5" />
-                  Scan pupil QR
+                  <Camera className="mr-2 h-4 w-4" />
+                  Or scan a pupil QR pass
                 </Button>
                 {scannerOpen && (
                   <div className="mt-3 rounded-2xl border border-sky-200 bg-white p-3">
@@ -284,36 +346,15 @@ export default function ClassBuilderSurveyPage() {
                     />
                   </div>
                 )}
-                <div className="my-4 flex items-center gap-3">
-                  <div className="h-px flex-1 bg-sky-200" />
-                  <span className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                    Backup
-                  </span>
-                  <div className="h-px flex-1 bg-sky-200" />
+              </div>
+            )}
+
+            {choiceMessage && (
+              <div className="flex justify-center">
+                <div className="inline-flex animate-bounce items-center gap-2 rounded-full bg-amber-100 px-4 py-2 text-sm font-black text-amber-800 shadow-sm ring-1 ring-amber-200">
+                  <Sparkles className="h-4 w-4 text-amber-500" />
+                  {choiceMessage}
                 </div>
-                <label className="text-sm font-bold text-slate-700">
-                  Choose name manually
-                </label>
-                <Select
-                  value={pupilId}
-                  onValueChange={(value) => {
-                    setPupilId(value);
-                    setFriendshipIds((ids) => ids.filter((id) => id !== value));
-                    setWorkWellIds((ids) => ids.filter((id) => id !== value));
-                  }}
-                >
-                  <SelectTrigger className="mt-2 h-12 bg-white">
-                    <SelectValue placeholder="Find your name" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {pupils.map((pupil) => (
-                      <SelectItem key={pupil.id} value={pupil.id}>
-                        {nameOf(pupil)}
-                        {submittedPupilIds.includes(pupil.id) ? " (already done)" : ""}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
             )}
 
@@ -325,6 +366,7 @@ export default function ClassBuilderSurveyPage() {
               pupils={availableChoices}
               selectedIds={friendshipIds}
               onChange={setFriendshipIds}
+              onChoiceMade={showChoiceMessage}
               disabled={!pupilId}
             />
 
@@ -336,6 +378,7 @@ export default function ClassBuilderSurveyPage() {
               pupils={availableChoices}
               selectedIds={workWellIds}
               onChange={setWorkWellIds}
+              onChoiceMade={showChoiceMessage}
               disabled={!pupilId}
             />
 
@@ -373,6 +416,7 @@ function ChoiceBlock({
   pupils,
   selectedIds,
   onChange,
+  onChoiceMade,
   disabled,
 }: {
   title: string;
@@ -382,6 +426,7 @@ function ChoiceBlock({
   pupils: Pupil[];
   selectedIds: string[];
   onChange: (ids: string[]) => void;
+  onChoiceMade: () => void;
   disabled: boolean;
 }) {
   return (
@@ -409,6 +454,9 @@ function ChoiceBlock({
               if (value === "none") {
                 next.splice(index, 1);
               } else {
+                if (next[index] !== value) {
+                  onChoiceMade();
+                }
                 next[index] = value;
               }
               onChange([...new Set(next.filter(Boolean))].slice(0, 3));
@@ -434,7 +482,69 @@ function ChoiceBlock({
           </Select>
         ))}
       </div>
+      {selectedIds.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {selectedIds.map((id) => {
+            const pupil = pupils.find((item) => item.id === id);
+            if (!pupil) return null;
+            return (
+              <span
+                key={id}
+                className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-3 py-1 text-xs font-bold text-sky-700 ring-1 ring-sky-100"
+              >
+                <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                {nameOf(pupil)}
+              </span>
+            );
+          })}
+        </div>
+      )}
     </div>
+  );
+}
+
+function SuccessScreen({
+  schoolName,
+  logoUrl,
+  pupilName,
+  onReset,
+}: {
+  schoolName: string;
+  logoUrl?: string | null;
+  pupilName: string;
+  onReset: () => void;
+}) {
+  return (
+    <main className="relative min-h-screen overflow-hidden flex items-center justify-center bg-[linear-gradient(135deg,#e0f2fe,#fce7f3,#ffedd5)] p-6">
+      <FloatingSparkles />
+      <Confetti />
+      <Card className="relative z-10 max-w-lg w-full border-0 shadow-2xl shadow-sky-100">
+        <CardContent className="p-8 text-center">
+          <div className="mx-auto mb-4 flex h-20 w-20 animate-bounce items-center justify-center rounded-[2rem] bg-white p-2 shadow-sm">
+            {logoUrl ? (
+              <img src={logoUrl} alt={`${schoolName} logo`} className="h-full w-full object-contain" />
+            ) : (
+              <CheckCircle2 className="w-11 h-11 text-emerald-600" />
+            )}
+          </div>
+          <div className="mx-auto mb-4 w-fit rounded-full bg-emerald-100 px-4 py-2 text-sm font-black text-emerald-700">
+            Choices saved
+          </div>
+          <h1 className="text-3xl font-black text-slate-900">Brilliant, {pupilName}!</h1>
+          <p className="mt-2 text-slate-600">
+            Thank you. Your choices have been saved for your teacher.
+          </p>
+          <Button
+            type="button"
+            onClick={onReset}
+            className="mt-6 h-12 w-full rounded-2xl bg-sky-600 text-base font-black shadow-lg shadow-sky-100"
+          >
+            <RotateCcw className="mr-2 h-5 w-5" />
+            Back to start for the next pupil
+          </Button>
+        </CardContent>
+      </Card>
+    </main>
   );
 }
 
@@ -467,6 +577,11 @@ function Message({
 
 function nameOf(pupil: Pupil) {
   return `${pupil.first_name} ${pupil.last_name}`;
+}
+
+function cohortLabel(title: string, fallback: string) {
+  const [, label] = title.split(" - ");
+  return label?.trim() || fallback;
 }
 
 function extractPupilToken(value: string) {

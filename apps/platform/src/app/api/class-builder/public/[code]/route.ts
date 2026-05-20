@@ -51,6 +51,12 @@ export async function GET(
 
   if (responsesError) throw responsesError;
 
+  const { data: organization } = await supabase
+    .from("organizations")
+    .select("name, settings")
+    .eq("id", session.organization_id)
+    .maybeSingle();
+
   let selectedPupilId: string | null = null;
   if (token) {
     const { hashPupilAccessToken } = await import("@/lib/pupil-pass");
@@ -101,6 +107,12 @@ export async function GET(
       year_group: session.year_group,
       current_class: session.current_class,
       closes_at: session.closes_at,
+      school_name: organization?.name ?? null,
+      logo_url:
+        (organization?.settings as { logo_url?: string | null } | null)?.logo_url ?? null,
+      primary_color:
+        (organization?.settings as { primary_color?: string | null } | null)?.primary_color ??
+        null,
     },
     pupils: mappedPupils,
     submittedPupilIds: (responses ?? []).map((response) => response.pupil_id),
