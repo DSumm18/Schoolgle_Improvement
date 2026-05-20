@@ -18,16 +18,17 @@ function mockSupabase(data: Record<string, unknown> | null) {
 }
 
 describe("subscription state", () => {
-  it("includes Toolbox for active subscribers even when older records predate the module", async () => {
+  it("returns only explicitly enabled modules and apps", async () => {
     const supabase = mockSupabase({
       status: "active",
-      enabled_modules: ["improvement", "compliance"],
+      enabled_modules: ["maintenance-tickets", "class-builder"],
       trial_end: null,
       current_period_end: "2099-01-01T00:00:00.000Z",
     });
 
     const state = await getSubscriptionState(supabase as never, "org-1");
 
-    expect(state.enabledModules).toContain("toolbox");
+    expect(state.enabledModules).toEqual(["maintenance-tickets", "class-builder"]);
+    expect(state.enabledModules).not.toContain("toolbox");
   });
 });

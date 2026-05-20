@@ -762,7 +762,11 @@ export default function DashboardLayout({
                                           >
                                             {/* Module heading — bold, clickable, replaces the old "home" app */}
                                             <Link
-                                              href={`/dashboard/${mod.id}`}
+                                              href={
+                                                isModuleEnabledBySubscription(mod.id)
+                                                  ? `/dashboard/${mod.id}`
+                                                  : group.apps[0]?.route || `/dashboard/${mod.id}`
+                                              }
                                               className={`flex items-center gap-2.5 px-3 py-1.5 rounded-md text-xs transition-all duration-150 ${
                                                 modActive
                                                   ? "font-bold text-foreground"

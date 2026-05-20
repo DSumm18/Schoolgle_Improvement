@@ -65,14 +65,10 @@ export async function getSubscriptionState(
 
   // Active = status is trialing/active AND not past the cutoff
   const isActive = (status === 'trialing' || status === 'active') && !isExpired;
-  const effectiveEnabledModules = isActive
-    ? Array.from(new Set([...enabledModules, 'toolbox']))
-    : enabledModules;
-
   return {
     organizationId,
     status: isExpired && status !== 'cancelled' ? 'expired' : status,
-    enabledModules: effectiveEnabledModules,
+    enabledModules,
     trialEnd,
     periodEnd,
     effectiveEnd,
