@@ -94,15 +94,15 @@ export function parseClassUploadCsv(csvText: string) {
       if (!raw[field]) errors.push(`Row ${rowNumber}: ${field} is required.`);
     }
 
-    const parsedYearGroupNumber = yearGroupLabelToNumber(raw.year_group);
+    const parsedYearGroupNumber = classYearGroupLabelToNumber(raw.year_group);
     if (parsedYearGroupNumber === null) {
-      errors.push(`Row ${rowNumber}: year_group must be Nursery, Reception, Y1-Y13 or 1-13.`);
+      errors.push(`Row ${rowNumber}: year_group must be Nursery, Reception, Y1-Y13, 1-13, or a split class such as Year 1/2.`);
       return;
     }
     if (errors.some((error) => error.startsWith(`Row ${rowNumber}:`))) return;
 
     classes.push({
-      year_group: normaliseYearGroupLabel(raw.year_group),
+      year_group: normaliseClassYearGroupLabel(raw.year_group),
       year_group_number: parsedYearGroupNumber,
       class_name: normaliseClassName(raw.class_name),
       room: raw.room ? normalisePupilName(raw.room) : null,
@@ -119,10 +119,60 @@ export function parseClassUploadCsv(csvText: string) {
 }
 
 export function inferKeyStage(yearGroup: string) {
-  const yearGroupNumber = yearGroupLabelToNumber(yearGroup);
+  const yearGroupNumber = classYearGroupLabelToNumber(yearGroup);
   if (yearGroupNumber === null || yearGroupNumber <= 0) return "EYFS";
   if (yearGroupNumber <= 2) return "KS1";
   return "KS2";
+}
+
+export function classYearGroupNumberForAssignment(yearGroup: string) {
+  return classYearGroupLabelToNumber(yearGroup);
+}
+
+export function uniqueClassesForRegisterUpsert(classes: ClassUploadRow[]) {
+  const byClassKey = new Map<string, ClassUploadRow>();
+
+  for (const classRow of classes) {
+    const key = `${classRow.class_name.toLowerCase()}|${classRow.academic_year}`;
+    const existing = byClassKey.get(key);
+    if (!existing) {
+      byClassKey.set(key, classRow);
+      continue;
+    }
+
+    byClassKey.set(key, {
+      ...existing,
+      room: existing.room || classRow.room,
+      location_code: existing.location_code || classRow.location_code,
+    });
+  }
+
+  return [...byClassKey.values()];
+}
+
+function normaliseClassYearGroupLabel(value: string) {
+  const splitYearGroup = parseSplitYearGroup(value);
+  if (splitYearGroup) return `Year ${splitYearGroup.start}/${splitYearGroup.end}`;
+  return normaliseYearGroupLabel(value);
+}
+
+function classYearGroupLabelToNumber(value: string) {
+  const splitYearGroup = parseSplitYearGroup(value);
+  if (splitYearGroup) return splitYearGroup.start;
+  return yearGroupLabelToNumber(value);
+}
+
+function parseSplitYearGroup(value: string) {
+  const trimmed = value.trim().toLowerCase();
+  const match = trimmed.match(/^(?:year\s*|y)?(\d{1,2})\s*[/&-]\s*(?:year\s*|y)?(\d{1,2})$/);
+  if (!match) return null;
+
+  const start = Number(match[1]);
+  const end = Number(match[2]);
+  if (!Number.isInteger(start) || !Number.isInteger(end)) return null;
+  if (start < 1 || end > 13 || start >= end) return null;
+  if (end - start > 1) return null;
+  return { start, end };
 }
 
 function normaliseEmail(value: string | null | undefined) {

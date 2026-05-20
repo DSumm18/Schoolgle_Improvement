@@ -1,5 +1,11 @@
 import { protectedRoute, apiError, apiSuccess } from "@/lib/api-utils";
-import { inferKeyStage, parseClassUploadCsv, type ClassUploadRow } from "@/lib/class-upload";
+import {
+  classYearGroupNumberForAssignment,
+  inferKeyStage,
+  parseClassUploadCsv,
+  uniqueClassesForRegisterUpsert,
+  type ClassUploadRow,
+} from "@/lib/class-upload";
 import { createServiceRoleClient } from "@/lib/supabase-server";
 
 type StaffLookup = {
@@ -8,6 +14,8 @@ type StaffLookup = {
   last_name: string;
   email: string | null;
   employee_id: string | null;
+  job_title?: string | null;
+  role_category?: string | null;
 };
 
 type LocationLookup = {
@@ -32,6 +40,7 @@ export const GET = protectedRoute(async (auth) => {
         updated_at,
         staff_class_assignments (
           id,
+          staff_id,
           staff_name,
           role,
           is_primary_teacher
@@ -44,8 +53,45 @@ export const GET = protectedRoute(async (auth) => {
 
   if (error) return apiError(error.message, 500);
 
+  const staffIds = [
+    ...new Set(
+      (data ?? []).flatMap((classRecord: any) =>
+        (classRecord.staff_class_assignments ?? [])
+          .map((assignment: any) => assignment.staff_id)
+          .filter(Boolean),
+      ),
+    ),
+  ];
+
+  const { data: staffRows, error: staffError } = staffIds.length
+    ? await supabase
+        .from("staff_directory")
+        .select("id,job_title,role_category")
+        .eq("organization_id", auth.organizationId)
+        .in("id", staffIds)
+    : { data: [], error: null };
+
+  if (staffError) return apiError(staffError.message, 500);
+
+  const staffById = new Map(
+    ((staffRows ?? []) as Array<{ id: string; job_title: string | null; role_category: string | null }>)
+      .map((staffMember) => [staffMember.id, staffMember]),
+  );
+
+  const classes = (data ?? []).map((classRecord: any) => ({
+    ...classRecord,
+    staff_class_assignments: (classRecord.staff_class_assignments ?? []).map((assignment: any) => {
+      const staffMember = assignment.staff_id ? staffById.get(assignment.staff_id) : null;
+      return {
+        ...assignment,
+        staff_job_title: staffMember?.job_title ?? null,
+        staff_role_category: staffMember?.role_category ?? null,
+      };
+    }),
+  }));
+
   return apiSuccess({
-    classes: data ?? [],
+    classes,
   });
 }, { requiredRole: "slt", rateLimit: false });
 
@@ -62,14 +108,15 @@ export const POST = protectedRoute(async (auth, request) => {
   const supabase = createServiceRoleClient();
   const { data: staffRows, error: staffError } = await supabase
     .from("staff_directory")
-    .select("id,first_name,last_name,email,employee_id")
+    .select("id,first_name,last_name,email,employee_id,job_title,role_category")
     .eq("organization_id", auth.organizationId)
     .eq("is_active", true);
 
   if (staffError) return apiError(staffError.message, 500);
 
   const staff = (staffRows ?? []) as StaffLookup[];
-  const locationCodes = [...new Set(parsed.classes.map((classRow) => classRow.location_code).filter(Boolean))] as string[];
+  const registerClasses = uniqueClassesForRegisterUpsert(parsed.classes);
+  const locationCodes = [...new Set(registerClasses.map((classRow) => classRow.location_code).filter(Boolean))] as string[];
   const { data: locationRows, error: locationError } = locationCodes.length
     ? await supabase
         .from("estates_locations")
@@ -86,7 +133,7 @@ export const POST = protectedRoute(async (auth, request) => {
       .map((location) => [location.room_code!.toUpperCase(), location]),
   );
   const warnings: string[] = [];
-  const rows = parsed.classes.map((classRow) => ({
+  const rows = registerClasses.map((classRow) => ({
     organization_id: auth.organizationId,
     year_group: classRow.year_group,
     class_name: classRow.class_name,
@@ -155,6 +202,92 @@ export const POST = protectedRoute(async (auth, request) => {
   });
 }, { requiredRole: "slt" });
 
+export const PATCH = protectedRoute(async (auth, request) => {
+  const body = await request.json();
+  const classId = String(body.classId || "");
+  const staffId = String(body.staffId || "");
+  const role = String(body.role || "Class Teacher").trim();
+  const isPrimaryTeacher = Boolean(body.isPrimaryTeacher ?? role.toLowerCase().includes("teacher"));
+
+  if (!classId || !staffId) return apiError("Class and staff member are required", 400, "MISSING_FIELDS");
+  if (!role) return apiError("Class role is required", 400, "MISSING_ROLE");
+
+  const supabase = createServiceRoleClient();
+  const { data: classRecord, error: classError } = await supabase
+    .from("ls_classes")
+    .select("id,year_group,class_name,academic_year")
+    .eq("id", classId)
+    .eq("organization_id", auth.organizationId)
+    .single();
+
+  if (classError || !classRecord) return apiError(classError?.message || "Class not found", 404);
+
+  const { data: staffMember, error: staffError } = await supabase
+    .from("staff_directory")
+    .select("id,first_name,last_name,job_title,role_category")
+    .eq("id", staffId)
+    .eq("organization_id", auth.organizationId)
+    .single();
+
+  if (staffError || !staffMember) return apiError(staffError?.message || "Staff member not found", 404);
+
+  const yearGroupNumber = classYearGroupNumberForAssignment(classRecord.year_group);
+  if (yearGroupNumber === null) return apiError("Class year group cannot be used for assignment", 400);
+
+  const { data: assignment, error } = await supabase
+    .from("staff_class_assignments")
+    .upsert(
+      {
+        organization_id: auth.organizationId,
+        staff_id: staffMember.id,
+        staff_name: `${staffMember.first_name} ${staffMember.last_name}`,
+        academic_year: classRecord.academic_year || "2025-26",
+        year_group: yearGroupNumber,
+        registration_group: classRecord.class_name,
+        role,
+        fte_for_class: 1,
+        term: "All Year",
+        is_primary_teacher: isPrimaryTeacher,
+        ls_class_id: classRecord.id,
+        assigned_by: auth.email,
+        updated_at: new Date().toISOString(),
+      },
+      {
+        onConflict:
+          "organization_id,staff_id,academic_year,year_group,registration_group,role",
+      },
+    )
+    .select("id,staff_id,staff_name,role,is_primary_teacher")
+    .single();
+
+  if (error) return apiError(error.message, 500);
+
+  return apiSuccess({
+    assignment: {
+      ...assignment,
+      staff_job_title: staffMember.job_title,
+      staff_role_category: staffMember.role_category,
+    },
+  });
+}, { requiredRole: "slt", rateLimit: false });
+
+export const DELETE = protectedRoute(async (auth, request) => {
+  const body = await request.json().catch(() => ({}));
+  const assignmentId = String(body.assignmentId || "");
+  if (!assignmentId) return apiError("Assignment ID is required", 400, "MISSING_ASSIGNMENT_ID");
+
+  const supabase = createServiceRoleClient();
+  const { error } = await supabase
+    .from("staff_class_assignments")
+    .delete()
+    .eq("id", assignmentId)
+    .eq("organization_id", auth.organizationId);
+
+  if (error) return apiError(error.message, 500);
+
+  return apiSuccess({ success: true });
+}, { requiredRole: "slt", rateLimit: false });
+
 async function upsertAssignment({
   supabase,
   auth,
@@ -179,16 +312,21 @@ async function upsertAssignment({
   isPrimaryTeacher: boolean;
 }) {
   if (!email && !employeeId) return 0;
-  const match = staff.find((staffMember) =>
-    (email && staffMember.email?.toLowerCase() === email) ||
-    (employeeId && staffMember.employee_id?.toLowerCase() === employeeId.toLowerCase()),
-  );
+  const match = email
+    ? staff.find((staffMember) => staffMember.email?.toLowerCase() === email)
+    : staff.find((staffMember) => employeeId && staffMember.employee_id?.toLowerCase() === employeeId.toLowerCase());
 
   if (!match) {
     warnings.push(
       `${role} for ${classRow.class_name} was not assigned because ${email || employeeId} was not found in staff.`,
     );
     return 0;
+  }
+
+  if (email && employeeId && match.employee_id && match.employee_id.toLowerCase() !== employeeId.toLowerCase()) {
+    warnings.push(
+      `${role} for ${classRow.class_name} was assigned by email to ${match.first_name} ${match.last_name}; employee ID ${employeeId} did not match that staff record.`,
+    );
   }
 
   const { error } = await supabase

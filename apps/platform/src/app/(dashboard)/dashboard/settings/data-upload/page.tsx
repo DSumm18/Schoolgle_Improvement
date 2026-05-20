@@ -3,7 +3,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import QRCode from "qrcode";
-import { CheckCircle2, Copy, Download, Eye, FileUp, Loader2, Lock, Printer, RefreshCw, Shield, Sparkles } from "lucide-react";
+import { CheckCircle2, Copy, Download, Eye, FileUp, Loader2, Lock, Plus, Printer, RefreshCw, Shield, Sparkles, Trash2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -86,9 +86,11 @@ type AssetRecord = {
 
 type StaffRecord = {
   id: string;
+  salutation?: string | null;
   first_name: string;
   last_name: string;
   email: string | null;
+  phone?: string | null;
   employee_id: string | null;
   job_title: string | null;
   role_category: string | null;
@@ -105,7 +107,10 @@ type ClassRecord = {
   pupil_count: number | null;
   staff_class_assignments?: Array<{
     id: string;
+    staff_id?: string | null;
     staff_name: string | null;
+    staff_job_title?: string | null;
+    staff_role_category?: string | null;
     role: string | null;
     is_primary_teacher: boolean | null;
   }>;
@@ -127,6 +132,32 @@ type WindowWithSavePicker = Window & {
     }>;
   }) => Promise<SaveFilePickerHandle>;
 };
+
+const STAFF_ROLE_OPTIONS = [
+  "headteacher",
+  "deputy_headteacher",
+  "assistant_headteacher",
+  "class_teacher",
+  "sendco",
+  "teaching_assistant",
+  "site_manager",
+  "office_staff",
+  "support_staff",
+  "supply_staff",
+  "other",
+];
+
+const CLASS_LINK_ROLE_OPTIONS = [
+  "Class Teacher",
+  "Teaching Assistant",
+  "Supply",
+  "PPA Cover",
+  "SENCO Support",
+  "1:1 Support",
+  "Pastoral Support",
+  "Phase Lead",
+  "Other",
+];
 
 export default function DataUploadPage() {
   const { organizationId } = useAuth();
@@ -161,6 +192,28 @@ export default function DataUploadPage() {
   const [showTbcOnly, setShowTbcOnly] = useState(false);
   const [editingPassId, setEditingPassId] = useState<string | null>(null);
   const [passDraft, setPassDraft] = useState<PassDraft>({ colour: "Blue", animal: "Fox", badge: "" });
+  const [addingStaff, setAddingStaff] = useState(false);
+  const [staffDraft, setStaffDraft] = useState({
+    first_name: "",
+    last_name: "",
+    email: "",
+    employee_id: "",
+    job_title: "",
+    role_category: "support_staff",
+  });
+  const [editingStaffId, setEditingStaffId] = useState<string | null>(null);
+  const [staffEditDraft, setStaffEditDraft] = useState({
+    first_name: "",
+    last_name: "",
+    email: "",
+    employee_id: "",
+    job_title: "",
+    role_category: "support_staff",
+    is_active: true,
+  });
+  const [classAssignmentDrafts, setClassAssignmentDrafts] = useState<Record<string, { staffId: string; role: string }>>({});
+  const [savingClassAssignmentId, setSavingClassAssignmentId] = useState<string | null>(null);
+  const [removingAssignmentId, setRemovingAssignmentId] = useState<string | null>(null);
 
   const classes = useMemo(
     () => [...new Set(pupils.map((pupil) => pupil.current_class).filter(Boolean))].sort(),
@@ -384,6 +437,7 @@ export default function DataUploadPage() {
       toast.success(`Imported ${data.imported} pupils and created Pupil Passes`);
       setPupilUploadReview(null);
       await fetchPupils();
+      setOpenArea("pupils");
       await fetchSetupStatus();
     } catch {
       toast.error("Could not upload pupil CSV");
@@ -400,7 +454,7 @@ export default function DataUploadPage() {
       toast.error(`Found ${review.errors.length} location issue${review.errors.length === 1 ? "" : "s"} to fix before import`);
       return;
     }
-    toast.success(`Checked ${review.validRows} location row${review.validRows === 1 ? "" : "s"} — ready to import`);
+    toast.success(`Checked ${review.validRows} location row${review.validRows === 1 ? "" : "s"} â€” ready to import`);
   }
 
   async function downloadLocationExport() {
@@ -458,7 +512,8 @@ export default function DataUploadPage() {
       toast.success(`Locations import complete: ${data.imported || 0} added, ${data.updated || 0} updated`);
       if (data.warnings?.length) toast.warning(data.warnings.slice(0, 2).join(" "));
       setLocationUploadReview(null);
-      if (openArea === "locations") await fetchLocations();
+      await fetchLocations();
+      setOpenArea("locations");
       await fetchSetupStatus();
     } catch {
       toast.error("Could not upload locations file");
@@ -485,6 +540,8 @@ export default function DataUploadPage() {
       }
       toast.success(`Assets import complete: ${data.imported || 0} added, ${data.updated || 0} updated`);
       if (data.warnings?.length) toast.warning(data.warnings.slice(0, 2).join(" "));
+      await fetchAssets();
+      setOpenArea("assets");
       await fetchSetupStatus();
     } catch {
       toast.error("Could not upload assets file");
@@ -514,6 +571,8 @@ export default function DataUploadPage() {
       toast.success(
         `Staff import complete: ${data.imported || 0} added, ${data.updated || 0} updated, ${data.archived || 0} archived`,
       );
+      await fetchStaffRecords();
+      setOpenArea("staff");
       await fetchSetupStatus();
     } catch {
       toast.error("Could not upload staff CSV");
@@ -542,11 +601,168 @@ export default function DataUploadPage() {
         `Class import complete: ${data.imported || 0} classes, ${data.assignments || 0} staff assignments`,
       );
       if (data.warnings?.length) toast.warning(data.warnings.slice(0, 2).join(" "));
+      await fetchClassRecords();
+      setOpenArea("classes");
       await fetchSetupStatus();
     } catch {
       toast.error("Could not upload class CSV");
     } finally {
       setClassImporting(false);
+    }
+  }
+
+  async function createManualStaffMember() {
+    if (!organizationId) return;
+    if (!staffDraft.first_name.trim() || !staffDraft.last_name.trim() || !staffDraft.job_title.trim()) {
+      toast.error("First name, last name and job title are required");
+      return;
+    }
+
+    setAddingStaff(true);
+    try {
+      const res = await fetch("/api/staff", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(await authHeaders()) },
+        body: JSON.stringify({
+          organizationId,
+          first_name: staffDraft.first_name.trim(),
+          last_name: staffDraft.last_name.trim(),
+          email: staffDraft.email.trim(),
+          employee_id: staffDraft.employee_id.trim(),
+          job_title: staffDraft.job_title.trim(),
+          role_category: staffDraft.role_category,
+          is_super_user: false,
+          is_active: true,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Could not add staff member");
+        return;
+      }
+      toast.success(`Added ${staffDraft.first_name} ${staffDraft.last_name}`);
+      setStaffDraft({
+        first_name: "",
+        last_name: "",
+        email: "",
+        employee_id: "",
+        job_title: "",
+        role_category: "support_staff",
+      });
+      await fetchStaffRecords();
+      await fetchSetupStatus();
+    } catch {
+      toast.error("Could not add staff member");
+    } finally {
+      setAddingStaff(false);
+    }
+  }
+
+  function startEditingStaff(staffMember: StaffRecord) {
+    setEditingStaffId(staffMember.id);
+    setStaffEditDraft({
+      first_name: staffMember.first_name,
+      last_name: staffMember.last_name,
+      email: staffMember.email || "",
+      employee_id: staffMember.employee_id || "",
+      job_title: staffMember.job_title || "",
+      role_category: staffMember.role_category || "support_staff",
+      is_active: staffMember.is_active,
+    });
+  }
+
+  async function saveStaffMember(staffId: string) {
+    if (!staffEditDraft.first_name.trim() || !staffEditDraft.last_name.trim() || !staffEditDraft.job_title.trim()) {
+      toast.error("First name, last name and job title are required");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/staff", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", ...(await authHeaders()) },
+        body: JSON.stringify({
+          id: staffId,
+          first_name: staffEditDraft.first_name.trim(),
+          last_name: staffEditDraft.last_name.trim(),
+          email: staffEditDraft.email.trim(),
+          employee_id: staffEditDraft.employee_id.trim(),
+          job_title: staffEditDraft.job_title.trim(),
+          role_category: staffEditDraft.role_category,
+          is_active: staffEditDraft.is_active,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Could not update staff member");
+        return;
+      }
+      toast.success("Staff member updated");
+      setEditingStaffId(null);
+      await fetchStaffRecords();
+      await fetchClassRecords();
+      await fetchSetupStatus();
+    } catch {
+      toast.error("Could not update staff member");
+    }
+  }
+
+  async function addClassAssignment(classRecord: ClassRecord) {
+    const draft = classAssignmentDrafts[classRecord.id] || { staffId: "", role: "Teaching Assistant" };
+    if (!draft.staffId) {
+      toast.error("Choose a staff member to link");
+      return;
+    }
+
+    setSavingClassAssignmentId(classRecord.id);
+    try {
+      const res = await fetch("/api/data-upload/classes", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...(await authHeaders()) },
+        body: JSON.stringify({
+          classId: classRecord.id,
+          staffId: draft.staffId,
+          role: draft.role,
+          isPrimaryTeacher: draft.role === "Class Teacher",
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Could not link staff to class");
+        return;
+      }
+      toast.success("Staff linked to class");
+      setClassAssignmentDrafts((current) => ({
+        ...current,
+        [classRecord.id]: { staffId: "", role: "Teaching Assistant" },
+      }));
+      await fetchClassRecords();
+    } catch {
+      toast.error("Could not link staff to class");
+    } finally {
+      setSavingClassAssignmentId(null);
+    }
+  }
+
+  async function removeClassAssignment(assignmentId: string) {
+    setRemovingAssignmentId(assignmentId);
+    try {
+      const res = await fetch("/api/data-upload/classes", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json", ...(await authHeaders()) },
+        body: JSON.stringify({ assignmentId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.error || "Could not remove class link");
+        return;
+      }
+      toast.success("Class link removed");
+      await fetchClassRecords();
+    } catch {
+      toast.error("Could not remove class link");
+    } finally {
+      setRemovingAssignmentId(null);
     }
   }
 
@@ -756,8 +972,8 @@ export default function DataUploadPage() {
       filename: "staff_directory_template_styled.xls",
       onUpload: importStaffCsv,
       busy: staffImporting,
-      locked: counts.assets === 0,
-      lockedReason: "Upload assets first, even if it is just the starter essentials.",
+      locked: false,
+      lockedReason: "Staff can be uploaded before locations or assets if you are setting up Class Builder first.",
     },
     {
       key: "pupils" as const,
@@ -905,7 +1121,7 @@ export default function DataUploadPage() {
               onShowTbcOnlyChange={setShowTbcOnly}
               onTypeChange={updateLocationType}
               onRefresh={fetchLocations}
-              onClose={() => setOpenArea("locations")}
+              onClose={() => setOpenArea(null)}
             />
           )}
 
@@ -921,31 +1137,32 @@ export default function DataUploadPage() {
                 asset.code || "No code",
                 asset.name,
                 [asset.category, asset.subcategory].filter(Boolean).join(" / ") || asset.asset_type || "Not set",
-                [asset.building, asset.floor, asset.room].filter(Boolean).join(" · ") || "Not placed",
+                [asset.building, asset.floor, asset.room].filter(Boolean).join(" Â· ") || "Not placed",
                 asset.status || "Not set",
               ])}
               onRefresh={fetchAssets}
-              onClose={() => setOpenArea("assets")}
+              onClose={() => setOpenArea(null)}
               primaryActionHref="/estates-compliance/assets"
               primaryActionLabel="Open live Asset Register"
             />
           )}
 
           {openArea === "staff" && (
-            <SimpleDataPanel
-              title="Staff"
+            <StaffMaintenancePanel
+              staffRecords={staffRecords}
               loading={staffLoading}
-              count={staffRecords.length}
-              columns={["Name", "Role", "Email", "Employee ID", "Status"]}
-              rows={staffRecords.map((staffMember) => [
-                `${staffMember.first_name} ${staffMember.last_name}`,
-                staffMember.job_title || staffMember.role_category || "Not set",
-                staffMember.email || "No email",
-                staffMember.employee_id || "No ID",
-                staffMember.is_active ? "Active" : "Inactive",
-              ])}
+              addingStaff={addingStaff}
+              staffDraft={staffDraft}
+              editingStaffId={editingStaffId}
+              staffEditDraft={staffEditDraft}
+              onStaffDraftChange={setStaffDraft}
+              onStaffEditDraftChange={setStaffEditDraft}
+              onCreateStaff={createManualStaffMember}
+              onStartEditingStaff={startEditingStaff}
+              onSaveStaff={saveStaffMember}
+              onCancelEditingStaff={() => setEditingStaffId(null)}
               onRefresh={fetchStaffRecords}
-              onClose={() => setOpenArea("staff")}
+              onClose={() => setOpenArea(null)}
             />
           )}
 
@@ -967,27 +1184,23 @@ export default function DataUploadPage() {
                 ].filter(Boolean).join(", ") || "None",
               ])}
               onRefresh={() => fetchPupils()}
-              onClose={() => setOpenArea("pupils")}
+              onClose={() => setOpenArea(null)}
             />
           )}
 
           {openArea === "classes" && (
-            <SimpleDataPanel
-              title="Classes"
+            <ClassMaintenancePanel
+              classRecords={classRecords}
+              staffRecords={staffRecords}
               loading={classesLoading}
-              count={classRecords.length}
-              columns={["Class", "Year", "Room", "Staff linked", "Academic year"]}
-              rows={classRecords.map((classRecord) => [
-                classRecord.class_name,
-                classRecord.year_group,
-                classRecord.room || "No room",
-                (classRecord.staff_class_assignments ?? [])
-                  .map((assignment) => `${assignment.staff_name || "Staff"} (${assignment.role || "role"})`)
-                  .join(", ") || "No staff linked",
-                classRecord.academic_year || "Not set",
-              ])}
+              assignmentDrafts={classAssignmentDrafts}
+              savingClassAssignmentId={savingClassAssignmentId}
+              removingAssignmentId={removingAssignmentId}
+              onAssignmentDraftChange={setClassAssignmentDrafts}
+              onAddAssignment={addClassAssignment}
+              onRemoveAssignment={removeClassAssignment}
               onRefresh={fetchClassRecords}
-              onClose={() => setOpenArea("classes")}
+              onClose={() => setOpenArea(null)}
             />
           )}
         </div>
@@ -1163,7 +1376,7 @@ export default function DataUploadPage() {
                       <td>
                         <span className="font-semibold">{pupil.pass_codename || "Basic QR pass"}</span>
                         <span className="ml-2 text-muted-foreground">
-                          {[pupil.pass_colour, pupil.pass_animal, pupil.pass_badge].filter(Boolean).join(" · ")}
+                          {[pupil.pass_colour, pupil.pass_animal, pupil.pass_badge].filter(Boolean).join(" Â· ")}
                         </span>
                       </td>
                       <td>
@@ -1250,17 +1463,17 @@ function UploadExplainer() {
     {
       title: "1. Download",
       detail: "Download the Excel template for the setup step you are working on.",
-      icon: "⬇️",
+      Icon: Download,
     },
     {
       title: "2. Update",
       detail: "Add or amend the data in the template using the guidance row.",
-      icon: "✍️",
+      Icon: Sparkles,
     },
     {
       title: "3. Upload",
       detail: "Upload the completed template to populate Schoolgle.",
-      icon: "⬆️",
+      Icon: FileUp,
     },
   ];
 
@@ -1270,7 +1483,7 @@ function UploadExplainer() {
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="max-w-md">
             <p className="text-xs font-bold uppercase tracking-wide text-primary">How it works</p>
-            <h2 className="text-xl font-black mt-1">Download, complete, upload — done.</h2>
+            <h2 className="text-xl font-black mt-1">Download, complete, upload ? done.</h2>
             <p className="text-sm text-muted-foreground mt-2">
               The template is the contract. If the school fills those columns, the data lands in the
               right place and powers Class Builder, Pupil Passes, seating plans, Pathfinder, assets and future assessment tools.
@@ -1278,12 +1491,9 @@ function UploadExplainer() {
           </div>
 
           <div className="grid flex-1 grid-cols-1 gap-3 md:grid-cols-3">
-            {steps.map((step) => (
-              <div
-                key={step.title}
-                className="rounded-2xl border bg-background/80 p-4 shadow-sm"
-              >
-                <div className="text-2xl">{step.icon}</div>
+            {steps.map(({ Icon, ...step }) => (
+              <div key={step.title} className="rounded-2xl border bg-background/80 p-4 shadow-sm">
+                <Icon className="h-6 w-6 text-primary" />
                 <p className="font-bold mt-2">{step.title}</p>
                 <p className="text-xs text-muted-foreground mt-1">{step.detail}</p>
               </div>
@@ -1415,21 +1625,21 @@ function SimpleDataPanel({
         ) : (
           <div className="overflow-x-auto rounded-xl border">
             <table className="w-full text-sm">
-              <thead className="bg-muted/50 text-left text-xs text-muted-foreground">
+              <thead className="bg-muted/40 text-left text-xs text-muted-foreground">
                 <tr>
                   {columns.map((column) => (
-                    <th key={column} className="px-3 py-2 font-semibold">
+                    <th key={column} className="px-4 py-2 first:pl-4">
                       {column}
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row, index) => (
-                  <tr key={`${title}-${index}`} className="border-t">
+                {rows.map((row, rowIndex) => (
+                  <tr key={`${title}-${rowIndex}`} className="border-t">
                     {row.map((cell, cellIndex) => (
-                      <td key={`${title}-${index}-${cellIndex}`} className="px-3 py-2">
-                        {cell}
+                      <td key={`${title}-${rowIndex}-${cellIndex}`} className="px-4 py-2">
+                        {cell || "Blank"}
                       </td>
                     ))}
                   </tr>
@@ -1441,6 +1651,398 @@ function SimpleDataPanel({
       </CardContent>
     </Card>
   );
+}
+
+function StaffMaintenancePanel({
+  staffRecords,
+  loading,
+  addingStaff,
+  staffDraft,
+  editingStaffId,
+  staffEditDraft,
+  onStaffDraftChange,
+  onStaffEditDraftChange,
+  onCreateStaff,
+  onStartEditingStaff,
+  onSaveStaff,
+  onCancelEditingStaff,
+  onRefresh,
+  onClose,
+}: {
+  staffRecords: StaffRecord[];
+  loading: boolean;
+  addingStaff: boolean;
+  staffDraft: {
+    first_name: string;
+    last_name: string;
+    email: string;
+    employee_id: string;
+    job_title: string;
+    role_category: string;
+  };
+  editingStaffId: string | null;
+  staffEditDraft: {
+    first_name: string;
+    last_name: string;
+    email: string;
+    employee_id: string;
+    job_title: string;
+    role_category: string;
+    is_active: boolean;
+  };
+  onStaffDraftChange: (draft: {
+    first_name: string;
+    last_name: string;
+    email: string;
+    employee_id: string;
+    job_title: string;
+    role_category: string;
+  }) => void;
+  onStaffEditDraftChange: (draft: {
+    first_name: string;
+    last_name: string;
+    email: string;
+    employee_id: string;
+    job_title: string;
+    role_category: string;
+    is_active: boolean;
+  }) => void;
+  onCreateStaff: () => void;
+  onStartEditingStaff: (staffMember: StaffRecord) => void;
+  onSaveStaff: (staffId: string) => void;
+  onCancelEditingStaff: () => void;
+  onRefresh: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex flex-wrap items-center justify-between gap-3 text-base">
+          <span>Staff maintenance</span>
+          <span className="flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" onClick={onRefresh} disabled={loading}>
+              {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+              Refresh
+            </Button>
+            <Button size="sm" variant="outline" onClick={onClose}>
+              Hide section
+            </Button>
+          </span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+          Add missing staff here without re-uploading the spreadsheet. Staff do not need to be linked to a class: site managers, office staff and leaders can sit in the staff list only.
+        </div>
+
+        <div className="rounded-xl border p-4">
+          <div className="mb-3 flex items-center gap-2 font-semibold">
+            <UserPlus className="h-4 w-4" />
+            Add a staff member
+          </div>
+          <div className="grid gap-3 md:grid-cols-3">
+            <Input
+              placeholder="First name"
+              value={staffDraft.first_name}
+              onChange={(event) => onStaffDraftChange({ ...staffDraft, first_name: event.target.value })}
+            />
+            <Input
+              placeholder="Last name"
+              value={staffDraft.last_name}
+              onChange={(event) => onStaffDraftChange({ ...staffDraft, last_name: event.target.value })}
+            />
+            <Input
+              placeholder="Job title, e.g. Site Manager"
+              value={staffDraft.job_title}
+              onChange={(event) => onStaffDraftChange({ ...staffDraft, job_title: event.target.value })}
+            />
+            <Input
+              placeholder="Email (optional)"
+              type="email"
+              value={staffDraft.email}
+              onChange={(event) => onStaffDraftChange({ ...staffDraft, email: event.target.value })}
+            />
+            <Input
+              placeholder="Employee ID (optional)"
+              value={staffDraft.employee_id}
+              onChange={(event) => onStaffDraftChange({ ...staffDraft, employee_id: event.target.value })}
+            />
+            <select
+              className="h-10 rounded-md border bg-background px-3 text-sm"
+              value={staffDraft.role_category}
+              onChange={(event) => onStaffDraftChange({ ...staffDraft, role_category: event.target.value })}
+            >
+              {STAFF_ROLE_OPTIONS.map((role) => (
+                <option key={role} value={role}>
+                  {formatRoleLabel(role)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <Button className="mt-3" onClick={onCreateStaff} disabled={addingStaff}>
+            {addingStaff ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
+            Add staff member
+          </Button>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <Badge variant="secondary">{staffRecords.length} in system</Badge>
+          <Badge variant="outline">{staffRecords.filter((staffMember) => staffMember.is_active).length} active</Badge>
+        </div>
+
+        {loading ? (
+          <p className="text-sm text-muted-foreground">Loading staff...</p>
+        ) : (
+          <div className="overflow-x-auto rounded-xl border">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/40 text-left text-xs text-muted-foreground">
+                <tr>
+                  {["Name", "Job title", "Role category", "Email", "Employee ID", "Status", "Actions"].map((column) => (
+                    <th key={column} className="px-4 py-2">{column}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {staffRecords.map((staffMember) => {
+                  const isEditing = editingStaffId === staffMember.id;
+                  return (
+                    <tr key={staffMember.id} className="border-t align-top">
+                      <td className="px-4 py-2 font-medium">
+                        {isEditing ? (
+                          <div className="grid gap-2">
+                            <Input value={staffEditDraft.first_name} onChange={(event) => onStaffEditDraftChange({ ...staffEditDraft, first_name: event.target.value })} />
+                            <Input value={staffEditDraft.last_name} onChange={(event) => onStaffEditDraftChange({ ...staffEditDraft, last_name: event.target.value })} />
+                          </div>
+                        ) : (
+                          `${staffMember.first_name} ${staffMember.last_name}`
+                        )}
+                      </td>
+                      <td className="px-4 py-2">
+                        {isEditing ? (
+                          <Input value={staffEditDraft.job_title} onChange={(event) => onStaffEditDraftChange({ ...staffEditDraft, job_title: event.target.value })} />
+                        ) : (
+                          staffMember.job_title || "Not set"
+                        )}
+                      </td>
+                      <td className="px-4 py-2">
+                        {isEditing ? (
+                          <select
+                            className="h-10 rounded-md border bg-background px-3 text-sm"
+                            value={staffEditDraft.role_category}
+                            onChange={(event) => onStaffEditDraftChange({ ...staffEditDraft, role_category: event.target.value })}
+                          >
+                            {STAFF_ROLE_OPTIONS.map((role) => (
+                              <option key={role} value={role}>{formatRoleLabel(role)}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          formatRoleLabel(staffMember.role_category)
+                        )}
+                      </td>
+                      <td className="px-4 py-2">
+                        {isEditing ? (
+                          <Input type="email" value={staffEditDraft.email} onChange={(event) => onStaffEditDraftChange({ ...staffEditDraft, email: event.target.value })} />
+                        ) : (
+                          staffMember.email || "No email"
+                        )}
+                      </td>
+                      <td className="px-4 py-2">
+                        {isEditing ? (
+                          <Input value={staffEditDraft.employee_id} onChange={(event) => onStaffEditDraftChange({ ...staffEditDraft, employee_id: event.target.value })} />
+                        ) : (
+                          staffMember.employee_id || "No ID"
+                        )}
+                      </td>
+                      <td className="px-4 py-2">
+                        {isEditing ? (
+                          <select
+                            className="h-10 rounded-md border bg-background px-3 text-sm"
+                            value={staffEditDraft.is_active ? "active" : "inactive"}
+                            onChange={(event) => onStaffEditDraftChange({ ...staffEditDraft, is_active: event.target.value === "active" })}
+                          >
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                          </select>
+                        ) : (
+                          staffMember.is_active ? "Active" : "Inactive"
+                        )}
+                      </td>
+                      <td className="px-4 py-2">
+                        {isEditing ? (
+                          <span className="flex gap-2">
+                            <Button size="sm" onClick={() => onSaveStaff(staffMember.id)}>Save</Button>
+                            <Button size="sm" variant="outline" onClick={onCancelEditingStaff}>Cancel</Button>
+                          </span>
+                        ) : (
+                          <Button size="sm" variant="outline" onClick={() => onStartEditingStaff(staffMember)}>
+                            Edit
+                          </Button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ClassMaintenancePanel({
+  classRecords,
+  staffRecords,
+  loading,
+  assignmentDrafts,
+  savingClassAssignmentId,
+  removingAssignmentId,
+  onAssignmentDraftChange,
+  onAddAssignment,
+  onRemoveAssignment,
+  onRefresh,
+  onClose,
+}: {
+  classRecords: ClassRecord[];
+  staffRecords: StaffRecord[];
+  loading: boolean;
+  assignmentDrafts: Record<string, { staffId: string; role: string }>;
+  savingClassAssignmentId: string | null;
+  removingAssignmentId: string | null;
+  onAssignmentDraftChange: (drafts: Record<string, { staffId: string; role: string }>) => void;
+  onAddAssignment: (classRecord: ClassRecord) => void;
+  onRemoveAssignment: (assignmentId: string) => void;
+  onRefresh: () => void;
+  onClose: () => void;
+}) {
+  const activeStaff = staffRecords.filter((staffMember) => staffMember.is_active);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex flex-wrap items-center justify-between gap-3 text-base">
+          <span>Classes maintenance</span>
+          <span className="flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" onClick={onRefresh} disabled={loading}>
+              {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+              Refresh
+            </Button>
+            <Button size="sm" variant="outline" onClick={onClose}>
+              Hide section
+            </Button>
+          </span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+          Link staff to classes here after import. The staff member&apos;s job title stays unchanged; the class link explains what they do for this class.
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Badge variant="secondary">{classRecords.length} classes</Badge>
+          <Badge variant="outline">{activeStaff.length} active staff available</Badge>
+        </div>
+
+        {loading ? (
+          <p className="text-sm text-muted-foreground">Loading classes...</p>
+        ) : classRecords.length === 0 ? (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            No classes are showing yet. Upload the classes file or click Refresh if the count says records exist.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {classRecords.map((classRecord) => {
+              const draft = assignmentDrafts[classRecord.id] || { staffId: "", role: "Teaching Assistant" };
+              const assignments = classRecord.staff_class_assignments ?? [];
+
+              return (
+                <div key={classRecord.id} className="rounded-xl border p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <h3 className="font-semibold">{classRecord.class_name}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {classRecord.year_group} · {classRecord.room || "No room"} · {classRecord.academic_year || "No academic year"}
+                      </p>
+                    </div>
+                    <Badge variant={assignments.length ? "default" : "secondary"}>
+                      {assignments.length ? `${assignments.length} linked` : "No staff linked"}
+                    </Badge>
+                  </div>
+
+                  <div className="mt-3 space-y-2">
+                    {assignments.map((assignment) => {
+                      const staffTitle = assignment.staff_job_title || assignment.staff_role_category || "Staff role not set";
+                      return (
+                        <div key={assignment.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/20 px-3 py-2 text-sm">
+                          <span>
+                            <span className="font-medium">{assignment.staff_name || "Staff"}</span>
+                            <span className="text-muted-foreground"> — {staffTitle} · class link: {assignment.role || "Not set"}</span>
+                          </span>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => onRemoveAssignment(assignment.id)}
+                            disabled={removingAssignmentId === assignment.id}
+                          >
+                            {removingAssignmentId === assignment.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="mt-3 grid gap-2 md:grid-cols-[1fr_220px_auto]">
+                    <select
+                      className="h-10 rounded-md border bg-background px-3 text-sm"
+                      value={draft.staffId}
+                      onChange={(event) =>
+                        onAssignmentDraftChange({
+                          ...assignmentDrafts,
+                          [classRecord.id]: { ...draft, staffId: event.target.value },
+                        })
+                      }
+                    >
+                      <option value="">Choose staff member...</option>
+                      {activeStaff.map((staffMember) => (
+                        <option key={staffMember.id} value={staffMember.id}>
+                          {staffMember.first_name} {staffMember.last_name} — {staffMember.job_title || formatRoleLabel(staffMember.role_category)}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      className="h-10 rounded-md border bg-background px-3 text-sm"
+                      value={draft.role}
+                      onChange={(event) =>
+                        onAssignmentDraftChange({
+                          ...assignmentDrafts,
+                          [classRecord.id]: { ...draft, role: event.target.value },
+                        })
+                      }
+                    >
+                      {CLASS_LINK_ROLE_OPTIONS.map((role) => (
+                        <option key={role} value={role}>{role}</option>
+                      ))}
+                    </select>
+                    <Button onClick={() => onAddAssignment(classRecord)} disabled={savingClassAssignmentId === classRecord.id}>
+                      {savingClassAssignmentId === classRecord.id ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
+                      Link staff
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function formatRoleLabel(value: string | null | undefined) {
+  if (!value) return "Not set";
+  return value
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 function LocationMaintenancePanel({
@@ -1696,6 +2298,7 @@ function LocationUploadReviewPanel({
   );
 }
 
+
 function PupilUploadReviewPanel({
   review,
   importing,
@@ -1759,33 +2362,49 @@ function PupilUploadReviewPanel({
           </div>
         )}
 
-        <div className="overflow-x-auto rounded-xl border">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/40 text-left text-xs text-muted-foreground">
+        <div className="max-h-[520px] overflow-auto rounded-xl border">
+          <table className="min-w-[1900px] text-sm">
+            <thead className="sticky top-0 z-10 bg-muted text-left text-xs text-muted-foreground">
               <tr>
                 <th className="p-2">Spreadsheet row</th>
                 <th>Pupil ID</th>
-                <th>Name</th>
+                <th>First name</th>
+                <th>Last name</th>
                 <th>Year</th>
                 <th>Class</th>
+                <th>Gender</th>
                 <th>SEND</th>
                 <th>EHCP</th>
+                <th>Primary need</th>
+                <th>FSM</th>
                 <th>EAL</th>
                 <th>PP</th>
+                <th>Status</th>
+                <th>Pass colour</th>
+                <th>Pass animal</th>
+                <th>Pass badge</th>
               </tr>
             </thead>
             <tbody>
-              {review.sampleRows.map((row) => (
+              {review.rows.map((row) => (
                 <tr key={`${row.rowNumber}-${row.pupil_id}`} className="border-t">
                   <td className="p-2 font-semibold">Row {row.rowNumber}</td>
-                  <td>{row.pupil_id || "—"}</td>
-                  <td>{[row.first_name, row.last_name].filter(Boolean).join(" ") || "—"}</td>
-                  <td>{row.year_group || "—"}</td>
-                  <td>{row.current_class || "—"}</td>
-                  <td>{row.send_status || "—"}</td>
-                  <td>{row.ehcp || "—"}</td>
-                  <td>{row.eal || "—"}</td>
-                  <td>{row.pupil_premium || "—"}</td>
+                  <td>{displayImportValue(row.pupil_id)}</td>
+                  <td>{displayImportValue(row.first_name)}</td>
+                  <td>{displayImportValue(row.last_name)}</td>
+                  <td>{displayImportValue(row.year_group)}</td>
+                  <td>{displayImportValue(row.current_class)}</td>
+                  <td>{displayImportValue(row.gender)}</td>
+                  <td>{displayImportValue(row.send_status)}</td>
+                  <td>{displayImportValue(row.ehcp)}</td>
+                  <td>{displayImportValue(row.primary_need)}</td>
+                  <td>{displayImportValue(row.fsm_eligible)}</td>
+                  <td>{displayImportValue(row.eal)}</td>
+                  <td>{displayImportValue(row.pupil_premium)}</td>
+                  <td>{row.is_active || "true"}</td>
+                  <td>{displayImportValue(row.pass_colour)}</td>
+                  <td>{displayImportValue(row.pass_animal)}</td>
+                  <td>{displayImportValue(row.pass_badge)}</td>
                 </tr>
               ))}
             </tbody>
@@ -1793,8 +2412,8 @@ function PupilUploadReviewPanel({
         </div>
 
         <p className="text-xs text-muted-foreground">
-          Showing {review.sampleRows.length} sample row{review.sampleRows.length === 1 ? "" : "s"} from across the file,
-          including row five where available, so you can check the mapping before saving anything.
+          Showing all {review.rows.length} staged pupil row{review.rows.length === 1 ? "" : "s"} and every import field.
+          Blank optional fields show as <span className="font-semibold">Blank</span>; QR pass fields will be auto-created if left blank.
         </p>
 
         <div className="flex flex-wrap gap-2">
@@ -1826,6 +2445,11 @@ function ReviewStat({
       <p className="mt-1 text-2xl font-black">{value}</p>
     </div>
   );
+}
+
+function displayImportValue(value: string | null | undefined) {
+  const trimmed = String(value || "").trim();
+  return trimmed || <span className="text-muted-foreground">Blank</span>;
 }
 
 function ReviewBreakdown({
@@ -1860,7 +2484,7 @@ function SetupWizardSummary({ counts }: { counts: SetupCounts }) {
       <CardContent className="grid gap-5 p-5 lg:grid-cols-[1fr_1.1fr] lg:items-center">
         <div>
           <p className="text-xs font-bold uppercase tracking-wide text-primary">Guided setup</p>
-          <h2 className="mt-1 text-xl font-black">Build the school’s source-of-truth foundations</h2>
+          <h2 className="mt-1 text-xl font-black">Build the schoolâ€™s source-of-truth foundations</h2>
           <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
             Work through the imports in order. Templates can be downloaded any time, but uploads unlock in sequence
             so the data lands cleanly: places first, then assets, staff, pupils and classes.
@@ -2084,7 +2708,7 @@ function openPrintWindow(cards: PassCard[], className?: string, format: PrintFor
   <div class="grid">
     ${cards.map((card) => {
       const colour = passColourHex(card.pass_colour);
-      const identity = [card.pass_colour, card.pass_animal, card.pass_badge].filter(Boolean).join(" · ");
+      const identity = [card.pass_colour, card.pass_animal, card.pass_badge].filter(Boolean).join(" Â· ");
       const badgeSvg = characterBadgeDataUrl(card.pass_animal, card.pass_colour, card.pass_badge);
       return `
       <div class="card" style="border-color: ${colour};">
@@ -2102,7 +2726,7 @@ function openPrintWindow(cards: PassCard[], className?: string, format: PrintFor
         </div>
         <div class="register-name">
           ${escapeHtml(`${card.first_name} ${card.last_name}`)}
-          <div class="actions">${escapeHtml(card.current_class || `Year ${card.year_group}`)} · ${escapeHtml(card.pass_codename || "Schoolgle Pass")}</div>
+          <div class="actions">${escapeHtml(card.current_class || `Year ${card.year_group}`)} Â· ${escapeHtml(card.pass_codename || "Schoolgle Pass")}</div>
         </div>
       </div>
     `}).join("")}
@@ -2120,7 +2744,7 @@ function openPrintWindow(cards: PassCard[], className?: string, format: PrintFor
 }
 
 function printTitle(format: PrintFormat, className?: string) {
-  const suffix = className ? ` — ${className}` : "";
+  const suffix = className ? ` â€” ${className}` : "";
   if (format === "book-sticker") return `Schoolgle Book Stickers${suffix}`;
   if (format === "register") return `Schoolgle QR Register${suffix}`;
   return `Schoolgle Pupil Passes${suffix}`;

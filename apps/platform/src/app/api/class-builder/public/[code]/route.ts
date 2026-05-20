@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase-server";
-import { validateClassBuilderSubmission } from "@/lib/class-builder";
+import {
+  classBuilderYearStorageAliases,
+  parseClassBuilderSessionYearGroups,
+  validateClassBuilderSubmission,
+} from "@/lib/class-builder";
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ code: string }> },
 ) {
   const { code } = await params;
+  const token = request.nextUrl.searchParams.get("t");
   const supabase = createServiceRoleClient();
   const { data: session, error: sessionError } = await supabase
     .from("class_builder_sessions")
@@ -18,11 +23,14 @@ export async function GET(
     return NextResponse.json({ error: "Survey not found" }, { status: 404 });
   }
 
+  const cohortYearGroups = parseClassBuilderSessionYearGroups(session.year_group);
+  const yearAliases = classBuilderYearStorageAliases(cohortYearGroups);
+
   let pupilQuery = supabase
     .from("pupils")
     .select("id, first_name, last_name, year_group, current_class, class_name")
     .eq("organization_id", session.organization_id)
-    .eq("year_group", session.year_group)
+    .in("year_group", yearAliases)
     .eq("is_active", true)
     .order("last_name")
     .order("first_name");
@@ -43,6 +51,48 @@ export async function GET(
 
   if (responsesError) throw responsesError;
 
+  let selectedPupilId: string | null = null;
+  if (token) {
+    const { hashPupilAccessToken } = await import("@/lib/pupil-pass");
+    const { data: tokenPupil, error: tokenPupilError } = await supabase
+      .from("pupils")
+      .select("id,is_active,pass_revoked_at")
+      .eq("organization_id", session.organization_id)
+      .eq("pupil_access_token_hash", hashPupilAccessToken(token))
+      .maybeSingle();
+
+    if (tokenPupilError) throw tokenPupilError;
+    if (!tokenPupil || tokenPupil.is_active === false || tokenPupil.pass_revoked_at) {
+      return NextResponse.json(
+        { error: "This pupil pass is not active. Ask your teacher for help." },
+        { status: 403 },
+      );
+    }
+    selectedPupilId = tokenPupil.id;
+  }
+
+  const mappedPupils = (pupils ?? []).map((pupil: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    year_group: string;
+    current_class: string | null;
+    class_name: string | null;
+  }) => ({
+    id: pupil.id,
+    first_name: pupil.first_name,
+    last_name: pupil.last_name,
+    year_group: pupil.year_group,
+    current_class: pupil.current_class ?? pupil.class_name ?? null,
+  }));
+
+  if (selectedPupilId && !mappedPupils.some((pupil) => pupil.id === selectedPupilId)) {
+    return NextResponse.json(
+      { error: "This pupil pass is not part of this survey group." },
+      { status: 403 },
+    );
+  }
+
   return NextResponse.json({
     session: {
       id: session.id,
@@ -52,14 +102,9 @@ export async function GET(
       current_class: session.current_class,
       closes_at: session.closes_at,
     },
-    pupils: (pupils ?? []).map((pupil: any) => ({
-      id: pupil.id,
-      first_name: pupil.first_name,
-      last_name: pupil.last_name,
-      year_group: pupil.year_group,
-      current_class: pupil.current_class ?? pupil.class_name ?? null,
-    })),
+    pupils: mappedPupils,
     submittedPupilIds: (responses ?? []).map((response) => response.pupil_id),
+    selectedPupilId,
   });
 }
 
@@ -71,6 +116,7 @@ export async function POST(
   const supabase = createServiceRoleClient();
   const body = await request.json();
   const pupilId = body.pupilId;
+  const pupilToken = typeof body.pupilToken === "string" ? body.pupilToken : "";
 
   const { data: session, error: sessionError } = await supabase
     .from("class_builder_sessions")
@@ -82,11 +128,14 @@ export async function POST(
     return NextResponse.json({ error: "Survey not found" }, { status: 404 });
   }
 
+  const cohortYearGroups = parseClassBuilderSessionYearGroups(session.year_group);
+  const yearAliases = classBuilderYearStorageAliases(cohortYearGroups);
+
   let pupilQuery = supabase
     .from("pupils")
     .select("id")
     .eq("organization_id", session.organization_id)
-    .eq("year_group", session.year_group)
+    .in("year_group", yearAliases)
     .eq("is_active", true);
 
   if (session.current_class) {
@@ -97,6 +146,24 @@ export async function POST(
 
   const { data: pupils, error: pupilsError } = await pupilQuery;
   if (pupilsError) throw pupilsError;
+
+  if (pupilToken) {
+    const { hashPupilAccessToken } = await import("@/lib/pupil-pass");
+    const { data: tokenPupil, error: tokenPupilError } = await supabase
+      .from("pupils")
+      .select("id,is_active,pass_revoked_at")
+      .eq("organization_id", session.organization_id)
+      .eq("pupil_access_token_hash", hashPupilAccessToken(pupilToken))
+      .maybeSingle();
+
+    if (tokenPupilError) throw tokenPupilError;
+    if (!tokenPupil || tokenPupil.id !== pupilId || tokenPupil.is_active === false || tokenPupil.pass_revoked_at) {
+      return NextResponse.json(
+        { errors: ["This pupil pass does not match the selected pupil."] },
+        { status: 403 },
+      );
+    }
+  }
 
   const choices = [
     ...normaliseChoiceIds(body.friendshipIds).map((id, index) => ({

@@ -92,6 +92,66 @@ export interface GenerateClassGroupsResult {
   summary: ClassBuilderGroupSummary;
 }
 
+export function normaliseClassBuilderYearValue(value: string | null | undefined) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  const lower = raw.toLowerCase();
+  if (["r", "rec", "reception", "year r", "yr r"].includes(lower)) return "R";
+  if (["n", "nursery", "year n", "yr n"].includes(lower)) return "N";
+  const match = lower.match(/\d+/);
+  return match ? String(Number(match[0])) : raw;
+}
+
+export function parseClassBuilderSessionYearGroups(value: string | null | undefined) {
+  const parts = String(value || "")
+    .split(/[,|+]/)
+    .map((part) => normaliseClassBuilderYearValue(part))
+    .filter(Boolean);
+  return [...new Set(parts)];
+}
+
+export function formatClassBuilderCohortYearGroups(values: string[]) {
+  return [...new Set(values.map((value) => normaliseClassBuilderYearValue(value)).filter(Boolean))]
+    .sort((a, b) => classBuilderYearSortValue(a) - classBuilderYearSortValue(b))
+    .join(",");
+}
+
+export function classBuilderYearLabel(value: string) {
+  const normalised = normaliseClassBuilderYearValue(value);
+  return normalised === "R" ? "Reception" : `Year ${normalised}`;
+}
+
+export function classBuilderCohortLabel(value: string | null | undefined) {
+  const years = parseClassBuilderSessionYearGroups(value);
+  if (years.length === 0) return "No cohort";
+  if (years.length === 1) return classBuilderYearLabel(years[0]);
+  return years.map(classBuilderYearLabel).join(" + ");
+}
+
+export function classBuilderYearStorageAliases(values: string[]) {
+  const aliases = new Set<string>();
+  for (const value of values) {
+    const normalised = normaliseClassBuilderYearValue(value);
+    if (!normalised) continue;
+    aliases.add(normalised);
+    if (normalised === "R") {
+      aliases.add("Reception");
+      aliases.add("Year R");
+      aliases.add("Rec");
+    } else {
+      aliases.add(`Year ${normalised}`);
+      aliases.add(`Y${normalised}`);
+    }
+  }
+  return [...aliases];
+}
+
+function classBuilderYearSortValue(value: string) {
+  if (normaliseClassBuilderYearValue(value) === "R") return 0;
+  const numeric = Number(normaliseClassBuilderYearValue(value));
+  return Number.isFinite(numeric) ? numeric : 99;
+}
+
 export function validateClassBuilderSubmission(
   input: ClassBuilderValidationInput,
 ): ClassBuilderValidationResult {

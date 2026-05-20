@@ -18,6 +18,49 @@ describe("reviewPupilUploadCsv", () => {
     expect(review.sampleRows[0]).toMatchObject({ rowNumber: 3, first_name: "Ada" });
   });
 
+  it("finds the styled Excel template header on row five", () => {
+    const csv = [
+      "Schoolgle Pupil Upload Template,,,,",
+      "Rows 1-3 are guidance row 4 explains columns,,,,",
+      "Tip: keep pupil_id stable,,,,",
+      "Unique pupil ID,Pupil first name,Pupil last name,Year group,Current class",
+      "pupil_id,first_name,last_name,year_group,current_class",
+      "759,Toby,Hulbert,Year 2,Ash",
+      "804,Edwyn,Daniel,Year 2,Ash",
+    ].join("\n");
+
+    const review = reviewPupilUploadCsv(csv, "Student List.xlsx");
+
+    expect(review.errors).toEqual([]);
+    expect(review.headerRow).toBe(5);
+    expect(review.totalRows).toBe(2);
+    expect(review.validRows).toBe(2);
+    expect(review.rows).toHaveLength(2);
+    expect(review.sampleRows[0]).toMatchObject({
+      rowNumber: 6,
+      first_name: "Toby",
+      year_group: "2",
+      current_class: "Ash",
+    });
+  });
+
+  it("shows gender and active status in the review sample", () => {
+    const csv = [
+      "pupil_id,first_name,last_name,year_group,current_class,gender,is_active",
+      "P1,Ada,Lovelace,Year R,Beech,Female,true",
+    ].join("\n");
+
+    const review = reviewPupilUploadCsv(csv, "pupils.csv");
+
+    expect(review.sampleRows[0]).toMatchObject({
+      year_group: "R",
+      gender: "Female",
+      is_active: "true",
+      primary_need: "",
+      pass_colour: "",
+    });
+  });
+
   it("reports required field and duplicate pupil id errors", () => {
     const csv = [
       "pupil_id,first_name,last_name,year_group,current_class",

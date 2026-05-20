@@ -1,4 +1,8 @@
 import { protectedRoute, apiError, apiSuccess } from "@/lib/api-utils";
+import {
+  classBuilderYearStorageAliases,
+  parseClassBuilderSessionYearGroups,
+} from "@/lib/class-builder";
 import { decryptPupilAccessToken } from "@/lib/pupil-pass";
 import { createServiceRoleClient } from "@/lib/supabase-server";
 
@@ -20,13 +24,16 @@ export const GET = protectedRoute(async (auth, request) => {
 
   if (sessionError) throw sessionError;
 
+  const cohortYearGroups = parseClassBuilderSessionYearGroups(session.year_group);
+  const yearAliases = classBuilderYearStorageAliases(cohortYearGroups);
+
   let pupilQuery = supabase
     .from("pupils")
     .select(
       "id, first_name, last_name, year_group, current_class, class_name, gender, send_status, sen_status, ehcp, primary_need, is_eal, is_pupil_premium, pass_codename, pass_colour, pass_animal, pass_badge, pupil_access_token_encrypted, pass_revoked_at",
     )
     .eq("organization_id", auth.organizationId)
-    .eq("year_group", session.year_group)
+    .in("year_group", yearAliases)
     .eq("is_active", true)
     .order("last_name")
     .order("first_name");

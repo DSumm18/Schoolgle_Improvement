@@ -9,8 +9,8 @@ export function normalisePupilName(value: string) {
 export function normaliseYearGroup(value: string) {
   const trimmed = value.trim();
   const lower = trimmed.toLowerCase();
-  if (lower === "reception" || lower === "r") return "R";
-  if (lower === "nursery" || lower === "n") return "N";
+  if (["reception", "r", "year r", "yr r"].includes(lower)) return "R";
+  if (["nursery", "n", "year n", "yr n"].includes(lower)) return "N";
   const match = lower.match(/^y(?:ear)?\s*(\d+)$/);
   return match ? match[1] : trimmed.toUpperCase();
 }

@@ -1,4 +1,5 @@
 import { protectedRoute, apiError, apiSuccess } from "@/lib/api-utils";
+import { formatClassBuilderCohortYearGroups } from "@/lib/class-builder";
 import { createServiceRoleClient } from "@/lib/supabase-server";
 
 export const GET = protectedRoute(async (auth) => {
@@ -27,11 +28,14 @@ export const GET = protectedRoute(async (auth) => {
 export const POST = protectedRoute(async (auth, request) => {
   const supabase = createServiceRoleClient();
   const body = await request.json();
-  const yearGroup = String(body.yearGroup || "").trim();
+  const cohortYearGroups = Array.isArray(body.cohortYearGroups)
+    ? body.cohortYearGroups.map((year: unknown) => String(year))
+    : [String(body.yearGroup || "")];
+  const yearGroup = formatClassBuilderCohortYearGroups(cohortYearGroups);
   const title = String(body.title || "").trim();
   const targetClassCount = Number(body.targetClassCount || 2);
 
-  if (!yearGroup) return apiError("Year group is required", 400);
+  if (!yearGroup) return apiError("At least one year group is required", 400);
   if (!title) return apiError("Title is required", 400);
   if (![2, 3].includes(targetClassCount)) {
     return apiError("Target class count must be 2 or 3", 400);

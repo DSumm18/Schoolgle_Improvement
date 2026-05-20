@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -30,7 +30,9 @@ type Session = {
 
 export default function ClassBuilderSurveyPage() {
   const params = useParams<{ code: string }>();
+  const searchParams = useSearchParams();
   const code = params.code;
+  const pupilToken = searchParams.get("t") || "";
   const [session, setSession] = useState<Session | null>(null);
   const [pupils, setPupils] = useState<Pupil[]>([]);
   const [submittedPupilIds, setSubmittedPupilIds] = useState<string[]>([]);
@@ -44,19 +46,23 @@ export default function ClassBuilderSurveyPage() {
 
   useEffect(() => {
     async function load() {
-      const res = await fetch(`/api/class-builder/public/${code}`);
+      const query = pupilToken ? `?t=${encodeURIComponent(pupilToken)}` : "";
+      const res = await fetch(`/api/class-builder/public/${code}${query}`);
       const data = await res.json();
       if (res.ok) {
         setSession(data.session);
         setPupils(data.pupils);
         setSubmittedPupilIds(data.submittedPupilIds ?? []);
+        if (data.selectedPupilId) {
+          setPupilId(data.selectedPupilId);
+        }
       } else {
         setErrors([data.error || "Survey not found"]);
       }
       setLoading(false);
     }
     if (code) load();
-  }, [code]);
+  }, [code, pupilToken]);
 
   const availableChoices = useMemo(
     () => pupils.filter((pupil) => pupil.id !== pupilId),
@@ -75,7 +81,7 @@ export default function ClassBuilderSurveyPage() {
     const res = await fetch(`/api/class-builder/public/${code}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ pupilId, friendshipIds, workWellIds }),
+      body: JSON.stringify({ pupilId, pupilToken, friendshipIds, workWellIds }),
     });
     const data = await res.json();
     setSubmitting(false);
@@ -95,7 +101,12 @@ export default function ClassBuilderSurveyPage() {
   }
 
   if (!session || errors.includes("Survey not found")) {
-    return <Message title="Survey not found" text="Please ask your teacher for a new link." />;
+    return (
+      <Message
+        title={errors.includes("Survey not found") ? "Survey not found" : "Survey not available"}
+        text={errors[0] || "Please ask your teacher for a new link."}
+      />
+    );
   }
 
   if (session.status !== "open") {
@@ -129,44 +140,60 @@ export default function ClassBuilderSurveyPage() {
             {session.title}
           </h1>
           <p className="text-slate-600 mt-1">
-            Choose your name, then pick the people who help you feel happy and ready to learn.
+            {selectedPupil
+              ? `Hi ${selectedPupil.first_name}. Pick the people who help you feel happy and ready to learn.`
+              : "Your teacher can scan your pupil pass, or help you choose your name if needed."}
           </p>
         </div>
 
         <Card className="border-0 shadow-xl shadow-sky-100/70">
           <CardContent className="p-5 md:p-6 space-y-5">
-            <div className="rounded-2xl bg-sky-50 p-4 ring-1 ring-sky-100">
-              <label className="flex items-center gap-2 text-base font-bold text-slate-800">
-                <StepBubble number={1} />
-                Choose your name
-              </label>
-              <Select
-                value={pupilId}
-                onValueChange={(value) => {
-                  setPupilId(value);
-                  setFriendshipIds((ids) => ids.filter((id) => id !== value));
-                  setWorkWellIds((ids) => ids.filter((id) => id !== value));
-                }}
-              >
-                <SelectTrigger className="mt-2 h-12 bg-white">
-                  <SelectValue placeholder="Find your name" />
-                </SelectTrigger>
-                <SelectContent>
-                  {pupils.map((pupil) => (
-                    <SelectItem key={pupil.id} value={pupil.id}>
-                      {nameOf(pupil)}
-                      {submittedPupilIds.includes(pupil.id) ? " (already done)" : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {selectedPupil && (
-                <p className="mt-3 flex items-center gap-2 text-sm font-semibold text-sky-700">
-                  <Sparkles className="h-4 w-4" />
-                  Hello {selectedPupil.first_name}! Now choose your people.
+            {selectedPupil ? (
+              <div className="rounded-2xl bg-emerald-50 p-4 ring-1 ring-emerald-100">
+                <div className="flex items-center gap-3">
+                  <StepBubble number={1} />
+                  <div>
+                    <p className="text-base font-black text-slate-900">
+                      Pupil pass recognised
+                    </p>
+                    <p className="text-sm font-semibold text-emerald-700">
+                      Hello {nameOf(selectedPupil)} - now choose your people.
+                    </p>
+                  </div>
+                  <CheckCircle2 className="ml-auto h-6 w-6 text-emerald-600" />
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-2xl bg-sky-50 p-4 ring-1 ring-sky-100">
+                <label className="flex items-center gap-2 text-base font-bold text-slate-800">
+                  <StepBubble number={1} />
+                  Choose your name
+                </label>
+                <p className="mt-1 text-sm text-slate-600">
+                  This is the teacher fallback. Pupils should normally scan their QR pass.
                 </p>
-              )}
-            </div>
+                <Select
+                  value={pupilId}
+                  onValueChange={(value) => {
+                    setPupilId(value);
+                    setFriendshipIds((ids) => ids.filter((id) => id !== value));
+                    setWorkWellIds((ids) => ids.filter((id) => id !== value));
+                  }}
+                >
+                  <SelectTrigger className="mt-2 h-12 bg-white">
+                    <SelectValue placeholder="Find your name" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {pupils.map((pupil) => (
+                      <SelectItem key={pupil.id} value={pupil.id}>
+                        {nameOf(pupil)}
+                        {submittedPupilIds.includes(pupil.id) ? " (already done)" : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <ChoiceBlock
               title="Friends"

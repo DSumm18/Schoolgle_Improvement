@@ -12,10 +12,17 @@ export type PupilUploadReviewRow = {
   last_name: string;
   year_group: string;
   current_class: string;
+  gender: string;
   send_status: string;
   ehcp: string;
+  primary_need: string;
+  fsm_eligible: string;
   eal: string;
   pupil_premium: string;
+  is_active: string;
+  pass_colour: string;
+  pass_animal: string;
+  pass_badge: string;
 };
 
 export type PupilUploadReview = {
@@ -26,6 +33,7 @@ export type PupilUploadReview = {
   validRows: number;
   errors: string[];
   warnings: string[];
+  rows: PupilUploadReviewRow[];
   sampleRows: PupilUploadReviewRow[];
   stats: {
     yearGroups: Array<{ value: string; count: number }>;
@@ -53,6 +61,7 @@ export function reviewPupilUploadCsv(csvText: string, filename = "pupil-upload.c
     validRows: 0,
     errors: ["CSV needs a header row and at least one pupil row."],
     warnings: [] as string[],
+    rows: [] as PupilUploadReviewRow[],
     sampleRows: [] as PupilUploadReviewRow[],
     stats: {
       yearGroups: [],
@@ -66,19 +75,10 @@ export function reviewPupilUploadCsv(csvText: string, filename = "pupil-upload.c
 
   if (lines.length < 2) return emptyReview;
 
-  let headerLineIndex = 0;
-  let headers = splitCsvLine(lines[0].raw).map(normaliseHeader);
-  let missing = REQUIRED_FIELDS.filter((field) => !headers.includes(field));
-
-  if (missing.length > 0 && lines.length > 2) {
-    const secondRowHeaders = splitCsvLine(lines[1].raw).map(normaliseHeader);
-    const secondRowMissing = REQUIRED_FIELDS.filter((field) => !secondRowHeaders.includes(field));
-    if (secondRowMissing.length === 0) {
-      headerLineIndex = 1;
-      headers = secondRowHeaders;
-      missing = [];
-    }
-  }
+  const headerMatch = findHeaderLine(lines);
+  const headerLineIndex = headerMatch.headerLineIndex;
+  const headers = headerMatch.headers;
+  const missing = headerMatch.missing;
 
   if (missing.length > 0) {
     return {
@@ -119,10 +119,17 @@ export function reviewPupilUploadCsv(csvText: string, filename = "pupil-upload.c
       last_name: raw.last_name ? normalisePupilName(raw.last_name) : "",
       year_group: raw.year_group ? normaliseYearGroup(raw.year_group) : "",
       current_class: raw.current_class ? normaliseClassName(raw.current_class) : "",
+      gender: raw.gender || "",
       send_status: normaliseSendStatus(raw.send_status || raw.sen_status) || "",
       ehcp: raw.ehcp || "",
+      primary_need: raw.primary_need || "",
+      fsm_eligible: raw.fsm_eligible || "",
       eal: raw.eal || "",
       pupil_premium: raw.pupil_premium || "",
+      is_active: raw.is_active || "",
+      pass_colour: raw.pass_colour || "",
+      pass_animal: raw.pass_animal || "",
+      pass_badge: raw.pass_badge || "",
     });
   });
 
@@ -134,6 +141,7 @@ export function reviewPupilUploadCsv(csvText: string, filename = "pupil-upload.c
     validRows: Math.max(0, rows.length - rowsWithErrors(errors).size),
     errors,
     warnings,
+    rows,
     sampleRows: pickSampleRows(rows),
     stats: {
       yearGroups: countValues(rows.map((row) => row.year_group)),
@@ -179,6 +187,21 @@ function countValues(values: string[]) {
 
 function truthy(value: string) {
   return ["true", "yes", "y", "1", "ehcp", "e"].includes(value.trim().toLowerCase());
+}
+
+function findHeaderLine(lines: Array<{ raw: string; rowNumber: number }>) {
+  for (let index = 0; index < Math.min(lines.length, 8); index += 1) {
+    const headers = splitCsvLine(lines[index].raw).map(normaliseHeader);
+    const missing = REQUIRED_FIELDS.filter((field) => !headers.includes(field));
+    if (missing.length === 0) return { headerLineIndex: index, headers, missing };
+  }
+
+  const headers = splitCsvLine(lines[0].raw).map(normaliseHeader);
+  return {
+    headerLineIndex: 0,
+    headers,
+    missing: REQUIRED_FIELDS.filter((field) => !headers.includes(field)),
+  };
 }
 
 function normaliseHeader(header: string) {

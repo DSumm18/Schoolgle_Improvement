@@ -24,6 +24,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import {
+  classBuilderCohortLabel,
+  classBuilderYearLabel,
+  formatClassBuilderCohortYearGroups,
+} from "@/lib/class-builder";
 import { classBuilderHowToGuide } from "@/lib/product-guides/class-builder";
 import {
   AlertTriangle,
@@ -162,6 +167,7 @@ export default function ClassBuilderPage() {
   const [busy, setBusy] = useState(false);
   const [title, setTitle] = useState("Class Builder Survey");
   const [yearGroup, setYearGroup] = useState("4");
+  const [selectedYearGroups, setSelectedYearGroups] = useState<string[]>(["4"]);
   const [currentClass, setCurrentClass] = useState("");
   const [surveyScope, setSurveyScope] = useState<"year" | "class" | "school">("year");
   const [targetClassCount, setTargetClassCount] = useState("2");
@@ -252,7 +258,8 @@ export default function ClassBuilderPage() {
       body: JSON.stringify({
         organizationId,
         title,
-        yearGroup,
+        yearGroup: surveyScope === "class" ? yearGroup : formatClassBuilderCohortYearGroups(selectedYearGroups),
+        cohortYearGroups: surveyScope === "class" ? [yearGroup] : selectedYearGroups,
         currentClass: surveyScope === "class" ? currentClass.trim() || null : null,
         targetClassCount: Number(targetClassCount),
         status: "draft",
@@ -399,8 +406,8 @@ export default function ClassBuilderPage() {
     | undefined;
   const pupilSurveyUrl = detail ? getSurveyUrl(detail.session) : "";
   const transitionLabel = detail
-    ? `Current Year ${detail.session.year_group} → draft Year ${nextYearGroup(detail.session.year_group)}`
-    : "Current cohort → next year classes";
+    ? `${classBuilderCohortLabel(detail.session.year_group)} cohort to draft classes`
+    : "Current cohort to next year classes";
   const availableYearGroups = useMemo(
     () => buildYearGroupOptions(classes, detail?.pupils ?? []),
     [classes, detail?.pupils],
@@ -414,8 +421,8 @@ export default function ClassBuilderPage() {
     [classes, yearGroup],
   );
   const cohortPupilCount = useMemo(
-    () => countPupilsForScope(detail?.pupils ?? [], yearGroup, currentClass, surveyScope),
-    [detail?.pupils, yearGroup, currentClass, surveyScope],
+    () => countPupilsForScope(detail?.pupils ?? [], selectedYearGroups, yearGroup, currentClass, surveyScope),
+    [detail?.pupils, selectedYearGroups, yearGroup, currentClass, surveyScope],
   );
   const scopeDescription =
     surveyScope === "class"
@@ -423,7 +430,7 @@ export default function ClassBuilderPage() {
         ? `Only pupils currently in ${currentClass} will appear in this survey.`
         : "Choose a class so only that class sees its own pupil list."
       : surveyScope === "year"
-        ? `All current Year ${yearGroup} pupils will appear in this Class Builder survey.`
+        ? `${selectedYearGroups.map(classBuilderYearLabel).join(" + ")} pupils will appear in this Class Builder survey. Use this for mixed-age transition groups.`
         : "Whole-school surveys belong in the wider Surveys module, not Class Builder.";
   const canGenerateGroups = Boolean(detail && detail.responses.length > 0 && !busy);
 
@@ -499,7 +506,7 @@ export default function ClassBuilderPage() {
                       setCurrentClass("");
                     }}
                   >
-                    Year group survey
+                    Cohort / transition survey
                   </Button>
                   <Button
                     type="button"
@@ -533,23 +540,79 @@ export default function ClassBuilderPage() {
                 </div>
               </div>
               <div>
-                <Label>Year transition</Label>
+                <Label>{surveyScope === "class" ? "Year transition" : "Survey year groups"}</Label>
+                {surveyScope !== "class" ? (
+                  <div className="mt-2 grid grid-cols-1 gap-2">
+                    {[
+                      { label: "Reception + Year 1", values: ["R", "1"] },
+                      { label: "Year 2 + Year 3", values: ["2", "3"] },
+                      { label: "Year 4 + Year 5", values: ["4", "5"] },
+                    ].map((preset) => {
+                      const isActive =
+                        selectedYearGroups.length === preset.values.length &&
+                        preset.values.every((value) => selectedYearGroups.includes(value));
+                      return (
+                        <Button
+                          key={preset.label}
+                          type="button"
+                          variant={isActive ? "default" : "outline"}
+                          className="justify-start text-xs"
+                          onClick={() => {
+                            setSelectedYearGroups(preset.values);
+                            setYearGroup(preset.values[0]);
+                            setCurrentClass("");
+                          }}
+                        >
+                          {preset.label}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                ) : null}
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   {availableYearGroups.map((option) => (
                     <Button
                       key={option.value}
                       type="button"
-                      variant={yearGroup === option.value ? "default" : "outline"}
+                      variant={
+                        surveyScope === "class"
+                          ? yearGroup === option.value
+                            ? "default"
+                            : "outline"
+                          : selectedYearGroups.includes(option.value)
+                            ? "default"
+                            : "outline"
+                      }
                       className="justify-start text-xs"
                       onClick={() => {
-                        setYearGroup(option.value);
-                        setCurrentClass("");
+                        if (surveyScope === "class") {
+                          setYearGroup(option.value);
+                          setSelectedYearGroups([option.value]);
+                          setCurrentClass("");
+                        } else {
+                          setSelectedYearGroups((current) => {
+                            const exists = current.includes(option.value);
+                            const next = exists
+                              ? current.filter((value) => value !== option.value)
+                              : [...current, option.value];
+                            const sorted = next.sort((a, b) => yearSortValue(a) - yearSortValue(b));
+                            setYearGroup(sorted[0] ?? option.value);
+                            return sorted.length > 0 ? sorted : [option.value];
+                          });
+                        }
                       }}
                     >
                       {option.label}
                     </Button>
                   ))}
                 </div>
+                {surveyScope !== "class" ? (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Select one or more current year groups. For Rawdon St Peter&apos;s
+                    mixed-age planning, use Reception + Year 1, Year 2 + Year 3,
+                    or Year 4 + Year 5.
+                  </p>
+                ) : null}
               </div>
               <div>
                 <Label>Title</Label>
@@ -557,10 +620,18 @@ export default function ClassBuilderPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label>Year group</Label>
+                  <Label>{surveyScope === "class" ? "Year group" : "Stored cohort"}</Label>
                   <Input
-                    value={yearGroup}
-                    onChange={(e) => setYearGroup(e.target.value)}
+                    value={
+                      surveyScope === "class"
+                        ? yearGroup
+                        : formatClassBuilderCohortYearGroups(selectedYearGroups)
+                    }
+                    disabled={surveyScope !== "class"}
+                    onChange={(e) => {
+                      setYearGroup(e.target.value);
+                      setSelectedYearGroups([e.target.value]);
+                    }}
                   />
                 </div>
                 <div>
@@ -697,7 +768,7 @@ export default function ClassBuilderPage() {
                       <StatusBadge status={session.status} />
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Year {session.year_group}
+                      {classBuilderCohortLabel(session.year_group)}
                       {session.current_class ? `, ${session.current_class}` : ""}
                       {" · "}
                       {session.response_count ?? 0} responses
@@ -1167,6 +1238,7 @@ function shortNameOf(pupil?: Pupil) {
 
 function buildYearGroupOptions(classes: ClassRecord[], pupils: Pupil[]) {
   const values = new Set<string>();
+  ["R", "1", "2", "3", "4", "5", "6"].forEach((value) => values.add(value));
   for (const classRecord of classes) {
     const value = normaliseYearValue(classRecord.year_group);
     if (value) values.add(value);
@@ -1175,14 +1247,11 @@ function buildYearGroupOptions(classes: ClassRecord[], pupils: Pupil[]) {
     const value = normaliseYearValue(pupil.year_group);
     if (value) values.add(value);
   }
-  if (values.size === 0) {
-    ["R", "1", "2", "3", "4", "5"].forEach((value) => values.add(value));
-  }
   return [...values]
     .sort((a, b) => yearSortValue(a) - yearSortValue(b))
     .map((value) => ({
       value,
-      label: `${yearLabel(value)} → ${yearLabel(nextYearGroup(value))}`,
+      label: `Current ${yearLabel(value)}`,
     }));
 }
 
@@ -1220,14 +1289,17 @@ function primaryTeacherName(classRecord: ClassRecord) {
 
 function countPupilsForScope(
   pupils: Pupil[],
+  selectedYearGroups: string[],
   yearGroup: string,
   currentClass: string,
   scope: "year" | "class" | "school",
 ) {
   if (scope === "school") return pupils.length;
+  const selectedYears = new Set(
+    (scope === "class" ? [yearGroup] : selectedYearGroups).map(normaliseYearValue),
+  );
   return pupils.filter((pupil) => {
-    const yearMatches =
-      normaliseYearValue(pupil.year_group) === normaliseYearValue(yearGroup);
+    const yearMatches = selectedYears.has(normaliseYearValue(pupil.year_group));
     if (!yearMatches) return false;
     if (scope === "class") return pupil.current_class === currentClass;
     return true;

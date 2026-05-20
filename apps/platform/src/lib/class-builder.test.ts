@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  classBuilderCohortLabel,
+  classBuilderYearStorageAliases,
+  formatClassBuilderCohortYearGroups,
   generateClassGroups,
   parseClassBuilderPupilCsv,
+  parseClassBuilderSessionYearGroups,
   validateClassBuilderSubmission,
   type ClassBuilderChoiceInput,
   type ClassBuilderPupil,
@@ -89,6 +93,20 @@ function choice(
     rank,
   };
 }
+
+describe("class builder cohort helpers", () => {
+  it("normalises flexible multi-year survey cohorts", () => {
+    expect(formatClassBuilderCohortYearGroups(["Year 1", "Reception", "Y1"])).toBe(
+      "R,1",
+    );
+    expect(parseClassBuilderSessionYearGroups("Year R,Year 1")).toEqual(["R", "1"]);
+    expect(parseClassBuilderSessionYearGroups("R,1")).toEqual(["R", "1"]);
+    expect(classBuilderCohortLabel("R,1")).toBe("Reception + Year 1");
+    expect(classBuilderYearStorageAliases(["R", "1"])).toEqual(
+      expect.arrayContaining(["R", "Reception", "Year R", "1", "Year 1", "Y1"]),
+    );
+  });
+});
 
 describe("validateClassBuilderSubmission", () => {
   it("rejects self-selection", () => {
