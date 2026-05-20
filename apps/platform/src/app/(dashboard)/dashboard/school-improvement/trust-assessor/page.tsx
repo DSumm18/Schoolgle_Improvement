@@ -8293,7 +8293,7 @@ export default function TrustAssessorPage() {
               <TrendingUp size={20} className="text-primary" />
             </div>
             <div>
-              <h1 className="text-xl font-semibold text-foreground">{isLocalAuthorityLevel ? "Local Authority School Improvement Assessor" : "Trust Assessor"}</h1>
+              <h1 className="text-xl font-semibold text-foreground">School Improvement Assessor</h1>
               <p className="text-sm text-muted-foreground">Upload mid-year data. Cross-reference with DfE. No AI — pure numbers.</p>
             </div>
           </div>

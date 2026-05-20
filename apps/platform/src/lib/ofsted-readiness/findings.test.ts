@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   buildActionFormFromFinding,
+  buildDocumentInspectionFindingDraft,
+  buildDocumentInspectionFindingSourceKey,
   buildWebsiteFindingDraft,
   buildWebsiteFindingSourceKey,
 } from "./findings";
@@ -190,5 +192,94 @@ describe("buildActionFormFromFinding", () => {
         url: "https://school.example/safeguarding",
       },
     ]);
+  });
+});
+
+describe("buildDocumentInspectionFindingDraft", () => {
+  it("creates a routed finding from a weak connected Drive document", () => {
+    const draft = buildDocumentInspectionFindingDraft({
+      checkId: "check-123",
+      driveFileId: "drive-file-123",
+      fileName: "Safeguarding_and_Child_Protection_Policy_2025-26.docx",
+      evaluationArea: "Safeguarding",
+      expectedDocument: "safeguarding, child protection, KCSIE",
+      foundModifiedAt: "2026-05-01T09:00:00.000Z",
+      inspection: {
+        rating: "needs_attention",
+        confidence: "high",
+        summary:
+          "The policy is present but does not fully evidence current filtering and monitoring arrangements.",
+        checkpoint_results: [
+          {
+            checkpoint: "Filtering and monitoring responsibilities",
+            met: false,
+            evidence: "No named responsibility or monitoring cycle found",
+            severity: "important",
+          },
+        ],
+        legislation_check: {
+          references_current: false,
+          legislation_found: ["KCSIE 2024"],
+          missing_references: ["KCSIE 2025"],
+        },
+        actions_required: [
+          {
+            action: "Update the policy to reference KCSIE 2025 and name filtering and monitoring responsibilities",
+            priority: "high",
+            rationale: "Inspectors will expect current statutory safeguarding references",
+            sef_impact: "Strengthens the safeguarding evidence trail",
+          },
+        ],
+        red_flags: [],
+      },
+    });
+
+    expect(draft).toMatchObject({
+      source_key: buildDocumentInspectionFindingSourceKey("check-123"),
+      source_type: "document_inspection",
+      source_scan_id: null,
+      finding_type: "quality_gap",
+      severity: "high",
+      action_level: "recommended_action",
+      category_id: "safeguarding",
+      score: 50,
+      confidence: 0.85,
+      evidence_url: "https://drive.google.com/open?id=drive-file-123",
+      recommended_task_title:
+        "Improve Safeguarding_and_Child_Protection_Policy_2025-26.docx for Ofsted readiness",
+    });
+    expect(draft?.checklist).toContain(
+      "Update the policy to reference KCSIE 2025 and name filtering and monitoring responsibilities",
+    );
+    expect(draft?.gaps).toContain(
+      "Missing current guidance reference: KCSIE 2025",
+    );
+  });
+
+  it("returns null for a strong document with no required action", () => {
+    const draft = buildDocumentInspectionFindingDraft({
+      checkId: "check-456",
+      driveFileId: "drive-file-456",
+      fileName: "Current_PE_Sports_Premium_2024-25.pdf",
+      evaluationArea: "Personal Development and Well-being",
+      expectedDocument: "sport premium",
+      inspection: {
+        rating: "expected_standard",
+        confidence: "medium",
+        summary: "The document is current and suitable for the current school year.",
+        checkpoint_results: [
+          {
+            checkpoint: "Published statement",
+            met: true,
+            evidence: "2024-25 grant report published",
+            severity: "minor",
+          },
+        ],
+        red_flags: [],
+        actions_required: [],
+      },
+    });
+
+    expect(draft).toBeNull();
   });
 });

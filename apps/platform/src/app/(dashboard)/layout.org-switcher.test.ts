@@ -15,4 +15,16 @@ describe("dashboard layout organization switcher", () => {
     expect(orgSwitcherBlock).toContain("<OrgSwitcher");
     expect(orgSwitcherBlock).not.toContain("!isSingleAppMode");
   });
+
+  it("keeps the dashboard shell stable without route-level or sidebar entrance animations", () => {
+    const source = readFileSync(
+      "apps/platform/src/app/(dashboard)/layout.tsx",
+      "utf8",
+    );
+
+    expect(source).not.toContain('<AnimatePresence mode="wait">');
+    expect(source).not.toContain('key={pathname}');
+    expect(source).not.toContain('initial={{ opacity: 0, x: -10 }}');
+    expect(source).not.toContain('initial={{ opacity: 0, x: -6 }}');
+  });
 });

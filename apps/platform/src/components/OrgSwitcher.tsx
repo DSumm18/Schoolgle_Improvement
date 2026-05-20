@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { ChevronDown, Building2, School } from "lucide-react";
+import { useState, useEffect, useMemo, useLayoutEffect, useRef, useCallback } from "react";
+import { ChevronDown, ChevronRight, Building2, School } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/SupabaseAuthContext";
 
@@ -22,12 +22,42 @@ interface OrgSwitcherProps {
   onOrgChange: (orgId: string) => void;
 }
 
+const ORG_SWITCHER_SCROLL_KEY = "schoolgle-org-switcher-scroll-top";
+
 export default function OrgSwitcher({ currentOrgId, onOrgChange }: OrgSwitcherProps) {
   const { user, session, loading: authLoading } = useAuth();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [currentOrg, setCurrentOrg] = useState<Organization | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [expandedParentId, setExpandedParentId] = useState<string | null>(null);
+  const dropdownScrollRef = useRef<HTMLDivElement | null>(null);
+  const selectedOrgButtonRef = useRef<HTMLButtonElement | null>(null);
+  const lastDropdownScrollTopRef = useRef(0);
+
+  const activeOrgId = currentOrg?.id || currentOrgId;
+
+  const persistDropdownScroll = useCallback((scrollTop: number) => {
+    lastDropdownScrollTopRef.current = scrollTop;
+    try {
+      sessionStorage.setItem(ORG_SWITCHER_SCROLL_KEY, String(scrollTop));
+    } catch {
+      // Session storage may be unavailable in restricted browser contexts.
+    }
+  }, []);
+
+  const readStoredDropdownScroll = useCallback(() => {
+    if (lastDropdownScrollTopRef.current > 0) {
+      return lastDropdownScrollTopRef.current;
+    }
+
+    try {
+      const stored = Number(sessionStorage.getItem(ORG_SWITCHER_SCROLL_KEY) || 0);
+      return Number.isFinite(stored) ? stored : 0;
+    } catch {
+      return 0;
+    }
+  }, []);
 
   useEffect(() => {
     async function fetchAccessibleOrgs() {
@@ -151,6 +181,14 @@ export default function OrgSwitcher({ currentOrgId, onOrgChange }: OrgSwitcherPr
   }, [user, currentOrgId, session, authLoading]);
 
   const handleOrgSelect = (org: Organization) => {
+    if (dropdownScrollRef.current) {
+      persistDropdownScroll(dropdownScrollRef.current.scrollTop);
+    }
+    setExpandedParentId(
+      org.organization_type === 'trust' || org.organization_type === 'local_authority'
+        ? org.id
+        : org.parent_organization_id,
+    );
     setCurrentOrg(org);
     onOrgChange(org.id);
     setIsOpen(false);
@@ -190,7 +228,6 @@ export default function OrgSwitcher({ currentOrgId, onOrgChange }: OrgSwitcherPr
   // Group orgs hierarchically: each trust with its accessible children beneath;
   // standalone schools (no parent, or parent not in the user's list) go last.
   const groups = useMemo(() => {
-    const byId = new Map(organizations.map((o) => [o.id, o]));
     const trusts = organizations
       .filter((o) => o.organization_type === 'trust' || o.organization_type === 'local_authority')
       .sort((a, b) => a.name.localeCompare(b.name));
@@ -216,6 +253,45 @@ export default function OrgSwitcher({ currentOrgId, onOrgChange }: OrgSwitcherPr
     return { trustGroups, standalone };
   }, [organizations]);
 
+  const activeParentGroupId = useMemo(() => {
+    const activeOrg = organizations.find((org) => org.id === activeOrgId);
+    if (!activeOrg) return null;
+
+    if (
+      activeOrg.organization_type === 'trust' ||
+      activeOrg.organization_type === 'local_authority'
+    ) {
+      return activeOrg.id;
+    }
+
+    const hasAccessibleParent = groups.trustGroups.some(
+      ({ trust }) => trust.id === activeOrg.parent_organization_id,
+    );
+
+    return hasAccessibleParent ? activeOrg.parent_organization_id : null;
+  }, [activeOrgId, groups.trustGroups, organizations]);
+
+  useEffect(() => {
+    if (!isOpen || expandedParentId || !activeParentGroupId) return;
+    setExpandedParentId(activeParentGroupId);
+  }, [activeParentGroupId, expandedParentId, isOpen]);
+
+  useLayoutEffect(() => {
+    if (!isOpen || !dropdownScrollRef.current) return;
+
+    const storedScrollTop = readStoredDropdownScroll();
+    if (storedScrollTop > 0) {
+      dropdownScrollRef.current.scrollTop = storedScrollTop;
+      return;
+    }
+
+    if (typeof selectedOrgButtonRef.current?.scrollIntoView === "function") {
+      selectedOrgButtonRef.current.scrollIntoView({
+        block: "nearest",
+      });
+    }
+  }, [activeOrgId, groups, isOpen, readStoredDropdownScroll]);
+
   if (loading) {
     return (
       <div className="px-4 py-2 bg-muted rounded-lg animate-pulse">
@@ -240,7 +316,15 @@ export default function OrgSwitcher({ currentOrgId, onOrgChange }: OrgSwitcherPr
   return (
     <div className="relative">
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          if (isOpen && dropdownScrollRef.current) {
+            persistDropdownScroll(dropdownScrollRef.current.scrollTop);
+          }
+          if (!isOpen) {
+            setExpandedParentId(activeParentGroupId);
+          }
+          setIsOpen(!isOpen);
+        }}
         className="px-3 py-2 bg-card hover:bg-accent border border-border rounded-lg flex items-center gap-2 transition-colors w-full text-left"
       >
         <OrgMark org={currentOrg} />
@@ -254,16 +338,43 @@ export default function OrgSwitcher({ currentOrgId, onOrgChange }: OrgSwitcherPr
         <>
           <div
             className="fixed inset-0 z-10"
-            onClick={() => setIsOpen(false)}
+            onClick={() => {
+              if (dropdownScrollRef.current) {
+                persistDropdownScroll(dropdownScrollRef.current.scrollTop);
+              }
+              setIsOpen(false);
+            }}
           />
-          <div className="absolute top-full left-0 mt-2 w-full bg-popover text-popover-foreground rounded-lg shadow-lg border border-border z-20 max-h-96 overflow-y-auto">
-            {groups.trustGroups.map(({ trust, children }) => (
+          <div
+            ref={dropdownScrollRef}
+            data-testid="org-switcher-menu"
+            onScroll={(event) => persistDropdownScroll(event.currentTarget.scrollTop)}
+            className="absolute top-full left-0 mt-2 w-full bg-popover text-popover-foreground rounded-lg shadow-lg border border-border z-20 max-h-96 overflow-y-auto"
+          >
+            {groups.trustGroups.map(({ trust, children }) => {
+              const isExpanded = expandedParentId === trust.id;
+
+              return (
               <div key={trust.id} className="border-b border-border last:border-b-0">
-                {/* Trust row */}
+                {/* Parent organization group row */}
                 <button
-                  onClick={() => handleOrgSelect(trust)}
+                  ref={
+                    trust.id === activeOrgId && !isExpanded
+                      ? selectedOrgButtonRef
+                      : null
+                  }
+                  onClick={() => {
+                    if (children.length === 0) {
+                      handleOrgSelect(trust);
+                      return;
+                    }
+
+                    setExpandedParentId((current) =>
+                      current === trust.id ? null : trust.id,
+                    );
+                  }}
                   className={`w-full px-4 py-3 flex items-center gap-3 hover:bg-accent transition-colors text-left ${
-                    trust.id === currentOrgId ? 'bg-primary/10' : ''
+                    trust.id === activeOrgId ? 'bg-primary/10' : ''
                   }`}
                 >
                   <OrgMark org={trust} />
@@ -275,17 +386,44 @@ export default function OrgSwitcher({ currentOrgId, onOrgChange }: OrgSwitcherPr
                       {trust.organization_type.replace('_', ' ')} · {children.length} {children.length === 1 ? 'school' : 'schools'}
                     </div>
                   </div>
-                  {trust.id === currentOrgId && (
+                  {children.length > 0 && (
+                    isExpanded ? (
+                      <ChevronDown size={16} className="text-muted-foreground" />
+                    ) : (
+                      <ChevronRight size={16} className="text-muted-foreground" />
+                    )
+                  )}
+                  {trust.id === activeOrgId && (
                     <div className="w-2 h-2 bg-primary rounded-full"></div>
                   )}
                 </button>
-                {/* Child schools indented */}
+                {isExpanded && (
+                  <div className="bg-muted/20">
+                    <button
+                      ref={trust.id === activeOrgId ? selectedOrgButtonRef : null}
+                      onClick={() => handleOrgSelect(trust)}
+                      className={`w-full pl-10 pr-4 py-2 flex items-center gap-2 hover:bg-accent transition-colors text-left ${
+                        trust.id === activeOrgId ? 'bg-primary/10' : ''
+                      }`}
+                    >
+                      <OrgMark org={trust} size="sm" />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm text-foreground truncate">
+                          Open {trust.name} overview
+                        </div>
+                      </div>
+                      {trust.id === activeOrgId && (
+                        <div className="w-2 h-2 bg-primary rounded-full"></div>
+                      )}
+                    </button>
+                    {/* Child schools indented */}
                 {children.map((child) => (
                   <button
                     key={child.id}
+                    ref={child.id === activeOrgId ? selectedOrgButtonRef : null}
                     onClick={() => handleOrgSelect(child)}
                     className={`w-full pl-10 pr-4 py-2 flex items-center gap-2 hover:bg-accent transition-colors text-left ${
-                      child.id === currentOrgId ? 'bg-primary/10' : ''
+                      child.id === activeOrgId ? 'bg-primary/10' : ''
                     }`}
                   >
                     <OrgMark org={child} size="sm" />
@@ -294,13 +432,16 @@ export default function OrgSwitcher({ currentOrgId, onOrgChange }: OrgSwitcherPr
                         {child.name}
                       </div>
                     </div>
-                    {child.id === currentOrgId && (
+                    {child.id === activeOrgId && (
                       <div className="w-2 h-2 bg-primary rounded-full"></div>
                     )}
                   </button>
-                ))}
+                    ))}
+                  </div>
+                )}
               </div>
-            ))}
+              );
+            })}
             {groups.standalone.length > 0 && (
               <div className="border-t border-border">
                 <div className="px-4 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider bg-muted/50">
@@ -309,9 +450,10 @@ export default function OrgSwitcher({ currentOrgId, onOrgChange }: OrgSwitcherPr
                 {groups.standalone.map((org) => (
                   <button
                     key={org.id}
+                    ref={org.id === activeOrgId ? selectedOrgButtonRef : null}
                     onClick={() => handleOrgSelect(org)}
                     className={`w-full px-4 py-3 flex items-center gap-3 hover:bg-accent transition-colors text-left ${
-                      org.id === currentOrgId ? 'bg-primary/10' : ''
+                      org.id === activeOrgId ? 'bg-primary/10' : ''
                     }`}
                   >
                     <OrgMark org={org} />
@@ -320,7 +462,7 @@ export default function OrgSwitcher({ currentOrgId, onOrgChange }: OrgSwitcherPr
                         {org.name}
                       </div>
                     </div>
-                    {org.id === currentOrgId && (
+                    {org.id === activeOrgId && (
                       <div className="w-2 h-2 bg-primary rounded-full"></div>
                     )}
                   </button>

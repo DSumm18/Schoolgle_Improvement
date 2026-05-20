@@ -1,0 +1,824 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Schoolgle School Improvement Assessor — Rochdale Screen Walkthrough</title>
+    <style>
+      :root {
+        --ink: #10223f;
+        --muted: #66758c;
+        --teal: #00a7ad;
+        --teal-dark: #05777b;
+        --blue: #169df5;
+        --lime: #b9df45;
+        --purple: #7666ff;
+        --amber: #f59e0b;
+        --rose: #fb5472;
+        --bg: #f4f8fb;
+        --paper: #ffffff;
+        --line: rgba(16, 34, 63, 0.12);
+        --shadow: 0 24px 70px rgba(16, 34, 63, 0.16);
+        --radius: 28px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 8% 8%, rgba(0, 167, 173, 0.16), transparent 34%),
+          radial-gradient(circle at 92% 16%, rgba(118, 102, 255, 0.14), transparent 30%),
+          linear-gradient(145deg, #eef8fb 0%, #f8fbff 58%, #f7f2ff 100%);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      .deck {
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 32px 30px 92px;
+      }
+
+      .slide {
+        display: none;
+        position: relative;
+        overflow: hidden;
+        width: min(1220px, calc(100vw - 60px));
+        min-height: min(690px, calc(100vh - 132px));
+        padding: 46px;
+        border: 1px solid rgba(255, 255, 255, 0.9);
+        border-radius: var(--radius);
+        background: rgba(255, 255, 255, 0.94);
+        box-shadow: var(--shadow);
+      }
+
+      .slide.active {
+        display: grid;
+        animation: rise 0.28s ease-out both;
+      }
+
+      @keyframes rise {
+        from {
+          transform: translateY(12px);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+
+      .slide::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background:
+          linear-gradient(90deg, rgba(0, 167, 173, 0.1), transparent 24%),
+          radial-gradient(circle at 100% 100%, rgba(185, 223, 69, 0.18), transparent 35%);
+      }
+
+      .content {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        gap: 24px;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        max-width: 900px;
+        font-size: clamp(54px, 7vw, 92px);
+        line-height: 0.93;
+        letter-spacing: -0.064em;
+      }
+
+      h2 {
+        max-width: 900px;
+        font-size: clamp(36px, 4.8vw, 62px);
+        line-height: 0.98;
+        letter-spacing: -0.055em;
+      }
+
+      h3 {
+        font-size: 23px;
+        line-height: 1.1;
+        letter-spacing: -0.025em;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        width: max-content;
+        align-items: center;
+        gap: 10px;
+        color: var(--teal-dark);
+        font-size: 13px;
+        font-weight: 850;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      .eyebrow::before {
+        content: "";
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+        background: var(--lime);
+        box-shadow: 0 0 0 7px rgba(185, 223, 69, 0.18);
+      }
+
+      .lead {
+        max-width: 830px;
+        color: var(--muted);
+        font-size: 24px;
+        line-height: 1.34;
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 22px;
+        font-weight: 950;
+        letter-spacing: -0.04em;
+      }
+
+      .mark {
+        width: 34px;
+        height: 34px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, var(--teal), var(--purple));
+        box-shadow: 0 12px 28px rgba(0, 167, 173, 0.3);
+        transform: rotate(-8deg);
+      }
+
+      .split {
+        display: grid;
+        grid-template-columns: minmax(0, 1.15fr) minmax(360px, 0.85fr);
+        gap: 30px;
+        align-items: center;
+      }
+
+      .split.reverse {
+        grid-template-columns: minmax(360px, 0.86fr) minmax(0, 1.14fr);
+      }
+
+      .screen {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        background: #fff;
+        box-shadow: 0 22px 54px rgba(16, 34, 63, 0.14);
+      }
+
+      .screen.tall {
+        max-height: 578px;
+        object-fit: contain;
+      }
+
+      .screen.full {
+        max-height: 560px;
+        object-fit: contain;
+      }
+
+      .caption {
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 14px;
+        font-weight: 750;
+      }
+
+      .pause-card {
+        display: grid;
+        gap: 14px;
+        padding: 24px;
+        border: 1px solid rgba(0, 167, 173, 0.2);
+        border-radius: 24px;
+        background: rgba(255, 255, 255, 0.76);
+      }
+
+      .pause-card strong {
+        color: var(--teal-dark);
+        font-size: 13px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .say {
+        color: var(--ink);
+        font-size: 25px;
+        font-weight: 850;
+        line-height: 1.18;
+        letter-spacing: -0.03em;
+      }
+
+      .small {
+        color: var(--muted);
+        font-size: 18px;
+        line-height: 1.36;
+      }
+
+      .must-say {
+        margin: 0;
+        padding: 12px 14px;
+        border-left: 5px solid #dc2626;
+        border-radius: 14px;
+        background: #fff1f2;
+        color: #991b1b;
+        font-size: 17px;
+        font-weight: 900;
+        line-height: 1.28;
+      }
+
+      .must-say::before {
+        content: "DON'T FORGET: ";
+        display: block;
+        margin-bottom: 4px;
+        color: #dc2626;
+        font-size: 12px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .pill-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        min-height: 36px;
+        padding: 8px 13px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        color: var(--muted);
+        background: rgba(255, 255, 255, 0.72);
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .grid-3 {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 18px;
+      }
+
+      .grid-4 {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 15px;
+      }
+
+      .point {
+        min-height: 150px;
+        padding: 22px;
+        border: 1px solid var(--line);
+        border-radius: 23px;
+        background: rgba(255, 255, 255, 0.7);
+      }
+
+      .point b {
+        display: block;
+        margin-bottom: 10px;
+        color: var(--ink);
+        font-size: 20px;
+        line-height: 1.08;
+        letter-spacing: -0.025em;
+      }
+
+      .point span {
+        color: var(--muted);
+        font-size: 17px;
+        line-height: 1.32;
+      }
+
+      .flow {
+        display: grid;
+        gap: 12px;
+      }
+
+      .flow-row {
+        display: grid;
+        grid-template-columns: 180px 1fr;
+        gap: 18px;
+        align-items: start;
+        padding: 15px 0;
+        border-top: 1px solid var(--line);
+      }
+
+      .flow-row:first-child {
+        border-top: 0;
+      }
+
+      .flow-row b {
+        color: var(--teal-dark);
+        font-size: 17px;
+      }
+
+      .flow-row p {
+        color: var(--ink);
+        font-size: 21px;
+        line-height: 1.25;
+      }
+
+      .quote {
+        max-width: 980px;
+        color: var(--ink);
+        font-size: clamp(31px, 4vw, 52px);
+        font-weight: 950;
+        line-height: 1.04;
+        letter-spacing: -0.052em;
+      }
+
+      .accent {
+        color: var(--teal-dark);
+      }
+
+      .amber {
+        color: #a15c00;
+      }
+
+      .nav {
+        position: fixed;
+        left: 50%;
+        bottom: 22px;
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        transform: translateX(-50%);
+        padding: 9px;
+        border: 1px solid rgba(255, 255, 255, 0.78);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.84);
+        box-shadow: 0 18px 45px rgba(16, 34, 63, 0.16);
+        backdrop-filter: blur(18px);
+      }
+
+      button {
+        border: 0;
+        border-radius: 999px;
+        background: var(--ink);
+        color: #fff;
+        padding: 12px 16px;
+        font: inherit;
+        font-size: 14px;
+        font-weight: 850;
+        cursor: pointer;
+      }
+
+      button.secondary {
+        color: var(--ink);
+        background: rgba(16, 34, 63, 0.08);
+      }
+
+      .counter {
+        min-width: 72px;
+        color: var(--muted);
+        text-align: center;
+        font-size: 14px;
+        font-weight: 850;
+      }
+
+      @media (max-width: 980px) {
+        .slide {
+          padding: 30px 24px;
+        }
+
+        .split,
+        .split.reverse,
+        .grid-3,
+        .grid-4 {
+          grid-template-columns: 1fr;
+        }
+
+        .flow-row {
+          grid-template-columns: 1fr;
+          gap: 6px;
+        }
+      }
+
+      @media print {
+        body {
+          background: #fff;
+        }
+
+        .deck {
+          display: block;
+          padding: 0;
+        }
+
+        .slide {
+          display: grid !important;
+          width: 100%;
+          min-height: 100vh;
+          border-radius: 0;
+          box-shadow: none;
+          page-break-after: always;
+        }
+
+        .nav {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="deck" aria-live="polite">
+      <section class="slide active">
+        <div class="content">
+          <div class="brand"><span class="mark"></span><span>Schoolgle</span></div>
+          <div>
+            <div class="eyebrow">Rochdale Council Demo</div>
+            <h1>Screen-led School Improvement Assessor walkthrough.</h1>
+          </div>
+          <p class="lead">
+            Use this as your talk track while you click through the real product. It tells you when
+            to pause, what to explain, and how to answer the data and AI questions.
+          </p>
+          <p class="must-say">
+            Call it School Improvement Assessor. The old Trust Assessor name made it sound MAT-only; this works for local authorities, trusts and groups of schools.
+          </p>
+          <div class="pill-row">
+            <span class="pill">School Improvement Assessor focus</span>
+            <span class="pill">Explain data sources live</span>
+            <span class="pill">Use PAYMAT as populated example</span>
+            <span class="pill">Keep Ofsted Readiness as future workflow</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide">
+        <div class="content split">
+          <div>
+            <div class="eyebrow">Pause Point 1</div>
+            <h2>This is the main Schoolgle workspace.</h2>
+            <div class="pause-card">
+              <strong>Say</strong>
+              <p class="say">
+                “For Rochdale, this top-level view is the local authority workspace. The schools and
+                modules the user sees depend on their account and permissions.”
+              </p>
+              <p class="small">
+                Point at the left sidebar: organisation context, active app, tasks, modules and Ed.
+                This helps them understand that School Improvement Assessor sits inside a wider school improvement
+                operating system.
+              </p>
+              <p class="must-say">
+                For Becky, the value is earlier visibility across schools and better support conversations, not another dashboard for the sake of it.
+              </p>
+            </div>
+          </div>
+          <div>
+            <img class="screen full" src="screens/01-rochdale-dashboard.png" alt="Rochdale Council Schoolgle dashboard" />
+            <p class="caption">Live app: Rochdale Council Schools dashboard.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide">
+        <div class="content split reverse">
+          <div>
+            <img class="screen tall" src="screens/crop-01-rochdale-sidebar.png" alt="Rochdale sidebar showing workspace and modules" />
+            <p class="caption">Pause on the sidebar before opening the module.</p>
+          </div>
+          <div>
+            <div class="eyebrow">Pause Point 2</div>
+            <h2>Explain the product model before the data.</h2>
+            <div class="flow">
+              <div class="flow-row">
+                <b>Parent layer</b>
+                <p>Rochdale Council can have oversight across its connected schools.</p>
+              </div>
+              <div class="flow-row">
+                <b>School layer</b>
+                <p>Each school keeps its own data, evidence and module access.</p>
+              </div>
+              <div class="flow-row">
+                <b>Module layer</b>
+                <p>School Improvement Assessor is one school improvement app inside the wider platform.</p>
+              </div>
+            </div>
+            <p class="must-say">
+              Do not position this as Rochdale imposing a system. Position it as helping identify the right schools for a useful pilot.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide">
+        <div class="content split">
+          <div>
+            <div class="eyebrow">Pause Point 3</div>
+            <h2>Open School Improvement, then School Improvement Assessor.</h2>
+            <div class="pause-card">
+              <strong>Say</strong>
+              <p class="say">
+                “This is where the LA school improvement work lives. Today I’m focusing on the
+                Assessor because it is the strongest thing to show.”
+              </p>
+              <p class="small">
+                If they ask about Ofsted Readiness, say it is the workflow this intelligence can feed,
+                but today you are demonstrating the data engine first.
+              </p>
+              <p class="must-say">
+                Headline order: understand where schools are first, then turn findings into Ofsted Readiness evidence, SEF content and improvement-plan actions.
+              </p>
+            </div>
+          </div>
+          <div>
+            <img class="screen tall" src="screens/crop-03-school-improvement-menu.png" alt="School Improvement module menu expanded" />
+            <p class="caption">Navigation moment: School Improvement module opened.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide">
+        <div class="content split">
+          <div>
+            <img class="screen full" src="screens/03-trust-assessor-rochdale.png" alt="Rochdale School Improvement Assessor screen showing connection state" />
+            <p class="caption">Rochdale view: useful to explain setup and missing connected data.</p>
+          </div>
+          <div>
+            <div class="eyebrow">Pause Point 4</div>
+            <h2>This screen shows the challenge as well as the product.</h2>
+            <div class="flow">
+              <div class="flow-row">
+                <b>Challenge</b>
+                <p>Schools and LAs have data, but it sits in different places and formats.</p>
+              </div>
+              <div class="flow-row">
+                <b>Product value</b>
+                <p>The app shows what is connected, what is missing and what richer analysis can unlock.</p>
+              </div>
+              <div class="flow-row">
+                <b>Honest line</b>
+                <p>“Rochdale’s live setup is the workspace; PAYMAT gives us the populated example.”</p>
+              </div>
+            </div>
+            <p class="must-say">
+              Be explicit: Rochdale is already set up; PAYMAT is just the populated example so they can see the product with data in it.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide">
+        <div class="content">
+          <div class="eyebrow">Pause Point 5</div>
+          <h2>Now explain where the data comes from.</h2>
+          <div class="grid-3">
+            <div class="point">
+              <b>1. Public DfE data</b>
+              <span>KS2, attendance, persistent absence, census context, school identity and comparators.</span>
+            </div>
+            <div class="point">
+              <b>2. School or trust captures</b>
+              <span>Current in-year assessment snapshots, spreadsheets and school-submitted summaries.</span>
+            </div>
+            <div class="point">
+              <b>3. Pupil-level evidence</b>
+              <span>MIS/CTF data where supplied, pseudonymised for cohort and group analysis.</span>
+            </div>
+          </div>
+          <p class="quote">
+            “The important bit is that Schoolgle labels the source, date and scope. It should never
+            blend those layers silently.”
+          </p>
+          <p class="must-say">
+            The differentiator is source-labelled intelligence: public DfE data, school captures and pupil evidence are kept separate and explained.
+          </p>
+        </div>
+      </section>
+
+      <section class="slide">
+        <div class="content split">
+          <div>
+            <div class="eyebrow">Pause Point 6</div>
+            <h2>Use PAYMAT as the populated data example.</h2>
+            <div class="pause-card">
+              <strong>Say</strong>
+              <p class="say">
+                “I’m switching to Pennine Academies Yorkshire here because it has demo-ready data,
+                so you can see what Rochdale would get once schools connect their captures.”
+              </p>
+              <p class="small">
+                This is not a dodge. It is clearer: Rochdale shows the LA workspace; PAYMAT shows the
+                populated assessor engine.
+              </p>
+              <p class="must-say">
+                Say this confidently. It is better to be transparent than pretend Rochdale already has full pilot data loaded.
+              </p>
+            </div>
+          </div>
+          <div>
+            <img class="screen full" src="screens/04-paymat-trust-assessor-with-data.png" alt="PAYMAT School Improvement Assessor populated example" />
+            <p class="caption">Populated example: School Improvement Assessor with data captures and findings.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide">
+        <div class="content split reverse">
+          <div>
+            <img class="screen" src="screens/crop-05-paymat-data-captures.png" alt="School Improvement Assessor data capture strip" />
+            <p class="caption">The data strip is where you explain source and freshness.</p>
+          </div>
+          <div>
+            <div class="eyebrow">Pause Point 7</div>
+            <h2>Talk through the source strip slowly.</h2>
+            <div class="flow">
+              <div class="flow-row">
+                <b>Spreadsheet</b>
+                <p>Mid-year submission: school or trust-provided current assessment data.</p>
+              </div>
+              <div class="flow-row">
+                <b>DfE loaded</b>
+                <p>External public baseline for comparison, not current-year teacher assessment.</p>
+              </div>
+              <div class="flow-row">
+                <b>School summary</b>
+                <p>Additional school-level capture can add richer current context.</p>
+              </div>
+              <div class="flow-row">
+                <b>Pupil data</b>
+                <p>Unlocked only when MIS/CTF pupil-level evidence is connected.</p>
+              </div>
+            </div>
+            <p class="must-say">
+              Pause here: this is where Becky will understand the value — freshness, source and data quality all in one place.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide">
+        <div class="content split">
+          <div>
+            <div class="eyebrow">Pause Point 8</div>
+            <h2>This is what makes it different.</h2>
+            <div class="pause-card">
+              <strong>Say</strong>
+              <p class="say">
+                “It does not just draw charts. It turns the data into questions leaders can actually
+                use in a school improvement conversation.”
+              </p>
+              <p class="small">
+                Mention: strongest school, needs-attention school, zero-GD writing flags and below-threshold
+                combined outcomes. These are prompts for professional discussion, not accusations.
+              </p>
+              <p class="must-say">
+                Keep saying "prompts for professional discussion". It protects the tone and reassures the LA this is not automated judgement.
+              </p>
+            </div>
+          </div>
+          <div>
+            <img class="screen" src="screens/crop-06-paymat-key-findings.png" alt="School Improvement Assessor key findings cards" />
+            <p class="caption">Key findings: triage signals, not inspection judgements.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide">
+        <div class="content">
+          <div class="eyebrow">Pause Point 9</div>
+          <h2>Answer the AI question without overclaiming.</h2>
+          <div class="grid-3">
+            <div class="point">
+              <b>Numbers first</b>
+              <span>The core School Improvement Assessor calculations are deterministic and source-labelled: no hidden AI judgement.</span>
+            </div>
+            <div class="point">
+              <b>AI where useful</b>
+              <span>AI helps with narrative, evidence analysis, document checks and drafting questions/actions.</span>
+            </div>
+            <div class="point">
+              <b>Approved providers</b>
+              <span>Schoolgle policy allows only OpenAI, Anthropic, Google, Microsoft, Meta Llama and Mistral for school data.</span>
+            </div>
+          </div>
+          <p class="quote accent">
+            “AI supports the professional judgement. It does not replace the adviser, headteacher or teacher.”
+          </p>
+          <p class="must-say">
+            Approved AI providers only. The numbers are deterministic; AI helps with narrative, evidence checks and suggested questions/actions.
+          </p>
+        </div>
+      </section>
+
+      <section class="slide">
+        <div class="content">
+          <div class="eyebrow">Pause Point 10</div>
+          <h2>Be open about the challenges. That builds trust.</h2>
+          <div class="grid-4">
+            <div class="point">
+              <b>Different counts</b>
+              <span>DfE census roll, school captures and pupil evidence can all have different scopes.</span>
+            </div>
+            <div class="point">
+              <b>Freshness</b>
+              <span>Published data is historic; school captures are current but self-reported.</span>
+            </div>
+            <div class="point">
+              <b>Data quality</b>
+              <span>Missing, inconsistent or over-optimistic values should become questions, not hidden assumptions.</span>
+            </div>
+            <div class="point">
+              <b>Permissions</b>
+              <span>Pupil-level depth only appears when schools connect the right evidence safely.</span>
+            </div>
+          </div>
+          <p class="lead amber">
+            This honesty is a selling point: the app is designed to make uncertainty visible rather than pretend it is not there.
+          </p>
+          <p class="must-say">
+            If data differs, we explain the lineage rather than forcing numbers to match. That is a quality feature.
+          </p>
+        </div>
+      </section>
+
+      <section class="slide">
+        <div class="content">
+          <div class="eyebrow">Close</div>
+          <h2>Ask Rochdale for a pilot, not a leap of faith.</h2>
+          <div class="flow">
+            <div class="flow-row">
+              <b>Step 1</b>
+              <p>Select three to five schools across different contexts.</p>
+            </div>
+            <div class="flow-row">
+              <b>Step 2</b>
+              <p>Start with URNs and DfE data, then add assessment captures where schools agree.</p>
+            </div>
+            <div class="flow-row">
+              <b>Step 3</b>
+              <p>Review whether it saves adviser time and improves school improvement conversations.</p>
+            </div>
+          </div>
+          <p class="quote">
+            “Let us prove it with Rochdale’s schools, Rochdale’s questions and Rochdale’s data.”
+          </p>
+          <p class="must-say">
+            Ask Becky for 3-5 pilot schools: Ofsted-window schools, schools with data concerns, or heads with appetite to try it.
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <nav class="nav" aria-label="Slide controls">
+      <button class="secondary" data-prev>Back</button>
+      <span class="counter" data-counter>1 / 12</span>
+      <button data-next>Next</button>
+      <button class="secondary" data-reset>Start</button>
+    </nav>
+
+    <script>
+      const slides = Array.from(document.querySelectorAll(".slide"));
+      const counter = document.querySelector("[data-counter]");
+      let current = Number(localStorage.getItem("schoolgle-rochdale-screen-demo-slide") || 0);
+
+      function show(index) {
+        current = Math.max(0, Math.min(slides.length - 1, index));
+        slides.forEach((slide, slideIndex) => slide.classList.toggle("active", slideIndex === current));
+        counter.textContent = `${current + 1} / ${slides.length}`;
+        localStorage.setItem("schoolgle-rochdale-screen-demo-slide", String(current));
+      }
+
+      document.querySelector("[data-next]").addEventListener("click", () => show(current + 1));
+      document.querySelector("[data-prev]").addEventListener("click", () => show(current - 1));
+      document.querySelector("[data-reset]").addEventListener("click", () => show(0));
+
+      window.addEventListener("keydown", (event) => {
+        if (["ArrowRight", "PageDown", " "].includes(event.key)) {
+          event.preventDefault();
+          show(current + 1);
+        }
+        if (["ArrowLeft", "PageUp"].includes(event.key)) {
+          event.preventDefault();
+          show(current - 1);
+        }
+        if (event.key.toLowerCase() === "f") {
+          document.documentElement.requestFullscreen?.();
+        }
+        if (event.key === "Home") show(0);
+        if (event.key === "End") show(slides.length - 1);
+      });
+
+      show(current);
+    </script>
+  </body>
+</html>

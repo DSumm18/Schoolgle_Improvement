@@ -43,6 +43,8 @@ Each school connecting to Schoolgle may provide data via spreadsheets, exports, 
 **Source:** MIS export or manual CSV
 **API:** `POST /api/pupils`
 **Target table:** `pupils`
+**Storage:** Stored in Schoolgle's database for subscribed products that need identifiable pupil records, including Class Builder and pupil passes.
+**Purpose:** Class/cohort setup, Class Builder grouping, pupil passes, cohort filtering and agreed school intelligence workflows.
 
 | Column           | Required | Type    | Validation             | Notes                                                |
 | ---------------- | -------- | ------- | ---------------------- | ---------------------------------------------------- |
@@ -61,6 +63,23 @@ Each school connecting to Schoolgle may provide data via spreadsheets, exports, 
 | primary_need     | No       | Text    | DfE codes              | SPLD/MLD/SLD/PMLD/SEMH/SLCN/HI/VI/MSI/PD/ASD/OTH/NSA |
 | fsm_eligible     | No       | Boolean |                        |                                                      |
 | ethnicity        | No       | Text    | DfE codes              | WBRI/AIND/APKN etc.                                  |
+
+**Minimisation notes:** pupil names and characteristics are collected only where needed for the subscribed product. EAL, pupil premium, FSM, looked-after, SEND/SEN, primary need, EHCP, gender and ethnicity fields should be supplied only where the school has determined they are necessary for the educational purpose. Ethnicity is special category data. SEND/primary need/EHCP information may reveal disability or health information and should be treated as higher-risk children's data.
+
+### 2A. Class Builder Data
+
+**Source:** Pupil import, MIS sync, Class Builder survey responses
+**APIs:** `POST /api/data-upload/pupils`, `POST /api/class-builder/pupils/import`, Class Builder session/response APIs
+**Target tables:** `pupils`, `class_builder_sessions`, `class_builder_responses`, `class_builder_choices`, `generated_class_groups`
+**Storage:** Stored in Schoolgle's database for the contract term or until the school deletes the session/data.
+
+| Data | Required | Type | Notes |
+| --- | --- | --- | --- |
+| Named pupil roll | Yes | Pupil identity and class/year fields | Needed so staff can build and review classes |
+| Pupil characteristics | Optional | EAL, FSM, pupil premium, SEND/SEN, EHCP, gender, ethnicity where supplied | Used only where needed for balancing/supporting educational needs |
+| Pupil preferences | Product-specific | Friendship/work-well choices | Used to generate explainable draft groups |
+| Generated class groups | Product output | JSON summaries and pupil IDs | Staff review and final decision remain human-led |
+| Pupil pass metadata | Optional/product-specific | Codename, attributes, token hash/encrypted token | Used for pupil-facing access; tokens must be revocable |
 
 ---
 

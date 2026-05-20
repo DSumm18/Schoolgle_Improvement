@@ -2036,6 +2036,8 @@ RATING SCALE (use exactly these values):
 - "needs_attention" (2): ${RATING_DESCRIPTORS.needs_attention.description}
 - "urgent_improvement" (1): ${RATING_DESCRIPTORS.urgent_improvement.description}
 
+Use school-friendly wording. The headline should help leaders quickly see whether the evidence is compliant, needs attention, or is a serious risk. Reserve "urgent_improvement" for a clear statutory failure, safeguarding risk, or listed automatic failure criterion; if evidence is simply thin, incomplete, or too brief, use "needs_attention".
+
 FRAMEWORK CONTEXT:
 - Subcategory: ${knowledge.subcategoryId}
 - Core inspection question: ${knowledge.coreQuestion}
@@ -2110,7 +2112,8 @@ IMPORTANT INSTRUCTIONS:
 4. If a checkpoint is partially met, explain what is present and what is missing
 5. Actions should be specific enough for the school to act on immediately
 6. Link actions to how they would improve the school's SEF position
-7. Current academic year is 2025-2026. Review dates should be within this period.`;
+7. Current academic year is 2025-2026. Review dates should be within this period.
+8. Keep the summary concise and non-alarmist unless there is a genuine urgent risk.`;
 
   return { systemPrompt, inspectionCriteria };
 }

@@ -6,6 +6,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   ClipboardCheck,
+  ExternalLink,
   Loader2,
   RefreshCw,
   ShieldAlert,
@@ -348,6 +349,17 @@ function FindingRow({
           <p className="mt-1 text-sm text-muted-foreground">
             {finding.summary || "Review the evidence and decide the next step."}
           </p>
+          {finding.evidence_url && (
+            <a
+              href={finding.evidence_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-300"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              Open evidence
+            </a>
+          )}
 
           {(finding.red_flags?.length > 0 || finding.gaps?.length > 0) && (
             <div className="mt-3 rounded-xl border border-amber-200/70 bg-amber-50/60 p-3 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-100">

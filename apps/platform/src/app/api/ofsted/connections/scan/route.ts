@@ -1,11 +1,14 @@
-import { NextRequest, NextResponse } from "next/server";
-import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
+import { NextResponse } from "next/server";
+import { protectedRoute, apiError } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
 import {
   getGoogleReauthoriseMessage,
   getValidGoogleAccessToken,
 } from "@/lib/google-oauth-tokens";
-import { ensureConnectorFolderStructure } from "@/lib/google-drive-connector";
+import {
+  ensureConnectorFolderStructure,
+  findChildFolder,
+} from "@/lib/google-drive-connector";
 
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
@@ -238,6 +241,12 @@ const SKIP_FILES = new Set([
   "desktop.ini",
 ]);
 
+const SKIP_FOLDER_NAMES = new Set(["_archive - do not scan"]);
+
+function getErrorMessage(error: unknown, fallback = "Scan failed"): string {
+  return error instanceof Error ? error.message : fallback;
+}
+
 interface DriveItem {
   id: string;
   name: string;
@@ -413,6 +422,14 @@ export const POST = protectedRoute(async (auth, req) => {
   }
 
   const supabase = createServiceRoleClient();
+  const inspectBaseUrl = req.nextUrl.origin || INTERNAL_BASE_URL;
+  const inspectHeaders: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  const authorization = req.headers.get("authorization");
+  const cookie = req.headers.get("cookie");
+  if (authorization) inspectHeaders.Authorization = authorization;
+  if (cookie) inspectHeaders.Cookie = cookie;
   let scanConnection: ScanConnection;
 
   try {
@@ -468,13 +485,31 @@ export const POST = protectedRoute(async (auth, req) => {
           await ensureConnectorFolderStructure(
             scanConnection.accessToken,
             scanConnection.folderId,
+            { appKeys: ["ofsted-readiness"] },
           );
+        }
+
+        let scanRootFolderId = scanConnection.folderId;
+        let scanRootPath = "";
+        if (
+          scanConnection.source === "schoolgle_connector" &&
+          scanConnection.accessToken
+        ) {
+          const ofstedFolder = await findChildFolder(
+            scanConnection.accessToken,
+            scanConnection.folderId,
+            "Ofsted Readiness",
+          );
+          if (ofstedFolder) {
+            scanRootFolderId = ofstedFolder.id;
+            scanRootPath = "Ofsted Readiness";
+          }
         }
 
         // Walk the entire folder tree, collecting both folders and files
         const allMatches: EvidenceMatch[] = [];
         const foldersToScan: Array<{ id: string; path: string }> = [
-          { id: scanConnection.folderId, path: "" },
+          { id: scanRootFolderId, path: scanRootPath },
         ];
         const scannedFolders = new Set<string>();
         const detectedFolders: Record<
@@ -530,6 +565,7 @@ export const POST = protectedRoute(async (auth, req) => {
                 : item.name;
 
               if (isFolder) {
+                if (SKIP_FOLDER_NAMES.has(item.name.toLowerCase())) continue;
                 // Only recurse into subfolders — folders are NOT evidence
                 foldersToScan.push({ id: item.id, path: itemPath });
               } else {
@@ -712,10 +748,10 @@ export const POST = protectedRoute(async (auth, req) => {
 
               // Call the inspect API internally
               const inspectRes = await fetch(
-                `${INTERNAL_BASE_URL}/api/ofsted/inspect`,
+                `${inspectBaseUrl}/api/ofsted/inspect`,
                 {
                   method: "POST",
-                  headers: { "Content-Type": "application/json" },
+                  headers: inspectHeaders,
                   body: JSON.stringify({
                     organizationId: orgId,
                     driveFileId: record.driveId,
@@ -736,10 +772,10 @@ export const POST = protectedRoute(async (auth, req) => {
                   `[Scan] Inspect failed for ${record.fileName}: ${inspectRes.status}`,
                 );
               }
-            } catch (inspectErr: any) {
+            } catch (inspectErr: unknown) {
               console.error(
                 `[Scan] Inspect error for ${record.fileName}:`,
-                inspectErr.message,
+                getErrorMessage(inspectErr, "Inspection failed"),
               );
             }
             inspected++;
@@ -786,7 +822,8 @@ export const POST = protectedRoute(async (auth, req) => {
           filesTotal: scannedFolders.size,
           evidenceFound: dedupedMatches.length,
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
+        const message = getErrorMessage(err);
         console.error("[Scan] Error:", err);
 
         if (scanConnection.id) {
@@ -799,14 +836,14 @@ export const POST = protectedRoute(async (auth, req) => {
             .from(statusTable)
             .update({
               scan_status: "error",
-              scan_error: err.message || "Scan failed",
+              scan_error: message,
             })
             .eq("id", scanConnection.id);
         }
 
         send({
           type: "error",
-          message: err.message || "Scan failed",
+          message,
           filesScanned: 0,
           filesTotal: 0,
           evidenceFound: 0,

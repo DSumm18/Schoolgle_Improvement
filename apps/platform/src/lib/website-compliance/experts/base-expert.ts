@@ -7,7 +7,7 @@
  */
 
 import type OpenAI from "openai";
-import type { ComplianceStatus, RequirementAssessment } from "../assessor";
+import type { ComplianceStatus } from "../assessor";
 
 /** Pre-matched pages and keywords from the structural phase */
 export interface StructuralMatch {
@@ -27,7 +27,13 @@ export interface StructuralMatch {
     severity: string;
     typicallyTrustLevel?: boolean;
   };
-  matchingPages: { url: string; title: string; content: string }[];
+  matchingPages: {
+    url: string;
+    title: string;
+    content: string;
+    contentType?: "html" | "pdf" | "document";
+    links?: string[];
+  }[];
   keywordsFound: string[];
   datesFound: string[];
   documentLinksFound: string[];

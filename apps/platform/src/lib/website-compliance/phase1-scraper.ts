@@ -15,10 +15,20 @@
 import { createHash } from "crypto";
 import { createServiceRoleClient } from "@/lib/supabase-server";
 import {
-  crawlWebsite,
-  type CrawlerResult,
-  type CrawledPage,
+  buildPublicEvidenceSeeds,
+  buildTrustSeedUrls,
+} from "@/lib/website-compliance/crawl-plan";
+import { fastInventoryCrawlWebsite } from "@/lib/website-compliance/fast-inventory-crawler";
+import type {
+  CrawlerResult,
+  CrawledPage,
 } from "@/lib/website-crawler";
+import {
+  routeWebsiteEvidenceItems,
+  summariseWebsiteEvidenceRoutes,
+  type WebsiteEvidenceInput,
+  type WebsiteEvidenceRoutingSummary,
+} from "./evidence-routing";
 
 // ─── Types ────────────────────────────────────────────────────────────
 
@@ -50,6 +60,7 @@ export interface ScrapeResult {
   pagesStored: number;
   documentsStored: number;
   edKnowledgeStored: number;
+  evidenceRouting: WebsiteEvidenceRoutingSummary;
   schoolType: "maintained" | "academy";
   schoolPhase: string;
   isChurchSchool: boolean;
@@ -57,33 +68,20 @@ export interface ScrapeResult {
   durationMs: number;
 }
 
-// ─── Trust site seed paths ────────────────────────────────────────────
+type ScraperPageMetadata = CrawledPage["metadata"] & {
+  source?: "school" | "trust";
+  ocrUsed?: boolean;
+  linkText?: string;
+  foundOnPage?: string;
+  textExtractionMethod?: string;
+  extractionError?: string;
+};
 
-const TRUST_SEED_PATHS = [
-  "/",
-  "/policies",
-  "/policies-and-statements",
-  "/key-information",
-  "/governance",
-  "/governance/policies",
-  "/governance/governance-structure",
-  "/governance/trustees",
-  "/trustees",
-  "/about/governance",
-  "/finance",
-  "/about/finance",
-  "/accounts",
-  "/annual-report",
-  "/gender-pay-gap",
-  "/complaints",
-  "/whistleblowing",
-  "/key-documents",
-  "/statutory-information",
-  "/about",
-  "/about-us",
-  "/our-schools",
-  "/our-trust",
-];
+function getScraperMetadata(page: CrawledPage): ScraperPageMetadata {
+  return page.metadata as ScraperPageMetadata;
+}
+
+// ─── Trust site seed paths ────────────────────────────────────────────
 
 // ─── Main Scraper ─────────────────────────────────────────────────────
 
@@ -142,15 +140,12 @@ export async function scrapeSchoolWebsite(
       progress: { step: 2, total: 8, message: "Detecting school type" },
     });
 
-    const quickCrawl = await crawlWebsite(websiteUrl, {
-      maxPages: 10,
-      requestDelay: 200,
-      pageTimeout: 15000,
-      sameDomainOnly: true,
-      processPDFs: false,
-      processDocuments: false,
+    const quickCrawl = await fastInventoryCrawlWebsite(websiteUrl, {
+      maxPages: 20,
+      delayMs: 50,
+      timeoutMs: 15000,
+      includeDocuments: false,
       userAgent: "Schoolgle-Compliance/1.0 (+https://schoolgle.co.uk)",
-      headless: true,
     });
 
     // ─── Step 3: Auto-detect school metadata ────────────────────────
@@ -158,12 +153,10 @@ export async function scrapeSchoolWebsite(
     progress("Detecting school metadata", 3, 8);
 
     const allContent = quickCrawl.pages
-      // @ts-expect-error - Auto-masked during strict compilation enforcement
       .map((p) => (p.content || "").toLowerCase())
       .join(" ");
 
     const allTitles = quickCrawl.pages
-      // @ts-expect-error - Auto-masked during strict compilation enforcement
       .map((p) => (p.title || "").toLowerCase())
       .join(" ");
 
@@ -171,10 +164,10 @@ export async function scrapeSchoolWebsite(
       allContent + " " + allTitles + " " + baseUrl.hostname.toLowerCase();
 
     // Detect school type
-    let schoolType = options.schoolType || detectSchoolType(allContent);
+    const schoolType = options.schoolType || detectSchoolType(allContent);
 
     // Detect school phase
-    let schoolPhase =
+    const schoolPhase =
       options.schoolPhase || detectSchoolPhase(phaseContent, baseUrl.hostname);
 
     // Detect church school
@@ -188,10 +181,15 @@ export async function scrapeSchoolWebsite(
     );
 
     // Find primary trust URL
-    let trustUrl =
+    const trustUrl =
       options.trustUrl ||
       findPrimaryTrustDomain(trustDomains, quickCrawl.pages);
 
+    const publicEvidenceSeeds = buildPublicEvidenceSeeds(
+      quickCrawl.pages,
+      websiteUrl,
+      { limit: 30 },
+    );
     await updateSession(supabase, sessionId, {
       school_type: schoolType,
       school_phase: schoolPhase,
@@ -211,18 +209,14 @@ export async function scrapeSchoolWebsite(
       progress: { step: 4, total: 8, message: "Crawling school website" },
     });
 
-    const crawlResult = await crawlWebsite(websiteUrl, {
+    const crawlResult = await fastInventoryCrawlWebsite(websiteUrl, {
       maxPages,
-      requestDelay: 300,
-      pageTimeout: 20000,
-      sameDomainOnly: true,
-      allowedDomains: [...trustDomains],
-      processPDFs: true,
-      processDocuments: true,
+      delayMs: 75,
+      timeoutMs: 15000,
+      seedUrls: publicEvidenceSeeds,
+      includeDocuments: true,
+      source: "school",
       userAgent: "Schoolgle-Compliance/1.0 (+https://schoolgle.co.uk)",
-      headless: true,
-      screenshotOCR: true,
-      screenshotOCRThreshold: 100,
     });
 
     progress(
@@ -243,26 +237,21 @@ export async function scrapeSchoolWebsite(
         const trustBaseUrl = trustUrl.startsWith("http")
           ? trustUrl
           : `https://${trustUrl}`;
-        const seedUrls = TRUST_SEED_PATHS.map(
-          (path) => `${trustBaseUrl.replace(/\/$/, "")}${path}`,
-        );
+        const seedUrls = buildTrustSeedUrls(trustBaseUrl);
 
-        const trustCrawl = await crawlWebsite(trustBaseUrl, {
+        const trustCrawl = await fastInventoryCrawlWebsite(trustBaseUrl, {
           maxPages: maxTrustPages,
-          requestDelay: 500,
-          pageTimeout: 30000,
-          sameDomainOnly: true,
-          allowedDomains: ["drive.google.com", "docs.google.com"],
-          processPDFs: true,
-          processDocuments: true,
+          delayMs: 75,
+          timeoutMs: 15000,
+          includeDocuments: true,
+          source: "trust",
           userAgent: "Schoolgle-Compliance/1.0 (+https://schoolgle.co.uk)",
-          headless: true,
           seedUrls,
         });
 
         // Tag trust pages and merge
         for (const page of trustCrawl.pages) {
-          (page.metadata as any).source = "trust";
+          getScraperMetadata(page).source = "trust";
           crawlResult.pages.push(page);
         }
 
@@ -285,7 +274,6 @@ export async function scrapeSchoolWebsite(
     progress("Storing scraped content", 6, 8);
     await updateSession(supabase, sessionId, {
       pages_found: crawlResult.pages.length,
-      // @ts-expect-error - Auto-masked during strict compilation enforcement
       documents_found: crawlResult.pages.filter((p) => p.contentType !== "html")
         .length,
       progress: { step: 6, total: 8, message: "Storing content in database" },
@@ -297,6 +285,7 @@ export async function scrapeSchoolWebsite(
       organizationId,
       crawlResult,
     );
+    const evidenceRouting = buildEvidenceRoutingSummary(crawlResult);
 
     // ─── Step 7: Feed Ed's knowledge base ───────────────────────────
 
@@ -325,6 +314,7 @@ export async function scrapeSchoolWebsite(
         step: 8,
         total: 8,
         message: `Complete: ${pagesStored} pages, ${documentsStored} documents in ${(durationMs / 1000).toFixed(1)}s`,
+        evidenceRouting,
       },
     });
 
@@ -339,6 +329,7 @@ export async function scrapeSchoolWebsite(
       pagesStored,
       documentsStored,
       edKnowledgeStored,
+      evidenceRouting,
       schoolType,
       schoolPhase,
       isChurchSchool,
@@ -356,6 +347,48 @@ export async function scrapeSchoolWebsite(
 }
 
 // ─── Detection Functions ──────────────────────────────────────────────
+
+function buildEvidenceRoutingSummary(
+  crawlResult: CrawlerResult,
+): WebsiteEvidenceRoutingSummary {
+  const evidenceInputs = buildEvidenceInputs(crawlResult);
+  return summariseWebsiteEvidenceRoutes(routeWebsiteEvidenceItems(evidenceInputs));
+}
+
+function buildEvidenceInputs(crawlResult: CrawlerResult): WebsiteEvidenceInput[] {
+  const pageTitleByUrl = new Map<string, string>();
+
+  for (const page of crawlResult.pages) {
+    if (page.contentType !== "html") continue;
+    pageTitleByUrl.set(page.url, page.title);
+    pageTitleByUrl.set(normaliseUrl(page.url), page.title);
+  }
+
+  return crawlResult.pages.map((page) => {
+    const metadata = getScraperMetadata(page);
+    const source = metadata.source === "trust" ? "trust" : "school";
+    const foundOnPageUrl = metadata.foundOnPage || null;
+    const foundOnPageTitle = foundOnPageUrl
+      ? pageTitleByUrl.get(foundOnPageUrl) ||
+        pageTitleByUrl.get(normaliseUrl(foundOnPageUrl)) ||
+        null
+      : null;
+
+    return {
+      url: page.url,
+      title:
+        page.contentType === "html"
+          ? page.title
+          : metadata.linkText || page.title || extractFilename(page.url),
+      linkText: metadata.linkText || null,
+      foundOnPageUrl,
+      foundOnPageTitle,
+      headings: page.headings?.map((heading) => heading.text) || [],
+      text: page.content || null,
+      source,
+    };
+  });
+}
 
 function detectSchoolType(content: string): "maintained" | "academy" {
   const academySignals = [
@@ -627,8 +660,8 @@ function extractDatesFromText(text: string): string[] {
     /\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}\b/gi,
     // YYYY-MM-DD
     /\b(\d{4}-\d{2}-\d{2})\b/g,
-    // Academic year (2024-2025, 2024/2025, 2024-25, 2024/25)
-    /\b(20\d{2}[\/-](?:20)?\d{2})\b/g,
+    // Academic year (2024-2025, 2024/2025, 2024-25, 2024/25, 2024–25)
+    /\b(20\d{2}\s*[\/\-–—]\s*(?:20)?\d{2})\b/g,
   ];
 
   const dates = new Set<string>();
@@ -656,8 +689,8 @@ async function storeScrapedContent(
   let documentsStored = 0;
 
   for (const page of crawlResult.pages) {
-    const source =
-      (page.metadata as any)?.source === "trust" ? "trust" : "school";
+    const metadata = getScraperMetadata(page);
+    const source = metadata.source === "trust" ? "trust" : "school";
     const text = page.content || "";
     const hash = text ? contentHash(text) : null;
     const wordCount = text ? text.split(/\s+/).filter(Boolean).length : 0;
@@ -700,9 +733,11 @@ async function storeScrapedContent(
 
       // Determine extraction method from metadata
       let extractionMethod: string | null = null;
-      if (fileType === "pdf") {
+      if (metadata.textExtractionMethod) {
+        extractionMethod = metadata.textExtractionMethod;
+      } else if (fileType === "pdf") {
         extractionMethod = text.length > 50 ? "pdf2json" : "failed";
-        if ((page.metadata as any)?.ocrUsed) extractionMethod = "gemini_ocr";
+        if (metadata.ocrUsed) extractionMethod = "gemini_ocr";
       } else if (fileType === "docx") {
         extractionMethod = "mammoth";
       } else if (text.length > 0) {
@@ -710,11 +745,11 @@ async function storeScrapedContent(
       }
 
       // Try to get a useful title: link text from referring page, or filename
-      const linkText = (page.metadata as any)?.linkText || null;
+      const linkText = metadata.linkText || null;
       const title = linkText || page.title || filename;
 
       // Find which page this document was linked from
-      const foundOnPageUrl = (page.metadata as any)?.foundOnPage || null;
+      const foundOnPageUrl = metadata.foundOnPage || null;
 
       const { error } = await supabase.from("website_scraped_documents").upsert(
         {
@@ -732,9 +767,10 @@ async function storeScrapedContent(
           extracted_text: text || null,
           extraction_method: extractionMethod,
           extraction_error:
-            !text || text.length < 50
+            metadata.extractionError ||
+            (!text || text.length < 50
               ? "No text extracted or content too short"
-              : null,
+              : null),
           word_count: wordCount,
           content_hash: hash,
           dates_found: dates,
@@ -760,7 +796,7 @@ async function storeScrapedContent(
 function normaliseUrl(url: string): string {
   try {
     const u = new URL(url);
-    let path = u.pathname.replace(/\/+$/, "") || "/";
+    const path = u.pathname.replace(/\/+$/, "") || "/";
     return `${u.protocol}//${u.hostname}${path}`.toLowerCase();
   } catch {
     return url.toLowerCase();
@@ -805,7 +841,6 @@ async function feedEdKnowledge(
         page_title: page.title?.substring(0, 500) || null,
         content: text.substring(0, 50000),
         meta_description: page.metadata?.description || null,
-        // @ts-expect-error - Auto-masked during strict compilation enforcement
         headings: page.headings?.map((h) => h.text) || [],
         links: (page.links || []).slice(0, 100),
         content_type: contentType,
@@ -834,6 +869,7 @@ export async function getScrapedPages(sessionId: string): Promise<
     title: string | null;
     extracted_text: string | null;
     headings: Array<{ level: number; text: string }>;
+    links_found: string[] | null;
     source: string;
     word_count: number;
   }>
@@ -841,7 +877,9 @@ export async function getScrapedPages(sessionId: string): Promise<
   const supabase = createServiceRoleClient();
   const { data, error } = await supabase
     .from("website_scraped_pages")
-    .select("id, url, title, extracted_text, headings, source, word_count")
+    .select(
+      "id, url, title, extracted_text, headings, links_found, source, word_count",
+    )
     .eq("session_id", sessionId)
     .order("crawled_at");
 
@@ -893,6 +931,9 @@ export async function getSessionInfo(sessionId: string): Promise<{
   school_phase: string;
   is_church_school: boolean;
   status: string;
+  progress?: {
+    evidenceRouting?: unknown;
+  } | null;
   pages_scraped: number;
   documents_scraped: number;
 } | null> {

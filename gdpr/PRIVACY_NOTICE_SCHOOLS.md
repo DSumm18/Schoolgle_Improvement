@@ -79,16 +79,31 @@ As the Data Processor, Schoolgle processes personal data on your behalf and unde
 | Feature usage    | Pages visited, tools used        | Art 6(1)(f) — legitimate interest (service improvement) |
 | AI usage metrics | Token counts, costs (no content) | Art 6(1)(f) — legitimate interest (billing)             |
 
-### 2.7 Data We Do NOT Collect
+### 2.7 Data We Do NOT Collect Unless Required By A Subscribed Product
 
-Schoolgle is designed for school improvement, NOT pupil management. Schools must NOT upload:
+Schoolgle is designed for school improvement and operational school workflows, not as a full MIS replacement. Some subscribed products do process identifiable pupil or staff data where that is necessary to deliver the product. For example, Class Builder stores a named pupil roll and relevant pupil characteristics so schools can create explainable draft class groups and pupil passes.
 
-- Pupil names or identifiable pupil data (except where required by the Compliance module for consent records)
-- Parent contact information (except where required for consent management)
-- Medical or health records
-- Financial/payroll data
-- Biometric data
-- Criminal records (beyond SCR statutory requirements)
+Schools must not upload personal data beyond the fields needed for the subscribed product. Schools must not upload:
+
+- Pupil names or identifiable pupil data unless the subscribed product requires it, such as Class Builder, pupil passes, consent records or agreed school intelligence workflows
+- Parent contact information except where required for consent management or an agreed product workflow
+- Medical or health records unless explicitly agreed for a specific product and covered by the relevant schedule/DPIA
+- Financial/payroll data unless the Finance or staffing product scope explicitly requires it
+- Biometric data unless explicitly agreed for consent/compliance management
+- Criminal records beyond SCR/statutory safeguarding requirements
+
+### 2.8 Class Builder And Pupil Foundation Data
+
+Where a school subscribes to Class Builder or related pupil-facing tools, Schoolgle may process:
+
+| Data Category | Examples | Lawful Basis | Special Category / Higher-Risk Position |
+| --- | --- | --- | --- |
+| Pupil identity | Pupil ID, first name, last name, year group, current class | School determines controller lawful basis, typically public task or legitimate school educational administration; Schoolgle processes under contract/instructions | Children's data; minimise fields |
+| Education characteristics | EAL, pupil premium, FSM, looked-after flag, SEND/SEN status, primary need, EHCP flag, gender, ethnicity where provided | School determines controller lawful basis and confirms necessity for educational support/class organisation | Ethnicity is special category; SEND/primary need may reveal disability/health and should be treated as higher-risk |
+| Pupil preferences | Friendship/work-well choices and generated group summaries | School determines controller lawful basis; Schoolgle processes to deliver Class Builder | Children's relationship/preference data; restrict access |
+| Pupil pass data | Pass codename, pass attributes, hashed/encrypted access token, last-used/revoked timestamps | Necessary to provide pupil access to subscribed tools | Access tokens must be protected and revocable |
+
+The school remains responsible for deciding which pupil characteristics are necessary and appropriate for the product. Schoolgle provides templates and validation to support minimisation.
 
 ---
 
@@ -199,7 +214,9 @@ Personal data may be transferred outside the UK for AI processing purposes. Thes
 | Compliance: Low-level concerns | [REQUIRES HUMAN INPUT — recommend 7 years post-resolution]              | [To be implemented] |
 | Compliance: Consent records    | [REQUIRES HUMAN INPUT — until child leaves school or consent withdrawn] | [To be implemented] |
 | Compliance: Complaints         | [REQUIRES HUMAN INPUT — per DfE guidance]                               | [To be implemented] |
-| AI processing                  | Real-time only (not stored by Schoolgle)                                | N/A                 |
+| Class Builder pupil foundation data | Contract term, until school deletion, or until no longer needed for the subscribed product | Delete/return on contract end or school request |
+| Class Builder preference responses and generated groups | Until the school deletes the session, contract end, or the educational purpose is complete | Delete/return on school request |
+| AI processing                  | Real-time only unless the subscribed product explicitly stores derived outputs or audit records | Provider-managed / Schoolgle deletion where stored |
 
 ---
 
@@ -237,7 +254,7 @@ As the Data Controller, the school must:
 
 1. Ensure lawful basis exists for all personal data processed through Schoolgle
 2. Provide appropriate privacy notices to staff, governors, parents, and children
-3. NOT upload identifiable pupil data unless using designated compliance features
+3. Only upload identifiable pupil data when it is required by a subscribed product such as Class Builder, pupil passes, consent management or an agreed school intelligence workflow
 4. Maintain records of processing activities (Article 30 ROPA)
 5. Conduct DPIAs for high-risk processing activities
 6. Respond to data subject requests (Schoolgle will assist)

@@ -13,6 +13,11 @@ import type {
 } from "./base-expert";
 import { createPolicyExpert } from "./policy-presence";
 
+const amountPattern = new RegExp(
+  "(?:\\u00a3|GBP|pounds?)\\s?[\\d,]+|[\\d,]+\\s?(?:pounds|GBP)",
+  "i",
+);
+
 export const pupilPremiumExpert: ComplianceExpert = {
   config: {
     requirementKeys: ["pupil_premium_strategy"],
@@ -38,7 +43,7 @@ export const pupilPremiumExpert: ComplianceExpert = {
         hasStrategy = true;
         foundUrl = foundUrl || page.url;
 
-        if (/£[\d,]+/.test(page.content || "")) {
+        if (amountPattern.test(page.content || "")) {
           hasAmount = true;
           evidence.push("Funding amount(s) found");
         }
@@ -132,6 +137,7 @@ export const peSportPremiumExpert: ComplianceExpert = {
     let hasSpending = false;
     let hasSwimming = false;
     let hasImpact = false;
+    let hasLimitedReportExtraction = false;
     let foundUrl = "";
     const evidence: string[] = [];
 
@@ -139,6 +145,7 @@ export const peSportPremiumExpert: ComplianceExpert = {
       const contentLower = (page.content || "").toLowerCase();
       const titleLower = (page.title || "").toLowerCase();
       const urlLower = page.url.toLowerCase();
+      const isPdf = page.contentType === "pdf";
 
       // Check if page is about PE/sport premium — content, title, or URL
       const isPEPremiumPage =
@@ -163,7 +170,7 @@ export const peSportPremiumExpert: ComplianceExpert = {
         hasContent = true;
         foundUrl = foundUrl || page.url;
 
-        if (/£[\d,]+/.test(page.content || "")) {
+        if (amountPattern.test(page.content || "")) {
           hasAmount = true;
           evidence.push("Funding amount found");
         }
@@ -204,7 +211,7 @@ export const peSportPremiumExpert: ComplianceExpert = {
       }
 
       // Also check for PDF documents that ARE the report (title/filename match)
-      if (!hasContent && (page as any).contentType === "pdf") {
+      if (isPdf) {
         const isReportPdf =
           titleLower.includes("sport") &&
           (titleLower.includes("premium") || titleLower.includes("grant"));
@@ -223,7 +230,7 @@ export const peSportPremiumExpert: ComplianceExpert = {
           // If it's a proper report PDF, it likely has spending detail
           // (content extraction may have failed but the document exists)
           if (contentLower.length < 100) {
-            // Content extraction failed — treat report PDF as having spending info
+            hasLimitedReportExtraction = true;
             hasSpending = true;
             evidence.push(
               "Report document found (PDF content extraction limited)",
@@ -239,10 +246,17 @@ export const peSportPremiumExpert: ComplianceExpert = {
       if (hasSwimming) score += 10;
       if (hasImpact) score += 10;
       const gaps: string[] = [];
-      if (!hasAmount) gaps.push("PE/sport premium total amount not stated");
-      if (!hasSwimming) gaps.push("Year 6 swimming data not found");
-      if (!hasImpact)
+      if (!hasAmount && !hasLimitedReportExtraction)
+        gaps.push("PE/sport premium total amount not stated");
+      if (!hasSwimming && !hasLimitedReportExtraction)
+        gaps.push("Year 6 swimming data not found");
+      if (!hasImpact && !hasLimitedReportExtraction)
         gaps.push("Impact/outcomes evidence could be strengthened");
+      if (!hasAmount && hasLimitedReportExtraction) {
+        evidence.push(
+          "Funding amount not machine-verified because the published report text extraction was limited",
+        );
+      }
       return {
         status: "compliant",
         complianceScore: score,
@@ -252,7 +266,7 @@ export const peSportPremiumExpert: ComplianceExpert = {
         gaps,
         recommendations:
           gaps.length > 0
-            ? ["Address the identified gaps to achieve full compliance"]
+            ? ["Review the published report for the identified content gaps"]
             : [],
         redFlags: [],
         confidence: 0.8,

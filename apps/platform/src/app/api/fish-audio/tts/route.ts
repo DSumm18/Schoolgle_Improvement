@@ -5,6 +5,12 @@ import { NextRequest, NextResponse } from "next/server";
  * The ed-widget posts to /api/fish-audio/tts (matching the Fish Audio v1/tts endpoint)
  * This route forwards to https://api.fish.audio/v1/tts with server-side API key
  */
+export async function GET() {
+  return NextResponse.json({
+    configured: Boolean(process.env.FISH_AUDIO_API_KEY),
+  });
+}
+
 export async function POST(request: NextRequest) {
   try {
     const requestBody = await request.json();

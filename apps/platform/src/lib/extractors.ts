@@ -5,17 +5,46 @@ import OpenAI from "openai";
 // pdfjs-dist is dynamically imported to avoid DOMMatrix error in Node.js
 import { logger } from "./logger";
 
+type PdfjsTextItem = { str?: string };
+type PdfjsTextContent = { items: PdfjsTextItem[] };
+type PdfjsPage = { getTextContent: () => Promise<PdfjsTextContent> };
+type PdfjsDocument = {
+  numPages: number;
+  getPage: (pageNumber: number) => Promise<PdfjsPage>;
+};
+type PdfjsModule = {
+  GlobalWorkerOptions: { workerSrc: string };
+  getDocument: (options: {
+    data: Uint8Array;
+    useSystemFonts: boolean;
+    disableWorker: boolean;
+  }) => { promise: Promise<PdfjsDocument> };
+};
+type Pdf2JsonRun = { T: string };
+type Pdf2JsonText = { R: Pdf2JsonRun[] };
+type Pdf2JsonPage = { Texts: Pdf2JsonText[] };
+type Pdf2JsonData = { Pages: Pdf2JsonPage[] };
+
 // Lazy-loaded PDF.js instance
-let pdfjsLib: any = null;
+let pdfjsLib: PdfjsModule | null = null;
+let preferPdf2json = false;
 
 async function getPdfjs() {
   if (!pdfjsLib) {
     // Dynamic import to avoid build-time issues with DOMMatrix
-    pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
+    pdfjsLib = (await import(
+      "pdfjs-dist/legacy/build/pdf.mjs"
+    )) as unknown as PdfjsModule;
     // Configure worker
     pdfjsLib.GlobalWorkerOptions.workerSrc = "";
   }
   return pdfjsLib;
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error
+    ? error.message
+    : String(error || "Unknown error");
 }
 
 /**
@@ -29,6 +58,11 @@ export async function parsePDF(buffer: Buffer): Promise<string> {
       bufferSize: buffer.length,
     });
 
+    if (preferPdf2json) {
+      const fallbackText = await tryParsePDFWithPdf2json(buffer, context);
+      if (fallbackText) return fallbackText;
+    }
+
     // Get lazy-loaded pdfjs
     const pdfjs = await getPdfjs();
 
@@ -39,6 +73,7 @@ export async function parsePDF(buffer: Buffer): Promise<string> {
     const loadingTask = pdfjs.getDocument({
       data: data,
       useSystemFonts: true,
+      disableWorker: true,
     });
 
     const pdf = await loadingTask.promise;
@@ -56,7 +91,7 @@ export async function parsePDF(buffer: Buffer): Promise<string> {
 
         // Combine text items with spaces
         const pageText = textContent.items
-          .map((item: any) => {
+          .map((item) => {
             // Handle text items with str property
             return item.str || "";
           })
@@ -91,7 +126,15 @@ export async function parsePDF(buffer: Buffer): Promise<string> {
     });
 
     return fullText;
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = getErrorMessage(error);
+    if (
+      errorMessage.includes("fake worker") ||
+      errorMessage.includes("workerSrc")
+    ) {
+      preferPdf2json = true;
+    }
+
     logger.warn(
       "pdfjs-dist extraction failed, trying pdf2json fallback",
       context,
@@ -99,37 +142,59 @@ export async function parsePDF(buffer: Buffer): Promise<string> {
     );
 
     // Fallback to pdf2json which works better in Node.js server environments
-    try {
-      const text = await parsePDFWithPdf2json(buffer);
-      if (text && text.length > 50) {
-        logger.info("pdf2json fallback successful", context, {
-          textLength: text.length,
-        });
-        return text;
-      }
-    } catch (fallbackError) {
-      logger.warn("pdf2json fallback also failed", context, fallbackError);
-    }
+    const fallbackText = await tryParsePDFWithPdf2json(buffer, context);
+    if (fallbackText) return fallbackText;
 
     // Handle specific error cases
     if (
-      error.message?.includes("password") ||
-      error.message?.includes("encrypted")
+      errorMessage.includes("password") ||
+      errorMessage.includes("encrypted")
     ) {
       return "[PDF is password-protected or encrypted - Cannot extract text]";
     }
 
-    if (error.message?.includes("Invalid PDF")) {
+    if (errorMessage.includes("Invalid PDF")) {
       return "[Invalid or corrupted PDF file]";
     }
 
-    return `[PDF extraction error: ${error.message || "Unknown error"}]`;
+    return `[PDF extraction error: ${errorMessage}]`;
   }
+}
+
+async function tryParsePDFWithPdf2json(
+  buffer: Buffer,
+  context: { function: string; file: string },
+): Promise<string | null> {
+  try {
+    const text = await parsePDFWithPdf2json(buffer);
+    if (text && text.length > 50) {
+      logger.info("pdf2json fallback successful", context, {
+        textLength: text.length,
+      });
+      return text;
+    }
+  } catch (fallbackError) {
+    logger.warn("pdf2json fallback also failed", context, fallbackError);
+  }
+
+  return null;
 }
 
 /**
  * Fallback PDF parser using pdf2json (works better in Node.js)
  */
+function safeDecodePdfText(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    try {
+      return decodeURIComponent(value.replace(/%(?![0-9A-Fa-f]{2})/g, "%25"));
+    } catch {
+      return value.replace(/%20/g, " ");
+    }
+  }
+}
+
 async function parsePDFWithPdf2json(buffer: Buffer): Promise<string> {
   const PDFParser = (await import("pdf2json")).default;
 
@@ -139,12 +204,12 @@ async function parsePDFWithPdf2json(buffer: Buffer): Promise<string> {
       reject(new Error("pdf2json timed out after 30s"));
     }, 30000);
 
-    parser.on("pdfParser_dataReady", (data: any) => {
+    parser.on("pdfParser_dataReady", (data: Pdf2JsonData) => {
       clearTimeout(timeout);
       try {
-        const text = data.Pages.map((page: any, idx: number) => {
-          const pageText = page.Texts.map((t: any) =>
-            decodeURIComponent(t.R.map((r: any) => r.T).join("")),
+        const text = data.Pages.map((page, idx) => {
+          const pageText = page.Texts.map((textItem) =>
+            safeDecodePdfText(textItem.R.map((run) => run.T).join("")),
           ).join(" ");
           return `--- Page ${idx + 1} ---\n${pageText}`;
         }).join("\n\n");
@@ -154,7 +219,7 @@ async function parsePDFWithPdf2json(buffer: Buffer): Promise<string> {
       }
     });
 
-    parser.on("pdfParser_dataError", (err: any) => {
+    parser.on("pdfParser_dataError", (err: unknown) => {
       clearTimeout(timeout);
       reject(err);
     });
@@ -205,6 +270,7 @@ export async function parseDocx(buffer: Buffer): Promise<string> {
  * Currently disabled due to build constraints
  */
 export async function parsePPTX(buffer: Buffer): Promise<string> {
+  void buffer;
   logger.warn("PPTX extraction attempted but currently disabled", {
     function: "parsePPTX",
     file: "extractors.ts",

@@ -310,6 +310,15 @@ export const APPS: AppDefinition[] = [
 
   // Improvement Apps
   {
+    id: "trust-assessor",
+    moduleId: "improvement",
+    name: "School Improvement Assessor",
+    route: "/dashboard/school-improvement/trust-assessor",
+    icon: TrendingUp,
+    shortDescription: "Source-labelled school improvement intelligence.",
+    requiredPermissions: ["admin", "headteacher", "slt"],
+  },
+  {
     id: "ofsted-readiness",
     moduleId: "improvement",
     name: "Ofsted Readiness",
@@ -321,7 +330,7 @@ export const APPS: AppDefinition[] = [
   {
     id: "sef-builder",
     moduleId: "improvement",
-    name: "SEF Builder",
+    name: "SEF",
     route: "/dashboard/sef",
     icon: FileText,
     shortDescription: "Draft self-evaluation reports.",
@@ -330,7 +339,7 @@ export const APPS: AppDefinition[] = [
   {
     id: "sdp-builder",
     moduleId: "improvement",
-    name: "SDP Builder",
+    name: "School Improvement Plan",
     route: "/dashboard/sdp",
     icon: TrendingUp,
     shortDescription: "Manage development plans.",
@@ -408,17 +417,8 @@ export const APPS: AppDefinition[] = [
     requiredPermissions: ["admin", "headteacher", "slt"],
     pilotHidden: true,
   },
-  {
-    id: "trust-assessor",
-    moduleId: "improvement",
-    name: "Trust Assessor",
-    route: "/dashboard/school-improvement/trust-assessor",
-    icon: TrendingUp,
-    shortDescription: "Structured trust dashboard with DfE cross-referencing.",
-    requiredPermissions: ["admin", "headteacher", "slt"],
-  },
   // Note: Data Capture was briefly exposed here as its own app but has been
-  // rolled back into the main Trust Assessor (now the single source of truth
+  // rolled back into the main School Improvement Assessor (now the single source of truth
   // for both the reporting and the data-entry flow). URL /dashboard/school-
   // improvement/data-capture is still live for admins who need the full-screen
   // grid, but it's accessed from within Trust Assessor, not the main nav.

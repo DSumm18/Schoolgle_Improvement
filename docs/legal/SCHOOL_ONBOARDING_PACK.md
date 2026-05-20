@@ -12,7 +12,7 @@ Before you start using Schoolgle, please complete the following:
 
 - [ ] Read the Privacy Policy
 - [ ] Sign the Data Processing Agreement (DPA)
-- [ ] Confirm no pupil data will be uploaded
+- [ ] Confirm whether the subscribed products require pupil data and which fields are necessary
 - [ ] Designate an account administrator
 - [ ] Inform staff about the new system
 
@@ -61,7 +61,7 @@ What data is processed:
 • Professional observations and feedback
 • Self-assessment data about school performance
 
-This does NOT include any pupil data.
+This may include pupil or staff data where it is required by the subscribed product. For example, Class Builder may use a named pupil roll, class/year group, relevant pupil characteristics and pupil preferences to help staff create explainable draft class groups.
 
 Who processes this data:
 • Schoolgle Ltd (as our Data Processor)
@@ -87,7 +87,7 @@ Answer these questions:
 
 | Question | Yes | No |
 |----------|-----|-----|
-| Does the system process pupil data? | ⚠️ STOP - Schoolgle should NOT be used for pupil data | ✅ Continue |
+| Does the subscribed product process pupil data? | Complete product schedule/DPIA screening and minimise fields | ✅ Continue |
 | Does it involve new technology? | Consider DPIA | ✅ Low risk |
 | Does it involve profiling or automated decisions about individuals? | Consider DPIA | ✅ No |
 | Does it process special category data (health, religion, etc.)? | Consider DPIA | ✅ No |
@@ -115,11 +115,11 @@ Answer these questions:
 
 ## 🚫 What NOT to Upload
 
-**DO NOT upload documents containing:**
-- ❌ Pupil names
-- ❌ Pupil photos  
-- ❌ Medical information
-- ❌ SEND details about specific pupils
+**DO NOT upload documents containing unnecessary data outside the product scope:**
+- ❌ Pupil names except where required by Class Builder, pupil passes, consent management or another agreed product
+- ❌ Pupil photos except where explicitly required by an agreed product
+- ❌ Medical information unless explicitly agreed and covered by the product schedule/DPIA
+- ❌ SEND details about specific pupils unless required by the product purpose and minimised
 - ❌ Safeguarding case notes
 - ❌ Parent contact details
 - ❌ Financial records (payroll, etc.)
@@ -193,10 +193,9 @@ Answer these questions:
 1. You have read and understood the Privacy Policy
 2. You have signed the Data Processing Agreement
 3. You will ensure staff are informed about data processing
-4. You will not upload identifiable pupil data to Schoolgle
+4. You will only upload identifiable pupil data where required by the subscribed product and relevant product processing schedule
 5. You have designated appropriate user roles
 
 ---
 
 *Welcome to Schoolgle! We're here to help you focus on what matters most - your school and your children.*
-

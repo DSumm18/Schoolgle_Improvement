@@ -30,12 +30,13 @@ export default function AppConnectionStatusCard({
   title = "Connected evidence source",
   compact = false,
 }: AppConnectionStatusCardProps) {
-  const { organization } = useAuth();
-  const organizationId = organization?.id || "";
+  const { organization, organizationId: activeOrganizationId } = useAuth();
+  const organizationId = activeOrganizationId || organization?.id || "";
   const [status, setStatus] = useState<AppConnectionStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [scanMessage, setScanMessage] = useState<string | null>(null);
 
   const fetchStatus = useCallback(async () => {
     if (!organizationId) {
@@ -73,10 +74,19 @@ export default function AppConnectionStatusCard({
 
     setScanning(true);
     setError(null);
+    setScanMessage(null);
     try {
+      const appScanRoute =
+        appKey === "ofsted-readiness"
+          ? "/api/ofsted/connections/scan"
+          : appKey === "siams-readiness"
+            ? "/api/siams/connections/scan"
+            : "/api/data-connections/scan";
+      const usesStreamedScan =
+        appKey === "ofsted-readiness" || appKey === "siams-readiness";
       const response = await clientAuthFetch(
         supabase,
-        "/api/data-connections/scan",
+        appScanRoute,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -86,10 +96,36 @@ export default function AppConnectionStatusCard({
           }),
         },
       );
-      const payload = await response.json();
 
       if (!response.ok) {
+        const payload = await response.json();
         throw new Error(payload.error || "Scan failed");
+      }
+
+      if (usesStreamedScan && response.body) {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
+            const event = JSON.parse(line.slice(6));
+            if (event.type === "error") {
+              throw new Error(event.message || "Scan failed");
+            }
+            if (event.message) setScanMessage(event.message);
+          }
+        }
+      } else {
+        await response.json();
       }
 
       await fetchStatus();
@@ -97,6 +133,7 @@ export default function AppConnectionStatusCard({
       setError(err instanceof Error ? err.message : "Scan failed");
     } finally {
       setScanning(false);
+      setTimeout(() => setScanMessage(null), 5000);
     }
   };
 
@@ -203,6 +240,11 @@ export default function AppConnectionStatusCard({
                 Archive folders excluded
               </div>
             </div>
+            {scanMessage && (
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                {scanMessage}
+              </p>
+            )}
 
             {!compact && (
               <div className="grid gap-3 text-xs text-slate-600 dark:text-slate-300 md:grid-cols-2">

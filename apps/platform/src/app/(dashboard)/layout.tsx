@@ -177,7 +177,7 @@ export default function DashboardLayout({
     violet: "#8b5cf6",
   };
 
-  // Scroll active module into view
+  // Keep active module in view without animated sidebar jumps
   const scrollToModule = useCallback((moduleId: string) => {
     requestAnimationFrame(() => {
       const el = moduleRefs.current[moduleId];
@@ -186,7 +186,7 @@ export default function DashboardLayout({
         const elRect = el.getBoundingClientRect();
         // Only scroll if element is not fully visible
         if (elRect.top < navRect.top || elRect.bottom > navRect.bottom) {
-          el.scrollIntoView({ behavior: "smooth", block: "center" });
+          el.scrollIntoView({ behavior: "auto", block: "center" });
         }
       }
     });
@@ -593,10 +593,10 @@ export default function DashboardLayout({
             </div>
           )}
 
-          {/* Navigation with smooth hover-to-scroll */}
+          {/* Navigation */}
           <nav
             ref={navRef}
-            className="flex-1 overflow-y-auto p-4 sidebar-scroll-container scroll-smooth"
+            className="flex-1 overflow-y-auto p-4 sidebar-scroll-container"
             data-lenis-prevent
           >
             {navigationItems.map((section) => (
@@ -607,7 +607,7 @@ export default function DashboardLayout({
                   </h3>
                 )}
                 <div className="space-y-0.5">
-                  {section.items.map((item, itemIdx) => {
+                  {section.items.map((item) => {
                     const itemModuleIds = (item as any).moduleIds as string[] | undefined;
                     const isModuleActive = itemModuleIds
                       ? itemModuleIds.some(
@@ -641,14 +641,11 @@ export default function DashboardLayout({
                       : undefined;
 
                     return (
-                      <motion.div
+                      <div
                         key={item.href}
                         ref={(el) => {
                           moduleRefs.current[item.id] = el;
                         }}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: itemIdx * 0.03 + 0.05 }}
                       >
                         <Link
                           href={item.href}
@@ -704,15 +701,7 @@ export default function DashboardLayout({
                           {isActive &&
                             isSidebarExpanded &&
                             subApps.length === 0 && (
-                              <motion.div
-                                layoutId="active-nav"
-                                className="w-1.5 h-4 bg-primary rounded-full"
-                                transition={{
-                                  type: "spring",
-                                  stiffness: 300,
-                                  damping: 30,
-                                }}
-                              />
+                              <div className="w-1.5 h-4 bg-primary rounded-full" />
                             )}
                         </Link>
 
@@ -766,12 +755,9 @@ export default function DashboardLayout({
                                               pathname.startsWith(a.route + "/"),
                                           );
                                         return (
-                                          <motion.div
+                                          <div
                                             key={mod.id}
                                             className={gi > 0 ? "mt-2" : ""}
-                                            initial={{ opacity: 0, y: -4 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: gi * 0.05 }}
                                           >
                                             {/* Module heading — bold, clickable, replaces the old "home" app */}
                                             <Link
@@ -789,22 +775,12 @@ export default function DashboardLayout({
                                               <span>{mod.name}</span>
                                             </Link>
                                             {/* Sub-apps branching off */}
-                                            {group.apps.map((app, ai) => {
+                                            {group.apps.map((app) => {
                                               const isSubActive =
                                                 pathname === app.route ||
                                                 pathname.startsWith(app.route + "/");
                                               return (
-                                                <motion.div
-                                                  key={app.id}
-                                                  initial={{ opacity: 0, x: -6 }}
-                                                  animate={{ opacity: 1, x: 0 }}
-                                                  transition={{
-                                                    delay: gi * 0.05 + (ai + 1) * 0.03,
-                                                    type: "spring",
-                                                    stiffness: 400,
-                                                    damping: 25,
-                                                  }}
-                                                >
+                                                <div key={app.id}>
                                                   <Link
                                                     href={app.route}
                                                     className={`flex items-center gap-2.5 ml-3 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-150 ${
@@ -819,39 +795,27 @@ export default function DashboardLayout({
                                                     />
                                                     <span className="truncate">{app.name}</span>
                                                     {isSubActive && (
-                                                      <motion.div
-                                                        layoutId="active-sub"
+                                                      <div
                                                         className="ml-auto w-1.5 h-3 rounded-full shrink-0"
                                                         style={{ backgroundColor: moduleColor || "var(--primary)" }}
-                                                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
                                                       />
                                                     )}
                                                   </Link>
-                                                </motion.div>
+                                                </div>
                                               );
                                             })}
-                                          </motion.div>
+                                          </div>
                                         );
                                       });
                                     }
 
                                     // Single-module planets — flat list with spring animations
-                                    return subApps.map((app, ai) => {
+                                    return subApps.map((app) => {
                                       const isSubActive =
                                         pathname === app.route ||
                                         pathname.startsWith(app.route + "/");
                                       return (
-                                        <motion.div
-                                          key={app.id}
-                                          initial={{ opacity: 0, x: -6 }}
-                                          animate={{ opacity: 1, x: 0 }}
-                                          transition={{
-                                            delay: ai * 0.03,
-                                            type: "spring",
-                                            stiffness: 400,
-                                            damping: 25,
-                                          }}
-                                        >
+                                        <div key={app.id}>
                                           <Link
                                             href={app.route}
                                             className={`flex items-center gap-2.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-150 ${
@@ -866,15 +830,13 @@ export default function DashboardLayout({
                                             />
                                             <span className="truncate">{app.name}</span>
                                             {isSubActive && (
-                                              <motion.div
-                                                layoutId="active-sub"
+                                              <div
                                                 className="ml-auto w-1.5 h-3 rounded-full shrink-0"
                                                 style={{ backgroundColor: moduleColor || "var(--primary)" }}
-                                                transition={{ type: "spring", stiffness: 300, damping: 30 }}
                                               />
                                             )}
                                           </Link>
-                                        </motion.div>
+                                        </div>
                                       );
                                     });
                                   })()}
@@ -882,7 +844,7 @@ export default function DashboardLayout({
                               </motion.div>
                             )}
                         </AnimatePresence>
-                      </motion.div>
+                      </div>
                     );
                   })}
                 </div>
@@ -972,21 +934,10 @@ export default function DashboardLayout({
         `}</style>
 
         <main
-          className={`flex-1 overflow-y-auto transition-all duration-500 ease-in-out bg-background text-foreground max-lg:ml-0 max-lg:pt-14 ${isSidebarExpanded ? "lg:ml-64" : "lg:ml-20"}`}
+          className={`flex-1 overflow-y-auto transition-[margin-left] duration-200 ease-out bg-background text-foreground max-lg:ml-0 max-lg:pt-14 ${isSidebarExpanded ? "lg:ml-64" : "lg:ml-20"}`}
         >
           {subscription && <SubscriptionBanner state={subscription} />}
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={pathname}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.25, ease: "easeOut" }}
-              className="min-h-screen"
-            >
-              {children}
-            </motion.div>
-          </AnimatePresence>
+          <div className="min-h-screen">{children}</div>
         </main>
 
         <UpgradeModal

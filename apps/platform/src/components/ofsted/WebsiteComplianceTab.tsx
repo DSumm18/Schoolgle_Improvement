@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { motion } from "framer-motion";
 import {
   Globe,
   Loader2,
   RefreshCw,
   ExternalLink,
+  Copy,
+  Check,
   AlertCircle,
   CheckCircle2,
   Search,
@@ -26,18 +27,113 @@ interface WebsiteComplianceTabProps {
 
 type TabState = "loading" | "no_scan" | "has_results" | "scanning" | "error";
 
+interface EvidenceRoutingTopRoute {
+  sourceUrl: string;
+  sourceTitle: string;
+  sourceOwner: "school" | "trust" | "external";
+  foundOnUrl: string | null;
+  requirementKey: string | null;
+  requirementName: string | null;
+  ofstedCategoryId: string;
+  subcategoryId: string;
+  confidence: "high" | "medium" | "low";
+  confidenceScore: number;
+  evidenceRole: "direct" | "supporting" | "context";
+  signals: string[];
+}
+
+interface EvidenceRoutingSummary {
+  totalRoutes: number;
+  byCategory: Record<string, number>;
+  bySourceOwner: Record<string, number>;
+  directEvidence: number;
+  needsQualityAssessment: number;
+  topRoutes: EvidenceRoutingTopRoute[];
+}
+
+interface WebsiteScanApiSession {
+  id: string;
+  websiteUrl?: string | null;
+  trustUrl?: string | null;
+  schoolType?: ScanSession["schoolType"];
+  schoolPhase?: string | null;
+  isChurchSchool?: boolean | null;
+  status?: string | null;
+  progress?: {
+    message?: string;
+    evidenceRouting?: EvidenceRoutingSummary;
+  } | null;
+  pagesFound?: number | null;
+  documentsFound?: number | null;
+  pagesScraped?: number | null;
+  documentsScraped?: number | null;
+  assessCompletedAt?: string | null;
+}
+
+interface WebsiteScanApiData {
+  hasSession?: boolean;
+  session?: WebsiteScanApiSession;
+  stats?: {
+    totalPages?: number | null;
+    totalDocuments?: number | null;
+  };
+  evidenceRouting?: EvidenceRoutingSummary | null;
+}
+
+const OFSTED_AREA_LABELS: Record<string, string> = {
+  inclusion: "Inclusion",
+  "curriculum-teaching": "Curriculum and teaching",
+  achievement: "Achievement",
+  "attendance-behaviour": "Attendance and behaviour",
+  "personal-development": "Personal development and wellbeing",
+  "leadership-governance": "Leadership and governance",
+};
+
+async function copyTextToClipboard(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    // Fall back to a temporary text area below.
+  }
+
+  try {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    textArea.style.left = "-9999px";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    const copied = document.execCommand("copy");
+    document.body.removeChild(textArea);
+    return copied;
+  } catch {
+    return false;
+  }
+}
+
 async function authFetch(
   url: string,
   options?: RequestInit,
 ): Promise<Response> {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  let accessToken: string | null | undefined;
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    accessToken = session?.access_token;
+    if (accessToken) break;
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+
   const headers: Record<string, string> = {
     ...(options?.headers as Record<string, string>),
   };
-  if (session?.access_token) {
-    headers["Authorization"] = `Bearer ${session.access_token}`;
+  if (accessToken) {
+    headers["Authorization"] = `Bearer ${accessToken}`;
   }
   return fetch(url, { ...options, headers });
 }
@@ -53,47 +149,97 @@ export default function WebsiteComplianceTab({
   const [error, setError] = useState<string | null>(null);
   const [scanUrl, setScanUrl] = useState("");
   const [scanProgress, setScanProgress] = useState("");
+  const [evidenceRouting, setEvidenceRouting] =
+    useState<EvidenceRoutingSummary | null>(null);
+
+  const applySessionData = useCallback((data?: WebsiteScanApiData | null) => {
+    const apiSession = data?.session;
+    if (!data?.hasSession || !apiSession) return false;
+
+    setSession({
+      id: apiSession.id,
+      websiteUrl: apiSession.websiteUrl || "",
+      trustUrl: apiSession.trustUrl || undefined,
+      schoolType: apiSession.schoolType,
+      schoolPhase: apiSession.schoolPhase || "",
+      isChurchSchool: Boolean(apiSession.isChurchSchool),
+      status: apiSession.status || "",
+      pagesFound:
+        apiSession.pagesScraped ??
+        apiSession.pagesFound ??
+        data.stats?.totalPages ??
+        0,
+      documentsFound:
+        apiSession.documentsScraped ??
+        apiSession.documentsFound ??
+        data.stats?.totalDocuments ??
+        0,
+      assessCompletedAt: apiSession.assessCompletedAt || undefined,
+    });
+    setEvidenceRouting(
+      data.evidenceRouting || apiSession.progress?.evidenceRouting || null,
+    );
+    setScanUrl(apiSession.websiteUrl || "");
+
+    if (apiSession.status === "scraping" || apiSession.status === "assessing") {
+      setScanProgress(apiSession.progress?.message || "Scan in progress...");
+      setState("scanning");
+    } else {
+      setState("has_results");
+    }
+
+    return true;
+  }, []);
 
   // Load existing results
   const loadResults = useCallback(async () => {
+    if (!organizationId) {
+      setState("loading");
+      return;
+    }
+
     try {
+      const initialSessionRes = await authFetch(
+        `/api/website-scan/v2?organizationId=${organizationId}&includeEvidenceRoutes=true`,
+      );
+      if (!initialSessionRes.ok) {
+        const payload = await initialSessionRes.json().catch(() => ({}));
+        throw new Error(payload.error || "Failed to fetch website scan session");
+      }
+      const initialSessionData =
+        (await initialSessionRes.json()) as WebsiteScanApiData;
+
+      if (!applySessionData(initialSessionData)) {
+        setState("no_scan");
+      }
+
       // Get latest assessment results
       const res = await authFetch(
         `/api/website-scan/v2/assess?organizationId=${organizationId}`,
       );
-      if (!res.ok) throw new Error("Failed to fetch results");
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        throw new Error(payload.error || "Failed to fetch results");
+      }
 
       const data = await res.json();
-      const result = data.data;
+      const result = data;
 
       if (!result?.hasResults) {
         // Check if there's a session at all
         const sessionRes = await authFetch(
-          `/api/website-scan/v2?organizationId=${organizationId}`,
+          `/api/website-scan/v2?organizationId=${organizationId}&includeEvidenceRoutes=true`,
         );
-        const sessionData = await sessionRes.json();
-
-        if (sessionData.data?.hasSession) {
-          const s = sessionData.data.session;
-          setSession({
-            id: s.id,
-            websiteUrl: s.websiteUrl,
-            trustUrl: s.trustUrl,
-            schoolType: s.schoolType,
-            schoolPhase: s.schoolPhase,
-            isChurchSchool: s.isChurchSchool,
-            status: s.status,
-            pagesFound: s.pagesScraped,
-            documentsFound: s.documentsScraped,
-          });
-          setScanUrl(s.websiteUrl || "");
-
-          // Session exists but no assessment — offer to run Phase 2
-          if (s.status === "scraped") {
-            setState("has_results");
-            return;
-          }
+        if (!sessionRes.ok) {
+          const payload = await sessionRes.json().catch(() => ({}));
+          throw new Error(
+            payload.error || "Failed to fetch website scan session",
+          );
         }
+        const sessionData = (await sessionRes.json()) as WebsiteScanApiData;
+
+        if (applySessionData(sessionData)) return;
+        if (applySessionData(initialSessionData)) return;
 
         setState("no_scan");
         return;
@@ -106,32 +252,24 @@ export default function WebsiteComplianceTab({
 
       // Also get session info
       const sessionRes = await authFetch(
-        `/api/website-scan/v2?organizationId=${organizationId}`,
+        `/api/website-scan/v2?organizationId=${organizationId}&includeEvidenceRoutes=true`,
       );
-      const sessionData = await sessionRes.json();
-      if (sessionData.data?.hasSession) {
-        const s = sessionData.data.session;
-        setSession({
-          id: s.id,
-          websiteUrl: s.websiteUrl,
-          trustUrl: s.trustUrl,
-          schoolType: s.schoolType,
-          schoolPhase: s.schoolPhase,
-          isChurchSchool: s.isChurchSchool,
-          status: s.status,
-          pagesFound: s.pagesScraped,
-          documentsFound: s.documentsScraped,
-          assessCompletedAt: s.assessCompletedAt,
-        });
-        setScanUrl(s.websiteUrl || "");
+      if (!sessionRes.ok) {
+        const payload = await sessionRes.json().catch(() => ({}));
+        throw new Error(payload.error || "Failed to fetch website scan session");
       }
+      const sessionData = (await sessionRes.json()) as WebsiteScanApiData;
+      applySessionData(sessionData);
 
       setState("has_results");
     } catch (err) {
       console.error("Error loading results:", err);
-      setState("no_scan");
+      setError(err instanceof Error ? err.message : "Failed to load results");
+      setState((currentState) =>
+        currentState === "loading" ? "no_scan" : currentState,
+      );
     }
-  }, [organizationId]);
+  }, [applySessionData, organizationId]);
 
   useEffect(() => {
     loadResults();
@@ -139,7 +277,7 @@ export default function WebsiteComplianceTab({
 
   // Run a new scan
   const runScan = async () => {
-    if (!scanUrl.trim()) return;
+    if (!scanUrl.trim() || !organizationId) return;
 
     let websiteUrl = scanUrl.trim();
     if (!websiteUrl.startsWith("http")) {
@@ -167,10 +305,11 @@ export default function WebsiteComplianceTab({
       }
 
       const scrapeData = await scrapeRes.json();
-      const sid = scrapeData.data?.sessionId;
+      const sid = scrapeData.sessionId;
+      setEvidenceRouting(scrapeData.evidenceRouting || null);
 
       setScanProgress(
-        `Found ${scrapeData.data.pagesStored} pages, ${scrapeData.data.documentsStored} docs. Assessing compliance...`,
+        `Found ${scrapeData.pagesStored} pages, ${scrapeData.documentsStored} docs. Assessing compliance...`,
       );
 
       // Phase 2
@@ -178,10 +317,11 @@ export default function WebsiteComplianceTab({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          organizationId,
           sessionId: sid,
-          schoolType: scrapeData.data.schoolType,
-          schoolPhase: scrapeData.data.schoolPhase,
-          isChurchSchool: scrapeData.data.isChurchSchool,
+          schoolType: scrapeData.schoolType,
+          schoolPhase: scrapeData.schoolPhase,
+          isChurchSchool: scrapeData.isChurchSchool,
         }),
       });
 
@@ -195,6 +335,39 @@ export default function WebsiteComplianceTab({
       setState("has_results");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Scan failed");
+      setState("error");
+    }
+  };
+
+  const runAssessment = async () => {
+    if (!session?.id) return;
+
+    setState("scanning");
+    setError(null);
+    setScanProgress("Assessing website compliance against requirements...");
+
+    try {
+      const assessRes = await authFetch("/api/website-scan/v2/assess", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          organizationId,
+          sessionId: session.id,
+          schoolType: session.schoolType,
+          schoolPhase: session.schoolPhase,
+          isChurchSchool: session.isChurchSchool,
+        }),
+      });
+
+      if (!assessRes.ok) {
+        const err = await assessRes.json().catch(() => ({}));
+        throw new Error(err.error || "Assessment failed");
+      }
+
+      await loadResults();
+      setState("has_results");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Assessment failed");
       setState("error");
     }
   };
@@ -255,7 +428,7 @@ export default function WebsiteComplianceTab({
               <button
                 onClick={runScan}
                 disabled={!scanUrl.trim()}
-                className="px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm transition-colors disabled:opacity-50 flex items-center gap-2"
+                className="px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-primary-foreground font-semibold text-sm transition-colors disabled:opacity-50 flex items-center gap-2"
               >
                 <Search className="w-4 h-4" />
                 Scan
@@ -368,6 +541,10 @@ export default function WebsiteComplianceTab({
       </div>
 
       {/* Results */}
+      {evidenceRouting && evidenceRouting.totalRoutes > 0 && (
+        <WebsiteEvidenceInventory evidenceRouting={evidenceRouting} />
+      )}
+
       {summary ? (
         <WebsiteComplianceResults
           summary={summary}
@@ -388,14 +565,187 @@ export default function WebsiteComplianceTab({
               found. Run the assessment to check compliance.
             </p>
             <button
-              onClick={runScan}
-              className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm transition-colors"
+              onClick={runAssessment}
+              className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-primary-foreground font-semibold text-sm transition-colors"
             >
               Run Assessment
             </button>
           </CardContent>
         </Card>
       ) : null}
+    </div>
+  );
+}
+
+function WebsiteEvidenceInventory({
+  evidenceRouting,
+}: {
+  evidenceRouting: EvidenceRoutingSummary;
+}) {
+  const categoryEntries = Object.entries(evidenceRouting.byCategory).sort(
+    ([firstCategory], [secondCategory]) =>
+      (OFSTED_AREA_LABELS[firstCategory] || firstCategory).localeCompare(
+        OFSTED_AREA_LABELS[secondCategory] || secondCategory,
+      ),
+  );
+
+  return (
+    <Card className="border border-blue-200/70 dark:border-blue-900/60 bg-blue-50/40 dark:bg-blue-950/10">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm font-semibold flex items-center gap-2">
+          <Globe className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+          Website evidence inventory
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid gap-3 sm:grid-cols-3">
+          <EvidenceStat
+            label="Mapped sources"
+            value={evidenceRouting.totalRoutes}
+          />
+          <EvidenceStat
+            label="Direct evidence"
+            value={evidenceRouting.directEvidence}
+          />
+          <EvidenceStat
+            label="Needs quality check"
+            value={evidenceRouting.needsQualityAssessment}
+          />
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {categoryEntries.map(([category, count]) => (
+            <span
+              key={category}
+              className="rounded-full border border-blue-200 bg-card/70 px-2.5 py-1 text-xs text-blue-900 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-100"
+            >
+              {OFSTED_AREA_LABELS[category] || category}: {count}
+            </span>
+          ))}
+        </div>
+
+        <div className="space-y-2">
+          {evidenceRouting.topRoutes.slice(0, 8).map((route) => (
+            <div
+              key={`${route.ofstedCategoryId}-${route.sourceUrl}`}
+              className="rounded-lg border border-border/60 bg-background/80 p-3"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <a
+                    href={route.sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm font-medium text-blue-700 hover:underline dark:text-blue-300"
+                  >
+                    {route.sourceTitle}
+                  </a>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {OFSTED_AREA_LABELS[route.ofstedCategoryId] ||
+                      route.ofstedCategoryId}
+                    {route.requirementName
+                      ? ` · ${route.requirementName}`
+                      : ""}
+                  </p>
+                </div>
+                <span className="shrink-0 rounded-full bg-muted px-2 py-1 text-[11px] uppercase tracking-wide text-muted-foreground">
+                  {route.sourceOwner}
+                </span>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <a
+                  href={route.sourceUrl}
+                  className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-2.5 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-blue-700"
+                >
+                  Open evidence
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+                {route.foundOnUrl && (
+                  <a
+                    href={route.foundOnUrl}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-muted/50"
+                  >
+                    Source page
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                )}
+                <a
+                  href={route.sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-muted/50"
+                >
+                  New tab
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+                <CopyLinkButton value={route.sourceUrl} />
+              </div>
+              {route.foundOnUrl && (
+                <a
+                  href={route.foundOnUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  Found on page
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <p className="text-xs text-muted-foreground">
+          Source files stay on the school or trust website. Schoolgle stores the
+          route, confidence and evidence links so Phase 2 can assess quality.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function CopyLinkButton({ value }: { value: string }) {
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">(
+    "idle",
+  );
+
+  const handleCopy = async () => {
+    const copiedOk = await copyTextToClipboard(value);
+    setCopyState(copiedOk ? "copied" : "failed");
+    window.setTimeout(() => setCopyState("idle"), 2400);
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-muted/50"
+    >
+      {copyState === "copied" ? (
+        <>
+          Copied
+          <Check className="h-3 w-3 text-emerald-600" />
+        </>
+      ) : copyState === "failed" ? (
+        <>
+          Copy failed
+          <AlertCircle className="h-3 w-3 text-amber-600" />
+        </>
+      ) : (
+        <>
+          Copy link
+          <Copy className="h-3 w-3" />
+        </>
+      )}
+    </button>
+  );
+}
+
+function EvidenceStat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-lg border border-blue-100 bg-card/70 p-3 dark:border-blue-900 dark:bg-blue-950/30">
+      <div className="text-lg font-bold text-foreground">{value}</div>
+      <div className="text-xs text-muted-foreground">{label}</div>
     </div>
   );
 }

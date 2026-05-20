@@ -324,6 +324,44 @@ export const SCHOOLGLE_CONNECTOR_FOLDERS: SchoolgleConnectorFolder[] = [
   },
 ];
 
+const CONNECTOR_APP_ENTITLEMENT_ALIASES: Record<string, string[]> = {
+  "ofsted-readiness": ["ofsted-readiness", "improvement"],
+  "siams-readiness": ["siams-readiness", "improvement"],
+  "trust-assessor": ["trust-assessor", "improvement"],
+  "school-intelligence": ["school-intelligence", "intelligence"],
+  "policy-manager": ["policy-manager", "compliance-policies", "compliance"],
+  compliance: ["compliance", "compliance-home"],
+  finance: ["finance", "finance-home"],
+  estates: ["estates", "estates-home", "estates-compliance", "compliance-checks"],
+};
+
+export function getConnectorFoldersForAppKeys(
+  appKeys: string[],
+): SchoolgleConnectorFolder[] {
+  const requestedAppKeys = new Set(appKeys);
+  return SCHOOLGLE_CONNECTOR_FOLDERS.filter((folder) =>
+    requestedAppKeys.has(folder.appKey),
+  );
+}
+
+export function resolveConnectorAppKeysFromEntitlements(
+  enabledEntitlements: string[] | null | undefined,
+): string[] {
+  const enabled = new Set(
+    (enabledEntitlements || [])
+      .map((key) => key.trim().toLowerCase())
+      .filter(Boolean),
+  );
+
+  return SCHOOLGLE_CONNECTOR_FOLDERS.flatMap((folder) => {
+    const entitlementAliases =
+      CONNECTOR_APP_ENTITLEMENT_ALIASES[folder.appKey] || [folder.appKey];
+    return entitlementAliases.some((alias) => enabled.has(alias))
+      ? [folder.appKey]
+      : [];
+  });
+}
+
 export type SchoolgleAppConnectionScope = {
   appKey: string;
   appName: string;
@@ -504,11 +542,15 @@ export function isConnectorGeneratedDraftPath(path: string): boolean {
 
 export function getConnectorFolderStructureText(
   schoolName = "Your School",
+  appKeys?: string[],
 ): string {
   const lines = [`${schoolName}`, `└── ${CONNECTOR_BRAND.homeFolderName}`];
+  const folders = appKeys
+    ? getConnectorFoldersForAppKeys(appKeys)
+    : SCHOOLGLE_CONNECTOR_FOLDERS;
 
-  SCHOOLGLE_CONNECTOR_FOLDERS.forEach((folder, folderIndex) => {
-    const isLastFolder = folderIndex === SCHOOLGLE_CONNECTOR_FOLDERS.length - 1;
+  folders.forEach((folder, folderIndex) => {
+    const isLastFolder = folderIndex === folders.length - 1;
     const folderPrefix = isLastFolder ? "    └──" : "    ├──";
     lines.push(`${folderPrefix} ${folder.name}`);
 

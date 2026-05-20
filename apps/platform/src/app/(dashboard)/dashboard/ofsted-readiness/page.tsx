@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -41,16 +41,19 @@ type Tab =
   | "safeguarding";
 
 export default function OfstedReadinessPage() {
-  const { organization } = useAuth();
+  const { organization, organizationId: activeOrganizationId } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [assessments, setAssessments] = useState<FrameworkAssessment>({});
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
-  const organizationId = organization?.id || "";
+  const organizationId = activeOrganizationId || organization?.id || "";
 
   // Fetch assessments when organization changes
   const fetchAssessments = useCallback(async () => {
-    if (!organizationId) return;
+    if (!organizationId) {
+      setLoading(false);
+      return;
+    }
 
     try {
       const { data, error } = await supabase

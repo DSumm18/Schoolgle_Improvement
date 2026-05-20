@@ -10,6 +10,10 @@ import {
   ChevronDown,
   ChevronRight,
   ExternalLink,
+  Copy,
+  Check,
+  FileText,
+  Link as LinkIcon,
   Shield,
   Info,
 } from "lucide-react";
@@ -135,6 +139,180 @@ const STATUS_CONFIG = {
   },
 };
 
+function prettifyUrlPart(value: string): string {
+  return decodeURIComponent(value)
+    .replace(/\.[a-z0-9]+$/i, "")
+    .replace(/[-_]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function getEvidenceUrlDetails(url: string, index: number) {
+  try {
+    const parsed = new URL(url);
+    const pathname = parsed.pathname.replace(/\/+$/, "");
+    const filename = pathname.split("/").pop() || parsed.hostname;
+    const extension = filename.match(/\.([a-z0-9]+)$/i)?.[1]?.toUpperCase();
+    const isDocument = Boolean(extension && extension !== "HTML");
+    const label = isDocument
+      ? prettifyUrlPart(filename)
+      : prettifyUrlPart(pathname.split("/").filter(Boolean).pop() || parsed.hostname);
+
+    return {
+      host: parsed.hostname.replace(/^www\./, ""),
+      label: label || `Evidence ${index + 1}`,
+      typeLabel: isDocument ? `${extension} document` : "Website page",
+      isDocument,
+    };
+  } catch {
+    return {
+      host: "External source",
+      label: `Evidence ${index + 1}`,
+      typeLabel: "Link",
+      isDocument: false,
+    };
+  }
+}
+
+async function copyToClipboard(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    // Fall back to a temporary text area below.
+  }
+
+  try {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    textArea.style.left = "-9999px";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    const copied = document.execCommand("copy");
+    document.body.removeChild(textArea);
+    return copied;
+  } catch {
+    return false;
+  }
+}
+
+function EvidenceLinkCard({ url, index }: { url: string; index: number }) {
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">(
+    "idle",
+  );
+  const details = getEvidenceUrlDetails(url, index);
+  const Icon = details.isDocument ? FileText : LinkIcon;
+
+  const handleCopy = async () => {
+    const copiedOk = await copyToClipboard(url);
+    setCopyState(copiedOk ? "copied" : "failed");
+    window.setTimeout(() => setCopyState("idle"), 2400);
+  };
+
+  return (
+    <div className="rounded-lg border border-border/60 bg-background p-3">
+      <div className="flex items-start gap-2">
+        <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium text-foreground">{details.label}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {details.typeLabel} · {details.host}
+          </p>
+        </div>
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <a
+          href={url}
+          className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-2.5 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-blue-700"
+        >
+          Open here
+          <ExternalLink className="h-3 w-3" />
+        </a>
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-muted/50"
+        >
+          New tab
+          <ExternalLink className="h-3 w-3" />
+        </a>
+        <button
+          type="button"
+          onClick={handleCopy}
+          className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-muted/50"
+        >
+          {copyState === "copied" ? (
+            <>
+              Copied
+              <Check className="h-3 w-3 text-emerald-600" />
+            </>
+          ) : copyState === "failed" ? (
+            <>
+              Copy failed
+              <AlertTriangle className="h-3 w-3 text-amber-600" />
+            </>
+          ) : (
+            <>
+              Copy link
+              <Copy className="h-3 w-3" />
+            </>
+          )}
+        </button>
+      </div>
+      {copyState === "failed" && (
+        <p className="mt-2 break-all rounded-md bg-muted px-2 py-1.5 text-[11px] text-muted-foreground">
+          {url}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function PlainEnglishSummary({ summary }: { summary: ComplianceSummary }) {
+  const actionCount =
+    summary.outdatedCount + summary.notFoundCount + summary.partialCount;
+
+  return (
+    <Card className="border border-blue-200/70 bg-blue-50/50 dark:border-blue-900/60 dark:bg-blue-950/20">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-semibold flex items-center gap-2">
+          <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+          Plain English summary
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2 text-sm text-muted-foreground">
+        <p>
+          Checked {summary.totalRequirements} website requirements.{" "}
+          <strong className="text-foreground">
+            {summary.compliantCount} look compliant
+          </strong>
+          , {summary.outdatedCount} appear outdated, {summary.notFoundCount} are
+          missing, and {summary.partialCount} need more detail.
+        </p>
+        {actionCount > 0 ? (
+          <p>
+            Start with the red/orange rows. “Outdated” means the document exists
+            but the date evidence suggests it needs review or republication.
+            Use <strong className="text-foreground">Open here</strong> to check
+            the source in this browser, or{" "}
+            <strong className="text-foreground">Copy link</strong> to share it.
+          </p>
+        ) : (
+          <p>
+            No immediate website compliance actions were detected in this scan.
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 // ─── Score Ring ───────────────────────────────────────────────
 
 function ScoreRing({
@@ -171,7 +349,7 @@ function ScoreRing({
           fill="none"
           stroke="currentColor"
           strokeWidth={strokeWidth}
-          className="text-slate-100 dark:text-slate-800"
+          className="text-muted-foreground/20"
         />
         <motion.circle
           cx={size / 2}
@@ -234,7 +412,7 @@ function CategoryBar({ category }: { category: CategorySummary }) {
   ];
 
   return (
-    <div className="flex h-2 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800">
+    <div className="flex h-2 rounded-full overflow-hidden bg-muted">
       {segments.map((seg, i) =>
         seg.count > 0 ? (
           <motion.div
@@ -312,20 +490,25 @@ function RequirementRow({
                 assessment.evidenceUrls.length > 0 && (
                   <div>
                     <p className="text-xs font-semibold text-muted-foreground mb-1">
-                      Evidence found on:
+                      Evidence links:
                     </p>
-                    {assessment.evidenceUrls.slice(0, 3).map((url, i) => (
-                      <a
-                        key={i}
-                        href={url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline truncate"
-                      >
-                        <ExternalLink className="w-3 h-3 shrink-0" />
-                        {url.replace(/^https?:\/\//, "").slice(0, 80)}
-                      </a>
-                    ))}
+                    <div className="space-y-2">
+                      {assessment.evidenceUrls
+                        .slice(0, compact ? 4 : 6)
+                        .map((url, index) => (
+                          <EvidenceLinkCard
+                            key={`${url}-${index}`}
+                            url={url}
+                            index={index}
+                          />
+                        ))}
+                    </div>
+                    {assessment.evidenceUrls.length > (compact ? 4 : 6) && (
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        {assessment.evidenceUrls.length - (compact ? 4 : 6)}{" "}
+                        more evidence links are stored for this requirement.
+                      </p>
+                    )}
                   </div>
                 )}
 
@@ -570,6 +753,8 @@ export default function WebsiteComplianceResults({
           </CardContent>
         </Card>
       </div>
+
+      <PlainEnglishSummary summary={summary} />
 
       {/* Priority actions callout */}
       {summary.notFoundCount > 0 && (

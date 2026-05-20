@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowRight, FileText, ShieldCheck } from "lucide-react";
 
 import { legalPageLinks } from "@/components/website/LegalPage";
+import { schoolgleCompanyDetails } from "@/lib/company-details";
 
 export const metadata: Metadata = {
   title: "Legal and Trust Centre | Schoolgle",
@@ -30,10 +31,10 @@ export default function LegalHubPage() {
           </p>
           <div className="mt-6 flex flex-wrap gap-3 text-sm">
             <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 font-medium text-emerald-700">
-              ICO registration ZC103199
+              ICO registration {schoolgleCompanyDetails.icoRegistration}
             </span>
             <span className="rounded-full border border-slate-200 bg-white px-3 py-1 font-medium text-slate-700">
-              Company No. 16776489
+              Company No. {schoolgleCompanyDetails.companyNumber}
             </span>
           </div>
         </div>
