@@ -12,14 +12,51 @@ import {
 import Link from "next/link";
 
 const SYSTEMS = [
-  { name: "Arbor", type: "MIS" },
-  { name: "SIMS", type: "MIS" },
-  { name: "Bromcom", type: "MIS" },
-  { name: "Every HR", type: "HR" },
-  { name: "Access", type: "Finance" },
-  { name: "PSF", type: "Finance" },
-  { name: "ParentPay", type: "Payments" },
-  { name: "CPOMS", type: "Safeguarding" },
+  {
+    name: "Arbor",
+    type: "MIS",
+    logo: "/logos/connectors/arbor.png",
+  },
+  {
+    name: "SIMS",
+    type: "MIS",
+    logo: "/logos/connectors/sims.png",
+    logoClassName: "scale-125",
+  },
+  {
+    name: "Bromcom",
+    type: "MIS",
+    logo: "/logos/connectors/bromcom.png",
+  },
+  {
+    name: "Every HR",
+    type: "HR",
+    logo: "/logos/connectors/every-hr.png",
+  },
+  {
+    name: "Access",
+    type: "Finance",
+    logo: "/logos/connectors/access.svg",
+    logoTileStyle: { backgroundColor: "#001b44" },
+    logoClassName: "max-w-9",
+  },
+  {
+    name: "IRIS Financials",
+    type: "Finance",
+    logo: "/logos/connectors/iris-financials.png",
+  },
+  {
+    name: "ParentPay",
+    type: "Payments",
+    logo: "/logos/connectors/parentpay.svg",
+    logoClassName: "max-w-11",
+  },
+  {
+    name: "CPOMS",
+    type: "Safeguarding",
+    logo: "/logos/connectors/cpoms.png",
+    logoClassName: "max-w-11",
+  },
 ];
 
 const STATS = [
@@ -179,10 +216,18 @@ const SystemsBridge = () => {
                     whileInView={{ opacity: 1, scale: 1 }}
                     viewport={{ once: true }}
                     transition={{ delay: 0.2 + i * 0.06 }}
-                    className="flex items-center gap-3 p-4 rounded-xl bg-foreground/[0.03] border border-border hover:border-primary/20 transition-all group"
+                    className="flex items-center gap-3 p-4 rounded-xl bg-foreground/[0.03] border border-border hover:border-primary/20 hover:bg-background/70 hover:shadow-sm transition-all group"
                   >
-                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-black text-xs group-hover:bg-primary/20 transition-colors">
-                      {system.name.charAt(0)}
+                    <div
+                      className={`w-12 h-12 rounded-xl bg-background flex items-center justify-center border border-border/70 shadow-sm overflow-hidden transition-colors group-hover:border-primary/30 ${system.logoTileClassName ?? ""}`}
+                      style={system.logoTileStyle}
+                    >
+                      <img
+                        src={system.logo}
+                        alt={`${system.name} logo`}
+                        loading="lazy"
+                        className={`max-h-8 max-w-10 object-contain ${system.logoClassName ?? ""}`}
+                      />
                     </div>
                     <div>
                       <p className="text-sm font-bold text-foreground">
