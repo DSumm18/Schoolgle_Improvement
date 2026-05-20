@@ -32,8 +32,8 @@ export async function GET(
     .eq("organization_id", session.organization_id)
     .in("year_group", yearAliases)
     .eq("is_active", true)
-    .order("last_name")
-    .order("first_name");
+    .order("first_name")
+    .order("last_name");
 
   if (session.current_class) {
     pupilQuery = pupilQuery.or(

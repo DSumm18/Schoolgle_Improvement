@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CheckCircle2, Heart, Loader2, Sparkles, Star, Users } from "lucide-react";
+import { Camera, CheckCircle2, Heart, Loader2, Sparkles, Star, Users, X } from "lucide-react";
 
 type Pupil = {
   id: string;
@@ -26,6 +26,11 @@ type Session = {
   status: "draft" | "open" | "closed";
   year_group: string;
   current_class: string | null;
+};
+
+type DetectedBarcode = { rawValue?: string };
+type BarcodeDetectorConstructor = new (options?: { formats?: string[] }) => {
+  detect: (source: HTMLVideoElement) => Promise<DetectedBarcode[]>;
 };
 
 export default function ClassBuilderSurveyPage() {
@@ -43,6 +48,11 @@ export default function ClassBuilderSurveyPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [scannerMessage, setScannerMessage] = useState("");
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const scanStreamRef = useRef<MediaStream | null>(null);
+  const scanTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -63,6 +73,18 @@ export default function ClassBuilderSurveyPage() {
     }
     if (code) load();
   }, [code, pupilToken]);
+
+  useEffect(
+    () => () => {
+      if (scanTimerRef.current) {
+        window.clearInterval(scanTimerRef.current);
+        scanTimerRef.current = null;
+      }
+      scanStreamRef.current?.getTracks().forEach((track) => track.stop());
+      scanStreamRef.current = null;
+    },
+    [],
+  );
 
   const availableChoices = useMemo(
     () => pupils.filter((pupil) => pupil.id !== pupilId),
@@ -90,6 +112,67 @@ export default function ClassBuilderSurveyPage() {
       return;
     }
     setSubmitted(true);
+  }
+
+  async function startScanner() {
+    setErrors([]);
+    setScannerMessage("Starting camera...");
+    setScannerOpen(true);
+
+    const BarcodeDetector = (
+      window as Window & { BarcodeDetector?: BarcodeDetectorConstructor }
+    ).BarcodeDetector;
+
+    if (!BarcodeDetector) {
+      setScannerMessage(
+        "This browser cannot scan QR codes inside the page. Use the tablet/phone camera app, or choose the pupil name as backup.",
+      );
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" },
+      });
+      scanStreamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+
+      const detector = new BarcodeDetector({ formats: ["qr_code"] });
+      setScannerMessage("Hold the pupil QR code up to the camera.");
+
+      scanTimerRef.current = window.setInterval(async () => {
+        if (!videoRef.current) return;
+        const codes = await detector.detect(videoRef.current);
+        const rawValue = codes[0]?.rawValue;
+        if (!rawValue) return;
+
+        const token = extractPupilToken(rawValue);
+        if (!token) {
+          setScannerMessage("That QR code is not a Schoolgle pupil pass.");
+          return;
+        }
+
+        stopScanner();
+        window.location.href = `/class-builder/s/${code}?t=${encodeURIComponent(token)}`;
+      }, 500);
+    } catch {
+      setScannerMessage(
+        "Camera access was blocked or unavailable. Use the device camera app, or choose the pupil name as backup.",
+      );
+    }
+  }
+
+  function stopScanner() {
+    if (scanTimerRef.current) {
+      window.clearInterval(scanTimerRef.current);
+      scanTimerRef.current = null;
+    }
+    scanStreamRef.current?.getTracks().forEach((track) => track.stop());
+    scanStreamRef.current = null;
+    setScannerOpen(false);
   }
 
   if (loading) {
@@ -167,11 +250,50 @@ export default function ClassBuilderSurveyPage() {
               <div className="rounded-2xl bg-sky-50 p-4 ring-1 ring-sky-100">
                 <label className="flex items-center gap-2 text-base font-bold text-slate-800">
                   <StepBubble number={1} />
-                  Choose your name
+                  Scan your pupil QR pass
                 </label>
                 <p className="mt-1 text-sm text-slate-600">
-                  This is the teacher fallback. Pupils should normally scan their QR pass.
+                  Use the camera on this device. If scanning is not available, choose the pupil name below.
                 </p>
+                <Button
+                  type="button"
+                  onClick={startScanner}
+                  className="mt-3 h-12 w-full rounded-2xl bg-sky-600 text-base font-black"
+                >
+                  <Camera className="mr-2 h-5 w-5" />
+                  Scan pupil QR
+                </Button>
+                {scannerOpen && (
+                  <div className="mt-3 rounded-2xl border border-sky-200 bg-white p-3">
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <p className="text-sm font-bold text-slate-700">{scannerMessage}</p>
+                      <button
+                        type="button"
+                        onClick={stopScanner}
+                        className="rounded-full bg-slate-100 p-2 text-slate-700"
+                        aria-label="Close QR scanner"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <video
+                      ref={videoRef}
+                      muted
+                      playsInline
+                      className="aspect-video w-full rounded-xl bg-slate-900 object-cover"
+                    />
+                  </div>
+                )}
+                <div className="my-4 flex items-center gap-3">
+                  <div className="h-px flex-1 bg-sky-200" />
+                  <span className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                    Backup
+                  </span>
+                  <div className="h-px flex-1 bg-sky-200" />
+                </div>
+                <label className="text-sm font-bold text-slate-700">
+                  Choose name manually
+                </label>
                 <Select
                   value={pupilId}
                   onValueChange={(value) => {
@@ -345,6 +467,16 @@ function Message({
 
 function nameOf(pupil: Pupil) {
   return `${pupil.first_name} ${pupil.last_name}`;
+}
+
+function extractPupilToken(value: string) {
+  try {
+    const url = new URL(value);
+    return url.searchParams.get("t");
+  } catch {
+    const match = value.match(/[?&]t=([^&]+)/);
+    return match?.[1] ? decodeURIComponent(match[1]) : null;
+  }
 }
 
 function StepBubble({ number }: { number: number }) {
