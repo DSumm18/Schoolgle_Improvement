@@ -4,8 +4,11 @@ import {
   CONNECTOR_SECURITY_COPY,
   SCHOOLGLE_CONNECTOR_FOLDERS,
   POLICY_GENERATED_DRAFTS_FOLDER,
+  getConnectorFoldersForAppKeys,
   getAppConnectionScope,
   getConnectorFolderLabels,
+  getConnectorFolderStructureText,
+  resolveConnectorAppKeysFromEntitlements,
   isConnectorArchivePath,
   isConnectorGeneratedDraftPath,
   getSafeConnectorFolderTarget,
@@ -36,6 +39,51 @@ describe("schoolgle connector product model", () => {
         appKey: "ofsted-readiness",
       }),
     );
+  });
+
+  it("filters connector folders to the apps the school is entitled to", () => {
+    expect(
+      getConnectorFoldersForAppKeys(["ofsted-readiness", "estates", "unknown"])
+        .map((folder) => folder.name),
+    ).toEqual(["Ofsted Readiness", "Estates"]);
+
+    expect(getConnectorFoldersForAppKeys([])).toEqual([]);
+  });
+
+  it("resolves app and module entitlements to connector app keys", () => {
+    expect(
+      resolveConnectorAppKeysFromEntitlements([
+        "toolbox",
+        "ofsted-readiness",
+        "finance",
+        "ofsted-readiness",
+      ]),
+    ).toEqual(["ofsted-readiness", "finance"]);
+
+    expect(resolveConnectorAppKeysFromEntitlements(["improvement"])).toEqual([
+      "ofsted-readiness",
+      "siams-readiness",
+      "trust-assessor",
+    ]);
+    expect(resolveConnectorAppKeysFromEntitlements(["estates-compliance"])).toEqual([
+      "estates",
+    ]);
+    expect(resolveConnectorAppKeysFromEntitlements(["compliance"])).toEqual([
+      "policy-manager",
+      "compliance",
+    ]);
+  });
+
+  it("builds folder structure text for only selected app keys", () => {
+    const structure = getConnectorFolderStructureText("Grove House", [
+      "ofsted-readiness",
+    ]);
+
+    expect(structure).toContain("Grove House");
+    expect(structure).toContain("Ofsted Readiness");
+    expect(structure).toContain("Website and Statutory Info");
+    expect(structure).not.toContain("SIAMS Readiness");
+    expect(structure).not.toContain("Estates");
   });
 
   it("defines focused app connection scopes without making Schoolgle the document source", () => {

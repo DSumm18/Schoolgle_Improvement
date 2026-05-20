@@ -1,17 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
-  TrendingUp,
-  TrendingDown,
-  Minus,
-  FileText,
   Download,
   AlertCircle,
   CheckCircle,
   Target,
+  Loader2,
+  PlusCircle,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -43,17 +42,15 @@ export default function SiamsReadinessReport({
   const [readiness, setReadiness] = useState<GetSiamsReadinessResponse | null>(
     null,
   );
-  const [loading, setLoading] = useState(true);
   const [selectedStrand, setSelectedStrand] = useState<SiamsStrandId | "all">(
     "all",
   );
+  const [creatingTaskKey, setCreatingTaskKey] = useState<string | null>(null);
+  const [createdTaskKeys, setCreatedTaskKeys] = useState<Set<string>>(
+    () => new Set(),
+  );
 
-  useEffect(() => {
-    fetchReadiness();
-  }, [organizationId]);
-
-  const fetchReadiness = async () => {
-    setLoading(true);
+  const fetchReadiness = useCallback(async () => {
     try {
       const response = await fetch(
         `/api/siams/readiness?organizationId=${organizationId}`,
@@ -64,10 +61,12 @@ export default function SiamsReadinessReport({
       }
     } catch (error) {
       console.error("Failed to fetch readiness:", error);
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [organizationId]);
+
+  useEffect(() => {
+    fetchReadiness();
+  }, [fetchReadiness]);
 
   const createSnapshot = async () => {
     try {
@@ -96,26 +95,73 @@ export default function SiamsReadinessReport({
     return { label: "Low", color: "bg-emerald-100 text-emerald-700" };
   };
 
-  const getTrendIcon = (trend: "up" | "down" | "stable") => {
-    switch (trend) {
-      case "up":
-        return <TrendingUp className="w-4 h-4 text-emerald-600" />;
-      case "down":
-        return <TrendingDown className="w-4 h-4 text-rose-600" />;
-      default:
-        return <Minus className="w-4 h-4 text-slate-400" />;
+  const createTaskFromGap = async (gap: SiamsGapsAnalysis) => {
+    const taskKey = `${gap.strand_id}:${gap.question_id}`;
+    setCreatingTaskKey(taskKey);
+
+    try {
+      const priority =
+        gap.gap_level === "critical"
+          ? "high"
+          : gap.needs_attention
+            ? "medium"
+            : "low";
+      const response = await fetch("/api/actions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: `Prepare SIAMS evidence for ${gap.question_id}`,
+          description: [
+            gap.question_text,
+            `Current evidence count: ${gap.evidence_count}.`,
+            gap.missing_evidence.length > 0
+              ? `Missing evidence: ${gap.missing_evidence.join(", ")}.`
+              : "Review the current evidence and strengthen the impact narrative.",
+            "Add concise evidence that shows what leaders do, how pupils experience it, and what difference it makes.",
+          ].join(" "),
+          success_criteria:
+            "Evidence is linked to the SIAMS question, is current, and clearly explains impact rather than just activity.",
+          framework_type: "siams",
+          task_type: "siams",
+          category_id: gap.strand_id,
+          subcategory_id: gap.question_id,
+          siams_strand_id: gap.strand_id,
+          siams_question_id: gap.question_id,
+          user_status: "draft",
+          ai_status: "not_assessed",
+          priority,
+          source: "siams_readiness_gap",
+          source_record_id: taskKey,
+          source_table_name: "siams_readiness",
+          approval_status: "pending_approval",
+          checklist: [
+            { title: "Add or link the strongest evidence source", completed: false },
+            { title: "Check evidence is current and easy to open", completed: false },
+            { title: "Add a short impact note for leaders/inspector", completed: false },
+          ],
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to create SIAMS task");
+      }
+
+      setCreatedTaskKeys((previous) => new Set(previous).add(taskKey));
+      toast.success("SIAMS task added to Actions Hub");
+    } catch (error) {
+      console.error("Failed to create SIAMS task:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to create SIAMS task",
+      );
+    } finally {
+      setCreatingTaskKey(null);
     }
   };
 
   const filteredGaps =
     readiness?.overall?.gaps?.filter(
       (gap) => selectedStrand === "all" || gap.strand_id === selectedStrand,
-    ) || [];
-
-  const filteredStrands =
-    readiness?.overall?.strands?.filter(
-      (s: SiamsStrandSummary) =>
-        selectedStrand === "all" || s.strand_id === selectedStrand,
     ) || [];
 
   return (
@@ -125,13 +171,15 @@ export default function SiamsReadinessReport({
         <div>
           <h2 className="text-xl font-bold">SIAMS Readiness Report</h2>
           <p className="text-sm text-slate-500">
-            Track your school's readiness for SIAMS inspection
+            Track your school&apos;s readiness for SIAMS inspection
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Select
             value={selectedStrand}
-            onValueChange={(value) => setSelectedStrand(value as any)}
+            onValueChange={(value) =>
+              setSelectedStrand(value as SiamsStrandId | "all")
+            }
           >
             <SelectTrigger className="w-48">
               <SelectValue placeholder="All Strands" />
@@ -265,7 +313,7 @@ export default function SiamsReadinessReport({
                   (a: SiamsGapsAnalysis, b: SiamsGapsAnalysis) =>
                     (a.evidence_count || 0) - (b.evidence_count || 0),
                 )
-                .map((gap: SiamsGapsAnalysis, idx: number) => {
+                .map((gap: SiamsGapsAnalysis) => {
                   const info = STRAND_INFO[gap.strand_id as SiamsStrandId];
                   const gapScore =
                     gap.gap_level === "critical"
@@ -274,6 +322,8 @@ export default function SiamsReadinessReport({
                         ? 50
                         : 100;
                   const priority = getGapPriority(gapScore);
+                  const taskKey = `${gap.strand_id}:${gap.question_id}`;
+                  const taskCreated = createdTaskKeys.has(taskKey);
 
                   return (
                     <div
@@ -302,11 +352,31 @@ export default function SiamsReadinessReport({
                           </p>
                         )}
                       </div>
-                      <div className="text-right">
-                        <p className="text-2xl font-bold text-rose-600">
-                          {gap.evidence_count}
-                        </p>
-                        <p className="text-[10px] text-slate-500">evidence</p>
+                      <div className="flex flex-col items-end gap-2 text-right">
+                        <div>
+                          <p className="text-2xl font-bold text-rose-600">
+                            {gap.evidence_count}
+                          </p>
+                          <p className="text-[10px] text-slate-500">evidence</p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant={taskCreated ? "outline" : "default"}
+                          className={
+                            taskCreated
+                              ? ""
+                              : "bg-purple-600 hover:bg-purple-700"
+                          }
+                          disabled={taskCreated || creatingTaskKey === taskKey}
+                          onClick={() => createTaskFromGap(gap)}
+                        >
+                          {creatingTaskKey === taskKey ? (
+                            <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <PlusCircle className="mr-2 h-3.5 w-3.5" />
+                          )}
+                          {taskCreated ? "Task added" : "Create task"}
+                        </Button>
                       </div>
                     </div>
                   );

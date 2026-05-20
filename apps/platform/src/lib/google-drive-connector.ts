@@ -1,12 +1,17 @@
 import {
   CONNECTOR_BRAND,
   SCHOOLGLE_CONNECTOR_FOLDERS,
+  getConnectorFoldersForAppKeys,
 } from "@/lib/schoolgle-connector";
 
 export type GoogleDriveFolder = {
   id: string;
   name: string;
   mimeType: string;
+};
+
+type EnsureConnectorFolderStructureOptions = {
+  appKeys?: string[];
 };
 
 export async function findSchoolgleFolder(
@@ -40,8 +45,13 @@ export async function findSchoolgleFolder(
 export async function ensureConnectorFolderStructure(
   accessToken: string,
   parentFolderId: string,
+  options: EnsureConnectorFolderStructureOptions = {},
 ): Promise<void> {
-  for (const folder of SCHOOLGLE_CONNECTOR_FOLDERS) {
+  const foldersToEnsure = options.appKeys
+    ? getConnectorFoldersForAppKeys(options.appKeys)
+    : SCHOOLGLE_CONNECTOR_FOLDERS;
+
+  for (const folder of foldersToEnsure) {
     const topLevelFolder = await findChildFolder(
       accessToken,
       parentFolderId,

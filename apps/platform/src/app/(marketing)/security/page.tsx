@@ -68,12 +68,19 @@ export default function SecurityPage() {
         </p>
       </LegalSection>
 
-      <LegalSection title="Current improvement areas">
+      <LegalSection title="Continuous improvement">
         <p>
-          Internal compliance tracking has identified ongoing work around
-          structured logging, local storage minimisation, breach workflow
-          automation and privacy settings. These are tracked as product and
-          engineering governance tasks.
+          Schoolgle maintains an internal security and data-protection
+          improvement plan so that our controls continue to mature as the
+          product develops. Current areas of routine improvement include audit
+          logging, minimising unnecessary browser-side storage, documenting
+          incident-response steps, and refining user privacy and admin controls.
+        </p>
+        <p>
+          These improvements are governance and product-quality tasks. They do
+          not change the core position that school data is only processed where
+          needed to provide the subscribed service, under the contract and data
+          processing agreement.
         </p>
         <div className="grid gap-4 md:grid-cols-2">
           <LegalCard title="DPO review before reliance">

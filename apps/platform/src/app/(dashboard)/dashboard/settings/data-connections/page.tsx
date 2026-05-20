@@ -42,9 +42,11 @@ import { DataFreshnessBadge } from "@/components/ui/DataSourceBadge";
 import {
   CONNECTOR_BRAND,
   CONNECTOR_SECURITY_COPY,
-  SCHOOLGLE_CONNECTOR_FOLDERS,
+  getConnectorFoldersForAppKeys,
   getConnectorFolderStructureText,
+  resolveConnectorAppKeysFromEntitlements,
 } from "@/lib/schoolgle-connector";
+import { useSubscriptionState } from "@/hooks/useSubscriptionState";
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
   const {
@@ -986,6 +988,13 @@ export default function DataConnectionsPage() {
   } | null>(null);
 
   const orgId = organization?.id;
+  const { state: subscription } = useSubscriptionState(orgId);
+  const enabledConnectorAppKeys = resolveConnectorAppKeysFromEntitlements(
+    subscription?.enabledModules,
+  );
+  const visibleConnectorFolders = getConnectorFoldersForAppKeys(
+    enabledConnectorAppKeys,
+  );
 
   const fetchConnection = useCallback(async () => {
     if (!orgId) {
@@ -1369,6 +1378,7 @@ export default function DataConnectionsPage() {
   const copyFolderStructure = () => {
     const structure = getConnectorFolderStructureText(
       organization?.name || "Your School",
+      enabledConnectorAppKeys,
     );
     navigator.clipboard.writeText(structure);
     setCopied(true);
@@ -1625,7 +1635,7 @@ export default function DataConnectionsPage() {
               {
                 step: "3",
                 title: "Connect to modules",
-                desc: "Ofsted Readiness, Trust Assessor, Compliance and Finance each read their own approved folder.",
+                desc: "Only the apps your school has enabled get their own folders. New app folders are added later if you upgrade.",
               },
             ].map((s) => (
               <div key={s.step} className="flex items-start gap-3">
@@ -1693,8 +1703,8 @@ export default function DataConnectionsPage() {
                     <span className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
                       3
                     </span>
-                    Schoolgle creates the app folder structure and only scans
-                    inside that folder boundary
+                    Schoolgle creates the enabled app folder structure and only
+                    scans inside that folder boundary
                   </li>
                 </ol>
                 <Button
@@ -1994,8 +2004,8 @@ export default function DataConnectionsPage() {
             <FolderOpen className="w-10 h-10 mx-auto mb-3 text-slate-300" />
             <h3 className="font-semibold mb-1">No data files detected</h3>
             <p className="text-sm text-muted-foreground max-w-md mx-auto">
-              Add your MIS and finance exports to the folder structure below,
-              then click Rescan to detect them.
+              Add files to the enabled app folders below, then click Rescan to
+              detect them.
             </p>
           </CardContent>
         </Card>
@@ -2018,13 +2028,20 @@ export default function DataConnectionsPage() {
                 {CONNECTOR_BRAND.homeFolderName}
               </span>
             </div>
-            {SCHOOLGLE_CONNECTOR_FOLDERS.map((folder, i) => {
+            {visibleConnectorFolders.length === 0 && (
+              <div className="ml-8 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 font-sans text-xs text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-200">
+                No product folders are currently enabled for this school. Add an
+                app to the subscription, then refresh the folder structure to
+                add its folders.
+              </div>
+            )}
+            {visibleConnectorFolders.map((folder, i) => {
               const FolderIcon = CONNECTOR_FOLDER_ICONS[folder.iconKey];
               return (
               <div key={folder.name} className="mb-3 last:mb-0">
                 <div className="ml-8 flex items-center gap-2">
                   <span className="text-slate-400">
-                    {i === SCHOOLGLE_CONNECTOR_FOLDERS.length - 1 ? "└──" : "├──"}
+                    {i === visibleConnectorFolders.length - 1 ? "└──" : "├──"}
                   </span>
                   <FolderIcon className={`w-4 h-4 ${folder.color}`} />
                   <span className="font-semibold">{folder.name}</span>

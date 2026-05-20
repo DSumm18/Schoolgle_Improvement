@@ -11,7 +11,10 @@ import type {
   ExpertResult,
 } from "./base-expert";
 
-const FBIT = "financial-benchmarking-and-insights-tool.service.gov.uk";
+const FBIT_CURRENT =
+  "financial-benchmarking-and-insights-tool.education.gov.uk";
+const FBIT_LEGACY_HOST =
+  "financial-benchmarking-and-insights-tool.service.gov.uk";
 const OLD_SERVICE = "schools-financial-benchmarking.service.gov.uk";
 
 export const financialLinkExpert: ComplianceExpert = {
@@ -25,12 +28,34 @@ export const financialLinkExpert: ComplianceExpert = {
     let foundNew = false;
     let foundOld = false;
     let foundUrl = "";
+    const links = [
+      ...match.documentLinksFound,
+      ...match.matchingPages.flatMap((page) => page.links || []),
+    ];
+
+    for (const link of links) {
+      const linkLower = link.toLowerCase();
+      if (
+        linkLower.includes(FBIT_CURRENT) ||
+        linkLower.includes(FBIT_LEGACY_HOST)
+      ) {
+        foundNew = true;
+        foundUrl = link;
+        break;
+      }
+      if (linkLower.includes(OLD_SERVICE)) {
+        foundOld = true;
+        foundUrl = foundUrl || link;
+      }
+    }
 
     for (const page of match.matchingPages) {
-      const content = (page.content || "").toLowerCase();
-      if (content.includes(FBIT)) {
+      const content = [page.content || "", ...(page.links || [])]
+        .join("\n")
+        .toLowerCase();
+      if (content.includes(FBIT_CURRENT) || content.includes(FBIT_LEGACY_HOST)) {
         foundNew = true;
-        foundUrl = page.url;
+        foundUrl = foundUrl || page.url;
       }
       if (content.includes(OLD_SERVICE)) {
         foundOld = true;
@@ -49,7 +74,7 @@ export const financialLinkExpert: ComplianceExpert = {
         complianceScore: 100,
         qualityScore: 4,
         clarityScore: 4,
-        evidenceQuotes: [`Link to FBIT found on ${foundUrl}`],
+        evidenceQuotes: [`Link to FBIT found: ${foundUrl}`],
         gaps: [],
         recommendations: [],
         redFlags: [],
@@ -64,13 +89,13 @@ export const financialLinkExpert: ComplianceExpert = {
         qualityScore: 2,
         clarityScore: 3,
         evidenceQuotes: [
-          `Link to old financial benchmarking service found on ${foundUrl}`,
+          `Financial benchmarking link found: ${foundUrl}`,
         ],
         gaps: [
-          "Link should point to the new Financial Benchmarking and Insights Tool (FBIT)",
+          "The link uses the legacy Schools Financial Benchmarking URL, which now redirects to FBIT",
         ],
         recommendations: [
-          `Update the link to https://${FBIT} — the old service has been replaced`,
+          `Update the link to https://${FBIT_CURRENT} so it points directly at the current DfE Financial Benchmarking and Insights Tool`,
         ],
         redFlags: [],
         confidence: 0.9,
@@ -85,7 +110,7 @@ export const financialLinkExpert: ComplianceExpert = {
       evidenceQuotes: [],
       gaps: ["No link to DfE financial benchmarking service found"],
       recommendations: [
-        `Add a link to https://${FBIT} so stakeholders can compare financial data`,
+        `Add a link to https://${FBIT_CURRENT} so stakeholders can compare financial data`,
       ],
       redFlags: ["Missing statutory financial benchmarking link"],
       confidence: 0.9,

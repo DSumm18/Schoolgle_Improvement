@@ -9,6 +9,7 @@ import { SiamsFrameworkView } from '@/components/siams';
 import { SiamsEvidenceMatcher } from '@/components/siams';
 import { SiamsReadinessReport } from '@/components/siams';
 import { SiamsChurchStatus } from '@/components/siams';
+import AppConnectionStatusCard from '@/components/connectors/AppConnectionStatusCard';
 
 type Tab = 'overview' | 'framework' | 'evidence' | 'readiness' | 'status';
 
@@ -47,6 +48,11 @@ export default function SiamsPage() {
                     </h1>
                 </div>
             </motion.div>
+
+            <AppConnectionStatusCard
+                appKey="siams-readiness"
+                title="SIAMS evidence source"
+            />
 
             {/* Tab Navigation */}
             <div className="flex border-b border-slate-200 dark:border-slate-800">

@@ -11,13 +11,17 @@
  * The scrape can be triggered independently of assessment.
  */
 
-import { NextRequest, NextResponse } from "next/server";
 import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
 import {
   scrapeSchoolWebsite,
   type ScrapeResult,
 } from "@/lib/website-compliance/phase1-scraper";
+import {
+  routeWebsiteEvidenceItems,
+  summariseWebsiteEvidenceRoutes,
+  type WebsiteEvidenceInput,
+} from "@/lib/website-compliance/evidence-routing";
 
 interface ScrapeRequest {
   websiteUrl: string;
@@ -89,6 +93,7 @@ export const POST = protectedRoute(async (auth, request) => {
       schoolPhase: result.schoolPhase,
       isChurchSchool: result.isChurchSchool,
       trustUrl: result.trustUrl,
+      evidenceRouting: result.evidenceRouting,
       durationMs: result.durationMs,
       message: `Scraped ${result.pagesStored} pages and ${result.documentsStored} documents in ${(result.durationMs / 1000).toFixed(1)}s. Ed knowledge base updated with ${result.edKnowledgeStored} entries. Ready for Phase 2 assessment.`,
     });
@@ -108,6 +113,8 @@ export const POST = protectedRoute(async (auth, request) => {
  */
 export const GET = protectedRoute(async (auth, request) => {
   const { searchParams } = new URL(request.url);
+  const includeEvidenceRoutes =
+    searchParams.get("includeEvidenceRoutes") === "true";
   // orgId MUST come from authenticated session — never from caller
   const organizationId = auth.organizationId;
 
@@ -157,6 +164,68 @@ export const GET = protectedRoute(async (auth, request) => {
     }
   }
 
+  let evidenceRouting:
+    | ReturnType<typeof summariseWebsiteEvidenceRoutes>
+    | undefined;
+
+  if (includeEvidenceRoutes) {
+    const [pagesForRouting, docsForRouting] = await Promise.all([
+      supabase
+        .from("website_scraped_pages")
+        .select("url, title, extracted_text, headings, source")
+        .eq("session_id", session.id),
+      supabase
+        .from("website_scraped_documents")
+        .select(
+          "url, filename, title, extracted_text, link_text, found_on_page_url, source",
+        )
+        .eq("session_id", session.id),
+    ]);
+
+    const pageTitleByUrl = new Map<string, string>();
+    const evidenceInputs: WebsiteEvidenceInput[] = [];
+
+    for (const page of pagesForRouting.data || []) {
+      if (page.title) pageTitleByUrl.set(page.url, page.title);
+      evidenceInputs.push({
+        url: page.url,
+        title: page.title,
+        headings: Array.isArray(page.headings)
+          ? page.headings
+              .map((heading: unknown) =>
+                typeof heading === "string"
+                  ? heading
+                  : typeof heading === "object" &&
+                      heading !== null &&
+                      "text" in heading
+                    ? String(heading.text)
+                    : "",
+              )
+              .filter(Boolean)
+          : [],
+        text: page.extracted_text,
+        source: page.source,
+      });
+    }
+
+    for (const doc of docsForRouting.data || []) {
+      evidenceInputs.push({
+        url: doc.url,
+        title: doc.title || doc.filename,
+        linkText: doc.link_text,
+        foundOnPageUrl: doc.found_on_page_url,
+        foundOnPageTitle: doc.found_on_page_url
+          ? pageTitleByUrl.get(doc.found_on_page_url) || null
+          : null,
+        text: doc.extracted_text,
+        source: doc.source,
+      });
+    }
+
+    const routes = routeWebsiteEvidenceItems(evidenceInputs);
+    evidenceRouting = summariseWebsiteEvidenceRoutes(routes);
+  }
+
   return apiSuccess({
     hasSession: true,
     session: {
@@ -182,5 +251,10 @@ export const GET = protectedRoute(async (auth, request) => {
       totalDocuments: docsResult.count || 0,
       documentsByType: docsByType,
     },
+    evidenceRouting:
+      evidenceRouting ||
+      (session.progress as { evidenceRouting?: unknown } | null)
+        ?.evidenceRouting ||
+      null,
   });
 });

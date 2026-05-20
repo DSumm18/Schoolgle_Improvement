@@ -211,7 +211,7 @@ This isn't just compliant. It's **belt and braces**. Even in the astronomically 
 ### The Three Questions Governors Will Ask
 
 **1. "Is it safe?"**
-Yes. Pupil names are encrypted on the school's own computers before any data reaches Ed. Our servers never see identifiable pupil data. Even if breached, there would be no pupil names to expose.
+For Ed features that use pseudonymised pupil analysis, pupil names should be encrypted or pseudonymised before processing so the AI feature does not need to see names. Some other Schoolgle products, such as Class Builder and pupil passes, do store identifiable pupil data because named pupil records are necessary for the product. Those products must be covered by the customer DPA, product schedule, minimisation controls and DPIA where required.
 
 **2. "Is it compliant?"**
 Yes. We provide a DPIA, a data processing agreement, and documentation of lawful basis. The ICO's guidance on AI and personal data has been followed throughout the design.

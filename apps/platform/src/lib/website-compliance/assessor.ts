@@ -15,10 +15,8 @@
  */
 
 import OpenAI from "openai";
-// @ts-expect-error - Auto-masked during strict compilation enforcement
 import { MODEL_CONFIG } from "../ai-evidence-matcher";
 import { maskPII } from "../pii-masker";
-// @ts-expect-error - Auto-masked during strict compilation enforcement
 import type { CrawledPage } from "../website-crawler";
 import {
   type ComplianceRequirement,
@@ -282,7 +280,6 @@ function structuralAssessment(
         return (
           titleLower.includes(patternLower) ||
           contentLower.includes(patternLower) ||
-          // @ts-expect-error - Auto-masked during strict compilation enforcement
           page.headings.some((h) => h.text.toLowerCase().includes(patternLower))
         );
       });

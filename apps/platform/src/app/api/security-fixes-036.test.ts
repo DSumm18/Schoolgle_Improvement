@@ -4,7 +4,8 @@
  * Verifies all 7 security fixes are correctly implemented:
  * 1. /api/ed/hub uses protectedRoute (auth required)
  * 2. /api/scan uses auth, orgId from session not body
- * 3. pupils table has no PII columns (first_name, last_name)
+ * 3. legacy pupils-table PII remediation exists; later product-specific migrations
+ *    may reintroduce named pupil fields only with a documented data contract
  * 4. safeguarding_concerns uses pupil_pseudonym_label not pupil_display_name
  * 5. national_insurance_number column removed
  * 6. /api/intelligence uses orgId from session not caller
@@ -107,9 +108,9 @@ describe("Fix #2: /api/scan — auth + session orgId", () => {
   });
 });
 
-// ─── Fix #3: pupils table must not have PII columns ───────────────
+// ─── Fix #3: legacy pupils PII remediation and product-scoped exception ───────────────
 
-describe("Fix #3: pupils table — no PII columns", () => {
+describe("Fix #3: pupils table — legacy PII remediation", () => {
   const migration = readSource(
     "../../../supabase/migrations/20260409_security_pii_remediation.sql",
   );
@@ -128,6 +129,26 @@ describe("Fix #3: pupils table — no PII columns", () => {
 
   it("migration drops ethnicity column", () => {
     expect(migration).toMatch(/DROP\s+COLUMN\s+IF\s+EXISTS\s+ethnicity/i);
+  });
+});
+
+describe("Class Builder pupil data contract", () => {
+  const migration = readSource(
+    "../../../supabase/migrations/20260515_class_builder_pupil_data_contract.sql",
+  );
+
+  it("documents that identifiable pupil fields are product-scoped", () => {
+    expect(migration).toContain("Product-scoped pupil foundation table");
+    expect(migration).toContain("customer DPA/product schedule");
+  });
+
+  it("explicitly adds the fields Class Builder imports and reads", () => {
+    expect(migration).toMatch(/ADD COLUMN IF NOT EXISTS first_name TEXT/i);
+    expect(migration).toMatch(/ADD COLUMN IF NOT EXISTS last_name TEXT/i);
+    expect(migration).toMatch(/ADD COLUMN IF NOT EXISTS is_eal BOOLEAN/i);
+    expect(migration).toMatch(/ADD COLUMN IF NOT EXISTS fsm_eligible BOOLEAN/i);
+    expect(migration).toMatch(/ADD COLUMN IF NOT EXISTS primary_need TEXT/i);
+    expect(migration).toMatch(/ADD COLUMN IF NOT EXISTS ethnicity TEXT/i);
   });
 });
 

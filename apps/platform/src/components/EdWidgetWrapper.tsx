@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
+import { getFishAudioWidgetConfig } from "@/lib/fish-audio-widget-config";
 
 interface EdWidgetWrapperProps {
   isOpen: boolean;
@@ -108,13 +109,22 @@ export default function EdWidgetWrapper({
         }
 
         try {
-          // Fish Audio is proxied through /api/fish-audio, so we pass a placeholder
-          // The actual API key is stored server-side in the API route
-          // Passing a non-empty string enables Fish Audio initialization
-          const fishAudioApiKey =
+          const serverProxyConfigured =
             typeof window !== "undefined"
-              ? process.env.NEXT_PUBLIC_FISH_AUDIO_API_KEY || "proxy-enabled"
-              : "proxy-enabled";
+              ? await fetch("/api/fish-audio/tts", {
+                  method: "GET",
+                  cache: "no-store",
+                })
+                  .then((response) =>
+                    response.ok ? response.json() : { configured: false },
+                  )
+                  .then((status) => Boolean(status?.configured))
+                  .catch(() => false)
+              : false;
+          const fishAudioConfig = getFishAudioWidgetConfig({
+            publicApiKey: process.env.NEXT_PUBLIC_FISH_AUDIO_API_KEY,
+            serverProxyConfigured,
+          });
 
           // Get voice IDs from environment variables (British UK accents)
           // These should be set in .env.local as NEXT_PUBLIC_FISH_AUDIO_VOICE_ID_ED and NEXT_PUBLIC_FISH_AUDIO_VOICE_ID_EDWINA
@@ -187,10 +197,10 @@ export default function EdWidgetWrapper({
               formFill: false, // Disable form fill for school support
               voice: true, // Voice always enabled
             },
-            // TTS Configuration - Use Fish Audio for voice output
-            ttsProvider: "fish", // CRITICAL: Must be 'fish' to enable Fish Audio
+            // TTS Configuration - use Fish Audio only when configured
+            ttsProvider: fishAudioConfig.ttsProvider,
             enableTTS: true, // Enable text-to-speech
-            fishAudioApiKey: fishAudioApiKey, // Pass API key to enable Fish Audio
+            fishAudioApiKey: fishAudioConfig.fishAudioApiKey,
             fishAudioVoiceIds:
               Object.keys(fishAudioVoiceIds).length > 0
                 ? fishAudioVoiceIds
@@ -208,11 +218,11 @@ export default function EdWidgetWrapper({
             "[EdWidgetWrapper] ✅✅✅ Ed widget initialized successfully!",
           );
           console.log(
-            "[EdWidgetWrapper] Features enabled: orb (Particle3D), chat, voice (Fish Audio)",
+            `[EdWidgetWrapper] Features enabled: orb (Particle3D), chat, voice (${fishAudioConfig.ttsProvider === "fish" ? "Fish Audio" : "browser TTS"})`,
           );
           console.log(
             "[EdWidgetWrapper] Fish Audio API key configured:",
-            fishAudioApiKey ? "YES" : "NO",
+            fishAudioConfig.fishAudioApiKey ? "YES" : "NO",
           );
           console.log(
             "[EdWidgetWrapper] Fish Audio voice IDs configured:",

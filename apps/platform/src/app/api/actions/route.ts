@@ -71,6 +71,14 @@ export const POST = protectedRoute(
       notes,
       source,
       created_by,
+      task_type,
+      department,
+      checklist,
+      approval_status,
+      siams_strand_id,
+      siams_question_id,
+      source_record_id,
+      source_table_name,
     } = body;
 
     if (!title) {
@@ -106,6 +114,14 @@ export const POST = protectedRoute(
         notes: notes || [],
         source: source || "manual",
         created_by: created_by || null,
+        task_type: task_type || "general",
+        department: department || null,
+        checklist: checklist || [],
+        approval_status: approval_status || "approved",
+        siams_strand_id: siams_strand_id || null,
+        siams_question_id: siams_question_id || null,
+        source_record_id: source_record_id || null,
+        source_table_name: source_table_name || null,
         evidence_count: 0,
         chase_count: 0,
       })

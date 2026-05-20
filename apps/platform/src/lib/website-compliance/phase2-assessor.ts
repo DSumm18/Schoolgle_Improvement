@@ -12,16 +12,12 @@
  */
 
 import OpenAI from "openai";
-import { createHash } from "crypto";
-// @ts-expect-error - Auto-masked during strict compilation enforcement
 import { MODEL_CONFIG } from "../ai-evidence-matcher";
 import { maskPII } from "../pii-masker";
 import { createServiceRoleClient } from "@/lib/supabase-server";
 import { buildWebsiteFindingDraft } from "@/lib/ofsted-readiness/findings";
 import {
   type ComplianceRequirement,
-  type RequirementCategory,
-  REQUIREMENT_CATEGORY_LABELS,
   WEBSITE_COMPLIANCE_REQUIREMENTS,
   getRequirementsForSchoolType,
 } from "./requirements";
@@ -30,9 +26,8 @@ import type {
   StructuralMatch as ExpertStructuralMatch,
   ExpertResult,
 } from "./experts/base-expert";
-import type { ComplianceStatus, RequirementAssessment } from "./assessor";
+import type { ComplianceStatus } from "./assessor";
 import {
-  checkLegislationCurrency,
   checkAllLegislationCurrency,
   getLegislationForCategory,
 } from "./rubrics/legislation-registry";
@@ -106,7 +101,8 @@ const UK_DATE_PATTERNS = [
   /(\d{1,2})[\/.](\d{1,2})[\/.](\d{2,4})/g,
   /(?:reviewed|updated|approved|dated|published|version|adopted|ratified|last\s*(?:reviewed|updated))\s*:?\s*(\d{1,2}[\/.\s]\d{1,2}[\/.\s]\d{2,4}|\w+\s+\d{4})/gi,
   /(?:review\s*date|next\s*review|due\s*for\s*review)\s*:?\s*(\d{1,2}[\/.\s]\d{1,2}[\/.\s]\d{2,4}|\w+\s+\d{4})/gi,
-  /(20\d{2})\s*[-/]\s*(20\d{2}|\d{2})/g,
+  /\b(20\d{2})\s*[-–—/]\s*(20\d{2}|\d{2})\b/g,
+  /\b([2-3]\d)\s*[-–—/]\s*([2-3]\d)\b/g,
 ];
 
 export function extractDates(text: string): string[] {
@@ -120,16 +116,87 @@ export function extractDates(text: string): string[] {
   return Array.from(dates);
 }
 
-function assessCurrency(
+function isPresent<T>(value: T | null | undefined | false): value is T {
+  return Boolean(value);
+}
+
+function extractYearSignals(dates: string[]): {
+  academicYearStarts: number[];
+  years: number[];
+} {
+  const academicYearStarts = new Set<number>();
+  const years = new Set<number>();
+
+  for (const date of dates) {
+    const rangeMatches = date.matchAll(
+      /\b(20\d{2})\s*[-–—/]\s*(20\d{2}|\d{2})\b/g,
+    );
+    for (const match of rangeMatches) {
+      academicYearStarts.add(Number(match[1]));
+    }
+
+    const shorthandRangeMatches = date.matchAll(
+      /\b([2-3]\d)\s*[-–—/]\s*([2-3]\d)\b/g,
+    );
+    for (const match of shorthandRangeMatches) {
+      const start = Number(match[1]);
+      const end = Number(match[2]);
+      if (end === start + 1) {
+        academicYearStarts.add(2000 + start);
+        years.add(2000 + start);
+        years.add(2000 + end);
+      }
+    }
+
+    const yearMatches = date.matchAll(/\b(20\d{2})\b/g);
+    for (const match of yearMatches) {
+      years.add(Number(match[1]));
+    }
+  }
+
+  return {
+    academicYearStarts: [...academicYearStarts],
+    years: [...years],
+  };
+}
+
+export function assessCurrency(
   dates: string[],
   requirement: ComplianceRequirement,
-): "current" | "possibly_outdated" | "outdated" | "unknown" {
+): "current" | "due_soon" | "possibly_outdated" | "outdated" | "unknown" {
   if (dates.length === 0) return "unknown";
 
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentAcademicYear =
     now.getMonth() >= 8 ? currentYear : currentYear - 1;
+  const { academicYearStarts, years } = extractYearSignals(dates);
+  const latestAcademicYearStart =
+    academicYearStarts.length > 0 ? Math.max(...academicYearStarts) : null;
+  const latestYear = years.length > 0 ? Math.max(...years) : null;
+
+  if (
+    latestAcademicYearStart !== null &&
+    latestAcademicYearStart >= currentAcademicYear
+  ) {
+    return "current";
+  }
+
+  if (latestAcademicYearStart !== null) {
+    if (latestAcademicYearStart === currentAcademicYear - 1) {
+      const deadlineStatus = assessPreviousAcademicYearDeadlineStatus(
+        requirement,
+        now,
+      );
+      if (deadlineStatus) return deadlineStatus;
+
+      return requirement.updateFrequency === "annually" ||
+        requirement.updateFrequency === "by_date"
+        ? "possibly_outdated"
+        : "current";
+    }
+    return "outdated";
+  }
 
   const hasCurrentYear = dates.some(
     (d) =>
@@ -139,12 +206,22 @@ function assessCurrency(
   );
   if (hasCurrentYear) return "current";
 
+  if (latestYear !== null && latestYear < currentAcademicYear - 1) {
+    return "outdated";
+  }
+
   const hasPreviousYear = dates.some(
     (d) =>
       d.includes(String(currentYear - 1)) ||
       d.includes(String(currentAcademicYear - 1)),
   );
   if (hasPreviousYear) {
+    const deadlineStatus = assessPreviousAcademicYearDeadlineStatus(
+      requirement,
+      now,
+    );
+    if (deadlineStatus) return deadlineStatus;
+
     if (
       requirement.updateFrequency === "annually" ||
       requirement.updateFrequency === "by_date"
@@ -155,6 +232,56 @@ function assessCurrency(
   }
 
   return "outdated";
+}
+
+function assessPreviousAcademicYearDeadlineStatus(
+  requirement: ComplianceRequirement,
+  now: Date,
+): "current" | "due_soon" | "outdated" | null {
+  if (requirement.key !== "pe_sport_premium") return null;
+  if (!requirement.deadline) return null;
+
+  const deadline = deadlineForCurrentReportingCycle(requirement.deadline, now);
+  if (!deadline) return null;
+
+  if (now.getTime() > deadline.getTime()) return "outdated";
+
+  const daysUntilDeadline = Math.ceil(
+    (deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+  );
+  return daysUntilDeadline <= 90 ? "due_soon" : "current";
+}
+
+function deadlineForCurrentReportingCycle(
+  deadline: string,
+  now: Date,
+): Date | null {
+  const match = deadline.match(/^(\d{1,2})\s+([A-Za-z]+)$/);
+  if (!match) return null;
+
+  const monthByName: Record<string, number> = {
+    january: 0,
+    february: 1,
+    march: 2,
+    april: 3,
+    may: 4,
+    june: 5,
+    july: 6,
+    august: 7,
+    september: 8,
+    october: 9,
+    november: 10,
+    december: 11,
+  };
+
+  const day = Number(match[1]);
+  const month = monthByName[match[2].toLowerCase()];
+  if (!Number.isFinite(day) || month === undefined) return null;
+
+  const currentAcademicYear =
+    now.getMonth() >= 8 ? now.getFullYear() : now.getFullYear() - 1;
+  const deadlineYear = month >= 8 ? currentAcademicYear : currentAcademicYear + 1;
+  return new Date(deadlineYear, month, day, 23, 59, 59, 999);
 }
 
 // ─── Main Assessment Engine ───────────────────────────────────────────
@@ -184,8 +311,11 @@ export async function assessScrapedWebsite(
   const schoolType =
     options.schoolType || (session.school_type as "maintained" | "academy");
   const schoolPhase =
-    options.schoolPhase || (session.school_phase as any) || "all";
+    options.schoolPhase ||
+    (session.school_phase as AssessOptions["schoolPhase"]) ||
+    "all";
   const isChurchSchool = options.isChurchSchool ?? session.is_church_school;
+  const preservedEvidenceRouting = session.progress?.evidenceRouting;
 
   // ─── Mark session as assessing ────────────────────────────────────
 
@@ -194,7 +324,14 @@ export async function assessScrapedWebsite(
     .update({
       status: "assessing",
       assess_started_at: new Date().toISOString(),
-      progress: { step: 1, total: 3, message: "Loading scraped content" },
+      progress: {
+        step: 1,
+        total: 3,
+        message: "Loading scraped content",
+        ...(preservedEvidenceRouting
+          ? { evidenceRouting: preservedEvidenceRouting }
+          : {}),
+      },
     })
     .eq("id", sessionId);
 
@@ -220,7 +357,7 @@ export async function assessScrapedWebsite(
       source: (page.source as "school" | "trust") || "school",
       wordCount: page.word_count || 0,
       headings: (page.headings as Array<{ level: number; text: string }>) || [],
-      links: [],
+      links: Array.isArray(page.links_found) ? page.links_found : [],
     });
   }
 
@@ -269,6 +406,9 @@ export async function assessScrapedWebsite(
         step: 2,
         total: 3,
         message: `Assessing ${requirements.length} requirements against ${allContent.length} sources`,
+        ...(preservedEvidenceRouting
+          ? { evidenceRouting: preservedEvidenceRouting }
+          : {}),
       },
     })
     .eq("id", sessionId);
@@ -389,6 +529,40 @@ export async function assessScrapedWebsite(
     else if (!legislationCurrent && dateCurrency !== "current")
       finalCurrency = "possibly_outdated";
 
+    const isDateControlledRequirement =
+      req.updateFrequency === "annually" || req.updateFrequency === "by_date";
+    const currencyMakesAssessmentOutdated =
+      result.status === "outdated" ||
+      (isDateControlledRequirement &&
+        (finalCurrency === "outdated" ||
+          finalCurrency === "possibly_outdated"));
+    const finalStatus: ComplianceStatus =
+      result.status !== "not_found" && currencyMakesAssessmentOutdated
+        ? "outdated"
+        : result.status;
+    const dueSoonRecommendation =
+      finalCurrency === "due_soon" && req.deadline
+        ? `${req.name} is currently acceptable, but the next update deadline is ${req.deadline}; prepare the new report before that date`
+        : null;
+    const storedCurrency =
+      finalCurrency === "due_soon" ? "current" : finalCurrency;
+    const currencyGap =
+      finalStatus === "outdated"
+        ? `${req.name} appears out of date based on detected date evidence${
+            match.datesFound.length > 0
+              ? ` (${match.datesFound.slice(0, 5).join(", ")})`
+              : ""
+          }`
+        : null;
+    const currencyRecommendation =
+      finalStatus === "outdated"
+        ? `Review and republish ${req.name} for the current academic year or current statutory version`
+        : null;
+    const currencyRedFlag =
+      finalStatus === "outdated" && req.severity === "statutory"
+        ? `Outdated statutory requirement: ${req.name}`
+        : null;
+
     // Separate page IDs and doc IDs from matched content
     const pageIds: string[] = [];
     const docIds: string[] = [];
@@ -396,26 +570,51 @@ export async function assessScrapedWebsite(
       if (mc.contentType === "html") pageIds.push(mc.id);
       else docIds.push(mc.id);
     }
+    const matchingPageUrls = match.matchingContent.map((c) => c.url);
+    const preferredPageUrls = match.matchingContent
+      .filter((c) => isPreferredEvidencePage(c, req))
+      .map((c) => c.url);
+    const evidencePageUrls =
+      preferredPageUrls.length > 0
+        ? preferredPageUrls
+        : matchingPageUrls.slice(0, 3);
+    const evidenceUrls = Array.from(
+      new Set([
+        ...match.documentLinksFound.slice(0, 5),
+        ...evidencePageUrls,
+      ]),
+    ).slice(0, 10);
 
     assessments.push({
       requirement_key: req.key,
       requirement_name: req.name,
       category: req.category,
-      status: result.status,
-      compliance_score: result.complianceScore,
+      status: finalStatus,
+      compliance_score:
+        finalStatus === "outdated"
+          ? Math.min(result.complianceScore, 55)
+          : result.complianceScore,
       quality_score: result.qualityScore,
       clarity_score: result.clarityScore,
       evidence_page_ids: pageIds,
       evidence_doc_ids: docIds,
-      evidence_urls: match.matchingContent.map((c) => c.url),
+      evidence_urls: evidenceUrls,
       evidence_quotes: result.evidenceQuotes.slice(0, 10),
-      currency_status: finalCurrency,
+      currency_status: storedCurrency,
       legislation_refs_found: legislationRefsFound,
       legislation_current: legislationCurrent,
       review_date_found: null, // TODO: extract actual review date
-      gaps: result.gaps.slice(0, 20),
-      recommendations: result.recommendations.slice(0, 20),
-      red_flags: result.redFlags.slice(0, 10),
+      gaps: [currencyGap, ...result.gaps].filter(isPresent).slice(0, 20),
+      recommendations: [
+        dueSoonRecommendation,
+        currencyRecommendation,
+        ...result.recommendations,
+      ]
+        .filter(isPresent)
+        .slice(0, 20),
+      red_flags: [currencyRedFlag, ...result.redFlags]
+        .filter(isPresent)
+        .slice(0, 10),
       ai_model_used: aiModel,
       ai_tokens_used: aiTokens,
       confidence: result.confidence,
@@ -519,6 +718,9 @@ export async function assessScrapedWebsite(
         step: 3,
         total: 3,
         message: `Assessment complete: ${compliantCount}/${assessments.length} compliant (${overallCompliance}%)`,
+        ...(preservedEvidenceRouting
+          ? { evidenceRouting: preservedEvidenceRouting }
+          : {}),
       },
     })
     .eq("id", sessionId);
@@ -538,6 +740,98 @@ export async function assessScrapedWebsite(
 }
 
 // ─── Structural Matching (adapted for DB content) ─────────────────────
+
+const FINANCIAL_BENCHMARKING_HOSTS = [
+  "financial-benchmarking-and-insights-tool.education.gov.uk",
+  "financial-benchmarking-and-insights-tool.service.gov.uk",
+  "schools-financial-benchmarking.service.gov.uk",
+];
+
+function normaliseMatcherText(value: string): string {
+  let decoded = value;
+  try {
+    decoded = decodeURIComponent(value);
+  } catch {
+    decoded = value;
+  }
+
+  return decoded
+    .toLowerCase()
+    .replace(/^https?:\/\//, "")
+    .replace(/[-_%20]+/g, " ")
+    .replace(/[^\w\s.]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function addUniqueLink(target: string[], link: string): void {
+  if (!target.includes(link)) target.push(link);
+}
+
+function linkMatchesRequirement(
+  link: string,
+  req: ComplianceRequirement,
+): boolean {
+  const linkLower = link.toLowerCase();
+  const normalisedLink = normaliseMatcherText(link);
+
+  if (req.key === "financial_benchmarking_link") {
+    return FINANCIAL_BENCHMARKING_HOSTS.some((host) =>
+      linkLower.includes(host),
+    );
+  }
+
+  const keywordMatch = req.searchKeywords.some((kw) => {
+    const keyword = kw.toLowerCase();
+    const slugKeyword = keyword.replace(/\s+/g, "-");
+    return (
+      normalisedLink.includes(normaliseMatcherText(keyword)) ||
+      linkLower.includes(slugKeyword)
+    );
+  });
+
+  const urlPatternMatch = req.urlPatterns.some((pattern) => {
+    if (pattern === "/") return false;
+    const patternLower = pattern.toLowerCase();
+    return (
+      linkLower.includes(patternLower) ||
+      normalisedLink.includes(normaliseMatcherText(patternLower))
+    );
+  });
+
+  const documentPatternMatch = req.documentPatterns.some((pattern) => {
+    const normalisedPattern = normaliseMatcherText(pattern);
+    const slugPattern = pattern.toLowerCase().replace(/\s+/g, "-");
+    return (
+      normalisedLink.includes(normalisedPattern) ||
+      linkLower.includes(slugPattern)
+    );
+  });
+
+  return keywordMatch || urlPatternMatch || documentPatternMatch;
+}
+
+function isHomepageUrl(value: string): boolean {
+  try {
+    return new URL(value).pathname === "/";
+  } catch {
+    return false;
+  }
+}
+
+function isPreferredEvidencePage(
+  content: ScrapedContent,
+  req: ComplianceRequirement,
+): boolean {
+  if (content.contentType !== "html") return true;
+  if (isHomepageUrl(content.url)) return true;
+
+  const urlLower = content.url.toLowerCase();
+  return req.urlPatterns.some((pattern) => {
+    if (pattern === "/") return false;
+    return urlLower.includes(pattern.toLowerCase());
+  });
+}
 
 export interface ContentMatch {
   requirement: ComplianceRequirement;
@@ -560,9 +854,9 @@ export function runStructuralMatching(
       content: ScrapedContent;
       score: number;
       matchedKeywords: string[];
+      hasStrongEvidence: boolean;
     }[] = [];
     const keywordsFound = new Set<string>();
-    const datesFound = new Set<string>();
     const documentLinksFound: string[] = [];
 
     for (const item of allContent) {
@@ -571,6 +865,9 @@ export function runStructuralMatching(
       const urlLower = item.url.toLowerCase();
       const isPDF = item.contentType === "pdf";
       const isDoc = item.contentType === "document";
+      const matchedLinks = (item.links || []).filter((link) =>
+        linkMatchesRequirement(link, req),
+      );
 
       // URL pattern matching
       const urlMatch = req.urlPatterns.some((pattern) => {
@@ -601,6 +898,18 @@ export function runStructuralMatching(
         req.documentPatterns.some((p) =>
           item.linkText!.toLowerCase().includes(p.toLowerCase()),
         );
+      const documentTitleKeywordMatch =
+        (isPDF || isDoc) &&
+        req.searchKeywords.some((kw) => {
+          const keyword = kw.toLowerCase();
+          const slugKeyword = keyword.replace(/\s+/g, "-");
+          return (
+            titleLower.includes(keyword) ||
+            urlLower.includes(keyword) ||
+            urlLower.includes(slugKeyword) ||
+            item.linkText?.toLowerCase().includes(keyword)
+          );
+        });
 
       // Keyword matching in content + title
       const matchedKeywords = req.searchKeywords.filter(
@@ -627,23 +936,29 @@ export function runStructuralMatching(
         matchedKeywords.length > 0 ||
         docMatches.length > 0 ||
         filenameMatch ||
-        linkTextMatch;
+        linkTextMatch ||
+        matchedLinks.length > 0;
 
       let score = matchedKeywords.length * 2 + docMatches.length * 3;
       if (urlMatch && hasContentEvidence) score += 5;
       if (filenameMatch) score += 10;
       if (linkTextMatch) score += 8;
+      if (matchedLinks.length > 0) score += Math.min(12, matchedLinks.length * 8);
       if (isPDF && matchedKeywords.length >= 1) score += 3;
       if (!isPDF && urlMatch && matchedKeywords.length >= 1) score += 4;
       if (item.source === "trust" && req.typicallyTrustLevel) score += 5;
 
       if (score >= 2) {
-        scored.push({ content: item, score, matchedKeywords });
+        const hasStrongEvidence =
+          filenameMatch ||
+          Boolean(linkTextMatch) ||
+          Boolean(documentTitleKeywordMatch) ||
+          matchedLinks.length > 0 ||
+          (!(isPDF || isDoc) && docMatches.length > 0) ||
+          (urlMatch && matchedKeywords.length > 0);
+        scored.push({ content: item, score, matchedKeywords, hasStrongEvidence });
         matchedKeywords.forEach((kw) => keywordsFound.add(kw));
-
-        // Extract dates
-        const dates = item.datesFound || extractDates(item.content);
-        dates.forEach((d) => datesFound.add(d));
+        matchedLinks.forEach((link) => addUniqueLink(documentLinksFound, link));
       }
     }
 
@@ -656,11 +971,24 @@ export function runStructuralMatching(
       return true;
     });
 
-    const matchingContent = unique.slice(0, 8).map((s) => s.content);
+    const strongEvidence = unique.filter((s) => s.hasStrongEvidence);
+    const evidenceCandidates =
+      strongEvidence.length > 0 ? strongEvidence : unique;
+    const matchingContent = evidenceCandidates.slice(0, 8).map((s) => s.content);
+    const datesFound = new Set<string>();
+    for (const content of matchingContent) {
+      const dates = content.datesFound || extractDates(content.content);
+      dates.forEach((date) => datesFound.add(date));
+    }
 
     // Combined content for legislation checks
     const combinedContent = matchingContent
-      .map((c) => c.content.substring(0, 15000))
+      .map((c) =>
+        [
+          c.content.substring(0, 15000),
+          ...(c.links.length > 0 ? ["LINKS:", ...c.links] : []),
+        ].join("\n"),
+      )
       .join("\n");
 
     results.push({
@@ -700,10 +1028,12 @@ function buildExpertMatch(match: ContentMatch): ExpertStructuralMatch {
     matchingPages: match.matchingContent.map((c) => ({
       url: c.url,
       title: c.title,
+      contentType: c.contentType,
       content:
         c.contentType === "pdf"
           ? c.content.substring(0, 12000)
           : c.content.substring(0, 5000),
+      links: c.links,
     })),
     keywordsFound: match.keywordsFound,
     datesFound: match.datesFound,
@@ -722,7 +1052,9 @@ async function aiAssessRequirement(
   const combinedContent = match.matchingContent
     .map(
       (c) =>
-        `--- ${c.contentType.toUpperCase()}: ${c.title} (${c.url}) ---\n${c.content.substring(0, 12000)}`,
+        `--- ${c.contentType.toUpperCase()}: ${c.title} (${c.url}) ---\n${c.content.substring(0, 12000)}${
+          c.links.length > 0 ? `\n\nLINKS:\n${c.links.join("\n")}` : ""
+        }`,
     )
     .join("\n\n");
 
@@ -1065,7 +1397,13 @@ async function storeOfstedFindings(
 
     if (data && data.length > 0) {
       await supabase.from("ofsted_finding_events").insert(
-        data.map((finding: any) => ({
+        data.map(
+          (finding: {
+            id: string;
+            status: string;
+            source_key: string;
+            source_type: string;
+          }) => ({
           organization_id: organizationId,
           finding_id: finding.id,
           event_type: "scan_upserted",

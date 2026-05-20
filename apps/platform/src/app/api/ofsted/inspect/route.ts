@@ -1,18 +1,45 @@
 import { ROUTER_MODELS } from "@/lib/ai-openrouter";
 
-import { NextRequest, NextResponse } from "next/server";
 import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
+import { extractTextFromDriveFile } from "@/lib/drive-document-text";
+import {
+  getGoogleReauthoriseMessage,
+  getValidGoogleAccessToken,
+} from "@/lib/google-oauth-tokens";
 import {
   buildInspectionPrompt,
   RATING_DESCRIPTORS,
 } from "@/lib/ofsted/inspection-criteria";
+import {
+  buildDocumentInspectionFindingDraft,
+  buildDocumentInspectionFindingSourceKey,
+  type DocumentInspectionDetail,
+} from "@/lib/ofsted-readiness/findings";
 import { OFSTED_FRAMEWORK_DATA } from "@/lib/ofsted/framework-data";
 import type { OfstedSubCategoryId } from "@/lib/ofsted/types";
 import { getIntelligenceEngine } from "@/lib/school-intelligence-engine";
 
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+
+function buildDriveApiUrl(
+  path: string,
+  params: Record<string, string>,
+  accessToken?: string | null,
+) {
+  const search = new URLSearchParams(params);
+  if (!accessToken && GOOGLE_API_KEY) search.set("key", GOOGLE_API_KEY);
+  return `https://www.googleapis.com/drive/v3/${path}?${search}`;
+}
+
+function buildDriveRequestInit(
+  accessToken?: string | null,
+): RequestInit | undefined {
+  return accessToken
+    ? { headers: { Authorization: `Bearer ${accessToken}` } }
+    : undefined;
+}
 
 /**
  * Try to find the best matching evidence ID and subcategory for a document.
@@ -22,7 +49,8 @@ function findBestEvidenceMatch(
   fileName: string,
   requirementName?: string,
 ): { evidenceId: string; subcategoryId: OfstedSubCategoryId } | null {
-  const searchText = `${fileName} ${requirementName || ""}`.toLowerCase();
+  void requirementName;
+  const fileText = fileName.toLowerCase();
 
   for (const category of OFSTED_FRAMEWORK_DATA) {
     for (const sub of category.subcategories) {
@@ -33,12 +61,14 @@ function findBestEvidenceMatch(
         const evDescLower = ev.description.toLowerCase();
 
         // Strong match: evidence name appears in the filename
+        const evidenceNameWords = evNameLower
+          .split(" ")
+          .filter((word: string) => word.length > 3);
+
         if (
-          searchText.includes(evNameLower) ||
-          evNameLower
-            .split(" ")
-            // @ts-expect-error - Auto-masked during strict compilation enforcement
-            .every((word) => word.length > 3 && searchText.includes(word))
+          fileText.includes(evNameLower) ||
+          (evidenceNameWords.length > 0 &&
+            evidenceNameWords.every((word: string) => fileText.includes(word)))
         ) {
           return {
             evidenceId: ev.id,
@@ -48,11 +78,11 @@ function findBestEvidenceMatch(
         }
 
         // Moderate match: key words from description appear
-        // @ts-expect-error - Auto-masked during strict compilation enforcement
-        const descWords = evDescLower.split(" ").filter((w) => w.length > 4);
-        // @ts-expect-error - Auto-masked during strict compilation enforcement
-        const matchCount = descWords.filter((w) =>
-          searchText.includes(w),
+        const descWords = evDescLower
+          .split(" ")
+          .filter((word: string) => word.length > 4);
+        const matchCount = descWords.filter((word: string) =>
+          fileText.includes(word),
         ).length;
         if (matchCount >= 2 && matchCount >= descWords.length * 0.5) {
           return {
@@ -86,6 +116,8 @@ RATING SCALE (use exactly these values):
 - "expected_standard" (3): ${RATING_DESCRIPTORS.expected_standard.description}
 - "needs_attention" (2): ${RATING_DESCRIPTORS.needs_attention.description}
 - "urgent_improvement" (1): ${RATING_DESCRIPTORS.urgent_improvement.description}
+
+Use school-friendly wording. The headline should help leaders quickly see whether the evidence is compliant, needs attention, or is a serious risk. Reserve "urgent_improvement" for a clear statutory failure, safeguarding risk, or serious non-negotiable concern; if evidence is simply thin, incomplete, or too brief, use "needs_attention".
 
 You MUST respond in JSON format with this exact structure:
 {
@@ -134,7 +166,8 @@ You MUST respond in JSON format with this exact structure:
 7. Would an Ofsted inspector be satisfied with this document as evidence?
 
 Current academic year: 2025-2026
-Current date: ${new Date().toISOString().split("T")[0]}`;
+Current date: ${new Date().toISOString().split("T")[0]}
+Keep the summary concise and non-alarmist unless there is a genuine urgent risk.`;
 
   return { systemPrompt, inspectionCriteria };
 }
@@ -143,7 +176,10 @@ Current date: ${new Date().toISOString().split("T")[0]}`;
  * Resolve a Drive file ID to its actual target (follows shortcuts).
  * Returns { fileId, mimeType, name, modifiedTime, size }.
  */
-async function resolveFileId(fileId: string): Promise<{
+async function resolveFileId(
+  fileId: string,
+  accessToken?: string | null,
+): Promise<{
   fileId: string;
   mimeType: string;
   name: string;
@@ -151,18 +187,22 @@ async function resolveFileId(fileId: string): Promise<{
   size?: string;
 }> {
   const metaRes = await fetch(
-    `https://www.googleapis.com/drive/v3/files/${fileId}?` +
-      new URLSearchParams({
-        key: GOOGLE_API_KEY!,
+    buildDriveApiUrl(
+      `files/${fileId}`,
+      {
         fields:
           "id,name,mimeType,size,modifiedTime,shortcutDetails/targetId,shortcutDetails/targetMimeType",
         supportsAllDrives: "true",
-      }),
+      },
+      accessToken,
+    ),
+    buildDriveRequestInit(accessToken),
   );
 
   if (!metaRes.ok) {
+    const body = await metaRes.text().catch(() => "");
     throw new Error(
-      "Cannot access this file. Check the folder is still shared.",
+      `Cannot access this file. Check the folder is still shared. ${body}`,
     );
   }
 
@@ -178,12 +218,15 @@ async function resolveFileId(fileId: string): Promise<{
 
     // Get the target file's metadata
     const targetMetaRes = await fetch(
-      `https://www.googleapis.com/drive/v3/files/${targetId}?` +
-        new URLSearchParams({
-          key: GOOGLE_API_KEY!,
+      buildDriveApiUrl(
+        `files/${targetId}`,
+        {
           fields: "id,name,mimeType,size,modifiedTime",
           supportsAllDrives: "true",
-        }),
+        },
+        accessToken,
+      ),
+      buildDriveRequestInit(accessToken),
     );
 
     if (!targetMetaRes.ok) {
@@ -392,14 +435,40 @@ async function extractTextContent(
   return "";
 }
 
+void extractTextContent;
+
+async function getActiveGoogleDriveAccessToken(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  organizationId: string,
+): Promise<string | null> {
+  const { data: connection, error } = await supabase
+    .from("school_data_connections")
+    .select(
+      "id,access_token_encrypted,refresh_token_encrypted,token_expiry,is_active,provider",
+    )
+    .eq("organization_id", organizationId)
+    .eq("provider", "google")
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!connection) return null;
+
+  try {
+    return await getValidGoogleAccessToken({ supabase, connection });
+  } catch (error) {
+    console.error("[Inspect] Google Drive token error:", error);
+    throw new Error(getGoogleReauthoriseMessage());
+  }
+}
+
 /**
  * POST /api/ofsted/inspect
  * Download a document from Google Drive and run AI inspection against framework requirements.
  * Stores only the verdict — never stores document content (GDPR).
  */
 export const POST = protectedRoute(async (auth, req) => {
-  const { driveFileId, fileName, evidenceId, requirementName } =
-    await req.json();
+  const { driveFileId, evidenceId, requirementName } = await req.json();
 
   // orgId MUST come from authenticated session — never from caller
   const orgId = auth.organizationId;
@@ -408,37 +477,45 @@ export const POST = protectedRoute(async (auth, req) => {
     return apiError("Missing organizationId or driveFileId", 400);
   }
 
-  if (!GOOGLE_API_KEY) {
-    return apiError("Google Drive not configured", 500);
-  }
-
   if (!OPENROUTER_API_KEY) {
     return apiError("AI service not configured", 500);
   }
 
   const supabase = createServiceRoleClient();
+  const accessToken = await getActiveGoogleDriveAccessToken(supabase, orgId);
+
+  if (!accessToken && !GOOGLE_API_KEY) {
+    return apiError("Google Drive connection needs re-authorising", 401);
+  }
 
   // 1. Resolve the file (follows shortcuts to their target)
-  const resolved = await resolveFileId(driveFileId);
+  const resolved = await resolveFileId(driveFileId, accessToken);
   console.log(
     `[Inspect] Resolved file: ${resolved.name} (${resolved.mimeType}), ID: ${resolved.fileId}`,
   );
 
   // 2. Extract text content from the document
-  let textContent = await extractTextContent(
-    resolved.fileId,
-    resolved.mimeType,
-    resolved.name,
-  );
+  const extraction = await extractTextFromDriveFile({
+    fileId: resolved.fileId,
+    mimeType: resolved.mimeType,
+    fileName: resolved.name,
+    accessToken,
+    apiKey: GOOGLE_API_KEY,
+  });
+
+  let textContent = extraction.text;
+  const extractedTextLength = textContent.length;
+  let usedMetadataOnly = false;
 
   // If extraction failed, provide metadata-only context
   if (!textContent || textContent.length < 50) {
+    usedMetadataOnly = true;
     textContent = `Document: ${resolved.name}
 File type: ${resolved.mimeType}
 Last modified: ${resolved.modifiedTime || "unknown"}
 File size: ${resolved.size ? Math.round(parseInt(resolved.size) / 1024) + " KB" : "unknown"}
 
-Note: Full text content could not be extracted from this shared file. Assessment is based on filename, date, and file type only. For a full content inspection, the document would need to be uploaded directly or the Drive folder shared with the service account.`;
+Note: Full text content could not be extracted from this connected Drive file. Assessment is based on filename, date, and file type only. Check the file type, Drive permissions, or whether the document is image-only.`;
   }
 
   // Truncate to avoid token limits (keep first ~12000 chars for thorough inspection)
@@ -567,6 +644,26 @@ Inspect this document thoroughly against every checkpoint. Provide your professi
     };
   }
 
+  if (!inspection) {
+    inspection = {
+      rating: "needs_attention",
+      confidence: "low",
+      summary: "AI inspection could not be completed — manual review required",
+      checkpoint_results: [],
+      red_flags: [],
+      strengths: [],
+      actions_required: [
+        {
+          action: "Manual review of this document is required",
+          priority: "high",
+          rationale: "AI inspection did not return a readable judgement",
+          sef_impact: "Cannot contribute to SEF until reviewed",
+        },
+      ],
+      sef_contribution: "Pending manual review",
+    };
+  }
+
   // Normalise: map old "verdict" format to new "rating" format for backwards compatibility
   if (inspection && !inspection.rating && inspection.verdict) {
     const verdictToRating: Record<string, string> = {
@@ -590,23 +687,167 @@ Inspect this document thoroughly against every checkpoint. Provide your professi
   }
 
   // 5. Store the inspection result (verdict only, never document content — GDPR)
+  const inspectionDetail = {
+    ...inspection,
+    extraction: {
+      method: extraction.extractionMethod,
+      limited: extraction.limited,
+      extracted_text_length: extractedTextLength,
+      used_metadata_only: usedMetadataOnly,
+    },
+  };
+
   if (evidenceId) {
-    await supabase
+    const { data: updatedCheck, error: updateError } = await supabase
       .from("ofsted_document_checks")
       .update({
         inspection_verdict: inspection.rating || inspection.verdict,
         inspection_summary: inspection.summary,
         inspection_actions: inspection.actions_required || inspection.actions,
-        inspection_detail: inspection,
+        inspection_detail: inspectionDetail,
         inspected_at: new Date().toISOString(),
       })
-      .eq("id", evidenceId);
+      .eq("id", evidenceId)
+      .eq("organization_id", orgId)
+      .select(
+        "id,evaluation_area,expected_document,found_filename,found_path,found_modified_at",
+      )
+      .maybeSingle();
+
+    if (updateError) {
+      console.error("[Inspect] Failed to store document check:", updateError);
+    }
+
+    if (updatedCheck) {
+      await syncDocumentInspectionFinding({
+        supabase,
+        orgId,
+        userId: auth.userId,
+        check: updatedCheck,
+        inspection: inspectionDetail,
+      });
+    }
   }
 
   return apiSuccess({
     fileName: resolved.name,
     modifiedTime: resolved.modifiedTime,
-    inspection,
+    inspection: inspectionDetail,
+    extraction: inspectionDetail.extraction,
     evidenceMatch: match || null,
   });
 });
+
+async function syncDocumentInspectionFinding({
+  supabase,
+  orgId,
+  userId,
+  check,
+  inspection,
+}: {
+  supabase: ReturnType<typeof createServiceRoleClient>;
+  orgId: string;
+  userId: string;
+  check: {
+    id: string;
+    evaluation_area: string;
+    expected_document: string;
+    found_filename: string | null;
+    found_path: string | null;
+    found_modified_at: string | null;
+  };
+  inspection: DocumentInspectionDetail;
+}) {
+  if (!check.found_path || !check.found_filename) return;
+
+  const sourceKey = buildDocumentInspectionFindingSourceKey(check.id);
+  const draft = buildDocumentInspectionFindingDraft({
+    checkId: check.id,
+    driveFileId: check.found_path,
+    fileName: check.found_filename,
+    evaluationArea: check.evaluation_area,
+    expectedDocument: check.expected_document,
+    foundModifiedAt: check.found_modified_at,
+    inspection,
+  });
+
+  try {
+    if (!draft) {
+      await supabase
+        .from("ofsted_findings")
+        .update({
+          status: "verified",
+          verification_status: "passed",
+          verified_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("organization_id", orgId)
+        .eq("source_key", sourceKey)
+        .is("assigned_task_id", null);
+      return;
+    }
+
+    const now = new Date().toISOString();
+    const row = {
+      organization_id: orgId,
+      source_key: draft.source_key,
+      source_type: draft.source_type,
+      source_scan_id: draft.source_scan_id,
+      source_record_id: check.id,
+      source_url: draft.evidence_url,
+      framework_type: draft.framework_type,
+      category_id: draft.category_id,
+      subcategory_id: draft.subcategory_id,
+      rule_key: draft.rule_key,
+      rule_version: draft.rule_version,
+      rule_source: draft.rule_source,
+      title: draft.title,
+      summary: draft.summary,
+      finding_type: draft.finding_type,
+      severity: draft.severity,
+      action_level: draft.action_level,
+      status: draft.status,
+      score: draft.score,
+      confidence: draft.confidence,
+      evidence_url: draft.evidence_url,
+      evidence_quotes: draft.evidence_quotes,
+      gaps: draft.gaps,
+      recommendations: draft.recommendations,
+      red_flags: draft.red_flags,
+      checklist: draft.checklist,
+      recommended_task_title: draft.recommended_task_title,
+      recommended_task_description: draft.recommended_task_description,
+      verification_status: "not_requested",
+      metadata: draft.metadata,
+      updated_at: now,
+    };
+
+    const { data: finding, error } = await supabase
+      .from("ofsted_findings")
+      .upsert(row, { onConflict: "organization_id,source_key" })
+      .select("id,status,source_type,source_key")
+      .maybeSingle();
+
+    if (error) {
+      console.warn("[Inspect] Could not sync Ofsted finding:", error.message);
+      return;
+    }
+
+    if (finding?.id) {
+      await supabase.from("ofsted_finding_events").insert({
+        organization_id: orgId,
+        finding_id: finding.id,
+        event_type: "document_inspection_upserted",
+        actor_user_id: userId,
+        new_status: finding.status,
+        metadata: {
+          source_type: finding.source_type,
+          source_key: finding.source_key,
+          document_check_id: check.id,
+        },
+      });
+    }
+  } catch (error) {
+    console.warn("[Inspect] Ofsted finding sync skipped:", error);
+  }
+}

@@ -1,6 +1,8 @@
 import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
 import { ensureConnectorFolderStructure } from "@/lib/google-drive-connector";
+import { getEnabledConnectorAppKeys } from "@/lib/connectors/connector-entitlements";
+import { getConnectorFoldersForAppKeys } from "@/lib/schoolgle-connector";
 import {
   getGoogleReauthoriseMessage,
   getValidGoogleAccessToken,
@@ -71,15 +73,24 @@ export const POST = protectedRoute(async (auth, req) => {
     .eq("id", connectionId);
 
   try {
+    const enabledConnectorAppKeys = await getEnabledConnectorAppKeys(
+      supabase,
+      orgId,
+    );
+    const enabledFolderNames = getConnectorFoldersForAppKeys(
+      enabledConnectorAppKeys,
+    ).map((folder) => folder.name);
+
     if (accessToken) {
-      await ensureConnectorFolderStructure(accessToken, conn.folder_id);
+      await ensureConnectorFolderStructure(accessToken, conn.folder_id, {
+        appKeys: enabledConnectorAppKeys,
+      });
     }
 
-    // Recursively list all visible files and folders
-    const scanContents = await listAllContents(
+    // Recursively list only the app folders this school is entitled to use.
+    const scanContents = await listEnabledAppContents(
       conn.folder_id,
-      "",
-      0,
+      enabledFolderNames,
       accessToken,
     );
     const allFiles = scanContents.files;
@@ -167,6 +178,66 @@ type DriveScanContents = {
   folderCount: number;
 };
 
+async function listEnabledAppContents(
+  rootFolderId: string,
+  enabledFolderNames: string[],
+  accessToken?: string | null,
+): Promise<DriveScanContents> {
+  if (enabledFolderNames.length === 0) {
+    return { files: [], folderCount: 0 };
+  }
+
+  const enabledFolders = new Set(enabledFolderNames);
+  const rootItems = await listFolderChildren(rootFolderId, accessToken);
+  const files: DriveFile[] = [];
+  let folderCount = 0;
+
+  for (const item of rootItems) {
+    const isFolder = item.mimeType === "application/vnd.google-apps.folder";
+    if (!isFolder || !enabledFolders.has(item.name)) continue;
+
+    folderCount += 1;
+    const subContents = await listAllContents(
+      item.id,
+      item.name,
+      1,
+      accessToken,
+    );
+    folderCount += subContents.folderCount;
+    files.push(...subContents.files);
+  }
+
+  return { files, folderCount };
+}
+
+async function listFolderChildren(
+  folderId: string,
+  accessToken?: string | null,
+): Promise<DriveFile[]> {
+  if (!GOOGLE_API_KEY && !accessToken) return [];
+
+  const params = new URLSearchParams({
+    q: `'${folderId}' in parents and trashed = false`,
+    fields: "files(id,name,mimeType,modifiedTime)",
+    pageSize: "200",
+    supportsAllDrives: "true",
+    includeItemsFromAllDrives: "true",
+  });
+  if (!accessToken && GOOGLE_API_KEY) params.set("key", GOOGLE_API_KEY);
+
+  const res = await fetch(
+    `https://www.googleapis.com/drive/v3/files?${params}`,
+    accessToken
+      ? { headers: { Authorization: `Bearer ${accessToken}` } }
+      : undefined,
+  );
+
+  if (!res.ok) return [];
+
+  const data = await res.json();
+  return data.files || [];
+}
+
 async function listAllContents(
   folderId: string,
   folderPath = "",
@@ -197,7 +268,7 @@ async function listAllContents(
         : undefined,
     );
 
-    if (!res.ok) return files;
+    if (!res.ok) return { files, folderCount };
 
     const data = await res.json();
     const items = data.files || [];

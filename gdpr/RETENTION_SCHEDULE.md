@@ -66,6 +66,15 @@
 | Staff absences          | Duration of employment + 6 years | Employment law; Equality Act claims (6 years) | Automated purge                                         | **NO — stored indefinitely**   | Engineering |
 | Staff qualifications    | Duration of employment + 6 years | Professional verification                     | Automated purge                                         | **NO — stored indefinitely**   | Engineering |
 
+### Pupil Foundation And Class Builder Data
+
+| Data Category | Retention Period | Justification | Deletion Method | Implemented? | Owner |
+| --- | --- | --- | --- | --- | --- |
+| Pupil foundation records (`pupils`) | Contract term, until school deletion, or until the pupil record is no longer needed for the subscribed product | Class Builder, pupil passes, class/cohort setup and agreed school workflows | Hard delete or return/delete at contract end; backup expiry per provider | **NO — formal purge workflow needs implementation** | Engineering |
+| Pupil pass token hashes/encrypted tokens | Until pass revoked, pupil leaves scope, or contract end | Secure pupil access to subscribed tools | Revoke token immediately; hard delete with pupil record | **PARTIAL — revocation fields exist** | Engineering |
+| Class Builder responses and choices | Until the school deletes the session, the class-building purpose is complete, or contract end | Class grouping evidence and staff review | Hard delete with session or contract-end deletion | **NO — formal purge workflow needs implementation** | Engineering |
+| Generated class groups and summaries | Until the school deletes the session, the class-building purpose is complete, or contract end | Draft class grouping and auditability | Hard delete with session or contract-end deletion | **NO — formal purge workflow needs implementation** | Engineering |
+
 ### Governance Data
 
 | Data Category      | Retention Period          | Justification                                | Deletion Method | Implemented?                 | Owner       |

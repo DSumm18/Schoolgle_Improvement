@@ -9,6 +9,8 @@ import {
   ensureConnectorFolderStructure,
   findSchoolgleFolder,
 } from "@/lib/google-drive-connector";
+import { getEnabledConnectorAppKeys } from "@/lib/connectors/connector-entitlements";
+import { buildGoogleReauthorisationUpsertPayload } from "@/lib/connectors/connection-reauthorisation";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -97,41 +99,35 @@ export async function GET(req: NextRequest) {
       : null;
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const enabledConnectorAppKeys = await getEnabledConnectorAppKeys(
+      supabase,
+      organizationId,
+    );
     await ensureConnectorFolderStructure(
       tokenData.access_token,
       connectorFolder.id,
+      { appKeys: enabledConnectorAppKeys },
     );
 
     const { data: existingConnection } = await supabase
       .from("school_data_connections")
-      .select("refresh_token_encrypted")
+      .select(
+        "refresh_token_encrypted,last_scan_at,detected_folders,total_files,total_folders",
+      )
       .eq("organization_id", organizationId)
       .eq("provider", "google")
       .maybeSingle();
 
-    const refreshToken =
-      tokenData.refresh_token ||
-      existingConnection?.refresh_token_encrypted ||
-      null;
-
     await supabase.from("school_data_connections").upsert(
-      {
-        organization_id: organizationId,
-        provider: "google",
-        folder_id: connectorFolder.id,
-        folder_name: connectorFolder.name,
-        connected_by: userId,
-        connected_at: new Date().toISOString(),
-        is_active: true,
-        scan_status: "idle",
-        scan_error: null,
-        detected_folders: {},
-        total_files: 0,
-        total_folders: 0,
-        access_token_encrypted: tokenData.access_token,
-        refresh_token_encrypted: refreshToken,
-        token_expiry: tokenExpiry,
-      },
+      buildGoogleReauthorisationUpsertPayload({
+        organizationId,
+        connectedBy: userId,
+        connectorFolder,
+        accessToken: tokenData.access_token,
+        refreshTokenFromOAuth: tokenData.refresh_token || null,
+        tokenExpiry,
+        existingConnection,
+      }),
       { onConflict: "organization_id,provider" },
     );
 

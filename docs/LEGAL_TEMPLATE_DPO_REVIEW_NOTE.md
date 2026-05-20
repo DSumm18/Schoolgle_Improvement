@@ -47,6 +47,7 @@ Before treating these pages as final, confirm:
 - The exact breach-notification commitment to include in signed customer contracts.
 - The deletion, retention, backup and audit-log retention schedule after contract termination.
 - Whether the product needs a DPIA template for schools using AI with pupil, staff, SEND, safeguarding or HR data.
+- Whether Class Builder and pupil-facing tools have a completed DPIA and product schedule covering identifiable pupil data, EAL, FSM, pupil premium, looked-after status, SEND/SEN, EHCP, primary need, gender, ethnicity, pupil preferences, generated class groups and pupil pass tokens.
 - Whether any analytics, pixels, session replay, local storage or device identifiers are active beyond strictly necessary use.
 - Whether local storage currently contains sensitive OAuth/API keys or pupil lookup information, and the remediation timeline.
 - Whether AI provider prompts are consistently minimised and logged with human-review status.

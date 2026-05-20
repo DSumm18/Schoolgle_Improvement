@@ -98,7 +98,9 @@ async function ensurePolicyDraftsFolder(
   accessToken: string,
   rootFolderId: string,
 ) {
-  await ensureConnectorFolderStructure(accessToken, rootFolderId);
+  await ensureConnectorFolderStructure(accessToken, rootFolderId, {
+    appKeys: ["policy-manager"],
+  });
 
   const policiesFolder =
     (await findChildFolder(accessToken, rootFolderId, "Policies")) ||

@@ -122,6 +122,21 @@
 | **Technical measures**          | RLS, org-scoped                                                       |
 | **DPIA required?**              | No                                                                    |
 
+### PA-007A: Pupil Foundation Data And Class Builder
+
+| Field                           | Detail                                                                                                                                                                                                 |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Processing purpose**          | Import and maintain pupil foundation data for subscribed pupil-facing products, including Class Builder, pupil passes, cohort/class filtering, draft class grouping and related educational analysis |
+| **Categories of data subjects** | Pupils; school staff where linked to classes or setup decisions                                                                                                                                         |
+| **Categories of personal data** | Pupil ID, MIS reference, first name, last name, date of birth where supplied, year group, current class, gender, EAL, pupil premium, FSM, looked-after flag, SEND/SEN status, primary need, EHCP flag, ethnicity where supplied, pupil pass metadata, Class Builder preference responses and generated group summaries |
+| **Lawful basis**                | The school determines the controller lawful basis, typically public task for education and school administration. Schoolgle processes as processor under Article 28 and the customer contract.          |
+| **Special category**            | Ethnicity is special category data. SEND/primary need/EHCP information may reveal disability or health information and should be treated as higher-risk children's data.                               |
+| **Recipients**                  | Supabase (database). Approved AI providers only if the relevant product feature explicitly uses AI and the school has been informed.                                                                    |
+| **International transfers**     | None for ordinary database storage if hosted in the agreed Supabase region; AI transfers depend on the selected product feature and must follow the approved-provider/DPA process.                     |
+| **Retention**                   | Contract term or until the school deletes the data/session; return/delete on contract end or school request; backups expire per provider schedule.                                                     |
+| **Technical measures**          | Authenticated access, org scoping, service-role API controls, RLS where implemented, token hashing/encryption for pupil passes, minimised templates and role-restricted access.                       |
+| **DPIA required?**              | YES for Class Builder / pupil-facing tools because identifiable children's data and higher-risk characteristics are processed.                                                                          |
+
 ### PA-008: Staff Absence Recording
 
 | Field                           | Detail                                                                    |
@@ -329,7 +344,7 @@
 | Metric                                     | Count                                                      |
 | ------------------------------------------ | ---------------------------------------------------------- |
 | Total processing activities                | 21                                                         |
-| Activities requiring DPIA                  | 7 (PA-004, PA-005, PA-006, PA-008, PA-010, PA-011, PA-012) |
+| Activities requiring DPIA                  | 8 (PA-004, PA-005, PA-006, PA-007A, PA-008, PA-010, PA-011, PA-012) |
 | Activities with international transfers    | 9                                                          |
 | Activities involving special category data | 5                                                          |
 | Activities involving children's data       | 3 (PA-011, PA-012, PA-013)                                 |

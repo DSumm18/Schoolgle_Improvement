@@ -45,16 +45,24 @@ Address: [Company Address]
 | Evidence documents | Inspection preparation | Contract performance |
 | Observation notes | Teaching quality monitoring | Contract performance |
 
-### 2.4 Data We Do NOT Collect
+### 2.4 Pupil, Staff And Product Data
 
-- ❌ Pupil names or identifiable pupil data
+Schoolgle only collects pupil, staff or other personal data where it is needed for a subscribed product or agreed workflow.
+
+Some products, including Class Builder, require identifiable pupil data to work properly. In those cases, Schoolgle may process a named pupil roll, year group, class, relevant pupil characteristics, pupil preferences, generated class groups and pupil pass metadata.
+
+Schools should not upload personal data beyond the relevant product template or product schedule. In particular, users should not upload unnecessary safeguarding, medical, payroll, parent contact, biometric or free-text sensitive information unless it is explicitly covered by the subscribed product and data processing schedule.
+
+### 2.5 Data We Do NOT Collect Unless In Scope
+
+- ❌ Pupil names or identifiable pupil data outside the subscribed product scope
 - ❌ Parent contact information
 - ❌ Medical or health records
 - ❌ Financial information (beyond subscription)
 - ❌ Biometric data
 - ❌ Criminal records
 
-**Important:** Schoolgle is designed for school IMPROVEMENT data, not pupil MIS data. Users should NOT upload documents containing identifiable pupil information.
+**Important:** Schoolgle is not a replacement MIS. Users should only upload identifiable pupil or staff data where it is needed for the subscribed product and covered by the relevant product schedule.
 
 ---
 
@@ -239,4 +247,3 @@ If you have concerns about our data handling:
 **Schoolgle Ltd**  
 Email: dpo@schoolgle.co.uk  
 Website: schoolgle.co.uk  
-

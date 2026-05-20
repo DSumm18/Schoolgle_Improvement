@@ -38,12 +38,15 @@
 ### 3.1 Categories of Data Subjects
 - School staff (teachers, support staff, leaders)
 - Governors
+- Pupils, where the subscribed product requires identifiable pupil data, such as Class Builder, pupil passes, consent management or agreed school intelligence workflows
 
 ### 3.2 Types of Personal Data
 - Names and email addresses
 - Job titles and roles
 - Professional observations and feedback
 - Login and usage data
+- Pupil identifiers, names, year group, class, and relevant pupil characteristics where needed for the subscribed product
+- Pupil preference data and generated class/group outputs where Class Builder is used
 
 ### 3.3 Purpose of Processing
 - Providing school improvement tracking services
@@ -148,7 +151,7 @@ The School shall:
 
 (c) Ensure data subjects have been informed about the processing.
 
-(d) Not upload identifiable pupil data to Schoolgle.
+(d) Only upload identifiable pupil data where it is required for the subscribed product and described in the relevant product processing schedule.
 
 (e) Notify Schoolgle of any changes to data protection requirements.
 
@@ -266,4 +269,3 @@ Date: _________________________
 - Cloud-hosted infrastructure (no on-premise servers)
 - Data centre certifications: ISO 27001, SOC 2
 - Geographic redundancy (EU region)
-
