@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetchers";
 import { Building2, Clock, CheckCircle2, XCircle, Lock, Save, RefreshCw } from "lucide-react";
+import { ED_CHATBOT_MODULE_ID } from "@/lib/ed/visibility";
 
 interface OrgRow {
   organizationId: string;
@@ -39,6 +40,7 @@ const ALL_MODULES = [
   "behaviour",
   "canvas",
   "teaching-learning",
+  ED_CHATBOT_MODULE_ID,
 ];
 
 function daysUntil(iso: string | null): number | null {
@@ -186,8 +188,8 @@ export default function AdminSubscriptionsPage() {
             {rows.map((r) => {
               const daysRemaining = daysUntil(
                 r.subscription?.status === "trialing"
-                  ? r.subscription?.trial_end
-                  : r.subscription?.current_period_end,
+                  ? (r.subscription?.trial_end ?? null)
+                  : (r.subscription?.current_period_end ?? null),
               );
               const isSelected = r.organizationId === selectedOrgId;
               return (

@@ -18,6 +18,8 @@ import { Tool } from "@/components/ToolCard";
 import EdWidgetWrapper from "@/components/EdWidgetWrapper";
 import toolsData from "@/data/tools.json";
 import { useAuth } from "@/context/SupabaseAuthContext";
+import { useSubscriptionState } from "@/hooks/useSubscriptionState";
+import { hasEdChatbotAccess } from "@/lib/ed/visibility";
 
 // Tool expertise data for Ed's context - keys MUST match tool IDs from tools.json
 const TOOL_EXPERTISE: Record<string, string[]> = {
@@ -115,11 +117,13 @@ interface ActiveTool {
 
 export default function ToolboxWorkspacePage() {
   const { organizationId } = useAuth();
+  const { state: subscription } = useSubscriptionState(organizationId);
+  const isEdEnabled = hasEdChatbotAccess(subscription);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<Category>("All");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeTool, setActiveTool] = useState<ActiveTool | null>(null);
-  const [edOpen, setEdOpen] = useState(true); // Ed is visible by default in workspace
+  const [edOpen, setEdOpen] = useState(false);
   const [edMinimized, setEdMinimized] = useState(false);
   const windowCheckInterval = useRef<NodeJS.Timeout | null>(null);
 
@@ -127,6 +131,8 @@ export default function ToolboxWorkspacePage() {
 
   // Update Ed's tool context when active tool changes
   useEffect(() => {
+    if (!isEdEnabled) return;
+
     const edInstance = (window as any).__ED_INSTANCE__;
     if (edInstance && typeof edInstance.setToolContext === "function") {
       if (activeTool) {
@@ -146,7 +152,7 @@ export default function ToolboxWorkspacePage() {
         edInstance.setToolContext(null);
       }
     }
-  }, [activeTool]);
+  }, [activeTool, isEdEnabled]);
 
   // Filter tools
   const filteredTools = tools.filter((tool) => {
@@ -419,18 +425,20 @@ export default function ToolboxWorkspacePage() {
                 </div>
               )}
 
-              <div className="pt-4 border-t border-gray-800">
-                <p className="text-sm text-gray-500 mb-3">
-                  Ed can help you with this tool:
-                </p>
-                <button
-                  onClick={() => (window as any).__ED_INSTANCE__?.open()}
-                  className="px-6 py-2.5 text-sm font-medium text-purple-300 bg-purple-900/30 hover:bg-purple-900/50 rounded-lg transition-colors flex items-center gap-2 mx-auto"
-                >
-                  <MessageCircle size={16} />
-                  Ask Ed for help
-                </button>
-              </div>
+              {isEdEnabled && (
+                <div className="pt-4 border-t border-gray-800">
+                  <p className="text-sm text-gray-500 mb-3">
+                    Ed can help you with this tool:
+                  </p>
+                  <button
+                    onClick={() => (window as any).__ED_INSTANCE__?.open()}
+                    className="px-6 py-2.5 text-sm font-medium text-purple-300 bg-purple-900/30 hover:bg-purple-900/50 rounded-lg transition-colors flex items-center gap-2 mx-auto"
+                  >
+                    <MessageCircle size={16} />
+                    Ask Ed for help
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             <div className="text-center max-w-md">
@@ -445,22 +453,26 @@ export default function ToolboxWorkspacePage() {
                 Schoolgle stays open here so you can quickly switch between
                 tools.
               </p>
-              <p className="text-gray-500 text-sm">
-                Ed is available to help you with any tool — just click "Ask Ed".
-              </p>
+              {isEdEnabled && (
+                <p className="text-gray-500 text-sm">
+                  Ed is available to help you with any tool — just click "Ask Ed".
+                </p>
+              )}
             </div>
           )}
         </div>
 
         {/* Real Ed Widget - With 3D Particle Orb */}
-        <EdWidgetWrapper
-          isOpen={edOpen}
-          onToggle={() => setEdOpen(!edOpen)}
-          isMinimized={edMinimized}
-          onToggleMinimize={() => setEdMinimized(!edMinimized)}
-          mode="user"
-          organizationId={organizationId ?? undefined}
-        />
+        {isEdEnabled && (
+          <EdWidgetWrapper
+            isOpen={edOpen}
+            onToggle={() => setEdOpen(!edOpen)}
+            isMinimized={edMinimized}
+            onToggleMinimize={() => setEdMinimized(!edMinimized)}
+            mode="user"
+            organizationId={organizationId ?? undefined}
+          />
+        )}
       </main>
     </div>
   );

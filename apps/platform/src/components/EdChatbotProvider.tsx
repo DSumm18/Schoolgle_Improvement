@@ -1,13 +1,16 @@
 "use client";
 
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { useAuth } from "@/context/SupabaseAuthContext";
 import EdWidgetWrapper from "@/components/EdWidgetWrapper";
+import { useSubscriptionState } from "@/hooks/useSubscriptionState";
+import { hasEdChatbotAccess } from "@/lib/ed/visibility";
 
 interface EdChatbotContextType {
   isOpen: boolean;
   isMinimized: boolean;
   initialMessage: string | null;
+  isEnabled: boolean;
   openChat: () => void;
   openChatWith: (message: string) => void;
   closeChat: () => void;
@@ -34,16 +37,20 @@ interface EdChatbotProviderProps {
 
 export function EdChatbotProvider({ children }: EdChatbotProviderProps) {
   const { user, session, organization } = useAuth();
+  const { state: subscription } = useSubscriptionState(organization?.id);
+  const isEnabled = hasEdChatbotAccess(subscription);
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [initialMessage, setInitialMessage] = useState<string | null>(null);
 
   const openChat = () => {
+    if (!isEnabled) return;
     setIsOpen(true);
     setIsMinimized(false);
   };
 
   const openChatWith = (message: string) => {
+    if (!isEnabled) return;
     setInitialMessage(message);
     setIsOpen(true);
     setIsMinimized(false);
@@ -59,6 +66,7 @@ export function EdChatbotProvider({ children }: EdChatbotProviderProps) {
   };
 
   const toggleChat = () => {
+    if (!isEnabled) return;
     if (isOpen) {
       closeChat();
     } else {
@@ -67,6 +75,7 @@ export function EdChatbotProvider({ children }: EdChatbotProviderProps) {
   };
 
   const toggleMinimize = () => {
+    if (!isEnabled) return;
     if (isMinimized) {
       setIsMinimized(false);
       setIsOpen(true);
@@ -74,6 +83,14 @@ export function EdChatbotProvider({ children }: EdChatbotProviderProps) {
       setIsMinimized(true);
     }
   };
+
+  useEffect(() => {
+    if (!isEnabled) {
+      setIsOpen(false);
+      setIsMinimized(false);
+      setInitialMessage(null);
+    }
+  }, [isEnabled]);
 
   // This component provides the context and renders the Ed Widget Wrapper
   // EdWidgetWrapper handles the actual widget with all features (orb, voice, fish audio, etc.)
@@ -87,6 +104,7 @@ export function EdChatbotProvider({ children }: EdChatbotProviderProps) {
         isOpen,
         isMinimized,
         initialMessage,
+        isEnabled,
         openChat,
         openChatWith,
         closeChat,
@@ -96,22 +114,23 @@ export function EdChatbotProvider({ children }: EdChatbotProviderProps) {
       }}
     >
       {children}
-      {/* Initialize Ed Widget for all users - mode depends on login state */}
-      <EdWidgetWrapper
-        isOpen={isOpen}
-        onToggle={toggleChat}
-        isMinimized={isMinimized}
-        onToggleMinimize={toggleMinimize}
-        organizationId={organization?.id}
-        userName={
-          user?.user_metadata?.full_name ||
-          user?.user_metadata?.name ||
-          user?.email?.split("@")[0]
-        }
-        schoolName={organization?.name}
-        mode={user && organization ? "user" : "demo"}
-        accessToken={session?.access_token}
-      />
+      {isEnabled && (
+        <EdWidgetWrapper
+          isOpen={isOpen}
+          onToggle={toggleChat}
+          isMinimized={isMinimized}
+          onToggleMinimize={toggleMinimize}
+          organizationId={organization?.id}
+          userName={
+            user?.user_metadata?.full_name ||
+            user?.user_metadata?.name ||
+            user?.email?.split("@")[0]
+          }
+          schoolName={organization?.name}
+          mode={user && organization ? "user" : "demo"}
+          accessToken={session?.access_token}
+        />
+      )}
     </EdChatbotContext.Provider>
   );
 }

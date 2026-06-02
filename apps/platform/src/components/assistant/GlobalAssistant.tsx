@@ -5,10 +5,13 @@ import { useAuth } from "@/context/SupabaseAuthContext";
 import EdWidgetWrapper from "@/components/EdWidgetWrapper";
 import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { useSubscriptionState } from "@/hooks/useSubscriptionState";
+import { hasEdChatbotAccess } from "@/lib/ed/visibility";
 
 export default function GlobalAssistant() {
   const { user, organizationId } = useAuth();
-  const isEdEnabled = true; // Default to enabled
+  const { state: subscription } = useSubscriptionState(organizationId);
+  const isEdEnabled = hasEdChatbotAccess(subscription);
   const pathname = usePathname();
 
   const [edChatbotOpen, setEdChatbotOpen] = useState(false);
