@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/SupabaseAuthContext";
 import LoginButton from "@/components/LoginButton";
@@ -12,6 +13,7 @@ import { Sparkles, ShieldCheck, Brain, Rocket, Loader2 } from "lucide-react";
 export default function LoginPage() {
   const { user, loading, session, signInWithEmail } = useAuth();
   const router = useRouter();
+  const [nextPath, setNextPath] = useState("/dashboard");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -27,19 +29,27 @@ export default function LoginPage() {
     setErrorMsg(null);
     try {
       await signInWithEmail(email, password);
-      router.push("/dashboard");
-    } catch (err: any) {
-      setErrorMsg(err?.message || "Sign-in failed");
+      router.push(nextPath);
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : "Sign-in failed");
     } finally {
       setSubmitting(false);
     }
   };
 
   useEffect(() => {
-    if (!loading && (user || session)) {
-      router.push("/dashboard");
+    const params = new URLSearchParams(window.location.search);
+    const requestedNext = params.get("next");
+    if (requestedNext?.startsWith("/")) {
+      setNextPath(requestedNext);
     }
-  }, [user, session, loading, router]);
+  }, []);
+
+  useEffect(() => {
+    if (!loading && (user || session)) {
+      router.push(nextPath);
+    }
+  }, [user, session, loading, router, nextPath]);
 
   if (loading) {
     return (
@@ -111,10 +121,12 @@ export default function LoginPage() {
               Secured for Educators
             </motion.div>
             <h2 className="text-3xl font-black text-slate-900 dark:text-white font-display">
-              Welcome Back
+              {nextPath.includes("deal-finder") ? "Open Deal Finder" : "Welcome Back"}
             </h2>
             <p className="text-slate-500 dark:text-slate-400 font-medium max-w-xs mx-auto">
-              Sign in to access your school's improvement intelligence engine.
+              {nextPath.includes("deal-finder")
+                ? "Sign in to use the free procurement comparison tool."
+                : "Sign in to access your school's improvement intelligence engine."}
             </p>
           </div>
 
@@ -166,6 +178,14 @@ export default function LoginPage() {
                   disabled={submitting}
                 />
               </div>
+              <div className="text-right">
+                <Link
+                  href="/forgot-password"
+                  className="text-xs font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                >
+                  Forgotten password?
+                </Link>
+              </div>
               {errorMsg && (
                 <p className="text-xs text-red-500 font-medium" role="alert">
                   {errorMsg}
@@ -209,7 +229,7 @@ const FeatureItem = ({
 }) => (
   <div className="flex gap-4">
     <div className="p-3 bg-white/5 rounded-2xl border border-white/10 shadow-lg shrink-0">
-      {React.cloneElement(icon as React.ReactElement<any>, { size: 24 })}
+      {React.cloneElement(icon as React.ReactElement<{ size?: number }>, { size: 24 })}
     </div>
     <div>
       <h3 className="font-bold text-lg mb-1">{title}</h3>

@@ -4,10 +4,17 @@ import { useEffect, useState, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase"; // Use shared client for auth operations
+import { getRecoveryRedirectPath } from "@/lib/auth/password-reset";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+function getErrorMessage(error: unknown, fallback = "An unexpected error occurred.") {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  return fallback;
+}
 
 // Loading fallback for Suspense
 function CallbackLoading() {
@@ -42,6 +49,10 @@ function AuthCallbackContent() {
     async function handleCallback() {
       // Get current search params
       const currentSearchParams = new URLSearchParams(window.location.search);
+      const recoveryRedirectPath = getRecoveryRedirectPath(
+        window.location.search,
+        window.location.hash,
+      );
 
       // Diagnostic logging
       console.log('[Auth Callback] URL:', window.location.href);
@@ -86,6 +97,14 @@ function AuthCallbackContent() {
             // Verify session is accessible
             const { data: { session: verifySession } } = await supabase.auth.getSession();
             if (verifySession) {
+              if (recoveryRedirectPath === "/reset-password") {
+                console.log('[Auth Callback] Recovery session verified, redirecting to password reset');
+                setStatus('success');
+                setMessage('Reset link verified. Redirecting...');
+                setTimeout(() => router.push(recoveryRedirectPath), 500);
+                return;
+              }
+
               console.log('[Auth Callback] Session verified, redirecting...');
               await handleSuccessfulAuth(data.user.id, data.user.email || '');
             } else {
@@ -185,6 +204,14 @@ function AuthCallbackContent() {
             }
             console.log('[Auth Callback] Session verified, user ID:', verifiedSession.user.id);
 
+            if (recoveryRedirectPath === "/reset-password") {
+              console.log('[Auth Callback] Recovery session verified, redirecting to password reset');
+              setStatus('success');
+              setMessage('Reset link verified. Redirecting...');
+              setTimeout(() => router.push(recoveryRedirectPath), 500);
+              return;
+            }
+
             // Create user record in database if needed (before redirect)
             let redirectPath = '/dashboard';
             if (supabaseServiceKey && supabaseUrl) {
@@ -240,8 +267,8 @@ function AuthCallbackContent() {
             }, 500);
             return;
 
-          } catch (error: any) {
-            console.error('[Auth Callback] Failed to process hash token:', error.message || error);
+          } catch (error: unknown) {
+            console.error('[Auth Callback] Failed to process hash token:', getErrorMessage(error, "Unknown error"));
             setStatus('error');
             setMessage('Failed to complete authentication. Please try again.');
             setTimeout(() => router.push('/login?error=hash_token_failed'), 2000);
@@ -256,6 +283,14 @@ function AuthCallbackContent() {
           console.error('[Auth Callback] Error getting session:', sessionError);
         }
         if (session?.user) {
+          if (recoveryRedirectPath === "/reset-password") {
+            console.log('[Auth Callback] Existing recovery session found, redirecting to password reset');
+            setStatus('success');
+            setMessage('Reset link verified. Redirecting...');
+            setTimeout(() => router.push(recoveryRedirectPath), 500);
+            return;
+          }
+
           console.log('[Auth Callback] Existing session found, user ID:', session.user.id);
           await handleSuccessfulAuth(session.user.id, session.user.email || '');
           return;
@@ -266,10 +301,10 @@ function AuthCallbackContent() {
         setStatus('error');
         setMessage('No authorization code received. Please try again.');
         setTimeout(() => router.push('/login'), 2000);
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('[Auth Callback] Unexpected error:', error);
         setStatus('error');
-        setMessage(error.message || 'An unexpected error occurred.');
+        setMessage(getErrorMessage(error));
         setTimeout(() => router.push('/login?error=unexpected'), 2000);
       }
     }
