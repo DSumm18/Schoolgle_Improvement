@@ -3,7 +3,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 export interface AssessmentIntelligenceSnapshotSummary {
   batchId: string;
   schoolUrn: number | null;
+  sourceKind: string;
   sourceLabel: string;
+  sourceLayer: string | null;
   className: string | null;
   subject: string | null;
   assessmentPeriod: string;
@@ -17,6 +19,8 @@ export interface AssessmentIntelligenceSnapshotSummary {
   greaterDepthPct: number | null;
   needsModerationCount: number;
   levelBreakdown: Record<string, number>;
+  isDemo: boolean;
+  demoFixtureId: string | null;
 }
 
 export interface AssessmentIntelligenceReportingSummary {
@@ -35,11 +39,15 @@ export interface AssessmentIntelligenceReportingSummary {
 interface BatchRow {
   id: string;
   school_urn: number | null;
+  source_kind: string;
   source_label: string;
+  source_layer?: string | null;
   assessment_period: string;
   academic_year_start: number;
   assessment_date: string | null;
   raw_snapshot: Record<string, unknown> | null;
+  is_demo?: boolean | null;
+  demo_fixture_id?: string | null;
   created_at: string;
 }
 
@@ -76,18 +84,15 @@ export async function buildAssessmentIntelligenceReportingSummary(
     }
   }
 
-  let batchQuery = supabase
-    .from("assessment_source_batches")
-    .select("id, school_urn, source_label, assessment_period, academic_year_start, assessment_date, raw_snapshot, created_at")
-    .in("organization_id", organizationIds)
-    .order("created_at", { ascending: false })
-    .limit(input.limit ?? 10);
+  const { data: batchData, error: batchError } = await fetchAssessmentBatches(
+    supabase,
+    {
+      organizationIds,
+      schoolUrn: input.schoolUrn,
+      limit: input.limit,
+    },
+  );
 
-  if (input.schoolUrn) {
-    batchQuery = batchQuery.eq("school_urn", input.schoolUrn);
-  }
-
-  const { data: batchData, error: batchError } = await batchQuery;
   if (batchError || !batchData?.length) {
     return emptyAssessmentIntelligenceSummary();
   }
@@ -126,7 +131,9 @@ export async function buildAssessmentIntelligenceReportingSummary(
     return {
       batchId: batch.id,
       schoolUrn: batch.school_urn,
+      sourceKind: batch.source_kind,
       sourceLabel: batch.source_label,
+      sourceLayer: batch.source_layer,
       className: typeof batch.raw_snapshot?.className === "string" ? batch.raw_snapshot.className : null,
       subject,
       assessmentPeriod: batch.assessment_period,
@@ -140,6 +147,8 @@ export async function buildAssessmentIntelligenceReportingSummary(
       greaterDepthPct: pct(greaterDepthCount, batchEvents.length),
       needsModerationCount,
       levelBreakdown,
+      isDemo: batch.is_demo === true,
+      demoFixtureId: batch.demo_fixture_id ?? null,
     };
   });
 
@@ -155,6 +164,65 @@ export async function buildAssessmentIntelligenceReportingSummary(
     latestSnapshot: snapshots[0] ?? null,
     snapshots,
   };
+}
+
+async function fetchAssessmentBatches(
+  supabase: SupabaseClient,
+  input: {
+    organizationIds: string[];
+    schoolUrn?: number | null;
+    limit?: number;
+  },
+) {
+  const currentSelect =
+    "id, school_urn, source_kind, source_label, source_layer, assessment_period, academic_year_start, assessment_date, raw_snapshot, is_demo, demo_fixture_id, created_at";
+  const legacySelect =
+    "id, school_urn, source_kind, source_label, assessment_period, academic_year_start, assessment_date, raw_snapshot, created_at";
+
+  const currentResult = await runBatchQuery(supabase, currentSelect, input);
+  if (!isMissingAssessmentMetadataColumn(currentResult.error)) {
+    return currentResult;
+  }
+
+  return runBatchQuery(supabase, legacySelect, input);
+}
+
+function runBatchQuery(
+  supabase: SupabaseClient,
+  select: string,
+  input: {
+    organizationIds: string[];
+    schoolUrn?: number | null;
+    limit?: number;
+  },
+) {
+  let batchQuery = supabase
+    .from("assessment_source_batches")
+    .select(select)
+    .in("organization_id", input.organizationIds)
+    .order("created_at", { ascending: false });
+
+  if (typeof input.limit === "number") {
+    batchQuery = batchQuery.limit(input.limit);
+  }
+
+  if (input.schoolUrn) {
+    batchQuery = batchQuery.eq("school_urn", input.schoolUrn);
+  }
+
+  return batchQuery;
+}
+
+function isMissingAssessmentMetadataColumn(
+  error: { message?: string; code?: string } | null,
+) {
+  if (!error) return false;
+  return (
+    error.code === "42703" ||
+    /column .*assessment_source_batches\.(is_demo|demo_fixture_id|source_layer).* does not exist/i.test(
+      error.message ?? "",
+    )
+  );
 }
 
 function emptyAssessmentIntelligenceSummary(): AssessmentIntelligenceReportingSummary {

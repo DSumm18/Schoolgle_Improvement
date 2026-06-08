@@ -18,6 +18,16 @@ export const GET = protectedRoute(async (auth, request) => {
     priority: searchParams.get("priority") as any,
     domain: searchParams.get("domain") as any,
     assigned_to: searchParams.get("assigned_to") || undefined,
+    asset_id: searchParams.get("asset_id") || searchParams.get("assetId") || undefined,
+    statutory_check_id:
+      searchParams.get("statutory_check_id") ||
+      searchParams.get("check_id") ||
+      searchParams.get("checkId") ||
+      undefined,
+    custom_check_id:
+      searchParams.get("custom_check_id") ||
+      searchParams.get("customCheckId") ||
+      undefined,
     overdue_only: searchParams.get("overdue_only") === "true",
     search: searchParams.get("search") || undefined,
   };

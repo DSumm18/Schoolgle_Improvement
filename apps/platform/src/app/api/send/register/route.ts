@@ -10,8 +10,6 @@
 
 import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
-import { createHmac } from "crypto";
-import { NextRequest } from "next/server";
 
 // Demo data for when no real data exists
 const DEMO_REGISTER = [
@@ -275,7 +273,7 @@ export const GET = protectedRoute(async (auth, request) => {
     .select("*")
     .eq("organization_id", organizationId)
     .order("year_group", { ascending: true })
-    .order("pupil_code", { ascending: true });
+    .order("pupil_id", { ascending: true });
 
   if (status) query = query.eq("sen_status", status);
   if (primaryNeed) query = query.eq("primary_need", primaryNeed);
@@ -338,7 +336,8 @@ export const GET = protectedRoute(async (auth, request) => {
     return apiSuccess({ data: filtered, demo: true });
   }
 
-  return apiSuccess({ data, demo: false });
+  const hydratedData = await hydrateWithPupilProfiles(supabase, organizationId, data);
+  return apiSuccess({ data: hydratedData, demo: false });
 });
 
 /**
@@ -346,13 +345,13 @@ export const GET = protectedRoute(async (auth, request) => {
  * Add a pupil to the SEN register
  */
 export const POST = protectedRoute(async (auth, request) => {
-  const { organizationId, userId } = auth;
+  const { organizationId } = auth;
   const supabase = createServiceRoleClient();
   const body = await request.json();
 
   const {
     pupil_code,
-    // PII fields accepted from client but NEVER persisted: first_name, last_name
+    pupil_id,
     year_group,
     sen_status,
     primary_need,
@@ -364,40 +363,34 @@ export const POST = protectedRoute(async (auth, request) => {
     notes,
   } = body;
 
-  if (!pupil_code || !sen_status || !primary_need) {
+  const stablePupilId = pupil_id || pupil_code;
+
+  if (!stablePupilId || !sen_status || !primary_need) {
     return apiError(
-      "pupil_code, sen_status, and primary_need are required",
+      "pupil_id, sen_status, and primary_need are required",
       400,
     );
   }
 
-  // Pseudonymise pupil_code → pupil_hash (SHA-256)
-  const hashSalt = process.env.PUPIL_HASH_SALT;
-  if (!hashSalt) {
-    return apiError("Server configuration error: PUPIL_HASH_SALT is required", 500);
-  }
-  const pupil_hash = createHmac("sha256", hashSalt)
-    .update(`${pupil_code}`.toLowerCase().trim())
-    .digest("hex");
+  // Link to the core pupil spine by stable pupil id/source reference.
+  const identifiedDate =
+    date_identified || new Date().toISOString().split("T")[0];
 
   const { data, error } = await supabase
     .from("send_register")
     .insert({
       organization_id: organizationId,
-      pupil_code,
-      pupil_hash,
-      // PII fields excluded — names resolve live from Google Drive
+      pupil_id: stablePupilId,
+      // Pupil names are hydrated from the core pupil profile, not duplicated here.
       year_group: year_group || null,
       sen_status,
       primary_need,
       secondary_need: secondary_need || null,
-      date_identified:
-        date_identified || new Date().toISOString().split("T")[0],
-      ehcp_status: ehcp_status || null,
+      date_identified: identifiedDate,
+      date_placed_on_register: identifiedDate,
+      has_ehcp: sen_status === "E" || Boolean(ehcp_status),
       class_name: class_name || null,
-      key_worker: key_worker || null,
-      notes: notes || null,
-      created_by: userId,
+      senco_notes: notes || key_worker || null,
     })
     .select()
     .single();
@@ -407,5 +400,60 @@ export const POST = protectedRoute(async (auth, request) => {
     return apiError("Failed to add pupil to register", 500);
   }
 
-  return apiSuccess(data, 201);
+  const [hydrated] = await hydrateWithPupilProfiles(supabase, organizationId, [data]);
+  return apiSuccess(hydrated, 201);
 });
+
+async function hydrateWithPupilProfiles(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  organizationId: string,
+  register: any[],
+) {
+  const pupilIds = [...new Set(register.map((row) => row.pupil_id).filter(Boolean))];
+  const sourceRefs = [...new Set(register.map((row) => row.source_pupil_ref).filter(Boolean))];
+  if (pupilIds.length === 0 && sourceRefs.length === 0) {
+    return register.map(normaliseRegisterRow);
+  }
+
+  const filters = [
+    pupilIds.length > 0 ? `pupil_id.in.(${pupilIds.map(escapeSupabaseFilterValue).join(",")})` : null,
+    sourceRefs.length > 0 ? `pupil_ref.in.(${sourceRefs.map(escapeSupabaseFilterValue).join(",")})` : null,
+  ].filter(Boolean);
+
+  const { data: pupils } = await supabase
+    .from("pupils")
+    .select("id,pupil_id,pupil_ref,first_name,last_name,year_group,current_class,class_name")
+    .eq("organization_id", organizationId)
+    .or(filters.join(","));
+
+  const byPupilId = new Map((pupils ?? []).map((pupil) => [pupil.pupil_id, pupil]));
+  const bySourceRef = new Map((pupils ?? []).filter((pupil) => pupil.pupil_ref).map((pupil) => [pupil.pupil_ref, pupil]));
+
+  return register.map((row) => {
+    const pupil = byPupilId.get(row.pupil_id) ?? bySourceRef.get(row.source_pupil_ref);
+    if (!pupil) return normaliseRegisterRow(row);
+    return {
+      ...normaliseRegisterRow(row),
+      pupil_record_id: pupil.id,
+      first_name: pupil.first_name ?? row.first_name ?? "",
+      last_name: pupil.last_name ?? row.last_name ?? "",
+      class_name: row.class_name ?? pupil.current_class ?? pupil.class_name,
+      year_group: row.year_group ?? pupil.year_group,
+    };
+  });
+}
+
+function normaliseRegisterRow(row: any) {
+  return {
+    ...row,
+    pupil_code: row.pupil_code ?? row.pupil_id,
+    display_label: row.display_label ?? row.pupil_code ?? row.pupil_id,
+    ehcp_status: row.ehcp_status ?? (row.has_ehcp ? "finalised" : null),
+    notes: row.notes ?? row.senco_notes ?? null,
+    key_worker: row.key_worker ?? null,
+  };
+}
+
+function escapeSupabaseFilterValue(value: string) {
+  return `"${String(value).replace(/"/g, '\\"')}"`;
+}

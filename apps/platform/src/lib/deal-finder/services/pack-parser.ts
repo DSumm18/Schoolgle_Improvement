@@ -16,6 +16,7 @@ const PACK_PATTERNS: Array<{ regex: RegExp; group: number }> = [
   { regex: /bag\s+of\s+(\d+)/i, group: 1 },
   { regex: /carton\s+of\s+(\d+)/i, group: 1 },
   { regex: /ream\s+of\s+(\d+)/i, group: 1 },
+  { regex: /\b(?:pk|pack)\s+(\d+)\b/i, group: 1 },
   { regex: /(\d+)\s*-?\s*(?:pk|pack)\b/i, group: 1 },
   { regex: /\bx\s*(\d+)\b/i, group: 1 },
   { regex: /\b(\d+)\s*x\b/i, group: 1 },
@@ -53,6 +54,7 @@ const VOLUME_PATTERNS: Array<{
 function extractPackUnit(text: string): string {
   const lower = text.toLowerCase();
   if (/\bream\b/.test(lower)) return "ream";
+  if (/\bsheet\b/.test(lower)) return "sheet";
   if (/\bbox\b/.test(lower)) return "box";
   if (/\bcase\b/.test(lower)) return "case";
   if (/\bcarton\b/.test(lower)) return "carton";
@@ -134,7 +136,40 @@ export function parsePackInfo(
     }
   }
 
-  const pack_unit = pack_quantity > 1 ? extractPackUnit(text) : "each";
+  let pack_unit = pack_quantity > 1 ? extractPackUnit(text) : "each";
+
+  const looksLikeCopyPaper =
+    /\b(?:a3|a4|copy|copier|printer|print)\b/i.test(text) &&
+    /\bpaper\b/i.test(text);
+  const sheetCountMatch = text.match(/\b(\d{3,6})\s*sheets?\b/i);
+
+  if (looksLikeCopyPaper && sheetCountMatch) {
+    const sheetCount = parseInt(sheetCountMatch[1], 10);
+    if (raw_pack_text?.toLowerCase().includes("sheet")) {
+      const reams = sheetCount >= 500 ? sheetCount / 500 : 1;
+      if (reams > 0 && reams <= 200 && Number.isFinite(reams)) {
+        pack_quantity = Number.isInteger(reams) ? reams : +reams.toFixed(2);
+        pack_unit = "ream";
+        raw_pack_text = `${sheetCount} sheets`;
+      }
+    } else if (pack_quantity > 1) {
+      pack_unit = "ream";
+    }
+  }
+
+  if (
+    looksLikeCopyPaper &&
+    pack_quantity >= 500 &&
+    pack_quantity <= 100000 &&
+    /\b(?:pack|box|case)\s+of\s+\d{3,6}\b/i.test(raw_pack_text || "")
+  ) {
+    const reams = pack_quantity / 500;
+    if (reams > 0 && reams <= 200 && Number.isFinite(reams)) {
+      pack_quantity = Number.isInteger(reams) ? reams : +reams.toFixed(2);
+      pack_unit = "ream";
+      raw_pack_text = `${raw_pack_text} sheets`;
+    }
+  }
 
   const confidence =
     packConfidence > 0 || weightConfidence > 0

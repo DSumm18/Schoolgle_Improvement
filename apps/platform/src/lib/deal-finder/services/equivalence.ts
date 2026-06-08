@@ -62,7 +62,7 @@ const PRODUCT_TYPE_MAP: Array<{ patterns: RegExp[]; group: string }> = [
   },
   { patterns: [/\bmarker\b|\bfelt\s*tip/i], group: "marker-pen" },
   { patterns: [/\bpen\b|\bpens\b/i], group: "pen" },
-  { patterns: [/\bpencil\b/i], group: "pencil" },
+  { patterns: [/\bpencils?\b/i], group: "pencil" },
   { patterns: [/\bruler\b/i], group: "ruler" },
   { patterns: [/\beraser\b|\brubber\b/i], group: "eraser" },
   { patterns: [/\bscissors\b/i], group: "scissors" },

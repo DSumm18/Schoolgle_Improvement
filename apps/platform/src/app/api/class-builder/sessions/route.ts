@@ -1,5 +1,8 @@
 import { protectedRoute, apiError, apiSuccess } from "@/lib/api-utils";
-import { formatClassBuilderCohortYearGroups } from "@/lib/class-builder";
+import {
+  buildDefaultDestinationClasses,
+  formatClassBuilderCohortYearGroups,
+} from "@/lib/class-builder";
 import { createServiceRoleClient } from "@/lib/supabase-server";
 
 export const GET = protectedRoute(async (auth) => {
@@ -34,6 +37,10 @@ export const POST = protectedRoute(async (auth, request) => {
   const yearGroup = formatClassBuilderCohortYearGroups(cohortYearGroups);
   const title = String(body.title || "").trim();
   const targetClassCount = Number(body.targetClassCount || 2);
+  const destinationStructure =
+    Array.isArray(body.destinationClasses) && body.destinationClasses.length > 0
+      ? body.destinationClasses
+      : buildDefaultDestinationClasses(yearGroup, targetClassCount);
 
   if (!yearGroup) return apiError("At least one year group is required", 400);
   if (!title) return apiError("Title is required", 400);
@@ -41,21 +48,35 @@ export const POST = protectedRoute(async (auth, request) => {
     return apiError("Target class count must be 2 or 3", 400);
   }
 
-  const { data, error } = await supabase
+  const sessionRecord = {
+    organization_id: auth.organizationId,
+    school_id: body.schoolId || null,
+    year_group: yearGroup,
+    current_class: body.currentClass || null,
+    title,
+    status: body.status || "draft",
+    target_class_count: targetClassCount,
+    destination_structure: destinationStructure,
+    created_by: auth.userId,
+    closes_at: body.closesAt || null,
+  };
+
+  let { data, error } = await supabase
     .from("class_builder_sessions")
-    .insert({
-      organization_id: auth.organizationId,
-      school_id: body.schoolId || null,
-      year_group: yearGroup,
-      current_class: body.currentClass || null,
-      title,
-      status: body.status || "draft",
-      target_class_count: targetClassCount,
-      created_by: auth.userId,
-      closes_at: body.closesAt || null,
-    })
+    .insert(sessionRecord)
     .select()
     .single();
+
+  if (error?.code === "PGRST204" || error?.message?.includes("destination_structure")) {
+    const { destination_structure, ...fallbackSessionRecord } = sessionRecord;
+    const fallback = await supabase
+      .from("class_builder_sessions")
+      .insert(fallbackSessionRecord)
+      .select()
+      .single();
+    data = fallback.data;
+    error = fallback.error;
+  }
 
   if (error) throw error;
   return apiSuccess(data, 201);

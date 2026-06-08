@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { runScrapePipeline } from "@/lib/deal-finder/services/scrape-pipeline";
 import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 
@@ -23,15 +23,12 @@ export const POST = protectedRoute(async (auth, request: NextRequest) => {
 
     const result = await runScrapePipeline(url);
 
-    if (result.status === "failed") {
-      return apiError(result.error || "Scrape pipeline failed", 500);
-    }
     return apiSuccess(result);
   } catch (error) {
     console.error("Scrape pipeline error:", error);
     return apiError("Scrape pipeline failed", 500);
   }
-});
+}, { orgOptional: true });
 
 /**
  * GET /api/tools/deal-finder/scrape?url=https://...
@@ -74,11 +71,8 @@ export const GET = protectedRoute(async (auth, request: NextRequest) => {
     const html = await res.text();
     const meta = extractMeta(html, url);
 
-    // Using basic NextResponse since headers are custom
-    return new Response(JSON.stringify({ data: meta }), {
-      status: 200,
+    return NextResponse.json({ data: meta }, {
       headers: {
-        "Content-Type": "application/json",
         "Cache-Control": "public, max-age=3600, s-maxage=3600",
       },
     });
@@ -89,7 +83,7 @@ export const GET = protectedRoute(async (auth, request: NextRequest) => {
         : "Failed to fetch product page";
     return apiError(message, 502);
   }
-});
+}, { orgOptional: true });
 
 interface ProductMeta {
   title: string | null;

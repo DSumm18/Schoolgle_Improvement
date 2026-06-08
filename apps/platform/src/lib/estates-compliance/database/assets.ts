@@ -37,7 +37,8 @@ const ASSET_COLUMNS = [
   "parent_asset_id", "installation_date",
   "manufacturer", "model", "serial_number", "specifications",
   "purchase_date", "purchase_price", "purchase_currency", "purchase_order_number",
-  "invoice_number", "purchased_from_contractor_id", "purchase_document_evidence_id",
+  "invoice_number", "purchased_from_contractor_id", "maintained_by_contractor_id",
+  "purchase_document_evidence_id",
   "warranty_start_date", "warranty_expiry", "warranty_provider", "warranty_terms",
   "expected_life_years", "condition_grade", "replacement_cost_estimate", "insurance_value",
   "last_inspection_date", "next_inspection_due", "maintenance_history", "linked_compliance_checks",
@@ -50,6 +51,14 @@ function pickAssetColumns(input: Partial<AssetInput>): Record<string, unknown> {
     if (key in input && (input as Record<string, unknown>)[key] !== undefined) {
       row[key] = (input as Record<string, unknown>)[key];
     }
+  }
+  if (input.maintained_by_contractor_id !== undefined) {
+    row.maintained_by_contractor_id = input.maintained_by_contractor_id || null;
+    row.specifications = {
+      ...((row.specifications as Record<string, unknown> | undefined) || {}),
+      ...((input.specifications as Record<string, unknown> | undefined) || {}),
+      maintained_by_contractor_id: input.maintained_by_contractor_id || null,
+    };
   }
   return row;
 }
@@ -88,6 +97,11 @@ export async function getAssets(
   }
   if (filters?.compliance_domain) {
     query = query.contains("compliance_domains", [filters.compliance_domain]);
+  }
+  if (filters?.linked_compliance_check) {
+    query = query.contains("linked_compliance_checks", [
+      filters.linked_compliance_check,
+    ]);
   }
   if (filters?.search) {
     const s = sanitizeSearch(filters.search);
@@ -280,11 +294,41 @@ export async function getAssetWithWarranty(
     }
   }
 
+  let maintenance_contact = null;
+  const specifications = (asset.specifications || {}) as Record<string, unknown>;
+  const maintainedByContractorId =
+    (asset as Asset & { maintained_by_contractor_id?: string | null })
+      .maintained_by_contractor_id ||
+    (typeof specifications.maintained_by_contractor_id === "string"
+      ? specifications.maintained_by_contractor_id
+      : null);
+
+  if (maintainedByContractorId) {
+    const { data: maintainer } = await supabase
+      .from("estates_contractors")
+      .select("id, company_name, contact_name, email, phone, mobile")
+      .eq("id", maintainedByContractorId)
+      .maybeSingle();
+
+    if (maintainer) {
+      maintenance_contact = {
+        contractor_id: maintainer.id,
+        company_name: maintainer.company_name,
+        contact_name: maintainer.contact_name,
+        email: maintainer.email,
+        phone: maintainer.phone,
+        mobile: maintainer.mobile,
+      };
+    }
+  }
+
   return {
     ...asset,
+    maintained_by_contractor_id: maintainedByContractorId,
     warranty_status,
     warranty_days_remaining: daysRemaining,
     supplier_contact,
+    maintenance_contact,
   };
 }
 

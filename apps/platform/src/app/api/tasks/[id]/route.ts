@@ -4,6 +4,55 @@ import { createServiceRoleClient } from "@/lib/supabase-server";
 import type { ActionForm } from "@/lib/tasks";
 import { v4 as uuidv4 } from "uuid";
 
+async function moveAssignedOfstedFindingToVerification(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  input: {
+    organizationId: string;
+    taskId: string;
+    actorUserId: string;
+    now: string;
+  },
+) {
+  const { data: existingFindings } = await supabase
+    .from("ofsted_findings")
+    .select("id,status")
+    .eq("organization_id", input.organizationId)
+    .eq("assigned_task_id", input.taskId)
+    .neq("status", "verified");
+
+  if (!existingFindings?.length) return;
+
+  const findingIds = existingFindings.map((finding: any) => finding.id);
+  const { error } = await supabase
+    .from("ofsted_findings")
+    .update({
+      status: "verification_required",
+      verification_status: "pending",
+      updated_at: input.now,
+    })
+    .eq("organization_id", input.organizationId)
+    .in("id", findingIds);
+
+  if (error) {
+    console.warn("[Tasks] Could not move Ofsted finding to verification:", error.message);
+    return;
+  }
+
+  await supabase.from("ofsted_finding_events").insert(
+    existingFindings.map((finding: any) => ({
+      organization_id: input.organizationId,
+      finding_id: finding.id,
+      event_type: "task_completed_verification_required",
+      actor_user_id: input.actorUserId,
+      previous_status: finding.status,
+      new_status: "verification_required",
+      metadata: {
+        task_id: input.taskId,
+      },
+    })),
+  );
+}
+
 /**
  * GET /api/tasks/[id]
  * Get a specific task by ID
@@ -63,7 +112,11 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
       task: {
         ...task,
         source_table: "actions",
-        assignee_name: task.assignee?.full_name || task.assignee?.email || null,
+        assignee_name:
+          task.assignee?.full_name ||
+          task.assignee?.email ||
+          task.owner_name ||
+          null,
         approver_name: task.approver?.full_name || task.approver?.email || null,
         subtasks,
       },
@@ -174,6 +227,15 @@ export const PATCH = protectedRoute(async (auth, req: NextRequest) => {
     return apiSuccess({
       task: estatesTask,
       source: "estates_compliance_tasks",
+    });
+  }
+
+  if (changes.status === "completed" && task) {
+    await moveAssignedOfstedFindingToVerification(supabase, {
+      organizationId: orgId,
+      taskId: id,
+      actorUserId: auth.userId,
+      now: updateData.updated_at,
     });
   }
 
@@ -299,6 +361,15 @@ export const POST = protectedRoute(async (auth, req: NextRequest) => {
       comment_type: "system",
       user_id: userId || auth.userId,
       created_at: now,
+    });
+  }
+
+  if (task) {
+    await moveAssignedOfstedFindingToVerification(supabase, {
+      organizationId: orgId,
+      taskId: id,
+      actorUserId: userId || auth.userId,
+      now,
     });
   }
 

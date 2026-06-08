@@ -24,6 +24,8 @@ export type PupilUploadReviewRow = {
   pass_colour: string;
   pass_animal: string;
   pass_badge: string;
+  class_source: "imported_class" | "year_group_fallback";
+  class_assignment_status: "ready" | "needs_review";
 };
 
 export type PupilUploadReview = {
@@ -43,10 +45,11 @@ export type PupilUploadReview = {
     ehcpCount: number;
     ealCount: number;
     pupilPremiumCount: number;
+    missingClassCount: number;
   };
 };
 
-const REQUIRED_FIELDS = ["pupil_id", "source_pupil_ref", "first_name", "last_name", "year_group", "current_class"];
+const REQUIRED_FIELDS = ["pupil_id", "source_pupil_ref", "first_name", "last_name", "year_group"];
 
 export function reviewPupilUploadCsv(csvText: string, filename = "pupil-upload.csv"): PupilUploadReview {
   const lines = csvText
@@ -71,6 +74,7 @@ export function reviewPupilUploadCsv(csvText: string, filename = "pupil-upload.c
       ehcpCount: 0,
       ealCount: 0,
       pupilPremiumCount: 0,
+      missingClassCount: 0,
     },
   };
 
@@ -111,6 +115,12 @@ export function reviewPupilUploadCsv(csvText: string, filename = "pupil-upload.c
       else seenIds.set(raw.pupil_id, line.rowNumber);
     }
 
+    const usesYearGroupFallback = !raw.current_class && Boolean(raw.year_group);
+    if (usesYearGroupFallback) {
+      warnings.push(
+        `Row ${line.rowNumber}: current_class is blank, so Schoolgle will use year_group as the class fallback and mark this pupil for class review.`,
+      );
+    }
     if (values.length > headers.length) warnings.push(`Row ${line.rowNumber}: has extra columns that will be ignored.`);
 
     rows.push({
@@ -120,7 +130,7 @@ export function reviewPupilUploadCsv(csvText: string, filename = "pupil-upload.c
       first_name: raw.first_name ? normalisePupilName(raw.first_name) : "",
       last_name: raw.last_name ? normalisePupilName(raw.last_name) : "",
       year_group: raw.year_group ? normaliseYearGroup(raw.year_group) : "",
-      current_class: raw.current_class ? normaliseClassName(raw.current_class) : "",
+      current_class: raw.current_class ? normaliseClassName(raw.current_class) : normaliseYearGroup(raw.year_group),
       gender: raw.gender || "",
       send_status: normaliseSendStatus(raw.send_status || raw.sen_status) || "",
       ehcp: raw.ehcp || "",
@@ -132,6 +142,8 @@ export function reviewPupilUploadCsv(csvText: string, filename = "pupil-upload.c
       pass_colour: raw.pass_colour || "",
       pass_animal: raw.pass_animal || "",
       pass_badge: raw.pass_badge || "",
+      class_source: usesYearGroupFallback ? "year_group_fallback" : "imported_class",
+      class_assignment_status: usesYearGroupFallback ? "needs_review" : "ready",
     });
   });
 
@@ -152,6 +164,7 @@ export function reviewPupilUploadCsv(csvText: string, filename = "pupil-upload.c
       ehcpCount: rows.filter((row) => truthy(row.ehcp)).length,
       ealCount: rows.filter((row) => truthy(row.eal)).length,
       pupilPremiumCount: rows.filter((row) => truthy(row.pupil_premium)).length,
+      missingClassCount: rows.filter((row) => row.class_assignment_status === "needs_review").length,
     },
   };
 }
@@ -207,7 +220,12 @@ function findHeaderLine(lines: Array<{ raw: string; rowNumber: number }>) {
 }
 
 function normaliseHeader(header: string) {
-  const normalised = header.toLowerCase().trim().replace(/[\s-]+/g, "_");
+  const normalised = header
+    .toLowerCase()
+    .trim()
+    .replace(/&/g, "and")
+    .replace(/[\s()./-]+/g, "_")
+    .replace(/^_+|_+$/g, "");
   if (
     [
       "upn",
@@ -218,10 +236,19 @@ function normaliseHeader(header: string) {
       "mis_pupil_ref",
       "mis_pupil_reference",
       "student_id",
+      "globally_unique_student_id",
     ].includes(normalised)
   ) {
     return "source_pupil_ref";
   }
+  if (normalised === "arbor_student_id") return "pupil_id";
+  if (normalised === "legal_first_name") return "first_name";
+  if (normalised === "legal_last_name") return "last_name";
+  if (normalised.startsWith("year_group")) return "year_group";
+  if (["courses_classes", "course_classes", "classes", "registration_form"].includes(normalised)) {
+    return "current_class";
+  }
+  if (normalised === "sex") return "gender";
   return normalised;
 }
 

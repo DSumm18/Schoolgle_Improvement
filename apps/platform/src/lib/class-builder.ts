@@ -10,6 +10,7 @@ export interface ClassBuilderPupil {
   gender: string | null;
   send_status: string | null;
   ehcp: boolean | null;
+  is_eal?: boolean | null;
 }
 
 export interface ClassBuilderPupilImportRow {
@@ -57,6 +58,12 @@ export interface GeneratedClassGroup {
   summary: Record<string, unknown>;
 }
 
+export interface ClassBuilderDestinationClass {
+  name: string;
+  allowedYearGroups?: string[];
+  targetYearCounts?: Record<string, number>;
+}
+
 export interface MutualChoiceSummary {
   pupilIds: [string, string];
   type: ClassBuilderChoiceType;
@@ -76,6 +83,7 @@ export interface ClassBuilderGroupSummary {
     gender: Record<string, Record<string, number>>;
     send: Record<string, Record<string, number>>;
     ehcp: Record<string, Record<string, number>>;
+    eal: Record<string, Record<string, number>>;
     currentClass: Record<string, Record<string, number>>;
   };
   tradeOffs: string[];
@@ -85,6 +93,7 @@ export interface GenerateClassGroupsInput {
   pupils: ClassBuilderPupil[];
   choices: ClassBuilderChoiceInput[];
   targetClassCount: 2 | 3 | number;
+  destinationClasses?: ClassBuilderDestinationClass[];
 }
 
 export interface GenerateClassGroupsResult {
@@ -214,15 +223,18 @@ export function validateClassBuilderSubmission(
 export function generateClassGroups(
   input: GenerateClassGroupsInput,
 ): GenerateClassGroupsResult {
-  const targetClassCount = Math.min(
-    3,
-    Math.max(2, Math.floor(input.targetClassCount || 2)),
-  );
-  const groups = Array.from({ length: targetClassCount }, (_, index) => ({
-    name: `Class ${index + 1}`,
+  const destinationClasses = normaliseDestinationClasses(input);
+  const targetClassCount = destinationClasses.length;
+  const groups: GeneratedClassGroup[] = destinationClasses.map((destinationClass, index) => ({
+    name: destinationClass.name || `Class ${index + 1}`,
     pupilIds: [] as string[],
-    summary: {},
+    summary: {
+      destinationClass,
+    },
   }));
+  const destinationByGroup = new Map(
+    groups.map((group, index) => [group.name, destinationClasses[index]]),
+  );
   const pupilMap = new Map(input.pupils.map((pupil) => [pupil.id, pupil]));
   const selectionCounts = countSelections(input.pupils, input.choices);
   const mutualLinks = findMutualLinks(input.choices);
@@ -232,10 +244,14 @@ export function generateClassGroups(
   for (const link of mutualLinks.filter((link) => link.type === "friendship")) {
     const [firstId, secondId] = link.pupilIds;
     if (assigned.has(firstId) || assigned.has(secondId)) continue;
-    const targetGroup = chooseBestGroup(groups, input.pupils, [
-      pupilMap.get(firstId),
-      pupilMap.get(secondId),
-    ]);
+    const targetGroup = chooseBestGroup(
+      groups,
+      input.pupils,
+      [pupilMap.get(firstId), pupilMap.get(secondId)],
+      destinationByGroup,
+      { strictCapacity: true },
+    );
+    if (!targetGroup) continue;
     targetGroup.pupilIds.push(firstId, secondId);
     assigned.add(firstId);
     assigned.add(secondId);
@@ -250,13 +266,20 @@ export function generateClassGroups(
     });
 
   for (const pupil of remaining) {
-    const targetGroup = chooseBestGroup(groups, input.pupils, [pupil]);
+    const targetGroup =
+      chooseBestGroup(groups, input.pupils, [pupil], destinationByGroup, {
+        strictCapacity: true,
+      }) ?? chooseBestGroup(groups, input.pupils, [pupil], destinationByGroup);
+    if (!targetGroup) continue;
     targetGroup.pupilIds.push(pupil.id);
     assigned.add(pupil.id);
   }
 
   for (const group of groups) {
-    group.summary = summarizeGroup(group.pupilIds, pupilMap);
+    group.summary = {
+      ...summarizeGroup(group.pupilIds, pupilMap),
+      destinationClass: destinationByGroup.get(group.name) ?? null,
+    };
   }
 
   const kept = mutualLinks.filter((link) =>
@@ -277,6 +300,17 @@ export function generateClassGroups(
     );
   }
 
+  const constrainedGroups = destinationClasses.filter(
+    (destinationClass) => (destinationClass.allowedYearGroups ?? []).length > 0,
+  );
+  if (constrainedGroups.length > 0) {
+    tradeOffs.push(
+      `Destination class structure applied: ${destinationClasses
+        .map((destinationClass) => destinationClass.name)
+        .join(", ")}.`,
+    );
+  }
+
   const summary: ClassBuilderGroupSummary = {
     mutualFriendshipsKept: kept.filter((link) => link.type === "friendship"),
     mutualFriendshipsSplit: split.filter((link) => link.type === "friendship"),
@@ -293,6 +327,41 @@ export function generateClassGroups(
   };
 
   return { groups, summary };
+}
+
+export function buildDefaultDestinationClasses(
+  yearGroupValue: string | null | undefined,
+  targetClassCount: number,
+): ClassBuilderDestinationClass[] {
+  const years = parseClassBuilderSessionYearGroups(yearGroupValue);
+  const classCount = Math.min(3, Math.max(2, Math.floor(targetClassCount || 2)));
+
+  if (years.length === 2 && classCount === 3 && areConsecutiveYearGroups(years)) {
+    const [lowerYear, upperYear] = years.sort(
+      (a, b) => classBuilderYearSortValue(a) - classBuilderYearSortValue(b),
+    );
+    const destinationLower = nextAcademicYearLabel(lowerYear);
+    const destinationUpper = nextAcademicYearLabel(upperYear);
+    return [
+      {
+        name: destinationLower,
+        allowedYearGroups: [lowerYear],
+      },
+      {
+        name: `${destinationLower}/${destinationUpper.replace(/^Year /, "")}`,
+        allowedYearGroups: [lowerYear, upperYear],
+      },
+      {
+        name: destinationUpper,
+        allowedYearGroups: [upperYear],
+      },
+    ];
+  }
+
+  return Array.from({ length: classCount }, (_, index) => ({
+    name: `Class ${index + 1}`,
+    allowedYearGroups: years,
+  }));
 }
 
 export function buildClassBuilderCsv(rows: Record<string, unknown>[]): string {
@@ -355,22 +424,47 @@ function chooseBestGroup(
   groups: GeneratedClassGroup[],
   allPupils: ClassBuilderPupil[],
   candidates: Array<ClassBuilderPupil | undefined>,
+  destinationByGroup: Map<string, ClassBuilderDestinationClass>,
+  options: { strictCapacity?: boolean } = {},
 ) {
   const usableCandidates = candidates.filter(
     (pupil): pupil is ClassBuilderPupil => Boolean(pupil),
   );
   const idealSize = Math.ceil(allPupils.length / groups.length);
   const pupilMap = new Map(allPupils.map((pupil) => [pupil.id, pupil]));
-  const groupsWithinIdealSize = groups.filter(
-    (group) => group.pupilIds.length + usableCandidates.length <= idealSize,
+  const eligibleGroups = groups.filter((group) =>
+    groupAcceptsCandidates(destinationByGroup.get(group.name), usableCandidates),
   );
+  const baseGroups = eligibleGroups.length > 0 ? eligibleGroups : groups;
+  const groupsWithinIdealSize = baseGroups.filter((group) => {
+    const destinationClass = destinationByGroup.get(group.name);
+    return (
+      group.pupilIds.length + usableCandidates.length <= idealSize &&
+      groupHasYearCapacity(destinationClass, group, usableCandidates, pupilMap)
+    );
+  });
+  if (options.strictCapacity && groupsWithinIdealSize.length === 0) {
+    return undefined;
+  }
   const candidateGroups =
-    groupsWithinIdealSize.length > 0 ? groupsWithinIdealSize : groups;
+    groupsWithinIdealSize.length > 0 ? groupsWithinIdealSize : baseGroups;
 
   return [...candidateGroups].sort((a, b) => {
     const sizeDiff =
-      scoreGroup(a, usableCandidates, idealSize, pupilMap) -
-      scoreGroup(b, usableCandidates, idealSize, pupilMap);
+      scoreGroup(
+        a,
+        usableCandidates,
+        idealSize,
+        pupilMap,
+        destinationByGroup.get(a.name),
+      ) -
+      scoreGroup(
+        b,
+        usableCandidates,
+        idealSize,
+        pupilMap,
+        destinationByGroup.get(b.name),
+      );
     if (sizeDiff !== 0) return sizeDiff;
     return a.name.localeCompare(b.name);
   })[0];
@@ -381,33 +475,223 @@ function scoreGroup(
   candidates: ClassBuilderPupil[],
   idealSize: number,
   pupilMap: Map<string, ClassBuilderPupil>,
+  destinationClass: ClassBuilderDestinationClass | undefined,
 ) {
   const projectedSize = group.pupilIds.length + candidates.length;
   let score = Math.abs(idealSize - projectedSize) * 12;
   if (projectedSize > idealSize) {
     score += (projectedSize - idealSize) * 100;
   }
+  if (!groupAcceptsCandidates(destinationClass, candidates)) {
+    score += 10000;
+  }
+  score += scoreYearCapacity(group, candidates, pupilMap, destinationClass);
   const summary = summarizeGroup(group.pupilIds, pupilMap) as {
     gender: Record<string, number>;
     send: Record<string, number>;
     ehcp: Record<string, number>;
+    eal: Record<string, number>;
     currentClass: Record<string, number>;
   };
   for (const candidate of candidates) {
     if (candidate.gender) {
-      score -= summary.gender[candidate.gender] ?? 0;
+      score += summary.gender[candidate.gender] ?? 0;
     }
     if (candidate.send_status) {
-      score -= (summary.send[candidate.send_status] ?? 0) * 2;
+      score += (summary.send[candidate.send_status] ?? 0) * 4;
     }
     if (candidate.ehcp) {
-      score -= (summary.ehcp.true ?? 0) * 3;
+      score += (summary.ehcp.true ?? 0) * 6;
+    }
+    if (candidate.is_eal) {
+      score += (summary.eal.true ?? 0) * 4;
     }
     if (candidate.current_class) {
-      score -= summary.currentClass[candidate.current_class] ?? 0;
+      score += summary.currentClass[candidate.current_class] ?? 0;
     }
   }
   return score;
+}
+
+function normaliseDestinationClasses(
+  input: GenerateClassGroupsInput,
+): ClassBuilderDestinationClass[] {
+  const targetClassCount = Math.min(
+    3,
+    Math.max(2, Math.floor(input.targetClassCount || 2)),
+  );
+  const supplied = (input.destinationClasses ?? [])
+    .slice(0, targetClassCount)
+    .map((destinationClass, index) => ({
+      name: destinationClass.name?.trim() || `Class ${index + 1}`,
+      allowedYearGroups: [
+        ...new Set(
+          (destinationClass.allowedYearGroups ?? [])
+            .map((yearGroup) => normaliseClassBuilderYearValue(yearGroup))
+            .filter(Boolean),
+        ),
+      ],
+    }));
+
+  if (supplied.length === targetClassCount) {
+    return withDestinationYearTargets(supplied, input.pupils);
+  }
+
+  return Array.from({ length: targetClassCount }, (_, index) => ({
+    name: `Class ${index + 1}`,
+    allowedYearGroups: [],
+  }));
+}
+
+function withDestinationYearTargets(
+  destinationClasses: ClassBuilderDestinationClass[],
+  pupils: ClassBuilderPupil[],
+) {
+  const constrained = destinationClasses.filter(
+    (destinationClass) => (destinationClass.allowedYearGroups ?? []).length > 0,
+  );
+  const uniqueYears = [
+    ...new Set(pupils.map((pupil) => normaliseClassBuilderYearValue(pupil.year_group))),
+  ].sort((a, b) => classBuilderYearSortValue(a) - classBuilderYearSortValue(b));
+
+  if (
+    destinationClasses.length !== 3 ||
+    constrained.length !== 3 ||
+    uniqueYears.length !== 2
+  ) {
+    return destinationClasses;
+  }
+
+  const [lowerYear, upperYear] = uniqueYears;
+  const lowerOnly = destinationClasses.find(
+    (destinationClass) =>
+      (destinationClass.allowedYearGroups ?? []).length === 1 &&
+      normaliseClassBuilderYearValue(destinationClass.allowedYearGroups?.[0]) ===
+        lowerYear,
+  );
+  const upperOnly = destinationClasses.find(
+    (destinationClass) =>
+      (destinationClass.allowedYearGroups ?? []).length === 1 &&
+      normaliseClassBuilderYearValue(destinationClass.allowedYearGroups?.[0]) ===
+        upperYear,
+  );
+  const mixed = destinationClasses.find(
+    (destinationClass) => (destinationClass.allowedYearGroups ?? []).length === 2,
+  );
+  if (!lowerOnly || !upperOnly || !mixed) return destinationClasses;
+
+  const idealSize = Math.ceil(pupils.length / destinationClasses.length);
+  const lowerTotal = pupils.filter(
+    (pupil) => normaliseClassBuilderYearValue(pupil.year_group) === lowerYear,
+  ).length;
+  const upperTotal = pupils.filter(
+    (pupil) => normaliseClassBuilderYearValue(pupil.year_group) === upperYear,
+  ).length;
+  const lowerOnlyTarget = Math.min(idealSize, lowerTotal);
+  const upperOnlyTarget = Math.min(idealSize, upperTotal);
+  const lowerMixedTarget = Math.max(0, lowerTotal - lowerOnlyTarget);
+  const upperMixedTarget = Math.max(0, upperTotal - upperOnlyTarget);
+
+  return destinationClasses.map((destinationClass) => {
+    if (destinationClass === lowerOnly) {
+      return { ...destinationClass, targetYearCounts: { [lowerYear]: lowerOnlyTarget } };
+    }
+    if (destinationClass === upperOnly) {
+      return { ...destinationClass, targetYearCounts: { [upperYear]: upperOnlyTarget } };
+    }
+    if (destinationClass === mixed) {
+      return {
+        ...destinationClass,
+        targetYearCounts: {
+          [lowerYear]: lowerMixedTarget,
+          [upperYear]: upperMixedTarget,
+        },
+      };
+    }
+    return destinationClass;
+  });
+}
+
+function groupAcceptsCandidates(
+  destinationClass: ClassBuilderDestinationClass | undefined,
+  candidates: ClassBuilderPupil[],
+) {
+  const allowedYearGroups = destinationClass?.allowedYearGroups ?? [];
+  if (allowedYearGroups.length === 0) return true;
+  const allowed = new Set(
+    allowedYearGroups.map((yearGroup) => normaliseClassBuilderYearValue(yearGroup)),
+  );
+  return candidates.every((candidate) =>
+    allowed.has(normaliseClassBuilderYearValue(candidate.year_group)),
+  );
+}
+
+function groupHasYearCapacity(
+  destinationClass: ClassBuilderDestinationClass | undefined,
+  group: GeneratedClassGroup,
+  candidates: ClassBuilderPupil[],
+  pupilMap: Map<string, ClassBuilderPupil>,
+) {
+  const targets = destinationClass?.targetYearCounts;
+  if (!targets || Object.keys(targets).length === 0) return true;
+  const projected = groupYearCounts(group, pupilMap);
+  for (const candidate of candidates) {
+    const year = normaliseClassBuilderYearValue(candidate.year_group);
+    projected[year] = (projected[year] ?? 0) + 1;
+  }
+  return Object.entries(projected).every(
+    ([year, count]) => count <= (targets[year] ?? 0),
+  );
+}
+
+function scoreYearCapacity(
+  group: GeneratedClassGroup,
+  candidates: ClassBuilderPupil[],
+  pupilMap: Map<string, ClassBuilderPupil>,
+  destinationClass: ClassBuilderDestinationClass | undefined,
+) {
+  const targets = destinationClass?.targetYearCounts;
+  if (!targets || Object.keys(targets).length === 0) return 0;
+  const projected = groupYearCounts(group, pupilMap);
+  for (const candidate of candidates) {
+    const year = normaliseClassBuilderYearValue(candidate.year_group);
+    projected[year] = (projected[year] ?? 0) + 1;
+  }
+  return Object.entries(projected).reduce((score, [year, count]) => {
+    const target = targets[year] ?? 0;
+    return score + Math.max(0, count - target) * 5000 + Math.abs(target - count);
+  }, 0);
+}
+
+function groupYearCounts(
+  group: GeneratedClassGroup,
+  pupilMap: Map<string, ClassBuilderPupil>,
+) {
+  return group.pupilIds.reduce<Record<string, number>>((counts, pupilId) => {
+    const pupil = pupilMap.get(pupilId);
+    if (!pupil) return counts;
+    const year = normaliseClassBuilderYearValue(pupil.year_group);
+    counts[year] = (counts[year] ?? 0) + 1;
+    return counts;
+  }, {});
+}
+
+function areConsecutiveYearGroups(values: string[]) {
+  const sorted = values
+    .map((value) => normaliseClassBuilderYearValue(value))
+    .sort((a, b) => classBuilderYearSortValue(a) - classBuilderYearSortValue(b));
+  if (sorted.length !== 2) return false;
+  if (sorted[0] === "R") return sorted[1] === "1";
+  const first = Number(sorted[0]);
+  const second = Number(sorted[1]);
+  return Number.isFinite(first) && Number.isFinite(second) && second === first + 1;
+}
+
+function nextAcademicYearLabel(value: string) {
+  const normalised = normaliseClassBuilderYearValue(value);
+  if (normalised === "R") return "Year 1";
+  const numeric = Number(normalised);
+  return Number.isFinite(numeric) ? `Year ${numeric + 1}` : classBuilderYearLabel(value);
 }
 
 function summarizeGroup(
@@ -422,6 +706,7 @@ function summarizeGroup(
     gender: countBy(pupils, (pupil) => pupil.gender || "not_recorded"),
     send: countBy(pupils, (pupil) => pupil.send_status || "none"),
     ehcp: countBy(pupils, (pupil) => (pupil.ehcp ? "true" : "false")),
+    eal: countBy(pupils, (pupil) => (pupil.is_eal ? "true" : "false")),
     currentClass: countBy(
       pupils,
       (pupil) => pupil.current_class || "not_recorded",
@@ -439,10 +724,11 @@ function buildBalanceSummary(
       balance.gender[group.name] = summary.gender;
       balance.send[group.name] = summary.send;
       balance.ehcp[group.name] = summary.ehcp;
+      balance.eal[group.name] = summary.eal;
       balance.currentClass[group.name] = summary.currentClass;
       return balance;
     },
-    { gender: {}, send: {}, ehcp: {}, currentClass: {} },
+    { gender: {}, send: {}, ehcp: {}, eal: {}, currentClass: {} },
   );
 }
 

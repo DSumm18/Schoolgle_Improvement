@@ -19,6 +19,7 @@ import {
   GraduationCap,
   Upload,
   Cpu,
+  FileClock,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -105,6 +106,17 @@ const SETTINGS_TABS: SettingsTab[] = [
     href: "/dashboard/settings/data-upload",
     color: "text-emerald-600",
     bgColor: "bg-emerald-50 dark:bg-emerald-950/20",
+  },
+  {
+    id: "gdpr-data-retention",
+    label: "GDPR Data Retention",
+    icon: FileClock,
+    description:
+      "Review pupil datasets, archive leaver cohorts, and plan export/anonymise/delete actions",
+    roles: ["admin", "headteacher", "slt"],
+    href: "/dashboard/settings/gdpr-data-retention",
+    color: "text-cyan-600",
+    bgColor: "bg-cyan-50 dark:bg-cyan-950/20",
   },
   {
     id: "data-connections",

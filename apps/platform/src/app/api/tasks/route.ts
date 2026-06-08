@@ -9,6 +9,7 @@ import type {
   TaskSortOption,
   OrgTaskSummary,
 } from "@/lib/tasks";
+import { resolveTaskAssigneeFromDatabase } from "@/lib/tasks/staff-assignment-server";
 import { v4 as uuidv4 } from "uuid";
 
 /**
@@ -480,8 +481,8 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
   const tasksWithAssignee = unifiedTasks.map((task) => ({
     ...task,
     assignee_name: task.assignee_id
-      ? usersMap[task.assignee_id]?.name || null
-      : null,
+      ? usersMap[task.assignee_id]?.name || task.owner || null
+      : task.owner || null,
   }));
 
   // Calculate summary statistics
@@ -523,6 +524,18 @@ export const POST = protectedRoute(async (auth, req: NextRequest) => {
     completed_by: null,
     completed_at: null,
   }));
+  const requestedAssigneeId = task.assignee_staff_id || task.assignee_id || null;
+  const resolvedAssignee = requestedAssigneeId
+    ? await resolveTaskAssigneeFromDatabase({
+        supabase,
+        organizationId: orgId,
+        requestedAssigneeId,
+      })
+    : null;
+
+  if (requestedAssigneeId && !resolvedAssignee) {
+    return apiError("Assignee not found in this school", 404);
+  }
 
   const { data: newTask, error } = await supabase
     .from("actions")
@@ -542,7 +555,8 @@ export const POST = protectedRoute(async (auth, req: NextRequest) => {
       status: task.status || "not_started",
       due_date: task.due_date || null,
       start_date: task.start_date || null,
-      assignee_id: task.assignee_id || null,
+      owner_name: task.owner_name || resolvedAssignee?.ownerName || null,
+      assignee_id: resolvedAssignee?.assigneeUserId || null,
       dependencies: task.dependencies || [],
       checklist: checklistWithIds,
       estimated_hours: task.estimated_hours || null,

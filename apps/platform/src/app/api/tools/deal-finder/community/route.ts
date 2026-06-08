@@ -54,4 +54,4 @@ export const POST = protectedRoute(async (auth, request: NextRequest) => {
     console.error("Community deal submission error:", err);
     return apiError("Submission failed", 500);
   }
-});
+}, { orgOptional: true });

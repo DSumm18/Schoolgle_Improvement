@@ -25,6 +25,7 @@ export interface ScrapedProduct {
 export interface ProductMatch {
   product_id: string;
   product_name: string;
+  product_description?: string | null;
   supplier_id: string;
   supplier_name: string;
   price_gbp: number | null;
@@ -35,13 +36,17 @@ export interface ProductMatch {
     | "barcode"
     | "fingerprint"
     | "fuzzy_name"
-    | "brand_category";
+    | "brand_category"
+    | "category_equivalence";
   match_score: number;
   saving_gbp: number | null;
   saving_pct: number | null;
   pack_quantity: number;
   pack_unit: string;
   unit_price_each: number | null;
+  source_comparison_quantity: number | null;
+  equivalent_quantity: number | null;
+  equivalent_total_price: number | null;
   unit_saving_gbp: number | null;
   unit_saving_pct: number | null;
   equivalence_type: "identical" | "alternative" | "different";
@@ -51,6 +56,13 @@ export interface ProductMatch {
   comparison_unit_label: string;
   rating_value: number | null;
   rating_count: number | null;
+}
+
+export interface RetailerSearchLink {
+  supplier_name: string;
+  url: string;
+  price_verified: boolean;
+  reason: string;
 }
 
 export interface ScrapeResponse {
@@ -66,6 +78,7 @@ export interface ScrapeResponse {
   match_count: number;
   duration_ms: number;
   discovery_pending: boolean;
+  retailer_search_links: RetailerSearchLink[];
   error?: string;
 }
 

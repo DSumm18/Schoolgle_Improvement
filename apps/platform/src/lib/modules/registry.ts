@@ -319,6 +319,16 @@ export const APPS: AppDefinition[] = [
     requiredPermissions: ["admin", "headteacher", "slt"],
   },
   {
+    id: "inspection-intelligence",
+    moduleId: "improvement",
+    name: "Inspection Intelligence",
+    route: "/dashboard/inspection-intelligence",
+    icon: Sparkles,
+    shortDescription:
+      "Combined DfE, assessment, evidence and Ofsted action journey.",
+    requiredPermissions: ["admin", "headteacher", "slt"],
+  },
+  {
     id: "ofsted-readiness",
     moduleId: "improvement",
     name: "Ofsted Readiness",
@@ -881,9 +891,9 @@ export const APPS: AppDefinition[] = [
   },
   {
     id: "deal-finder",
-    moduleId: "finance",
+    moduleId: "toolbox",
     name: "Deal Finder",
-    route: "/dashboard/deal-finder",
+    route: "/dashboard/toolbox/deal-finder",
     icon: Briefcase,
     shortDescription: "Find best prices and raise requisitions.",
     requiredPermissions: [
@@ -1396,9 +1406,9 @@ export function getModuleByPath(path: string): ModuleDefinition | undefined {
   if (foundModule) return foundModule;
 
   // Map apps to modules
-  const app = APPS.find(
-    (a) => path === a.route || path.startsWith(a.route + "/"),
-  );
+  const app = [...APPS]
+    .sort((a, b) => b.route.length - a.route.length)
+    .find((a) => path === a.route || path.startsWith(a.route + "/"));
   if (app) return MODULES.find((m) => m.id === app.moduleId);
 
   // Fallback for special cases

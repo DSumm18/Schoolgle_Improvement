@@ -7,6 +7,7 @@
   },
   "scripts": {
     "dev": "node apps/platform/scripts/ensure-non-production-db.mjs && next dev",
+    "dev:uat": "node apps/platform/scripts/run-dev-uat.mjs",
     "db:safety-check": "node apps/platform/scripts/ensure-non-production-db.mjs",
     "supabase:start": "npx supabase start --workdir apps/platform",
     "supabase:status": "npx supabase status --workdir apps/platform",

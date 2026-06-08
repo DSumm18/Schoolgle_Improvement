@@ -90,7 +90,8 @@ export function AssetPicker({
     const asset = body?.data || body;
     if (asset?.id) {
       setSelected(asset);
-      void fetchWarranty(asset.id);
+      onSelect(asset, null);
+      void fetchWarranty(asset.id, asset);
     }
   }
 
@@ -124,7 +125,7 @@ export function AssetPicker({
     }
   }
 
-  async function fetchWarranty(assetId: string) {
+  async function fetchWarranty(assetId: string, assetForSelect = selected) {
     setWarrantyLoading(true);
     setWarranty(null);
     const token = await getToken();
@@ -141,7 +142,7 @@ export function AssetPicker({
       const body = await res.json();
       setWarranty(body);
       // Emit to parent
-      if (selected) onSelect(selected, body);
+      if (assetForSelect) onSelect(assetForSelect, body);
     } catch {
       setWarranty(null);
     } finally {
@@ -161,7 +162,8 @@ export function AssetPicker({
     setQuery("");
     setResults([]);
     setShowDropdown(false);
-    void fetchWarranty(asset.id);
+    onSelect(asset, null);
+    void fetchWarranty(asset.id, asset);
   }
 
   function handleClear() {

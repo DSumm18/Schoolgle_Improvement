@@ -11,18 +11,36 @@ interface ScrapedProductCardProps {
 function formatPackInfo(product: ScrapedProduct): string | null {
   const parts: string[] = [];
   if (product.pack_quantity > 1) {
-    const unit = product.pack_unit === "each" ? "pack" : product.pack_unit;
-    parts.push(`${unit.charAt(0).toUpperCase() + unit.slice(1)} of ${product.pack_quantity}`);
+    if (product.comparison_unit_label === "per ream") {
+      parts.push(
+        `${product.pack_quantity} ream${product.pack_quantity === 1 ? "" : "s"}`,
+      );
+    } else {
+      const unit = product.pack_unit === "each" ? "pack" : product.pack_unit;
+      parts.push(
+        `${unit.charAt(0).toUpperCase() + unit.slice(1)} of ${product.pack_quantity}`,
+      );
+    }
   }
-  if (product.unit_weight_g) {
+  if (product.unit_weight_g && product.comparison_unit_label !== "per ream") {
     parts.push(`${product.unit_weight_g}g per item`);
   }
   return parts.length > 0 ? parts.join(" | ") : null;
 }
 
+function parseSourceUrl(sourceUrl: string): URL | null {
+  if (!sourceUrl) return null;
+  try {
+    return new URL(sourceUrl);
+  } catch {
+    return null;
+  }
+}
+
 export function ScrapedProductCard({ product }: ScrapedProductCardProps) {
   const packInfo = formatPackInfo(product);
   const [imgError, setImgError] = useState(false);
+  const source = parseSourceUrl(product.source_url);
 
   return (
     <div className="border-2 border-cyan-300/30 rounded-xl shadow-lg p-6 bg-white">
@@ -71,6 +89,11 @@ export function ScrapedProductCard({ product }: ScrapedProductCardProps) {
           {product.sku && (
             <p className="text-xs text-gray-400 mt-1">SKU: {product.sku}</p>
           )}
+          {source && (
+            <p className="mt-2 break-all rounded-lg bg-slate-50 px-2 py-1 text-xs text-slate-500">
+              Source: {source.hostname.replace(/^www\./, "")}{source.pathname}
+            </p>
+          )}
         </div>
 
         <div className="text-right flex-shrink-0">
@@ -81,21 +104,23 @@ export function ScrapedProductCard({ product }: ScrapedProductCardProps) {
               </p>
               {product.unit_price_each && product.pack_quantity > 1 && (
                 <p className="text-sm text-gray-500 mt-0.5">
-                  £{product.unit_price_each.toFixed(2)} each
+                  £{product.unit_price_each.toFixed(2)} {product.comparison_unit_label || "each"}
                 </p>
               )}
             </>
           ) : (
             <p className="text-sm text-gray-400">Price not found</p>
           )}
-          <a
-            href={product.source_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-xs text-cyan-500 hover:underline mt-2"
-          >
-            View original <ExternalLink className="w-3 h-3" />
-          </a>
+          {source && (
+            <a
+              href={product.source_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-xs text-cyan-500 hover:underline mt-2"
+            >
+              View original <ExternalLink className="w-3 h-3" />
+            </a>
+          )}
         </div>
       </div>
     </div>

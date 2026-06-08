@@ -94,11 +94,77 @@ describe("pupil pass utilities", () => {
     });
   });
 
+  it("normalises optional date of birth and Arbor sex headers", () => {
+    const parsed = parsePupilUploadCsv(
+      [
+        "pupil_id,source_pupil_ref,first_name,last_name,year_group,current_class,Sex,Date of Birth",
+        "P1,A802200106003,Lola,O'Neill,year 4,4 b,Female,15/09/2017",
+      ].join("\n"),
+    );
+
+    expect(parsed.errors).toEqual([]);
+    expect(parsed.pupils[0]).toMatchObject({
+      gender: "F",
+      date_of_birth: "2017-09-15",
+    });
+  });
+
+  it("parses Arbor pupil exports with year group and courses/classes headers", () => {
+    const parsed = parsePupilUploadCsv(
+      [
+        '"Globally Unique Student ID","Arbor Student ID","Legal First Name","Legal Last Name","Sex","Year group(s) this academic year","Date of Birth","Courses/classes","SEN status"',
+        "G001,ARB001,Ava,Adams,Female,Year 4,2017-09-15,4A,SEN Support",
+      ].join("\n"),
+    );
+
+    expect(parsed.errors).toEqual([]);
+    expect(parsed.pupils[0]).toMatchObject({
+      pupil_id: "ARB001",
+      source_pupil_ref: "G001",
+      first_name: "Ava",
+      last_name: "Adams",
+      year_group: "4",
+      current_class: "4A",
+      gender: "F",
+      date_of_birth: "2017-09-15",
+      send_status: "K",
+    });
+  });
+
   it("requires the core named-roll columns", () => {
     const parsed = parsePupilUploadCsv("first_name,last_name\nAva,Adams");
     expect(parsed.errors[0]).toContain("pupil_id");
     expect(parsed.errors[0]).toContain("source_pupil_ref");
-    expect(parsed.errors[0]).toContain("current_class");
+    expect(parsed.errors[0]).toContain("year_group");
+  });
+
+  it("uses year group as the class fallback when Arbor leaves courses/classes blank", () => {
+    const parsed = parsePupilUploadCsv(
+      [
+        "pupil_id,source_pupil_ref,first_name,last_name,year_group,current_class",
+        "P1,A001,Ava,Adams,Year 4,",
+      ].join("\n"),
+    );
+
+    expect(parsed.errors).toEqual([]);
+    expect(parsed.pupils[0]).toMatchObject({
+      year_group: "4",
+      current_class: "4",
+    });
+  });
+
+  it("selects the registration class from noisy Arbor courses/classes values", () => {
+    const parsed = parsePupilUploadCsv(
+      [
+        "pupil_id,source_pupil_ref,first_name,last_name,year_group,current_class",
+        'P1,A001,Ava,Adams,Year 6,"Year 6: 6 Rauf And Year 6"',
+        'P2,A002,Ben,Brown,Year N2,"N Butterworth, N Butterworth: Monday Am, N Butterworth: Monday Pm"',
+        'P3,A003,Cara,Cole,Year 6,"Year 6 And Year 6: 6 Howe"',
+      ].join("\n"),
+    );
+
+    expect(parsed.errors).toEqual([]);
+    expect(parsed.pupils.map((pupil) => pupil.current_class)).toEqual(["6 Rauf", "N Butterworth", "6 Howe"]);
   });
 
   it("publishes a Settings template with an explicit CTF-compatible source reference", () => {

@@ -90,6 +90,10 @@ export const POST = protectedRoute(
             body.evidence_required || template.evidence_required,
           checklist_items: body.checklist_items || template.checklist_items,
           notes: body.notes || template.notes,
+          classification: body.classification || "non_statutory",
+          frequency_locked:
+            body.frequency_locked ?? body.classification === "statutory",
+          statutory_reference: body.statutory_reference,
           visibility: body.visibility || "private",
           tags: body.tags || template.tags,
           is_template: false,
@@ -129,6 +133,10 @@ export const POST = protectedRoute(
       evidence_required: body.evidence_required || [],
       checklist_items: body.checklist_items || [],
       notes: body.notes,
+      classification: body.classification || "non_statutory",
+      frequency_locked:
+        body.frequency_locked ?? body.classification === "statutory",
+      statutory_reference: body.statutory_reference,
       visibility: body.visibility || "private",
       tags: body.tags || [],
       is_template: body.is_template || false,

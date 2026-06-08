@@ -1,7 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import { LayoutGrid, Search, AlertTriangle, ArrowRight, Sparkles, Activity } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+  Activity,
+  AlertTriangle,
+  ArrowRight,
+  CheckCircle2,
+  ExternalLink,
+  Info,
+  LayoutGrid,
+  Search,
+  Sparkles,
+} from "lucide-react";
 import { useAuth } from "@/context/SupabaseAuthContext";
 import { ScrapedProductCard } from "./ScrapedProductCard";
 import { SavingsBanner } from "./SavingsBanner";
@@ -16,27 +26,78 @@ interface ComparisonResultsProps {
 
 type EquivalenceFilter = "all" | "identical" | "alternative";
 
+function getRecommendation(data: ScrapeResponse) {
+  const pricedMatches = data.matches.filter((match) => match.price_gbp !== null);
+  const bestValue =
+    pricedMatches.find((match) => match.is_best_value) ||
+    [...pricedMatches].sort((a, b) => b.value_score - a.value_score)[0];
+  const bestSaving = [...pricedMatches]
+    .filter((match) => match.saving_gbp !== null && match.saving_gbp > 0)
+    .sort((a, b) => (b.saving_gbp || 0) - (a.saving_gbp || 0))[0];
+  const bestUnitSaving = [...pricedMatches]
+    .filter((match) => match.unit_saving_gbp !== null && match.unit_saving_gbp > 0)
+    .sort((a, b) => (b.unit_saving_pct || 0) - (a.unit_saving_pct || 0))[0];
+
+  if (bestUnitSaving) {
+    const unitName = bestUnitSaving.comparison_unit_label.replace(/^per\s+/, "");
+    const quantity = bestUnitSaving.source_comparison_quantity;
+    return {
+      title: "Best value: buy this way if you need the quantity",
+      body: `${bestUnitSaving.supplier_name} is cheaper on a like-for-like unit basis. The useful comparison is ${quantity ? `${quantity} ${unitName}${quantity === 1 ? "" : "s"}` : "the same quantity"}, not just the headline checkout price.`,
+      detail: `Unit saving: £${bestUnitSaving.unit_saving_gbp?.toFixed(2)} ${bestUnitSaving.comparison_unit_label}`,
+    };
+  }
+
+  if (bestSaving) {
+    return {
+      title: "Best immediate saving",
+      body: `${bestSaving.supplier_name} appears cheaper than the original product and is the best first option to review.`,
+      detail: `Potential saving: £${bestSaving.saving_gbp?.toFixed(2)}`,
+    };
+  }
+
+  if (bestValue) {
+    return {
+      title: "Original product looks best value so far",
+      body: `The alternatives we found are comparable, but none beat the original on a like-for-like unit basis. Keep the original unless you prefer a school-account supplier or need a different ordering route.`,
+      detail: "No verified saving against the pasted product",
+    };
+  }
+
+  if (data.discovery_pending) {
+    return {
+      title: "We have saved the product and are still searching",
+      body: "No verified alternatives are ready yet. Deal Finder has added this product to the community database and is checking supplier sources in the background.",
+      detail: "No fake supplier results shown",
+    };
+  }
+
+  return {
+    title: "No verified alternatives yet",
+    body: "We could read the product, but we could not verify a comparable supplier result. Try another URL or share the deal manually if you already know a supplier.",
+    detail: "Product saved for future matching",
+  };
+}
+
 export function ComparisonResults({ data, organizationId }: ComparisonResultsProps) {
   const { session } = useAuth();
   const [eqFilter, setEqFilter] = useState<EquivalenceFilter>("all");
   const [thresholds, setThresholds] = useState<ThresholdAlert[]>([]);
 
-  // Fetch thresholds so we can suggest rotation if needed
-  import("react").then((React) => {
-    React.useEffect(() => {
-      if (!organizationId) return;
-      fetch(`/api/tools/deal-finder/thresholds?organizationId=${organizationId}`, {
-        headers: {
-          "Authorization": session?.access_token ? `Bearer ${session.access_token}` : ""
-        }
+  useEffect(() => {
+    if (!organizationId) return;
+
+    fetch(`/api/tools/deal-finder/thresholds?organizationId=${organizationId}`, {
+      headers: {
+        Authorization: session?.access_token ? `Bearer ${session.access_token}` : "",
+      },
+    })
+      .then((response) => response.json())
+      .then((json) => {
+        if (json.data?.alerts) setThresholds(json.data.alerts);
       })
-        .then(r => r.json())
-        .then(j => {
-          if (j.data?.alerts) setThresholds(j.data.alerts);
-        })
-        .catch(console.error);
-    }, []);
-  });
+      .catch(console.error);
+  }, [organizationId, session?.access_token]);
 
   if (!data.product) return null;
 
@@ -81,6 +142,7 @@ export function ComparisonResults({ data, organizationId }: ComparisonResultsPro
 
   const hasIdentical = data.matches.some((m) => m.equivalence_type === "identical");
   const hasAlternative = data.matches.some((m) => m.equivalence_type === "alternative");
+  const recommendation = getRecommendation(data);
 
   return (
     <div className="space-y-6">
@@ -95,27 +157,89 @@ export function ComparisonResults({ data, organizationId }: ComparisonResultsPro
         />
       )}
 
+      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-950 shadow-sm">
+        <div className="flex items-start gap-3">
+          <div className="mt-0.5 rounded-full bg-white p-2 shadow-sm">
+            <Sparkles className="h-4 w-4 text-emerald-700" />
+          </div>
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">
+              Smart buying recommendation
+            </p>
+            <h3 className="mt-1 text-lg font-semibold">{recommendation.title}</h3>
+            <p className="mt-1 text-sm text-emerald-900/80">{recommendation.body}</p>
+            <p className="mt-3 inline-flex rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-semibold text-emerald-800">
+              {recommendation.detail}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
+        <div className="flex items-start gap-3">
+          <Info className="mt-0.5 h-4 w-4 flex-shrink-0 text-blue-700" />
+          <div>
+            <p className="text-sm font-bold text-blue-950">Fair comparison note</p>
+            <p className="mt-1 text-sm leading-6 text-blue-900/80">
+              Schools often prefer suppliers they already use, such as YPO,
+              ESPO, KCS or existing office accounts. We show alternatives so the
+              office can weigh price against account setup, delivery and ordering
+              friction.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {data.retailer_search_links.length > 0 && (
+        <div className="rounded-2xl border border-orange-200 bg-orange-50 p-4">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-sm font-bold text-orange-950">
+                Amazon live price check
+              </p>
+              <p className="mt-1 text-sm leading-6 text-orange-900/80">
+                We have not verified an Amazon product price for this comparison
+                yet, so Amazon is not ranked as a saving. Use this tagged search
+                link as a quick manual check.
+              </p>
+              <p className="mt-2 text-xs leading-5 text-orange-800">
+                {data.retailer_search_links[0].reason}
+              </p>
+            </div>
+            <a
+              href={data.retailer_search_links[0].url}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex flex-shrink-0 items-center gap-2 rounded-full border border-orange-200 bg-white px-4 py-2 text-sm font-semibold text-orange-800 shadow-sm hover:bg-orange-100"
+            >
+              Check Amazon
+              <ExternalLink className="h-4 w-4" />
+            </a>
+          </div>
+        </div>
+      )}
+
       {rotationWarning.should_rotate && (
-        <div className="bg-amber-900/20 border border-amber-800 rounded-xl p-5 mb-6 animate-in fade-in slide-in-from-top-2">
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 mb-6 animate-in fade-in slide-in-from-top-2">
           <div className="flex items-start gap-4">
-            <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
-              <AlertTriangle className="w-5 h-5 text-amber-500" />
+            <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+              <AlertTriangle className="w-5 h-5 text-amber-700" />
             </div>
             <div>
-              <h3 className="font-semibold text-amber-400 mb-1">Procurement Compliance Warning</h3>
-              <p className="text-gray-300 text-sm mb-3">{rotationWarning.reason}</p>
+              <h3 className="font-semibold text-amber-900 mb-1">Procurement Compliance Warning</h3>
+              <p className="text-amber-900/80 text-sm mb-3">{rotationWarning.reason}</p>
               
               {rotationWarning.alternatives.length > 0 && (
-                <div className="bg-[#0a0a0f] border border-gray-800 rounded-lg p-3">
-                  <p className="text-xs text-gray-400 mb-2 uppercase tracking-wider font-semibold">Suggested Compliant Rotation</p>
+                <div className="bg-white border border-amber-200 rounded-lg p-3">
+                  <p className="text-xs text-amber-700 mb-2 uppercase tracking-wider font-semibold">Suggested Compliant Rotation</p>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <span className="text-sm font-medium text-white">{rotationWarning.alternatives[0].supplier}</span>
-                      <span className="text-sm text-gray-400">£{rotationWarning.alternatives[0].price.toFixed(2)}</span>
+                      <span className="text-sm font-medium text-slate-950">{rotationWarning.alternatives[0].supplier}</span>
+                      <span className="text-sm text-slate-500">£{rotationWarning.alternatives[0].price.toFixed(2)}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-amber-500 font-medium">+£{rotationWarning.alternatives[0].price_diff.toFixed(2)} diff</span>
-                      <ArrowRight className="w-4 h-4 text-gray-500" />
+                      <span className="text-xs text-amber-700 font-medium">+£{rotationWarning.alternatives[0].price_diff.toFixed(2)} diff</span>
+                      <ArrowRight className="w-4 h-4 text-slate-500" />
                     </div>
                   </div>
                 </div>
@@ -126,9 +250,9 @@ export function ComparisonResults({ data, organizationId }: ComparisonResultsPro
       )}
 
       {data.discovery_pending && (
-        <div className="relative overflow-hidden bg-gradient-to-r from-blue-900 to-indigo-900 rounded-xl p-5 border border-indigo-500/30 shadow-lg mb-6 group cursor-wait">
+        <div className="relative overflow-hidden bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-5 border border-indigo-100 shadow-sm mb-6 group cursor-wait">
           {/* Animated background glow */}
-          <div className="absolute inset-0 bg-blue-500/10 blur-xl group-hover:bg-blue-400/20 transition-all duration-700"></div>
+          <div className="absolute inset-0 bg-blue-200/20 blur-xl group-hover:bg-blue-200/30 transition-all duration-700"></div>
           {/* Sweeping radar effect */}
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_2s_infinite]"></div>
           
@@ -136,23 +260,34 @@ export function ComparisonResults({ data, organizationId }: ComparisonResultsPro
             <div className="flex items-center gap-4">
               <div className="relative">
                 <div className="absolute inset-0 bg-blue-400 rounded-full animate-ping opacity-25"></div>
-                <div className="w-10 h-10 bg-blue-500/20 border border-blue-400/30 rounded-full flex items-center justify-center relative">
-                  <Activity className="w-5 h-5 text-blue-300 animate-pulse" />
+                <div className="w-10 h-10 bg-white border border-blue-100 rounded-full flex items-center justify-center relative">
+                  <Activity className="w-5 h-5 text-blue-700 animate-pulse" />
                 </div>
               </div>
               <div>
-                <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4 text-blue-300" />
-                  AI Deep Search Active
+                <h3 className="text-sm font-bold text-blue-950 flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-blue-700" />
+                  Supplier discovery active
                 </h3>
-                <p className="text-xs text-blue-200 mt-0.5">
-                  Our intelligence engine is currently scanning the web for deeper discounts. Refresh shortly.
+                <p className="text-xs text-blue-900/70 mt-0.5">
+                  This product is saved. We are checking trusted supplier sources and will only show verified matches.
                 </p>
               </div>
             </div>
           </div>
         </div>
       )}
+
+      <div className="rounded-2xl border border-slate-200 bg-white p-4">
+        <div className="flex items-start gap-3">
+          <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-700" />
+          <p className="text-sm leading-6 text-slate-600">
+            Some retailer links may be affiliate links. They do not cost the
+            school extra and help keep Deal Finder free. Results should stay
+            ordered by value, confidence and school feedback — not commission.
+          </p>
+        </div>
+      </div>
 
       <div className="flex items-center justify-between">
         <div>
@@ -212,9 +347,9 @@ export function ComparisonResults({ data, organizationId }: ComparisonResultsPro
           <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <Search className="w-8 h-8 text-gray-400" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">No matches found yet</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">No verified matches yet</h3>
           <p className="text-gray-500 max-w-md mx-auto">
-            We couldn&apos;t find alternative suppliers for this product. Try a different product URL.
+            We won&apos;t invent supplier results. This product has been saved, and the next pass should check trusted suppliers and community submissions for real alternatives.
           </p>
         </div>
       ) : (

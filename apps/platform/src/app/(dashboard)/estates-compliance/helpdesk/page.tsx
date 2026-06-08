@@ -25,6 +25,7 @@ import {
   Clock,
   Wrench,
 } from "lucide-react";
+import { supabase as supabaseClient } from "@/lib/supabase";
 
 type TabMode = "all" | "open" | "in_progress" | "resolved" | "closed";
 type SortField = "created_at" | "priority" | "status" | "ticket_number";
@@ -61,23 +62,32 @@ export default function HelpdeskPage() {
   const fetchTickets = async () => {
     try {
       setLoading(true);
-      const filters: any = {};
-      if (activeTab === "open") filters.status = "open";
-      if (activeTab === "in_progress") filters.status = "in_progress";
-      if (activeTab === "resolved") filters.status = "resolved";
-      if (activeTab === "closed") filters.status = "closed";
-      if (filters.priority) filters.priority = filters.priority;
+      const serverFilters: Record<string, string> = {};
+      if (activeTab === "open") serverFilters.status = "open";
+      if (activeTab === "in_progress") serverFilters.status = "in_progress";
+      if (activeTab === "resolved") serverFilters.status = "resolved";
+      if (activeTab === "closed") serverFilters.status = "closed";
+      if (filters.priority) serverFilters.priority = filters.priority;
+      if (filters.category) serverFilters.category = filters.category;
+      if (filters.search) serverFilters.search = filters.search;
 
       const params = new URLSearchParams();
-      Object.entries(filters).forEach(([key, value]) => {
+      Object.entries(serverFilters).forEach(([key, value]) => {
         if (value) params.append(key, String(value));
       });
+      if (organizationId) params.set("organizationId", organizationId);
+
+      const {
+        data: { session },
+      } = await supabaseClient.auth.getSession();
 
       const response = await fetch(
         `/api/estates/helpdesk?${params.toString()}`,
         {
           headers: {
-            "x-organization-id": organizationId || "",
+            ...(session?.access_token
+              ? { Authorization: `Bearer ${session.access_token}` }
+              : {}),
           },
         },
       );
@@ -98,9 +108,17 @@ export default function HelpdeskPage() {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch("/api/estates/helpdesk/stats", {
+      const {
+        data: { session },
+      } = await supabaseClient.auth.getSession();
+      const params = new URLSearchParams();
+      if (organizationId) params.set("organizationId", organizationId);
+
+      const response = await fetch(`/api/estates/helpdesk/stats?${params}`, {
         headers: {
-          "x-organization-id": organizationId || "",
+          ...(session?.access_token
+            ? { Authorization: `Bearer ${session.access_token}` }
+            : {}),
         },
       });
       if (response.ok) {
@@ -199,6 +217,10 @@ export default function HelpdeskPage() {
 
   const getCategoryLabel = (category: string) => {
     return category.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+  };
+
+  const getDisplayName = (name?: string, fallback?: string) => {
+    return name || fallback || "-";
   };
 
   const formatDate = (dateString?: string) => {
@@ -460,13 +482,24 @@ export default function HelpdeskPage() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
                         <User className="w-3.5 h-3.5 text-gray-400" />
-                        {ticket.raised_by || "-"}
+                        {getDisplayName(ticket.raised_by_name, ticket.raised_by)}
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
-                        <User className="w-3.5 h-3.5 text-gray-400" />
-                        {ticket.assigned_to || "-"}
+                      <div className="space-y-1 text-gray-700 dark:text-gray-300">
+                        <div className="flex items-center gap-2">
+                          <User className="w-3.5 h-3.5 text-gray-400" />
+                          {getDisplayName(
+                            ticket.assigned_to_name,
+                            ticket.assigned_to,
+                          )}
+                        </div>
+                        {ticket.assigned_contractor_name && (
+                          <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                            <Wrench className="w-3.5 h-3.5" />
+                            {ticket.assigned_contractor_name}
+                          </div>
+                        )}
                       </div>
                     </td>
                     <td className="px-4 py-3">

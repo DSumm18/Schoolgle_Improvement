@@ -380,15 +380,15 @@ export const GET = protectedRoute(async (auth, request) => {
   let query = supabase
     .from("send_provision_map")
     .select(
-      "*, send_register(pupil_code, first_name, last_name, year_group, primary_need, sen_status)",
+      "*, send_register(pupil_id, year_group, primary_need, sen_status)",
     )
     .eq("organization_id", organizationId)
     .order("created_at", { ascending: false });
 
   if (pupilId) query = query.eq("pupil_id", pupilId);
   if (type) query = query.eq("provision_type", type);
-  if (active === "true") query = query.eq("is_active", true);
-  if (active === "false") query = query.eq("is_active", false);
+  if (active === "true") query = query.eq("active", true);
+  if (active === "false") query = query.eq("active", false);
 
   const { data, error } = await query;
 
@@ -396,7 +396,7 @@ export const GET = protectedRoute(async (auth, request) => {
     console.error("[SEND Provision Map GET]", error);
   }
 
-  if (!data || data.length === 0) {
+  if (error) {
     let filtered = [...DEMO_PROVISIONS];
     if (pupilId) filtered = filtered.filter((p) => p.pupil_id === pupilId);
     if (type) filtered = filtered.filter((p) => p.provision_type === type);
@@ -405,7 +405,7 @@ export const GET = protectedRoute(async (auth, request) => {
     return apiSuccess({ data: filtered, demo: true });
   }
 
-  return apiSuccess({ data, demo: false });
+  return apiSuccess({ data: (data || []).map(normaliseProvision), demo: false });
 });
 
 /**
@@ -413,7 +413,7 @@ export const GET = protectedRoute(async (auth, request) => {
  * Create a new provision
  */
 export const POST = protectedRoute(async (auth, request) => {
-  const { organizationId, userId } = auth;
+  const { organizationId } = auth;
   const supabase = createServiceRoleClient();
   const body = await request.json();
 
@@ -440,25 +440,24 @@ export const POST = protectedRoute(async (auth, request) => {
     );
   }
 
+  const mappedType = mapProvisionType(provision_type);
   const { data, error } = await supabase
     .from("send_provision_map")
     .insert({
       organization_id: organizationId,
       pupil_id,
       provision_name,
-      provision_type,
-      area: area || null,
+      provision_type: mappedType,
       frequency: frequency || null,
       duration_minutes: duration_minutes || null,
-      sessions_per_week: sessions_per_week || null,
       delivered_by: delivered_by || null,
       start_date: start_date || new Date().toISOString().split("T")[0],
       end_date: end_date || null,
-      cost_per_week: cost_per_week || 0,
-      funding_source: funding_source || "school_budget",
-      is_active: true,
-      impact_notes: impact_notes || null,
-      created_by: userId,
+      weekly_cost: cost_per_week || 0,
+      funded_by: mapFundingSource(funding_source),
+      active: true,
+      impact_measure: area || null,
+      impact_outcome: impact_notes || null,
     })
     .select()
     .single();
@@ -468,5 +467,42 @@ export const POST = protectedRoute(async (auth, request) => {
     return apiError("Failed to create provision", 500);
   }
 
-  return apiSuccess(data, 201);
+  return apiSuccess(normaliseProvision(data), 201);
 });
+
+function normaliseProvision(row: any) {
+  return {
+    ...row,
+    cost_per_week: row.cost_per_week ?? row.weekly_cost ?? 0,
+    funding_source: row.funding_source ?? row.funded_by ?? "school_budget",
+    is_active: row.is_active ?? row.active ?? true,
+    impact_notes: row.impact_notes ?? row.impact_outcome ?? null,
+  };
+}
+
+function mapProvisionType(value: string) {
+  const allowed = new Set([
+    "in_class_support",
+    "withdrawal_group",
+    "one_to_one",
+    "specialist_teaching",
+    "therapy",
+    "equipment",
+    "environmental_adaptation",
+    "other",
+  ]);
+  if (allowed.has(value)) return value;
+  if (value === "adult_support") return "one_to_one";
+  if (value === "therapy_programme") return "therapy";
+  if (value === "specialist_equipment") return "equipment";
+  return "other";
+}
+
+function mapFundingSource(value?: string | null) {
+  if (value === "ehcp_funding") return "ehcp_funding";
+  if (value === "pupil_premium") return "pupil_premium";
+  if (value === "la_top_up") return "la_top_up";
+  if (value === "external_grant") return "external_grant";
+  if (value === "other") return "other";
+  return "school_budget";
+}

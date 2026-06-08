@@ -7,6 +7,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useAuth } from "@/context/SupabaseAuthContext";
+import { supabase } from "@/lib/supabase";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -22,6 +24,7 @@ import { Button } from "@/components/ui/button";
 
 export default function NewContractorPage() {
   const router = useRouter();
+  const { organizationId } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -32,23 +35,31 @@ export default function NewContractorPage() {
     const services = Array.from(formData.entries())
       .filter(([key]) => key.startsWith("service-"))
       .map(([key]) => key.replace("service-", ""));
+    const address = String(formData.get("address") || "").trim();
 
     const data = {
       company_name: formData.get("company_name"),
       contact_name: formData.get("contact_name"),
-      contact_email: formData.get("contact_email"),
-      contact_phone: formData.get("contact_phone"),
-      address: formData.get("address"),
-      is_preferred: formData.get("is_preferred") === "on",
-      services,
+      email: formData.get("contact_email"),
+      phone: formData.get("contact_phone"),
+      address: address ? { raw: address } : undefined,
+      preferred: formData.get("is_preferred") === "on",
+      services: services.map((service) => ({ service_type: service })),
       status: formData.get("status") || "active",
     };
 
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error("Please sign in again before adding a contractor");
+
       const response = await fetch("/api/estates/contractors", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ ...data, organizationId }),
       });
 
       if (!response.ok) {
@@ -198,7 +209,6 @@ export default function NewContractorPage() {
             <SelectContent>
               <SelectItem value="active">Active</SelectItem>
               <SelectItem value="inactive">Inactive</SelectItem>
-              <SelectItem value="under_review">Under Review</SelectItem>
               <SelectItem value="restricted">Restricted</SelectItem>
             </SelectContent>
           </Select>

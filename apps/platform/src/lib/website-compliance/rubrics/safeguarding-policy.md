@@ -3,7 +3,7 @@
 ## Legislation
 
 - Keeping Children Safe in Education (KCSIE) 2025
-- Working Together to Safeguard Children 2023
+- Working Together to Safeguard Children 2026
 - School Information (England) Regulations 2008, Schedule 4
 - Children Act 1989 and 2004
 - Education Act 2002, Section 175 (maintained) / Section 157 (academies)
@@ -14,8 +14,11 @@ Must reference KCSIE 2025 (published September 2025). Any reference to
 KCSIE 2024 or earlier WITHOUT also referencing KCSIE 2025 means the policy
 has not been updated for the current academic year.
 
-Must also reference Working Together to Safeguard Children 2023.
-References to Working Together 2018 alone indicate an outdated policy.
+Must also reference Working Together to Safeguard Children 2026, or clearly
+evidence that the school has updated its multi-agency safeguarding procedures
+to reflect the 2026 statutory guidance.
+References to Working Together 2023 or earlier without 2026 review evidence
+indicate a policy that needs checking.
 
 ## Review Frequency
 
@@ -67,7 +70,7 @@ reviewed at the start of each academic year (September) at minimum.
 ## Red Flags
 
 - References KCSIE 2024 or earlier without referencing 2025
-- References Working Together 2018 without referencing 2023
+- References Working Together 2023 or earlier without referencing 2026 review evidence
 - DSL name does not match the person currently in role
 - No review date or review date more than 14 months old
 - Generic template with "[SCHOOL NAME]" or "[INSERT NAME]" placeholders unfilled
@@ -84,7 +87,7 @@ reviewed at the start of each academic year (September) at minimum.
 ### Compliant (80-100)
 
 - Policy exists, is accessible on the website, and is clearly the current version
-- References KCSIE 2025 and Working Together 2023
+- References KCSIE 2025 and Working Together 2026
 - DSL and Deputy DSL named with contact details
 - All 27 required content areas substantially covered
 - Review date within the last 12 months

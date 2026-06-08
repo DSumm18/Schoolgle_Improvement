@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { createClient } from "@supabase/supabase-js";
 
@@ -21,6 +21,23 @@ interface SearchRequest {
   source_url: string;
   source_domain: string;
   pack_qty: number | null;
+}
+
+function expandCategory(category: string | null | undefined): string[] {
+  const normalized = (category || "general").toLowerCase().trim();
+  const aliases: Record<string, string[]> = {
+    stationery: ["stationery", "paper"],
+    cleaning: ["cleaning"],
+    "it equipment": ["computing"],
+    equipment: ["computing"],
+    furniture: ["furniture"],
+    catering: ["catering"],
+    educational: ["books", "art"],
+    playground: ["sport"],
+    maintenance: ["cleaning", "computing"],
+  };
+
+  return aliases[normalized] || [normalized];
 }
 
 /**
@@ -82,14 +99,15 @@ export const POST = protectedRoute(async (auth, request: NextRequest) => {
     }
 
     // 2. Find education supplier alternatives in the same category
-    //    Preferred suppliers come first
+    const categories = expandCategory(body.category);
+
     const { data: supplierAlts } = await supabase
       .from("deal_finder_products")
       .select("*")
-      .eq("category", body.category || "general")
+      .in("category", categories)
       .eq("is_education_supplier", true)
       .not("price", "is", null)
-      .order("is_preferred", { ascending: false })
+      .order("is_education_supplier", { ascending: false })
       .order("price", { ascending: true })
       .limit(10);
 
@@ -139,16 +157,11 @@ export const POST = protectedRoute(async (auth, request: NextRequest) => {
       return true;
     });
 
-    // Sort: preferred first, then education suppliers, then by unit price
     const searchedUnitPrice = unitPrice || body.price;
     dedupedAlts.sort((a, b) => {
-      // Preferred suppliers always first
-      if (a.is_preferred && !b.is_preferred) return -1;
-      if (!a.is_preferred && b.is_preferred) return 1;
-      // Then education suppliers
       if (a.is_education_supplier && !b.is_education_supplier) return -1;
       if (!a.is_education_supplier && b.is_education_supplier) return 1;
-      // Then by unit price (best value)
+
       const aUnit = a.unit_price
         ? parseFloat(a.unit_price)
         : a.price
@@ -159,7 +172,11 @@ export const POST = protectedRoute(async (auth, request: NextRequest) => {
         : b.price
           ? parseFloat(b.price)
           : 999;
-      return aUnit - bUnit;
+
+      if (aUnit !== bUnit) return aUnit - bUnit;
+      if (a.is_preferred && !b.is_preferred) return -1;
+      if (!a.is_preferred && b.is_preferred) return 1;
+      return 0;
     });
 
     // 5. Build alternatives with savings calculations
@@ -193,6 +210,8 @@ export const POST = protectedRoute(async (auth, request: NextRequest) => {
       return {
         id: alt.id,
         title: alt.title,
+        description: alt.description,
+        image_url: alt.image_url,
         price: altPrice,
         pack_qty: alt.pack_qty,
         unit_price: altUnitPrice,
@@ -230,26 +249,21 @@ export const POST = protectedRoute(async (auth, request: NextRequest) => {
       .select("*", { count: "exact", head: true })
       .eq("is_education_supplier", false);
 
-    return new Response(JSON.stringify(
-      {
-        data: {
-          alternatives,
-          bulk_suggestions: bulkSuggestions,
-          stats: {
-            total_products: totalProducts || 0,
-            total_searches: totalSearches || 0,
-          },
-        }
-      }
-    ), {
-      status: 200,
-      headers: { "Content-Type": "application/json", "Cache-Control": "no-cache" },
+    return apiSuccess({
+      data: {
+        alternatives,
+        bulk_suggestions: bulkSuggestions,
+        stats: {
+          total_products: totalProducts || 0,
+          total_searches: totalSearches || 0,
+        },
+      },
     });
   } catch (error) {
     console.error("Deal Finder search error:", error);
     return apiError("Search failed", 500);
   }
-});
+}, { orgOptional: true });
 
 interface BulkSuggestion {
   title: string;

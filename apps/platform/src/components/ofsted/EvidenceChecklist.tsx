@@ -67,7 +67,14 @@ interface InspectionDetail {
     evidence: string;
   }>;
   red_flags?: string[];
-  date_check?: { is_current: boolean; date_found: string | null; note: string };
+  date_check?: {
+    is_current: boolean;
+    date_found: string | null;
+    review_due_at?: string | null;
+    reminder_due_at?: string | null;
+    reminder_lead_months?: number | null;
+    note: string;
+  };
   legislation_check?: {
     references_current: boolean;
     legislation_found?: string[];
@@ -146,9 +153,14 @@ interface DocumentCheck {
 /** Build a Google Drive link from a file/folder ID */
 function driveLink(driveId: string | null, isFolder: boolean): string | null {
   if (!driveId) return null;
+  if (/^https?:\/\//i.test(driveId)) return driveId;
   return isFolder
     ? `https://drive.google.com/drive/folders/${driveId}`
     : `https://drive.google.com/file/d/${driveId}/view`;
+}
+
+function isWebsiteEvidence(path: string | null): boolean {
+  return Boolean(path && /^https?:\/\//i.test(path));
 }
 
 // Map framework category IDs to the evaluation_area strings used in the DB
@@ -159,6 +171,27 @@ const CATEGORY_ID_TO_AREA: Record<string, string> = {
   "attendance-behaviour": "Attendance and Behaviour",
   "personal-development": "Personal Development and Well-being",
   "leadership-governance": "Leadership and Governance",
+};
+
+const AREA_ALIASES: Record<string, string[]> = {
+  Inclusion: ["Inclusion", "Inclusion & SEND"],
+  "Curriculum and Teaching": [
+    "Curriculum and Teaching",
+    "Curriculum & Teaching",
+  ],
+  Achievement: ["Achievement", "Achievement & Assessment"],
+  "Attendance and Behaviour": [
+    "Attendance and Behaviour",
+    "Attendance & Behaviour",
+  ],
+  "Personal Development and Well-being": [
+    "Personal Development and Well-being",
+    "Personal Development",
+  ],
+  "Leadership and Governance": [
+    "Leadership and Governance",
+    "Leadership & Management",
+  ],
 };
 
 // EIF 2025: 6 Key Judgement Areas + Safeguarding
@@ -224,13 +257,14 @@ function isStale(dateStr: string | null): boolean {
   return date < oneYearAgo;
 }
 
-/** Check if a document was modified recently (within 6 months) */
-function isRecent(dateStr: string | null): boolean {
-  if (!dateStr) return false;
-  const date = new Date(dateStr);
-  const sixMonthsAgo = new Date();
-  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-  return date >= sixMonthsAgo;
+function formatDateOnly(dateOnly: string | null | undefined): string | null {
+  if (!dateOnly) return null;
+  return new Date(`${dateOnly}T00:00:00.000Z`).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  });
 }
 
 interface EvidenceRequirement {
@@ -252,6 +286,7 @@ function getEvidenceStatus(
   matchedFile: DocumentCheck | null,
 ): EvidenceRequirement["status"] {
   if (!matchedFile) return "missing";
+  if (!matchedFile.found) return "missing";
   // If inspected, use the rating (supports both old verdict and new rating)
   if (matchedFile.inspection_verdict) {
     const v = matchedFile.inspection_verdict;
@@ -300,7 +335,7 @@ export default function EvidenceChecklist({
     check: DocumentCheck,
     requirementName: string,
   ) => {
-    if (!check.found_path || inspecting) return;
+    if (!check.found_path || inspecting || isWebsiteEvidence(check.found_path)) return;
     setInspecting(check.id);
     try {
       const res = await fetch("/api/ofsted/inspect", {
@@ -335,6 +370,10 @@ export default function EvidenceChecklist({
       scanByArea[check.evaluation_area] = [];
     scanByArea[check.evaluation_area].push(check);
   }
+  const getAreaScans = (areaName: string) =>
+    (AREA_ALIASES[areaName] ?? [areaName]).flatMap(
+      (alias) => scanByArea[alias] ?? [],
+    );
 
   // Build framework-driven checklist: for each category, check each evidence requirement
   const frameworkChecklist: Array<{
@@ -346,14 +385,18 @@ export default function EvidenceChecklist({
     const areaName = CATEGORY_ID_TO_AREA[category.id];
     if (!areaName) continue;
 
-    const areaScans = scanByArea[areaName] || [];
+    const areaScans = getAreaScans(areaName);
     const requirements: EvidenceRequirement[] = [];
 
     for (const sub of category.subcategories) {
       // @ts-expect-error - Auto-masked during strict compilation enforcement
       for (const ev of sub.evidenceRequired) {
         // Try to find a matching scan result (real file, not folder)
-        const matchedFile = findBestMatch(ev.name, ev.description, areaScans);
+        const matchedFile = findBestMatch(
+          ev.name,
+          ev.description,
+          areaScans,
+        );
         const status = getEvidenceStatus(matchedFile);
 
         requirements.push({
@@ -375,7 +418,11 @@ export default function EvidenceChecklist({
   const sgScans = scanByArea["Safeguarding"] || [];
   const sgRequirements: EvidenceRequirement[] = SAFEGUARDING_REQUIREMENTS.map(
     (req) => {
-      const matchedFile = findBestMatch(req.name, req.description, sgScans);
+      const matchedFile = findBestMatch(
+        req.name,
+        req.description,
+        sgScans,
+      );
       return {
         id: req.id,
         name: req.name,
@@ -412,8 +459,8 @@ export default function EvidenceChecklist({
             Evidence Audit — EIF 2025
           </h3>
           <p className="text-sm text-muted-foreground">
-            {totalRequired} evidence requirements checked against your Google
-            Drive
+            {totalRequired} evidence requirements checked against website scans
+            and connected evidence sources
           </p>
         </div>
         <div className="flex items-center gap-4 text-sm font-medium">
@@ -425,6 +472,12 @@ export default function EvidenceChecklist({
             <span className="flex items-center gap-1.5 text-amber-600">
               <AlertTriangle className="w-4 h-4" />
               {totalStale} stale
+            </span>
+          )}
+          {totalActionNeeded > 0 && (
+            <span className="flex items-center gap-1.5 text-orange-600">
+              <AlertTriangle className="w-4 h-4" />
+              {totalActionNeeded} actions
             </span>
           )}
           <span className="flex items-center gap-1.5 text-red-500">
@@ -646,7 +699,7 @@ export default function EvidenceChecklist({
                                             ).toLocaleDateString()}
                                           </span>
                                         )}
-                                        {/* Inspect button — only for real files without inspection */}
+                                        {/* Inspect button — only for Drive files without inspection */}
                                         {!inspection &&
                                           req.matchedFile.found_path && (
                                             <button
@@ -656,7 +709,12 @@ export default function EvidenceChecklist({
                                                   req.name,
                                                 )
                                               }
-                                              disabled={!!inspecting}
+                                              disabled={
+                                                !!inspecting ||
+                                                isWebsiteEvidence(
+                                                  req.matchedFile.found_path,
+                                                )
+                                              }
                                               className="ml-auto text-[10px] font-bold px-2 py-1 rounded bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:opacity-80 disabled:opacity-50 flex items-center gap-1"
                                             >
                                               {isInspecting ? (
@@ -667,7 +725,11 @@ export default function EvidenceChecklist({
                                               ) : (
                                                 <>
                                                   <ShieldCheck className="w-3 h-3" />{" "}
-                                                  Inspect
+                                                  {isWebsiteEvidence(
+                                                    req.matchedFile.found_path,
+                                                  )
+                                                    ? "Website evidence"
+                                                    : "Inspect"}
                                                 </>
                                               )}
                                             </button>
@@ -682,6 +744,36 @@ export default function EvidenceChecklist({
                                     <p className="text-xs font-medium text-foreground">
                                       {inspection.summary}
                                     </p>
+
+                                    {inspection.date_check?.review_due_at && (
+                                      <div className="mt-1.5 p-2 bg-blue-50 dark:bg-blue-950/30 rounded border border-blue-200 dark:border-blue-800/30">
+                                        <p className="text-[10px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider mb-1">
+                                          Policy Review
+                                        </p>
+                                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-blue-800 dark:text-blue-200">
+                                          <span className="inline-flex items-center gap-1">
+                                            <Calendar className="w-3 h-3" />
+                                            Review due:{" "}
+                                            {inspection.date_check.date_found ||
+                                              formatDateOnly(
+                                                inspection.date_check
+                                                  .review_due_at,
+                                              )}
+                                          </span>
+                                          {inspection.date_check
+                                            .reminder_due_at && (
+                                            <span className="inline-flex items-center gap-1">
+                                              <Clock className="w-3 h-3" />
+                                              Reminder task:{" "}
+                                              {formatDateOnly(
+                                                inspection.date_check
+                                                  .reminder_due_at,
+                                              )}
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    )}
 
                                     {/* Checkpoint results — what was checked and why */}
                                     {inspection.checkpoint_results &&
@@ -926,8 +1018,8 @@ export default function EvidenceChecklist({
                                 {/* Status-based action prompts */}
                                 {req.status === "missing" && (
                                   <p className="mt-1 text-xs text-red-600 dark:text-red-400 font-medium">
-                                    Action: Upload or create this document in
-                                    your Google Drive
+                                    Action: add a website link or place this in
+                                    the connected evidence folder
                                   </p>
                                 )}
                                 {req.status === "found_stale" &&
@@ -940,8 +1032,8 @@ export default function EvidenceChecklist({
                                   )}
                                 {req.status === "found" && !inspection && (
                                   <p className="mt-1 text-xs text-blue-600 dark:text-blue-400">
-                                    Document found — click Inspect to verify it
-                                    meets EIF 2025 requirements
+                                    Document found — verify it meets EIF 2025
+                                    requirements
                                   </p>
                                 )}
                               </div>
@@ -961,6 +1053,20 @@ export default function EvidenceChecklist({
   );
 }
 
+const GENERIC_MATCH_WORDS = new Set([
+  "evidence",
+  "document",
+  "documents",
+  "policy",
+  "policies",
+  "current",
+  "school",
+  "pupils",
+  "pupil",
+  "provision",
+  "support",
+]);
+
 /**
  * Find the best matching scan result for a framework evidence requirement.
  * Matches evidence requirement name/description keywords against scan filenames.
@@ -970,32 +1076,63 @@ function findBestMatch(
   reqDescription: string,
   scans: DocumentCheck[],
 ): DocumentCheck | null {
-  if (scans.length === 0) return null;
+  return findBestWebsiteFirstMatch(reqName, reqDescription, scans);
+}
 
-  const reqWords = `${reqName} ${reqDescription}`
-    .toLowerCase()
-    .replace(/[_-]/g, " ")
+function findBestWebsiteFirstMatch(
+  reqName: string,
+  reqDescription: string,
+  scans: DocumentCheck[],
+): DocumentCheck | null {
+  const foundScans = scans.filter((scan) => scan.found);
+  if (foundScans.length === 0) return null;
+
+  const normalizedReqName = normalizeMatchText(reqName);
+  const reqWords = normalizeMatchText(`${reqName} ${reqDescription}`)
     .split(/\s+/)
-    .filter((w) => w.length > 2);
+    .filter((word) => word.length > 2 && !GENERIC_MATCH_WORDS.has(word));
 
   let bestMatch: DocumentCheck | null = null;
   let bestScore = 0;
 
-  for (const scan of scans) {
-    const filename = (scan.found_filename || "")
-      .toLowerCase()
-      .replace(/[_📁]/g, " ")
-      .trim();
-    const keywords = (scan.expected_document || "").toLowerCase();
+  for (const scan of foundScans) {
+    const filename = normalizeMatchText(scan.found_filename || "");
+    const expectedDocument = normalizeMatchText(scan.expected_document || "");
+    const inspectionText = normalizeMatchText(getInspectionMatchText(scan));
 
-    let score = 0;
+    let textScore = 0;
+    let distinctiveMatches = 0;
+    const exactExpectedMatch = expectedDocument === normalizedReqName;
+    const exactFilenameMatch = filename === normalizedReqName;
+
+    if (exactExpectedMatch) textScore += 30;
+    if (exactFilenameMatch) textScore += 20;
+
     for (const word of reqWords) {
-      if (filename.includes(word)) score += 2;
-      if (keywords.includes(word)) score += 1;
+      let wordMatched = false;
+      if (filename.includes(word)) {
+        textScore += 3;
+        wordMatched = true;
+      }
+      if (expectedDocument.includes(word)) {
+        textScore += 2;
+        wordMatched = true;
+      }
+      if (inspectionText.includes(word)) {
+        textScore += 1;
+        wordMatched = true;
+      }
+      if (wordMatched) distinctiveMatches += 1;
     }
 
-    // Prefer real files over folders
-    if (score > 0 && !scan.found_filename?.startsWith("📁")) {
+    if (!exactExpectedMatch && !exactFilenameMatch && distinctiveMatches === 0) {
+      continue;
+    }
+
+    let score = textScore;
+    if (isWebsiteEvidence(scan.found_path)) score += 25;
+
+    if (score > 0 && !isFolderEvidenceName(scan.found_filename)) {
       score += 3;
     }
 
@@ -1005,6 +1142,45 @@ function findBestMatch(
     }
   }
 
-  // Require at least a minimal match
-  return bestScore >= 2 ? bestMatch : null;
+  return bestScore >= 4 ? bestMatch : null;
+}
+
+function normalizeMatchText(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/\.(pdf|docx?|xlsx?|pptx?|csv|txt|odt|ods|gdoc|gsheet)$/i, "")
+    .replace(/📁/g, " ")
+    .replace(/[_\-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isFolderEvidenceName(value: string | null | undefined): boolean {
+  if (!value) return false;
+  const normalized = value.trim().toLowerCase();
+  return normalized.startsWith("📁") || normalized.startsWith("folder:");
+}
+
+function getInspectionMatchText(scan: DocumentCheck): string {
+  const inspection = scan.inspection_detail;
+  if (!inspection) return scan.inspection_summary ?? "";
+
+  return [
+    scan.inspection_summary,
+    inspection.summary,
+    ...(inspection.checkpoint_results ?? []).flatMap((checkpoint) => [
+      checkpoint.checkpoint,
+      checkpoint.evidence,
+    ]),
+    ...(inspection.content_checks ?? []).flatMap((check) => [
+      check.requirement,
+      check.evidence,
+    ]),
+    ...(inspection.actions_required ?? []).map((action) => action.action),
+    ...(inspection.actions ?? []),
+    ...(inspection.strengths ?? []),
+    ...(inspection.red_flags ?? []),
+  ]
+    .filter(Boolean)
+    .join(" ");
 }

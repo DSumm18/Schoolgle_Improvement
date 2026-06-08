@@ -20,6 +20,19 @@ export const GET = protectedRoute(async (auth, request) => {
     category: searchParams.get("category") as any,
     assigned_to: searchParams.get("assigned_to") || undefined,
     asset_id: searchParams.get("asset_id") || undefined,
+    compliance_domain:
+      searchParams.get("compliance_domain") ||
+      searchParams.get("domain") ||
+      undefined,
+    statutory_check_id:
+      searchParams.get("statutory_check_id") ||
+      searchParams.get("check_id") ||
+      searchParams.get("checkId") ||
+      undefined,
+    custom_check_id:
+      searchParams.get("custom_check_id") ||
+      searchParams.get("customCheckId") ||
+      undefined,
     location: searchParams.get("location") || undefined,
     search: searchParams.get("search") || undefined,
   };
@@ -39,8 +52,68 @@ export const GET = protectedRoute(async (auth, request) => {
     { page, pageSize },
   );
 
+  const supabase = createServiceRoleClient();
+  const userIds = Array.from(
+    new Set(
+      result.data
+        .flatMap((ticket) => [ticket.raised_by, ticket.assigned_to])
+        .filter((value): value is string => Boolean(value)),
+    ),
+  );
+  const contractorIds = Array.from(
+    new Set(
+      result.data
+        .map((ticket) => ticket.assigned_contractor_id)
+        .filter((value): value is string => Boolean(value)),
+    ),
+  );
+
+  const [{ data: users }, { data: contractors }] = await Promise.all([
+    userIds.length
+      ? supabase
+          .from("users")
+          .select("id, display_name, email")
+          .in("id", userIds)
+      : Promise.resolve({ data: [] }),
+    contractorIds.length
+      ? supabase
+          .from("estates_contractors")
+          .select("id, company_name")
+          .eq("organization_id", organizationId)
+          .in("id", contractorIds)
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  const userNames = new Map(
+    (users || []).map((user) => [
+      user.id,
+      user.display_name || user.email || user.id,
+    ]),
+  );
+  const contractorNames = new Map(
+    (contractors || []).map((contractor) => [
+      contractor.id,
+      contractor.company_name || contractor.id,
+    ]),
+  );
+  const tickets = result.data.map((ticket) => ({
+    ...ticket,
+    raised_by_name: ticket.raised_by
+      ? userNames.get(ticket.raised_by) || ticket.raised_by
+      : undefined,
+    assigned_to_name:
+      ticket.assigned_to_name ||
+      (ticket.assigned_to
+        ? userNames.get(ticket.assigned_to) || ticket.assigned_to
+        : undefined),
+    assigned_contractor_name: ticket.assigned_contractor_id
+      ? contractorNames.get(ticket.assigned_contractor_id) ||
+        ticket.assigned_contractor_id
+      : undefined,
+  }));
+
   return apiSuccess({
-    tickets: result.data,
+    tickets,
     total: result.total,
     page: result.page,
     pageSize: result.pageSize,

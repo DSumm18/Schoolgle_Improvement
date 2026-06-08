@@ -1,6 +1,7 @@
 import { protectedRoute, apiError, apiSuccess } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
 import {
+  buildDefaultDestinationClasses,
   classBuilderYearStorageAliases,
   generateClassGroups,
   parseClassBuilderSessionYearGroups,
@@ -31,7 +32,7 @@ export const POST = protectedRoute(async (auth, request) => {
   let pupilQuery = supabase
     .from("pupils")
     .select(
-      "id, first_name, last_name, year_group, current_class, class_name, gender, send_status, sen_status, ehcp",
+      "id, first_name, last_name, year_group, current_class, class_name, gender, send_status, sen_status, ehcp, is_eal",
     )
     .eq("organization_id", auth.organizationId)
     .in("year_group", yearAliases)
@@ -62,6 +63,14 @@ export const POST = protectedRoute(async (auth, request) => {
     pupils: (pupils ?? []).map(mapPupil),
     choices,
     targetClassCount: session.target_class_count,
+    destinationClasses:
+      Array.isArray(session.destination_structure) &&
+      session.destination_structure.length > 0
+        ? session.destination_structure
+        : buildDefaultDestinationClasses(
+            session.year_group,
+            session.target_class_count,
+          ),
   });
 
   await supabase.from("generated_class_groups").delete().eq("session_id", sessionId);
@@ -92,5 +101,6 @@ function mapPupil(pupil: any): ClassBuilderPupil {
     gender: pupil.gender ?? null,
     send_status: pupil.send_status ?? pupil.sen_status ?? null,
     ehcp: pupil.ehcp ?? pupil.sen_status === "E",
+    is_eal: pupil.is_eal ?? null,
   };
 }

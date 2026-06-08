@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useMemo } from "react";
+import Link from "next/link";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetchers";
 import { useAuth } from "@/context/SupabaseAuthContext";
@@ -53,6 +54,7 @@ import {
 
 interface SENPupil {
   id: string;
+  pupil_record_id?: string | null;
   pupil_code: string;
   first_name: string;
   last_name: string;
@@ -1458,7 +1460,18 @@ function RegisterSection({
                   {pupil.key_worker || "-"}
                 </td>
                 <td className="px-4 py-3">
-                  <ChevronRight size={16} className="text-slate-300" />
+                  {pupil.pupil_record_id ? (
+                    <Link
+                      href={`/dashboard/pupils/${pupil.pupil_record_id}`}
+                      onClick={(event) => event.stopPropagation()}
+                      className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-sky-700 hover:bg-sky-50"
+                    >
+                      Profile
+                      <ExternalLink size={13} />
+                    </Link>
+                  ) : (
+                    <ChevronRight size={16} className="text-slate-300" />
+                  )}
                 </td>
               </tr>
             ))}

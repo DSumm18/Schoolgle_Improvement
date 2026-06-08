@@ -166,6 +166,33 @@ function isDocumentLike(url: string): boolean {
   }
 }
 
+function googleDriveFolderId(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname !== "drive.google.com") return null;
+
+    if (parsed.pathname.includes("/embeddedfolderview")) {
+      return parsed.searchParams.get("id");
+    }
+
+    const folderMatch = parsed.pathname.match(/\/drive\/folders\/([^/]+)/);
+    return folderMatch?.[1] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function isGoogleDriveFolderUrl(url: string): boolean {
+  return Boolean(googleDriveFolderId(url));
+}
+
+function toEmbeddedGoogleDriveFolderUrl(url: string): string | null {
+  const folderId = googleDriveFolderId(url);
+  return folderId
+    ? `https://drive.google.com/embeddedfolderview?id=${folderId}#grid`
+    : null;
+}
+
 async function fetchText(
   url: string,
   timeoutMs: number,
@@ -227,6 +254,32 @@ function extractLinks(html: string, baseUrl: string): string[] {
   }
 
   return [...links];
+}
+
+function extractGoogleDriveFolderDocuments(
+  html: string,
+  folderUrl: string,
+  foundOnPage: string,
+  source: InventorySource,
+): InventoryDocument[] {
+  const documents = new Map<string, InventoryDocument>();
+  const anchorPattern =
+    /<a\b[^>]*href=["']([^"']*drive\.google\.com\/file\/d\/[^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+
+  for (const match of html.matchAll(anchorPattern)) {
+    const url = normaliseUrl(match[1], folderUrl);
+    if (!url || isIgnored(url)) continue;
+
+    const linkText = stripHtml(match[2]).slice(0, 500);
+    documents.set(url, {
+      url,
+      foundOnPage,
+      linkText,
+      source,
+    });
+  }
+
+  return [...documents.values()];
 }
 
 function extractDocumentLinks(
@@ -364,6 +417,37 @@ function documentFileType(url: string, contentType = ""):
   return "unsupported";
 }
 
+function detectDownloadedDocumentFileType(
+  url: string,
+  contentType: string,
+  buffer: Buffer,
+  filename?: string | null,
+): ReturnType<typeof documentFileType> {
+  const typeFromFilename = filename
+    ? documentFileType(filename, contentType)
+    : "unsupported";
+  if (typeFromFilename !== "unsupported") return typeFromFilename;
+
+  const typeFromUrl = documentFileType(url, contentType);
+  if (typeFromUrl !== "unsupported") return typeFromUrl;
+
+  if (buffer.subarray(0, 5).toString("latin1") === "%PDF-") return "pdf";
+
+  return "unsupported";
+}
+
+function contentDispositionFilename(value: string | null): string | null {
+  if (!value) return null;
+  const utfMatch = value.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utfMatch) return decodeURIComponent(utfMatch[1].trim());
+
+  const quotedMatch = value.match(/filename="([^"]+)"/i);
+  if (quotedMatch) return quotedMatch[1].trim();
+
+  const plainMatch = value.match(/filename=([^;]+)/i);
+  return plainMatch?.[1]?.trim() ?? null;
+}
+
 function cleanDocumentText(text: string): string {
   const cleaned = decodeHtmlEntities(text)
     .replace(/--- Page \d+ ---/g, "\n")
@@ -406,7 +490,12 @@ async function fetchDocumentBuffer(
   timeoutMs: number,
   userAgent: string,
   maxBytes: number,
-): Promise<{ buffer: Buffer; contentType: string; finalUrl: string }> {
+): Promise<{
+  buffer: Buffer;
+  contentType: string;
+  finalUrl: string;
+  filename: string | null;
+}> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -443,6 +532,9 @@ async function fetchDocumentBuffer(
       buffer,
       contentType: response.headers.get("content-type") || "",
       finalUrl: response.url || url,
+      filename: contentDispositionFilename(
+        response.headers.get("content-disposition"),
+      ),
     };
   } finally {
     clearTimeout(timeout);
@@ -457,13 +549,18 @@ async function extractDocumentText(
 ): Promise<DocumentExtractionResult> {
   try {
     const downloadUrl = resolveDownloadUrl(document.url);
-    const { buffer, contentType, finalUrl } = await fetchDocumentBuffer(
+    const { buffer, contentType, finalUrl, filename } = await fetchDocumentBuffer(
       downloadUrl,
       timeoutMs,
       userAgent,
       maxBytes,
     );
-    const fileType = documentFileType(finalUrl || document.url, contentType);
+    const fileType = detectDownloadedDocumentFileType(
+      finalUrl || document.url,
+      contentType,
+      buffer,
+      filename || document.linkText,
+    );
 
     if (fileType === "unsupported") {
       return {
@@ -557,6 +654,96 @@ const DOCUMENT_EXTRACTION_PRIORITY_TERMS = [
   "wellbeing",
   "ofsted",
 ];
+
+const PAGE_CRAWL_PRIORITY_TERMS = [
+  "policies-and-documents",
+  "policy",
+  "policies",
+  "safeguarding",
+  "send",
+  "sen",
+  "curriculum",
+  "reading",
+  "phonics",
+  "writing",
+  "maths",
+  "mathematics",
+  "science",
+  "history",
+  "geography",
+  "art",
+  "design-technology",
+  "design technology",
+  "music",
+  "computing",
+  "modern-foreign-language",
+  "modern foreign language",
+  "religious-education",
+  "religious education",
+  "physical-education",
+  "physical education",
+  "pshe",
+  "rhe",
+  "governance",
+  "key-information",
+  "ofsted",
+  "pupil-premium",
+  "sports-premium",
+  "attendance",
+  "behaviour",
+  "equality",
+  "accessibility",
+];
+
+function scorePageCrawlPriority(url: string): number {
+  const haystack = decodeURIComponent(url)
+    .toLowerCase()
+    .replace(/[-_]+/g, " ");
+  let score = 0;
+
+  for (const term of PAGE_CRAWL_PRIORITY_TERMS) {
+    if (haystack.includes(term.replace(/[-_]+/g, " "))) score += 10;
+  }
+
+  if (haystack.includes("policies and documents")) score += 30;
+  if (haystack.includes("phonics")) score += 5;
+  if (/\/(?:reading|phonics|writing|maths|science|history|geography|art|music|computing)(?:\/|$)/.test(haystack)) {
+    score += 30;
+  }
+
+  return score;
+}
+
+function sortPageQueueByPriority(urls: string[]): string[] {
+  return urls
+    .map((url, index) => ({ url, index, score: scorePageCrawlPriority(url) }))
+    .sort((left, right) => right.score - left.score || left.index - right.index)
+    .map((item) => item.url);
+}
+
+function isSoftNotFoundPage(page: {
+  url: string;
+  title?: string | null;
+  content?: string | null;
+  status?: number | null;
+}): boolean {
+  if (page.status && page.status >= 400) return true;
+
+  const title = (page.title || "").toLowerCase();
+  const content = (page.content || "").toLowerCase();
+  const combined = `${title} ${content}`;
+
+  if (
+    title.includes("page not found") ||
+    title.includes("404") ||
+    combined.includes("oops! that page") ||
+    combined.includes("the page you are looking for could not be found")
+  ) {
+    return true;
+  }
+
+  return false;
+}
 
 function scoreDocumentExtractionPriority(document: InventoryDocument): number {
   const haystack = `${document.url} ${document.linkText} ${document.foundOnPage}`
@@ -761,16 +948,24 @@ export async function fastInventoryCrawlWebsite(
   const errors: CrawlError[] = [];
   const pages: CrawledPage[] = [];
   const documents = new Map<string, InventoryDocument>();
+  const driveFolders = new Map<string, InventoryDocument>();
 
-  const pageUrls = await discoverSitePages(
+  const initialPageUrls = await discoverSitePages(
     siteRoot,
     maxPages,
     timeoutMs,
     userAgent,
     config.seedUrls || [],
   );
+  const pageQueue = [...initialPageUrls];
+  const queuedPageUrls = new Set(pageQueue);
+  const visitedPageUrls = new Set<string>();
 
-  for (const pageUrl of pageUrls) {
+  while (pageQueue.length > 0 && visitedPageUrls.size < maxPages) {
+    const pageUrl = pageQueue.shift();
+    if (!pageUrl || visitedPageUrls.has(pageUrl)) continue;
+    visitedPageUrls.add(pageUrl);
+
     if (delayMs > 0) await sleep(delayMs);
 
     const response = await fetchText(pageUrl, timeoutMs, userAgent);
@@ -805,16 +1000,81 @@ export async function fastInventoryCrawlWebsite(
       } as CrawledPage["metadata"] & { source: InventorySource },
     };
 
-    pages.push(page);
+    const isSoftNotFound = isSoftNotFoundPage(page);
+    if (!isSoftNotFound) {
+      pages.push(page);
+    }
 
-    if (includeDocuments) {
+    const discoveredPageLinks: string[] = [];
+    for (const link of links) {
+      if (
+        hostname(link) !== hostname(siteRoot) ||
+        isDocumentLike(link) ||
+        visitedPageUrls.has(link) ||
+        queuedPageUrls.has(link)
+      ) {
+        continue;
+      }
+      discoveredPageLinks.push(link);
+    }
+
+    if (discoveredPageLinks.length > 0) {
+      for (const link of sortPageQueueByPriority(discoveredPageLinks)) {
+        queuedPageUrls.add(link);
+        pageQueue.push(link);
+      }
+      pageQueue.sort(
+        (left, right) =>
+          scorePageCrawlPriority(right) - scorePageCrawlPriority(left),
+      );
+    }
+
+    if (includeDocuments && !isSoftNotFound) {
       for (const document of extractDocumentLinks(response.text, finalUrl, source)) {
+        if (isGoogleDriveFolderUrl(document.url)) {
+          if (!driveFolders.has(document.url)) driveFolders.set(document.url, document);
+          continue;
+        }
         if (!documents.has(document.url)) documents.set(document.url, document);
       }
     }
   }
 
   if (includeDocuments) {
+    if (driveFolders.size > 0) {
+      const folderResults = await mapWithConcurrency(
+        [...driveFolders.values()],
+        Math.min(2, documentConcurrency),
+        async (folder) => {
+          const embeddedUrl = toEmbeddedGoogleDriveFolderUrl(folder.url);
+          if (!embeddedUrl) return [];
+
+          const response = await fetchText(embeddedUrl, timeoutMs, userAgent);
+          if (!response.ok || !response.text) {
+            errors.push({
+              url: folder.url,
+              error: response.error || `HTTP ${response.status}`,
+              timestamp: new Date().toISOString(),
+            });
+            return [];
+          }
+
+          return extractGoogleDriveFolderDocuments(
+            response.text,
+            response.finalUrl || embeddedUrl,
+            folder.foundOnPage,
+            folder.source,
+          );
+        },
+      );
+
+      for (const folderDocuments of folderResults) {
+        for (const document of folderDocuments) {
+          if (!documents.has(document.url)) documents.set(document.url, document);
+        }
+      }
+    }
+
     const documentList = [...documents.values()];
     const extractionTargets = extractDocumentTextEnabled
       ? documentList
@@ -861,7 +1121,7 @@ export async function fastInventoryCrawlWebsite(
     (page) => page.contentType === "document",
   ).length;
   const stats: CrawlerStats = {
-    totalPages: pageUrls.length + documents.size,
+    totalPages: visitedPageUrls.size + documents.size,
     successfulPages: pages.length,
     failedPages: errors.length,
     pdfsProcessed,
@@ -878,3 +1138,13 @@ export async function fastInventoryCrawlWebsite(
     backend: "inventory",
   };
 }
+
+export const __fastInventoryCrawlerTestables = {
+  detectDownloadedDocumentFileType,
+  extractGoogleDriveFolderDocuments,
+  isGoogleDriveFolderUrl,
+  isSoftNotFoundPage,
+  scorePageCrawlPriority,
+  sortPageQueueByPriority,
+  toEmbeddedGoogleDriveFolderUrl,
+};

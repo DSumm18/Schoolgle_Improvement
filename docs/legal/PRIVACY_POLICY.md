@@ -1,7 +1,7 @@
 # Schoolgle Privacy Policy
 
-**Last Updated:** November 2025  
-**Version:** 1.0
+**Last Updated:** June 2026
+**Version:** 1.1
 
 ---
 
@@ -11,9 +11,9 @@ Schoolgle ("we", "us", "our") is committed to protecting the privacy and securit
 
 We are registered as a Data Processor under UK GDPR. Schools using Schoolgle remain the Data Controller for any personal data processed through our platform.
 
-**Data Protection Officer Contact:**  
-Email: dpo@schoolgle.co.uk  
-Address: [Company Address]
+**Data Protection Officer Contact:**
+Email: dpo@schoolgle.co.uk
+Address: 25-29 Sandy Way, Yeadon, Leeds, West Yorkshire, England, LS19 7EW
 
 ---
 
@@ -49,7 +49,9 @@ Address: [Company Address]
 
 Schoolgle only collects pupil, staff or other personal data where it is needed for a subscribed product or agreed workflow.
 
-Some products, including Class Builder, require identifiable pupil data to work properly. In those cases, Schoolgle may process a named pupil roll, year group, class, relevant pupil characteristics, pupil preferences, generated class groups and pupil pass metadata.
+Some products, including Class Builder, SEND workflows and pupil passes, require identifiable pupil data to work properly. In those cases, Schoolgle may process a named pupil roll, MIS reference, date of birth, year group, class, sex/gender, relevant pupil characteristics, SEND status, pupil preferences, generated class groups and pupil pass metadata.
+
+Date of birth is only processed where it is needed for pupil matching, age/year-group checks, SEND/document workflows or a pupil-facing verification journey. It must not be used as the only login secret or password.
 
 Schools should not upload personal data beyond the relevant product template or product schedule. In particular, users should not upload unnecessary safeguarding, medical, payroll, parent contact, biometric or free-text sensitive information unless it is explicitly covered by the subscribed product and data processing schedule.
 
@@ -138,6 +140,7 @@ When you use AI features (Voice-to-Observation, Mock Inspector, Ed Chatbot):
 | Account data | Until account deletion + 30 days | Hard delete |
 | Usage logs | 12 months | Automatic purge |
 | School improvement data | Until deleted by school + 30 days | Hard delete |
+| Product-scoped pupil/staff data | Until deleted by school, product deactivation, contract end or agreed retention trigger + 30 days | Hard delete or anonymisation where configured |
 | Backups | 90 days | Automatic expiry |
 | AI processing data | Real-time only (not stored) | N/A |
 
@@ -192,7 +195,7 @@ When using AI features, data may be processed in the United States. We ensure ad
 ## 8. Data Subject Requests
 
 ### For Individual Users:
-Email: dpo@schoolgle.co.uk  
+Email: dpo@schoolgle.co.uk
 In-app: Settings → Privacy → "My Data Rights"
 
 ### For Schools (Organisation-Level):
@@ -218,7 +221,11 @@ We do NOT use tracking or advertising cookies.
 
 ## 10. Children's Privacy
 
-Schoolgle is designed for use by school staff (adults). We do not knowingly collect data from children under 18. If pupil data is accidentally uploaded, schools must notify us immediately for deletion.
+Most Schoolgle users are school staff adults. Some subscribed products process pupil data provided by the school, and some pupil-facing features may be accessed by children where the school enables them.
+
+Where pupil data is processed, the school remains the data controller and Schoolgle acts as processor under the customer agreement, data processing agreement and product schedule. We apply data minimisation, role-based access control, audit logging and high-privacy defaults. Schools must make their pupil, parent and carer privacy notices available and ensure those notices explain how Schoolgle is used.
+
+Schoolgle must not be used to upload pupil data outside the subscribed product scope. If pupil data is uploaded accidentally or outside scope, schools should notify us for deletion.
 
 ---
 
@@ -244,6 +251,9 @@ If you have concerns about our data handling:
 
 ## 13. Contact Us
 
-**Schoolgle Ltd**  
-Email: dpo@schoolgle.co.uk  
-Website: schoolgle.co.uk  
+**Schoolgle Ltd**
+Email: dpo@schoolgle.co.uk
+Website: schoolgle.co.uk
+Company number: 16776489
+Registered office: 25-29 Sandy Way, Yeadon, Leeds, West Yorkshire, England, LS19 7EW
+ICO registration: ZC103199

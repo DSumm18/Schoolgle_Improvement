@@ -72,6 +72,8 @@ const categoryColors: Record<
 
 const pricingColors: Record<Tool["pricing"], string> = {
   Free: "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300",
+  "Free for schools":
+    "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300",
   "Free tier": "bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300",
   "Education free":
     "bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300",
@@ -84,10 +86,14 @@ export default function ToolCard({
 }: ToolCardProps) {
   const [faviconError, setFaviconError] = useState(false);
   const categoryStyle = categoryColors[tool.category];
-  const pricingStyle = pricingColors[tool.pricing];
+  const pricingStyle =
+    pricingColors[tool.pricing] ||
+    "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300";
+  const isExternal = /^https?:\/\//i.test(tool.url);
 
-  // Get favicon via Google S2 service
-  const faviconUrl = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(new URL(tool.url).hostname)}&sz=32`;
+  const faviconUrl = isExternal
+    ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(new URL(tool.url).hostname)}&sz=32`
+    : "";
 
   // Launch tool in workspace popup window
   const handleWorkspaceLaunch = () => {
@@ -101,7 +107,7 @@ export default function ToolCard({
       {/* Header */}
       <div className="flex items-start gap-4 mb-4">
         <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center overflow-hidden">
-          {!faviconError ? (
+          {faviconUrl && !faviconError ? (
             <Image
               src={faviconUrl}
               alt=""
@@ -176,8 +182,8 @@ export default function ToolCard({
       ) : (
         <a
           href={tool.url}
-          target="_blank"
-          rel="noopener noreferrer"
+          target={isExternal ? "_blank" : undefined}
+          rel={isExternal ? "noopener noreferrer" : undefined}
           className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors group-hover:bg-gray-900 group-hover:text-white dark:group-hover:bg-gray-100 dark:group-hover:text-gray-900"
         >
           Open tool

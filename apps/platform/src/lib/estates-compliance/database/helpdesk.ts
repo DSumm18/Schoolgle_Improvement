@@ -26,6 +26,8 @@ function sanitizeSearch(input: string): string {
 const UPDATABLE_TICKET_COLUMNS = [
   'title', 'description', 'category', 'priority', 'status',
   'assigned_to', 'assigned_to_name', 'resolution', 'resolution_summary',
+  'assigned_contractor_id', 'contractor_id', 'compliance_domain',
+  'statutory_check_id', 'custom_check_id',
   'resolved_at', 'resolved_by', 'actual_cost', 'estimated_cost',
   'due_date', 'completed_date', 'safeguarding_flag', 'risk_score',
   'notes', 'evidence_urls', 'resolution_notes',
@@ -51,6 +53,9 @@ export interface TicketFilters {
   assigned_to?: string;
   reported_by?: string;
   asset_id?: string;
+  compliance_domain?: string;
+  statutory_check_id?: string;
+  custom_check_id?: string;
   location?: string;
   search?: string;
 }
@@ -108,6 +113,15 @@ export async function getHelpdeskTickets(
   }
   if (filters?.asset_id) {
     query = query.eq('asset_id', filters.asset_id);
+  }
+  if (filters?.compliance_domain) {
+    query = query.eq('compliance_domain', filters.compliance_domain);
+  }
+  if (filters?.statutory_check_id) {
+    query = query.eq('statutory_check_id', filters.statutory_check_id);
+  }
+  if (filters?.custom_check_id) {
+    query = query.eq('custom_check_id', filters.custom_check_id);
   }
   if (filters?.location) {
     query = query.eq('location', filters.location);
@@ -204,10 +218,15 @@ export interface CreateTicketInput {
   status?: TicketStatus;
   location?: string;
   asset_id?: string;
+  compliance_domain?: string;
+  statutory_check_id?: string;
+  custom_check_id?: string;
   reported_by: string;
   reported_by_email?: string;
   reported_by_phone?: string;
   assigned_to?: string;
+  assigned_contractor_id?: string;
+  contractor_id?: string;
   estimated_cost?: number;
   actual_cost?: number;
   attachments?: string[];
@@ -231,6 +250,12 @@ export async function createHelpdeskTicket(input: CreateTicketInput & Record<str
     raised_by: input.reported_by,  // DB column is raised_by, not reported_by
     asset_id: input.asset_id || null,
     assigned_to: input.assigned_to || null,
+    assigned_contractor_id:
+      input.assigned_contractor_id || input.contractor_id || null,
+    contractor_id: input.contractor_id || null,
+    compliance_domain: input.compliance_domain || null,
+    statutory_check_id: input.statutory_check_id || null,
+    custom_check_id: input.custom_check_id || null,
     estimated_cost: input.estimated_cost || null,
     actual_cost: input.actual_cost || null,
     attachment_urls: input.attachments || [],

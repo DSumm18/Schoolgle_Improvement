@@ -27,7 +27,7 @@ export const GET = protectedRoute(async (auth, request) => {
   const { data: cycles } = await supabase
     .from("send_graduated_approach")
     .select("*")
-    .eq("pupil_id", id)
+    .eq("send_register_id", id)
     .eq("organization_id", organizationId)
     .order("cycle_number", { ascending: false });
 
@@ -35,7 +35,7 @@ export const GET = protectedRoute(async (auth, request) => {
   const { data: provisions } = await supabase
     .from("send_provision_map")
     .select("*")
-    .eq("pupil_id", id)
+    .eq("send_register_id", id)
     .eq("organization_id", organizationId)
     .order("created_at", { ascending: false });
 
@@ -43,9 +43,9 @@ export const GET = protectedRoute(async (auth, request) => {
   const { data: referrals } = await supabase
     .from("send_referrals")
     .select("*")
-    .eq("pupil_id", id)
+    .eq("send_register_id", id)
     .eq("organization_id", organizationId)
-    .order("referral_date", { ascending: false });
+    .order("referred_at", { ascending: false });
 
   return apiSuccess({
     ...pupil,
@@ -67,16 +67,17 @@ export const PUT = protectedRoute(async (auth, request) => {
 
   // PII fields explicitly excluded: first_name, last_name — never persisted
   const allowedFields = [
-    "pupil_code",
+    "pupil_id",
     "year_group",
     "sen_status",
     "primary_need",
     "secondary_need",
     "date_identified",
-    "ehcp_status",
+    "has_ehcp",
+    "ehcp_start_date",
+    "ehcp_annual_review_due",
     "class_name",
-    "key_worker",
-    "notes",
+    "senco_notes",
   ];
 
   const updates: Record<string, unknown> = {

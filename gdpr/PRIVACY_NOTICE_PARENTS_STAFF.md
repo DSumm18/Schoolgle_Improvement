@@ -162,4 +162,6 @@ If you are unhappy with how your data is handled:
 Email: dpo@schoolgle.co.uk
 Website: schoolgle.co.uk
 
-[REQUIRES HUMAN INPUT — insert registered company address]
+Company number: 16776489
+Registered office: 25-29 Sandy Way, Yeadon, Leeds, West Yorkshire, England, LS19 7EW
+ICO registration: ZC103199

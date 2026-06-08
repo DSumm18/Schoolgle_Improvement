@@ -9,7 +9,7 @@
  * Update cycle:
  * - KCSIE: September each year
  * - Academy Trust Handbook: September each year
- * - Working Together: irregular (last updated 2023)
+ * - Working Together: irregular (last updated 2026)
  * - School Information Regs: amended periodically
  * - SEND Code of Practice: 2015, awaiting replacement
  */
@@ -60,14 +60,14 @@ export const LEGISLATION_REGISTRY: LegislationEntry[] = [
   {
     key: "working_together",
     title: "Working Together to Safeguard Children",
-    currentVersion: "2023",
-    supersededVersions: ["2018", "2015", "2013", "2010", "2006"],
-    publishedDate: "2023-12-01",
+    currentVersion: "2026",
+    supersededVersions: ["2023", "2018", "2015", "2013", "2010", "2006"],
+    publishedDate: "2026-03-18",
     categories: ["safeguarding"],
     notes:
-      "Major revision in 2023 replacing the 2018 version. " +
-      "Key changes: multi-agency safeguarding arrangements, " +
-      "information sharing, contextual safeguarding.",
+      "Updated in 2026 with strengthened expectations on shared responsibility, " +
+      "anti-discriminatory practice, family help, information sharing, " +
+      "hidden harms and serious incident learning.",
   },
 
   // ─── School Information ──────────────────────────────────────────

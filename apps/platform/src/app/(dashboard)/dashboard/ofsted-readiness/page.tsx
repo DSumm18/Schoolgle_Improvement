@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   Shield,
   BookOpen,
@@ -23,6 +23,7 @@ import { OfstedIntelligenceBrief } from "@/components/ofsted";
 import SafeguardingPanel from "@/components/ofsted/SafeguardingPanel";
 import WebsiteComplianceTab from "@/components/ofsted/WebsiteComplianceTab";
 import OfstedFindingsPanel from "@/components/ofsted/OfstedFindingsPanel";
+import { AssessmentSignalBridgePanel } from "@/components/ofsted/AssessmentSignalBridgePanel";
 import DocumentPresenceChecker from "@/components/ofsted/DocumentPresenceChecker";
 import DriveConnectionPanel from "@/components/ofsted/DriveConnectionPanel";
 import EvidenceChecklist from "@/components/ofsted/EvidenceChecklist";
@@ -45,6 +46,8 @@ export default function OfstedReadinessPage() {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [assessments, setAssessments] = useState<FrameworkAssessment>({});
   const [loading, setLoading] = useState(false);
+  const [findingsRefreshKey, setFindingsRefreshKey] = useState(0);
+  const [evidenceRefreshKey, setEvidenceRefreshKey] = useState(0);
 
   const organizationId = activeOrganizationId || organization?.id || "";
 
@@ -229,17 +232,15 @@ export default function OfstedReadinessPage() {
 
       {/* Tab Content */}
       {!loading && (
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeTab}
-            role="tabpanel"
-            id={`tabpanel-ofsted-${activeTab}`}
-            aria-labelledby={`tab-ofsted-${activeTab}`}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-          >
+        <motion.div
+          key={activeTab}
+          role="tabpanel"
+          id={`tabpanel-ofsted-${activeTab}`}
+          aria-labelledby={`tab-ofsted-${activeTab}`}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+        >
             {activeTab === "overview" && (
               <div className="space-y-6">
                 <DriveConnectionPanel
@@ -247,7 +248,15 @@ export default function OfstedReadinessPage() {
                   onScanComplete={fetchAssessments}
                 />
                 <OfstedIntelligenceBrief organizationId={organizationId} />
+                <AssessmentSignalBridgePanel
+                  organizationId={organizationId}
+                  onFindingsCreated={() => {
+                    setFindingsRefreshKey((value) => value + 1);
+                    fetchAssessments();
+                  }}
+                />
                 <OfstedFindingsPanel
+                  key={`overview-findings-${findingsRefreshKey}`}
                   compact
                   organizationId={organizationId}
                 />
@@ -276,6 +285,11 @@ export default function OfstedReadinessPage() {
                   organizationId={organizationId}
                   accessToken={driveAccess.accessToken}
                   provider={driveAccess.isConnected ? "google" : ""}
+                  onResolved={() => setEvidenceRefreshKey((value) => value + 1)}
+                />
+                <EvidenceChecklist
+                  key={`evidence-checklist-${evidenceRefreshKey}`}
+                  organizationId={organizationId}
                 />
                 <OfstedEvidenceMatcher organizationId={organizationId} />
               </div>
@@ -286,8 +300,7 @@ export default function OfstedReadinessPage() {
             {activeTab === "safeguarding" && (
               <SafeguardingPanel organizationId={organizationId} />
             )}
-          </motion.div>
-        </AnimatePresence>
+        </motion.div>
       )}
     </div>
   );

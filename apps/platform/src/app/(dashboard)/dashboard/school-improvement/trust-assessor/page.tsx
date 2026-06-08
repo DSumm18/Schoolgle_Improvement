@@ -50,6 +50,7 @@ import type { CohortPassportData } from "@/components/trust-assessor/CohortPassp
 import { PupilCardGrid } from "@/components/trust-assessor/PupilCardGrid";
 import { SchoolTabTabs } from "@/components/trust-assessor/SchoolTabTabs";
 import type { SchoolTabId } from "@/components/trust-assessor/SchoolTabTabs";
+import { DataFoundationJourney } from "@/components/trust-assessor/DataFoundationJourney";
 import { EditModeProvider, EditableText } from "@/components/trust-assessor/EditableText";
 import { HideableCard } from "@/components/trust-assessor/HideableCard";
 import { useAuth } from "@/context/SupabaseAuthContext";
@@ -83,6 +84,7 @@ import {
   assessStaffing,
   NATIONAL_P_T_RATIO,
 } from "@/lib/trust-analysis/staffing-ratios";
+import { buildAssessmentJourneyLayers } from "@/lib/assessment-intelligence/spine-adapter";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -8281,6 +8283,29 @@ export default function TrustAssessorPage() {
         ? `${organisationLabelTitle} data capture`
         : "School submission";
   const showFullCapturePanel = !parsed;
+  const dataJourneyLayers = useMemo(
+    () =>
+      buildAssessmentJourneyLayers({
+        dfeConnected: Boolean(dfeData || publicDataReport || publicDataPrimaryReport),
+        captureCount:
+          Object.values(capturesByPeriod).filter(Boolean).length + (parsed ? 1 : 0),
+        pupilEventCount:
+          perPupilData?.assessmentIntelligence?.eventCount ??
+          perPupilData?.summary?.totalRecords ??
+          0,
+        ofstedFindingCount: 0,
+        demoMode: false,
+      }),
+    [
+      capturesByPeriod,
+      dfeData,
+      parsed,
+      perPupilData?.assessmentIntelligence?.eventCount,
+      perPupilData?.summary?.totalRecords,
+      publicDataPrimaryReport,
+      publicDataReport,
+    ],
+  );
 
   return (
     <AbbrevLookupContext.Provider value={tabSchoolLookup}>
@@ -8294,13 +8319,16 @@ export default function TrustAssessorPage() {
             </div>
             <div>
               <h1 className="text-xl font-semibold text-foreground">School Improvement Assessor</h1>
-              <p className="text-sm text-muted-foreground">Upload mid-year data. Cross-reference with DfE. No AI — pure numbers.</p>
+              <p className="text-sm text-muted-foreground">
+                Start with DfE data, add school captures, then unlock pupil-level evidence and Ofsted-ready actions.
+              </p>
             </div>
           </div>
         </div>
       </div>
 
       <div className="max-w-6xl mx-auto px-6 py-8 space-y-8">
+        <DataFoundationJourney layers={dataJourneyLayers} />
 
         {/* ─── Data captures for the active org ──────────────────────────── */}
         {/* Always visible at the top so school-level users (no spreadsheet yet) */}

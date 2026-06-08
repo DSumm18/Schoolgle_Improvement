@@ -25,9 +25,11 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import {
+  buildDefaultDestinationClasses,
   classBuilderCohortLabel,
   classBuilderYearLabel,
   formatClassBuilderCohortYearGroups,
+  type ClassBuilderDestinationClass,
 } from "@/lib/class-builder";
 import { classBuilderHowToGuide } from "@/lib/product-guides/class-builder";
 import {
@@ -57,6 +59,7 @@ type Session = {
   current_class: string | null;
   status: "draft" | "open" | "closed";
   target_class_count: number;
+  destination_structure?: ClassBuilderDestinationClass[] | null;
   survey_code: string;
   created_at: string;
   response_count?: number;
@@ -171,6 +174,9 @@ export default function ClassBuilderPage() {
   const [currentClass, setCurrentClass] = useState("");
   const [surveyScope, setSurveyScope] = useState<"year" | "class" | "school">("year");
   const [targetClassCount, setTargetClassCount] = useState("2");
+  const [classStructureMode, setClassStructureMode] = useState<
+    "balanced" | "mixed-transition"
+  >("mixed-transition");
   const [seatingLayout, setSeatingLayout] = useState("tables-4");
   const [selectedPassPupil, setSelectedPassPupil] = useState<Pupil | null>(null);
   const [selectedTable, setSelectedTable] = useState<TableDetail | null>(null);
@@ -252,16 +258,25 @@ export default function ClassBuilderPage() {
       return;
     }
     setBusy(true);
+    const storedYearGroup =
+      surveyScope === "class"
+        ? yearGroup
+        : formatClassBuilderCohortYearGroups(selectedYearGroups);
+    const destinationClasses =
+      classStructureMode === "mixed-transition" && surveyScope === "year"
+        ? buildDefaultDestinationClasses(storedYearGroup, Number(targetClassCount))
+        : buildBalancedDestinationClasses(Number(targetClassCount));
     const res = await fetch("/api/class-builder/sessions", {
       method: "POST",
       headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify({
         organizationId,
         title,
-        yearGroup: surveyScope === "class" ? yearGroup : formatClassBuilderCohortYearGroups(selectedYearGroups),
+        yearGroup: storedYearGroup,
         cohortYearGroups: surveyScope === "class" ? [yearGroup] : selectedYearGroups,
         currentClass: surveyScope === "class" ? currentClass.trim() || null : null,
         targetClassCount: Number(targetClassCount),
+        destinationClasses,
         status: "draft",
       }),
     });
@@ -676,6 +691,48 @@ export default function ClassBuilderPage() {
                   </SelectContent>
                 </Select>
               </div>
+              <div>
+                <Label>Class structure</Label>
+                <Select
+                  value={classStructureMode}
+                  onValueChange={(value) =>
+                    setClassStructureMode(value as "balanced" | "mixed-transition")
+                  }
+                  disabled={surveyScope === "class"}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="mixed-transition">
+                      Mixed-year transition
+                    </SelectItem>
+                    <SelectItem value="balanced">
+                      Same-year balanced classes
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <div className="mt-2 rounded-lg border border-sky-200 bg-sky-50 p-3 text-xs text-sky-900">
+                  {classStructureMode === "mixed-transition" && surveyScope === "year" ? (
+                    <>
+                      <p className="font-bold">Destination classes:</p>
+                      <p>
+                        {buildDefaultDestinationClasses(
+                          formatClassBuilderCohortYearGroups(selectedYearGroups),
+                          Number(targetClassCount),
+                        )
+                          .map((destinationClass) => destinationClass.name)
+                          .join(" · ")}
+                      </p>
+                    </>
+                  ) : (
+                    <p>
+                      Creates {targetClassCount} balanced classes from the selected
+                      cohort without year-specific destination rules.
+                    </p>
+                  )}
+                </div>
+              </div>
               <Button
                 onClick={createSession}
                 disabled={busy || surveyScope === "school" || (surveyScope === "class" && !currentClass)}
@@ -1014,21 +1071,35 @@ export default function ClassBuilderPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {detail.groups.slice(0, detail.session.target_class_count).map((group) => (
+                    {detail.groups.slice(0, detail.session.target_class_count).map((group) => {
+                      const groupPupils = group.pupil_ids
+                        .map((id) => pupilById.get(id))
+                        .filter((pupil): pupil is Pupil => Boolean(pupil));
+                      return (
                       <div key={group.id} className="rounded-lg border p-4">
-                        <h3 className="font-bold">{group.name}</h3>
-                        <p className="text-xs text-muted-foreground mb-3">
-                          {group.pupil_ids.length} pupils
-                        </p>
-                        <div className="space-y-1">
-                          {group.pupil_ids.map((id) => (
-                            <p key={id} className="text-sm">
-                              {pupilById.get(id) ? nameOf(pupilById.get(id)!) : id}
+                        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                          <div>
+                            <h3 className="font-bold">{group.name}</h3>
+                            <p className="text-xs text-muted-foreground">
+                              {group.pupil_ids.length} pupils
                             </p>
-                          ))}
+                          </div>
+                          <YearGroupBalance pupils={groupPupils} />
+                        </div>
+                        <div className="space-y-1">
+                          {group.pupil_ids.map((id) => {
+                            const pupil = pupilById.get(id);
+                            return (
+                              <div key={id} className="flex items-center gap-2 text-sm">
+                                {pupil && <YearGroupChip yearGroup={pupil.year_group} />}
+                                <span>{pupil ? nameOf(pupil) : id}</span>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
-                    ))}
+                    );
+                    })}
                   </div>
                   {latestExplanation && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
@@ -1255,6 +1326,19 @@ function buildYearGroupOptions(classes: ClassRecord[], pupils: Pupil[]) {
     }));
 }
 
+function buildBalancedDestinationClasses(
+  targetClassCount: number,
+): ClassBuilderDestinationClass[] {
+  const classCount = Math.min(
+    3,
+    Math.max(2, Math.floor(targetClassCount || 2)),
+  );
+  return Array.from({ length: classCount }, (_, index) => ({
+    name: `Class ${index + 1}`,
+    allowedYearGroups: [],
+  }));
+}
+
 function normaliseYearValue(value: string | null | undefined) {
   const raw = String(value || "").trim();
   if (!raw) return "";
@@ -1273,6 +1357,76 @@ function yearSortValue(value: string) {
 function yearLabel(value: string) {
   const normalised = normaliseYearValue(value);
   return normalised === "R" ? "Reception" : `Year ${normalised}`;
+}
+
+function yearChipLabel(value: string | null | undefined) {
+  const normalised = normaliseYearValue(value);
+  return normalised === "R" ? "YR" : normalised ? `Y${normalised}` : "Y?";
+}
+
+function yearChipClassName(value: string | null | undefined) {
+  const normalised = normaliseYearValue(value);
+  const classes: Record<string, string> = {
+    R: "border-pink-200 bg-pink-50 text-pink-800",
+    "1": "border-sky-200 bg-sky-50 text-sky-800",
+    "2": "border-emerald-200 bg-emerald-50 text-emerald-800",
+    "3": "border-amber-200 bg-amber-50 text-amber-800",
+    "4": "border-blue-200 bg-blue-50 text-blue-800",
+    "5": "border-purple-200 bg-purple-50 text-purple-800",
+    "6": "border-rose-200 bg-rose-50 text-rose-800",
+  };
+  return classes[normalised] ?? "border-slate-200 bg-slate-50 text-slate-700";
+}
+
+function YearGroupChip({
+  yearGroup,
+  compact = false,
+}: {
+  yearGroup: string | null | undefined;
+  compact?: boolean;
+}) {
+  return (
+    <span
+      className={`inline-flex shrink-0 items-center rounded-full border font-black ${
+        compact ? "px-1.5 py-0.5 text-[9px]" : "px-2 py-0.5 text-[10px]"
+      } ${yearChipClassName(yearGroup)}`}
+      title={`Current ${yearLabel(yearGroup || "")}`}
+    >
+      {yearChipLabel(yearGroup)}
+    </span>
+  );
+}
+
+function YearGroupBalance({
+  pupils,
+  compact = false,
+}: {
+  pupils: Pupil[];
+  compact?: boolean;
+}) {
+  const counts = pupils.reduce<Record<string, number>>((acc, pupil) => {
+    const year = normaliseYearValue(pupil.year_group) || "?";
+    acc[year] = (acc[year] ?? 0) + 1;
+    return acc;
+  }, {});
+
+  return (
+    <div className="flex flex-wrap gap-1">
+      {Object.entries(counts)
+        .sort(([a], [b]) => yearSortValue(a) - yearSortValue(b))
+        .map(([year, count]) => (
+          <span
+            key={year}
+            className={`inline-flex items-center rounded-full border font-black ${
+              compact ? "px-1.5 py-0.5 text-[9px]" : "px-2 py-1 text-[10px]"
+            } ${yearChipClassName(year)}`}
+            title={`${yearLabel(year)} pupils in this group`}
+          >
+            {yearChipLabel(year)} {count}
+          </span>
+        ))}
+    </div>
+  );
 }
 
 function primaryTeacherName(classRecord: ClassRecord) {
@@ -1613,6 +1767,7 @@ function SeatingPreview({
                                     <p className="max-w-[118px] truncate font-semibold">
                                       {seat.pupil ? shortNameOf(seat.pupil) : "Empty"}
                                     </p>
+                                    {seat.pupil && <YearGroupChip yearGroup={seat.pupil.year_group} compact />}
                                   </div>
                                 </div>
                                 <div className="flex shrink-0 items-center gap-1">
@@ -1781,6 +1936,7 @@ function TableBalance({ pupils }: { pupils: Pupil[] }) {
 
   return (
     <div className="mt-1 flex flex-wrap gap-1 text-[10px] font-semibold">
+      <YearGroupBalance pupils={pupils} compact />
       <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-slate-700">
         F {counts.F ?? 0}
       </span>
@@ -2071,7 +2227,10 @@ function TableDetailDialog({
                     <div className="flex min-w-0 items-center gap-3">
                       <CharacterBadge pupil={pupil} size="md" />
                       <div className="min-w-0">
-                        <p className="text-base font-black">{nameOf(pupil)}</p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-base font-black">{nameOf(pupil)}</p>
+                          <YearGroupChip yearGroup={pupil.year_group} />
+                        </div>
                         <p className="text-xs text-muted-foreground">
                           Current {pupil.current_class || "No class"} · Year{" "}
                           {pupil.year_group}

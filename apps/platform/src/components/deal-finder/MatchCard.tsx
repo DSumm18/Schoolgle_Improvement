@@ -15,6 +15,7 @@ const matchTypeLabels: Record<string, string> = {
   fingerprint: "Same Product",
   fuzzy_name: "Similar Product",
   brand_category: "Same Brand",
+  category_equivalence: "Same product type",
 };
 
 const equivalenceBadge: Record<string, { label: string; className: string }> = {
@@ -25,6 +26,9 @@ const equivalenceBadge: Record<string, { label: string; className: string }> = {
 
 function formatPackLabel(match: ProductMatch): string | null {
   if (!match.pack_quantity || match.pack_quantity <= 1) return null;
+  if (match.comparison_unit_label === "per ream") {
+    return `${match.pack_quantity} ream${match.pack_quantity === 1 ? "" : "s"}`;
+  }
   const unit = !match.pack_unit || match.pack_unit === "each" ? "pack" : match.pack_unit;
   return `${unit.charAt(0).toUpperCase() + unit.slice(1)} of ${match.pack_quantity}`;
 }
@@ -43,6 +47,56 @@ function getFreshnessStatus(dateString: string | null): { label: string; colorCl
   }
 }
 
+function isAmazonUrl(url: string | null): boolean {
+  if (!url) return false;
+  try {
+    return new URL(url).hostname.toLowerCase().includes("amazon.");
+  } catch {
+    return url.toLowerCase().includes("amazon.");
+  }
+}
+
+function formatSourceUrl(url: string | null): string | null {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    return `${parsed.hostname.replace(/^www\./, "")}${parsed.pathname}`;
+  } catch {
+    return url;
+  }
+}
+
+const establishedSchoolSuppliers = [
+  "ypo",
+  "espo",
+  "kcs",
+  "tts",
+  "gls",
+  "hope",
+  "findel",
+  "consortium",
+];
+
+function getSupplierFriction(match: ProductMatch): { label: string; className: string } {
+  const supplier = match.supplier_name.toLowerCase();
+  const source = match.source_url?.toLowerCase() || "";
+  const isSchoolSupplier = establishedSchoolSuppliers.some(
+    (name) => supplier.includes(name) || source.includes(name),
+  );
+
+  if (isSchoolSupplier) {
+    return {
+      label: "School-account friendly",
+      className: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    };
+  }
+
+  return {
+    label: "May need supplier setup",
+    className: "bg-amber-50 text-amber-700 border-amber-200",
+  };
+}
+
 export function MatchCard({ match, rank }: MatchCardProps) {
   const hasSaving = match.saving_gbp !== null && match.saving_gbp > 0;
   const isMoreExpensive = match.saving_gbp !== null && match.saving_gbp < 0;
@@ -51,13 +105,22 @@ export function MatchCard({ match, rank }: MatchCardProps) {
   const equiv = equivalenceBadge[match.equivalence_type];
   const [imgError, setImgError] = useState(false);
   const freshness = getFreshnessStatus(match.price_date);
+  const affiliateLink = isAmazonUrl(match.source_url);
+  const supplierFriction = getSupplierFriction(match);
+  const sourceLabel = formatSourceUrl(match.source_url);
+  const equivalentLabel =
+    match.source_comparison_quantity &&
+    match.equivalent_total_price !== null &&
+    match.comparison_unit_label !== "each"
+      ? `Compared as ${match.source_comparison_quantity} ${match.comparison_unit_label.replace(/^per\s+/, "")}${match.source_comparison_quantity === 1 ? "" : "s"}: £${match.equivalent_total_price.toFixed(2)}`
+      : null;
 
   return (
     <a
       href={match.source_url || "#"}
       target={match.source_url ? "_blank" : undefined}
       rel={match.source_url ? "noopener noreferrer" : undefined}
-      className={`block border rounded-xl p-4 transition-all duration-200 hover:shadow-md bg-white ${
+      className={`group block border rounded-xl p-4 transition-all duration-200 hover:shadow-md bg-white ${
         hasSaving ? "border-green-200 bg-green-50/30" : ""
       } ${match.is_best_value ? "ring-2 ring-amber-400" : rank === 0 && hasSaving ? "ring-2 ring-green-300" : ""}`}
     >
@@ -84,7 +147,17 @@ export function MatchCard({ match, rank }: MatchCardProps) {
 
         <div className="flex-1 min-w-0">
           <h4 className="font-medium text-gray-900 text-sm line-clamp-2 hover:text-cyan-600 transition-colors">{match.product_name}</h4>
+          {match.product_description && (
+            <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">
+              {match.product_description}
+            </p>
+          )}
           {packLabel && <p className="text-xs text-gray-500 mt-0.5">{packLabel}</p>}
+          {equivalentLabel && (
+            <p className="mt-1 inline-flex rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+              {equivalentLabel}
+            </p>
+          )}
           <div className="flex items-center gap-2 mt-0.5 flex-wrap">
             <p className="text-sm font-medium text-gray-700">{match.supplier_name}</p>
             {match.rating_value && (
@@ -98,6 +171,9 @@ export function MatchCard({ match, rank }: MatchCardProps) {
               <span className={`w-1.5 h-1.5 rounded-full ${freshness.dotClass}`} />
               {freshness.label}
             </div>
+            <div className={`rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${supplierFriction.className}`}>
+              {supplierFriction.label}
+            </div>
           </div>
           <div className="flex items-center gap-2 mt-1.5 flex-wrap">
             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs border border-gray-200 text-gray-600">
@@ -110,6 +186,11 @@ export function MatchCard({ match, rank }: MatchCardProps) {
             )}
             <span className="text-xs text-gray-400">{match.match_score}% match</span>
           </div>
+          {sourceLabel && (
+            <p className="mt-2 break-all rounded-lg bg-slate-50 px-2 py-1 text-[11px] text-slate-500">
+              Source: {sourceLabel}
+            </p>
+          )}
         </div>
 
         <div className="text-right flex-shrink-0">
@@ -125,7 +206,7 @@ export function MatchCard({ match, rank }: MatchCardProps) {
                 <div className="flex items-center gap-1 justify-end text-green-600">
                   <ArrowDown className="w-3 h-3" />
                   <span className="text-sm font-medium">
-                    Save £{match.unit_saving_gbp!.toFixed(2)}/item ({match.unit_saving_pct?.toFixed(0)}%)
+                    Save £{match.unit_saving_gbp!.toFixed(2)} {match.comparison_unit_label} ({match.unit_saving_pct?.toFixed(0)}%)
                   </span>
                 </div>
               ) : hasSaving ? (
@@ -139,7 +220,12 @@ export function MatchCard({ match, rank }: MatchCardProps) {
               {isMoreExpensive && (
                 <div className="flex items-center gap-1 justify-end text-red-500">
                   <ArrowUp className="w-3 h-3" />
-                  <span className="text-xs">£{Math.abs(match.saving_gbp!).toFixed(2)} more</span>
+                  <span className="text-xs">
+                    £{Math.abs(match.saving_gbp!).toFixed(2)} more
+                    {match.equivalent_total_price !== null && match.equivalent_quantity
+                      ? " for same quantity"
+                      : ""}
+                  </span>
                 </div>
               )}
             </>
@@ -153,6 +239,11 @@ export function MatchCard({ match, rank }: MatchCardProps) {
             {match.source_url && (
               <span className="text-xs text-cyan-500 font-medium flex items-center gap-1 group-hover:underline">
                 View Deal <ExternalLink className="w-3 h-3" />
+              </span>
+            )}
+            {affiliateLink && (
+              <span className="block text-[10px] font-medium text-slate-400">
+                Affiliate link · no extra cost
               </span>
             )}
           </div>

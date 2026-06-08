@@ -4,12 +4,15 @@
  * Helper functions for querying estates_contractors and estates_contracts tables
  */
 
-import { supabase } from "@/lib/supabase";
+import { createServiceRoleClient } from "@/lib/supabase-server";
 import type {
   Contractor,
+  ContractorInput,
   Contract,
   PaginatedResponse,
 } from "@/types/estates-compliance";
+
+const supabase = createServiceRoleClient();
 
 // ============================================================================
 // CONTRACTORS

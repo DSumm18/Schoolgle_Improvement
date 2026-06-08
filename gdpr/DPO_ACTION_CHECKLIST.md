@@ -7,18 +7,17 @@ This is your personal to-do list. Everything technical has been implemented. The
 
 ---
 
-## 1. ICO Registration (Do First)
+## 1. ICO Registration Details (Do First)
 
-- [ ] **Pay ICO data protection fee** â€” Â£40/year for micro organisations
-  - Go to: https://ico.org.uk/for-organisations/data-protection-fee/
-  - Select: "Data controller" â†’ answer the questions about Schoolgle
-  - Pay online (card or direct debit)
-  - You'll get a registration number (e.g., ZA123456) â€” add it to the privacy policy footer
+- [ ] **Update ICO registration details after registered office change**
+  - Registration number: ZC103199
+  - Go to: https://ico.org.uk/for-organisations/data-protection-fee/change/
+  - Update organisation address to: 25-29 Sandy Way, Yeadon, Leeds, West Yorkshire, England, LS19 7EW
+  - Check nominated contact address, DPO details, trading names and payment tier while in the account
 
-- [ ] **Register your DPO with the ICO**
-  - After paying the fee, log into your ICO account
-  - Add DPO details: your name, dpo@schoolgle.co.uk
-  - This is a legal requirement under Article 37(7)
+- [ ] **Check DPO details on the ICO account**
+  - Confirm DPO/contact email is dpo@schoolgle.co.uk or the intended monitored mailbox
+  - Confirm the postal contact address is the new registered office or intended correspondence address
 
 ---
 
@@ -137,8 +136,8 @@ A DPO or ICO auditor will typically check:
 
 | Check                                 | Status                                                 |
 | ------------------------------------- | ------------------------------------------------------ |
-| ICO registration and fee paid         | **YOU NEED TO DO THIS**                                |
-| DPO appointed and registered          | **YOU NEED TO DO THIS**                                |
+| ICO registration and fee paid         | Registration known: ZC103199; update address/details   |
+| DPO appointed and registered          | Confirm/update details in ICO account                  |
 | Privacy policy publicly accessible    | âœ… `/privacy`                                          |
 | Cookie consent mechanism              | âœ… Banner with essential/analytics choice              |
 | Article 30 ROPA (processing register) | âœ… `/gdpr/DATA_PROCESSING_REGISTER.md`                 |
@@ -150,5 +149,4 @@ A DPO or ICO auditor will typically check:
 | Security measures                     | âœ… Auth on all routes, PII masking, encryption at rest |
 
 **Bottom line:** The technical and documentation work is done. You need to pay the ICO fee, sign ~6 DPAs online, and sign off the DPIAs. That's a couple of hours of work.
-
 

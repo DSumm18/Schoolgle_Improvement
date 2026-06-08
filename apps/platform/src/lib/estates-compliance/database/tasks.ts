@@ -21,6 +21,9 @@ export interface TaskFilters {
   priority?: TaskPriority;
   domain?: ComplianceDomain;
   assigned_to?: string;
+  asset_id?: string;
+  statutory_check_id?: string;
+  custom_check_id?: string;
   due_before?: Date;
   due_after?: Date;
   overdue_only?: boolean;
@@ -74,6 +77,15 @@ export async function getComplianceTasks(
   }
   if (filters?.assigned_to) {
     query = query.eq("assigned_to", filters.assigned_to);
+  }
+  if (filters?.asset_id) {
+    query = query.eq("asset_id", filters.asset_id);
+  }
+  if (filters?.statutory_check_id) {
+    query = query.eq("statutory_check_id", filters.statutory_check_id);
+  }
+  if (filters?.custom_check_id) {
+    query = query.eq("custom_check_id", filters.custom_check_id);
   }
   if (filters?.due_before) {
     query = query.lte("due_by", filters.due_before.toISOString());
@@ -162,6 +174,8 @@ export interface CreateTaskInput {
   assigned_to?: string;
   asset_id?: string;
   contractor_id?: string;
+  statutory_check_id?: string;
+  custom_check_id?: string;
   recurring?: boolean;
   recurrence_pattern?: RecurrencePattern;
   recurrence_interval?: number;
@@ -206,6 +220,12 @@ export function buildTaskInsertRow(input: CreateTaskInput) {
     assigned_to: input.assigned_to || null,
     assigned_contractor_id: input.contractor_id || null,
     asset_id: input.asset_id || null,
+    statutory_check_id:
+      input.statutory_check_id ||
+      (typeof (input as any).metadata?.statutory_check_id === "string"
+        ? (input as any).metadata.statutory_check_id
+        : null),
+    custom_check_id: input.custom_check_id || null,
     checklist: input.checklist_items || [],
     status: input.status || "pending",
     ai_insights:
@@ -227,6 +247,12 @@ export function buildTaskUpdateRow(updates: UpdateTaskInput) {
   if (updates.due_date !== undefined) row.due_by = toDateOnly(updates.due_date);
   if (updates.assigned_to !== undefined) row.assigned_to = updates.assigned_to;
   if (updates.asset_id !== undefined) row.asset_id = updates.asset_id;
+  if (updates.statutory_check_id !== undefined) {
+    row.statutory_check_id = updates.statutory_check_id;
+  }
+  if (updates.custom_check_id !== undefined) {
+    row.custom_check_id = updates.custom_check_id;
+  }
   if (updates.contractor_id !== undefined) {
     row.assigned_contractor_id = updates.contractor_id;
     row.task_source = updates.contractor_id ? "external" : "internal";

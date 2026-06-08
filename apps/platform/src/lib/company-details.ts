@@ -3,7 +3,7 @@ export const schoolgleCompanyDetails = {
   tradingName: "Schoolgle",
   companyNumber: "16776489",
   registeredJurisdiction: "England and Wales",
-  registeredOffice: "46 Hawthorn Drive, Yeadon, Leeds, England, LS19 7XB",
+  registeredOffice: "25-29 Sandy Way, Yeadon, Leeds, West Yorkshire, England, LS19 7EW",
   icoRegistration: "ZC103199",
   adminEmail: "admin@schoolgle.co.uk",
   privacyEmail: "privacy@schoolgle.co.uk",

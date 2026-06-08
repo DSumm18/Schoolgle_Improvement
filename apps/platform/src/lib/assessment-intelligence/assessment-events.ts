@@ -71,6 +71,11 @@ export function buildAssessmentSourceLabel(input: AssessmentSourceLabelInput): s
     return `Source: DfE validated assessment data, ${input.assessmentPeriod} ${yearLabel}`;
   }
 
+  if (input.sourceKind === "ctf_import") {
+    const tierLabel = input.validationTier.replaceAll("_", " ");
+    return `Source: CTF import, ${input.assessmentPeriod} ${yearLabel}, ${tierLabel}`;
+  }
+
   const kindLabel = input.sourceKind.replaceAll("_", " ");
   const tierLabel = input.validationTier.replaceAll("_", " ");
   return `Source: ${kindLabel}, ${input.assessmentPeriod} ${yearLabel}, ${tierLabel}`;

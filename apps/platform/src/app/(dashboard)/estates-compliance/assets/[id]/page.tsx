@@ -906,6 +906,62 @@ export default function AssetDetailPage() {
                   </div>
                 </div>
               )}
+
+              {/* Maintenance contractor */}
+              {asset.maintenance_contact && (
+                <div className="py-2 space-y-1.5">
+                  <span className="text-sm text-muted-foreground block">
+                    Maintained / supported by
+                  </span>
+                  <div className="pl-0 space-y-1">
+                    <p className="text-sm font-semibold">
+                      {asset.maintenance_contact.company_name}
+                    </p>
+                    {asset.maintenance_contact.contact_name && (
+                      <p className="text-sm text-muted-foreground">
+                        {asset.maintenance_contact.contact_name}
+                      </p>
+                    )}
+                    {asset.maintenance_contact.email && (
+                      <a
+                        href={`mailto:${asset.maintenance_contact.email}`}
+                        className="flex items-center gap-1.5 text-sm text-blue-600 hover:underline"
+                      >
+                        <Mail className="w-3.5 h-3.5" />
+                        {asset.maintenance_contact.email}
+                      </a>
+                    )}
+                    {asset.maintenance_contact.phone && (
+                      <a
+                        href={`tel:${asset.maintenance_contact.phone}`}
+                        className="flex items-center gap-1.5 text-sm text-blue-600 hover:underline"
+                      >
+                        <Phone className="w-3.5 h-3.5" />
+                        {asset.maintenance_contact.phone}
+                      </a>
+                    )}
+                    {asset.maintenance_contact.mobile && (
+                      <a
+                        href={`tel:${asset.maintenance_contact.mobile}`}
+                        className="flex items-center gap-1.5 text-sm text-blue-600 hover:underline"
+                      >
+                        <Phone className="w-3.5 h-3.5" />
+                        {asset.maintenance_contact.mobile}{" "}
+                        <span className="text-xs text-muted-foreground">(mobile)</span>
+                      </a>
+                    )}
+                    {asset.maintained_by_contractor_id && (
+                      <Link
+                        href={`/estates-compliance/contractors/${asset.maintained_by_contractor_id}`}
+                        className="flex items-center gap-1 text-sm text-blue-600 hover:underline mt-1"
+                      >
+                        View maintenance contractor
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -1203,9 +1259,13 @@ export default function AssetDetailPage() {
                 </>
               )}
 
-              <Button variant="outline" size="sm">
-                <Plus className="w-3.5 h-3.5 mr-1.5" />
-                Create ticket for this asset
+              <Button asChild variant="outline" size="sm">
+                <Link
+                  href={`/estates-compliance/helpdesk/new?assetId=${asset.id}&title=${encodeURIComponent(`${asset.name} issue`)}&location=${encodeURIComponent([asset.building, asset.room].filter(Boolean).join(" / "))}`}
+                >
+                  <Plus className="w-3.5 h-3.5 mr-1.5" />
+                  Create ticket for this asset
+                </Link>
               </Button>
             </CardContent>
           </Card>

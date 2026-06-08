@@ -9,13 +9,13 @@ interface LoadingStepsProps {
 const steps = [
   "Fetching product page...",
   "Extracting product details...",
-  "Searching 20+ suppliers...",
+  "Checking trusted supplier matches...",
   "Calculating savings...",
 ];
 
 export function LoadingSteps({ currentStep }: LoadingStepsProps) {
   return (
-    <div className="max-w-md mx-auto py-12">
+    <div className="mx-auto max-w-md py-8">
       <div className="space-y-4">
         {steps.map((step, index) => {
           const isComplete = index < currentStep;
@@ -30,15 +30,15 @@ export function LoadingSteps({ currentStep }: LoadingStepsProps) {
               }`}
             >
               {isComplete ? (
-                <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
               ) : isCurrent ? (
-                <Loader2 className="w-5 h-5 text-cyan-500 animate-spin flex-shrink-0" />
+                <Loader2 className="w-5 h-5 text-emerald-600 animate-spin flex-shrink-0" />
               ) : (
-                <div className="w-5 h-5 rounded-full border-2 border-gray-300 flex-shrink-0" />
+                <div className="w-5 h-5 rounded-full border-2 border-slate-300 flex-shrink-0" />
               )}
               <span
                 className={`text-sm ${
-                  isCurrent ? "text-gray-900 font-medium" : "text-gray-500"
+                  isCurrent ? "text-slate-950 font-semibold" : "text-slate-500"
                 }`}
               >
                 {step}

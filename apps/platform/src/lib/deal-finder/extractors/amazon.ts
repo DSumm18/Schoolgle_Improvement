@@ -1,6 +1,7 @@
 import axios from "axios";
 import * as cheerio from "cheerio";
 import { BaseExtractor, type ExtractedProduct } from "./base";
+import { applyAffiliateParameters } from "../affiliate-links";
 
 export class AmazonExtractor extends BaseExtractor {
   readonly key = "amazon";
@@ -68,11 +69,6 @@ export class AmazonExtractor extends BaseExtractor {
       url,
     );
 
-    const associateTag = process.env.AMAZON_ASSOCIATE_TAG;
-    const finalUrl = associateTag 
-      ? (url.includes("?") ? `${url}&tag=${associateTag}` : `${url}?tag=${associateTag}`)
-      : url;
-
     return {
       name,
       price,
@@ -80,7 +76,7 @@ export class AmazonExtractor extends BaseExtractor {
       sku: sku || undefined,
       brand: brand || undefined,
       image_url: image,
-      source_url: finalUrl,
+      source_url: applyAffiliateParameters(url),
       in_stock: !$("#outOfStock").length,
     };
   }

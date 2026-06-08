@@ -16,8 +16,8 @@
 | **Organisation**     | Schoolgle Ltd               |
 | **Role**             | Data Processor (Article 28) |
 | **DPO Contact**      | dpo@schoolgle.co.uk         |
-| **ICO Registration** | [REQUIRES HUMAN INPUT]      |
-| **Address**          | [REQUIRES HUMAN INPUT]      |
+| **ICO Registration** | ZC103199                    |
+| **Address**          | 25-29 Sandy Way, Yeadon, Leeds, West Yorkshire, England, LS19 7EW |
 
 ---
 

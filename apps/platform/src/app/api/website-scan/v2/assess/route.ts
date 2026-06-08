@@ -75,7 +75,7 @@ export const POST = protectedRoute(async (auth, request) => {
 
     return apiSuccess({
       ...result,
-      message: `Assessment complete: ${result.compliantCount}/${result.totalRequirements} compliant (${result.overallComplianceScore}%) in ${(result.durationMs / 1000).toFixed(1)}s`,
+      message: `Assessment complete: ${result.compliantCount}/${result.totalRequirements} compliant (${result.overallComplianceScore}%) in ${(result.durationMs / 1000).toFixed(1)}s. Synced ${result.ofstedDocumentChecksSynced} Ofsted evidence checks.`,
     });
   } catch (error) {
     console.error("[Website Scan V2 Assess] Error:", error);

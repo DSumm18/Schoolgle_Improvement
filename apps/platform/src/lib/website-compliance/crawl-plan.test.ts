@@ -3,6 +3,7 @@ import type { CrawledPage } from "../website-crawler";
 import {
   buildAllowedExternalDomains,
   buildPublicEvidenceSeeds,
+  buildSchoolEvidenceSeedUrls,
   buildTrustSeedUrls,
   classifyEvidenceLink,
   normaliseHostname,
@@ -35,10 +36,36 @@ describe("crawl-plan", () => {
   it("builds targeted trust seed URLs including PAYMAT policy paths", () => {
     const seeds = buildTrustSeedUrls("https://paymat.org/");
 
-    expect(seeds).toContain("https://paymat.org/governance/policies-and-statements");
-    expect(seeds).toContain("https://paymat.org/governance/governance-structure");
+    expect(seeds).toContain(
+      "https://paymat.org/governance/policies-and-statements",
+    );
+    expect(seeds).toContain(
+      "https://paymat.org/governance/governance-structure",
+    );
     expect(seeds).not.toContain("https://paymat.org/policies");
     expect(new Set(seeds).size).toBe(seeds.length);
+  });
+
+  it("always seeds statutory school pages before sitemap ordering can exclude them", () => {
+    expect(buildSchoolEvidenceSeedUrls("https://grovehouseprimary.co.uk/")).toEqual(
+      expect.arrayContaining([
+        "https://grovehouseprimary.co.uk/policies-and-documents",
+        "https://grovehouseprimary.co.uk/key-information",
+        "https://grovehouseprimary.co.uk/send",
+        "https://grovehouseprimary.co.uk/safeguarding",
+      ]),
+    );
+  });
+
+  it("seeds curriculum subject pages because school sites often omit them from sitemaps", () => {
+    expect(buildSchoolEvidenceSeedUrls("https://grovehouseprimary.co.uk/")).toEqual(
+      expect.arrayContaining([
+        "https://grovehouseprimary.co.uk/the-grove-house-curriculum",
+        "https://grovehouseprimary.co.uk/reading",
+        "https://grovehouseprimary.co.uk/learning/phonics",
+        "https://grovehouseprimary.co.uk/learning-maths",
+      ]),
+    );
   });
 
   it("classifies public evidence links without treating analytics or socials as evidence", () => {

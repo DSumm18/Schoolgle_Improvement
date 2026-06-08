@@ -36,7 +36,24 @@ import {
   TaskType,
   TaskPriority,
   SiamsStrandId,
+  Department,
 } from "@/lib/tasks";
+
+interface TaskStaffOption {
+  id: string;
+  display_name?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  email?: string | null;
+  job_title?: string | null;
+  role_category?: string | null;
+  is_active?: boolean;
+}
+
+interface TaskTeamOption {
+  id: string;
+  name: string;
+}
 
 interface TaskModalProps {
   isOpen: boolean;
@@ -95,6 +112,23 @@ const SIAMS_STRANDS: { value: SiamsStrandId; label: string }[] = [
   { value: "re", label: "Religious Education" },
 ];
 
+function getTaskStaffDisplayName(staff: TaskStaffOption) {
+  const explicitName = staff.display_name?.trim();
+  if (explicitName) return explicitName;
+
+  const joinedName = [staff.first_name, staff.last_name]
+    .map((part) => part?.trim())
+    .filter(Boolean)
+    .join(" ");
+
+  const role = [staff.job_title, staff.role_category]
+    .filter(Boolean)
+    .join(" · ");
+
+  const name = joinedName || staff.email || "Unnamed staff member";
+  return role ? `${name} — ${role}` : name;
+}
+
 export default function TaskModal({
   isOpen,
   onClose,
@@ -117,8 +151,8 @@ export default function TaskModal({
   } as ActionForm);
 
   const [checklistItems, setChecklistItems] = useState<string[]>([""]);
-  const [selectedUsers, setSelectedUsers] = useState<any[]>([]);
-  const [selectedTeams, setSelectedTeams] = useState<any[]>([]);
+  const [selectedUsers, setSelectedUsers] = useState<TaskStaffOption[]>([]);
+  const [selectedTeams, setSelectedTeams] = useState<TaskTeamOption[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isEditing = !!initialData;
@@ -141,7 +175,9 @@ export default function TaskModal({
           checklist: initialData.checklist || [],
         });
         setChecklistItems(
-          (initialData.checklist || []).map((c: any) => c.title || c),
+          (initialData.checklist || []).map((c) =>
+            typeof c === "string" ? c : c.title || "",
+          ),
         );
       } else {
         setFormData({
@@ -169,13 +205,17 @@ export default function TaskModal({
   const fetchUsersAndTeams = async () => {
     try {
       const [usersRes, teamsRes] = await Promise.all([
-        fetch(`/api/governance/governors?organizationId=${organizationId}`),
+        fetch(`/api/staff?source=db&organizationId=${organizationId}`),
         fetch(`/api/teams?organizationId=${organizationId}`),
       ]);
 
       if (usersRes.ok) {
         const data = await usersRes.json();
-        setSelectedUsers(data.governors || []);
+        setSelectedUsers(
+          ((data.staff || []) as TaskStaffOption[]).filter(
+            (staff) => staff.is_active,
+          ),
+        );
       }
 
       if (teamsRes.ok) {
@@ -449,7 +489,7 @@ export default function TaskModal({
                 <SelectContent>
                   {selectedUsers.map((user) => (
                     <SelectItem key={user.id} value={user.id}>
-                      {user.full_name}
+                      {getTaskStaffDisplayName(user)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -482,7 +522,7 @@ export default function TaskModal({
               <Select
                 value={formData.department || ""}
                 onValueChange={(value) =>
-                  setFormData({ ...formData, department: value as any })
+                  setFormData({ ...formData, department: value as Department })
                 }
               >
                 <SelectTrigger id="department">

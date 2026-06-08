@@ -1,6 +1,13 @@
 import { NextRequest } from "next/server";
 import { apiError, apiSuccess, protectedRoute } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
+import {
+  buildAccessibleOrganizationList,
+  isParentOrganization,
+  type AccessibleOrganization,
+  type ChildOrganization,
+} from "@/lib/organizations/accessible-organizations";
+import { filterOrganizationsForRuntimeAccess } from "@/lib/environment-safety";
 
 type OrganizationRow = {
   id: string;
@@ -15,8 +22,8 @@ type OrganizationRow = {
 };
 
 type OrganizationMembershipRow = {
+  organization_id: string;
   role: string | null;
-  organization: OrganizationRow | OrganizationRow[] | null;
 };
 
 export const GET = protectedRoute(
@@ -42,69 +49,71 @@ export const GET = protectedRoute(
     }
 
     if (superAdmin) {
-      const { data: allOrganizations, error: allOrganizationsError } = await supabase
+      let query = supabase
         .from("organizations")
         .select("id, name, organization_type, parent_organization_id, urn, settings")
         .order("name", { ascending: true });
 
+      if (targetOrganizationId) {
+        query = query.eq("id", targetOrganizationId);
+      }
+
+      const { data: allOrganizations, error: allOrganizationsError } = await query;
+
       if (allOrganizationsError) return apiError(allOrganizationsError.message, 500);
 
-      let organizations = (allOrganizations ?? []).map((organization) => ({
-        ...(organization as OrganizationRow),
-        role: "admin",
-      }));
-
-      if (targetOrganizationId) {
-        organizations = organizations.filter((org) => org.id === targetOrganizationId);
-      }
+      const organizations = filterOrganizationsForRuntimeAccess(
+        (allOrganizations ?? []).map((organization) => ({
+          ...(organization as OrganizationRow),
+          role: "admin",
+        })),
+      );
 
       return apiSuccess({ organizations });
     }
 
-    const { data, error } = await supabase
+    const { data: memberships, error: membershipError } = await supabase
       .from("organization_members")
-      .select(
-        `
-        role,
-        organization_id,
-        organization:organizations (
-          id,
-          name,
-          organization_type,
-          parent_organization_id,
-          urn,
-          settings
-        )
-      `,
-      )
+      .select("organization_id, role")
       .eq("user_id", auth.userId)
       .order("created_at", { ascending: true });
 
-    if (error) return apiError(error.message, 500);
+    if (membershipError) return apiError(membershipError.message, 500);
 
-    const directMemberships = ((data ?? []) as OrganizationMembershipRow[])
-      .map((membership) => {
-        const organization = Array.isArray(membership.organization)
-          ? membership.organization[0]
-          : membership.organization;
-
-        if (!organization) return null;
-
-        return {
-          ...(organization as OrganizationRow),
-          role: membership.role || "viewer",
-        };
-      })
-      .filter(Boolean) as Array<OrganizationRow & { role: string }>;
-
-    const trustMemberships = directMemberships.filter(
-      (org) => org.organization_type === "trust" || org.organization_type === "local_authority",
+    const membershipRows = (memberships ?? []) as OrganizationMembershipRow[];
+    const roleByOrganizationId = new Map(
+      membershipRows.map((membership) => [
+        membership.organization_id,
+        membership.role || "viewer",
+      ]),
+    );
+    const directOrganizationIds = membershipRows.map(
+      (membership) => membership.organization_id,
     );
 
-    let childOrganizations: Array<OrganizationRow & { role: string }> = [];
+    let directMemberships: AccessibleOrganization[] = [];
+    if (directOrganizationIds.length > 0) {
+      const { data: directOrganizations, error: directOrganizationsError } =
+        await supabase
+          .from("organizations")
+          .select("id, name, organization_type, parent_organization_id, urn, settings")
+          .in("id", directOrganizationIds);
+
+      if (directOrganizationsError) {
+        return apiError(directOrganizationsError.message, 500);
+      }
+
+      directMemberships = (directOrganizations ?? []).map((organization) => ({
+        ...(organization as OrganizationRow),
+        role: roleByOrganizationId.get(organization.id) || "viewer",
+      }));
+    }
+
+    const trustMemberships = directMemberships.filter(isParentOrganization);
+
+    let childOrganizations: ChildOrganization[] = [];
     if (trustMemberships.length > 0) {
       const trustIds = trustMemberships.map((org) => org.id);
-      const roleByTrustId = new Map(trustMemberships.map((org) => [org.id, org.role]));
 
       const { data: children, error: childError } = await supabase
         .from("organizations")
@@ -114,26 +123,16 @@ export const GET = protectedRoute(
 
       if (childError) return apiError(childError.message, 500);
 
-      childOrganizations = (children ?? []).map((child) => ({
-        ...(child as OrganizationRow),
-        role: roleByTrustId.get(child.parent_organization_id ?? "") || "viewer",
-      }));
+      childOrganizations = (children ?? []) as ChildOrganization[];
     }
 
-    const byId = new Map<string, OrganizationRow & { role: string }>();
-    for (const org of [...directMemberships, ...childOrganizations]) {
-      byId.set(org.id, org);
-    }
-
-    let organizations = Array.from(byId.values()).sort((a, b) => {
-      if (a.parent_organization_id === b.id) return 1;
-      if (b.parent_organization_id === a.id) return -1;
-      return a.name.localeCompare(b.name);
-    });
-
-    if (targetOrganizationId) {
-      organizations = organizations.filter((org) => org.id === targetOrganizationId);
-    }
+    const organizations = filterOrganizationsForRuntimeAccess(
+      buildAccessibleOrganizationList({
+        directOrganizations: directMemberships,
+        childOrganizations,
+        targetOrganizationId,
+      }),
+    );
 
     return apiSuccess({ organizations });
   },

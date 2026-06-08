@@ -16,10 +16,13 @@ import {
   CalendarCheck,
   Heart,
   Crown,
+  ExternalLink,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { clientAuthFetch } from "@/lib/auth/client-auth-fetch";
+import { supabase } from "@/lib/supabase";
 
 // --- Types ---
 
@@ -28,12 +31,28 @@ interface DocumentFound {
   path: string;
   area: string;
   matched_to: string;
+  source?: "website" | "website_document" | "drive";
+  source_label?: string;
+  evidence_url?: string | null;
+  found_on_url?: string | null;
+  readiness_status?:
+    | "ready"
+    | "needs_review"
+    | "needs_publication"
+    | "present_unassessed";
+  website_status?: string | null;
+  compliance_score?: number | null;
+  notes?: string[];
+  action_required?: boolean;
 }
 
 interface DocumentMissing {
   expected_name: string;
   area: string;
   priority: string;
+  reason?: string;
+  website_expected?: boolean;
+  suggested_action?: string;
 }
 
 interface AreaCoverage {
@@ -48,6 +67,15 @@ interface CheckResult {
   coverage_by_area: Record<string, AreaCoverage>;
   overall_coverage: number;
   total_files_scanned: number;
+  total_website_sources_scanned?: number;
+  action_required_count?: number;
+  saved_document_checks_count?: number;
+  website_scan?: {
+    status: string;
+    website_url: string;
+    trust_url: string | null;
+    assessed_at: string | null;
+  } | null;
 }
 
 interface DocumentPresenceCheckerProps {
@@ -55,6 +83,7 @@ interface DocumentPresenceCheckerProps {
   accessToken: string | null;
   provider: string;
   folderId?: string;
+  onResolved?: () => void;
 }
 
 // --- Area metadata ---
@@ -81,6 +110,32 @@ const PRIORITY_BADGE: Record<
   recommended: { label: "Recommended", variant: "secondary" },
 };
 
+const READINESS_BADGE: Record<
+  NonNullable<DocumentFound["readiness_status"]>,
+  { label: string; className: string }
+> = {
+  ready: {
+    label: "Ready",
+    className:
+      "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200",
+  },
+  needs_review: {
+    label: "Review",
+    className:
+      "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200",
+  },
+  needs_publication: {
+    label: "Publish/link",
+    className:
+      "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-200",
+  },
+  present_unassessed: {
+    label: "Found",
+    className:
+      "border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200",
+  },
+};
+
 // --- Component ---
 
 export default function DocumentPresenceChecker({
@@ -88,6 +143,7 @@ export default function DocumentPresenceChecker({
   accessToken,
   provider,
   folderId,
+  onResolved,
 }: DocumentPresenceCheckerProps) {
   const [result, setResult] = useState<CheckResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -95,32 +151,22 @@ export default function DocumentPresenceChecker({
   const [expandedArea, setExpandedArea] = useState<string | null>(null);
 
   const runCheck = useCallback(async () => {
-    if (!accessToken) {
-      setError(
-        "No access token available. Please connect your cloud storage first.",
-      );
-      return;
-    }
-
-    if (!folderId) {
-      setError("No folder selected. Please select a root folder to scan.");
-      return;
-    }
-
     setLoading(true);
     setError(null);
     setResult(null);
 
     try {
-      const response = await fetch("/api/ofsted/document-check", {
+      const body: Record<string, string> = { organizationId };
+      if (accessToken && folderId) {
+        body.provider = provider;
+        body.access_token = accessToken;
+        body.folder_id = folderId;
+      }
+
+      const response = await clientAuthFetch(supabase, "/api/ofsted/document-check", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          organizationId: organizationId,
-          provider,
-          access_token: accessToken,
-          folder_id: folderId,
-        }),
+        body: JSON.stringify(body),
       });
 
       if (!response.ok) {
@@ -132,6 +178,7 @@ export default function DocumentPresenceChecker({
 
       const data: CheckResult = await response.json();
       setResult(data);
+      onResolved?.();
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "An unexpected error occurred",
@@ -139,7 +186,7 @@ export default function DocumentPresenceChecker({
     } finally {
       setLoading(false);
     }
-  }, [organizationId, accessToken, provider, folderId]);
+  }, [organizationId, accessToken, provider, folderId, onResolved]);
 
   const toggleArea = (area: string) => {
     setExpandedArea((prev) => (prev === area ? null : area));
@@ -163,23 +210,24 @@ export default function DocumentPresenceChecker({
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
-            Document Presence Checker
+            Website Evidence Sync
           </h3>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Scan your connected cloud storage to verify expected Ofsted
-            documents are in place.
+            Website scans automatically refresh Ofsted evidence checks. Use
+            refresh only if you have changed cloud evidence or want to re-run
+            the latest website evidence mapping.
           </p>
         </div>
-        <Button onClick={runCheck} disabled={loading || !accessToken}>
+        <Button onClick={runCheck} disabled={loading}>
           {loading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Scanning...
+              Checking...
             </>
           ) : (
             <>
               <FolderSearch className="mr-2 h-4 w-4" />
-              Run Check
+              Refresh Evidence
             </>
           )}
         </Button>
@@ -201,13 +249,15 @@ export default function DocumentPresenceChecker({
         </motion.div>
       )}
 
-      {/* No token warning */}
+      {/* Optional cloud warning */}
       {!accessToken && !error && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950">
+        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950">
           <div className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-amber-600" />
-            <p className="text-sm text-amber-800 dark:text-amber-200">
-              Connect your Google Drive or OneDrive to scan for documents.
+            <FolderSearch className="h-5 w-5 text-blue-600" />
+            <p className="text-sm text-blue-800 dark:text-blue-200">
+              Drive is optional here. Website-scanned policies are used first;
+              connected Drive is only needed for internal evidence such as SCR,
+              training records and provision maps.
             </p>
           </div>
         </div>
@@ -236,9 +286,24 @@ export default function DocumentPresenceChecker({
                     {result.documents_found.length} of{" "}
                     {result.documents_found.length +
                       result.documents_missing.length}{" "}
-                    expected documents found across {result.total_files_scanned}{" "}
-                    files scanned
+                    expected documents found. Checked{" "}
+                    {result.total_website_sources_scanned ?? 0} website sources
+                    {result.total_files_scanned > 0
+                      ? ` and ${result.total_files_scanned} cloud files`
+                      : ""}
+                    .{" "}
+                    {typeof result.saved_document_checks_count === "number"
+                      ? `Saved ${result.saved_document_checks_count} evidence checks.`
+                      : ""}
                   </p>
+                  {result.website_scan?.website_url && (
+                    <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                      Website source: {result.website_scan.website_url}
+                      {result.website_scan.trust_url
+                        ? ` + ${result.website_scan.trust_url}`
+                        : ""}
+                    </p>
+                  )}
                 </div>
                 <div className="flex gap-4 text-sm">
                   <div className="flex items-center gap-1.5">
@@ -251,6 +316,12 @@ export default function DocumentPresenceChecker({
                     <XCircle className="h-4 w-4 text-red-500" />
                     <span className="text-slate-600 dark:text-slate-300">
                       {result.documents_missing.length} missing
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <AlertTriangle className="h-4 w-4 text-amber-500" />
+                    <span className="text-slate-600 dark:text-slate-300">
+                      {result.action_required_count ?? 0} actions
                     </span>
                   </div>
                 </div>
@@ -359,9 +430,75 @@ export default function DocumentPresenceChecker({
                                           <span className="font-medium text-slate-700 dark:text-slate-200">
                                             {doc.matched_to}
                                           </span>
-                                          <p className="text-xs text-slate-400">
+                                          <div className="mt-1 flex flex-wrap gap-1.5">
+                                            <Badge
+                                              variant="outline"
+                                              className="text-[10px]"
+                                            >
+                                              {doc.source_label || "Evidence"}
+                                            </Badge>
+                                            {doc.readiness_status && (
+                                              <Badge
+                                                variant="outline"
+                                                className={`text-[10px] ${READINESS_BADGE[doc.readiness_status].className}`}
+                                              >
+                                                {
+                                                  READINESS_BADGE[
+                                                    doc.readiness_status
+                                                  ].label
+                                                }
+                                              </Badge>
+                                            )}
+                                            {typeof doc.compliance_score ===
+                                              "number" && (
+                                              <Badge
+                                                variant="outline"
+                                                className="text-[10px]"
+                                              >
+                                                {doc.compliance_score}%
+                                              </Badge>
+                                            )}
+                                          </div>
+                                          <p className="mt-1 text-xs text-slate-400">
                                             {doc.name}
                                           </p>
+                                          {doc.notes?.[0] && (
+                                            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                              {doc.notes[0]}
+                                            </p>
+                                          )}
+                                          <div className="mt-1 flex flex-wrap gap-2">
+                                            {doc.evidence_url && (
+                                              <a
+                                                href={doc.evidence_url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                onClick={(event) =>
+                                                  event.stopPropagation()
+                                                }
+                                                className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700"
+                                              >
+                                                Open evidence
+                                                <ExternalLink className="h-3 w-3" />
+                                              </a>
+                                            )}
+                                            {doc.found_on_url &&
+                                              doc.found_on_url !==
+                                                doc.evidence_url && (
+                                                <a
+                                                  href={doc.found_on_url}
+                                                  target="_blank"
+                                                  rel="noopener noreferrer"
+                                                  onClick={(event) =>
+                                                    event.stopPropagation()
+                                                  }
+                                                  className="inline-flex items-center gap-1 text-xs font-medium text-slate-500 hover:text-slate-700"
+                                                >
+                                                  Source page
+                                                  <ExternalLink className="h-3 w-3" />
+                                                </a>
+                                              )}
+                                          </div>
                                         </div>
                                       </li>
                                     ))}
@@ -398,6 +535,19 @@ export default function DocumentPresenceChecker({
                                           >
                                             {priorityInfo.label}
                                           </Badge>
+                                          {doc.website_expected && (
+                                            <Badge
+                                              variant="outline"
+                                              className="text-[10px]"
+                                            >
+                                              Website expected
+                                            </Badge>
+                                          )}
+                                          {doc.reason && (
+                                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                                              {doc.reason}
+                                            </p>
+                                          )}
                                         </li>
                                       );
                                     })}

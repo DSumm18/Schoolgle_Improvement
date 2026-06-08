@@ -6,6 +6,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Asset } from "@/types/estates-compliance";
 import { AssetTable } from "@/components/estates-compliance/AssetTable";
 import { AssetCard } from "@/components/estates-compliance/AssetCard";
@@ -15,6 +16,7 @@ type ViewMode = "table" | "grid";
 
 export default function AssetsPage() {
   const { organizationId, session } = useAuth();
+  const searchParams = useSearchParams();
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -23,6 +25,7 @@ export default function AssetsPage() {
     asset_type: "",
     building: "",
     search: "",
+    compliance_domain: searchParams.get("compliance_domain") || "",
   });
 
   useEffect(() => {
@@ -42,6 +45,8 @@ export default function AssetsPage() {
       if (filters.asset_type) params.append("asset_type", filters.asset_type);
       if (filters.building) params.append("building", filters.building);
       if (filters.search) params.append("search", filters.search);
+      if (filters.compliance_domain)
+        params.append("compliance_domain", filters.compliance_domain);
 
       const response = await fetch(`/api/estates/assets?${params.toString()}`, {
         headers: {

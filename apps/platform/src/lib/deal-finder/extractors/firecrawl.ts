@@ -14,21 +14,33 @@ async function getClient() {
   return _client as any;
 }
 
-// Fallback logic for when Firecrawl fails / LLM blocks on Cookies
-async function fallbackScrape(url: string, rawTitleFallback?: string): Promise<ExtractedProduct> {
-    console.log(`[Universal Scraper] Initiating explicit fallback extraction for ${url}...`);
+function normalizeImageUrl(imageUrl: string | undefined, baseUrl: string): string | undefined {
+    if (!imageUrl?.trim()) return undefined;
+    const trimmed = imageUrl.trim();
+    if (/^https?:\/\//i.test(trimmed)) return trimmed;
+    if (trimmed.startsWith("//")) return `https:${trimmed}`;
     try {
-        const response = await fetch(url, {
-            headers: {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-                "Accept-Language": "en-GB,en;q=0.9",
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
-            }
-        });
-        
-        const html = await response.text();
+        return new URL(trimmed, baseUrl).toString();
+    } catch {
+        return undefined;
+    }
+}
+
+function parsePriceText(text: string | undefined): number | undefined {
+    if (!text) return undefined;
+    const match = text.match(/[£]\s*([\d,]+(?:\.\d{1,2})?)/);
+    if (!match?.[1]) return undefined;
+    const value = parseFloat(match[1].replace(/,/g, ""));
+    return Number.isFinite(value) && value > 0 ? value : undefined;
+}
+
+export function extractFallbackProductFromHtml(
+    html: string,
+    url: string,
+    rawTitleFallback?: string,
+): ExtractedProduct {
         const $ = cheerio.load(html);
-        
+
         // 1. JSON-LD Extraction (Highly reliable for SPAs like Viking)
         let jsonLdPrice: number | undefined;
         let jsonLdImage: string | undefined;
@@ -58,40 +70,71 @@ async function fallbackScrape(url: string, rawTitleFallback?: string): Promise<E
             }
         });
 
-        let title = jsonLdTitle || $('meta[property="og:title"]').attr('content') || $('title').text() || rawTitleFallback;
-        if (!title) title = "Unknown Product - Seed Match";
-        
-        // clean generic titles
-        title = title.replace(/\|.*/g, '').replace(/-.*/g, '').trim();
+        let title =
+            jsonLdTitle ||
+            $("#productTitle").text().trim() ||
+            $('meta[property="og:title"]').attr('content') ||
+            $('title').text() ||
+            rawTitleFallback;
+        if (!title) {
+            throw new Error("Could not extract a verified product title");
+        }
 
-        let image_url = jsonLdImage || $('meta[property="og:image"]').attr('content') || $('img[itemprop="image"]').attr('src') || $('img.product-image').attr('src') || undefined;
-        let description = jsonLdDesc || $('meta[property="og:description"]').attr('content') || undefined;
+        title = title.replace(/\|.*/g, '').trim();
 
-        // Try specifically to locate price if JSON-LD missed it
+        if (
+            !title ||
+            /^(amazon\.co\.uk|access denied|page not found|not found|robot check|captcha|just a moment)$/i.test(title) ||
+            /cookie|captcha|robot check|access denied|page not found|not found/i.test(title)
+        ) {
+            throw new Error(`Extracted page title is not a verified product title: ${title || "blank"}`);
+        }
+
+        const image_url = normalizeImageUrl(
+            jsonLdImage ||
+                $('meta[property="og:image"]').attr('content') ||
+                $('img[itemprop="image"]').attr('src') ||
+                $('#imgTagWrapperId img, #landingImage').attr('src') ||
+                $('img.product-image').attr('src'),
+            url,
+        );
+        const description = jsonLdDesc || $('meta[property="og:description"]').attr('content') || undefined;
+
         let price: number | undefined = jsonLdPrice;
         if (!price) {
-            const priceRegex = /£\s?(\d+(?:\.\d{2})?)/;
-            // Search common price elements first
-            const priceText = $('.price, [data-price],meta[itemprop="price"], .product-price, .viking-price, [data-test-id="product-price"]').first().text() || html.substring(0, 15000);
-            const match = priceText.match(priceRegex);
-            if (match && match[1]) {
-               price = parseFloat(match[1]);
-            }
+            const offscreenPrice = parsePriceText($('.a-price .a-offscreen, .a-offscreen').first().text());
+            const metaPrice = $('meta[itemprop="price"]').attr('content');
+            const dataPrice = $('[data-price]').first().attr('data-price');
+            const genericPriceText = $('.price, [data-price], .product-price, .viking-price, [data-test-id="product-price"]').first().text();
+            price =
+                offscreenPrice ||
+                (metaPrice ? parseFloat(metaPrice) : undefined) ||
+                (dataPrice ? parseFloat(dataPrice) : undefined) ||
+                parsePriceText(genericPriceText) ||
+                parsePriceText(html.substring(0, 30000));
         }
-        
+
+        const asinMatch = url.match(/\/(?:dp|product)\/([A-Z0-9]{10})/i);
+        const brand =
+            $("#bylineInfo, a#bylineInfo")
+                .first()
+                .text()
+                .replace(/^(Visit the |Brand:\s*)/i, "")
+                .trim() || undefined;
+
         // Pack Quantity Heuristic
         let packQty = title.toLowerCase().match(/pack of (\d+)/)?.[1] || title.toLowerCase().match(/(\d+)\s?pk/)?.[1];
         const parsedPackQty = packQty ? parseInt(packQty) : 1;
 
         return {
             name: title,
-            description: description,
-            price: price,
+            description,
+            price,
             currency: "GBP",
-            sku: undefined,
-            brand: undefined,
+            sku: asinMatch?.[1],
+            brand,
             barcode: undefined,
-            image_url: image_url,
+            image_url,
             source_url: url,
             in_stock: true,
             pack_quantity: parsedPackQty,
@@ -101,6 +144,26 @@ async function fallbackScrape(url: string, rawTitleFallback?: string): Promise<E
             rating_value: undefined,
             rating_count: undefined,
         };
+}
+
+// Fallback logic for when Firecrawl fails / LLM blocks on Cookies
+async function fallbackScrape(url: string, rawTitleFallback?: string): Promise<ExtractedProduct> {
+    console.log(`[Universal Scraper] Initiating explicit fallback extraction for ${url}...`);
+    try {
+        const response = await fetch(url, {
+            headers: {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                "Accept-Language": "en-GB,en;q=0.9",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Supplier page returned status ${response.status}`);
+        }
+
+        const html = await response.text();
+        return extractFallbackProductFromHtml(html, url, rawTitleFallback);
     } catch (e) {
         throw new Error(`Complete extraction failure (Firecrawl + Native Fallback) for ${url}: ` + e);
     }
@@ -128,7 +191,7 @@ export async function firecrawlExtract(url: string): Promise<ExtractedProduct> {
   });
 
   const client = await getClient();
-  
+
   if (!client) {
      return fallbackScrape(url);
   }
@@ -150,7 +213,7 @@ export async function firecrawlExtract(url: string): Promise<ExtractedProduct> {
 
   // Look under result.json for v1 API or result for v0
   const extracted = result?.json || result?.data;
-  
+
   // If Firecrawl returned an empty name or nulls because of Cookie Banners
   if (!extracted?.product_name || extracted?.product_name === "" || extracted?.product_name.includes("Cookie")) {
      console.warn(`[Extraction] Firecrawl hit a Cookie Wall or failed LLM mapping. Initiating fallback...`);

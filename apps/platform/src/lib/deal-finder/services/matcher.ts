@@ -1,8 +1,15 @@
 import { createServiceRoleClient } from '@/lib/supabase-server';
+import { createHash } from 'crypto';
+import {
+  getSearchableSupplierDefinitions,
+  normaliseSupplierDomain,
+  SEARCHABLE_SUPPLIER_TARGET,
+} from '@/lib/deal-finder/suppliers';
 
 export interface MatchResult {
   product_id: string;
   product_name: string;
+  product_description?: string | null;
   supplier_id: string;
   supplier_name: string;
   price_gbp: number | null;
@@ -23,6 +30,134 @@ export interface MatchResult {
 
 function db() {
   return createServiceRoleClient();
+}
+
+let supplierRegistrySync: Promise<void> | null = null;
+
+function deterministicSupplierId(domain: string): string {
+  const hash = createHash("sha1")
+    .update(`schoolgle-deal-finder:${normaliseSupplierDomain(domain)}`)
+    .digest("hex");
+
+  return [
+    hash.slice(0, 8),
+    hash.slice(8, 12),
+    `5${hash.slice(13, 16)}`,
+    ((parseInt(hash.slice(16, 18), 16) & 0x3f) | 0x80).toString(16).padStart(2, "0") + hash.slice(18, 20),
+    hash.slice(20, 32),
+  ].join("-");
+}
+
+function supplierWebsiteAliases(website: string | null | undefined): string[] {
+  if (!website) return [];
+  try {
+    const parsed = new URL(website.startsWith("http") ? website : `https://${website}`);
+    const host = normaliseSupplierDomain(parsed.hostname);
+    return [host, host.replace(/^uk\./, "")];
+  } catch {
+    const host = normaliseSupplierDomain(website);
+    return [host, host.replace(/^uk\./, "")];
+  }
+}
+
+async function ensureStaticSupplierRegistry(): Promise<void> {
+  const registry = getSearchableSupplierDefinitions();
+  if (registry.length < SEARCHABLE_SUPPLIER_TARGET) {
+    console.warn(
+      `[deal-finder] Supplier registry below target: ${registry.length}/${SEARCHABLE_SUPPLIER_TARGET}`,
+    );
+  }
+
+  const client = db();
+  const { data: existingSuppliers, error: supplierError } = await client
+    .from("suppliers")
+    .select("id,name,website");
+
+  if (supplierError) {
+    console.error("ensureStaticSupplierRegistry suppliers error:", supplierError);
+    return;
+  }
+
+  const byDomain = new Map<string, { id: string; name: string; website: string | null }>();
+  for (const supplier of existingSuppliers || []) {
+    for (const alias of supplierWebsiteAliases(supplier.website)) {
+      byDomain.set(alias, supplier);
+    }
+  }
+
+  const supplierIds = new Map<string, string>();
+  const suppliersToInsert: Array<{
+    id: string;
+    name: string;
+    website: string;
+    verified: boolean;
+  }> = [];
+
+  for (const supplier of registry) {
+    const domain = normaliseSupplierDomain(supplier.domain);
+    const existing = byDomain.get(domain) || byDomain.get(domain.replace(/^uk\./, ""));
+    const id = existing?.id || deterministicSupplierId(domain);
+    supplierIds.set(domain, id);
+
+    if (!existing) {
+      suppliersToInsert.push({
+        id,
+        name: supplier.name,
+        website: `https://${supplier.domain}`,
+        verified: true,
+      });
+    }
+  }
+
+  if (suppliersToInsert.length) {
+    const { error } = await client.from("suppliers").upsert(suppliersToInsert, {
+      onConflict: "id",
+    });
+    if (error) {
+      console.error("ensureStaticSupplierRegistry insert suppliers error:", error);
+    }
+  }
+
+  const { data: existingPatterns, error: patternError } = await client
+    .from("supplier_url_patterns")
+    .select("supplier_id,url_pattern,search_url_template");
+
+  if (patternError) {
+    console.error("ensureStaticSupplierRegistry patterns error:", patternError);
+    return;
+  }
+
+  const existingPatternKeys = new Set(
+    (existingPatterns || []).map((pattern) =>
+      `${pattern.supplier_id}:${pattern.search_url_template || pattern.url_pattern}`,
+    ),
+  );
+
+  const patternsToInsert = registry
+    .map((supplier) => {
+      const domain = normaliseSupplierDomain(supplier.domain);
+      const supplierId = supplierIds.get(domain);
+      if (!supplierId || !supplier.search_url_template) return null;
+
+      const key = `${supplierId}:${supplier.search_url_template}`;
+      if (existingPatternKeys.has(key)) return null;
+
+      return {
+        supplier_id: supplierId,
+        url_pattern: normaliseSupplierDomain(supplier.domain).replace(/\./g, "\\."),
+        extractor_key: supplier.extractor_key || "generic",
+        is_active: true,
+        search_url_template: supplier.search_url_template,
+      };
+    })
+    .filter((pattern): pattern is NonNullable<typeof pattern> => Boolean(pattern));
+
+  if (patternsToInsert.length) {
+    const { error } = await client.from("supplier_url_patterns").insert(patternsToInsert);
+    if (error) {
+      console.error("ensureStaticSupplierRegistry insert patterns error:", error);
+    }
+  }
 }
 
 export async function findSimilarProducts(
@@ -55,7 +190,7 @@ export async function findSimilarProducts(
              
              if (newIds.length > 0) {
                  const { data: prods } = await db().from('products')
-                     .select('id, name, image_url, source_url, typical_price, rating_value, rating_count, suppliers(id, name), prices(price_gbp, price_date)')
+                     .select('id, name, description, image_url, source_url, typical_price, rating_value, rating_count, suppliers(id, name), prices(price_gbp, price_date)')
                      .in('id', newIds);
                      
                  if (prods) {
@@ -69,6 +204,7 @@ export async function findSimilarProducts(
                          results.push({
                              product_id: p.id,
                              product_name: p.name,
+                             product_description: p.description,
                              supplier_id: supplierId || 'unknown',
                              supplier_name: supplierName || 'Unknown',
                              price_gbp: priceObj?.price_gbp || p.typical_price || 0,
@@ -95,6 +231,24 @@ export async function findSimilarProducts(
 
   // Deduplicate and sort by price
   const unique = Array.from(new Map(results.map(r => [r.product_id, r])).values());
+  const missingDescriptions = unique.filter((result) => result.product_description === undefined);
+  if (missingDescriptions.length > 0) {
+    const { data: descriptions } = await db()
+      .from("products")
+      .select("id,description")
+      .in(
+        "id",
+        missingDescriptions.map((result) => result.product_id),
+      );
+    const descriptionById = new Map(
+      (descriptions || []).map((row) => [row.id, row.description || null]),
+    );
+    for (const result of unique) {
+      if (result.product_description === undefined) {
+        result.product_description = descriptionById.get(result.product_id) ?? null;
+      }
+    }
+  }
   unique.sort((a, b) => (a.price_gbp || 9999) - (b.price_gbp || 9999));
   
   return unique.slice(0, limit);
@@ -135,6 +289,16 @@ export async function upsertProduct(product: {
       .limit(1)
       .maybeSingle();
     if (byUrl) existingId = byUrl.id;
+  }
+
+  if (!existingId) {
+    const { data: byName } = await db()
+      .from("products")
+      .select("id")
+      .eq("name", product.name)
+      .limit(1)
+      .maybeSingle();
+    if (byName) existingId = byName.id;
   }
 
   const payload: Record<string, unknown> = {
@@ -332,7 +496,8 @@ export async function getSupplierSearchUrls(): Promise<
     search_url_template: string | null;
   }>
 > {
-  const { data, error } = await db()
+  const client = db();
+  let { data, error } = await client
     .from("supplier_url_patterns")
     .select("supplier_id, search_url_template, suppliers(name)")
     .eq("is_active", true)
@@ -341,6 +506,25 @@ export async function getSupplierSearchUrls(): Promise<
   if (error) {
     console.error("getSupplierSearchUrls error:", error);
     return [];
+  }
+
+  if ((data || []).length < SEARCHABLE_SUPPLIER_TARGET) {
+    supplierRegistrySync ||= ensureStaticSupplierRegistry().finally(() => {
+      supplierRegistrySync = null;
+    });
+    await supplierRegistrySync;
+
+    const refreshed = await client
+      .from("supplier_url_patterns")
+      .select("supplier_id, search_url_template, suppliers(name)")
+      .eq("is_active", true)
+      .not("search_url_template", "is", null);
+
+    if (refreshed.error) {
+      console.error("getSupplierSearchUrls refresh error:", refreshed.error);
+    } else {
+      data = refreshed.data;
+    }
   }
 
   return (data || []).map((row: Record<string, unknown>) => ({

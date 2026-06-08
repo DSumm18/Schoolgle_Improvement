@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { supabase } from "@/lib/supabase";
 import type { AssetInput, AssetType, AssetStatus, ConditionGrade } from "@/types/estates-compliance";
 import type { Contractor } from "@/types/estates-compliance";
 
@@ -59,8 +60,6 @@ const ASSET_STATUS_OPTIONS: { value: AssetStatus; label: string }[] = [
   { value: "active", label: "Active" },
   { value: "inactive", label: "Inactive" },
   { value: "under_repair", label: "Under Repair" },
-  { value: "under_maintenance", label: "Under Maintenance" },
-  { value: "requires_inspection", label: "Requires Inspection" },
   { value: "disposed", label: "Disposed" },
   { value: "retired", label: "Retired" },
 ];
@@ -137,6 +136,7 @@ interface FormState {
   purchase_order_number: string;
   invoice_number: string;
   purchased_from_contractor_id: string;
+  maintained_by_contractor_id: string;
   // Warranty
   warranty_start_date: string;
   warranty_expiry: string;
@@ -175,6 +175,7 @@ const EMPTY_FORM: FormState = {
   purchase_order_number: "",
   invoice_number: "",
   purchased_from_contractor_id: "",
+  maintained_by_contractor_id: "",
   warranty_start_date: "",
   warranty_expiry: "",
   warranty_provider: "",
@@ -210,6 +211,11 @@ function toFormState(values: Partial<AssetInput>): FormState {
     purchase_order_number: values.purchase_order_number ?? "",
     invoice_number: values.invoice_number ?? "",
     purchased_from_contractor_id: values.purchased_from_contractor_id ?? "",
+    maintained_by_contractor_id:
+      values.maintained_by_contractor_id ??
+      ((values.specifications as { maintained_by_contractor_id?: string } | undefined)
+        ?.maintained_by_contractor_id ||
+        ""),
     warranty_start_date: values.warranty_start_date ?? "",
     warranty_expiry: values.warranty_expiry ?? "",
     warranty_provider: values.warranty_provider ?? "",
@@ -264,14 +270,31 @@ export function AssetForm({ mode, initialValues, assetId, organizationId, onSucc
   const [contractors, setContractors] = useState<Contractor[]>([]);
   const [contractorSearch, setContractorSearch] = useState("");
   const [contractorDropdownOpen, setContractorDropdownOpen] = useState(false);
+  const [maintainerSearch, setMaintainerSearch] = useState("");
+  const [maintainerDropdownOpen, setMaintainerDropdownOpen] = useState(false);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
+
+  async function getAuthHeaders(contentType = true): Promise<Record<string, string>> {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    return {
+      ...(contentType ? { "Content-Type": "application/json" } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+  }
 
   // Load contractors
   useEffect(() => {
     if (!organizationId) return;
-    fetch(`/api/estates/contractors?organizationId=${organizationId}`)
-      .then((r) => r.json())
+    getAuthHeaders()
+      .then((headers) =>
+        fetch(`/api/estates/contractors?organizationId=${organizationId}`, {
+          headers,
+        }),
+      )
+      .then((r) => (r.ok ? r.json() : Promise.reject(r)))
       .then((d) => {
+        if (Array.isArray(d.contractors)) setContractors(d.contractors);
         if (Array.isArray(d.data)) setContractors(d.data);
         else if (Array.isArray(d)) setContractors(d);
       })
@@ -297,6 +320,15 @@ export function AssetForm({ mode, initialValues, assetId, organizationId, onSucc
     }));
     setContractorSearch(contractor.company_name);
     setContractorDropdownOpen(false);
+  }, []);
+
+  const handleMaintainerSelect = useCallback((contractor: Contractor) => {
+    setForm((prev) => ({
+      ...prev,
+      maintained_by_contractor_id: contractor.id,
+    }));
+    setMaintainerSearch(contractor.company_name);
+    setMaintainerDropdownOpen(false);
   }, []);
 
   // When purchase_date changes, auto-fill warranty_start_date if empty
@@ -349,6 +381,13 @@ export function AssetForm({ mode, initialValues, assetId, organizationId, onSucc
     if (form.purchase_order_number.trim()) payload.purchase_order_number = form.purchase_order_number.trim();
     if (form.invoice_number.trim()) payload.invoice_number = form.invoice_number.trim();
     if (form.purchased_from_contractor_id) payload.purchased_from_contractor_id = form.purchased_from_contractor_id;
+    if (form.maintained_by_contractor_id) {
+      payload.maintained_by_contractor_id = form.maintained_by_contractor_id;
+      payload.specifications = {
+        ...(payload.specifications || {}),
+        maintained_by_contractor_id: form.maintained_by_contractor_id,
+      };
+    }
     if (form.warranty_start_date) payload.warranty_start_date = form.warranty_start_date;
     if (form.warranty_expiry) payload.warranty_expiry = form.warranty_expiry;
     if (form.warranty_provider.trim()) payload.warranty_provider = form.warranty_provider.trim();
@@ -378,7 +417,7 @@ export function AssetForm({ mode, initialValues, assetId, organizationId, onSucc
 
       const response = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: await getAuthHeaders(),
         body: JSON.stringify(payload),
       });
 
@@ -400,8 +439,9 @@ export function AssetForm({ mode, initialValues, assetId, organizationId, onSucc
         photoFormData.append("title", `Photo — ${form.name}`);
         photoFormData.append("source_type", "upload");
         // Best-effort — don't block on failure
-        await fetch("/api/estates/evidence", {
+        await fetch(`/api/estates/evidence?organizationId=${organizationId}`, {
           method: "POST",
+          headers: await getAuthHeaders(false),
           body: photoFormData,
         }).catch(() => {});
       }
@@ -417,8 +457,12 @@ export function AssetForm({ mode, initialValues, assetId, organizationId, onSucc
   };
 
   const selectedContractor = contractors.find((c) => c.id === form.purchased_from_contractor_id);
+  const selectedMaintainer = contractors.find((c) => c.id === form.maintained_by_contractor_id);
   const filteredContractors = contractors.filter((c) =>
     c.company_name.toLowerCase().includes(contractorSearch.toLowerCase())
+  );
+  const filteredMaintainers = contractors.filter((c) =>
+    c.company_name.toLowerCase().includes(maintainerSearch.toLowerCase())
   );
 
   return (
@@ -724,6 +768,74 @@ export function AssetForm({ mode, initialValues, assetId, organizationId, onSucc
             >
               add a new supplier
             </Link>
+          </p>
+        </div>
+
+        {/* Maintenance contractor picker */}
+        <div>
+          <FieldLabel>Maintained / Supported By</FieldLabel>
+          <div className="relative">
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <input
+                  type="text"
+                  value={maintainerSearch}
+                  placeholder="Search maintenance contractor..."
+                  onChange={(e) => {
+                    setMaintainerSearch(e.target.value);
+                    setMaintainerDropdownOpen(true);
+                    if (e.target.value === "") {
+                      setForm((p) => ({
+                        ...p,
+                        maintained_by_contractor_id: "",
+                      }));
+                    }
+                  }}
+                  onFocus={() => setMaintainerDropdownOpen(true)}
+                  onBlur={() => setTimeout(() => setMaintainerDropdownOpen(false), 200)}
+                  className="flex h-10 w-full rounded-xl border border-input bg-background pl-9 pr-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                />
+              </div>
+              <Link
+                href="/estates-compliance/contractors/new"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Button type="button" variant="outline" size="icon" title="Add new contractor">
+                  <ExternalLink className="h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+
+            {maintainerDropdownOpen && filteredMaintainers.length > 0 && (
+              <div className="absolute z-50 mt-1 w-full rounded-xl border border-border bg-popover shadow-lg max-h-48 overflow-y-auto">
+                {filteredMaintainers.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    className="w-full px-3 py-2 text-left text-sm hover:bg-accent focus:bg-accent focus:outline-none"
+                    onMouseDown={() => handleMaintainerSelect(c)}
+                  >
+                    <span className="font-medium">{c.company_name}</span>
+                    {c.contact_name && (
+                      <span className="ml-2 text-muted-foreground text-xs">{c.contact_name}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {selectedMaintainer && (
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              Selected: <span className="font-medium text-foreground">{selectedMaintainer.company_name}</span>
+              {selectedMaintainer.email && ` · ${selectedMaintainer.email}`}
+            </p>
+          )}
+          <p className="mt-1 text-xs text-muted-foreground">
+            This is the contractor you normally contact for servicing, repairs,
+            or support. It can be different from the supplier/warranty contact.
           </p>
         </div>
       </FormSection>

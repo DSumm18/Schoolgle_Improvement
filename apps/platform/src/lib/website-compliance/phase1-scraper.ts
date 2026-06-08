@@ -16,6 +16,7 @@ import { createHash } from "crypto";
 import { createServiceRoleClient } from "@/lib/supabase-server";
 import {
   buildPublicEvidenceSeeds,
+  buildSchoolEvidenceSeedUrls,
   buildTrustSeedUrls,
 } from "@/lib/website-compliance/crawl-plan";
 import { fastInventoryCrawlWebsite } from "@/lib/website-compliance/fast-inventory-crawler";
@@ -190,6 +191,7 @@ export async function scrapeSchoolWebsite(
       websiteUrl,
       { limit: 30 },
     );
+    const schoolEvidenceSeeds = buildSchoolEvidenceSeedUrls(websiteUrl);
     await updateSession(supabase, sessionId, {
       school_type: schoolType,
       school_phase: schoolPhase,
@@ -213,7 +215,7 @@ export async function scrapeSchoolWebsite(
       maxPages,
       delayMs: 75,
       timeoutMs: 15000,
-      seedUrls: publicEvidenceSeeds,
+      seedUrls: [...schoolEvidenceSeeds, ...publicEvidenceSeeds],
       includeDocuments: true,
       source: "school",
       userAgent: "Schoolgle-Compliance/1.0 (+https://schoolgle.co.uk)",

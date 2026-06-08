@@ -416,28 +416,58 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
     if (!user?.id) return;
 
     try {
-      const token = (await supabase.auth.getSession()).data.session?.access_token;
-      const response = await fetch(
-        `/api/organizations/accessible?targetOrganizationId=${encodeURIComponent(orgId)}`,
-        {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        },
-      );
+      const { data: accessibleOrgIds, error: accessibleOrgError } =
+        await supabase.rpc("get_user_accessible_orgs");
 
-      if (!response.ok) {
-        console.error("[AuthContext] switchOrganization failed:", response.status);
+      if (accessibleOrgError) {
+        console.error(
+          "[AuthContext] switchOrganization accessible org lookup failed:",
+          accessibleOrgError,
+        );
         return;
       }
 
-      const data = await response.json();
-      const org = data.organizations?.[0];
+      const accessibleIds = ((accessibleOrgIds || []) as string[]).map(String);
+      if (!accessibleIds.includes(orgId)) {
+        console.error("[AuthContext] switchOrganization denied:", orgId);
+        return;
+      }
+
+      const { data: org, error: orgError } = await supabase
+        .from("organizations")
+        .select("id, name, organization_type, parent_organization_id")
+        .eq("id", orgId)
+        .maybeSingle();
+
+      if (orgError || !org) {
+        console.error("[AuthContext] switchOrganization org lookup failed:", orgError);
+        return;
+      }
+
+      const { data: directMembership } = await supabase
+        .from("organization_members")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("organization_id", orgId)
+        .maybeSingle();
+
+      let role = directMembership?.role || "viewer";
+      if (!directMembership && org.parent_organization_id) {
+        const { data: parentMembership } = await supabase
+          .from("organization_members")
+          .select("role")
+          .eq("user_id", user.id)
+          .eq("organization_id", org.parent_organization_id)
+          .maybeSingle();
+        role = parentMembership?.role || role;
+      }
 
       if (org) {
         setOrganizationId(org.id);
         setOrganization({
           id: org.id,
           name: org.name,
-          role: (org.role || "viewer") as Organization["role"],
+          role: role as Organization["role"],
           organization_type: org.organization_type,
         });
 

@@ -453,7 +453,7 @@ export default function EstatesComplianceDashboard() {
         {/* ================================================================
             TOP NAV BAR — Quick Links
         ================================================================ */}
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 p-6 pb-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-7 gap-3 p-6 pb-4">
           {[
             {
               href: "/estates-compliance/diary",
@@ -461,6 +461,13 @@ export default function EstatesComplianceDashboard() {
               label: "My Diary",
               sub: "Daily tasks",
               bg: "bg-blue-50 text-blue-600",
+            },
+            {
+              href: "/estates-compliance/risk-control-checks",
+              icon: "🛡️",
+              label: "Risk Controls",
+              sub: "Due checks",
+              bg: "bg-orange-50 text-orange-600",
             },
             {
               href: "/estates-compliance/assets",

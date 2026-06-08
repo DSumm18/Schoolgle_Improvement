@@ -72,12 +72,17 @@ export class GenericExtractor extends BaseExtractor {
     // @ts-expect-error - Auto-masked during strict compilation enforcement
     const ratings = this.extractRatings($);
 
+    const image =
+      og.image ||
+      meta.image ||
+      this.extractProductImage($, cleanUrl);
+
     return {
       name,
       description: og.description || meta.description,
       price: og.price || meta.price,
       currency: og.currency || meta.currency || "GBP",
-      image_url: this.normalizeImageUrl(og.image || meta.image, url),
+      image_url: this.normalizeImageUrl(image, cleanUrl),
       source_url: url,
       brand: meta.brand,
       sku: meta.sku,
@@ -180,12 +185,45 @@ export class GenericExtractor extends BaseExtractor {
     return {
       name: $('meta[name="title"]').attr("content")?.trim() || $("title").text().trim(),
       description: $('meta[name="description"]').attr("content")?.trim(),
-      image: $('meta[name="twitter:image"]').attr("content") || $('link[rel="image_src"]').attr("href"),
+      image:
+        $('meta[name="twitter:image"]').attr("content") ||
+        $('meta[property="twitter:image"]').attr("content") ||
+        $('link[rel="image_src"]').attr("href") ||
+        $('[itemprop="image"]').attr("content") ||
+        $('[itemprop="image"]').attr("src"),
       price,
       currency: undefined as string | undefined,
       brand: $('meta[name="brand"]').attr("content")?.trim() || $('[itemprop="brand"]').text().trim() || undefined,
       sku: $('meta[name="sku"]').attr("content")?.trim() || $('[itemprop="sku"]').text().trim() || undefined,
     };
+  }
+
+  private extractProductImage(
+    $: ReturnType<typeof cheerio.load>,
+    baseUrl: string,
+  ): string | undefined {
+    const candidates = [
+      'img[itemprop="image"]',
+      'img[id*="product"]',
+      'img[class*="product"]',
+      'img[class*="main"]',
+      'img[class*="hero"]',
+      'picture img',
+    ];
+
+    for (const selector of candidates) {
+      const element = $(selector).first();
+      const image =
+        element.attr("src") ||
+        element.attr("data-src") ||
+        element.attr("data-lazy-src") ||
+        element.attr("data-original") ||
+        element.attr("content");
+      const normalized = this.normalizeImageUrl(image, baseUrl);
+      if (normalized) return normalized;
+    }
+
+    return undefined;
   }
 
   private extractRatings($: cheerio.CheerioAPI): {

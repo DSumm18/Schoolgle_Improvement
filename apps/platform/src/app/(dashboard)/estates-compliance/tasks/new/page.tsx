@@ -1,14 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { useAuth } from "@/context/SupabaseAuthContext";
 import { TaskScheduler } from "@/components/estates-compliance/TaskScheduler";
+import type { ComplianceDomain } from "@/types/estates-compliance";
 
 export default function NewComplianceTaskPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { organizationId } = useAuth();
+  const initialDomain =
+    (searchParams.get("domain") as ComplianceDomain | null) || "legionella";
+  const initialAssetId =
+    searchParams.get("assetId") || searchParams.get("asset_id") || null;
+  const initialTitle = searchParams.get("title") || "";
+  const initialDescription = searchParams.get("description") || "";
+  const initialCheckId = searchParams.get("checkId") || null;
 
   if (!organizationId) {
     return (
@@ -40,6 +49,11 @@ export default function NewComplianceTaskPage() {
 
       <TaskScheduler
         organizationId={organizationId}
+        initialDomain={initialDomain}
+        initialAssetId={initialAssetId}
+        initialTitle={initialTitle}
+        initialDescription={initialDescription}
+        initialCheckId={initialCheckId}
         onSuccess={() => router.push("/estates-compliance/tasks")}
         onCancel={() => router.push("/estates-compliance/tasks")}
       />

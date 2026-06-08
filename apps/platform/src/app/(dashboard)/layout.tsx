@@ -73,7 +73,14 @@ const HIDDEN_MODULE_IDS = new Set(MODULES.filter((m) => m.pilotHidden).map((m) =
 const HIDDEN_WORKSPACE_ITEM_IDS = new Set(["tasks", "calendar", "show-me"]);
 
 const TRUST_ASSESSOR_APP_ID = "trust-assessor";
+const FREE_TOOLBOX_APP_IDS = new Set(["deal-finder"]);
 const TRUST_ASSESSOR_ROUTE = "/dashboard/school-improvement/trust-assessor";
+
+function getAppByPath(pathname: string) {
+  return [...APPS]
+    .sort((a, b) => b.route.length - a.route.length)
+    .find((app) => pathname === app.route || pathname.startsWith(app.route + "/"));
+}
 
 export default function DashboardLayout({
   children,
@@ -142,6 +149,7 @@ export default function DashboardLayout({
 
   const isAppEnabledBySubscription = useCallback(
     (app: (typeof APPS)[number]) => {
+      if (FREE_TOOLBOX_APP_IDS.has(app.id)) return true;
       if (!hasSubscriptionRecord) return true;
       if (!subscriptionActive) return false;
       return enabledModuleSet.has(app.moduleId) || enabledModuleSet.has(app.id);
@@ -151,6 +159,7 @@ export default function DashboardLayout({
 
   const isModuleEnabledBySubscription = useCallback(
     (moduleId: string) => {
+      if (moduleId === "toolbox") return true;
       if (!hasSubscriptionRecord) return true;
       if (!subscriptionActive) return false;
       return (
@@ -214,9 +223,7 @@ export default function DashboardLayout({
       pathname !== "/dashboard/no-access"
     ) {
       const currentModule = getModuleByPath(pathname);
-      const currentApp = APPS.find(
-        (a) => pathname === a.route || pathname.startsWith(a.route + "/"),
-      );
+      const currentApp = getAppByPath(pathname);
 
       if (
         currentApp &&
@@ -575,11 +582,7 @@ export default function DashboardLayout({
                   Active App
                 </p>
                 <p className="text-sm font-black truncate">
-                  {APPS.find(
-                    (a) =>
-                      pathname === a.route ||
-                      pathname.startsWith(a.route + "/"),
-                  )?.name || "Dashboard"}
+                  {getAppByPath(pathname)?.name || "Dashboard"}
                 </p>
               </div>
             )}

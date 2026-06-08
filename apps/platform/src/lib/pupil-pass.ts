@@ -47,6 +47,7 @@ export type PupilUploadRow = {
   year_group: string;
   current_class: string;
   gender: string | null;
+  date_of_birth: string | null;
   send_status: string | null;
   ehcp: boolean;
   primary_need: string | null;
@@ -123,7 +124,7 @@ export function parsePupilUploadCsv(csvText: string) {
     .filter((line) => line && !line.startsWith("#"));
   if (lines.length < 2) return { pupils: [] as PupilUploadRow[], errors: ["CSV needs a header row and at least one pupil row."] };
 
-  const required = ["pupil_id", "source_pupil_ref", "first_name", "last_name", "year_group", "current_class"];
+  const required = ["pupil_id", "source_pupil_ref", "first_name", "last_name", "year_group"];
   const { headers, headerIndex, missing } = findHeader(lines, required);
 
   if (missing.length > 0) return { pupils: [] as PupilUploadRow[], errors: [`Missing required columns: ${missing.join(", ")}`] };
@@ -150,8 +151,11 @@ export function parsePupilUploadCsv(csvText: string) {
       first_name: normalisePupilName(raw.first_name),
       last_name: normalisePupilName(raw.last_name),
       year_group: normaliseYearGroup(raw.year_group),
-      current_class: normaliseClassName(raw.current_class),
+      current_class: raw.current_class
+        ? normaliseArborClassName(raw.current_class)
+        : normaliseYearGroup(raw.year_group),
       gender: normaliseGender(raw.gender),
+      date_of_birth: normaliseDateOfBirth(raw.date_of_birth || raw.dob),
       send_status: normaliseSendStatus(raw.send_status || raw.sen_status),
       ehcp: toBool(raw.ehcp),
       primary_need: raw.primary_need || null,
@@ -198,6 +202,7 @@ function getPupilUploadTemplateRows() {
     "Year group, e.g. R, 1, 2, 3, 4, 5, 6. Required.",
     "Current class or registration group, e.g. 4A or Oak. Required.",
     "Optional: M, F or O.",
+    "Optional: date of birth in YYYY-MM-DD format; used for safe matching and age/year checks.",
     "Optional: K for SEN Support, E for EHCP, or blank.",
     "Optional: true/false or yes/no.",
     "Optional SEND primary need, e.g. ASD, SLCN, SEMH.",
@@ -217,6 +222,7 @@ function getPupilUploadTemplateRows() {
     "year_group",
     "current_class",
     "gender",
+    "date_of_birth",
     "send_status",
     "ehcp",
     "primary_need",
@@ -229,9 +235,9 @@ function getPupilUploadTemplateRows() {
     "pass_badge",
   ];
   const examples = [
-    ["SG001", "A802200106001", "Ava", "Adams", "4", "4A", "F", "K", "false", "SLCN", "no", "yes", "no", "true", "Purple", "Panda", "Star"],
-    ["SG002", "A802200106002", "Dan", "Dunn", "4", "4A", "M", "E", "true", "ASD", "yes", "yes", "no", "true", "Blue", "Fox", ""],
-    ["SG003", "A802200106003", "Sam", "Smith", "4", "4A", "", "", "false", "", "no", "no", "yes", "true", "", "", ""],
+    ["SG001", "A802200106001", "Ava", "Adams", "4", "4A", "F", "2017-09-15", "K", "false", "SLCN", "no", "yes", "no", "true", "Purple", "Panda", "Star"],
+    ["SG002", "A802200106002", "Dan", "Dunn", "4", "4A", "M", "2017-11-02", "E", "true", "ASD", "yes", "yes", "no", "true", "Blue", "Fox", ""],
+    ["SG003", "A802200106003", "Sam", "Smith", "4", "4A", "", "", "", "false", "", "no", "no", "yes", "true", "", "", ""],
   ];
   return { descriptions, fields, examples };
 }
@@ -265,7 +271,12 @@ function normaliseChoice(value: string | null | undefined, allowed: string[]) {
 }
 
 function normaliseHeader(header: string) {
-  const normalised = header.toLowerCase().trim().replace(/[\s-]+/g, "_");
+  const normalised = header
+    .toLowerCase()
+    .trim()
+    .replace(/&/g, "and")
+    .replace(/[\s()./-]+/g, "_")
+    .replace(/^_+|_+$/g, "");
   if (
     [
       "upn",
@@ -276,15 +287,47 @@ function normaliseHeader(header: string) {
       "mis_pupil_ref",
       "mis_pupil_reference",
       "student_id",
+      "globally_unique_student_id",
     ].includes(normalised)
   ) {
     return "source_pupil_ref";
   }
+  if (normalised === "arbor_student_id") return "pupil_id";
+  if (normalised === "legal_first_name") return "first_name";
+  if (normalised === "legal_last_name") return "last_name";
+  if (normalised.startsWith("year_group")) return "year_group";
+  if (["courses_classes", "course_classes", "classes", "registration_form"].includes(normalised)) {
+    return "current_class";
+  }
+  if (
+    [
+      "date_of_birth",
+      "dob",
+      "d.o.b",
+      "d.o.b.",
+      "birth_date",
+    ].includes(normalised)
+  ) {
+    return "date_of_birth";
+  }
+  if (normalised === "sex") return "gender";
   return normalised;
 }
 
 function normaliseSourcePupilRef(value: string) {
   return value.trim().toUpperCase();
+}
+
+function normaliseArborClassName(value: string) {
+  const segments = value
+    .split(/,|\s+and\s+/i)
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+  const registrationSegment = segments.find((segment) => /^Year\s+[^:]+:\s*.+$/i.test(segment));
+  const directClassSegment = segments.find((segment) => !/^Year\s+[NR\d]+$/i.test(segment) && !/:/.test(segment));
+  const selected = registrationSegment ?? directClassSegment ?? segments[0] ?? value;
+  const registrationMatch = selected.match(/^Year\s+[^:]+:\s*(.+)$/i);
+  return normaliseClassName(registrationMatch?.[1] ?? selected);
 }
 
 function findHeader(lines: string[], required: string[]) {
@@ -302,6 +345,21 @@ function toBool(value: string | boolean | undefined) {
   if (typeof value === "boolean") return value;
   if (!value) return false;
   return ["true", "yes", "y", "1", "ehcp", "e"].includes(value.trim().toLowerCase());
+}
+
+function normaliseDateOfBirth(value: string | null | undefined) {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+
+  const dateMatch = trimmed.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2}|\d{4})$/);
+  if (!dateMatch) return trimmed;
+
+  const day = dateMatch[1].padStart(2, "0");
+  const month = dateMatch[2].padStart(2, "0");
+  const rawYear = dateMatch[3];
+  const year = rawYear.length === 2 ? `20${rawYear}` : rawYear;
+  return `${year}-${month}-${day}`;
 }
 
 function splitCsvLine(line: string) {

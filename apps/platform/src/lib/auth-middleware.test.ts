@@ -10,10 +10,14 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // Mock Supabase
 vi.mock("./supabase-server", () => ({
   createServerSupabaseClient: vi.fn(),
+  createServiceRoleClient: vi.fn(),
 }));
 
 import { withAuth, type AuthContext } from "./auth-middleware";
-import { createServerSupabaseClient } from "./supabase-server";
+import {
+  createServerSupabaseClient,
+  createServiceRoleClient,
+} from "./supabase-server";
 import { NextRequest, NextResponse } from "next/server";
 
 function makeRequest(
@@ -44,17 +48,30 @@ function mockSupabase(user: any, membership: any) {
         error: user ? null : { message: "No user" },
       }),
     },
-    from: vi.fn().mockReturnValue({
-      select: vi.fn().mockReturnValue({
-        eq: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-            single: vi.fn().mockResolvedValue({
-              data: membership,
-              error: membership ? null : { message: "Not found" },
-            }),
-          }),
+  });
+
+  (createServiceRoleClient as any).mockReturnValue({
+    from: vi.fn((table: string) => {
+      const filters = new Map<string, string>();
+      const query = {
+        select: vi.fn(() => query),
+        eq: vi.fn((column: string, value: string) => {
+          filters.set(column, value);
+          return query;
         }),
-      }),
+        maybeSingle: vi.fn().mockImplementation(async () => {
+          if (
+            table === "organization_members" &&
+            filters.get("user_id") === "user-1" &&
+            filters.has("organization_id")
+          ) {
+            return { data: membership, error: null };
+          }
+
+          return { data: null, error: null };
+        }),
+      };
+      return query;
     }),
   });
 }
@@ -185,6 +202,36 @@ describe("Auth Middleware", () => {
         expect.objectContaining({ organizationId: "org-from-body" }),
         expect.anything(),
       );
+    });
+
+    it("should block protected live organizations in UAT runtime", async () => {
+      const previousDbEnv = process.env.SCHOOLGLE_DB_ENV;
+      const previousProtectedOrgs = process.env.SCHOOLGLE_PROTECTED_LIVE_ORG_IDS;
+
+      process.env.SCHOOLGLE_DB_ENV = "uat";
+      process.env.SCHOOLGLE_PROTECTED_LIVE_ORG_IDS = "rawdon-org";
+
+      try {
+        mockSupabase(
+          { id: "user-1", email: "admin@school.uk" },
+          { role: "admin" },
+        );
+
+        const request = makeRequest("/api/test?organizationId=rawdon-org");
+        const handler = vi
+          .fn()
+          .mockResolvedValue(NextResponse.json({ ok: true }));
+
+        const response = await withAuth(request, handler);
+        const body = await response.json();
+
+        expect(response.status).toBe(403);
+        expect(body.code).toBe("PROTECTED_LIVE_ORG_BLOCKED");
+        expect(handler).not.toHaveBeenCalled();
+      } finally {
+        process.env.SCHOOLGLE_DB_ENV = previousDbEnv;
+        process.env.SCHOOLGLE_PROTECTED_LIVE_ORG_IDS = previousProtectedOrgs;
+      }
     });
   });
 });

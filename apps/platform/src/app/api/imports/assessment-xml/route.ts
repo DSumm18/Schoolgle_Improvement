@@ -9,6 +9,8 @@
  *   folderId?: string         // override: use specific Drive folder ID instead of detected one
  *   fileId?: string           // import a single specific file by Drive ID
  *   dryRun?: boolean          // parse + report, don't write to DB (default: false)
+ *   isDemo?: boolean          // marks a synthetic demo import
+ *   demoFixtureId?: string    // reusable fixture id for demo imports
  * }
  *
  * GET /api/imports/assessment-xml?organizationId=xxx
@@ -25,6 +27,7 @@ import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
 import { parseAssessmentXML } from "@/lib/ctf-xml-parser";
 import type { ParsedAssessmentRecord } from "@/lib/ctf-xml-parser";
+import { mapCtfRecordsToAssessmentSpine } from "@/lib/assessment-intelligence/spine-adapter";
 import { NextRequest } from "next/server";
 
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
@@ -175,6 +178,11 @@ export const POST = protectedRoute(async (auth, request: NextRequest) => {
   const dryRun = body.dryRun === true;
   const singleFileId = body.fileId as string | undefined;
   const folderIdOverride = body.folderId as string | undefined;
+  const isDemo = body.isDemo === true || typeof body.demoFixtureId === "string";
+  const demoFixtureId =
+    typeof body.demoFixtureId === "string" && body.demoFixtureId.trim()
+      ? body.demoFixtureId.trim()
+      : null;
 
   if (!organizationId) return apiError("Missing organizationId", 400);
   if (!GOOGLE_API_KEY)
@@ -315,6 +323,10 @@ export const POST = protectedRoute(async (auth, request: NextRequest) => {
           pseudonymisation_method: "sha256_hmac",
           salt_hint:
             "Server-side: organizationId used as HMAC salt (deterministic, consistent across imports)",
+          is_demo: isDemo,
+          demo_fixture_id: demoFixtureId,
+          source_display_name: isDemo ? "Synthetic demo CTF import" : "CTF assessment import",
+          source_layer: "pupil_level",
         })
         .select("id")
         .single();
@@ -379,6 +391,50 @@ export const POST = protectedRoute(async (auth, request: NextRequest) => {
         .from("school_assessment_imports")
         .update({ status: "complete" })
         .eq("id", importRecord.id);
+
+      const spineMapping = mapCtfRecordsToAssessmentSpine({
+        organizationId,
+        importId: importRecord.id,
+        fileName: file.name,
+        parsed,
+        isDemo,
+        demoFixtureId,
+      });
+
+      const { data: sourceBatch, error: sourceBatchError } = await supabase
+        .from("assessment_source_batches")
+        .insert(spineMapping.batchInsert)
+        .select("id")
+        .single();
+
+      if (sourceBatchError || !sourceBatch?.id) {
+        fileResult.warnings = [
+          ...(fileResult.warnings ?? []),
+          `Assessment spine batch was not created: ${sourceBatchError?.message ?? "no batch id returned"}`,
+        ];
+      } else {
+        for (let i = 0; i < spineMapping.eventInserts.length; i += BATCH_SIZE) {
+          const spineBatch = spineMapping.eventInserts
+            .slice(i, i + BATCH_SIZE)
+            .map((event) => ({
+              ...event,
+              source_batch_id: sourceBatch.id,
+            }));
+
+          if (spineBatch.length === 0) continue;
+
+          const { error: spineEventError } = await supabase
+            .from("pupil_assessment_events")
+            .insert(spineBatch);
+
+          if (spineEventError) {
+            fileResult.warnings = [
+              ...(fileResult.warnings ?? []),
+              `Assessment spine event batch ${Math.floor(i / BATCH_SIZE)} failed: ${spineEventError.message}`,
+            ];
+          }
+        }
+      }
 
       fileResult.inserted_count = insertedCount;
       fileResult.status = "complete";

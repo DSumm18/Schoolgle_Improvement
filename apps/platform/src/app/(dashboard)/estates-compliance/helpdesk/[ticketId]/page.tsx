@@ -15,6 +15,7 @@ import {
   TicketPriority,
 } from "@/types/estates-compliance";
 import { PhotoCapture } from "@/components/estates-compliance/PhotoCapture";
+import { RiskControlReviewPanel } from "@/components/estates-compliance/RiskControlReviewPanel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -400,6 +401,10 @@ export default function HelpdeskTicketDetailPage() {
               </p>
             </CardContent>
           </Card>
+
+          {ticket.status !== "resolved" && ticket.status !== "closed" && (
+            <RiskControlReviewPanel ticketId={ticketId} />
+          )}
 
           {/* Photos / Evidence */}
           <Card>

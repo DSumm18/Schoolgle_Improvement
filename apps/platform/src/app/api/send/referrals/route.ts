@@ -168,14 +168,14 @@ export const GET = protectedRoute(async (auth, request) => {
   let query = supabase
     .from("send_referrals")
     .select(
-      "*, send_register(pupil_code, first_name, last_name, year_group, primary_need, sen_status)",
+      "*, send_register(pupil_id, year_group, primary_need, sen_status)",
     )
     .eq("organization_id", organizationId)
-    .order("referral_date", { ascending: false });
+    .order("referred_at", { ascending: false });
 
   if (status) query = query.eq("status", status);
   if (type) query = query.eq("referral_type", type);
-  if (pupilId) query = query.eq("pupil_id", pupilId);
+  if (pupilId) query = query.eq("send_register_id", pupilId);
 
   const { data, error } = await query;
 
@@ -183,7 +183,7 @@ export const GET = protectedRoute(async (auth, request) => {
     console.error("[SEND Referrals GET]", error);
   }
 
-  if (!data || data.length === 0) {
+  if (error) {
     let filtered = [...DEMO_REFERRALS];
     if (status) filtered = filtered.filter((r) => r.status === status);
     if (type) filtered = filtered.filter((r) => r.referral_type === type);
@@ -191,7 +191,7 @@ export const GET = protectedRoute(async (auth, request) => {
     return apiSuccess({ data: filtered, demo: true });
   }
 
-  return apiSuccess({ data, demo: false });
+  return apiSuccess({ data: (data || []).map(normaliseReferral), demo: false });
 });
 
 /**
@@ -199,7 +199,7 @@ export const GET = protectedRoute(async (auth, request) => {
  * Create a new referral
  */
 export const POST = protectedRoute(async (auth, request) => {
-  const { organizationId, userId } = auth;
+  const { organizationId } = auth;
   const supabase = createServiceRoleClient();
   const body = await request.json();
 
@@ -225,17 +225,15 @@ export const POST = protectedRoute(async (auth, request) => {
     .from("send_referrals")
     .insert({
       organization_id: organizationId,
-      pupil_id,
+      send_register_id: pupil_id,
       referral_type,
-      referral_date: new Date().toISOString().split("T")[0],
+      referred_at: new Date().toISOString().split("T")[0],
       referred_by: referred_by || null,
-      referral_reason,
+      referred_by_name: referred_by || null,
       status: "draft",
       agency_name: agency_name || null,
-      agency_contact: agency_contact || null,
       expected_wait_weeks: expected_wait_weeks || null,
-      notes: notes || null,
-      created_by: userId,
+      report_summary: notes || referral_reason || null,
     })
     .select()
     .single();
@@ -245,8 +243,18 @@ export const POST = protectedRoute(async (auth, request) => {
     return apiError("Failed to create referral", 500);
   }
 
-  return apiSuccess(data, 201);
+  return apiSuccess(normaliseReferral(data), 201);
 });
+
+function normaliseReferral(row: any) {
+  return {
+    ...row,
+    pupil_id: row.pupil_id ?? row.send_register_id,
+    referral_date: row.referral_date ?? row.referred_at,
+    referral_reason: row.referral_reason ?? row.report_summary,
+    notes: row.notes ?? row.report_summary,
+  };
+}
 
 /**
  * PUT /api/send/referrals

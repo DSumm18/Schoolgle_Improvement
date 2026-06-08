@@ -24,6 +24,9 @@ export interface CustomCheck {
   evidence_required: string[];
   checklist_items?: string[];
   notes?: string;
+  classification: "statutory" | "non_statutory";
+  frequency_locked: boolean;
+  statutory_reference?: string;
   visibility: CheckVisibility;
   tags: string[];
   is_template: boolean;
@@ -50,6 +53,9 @@ export interface CreateCustomCheckInput {
   evidence_required: string[];
   checklist_items?: string[];
   notes?: string;
+  classification?: "statutory" | "non_statutory";
+  frequency_locked?: boolean;
+  statutory_reference?: string;
   visibility: CheckVisibility;
   tags?: string[];
   is_template?: boolean;
@@ -207,6 +213,10 @@ export async function createCustomCheck(
       tags: input.tags || [],
       evidence_required: input.evidence_required || [],
       checklist_items: input.checklist_items || [],
+      classification: input.classification || "non_statutory",
+      frequency_locked:
+        input.frequency_locked ?? input.classification === "statutory",
+      statutory_reference: input.statutory_reference || null,
       is_template: input.is_template || false,
       usage_count: 0,
     })
@@ -318,6 +328,11 @@ export async function cloneCustomCheck(
       overrides?.evidence_required || original.evidence_required,
     checklist_items: overrides?.checklist_items || original.checklist_items,
     notes: overrides?.notes || original.notes,
+    classification: overrides?.classification || original.classification,
+    frequency_locked:
+      overrides?.frequency_locked ?? original.frequency_locked,
+    statutory_reference:
+      overrides?.statutory_reference || original.statutory_reference,
     visibility: overrides?.visibility || "private",
     tags: overrides?.tags || original.tags,
     is_template: false,

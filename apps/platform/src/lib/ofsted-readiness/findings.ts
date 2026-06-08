@@ -5,7 +5,12 @@ export type OfstedFindingSourceType =
   | "drive_scan"
   | "document_inspection"
   | "manual_review"
-  | "rules_update";
+  | "rules_update"
+  | "dfe_public_data"
+  | "school_assessment_capture"
+  | "ctf_pupil_layer"
+  | "assessment_creator"
+  | "school_improvement_signal";
 
 export type OfstedFindingType =
   | "missing"

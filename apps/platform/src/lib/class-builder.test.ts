@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildDefaultDestinationClasses,
   classBuilderCohortLabel,
   classBuilderYearStorageAliases,
   formatClassBuilderCohortYearGroups,
@@ -229,5 +230,62 @@ describe("generateClassGroups", () => {
     expect(result.summary.selectionCounts.highDemand).toEqual(
       expect.any(Array),
     );
+  });
+
+  it("applies mixed-year destination class rules", () => {
+    const mixedPupils: ClassBuilderPupil[] = [
+      ...Array.from({ length: 6 }, (_, index) => ({
+        id: `y4-${index + 1}`,
+        first_name: `Year4${index + 1}`,
+        last_name: "Pupil",
+        year_group: "4",
+        current_class: "Rowan",
+        gender: index % 2 === 0 ? "F" : "M",
+        send_status: null,
+        ehcp: false,
+      })),
+      ...Array.from({ length: 6 }, (_, index) => ({
+        id: `y5-${index + 1}`,
+        first_name: `Year5${index + 1}`,
+        last_name: "Pupil",
+        year_group: "5",
+        current_class: "Willow",
+        gender: index % 2 === 0 ? "F" : "M",
+        send_status: null,
+        ehcp: false,
+      })),
+    ];
+
+    const result = generateClassGroups({
+      pupils: mixedPupils,
+      choices: [],
+      targetClassCount: 3,
+      destinationClasses: buildDefaultDestinationClasses("4,5", 3),
+    });
+
+    expect(result.groups.map((group) => group.name)).toEqual([
+      "Year 5",
+      "Year 5/6",
+      "Year 6",
+    ]);
+    expect(result.groups.map((group) => group.pupilIds.length)).toEqual([
+      4,
+      4,
+      4,
+    ]);
+
+    const pupilById = new Map(mixedPupils.map((pupil) => [pupil.id, pupil]));
+    const year5Group = result.groups.find((group) => group.name === "Year 5");
+    const mixedGroup = result.groups.find((group) => group.name === "Year 5/6");
+    const year6Group = result.groups.find((group) => group.name === "Year 6");
+
+    expect(year5Group?.pupilIds.every((id) => pupilById.get(id)?.year_group === "4")).toBe(true);
+    expect(year6Group?.pupilIds.every((id) => pupilById.get(id)?.year_group === "5")).toBe(true);
+    expect(
+      mixedGroup?.pupilIds.some((id) => pupilById.get(id)?.year_group === "4"),
+    ).toBe(true);
+    expect(
+      mixedGroup?.pupilIds.some((id) => pupilById.get(id)?.year_group === "5"),
+    ).toBe(true);
   });
 });

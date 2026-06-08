@@ -57,11 +57,14 @@ CREATE TABLE IF NOT EXISTS class_builder_sessions (
   title TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'open', 'closed')),
   target_class_count INTEGER NOT NULL DEFAULT 2 CHECK (target_class_count IN (2, 3)),
+  destination_structure JSONB,
   survey_code TEXT NOT NULL UNIQUE DEFAULT upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 8)),
   created_by UUID,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   closes_at TIMESTAMPTZ
 );
+
+ALTER TABLE class_builder_sessions ADD COLUMN IF NOT EXISTS destination_structure JSONB;
 
 CREATE TABLE IF NOT EXISTS class_builder_responses (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

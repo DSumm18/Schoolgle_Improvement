@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Shield,
   ShieldCheck,
   ShieldAlert,
   ShieldQuestion,
@@ -51,9 +50,9 @@ interface SafeguardingPanelProps {
 const DEFAULT_CHECKLIST: Omit<ChecklistItem, "checked" | "notes">[] = [
   {
     id: "safeguarding-policy",
-    label: "Safeguarding policy present, dated, references KCSIE 2024",
+    label: "Safeguarding policy present, dated, references KCSIE 2025",
     description:
-      "The school has a current safeguarding/child protection policy that is reviewed annually, dated, and explicitly references Keeping Children Safe in Education (KCSIE) 2024.",
+      "The school has a current safeguarding/child protection policy that is reviewed annually, dated, and explicitly references Keeping Children Safe in Education (KCSIE) 2025 and current Working Together guidance.",
   },
   {
     id: "scr-present",

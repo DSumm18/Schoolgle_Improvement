@@ -88,6 +88,7 @@ export interface Asset {
   invoice_number?: string | null;
   purchased_from_contractor_id?: string | null;
   purchase_document_evidence_id?: string | null;
+  maintained_by_contractor_id?: string | null;
 
   // Warranty
   warranty_start_date?: string | null;
@@ -133,6 +134,14 @@ export interface AssetWithWarrantyStatus extends Asset {
     phone?: string | null;
     mobile?: string | null;
   } | null;
+  maintenance_contact?: {
+    contractor_id: string;
+    company_name: string;
+    contact_name?: string | null;
+    email?: string | null;
+    phone?: string | null;
+    mobile?: string | null;
+  } | null;
 }
 
 export interface AssetInput {
@@ -166,6 +175,7 @@ export interface AssetInput {
   invoice_number?: string;
   purchased_from_contractor_id?: string;
   purchase_document_evidence_id?: string;
+  maintained_by_contractor_id?: string;
 
   // Warranty
   warranty_start_date?: string;
@@ -406,6 +416,8 @@ export interface ComplianceTask {
   assigned_to?: string;
   assigned_contractor_id?: string;
   asset_id?: string;
+  statutory_check_id?: string;
+  custom_check_id?: string;
   location_details?: Record<string, unknown>;
   checklist: Array<Record<string, unknown>>;
   status: TaskStatus;
@@ -491,9 +503,15 @@ export interface HelpdeskTicket {
   task_id?: string;
   contractor_id?: string;
   contract_id?: string;
+  compliance_domain?: string;
+  statutory_check_id?: string;
+  custom_check_id?: string;
   raised_by: string;
+  raised_by_name?: string;
   assigned_to?: string;
+  assigned_to_name?: string;
   assigned_contractor_id?: string;
+  assigned_contractor_name?: string;
   status: TicketStatus;
   sla_target?: string;
   sla_met?: boolean;
@@ -649,6 +667,7 @@ export interface AssetFilters {
   room?: string;
   status?: AssetStatus;
   compliance_domain?: string;
+  linked_compliance_check?: string;
   search?: string;
 }
 

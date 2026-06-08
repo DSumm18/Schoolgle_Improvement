@@ -440,6 +440,8 @@ export const WEBSITE_COMPLIANCE_REQUIREMENTS: ComplianceRequirement[] = [
       "Bug Club",
     ],
     urlPatterns: [
+      "/learning/phonics",
+      "/phonics",
       "/curriculum/phonics",
       "/curriculum/reading",
       "/reading",

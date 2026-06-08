@@ -1,0 +1,5950 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
+<CTfile>
+  <Header>
+    <DocumentName>Schoolgle synthetic demo data - rochdale-demo-primary</DocumentName>
+    <CTFversion>21.0</CTFversion>
+    <DateTime>2026-01-15T09:00:00</DateTime>
+    <DocumentQualifier>partial</DocumentQualifier>
+    <DataDescriptor>Partial CTF containing phonics check data</DataDescriptor>
+    <SupplierID>Arbor</SupplierID>
+    <SourceSchool>
+      <LEA>354</LEA>
+      <Estab>9001</Estab>
+      <URN>149001</URN>
+      <SchoolName>Rochdale Demo Primary School</SchoolName>
+      <AcademicYear>2021</AcademicYear>
+
+
+
+
+
+
+        </SourceSchool>
+    <DestSchool>
+      <LEA>354</LEA>
+      <Estab>9001</Estab>
+
+
+
+        </DestSchool>
+
+
+
+
+
+
+
+
+
+    </Header>
+  <CTFpupilData>
+    <Pupil>
+      <UPN>Z900000000001</UPN>
+      <Surname>SGXFamily0001</Surname>
+      <Forename>SGXGiven0001</Forename>
+      <DOB>2020-01-03</DOB>
+      <Gender>F</Gender>
+      <BasicDetails>
+        <PreferredSurname>SGXFamily0001</PreferredSurname>
+        <PreferredForename>SGXGiven0001</PreferredForename>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-A</Ethnicity>
+        <EthnicitySource>SYN-A</EthnicitySource>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-EN</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>true</MedicalFlag>
+
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>1 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>1 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <PostCode>RD1 1AA</PostCode>
+        <Country>1 Schoolgle Demo Street</Country>
+1 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WT</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>27</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000002</UPN>
+      <Surname>SGXFamily0002</Surname>
+      <Forename>SGXGiven0002</Forename>
+      <DOB>2020-02-10</DOB>
+      <Gender>M</Gender>
+      <BasicDetails>
+        <PreferredSurname>SGXFamily0002</PreferredSurname>
+        <PreferredForename>SGXGiven0002</PreferredForename>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-A</Ethnicity>
+        <EthnicitySource>SYN-A</EthnicitySource>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-EN</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>true</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>2 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>2 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <PostCode>RD2 2BB</PostCode>
+        <Country>2 Schoolgle Demo Street</Country>
+2 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WA</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>38</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000003</UPN>
+      <Surname>SGXFamily0003</Surname>
+      <Forename>SGXGiven0003</Forename>
+      <DOB>2020-03-17</DOB>
+      <Gender>F</Gender>
+      <BasicDetails>
+        <PreferredSurname>SGXFamily0003</PreferredSurname>
+        <PreferredForename>SGXGiven0003</PreferredForename>
+        <MiddleNames>Abdullah</MiddleNames>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-A</Ethnicity>
+        <EthnicitySource>SYN-A</EthnicitySource>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-EN</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>true</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>3 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>3 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <County>3 Schoolgle Demo Street</County>
+        <PostCode>RD3 1AA</PostCode>
+        <Country>3 Schoolgle Demo Street</Country>
+3 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WT</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>26</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000004</UPN>
+      <Surname>SGXFamily0004</Surname>
+      <Forename>SGXGiven0004</Forename>
+      <DOB>2020-07-25</DOB>
+      <Gender>M</Gender>
+      <BasicDetails>
+        <PreferredSurname>SGXFamily0004</PreferredSurname>
+        <PreferredForename>SGXGiven0004</PreferredForename>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-A</Ethnicity>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-EN</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>true</MedicalFlag>
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>4 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>4 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <PostCode>RD4 2BB</PostCode>
+        <Country>4 Schoolgle Demo Street</Country>
+4 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WT</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>3</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000005</UPN>
+      <Surname>SGXFamily0005</Surname>
+      <Forename>SGXGiven0005</Forename>
+      <DOB>2020-05-07</DOB>
+      <Gender>F</Gender>
+      <BasicDetails>
+        <PreferredSurname>SGXFamily0005</PreferredSurname>
+        <PreferredForename>SGXGiven0005</PreferredForename>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-A</Ethnicity>
+        <EthnicitySource>SYN-A</EthnicitySource>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-EN</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>true</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>5 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>5 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <PostCode>RD5 1AA</PostCode>
+        <Country>5 Schoolgle Demo Street</Country>
+5 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WT</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>24</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000006</UPN>
+      <Surname>SGXFamily0006</Surname>
+      <Forename>SGXGiven0006</Forename>
+      <DOB>2020-06-14</DOB>
+      <Gender>M</Gender>
+      <BasicDetails>
+        <PreferredSurname>SGXFamily0006</PreferredSurname>
+        <FormerSurname>SGXFamily0006</FormerSurname>
+        <PreferredForename>SGXGiven0006</PreferredForename>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-A</Ethnicity>
+        <EthnicitySource>SYN-A</EthnicitySource>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-EN</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>true</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>6 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>6 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <PostCode>RD6 2BB</PostCode>
+        <Country>6 Schoolgle Demo Street</Country>
+6 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WA</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>33</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000007</UPN>
+      <Surname>SGXFamily0007</Surname>
+      <Forename>SGXGiven0007</Forename>
+      <DOB>2020-07-21</DOB>
+      <Gender>F</Gender>
+      <BasicDetails>
+        <PreferredSurname>SGXFamily0007</PreferredSurname>
+        <PreferredForename>SGXGiven0007</PreferredForename>
+        <MiddleNames>Isobella</MiddleNames>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-A</Ethnicity>
+        <EthnicitySource>SYN-A</EthnicitySource>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-EN</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>true</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>7 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>7 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <PostCode>RD7 1AA</PostCode>
+        <Country>7 Schoolgle Demo Street</Country>
+7 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WT</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>30</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000008</UPN>
+      <Surname>SGXFamily0008</Surname>
+      <Forename>SGXGiven0008</Forename>
+      <DOB>2020-08-04</DOB>
+      <Gender>M</Gender>
+      <BasicDetails>
+        <PreferredSurname>SGXFamily0008</PreferredSurname>
+        <FormerSurname>SGXFamily0008</FormerSurname>
+        <PreferredForename>SGXGiven0008</PreferredForename>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-A</Ethnicity>
+        <EthnicitySource>SYN-A</EthnicitySource>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-EN</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>true</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>8 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>8 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <PostCode>RD8 2BB</PostCode>
+        <Country>8 Schoolgle Demo Street</Country>
+8 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WA</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>39</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000009</UPN>
+      <Surname>SGXFamily0009</Surname>
+      <Forename>SGXGiven0009</Forename>
+      <DOB>2019-09-11</DOB>
+      <Gender>F</Gender>
+      <BasicDetails>
+        <PreferredSurname>SGXFamily0009</PreferredSurname>
+        <PreferredForename>SGXGiven0009</PreferredForename>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-A</Ethnicity>
+        <EthnicitySource>SYN-A</EthnicitySource>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-EN</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>true</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>9 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>9 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <PostCode>RD9 1AA</PostCode>
+        <Country>9 Schoolgle Demo Street</Country>
+9 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WT</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>14</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000010</UPN>
+      <Surname>SGXFamily0010</Surname>
+      <Forename>SGXGiven0010</Forename>
+      <DOB>2019-10-18</DOB>
+      <Gender>M</Gender>
+      <BasicDetails>
+        <PreferredSurname>SGXFamily0010</PreferredSurname>
+        <PreferredForename>SGXGiven0010</PreferredForename>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-A</Ethnicity>
+        <EthnicitySource>SYN-A</EthnicitySource>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-EN</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>true</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>10 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>10 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <PostCode>RD1 2BB</PostCode>
+        <Country>10 Schoolgle Demo Street</Country>
+10 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WT</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>29</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000011</UPN>
+      <Surname>SGXFamily0011</Surname>
+      <Forename>SGXGiven0011</Forename>
+      <DOB>2019-11-25</DOB>
+      <Gender>F</Gender>
+      <BasicDetails>
+        <PreferredSurname>SGXFamily0011</PreferredSurname>
+        <PreferredForename>SGXGiven0011</PreferredForename>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-A</Ethnicity>
+        <EthnicitySource>SYN-A</EthnicitySource>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-EN</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>false</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>11 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>11 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <PostCode>RD2 1AA</PostCode>
+        <Country>11 Schoolgle Demo Street</Country>
+11 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WT</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>1</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000012</UPN>
+      <Surname>SGXFamily0012</Surname>
+      <Forename>SGXGiven0012</Forename>
+      <DOB>2019-12-08</DOB>
+      <Gender>M</Gender>
+      <BasicDetails>
+        <PreferredSurname>SGXFamily0012</PreferredSurname>
+        <PreferredForename>SGXGiven0012</PreferredForename>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-B</Ethnicity>
+        <EthnicitySource>SYN-A</EthnicitySource>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-EN</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>false</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>12 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>12 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <PostCode>RD3 2BB</PostCode>
+        <Country>12 Schoolgle Demo Street</Country>
+12 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WT</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>30</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000013</UPN>
+      <Surname>SGXFamily0013</Surname>
+      <Forename>SGXGiven0013</Forename>
+      <DOB>2020-01-15</DOB>
+      <Gender>F</Gender>
+      <BasicDetails>
+        <PreferredSurname>SGXFamily0013</PreferredSurname>
+        <FormerSurname>SGXFamily0013</FormerSurname>
+        <PreferredForename>SGXGiven0013</PreferredForename>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-B</Ethnicity>
+        <EthnicitySource>SYN-A</EthnicitySource>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-EN</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>false</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>13 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>13 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <PostCode>RD4 1AA</PostCode>
+        <Country>13 Schoolgle Demo Street</Country>
+13 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WA</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>32</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000014</UPN>
+      <Surname>SGXFamily0014</Surname>
+      <Forename>SGXGiven0014</Forename>
+      <DOB>2020-02-22</DOB>
+      <Gender>M</Gender>
+      <BasicDetails>
+        <PreferredSurname>SGXFamily0014</PreferredSurname>
+        <PreferredForename>SGXGiven0014</PreferredForename>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-B</Ethnicity>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-EN</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>false</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>14 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>14 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <PostCode>RD5 2BB</PostCode>
+        <Country>14 Schoolgle Demo Street</Country>
+14 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WA</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>37</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000015</UPN>
+      <Surname>SGXFamily0015</Surname>
+      <Forename>SGXGiven0015</Forename>
+      <DOB>2020-03-05</DOB>
+      <Gender>F</Gender>
+      <BasicDetails>
+        <PreferredSurname>SGXFamily0015</PreferredSurname>
+        <PreferredForename>SGXGiven0015</PreferredForename>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-B</Ethnicity>
+        <EthnicitySource>SYN-A</EthnicitySource>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-EN</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>false</MedicalFlag>
+
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>15 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>15 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <PostCode>RD6 1AA</PostCode>
+        <Country>15 Schoolgle Demo Street</Country>
+15 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WT</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>0</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000016</UPN>
+      <Surname>SGXFamily0016</Surname>
+      <Forename>SGXGiven0016</Forename>
+      <DOB>2020-04-12</DOB>
+      <Gender>M</Gender>
+      <BasicDetails>
+        <PreferredSurname>SGXFamily0016</PreferredSurname>
+        <FormerSurname>SGXFamily0016</FormerSurname>
+        <PreferredForename>SGXGiven0016</PreferredForename>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-B</Ethnicity>
+        <EthnicitySource>SYN-A</EthnicitySource>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-EN</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>false</MedicalFlag>
+
+
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>16 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>16 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <County>16 Schoolgle Demo Street</County>
+        <PostCode>RD7 2BB</PostCode>
+        <Country>16 Schoolgle Demo Street</Country>
+16 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WT</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>26</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000017</UPN>
+      <Surname>SGXFamily0017</Surname>
+      <Forename>SGXGiven0017</Forename>
+      <DOB>2020-05-19</DOB>
+      <Gender>F</Gender>
+      <BasicDetails>
+        <PreferredSurname>SGXFamily0017</PreferredSurname>
+        <PreferredForename>SGXGiven0017</PreferredForename>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-B</Ethnicity>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-EN</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>false</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>17 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>17 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <PostCode>RD8 1AA</PostCode>
+        <Country>17 Schoolgle Demo Street</Country>
+17 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WT</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>10</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000018</UPN>
+      <Surname>SGXFamily0018</Surname>
+      <Forename>SGXGiven0018</Forename>
+      <DOB>2019-12-04</DOB>
+      <Gender>M</Gender>
+      <BasicDetails>
+        <PreferredSurname>SGXFamily0018</PreferredSurname>
+        <PreferredForename>SGXGiven0018</PreferredForename>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-B</Ethnicity>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-EN</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>false</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>18 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>18 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <PostCode>RD9 2BB</PostCode>
+        <Country>18 Schoolgle Demo Street</Country>
+18 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WA</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>39</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000019</UPN>
+      <Surname>SGXFamily0019</Surname>
+      <Forename>SGXGiven0019</Forename>
+      <DOB>2020-07-09</DOB>
+      <Gender>F</Gender>
+      <BasicDetails>
+        <PreferredSurname>SGXFamily0019</PreferredSurname>
+        <PreferredForename>SGXGiven0019</PreferredForename>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-B</Ethnicity>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-EN</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>false</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>19 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>19 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <PostCode>RD1 1AA</PostCode>
+        <Country>19 Schoolgle Demo Street</Country>
+19 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WT</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>23</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000020</UPN>
+      <Surname>SGXFamily0020</Surname>
+      <Forename>SGXGiven0020</Forename>
+      <DOB>2020-08-16</DOB>
+      <Gender>M</Gender>
+      <BasicDetails>
+        <PreferredSurname>SGXFamily0020</PreferredSurname>
+        <FormerSurname>SGXFamily0020</FormerSurname>
+        <PreferredForename>SGXGiven0020</PreferredForename>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-B</Ethnicity>
+        <EthnicitySource>SYN-A</EthnicitySource>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-EN</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>false</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>20 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>20 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <PostCode>RD2 2BB</PostCode>
+        <Country>20 Schoolgle Demo Street</Country>
+20 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WA</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>38</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000021</UPN>
+      <Surname>SGXFamily0021</Surname>
+      <Forename>SGXGiven0021</Forename>
+      <DOB>2020-03-25</DOB>
+      <Gender>F</Gender>
+      <BasicDetails>
+        <PreferredSurname>SGXFamily0021</PreferredSurname>
+        <PreferredForename>SGXGiven0021</PreferredForename>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-C</Ethnicity>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-EN</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>false</MedicalFlag>
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>21 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>21 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <PostCode>RD3 1AA</PostCode>
+        <Country>21 Schoolgle Demo Street</Country>
+21 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WA</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>35</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000022</UPN>
+      <Surname>SGXFamily0022</Surname>
+      <Forename>SGXGiven0022</Forename>
+      <DOB>2019-10-06</DOB>
+      <Gender>M</Gender>
+      <BasicDetails>
+        <PreferredSurname>SGXFamily0022</PreferredSurname>
+        <PreferredForename>SGXGiven0022</PreferredForename>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-C</Ethnicity>
+        <EthnicitySource>SYN-A</EthnicitySource>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-EN</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>false</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>22 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>22 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <PostCode>RD4 2BB</PostCode>
+        <Country>22 Schoolgle Demo Street</Country>
+22 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WA</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>40</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000023</UPN>
+      <Surname>SGXFamily0023</Surname>
+      <Forename>SGXGiven0023</Forename>
+      <DOB>2019-11-13</DOB>
+      <Gender>F</Gender>
+      <BasicDetails>
+        <PreferredSurname>SGXFamily0023</PreferredSurname>
+        <PreferredForename>SGXGiven0023</PreferredForename>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-C</Ethnicity>
+        <EthnicitySource>SYN-A</EthnicitySource>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-EN</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>false</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>23 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>23 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <PostCode>RD5 1AA</PostCode>
+        <Country>23 Schoolgle Demo Street</Country>
+23 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WT</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>22</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000024</UPN>
+      <Surname>SGXFamily0024</Surname>
+      <Forename>SGXGiven0024</Forename>
+      <DOB>2019-12-20</DOB>
+      <Gender>M</Gender>
+      <BasicDetails>
+        <PreferredSurname>SGXFamily0024</PreferredSurname>
+        <PreferredForename>SGXGiven0024</PreferredForename>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-C</Ethnicity>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-EN</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>false</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>24 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>24 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <PostCode>RD6 2BB</PostCode>
+        <Country>24 Schoolgle Demo Street</Country>
+24 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WT</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>27</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000025</UPN>
+      <Surname>SGXFamily0025</Surname>
+      <Forename>SGXGiven0025</Forename>
+      <DOB>2020-01-03</DOB>
+      <Gender>F</Gender>
+      <BasicDetails>
+        <PreferredSurname>SGXFamily0025</PreferredSurname>
+        <PreferredForename>SGXGiven0025</PreferredForename>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-C</Ethnicity>
+        <EthnicitySource>SYN-A</EthnicitySource>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-EN</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>false</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>25 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>25 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <PostCode>RD7 1AA</PostCode>
+        <Country>25 Schoolgle Demo Street</Country>
+25 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WT</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>0</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000026</UPN>
+      <Surname>SGXFamily0026</Surname>
+      <Forename>SGXGiven0026</Forename>
+      <DOB>2020-02-10</DOB>
+      <Gender>M</Gender>
+      <BasicDetails>
+        <PreferredSurname>SGXFamily0026</PreferredSurname>
+        <PreferredForename>SGXGiven0026</PreferredForename>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-C</Ethnicity>
+        <EthnicitySource>SYN-A</EthnicitySource>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-EN</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>false</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>26 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>26 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <County>26 Schoolgle Demo Street</County>
+        <PostCode>RD8 2BB</PostCode>
+        <Country>26 Schoolgle Demo Street</Country>
+26 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WA</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>33</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000027</UPN>
+      <Surname>SGXFamily0027</Surname>
+      <Forename>SGXGiven0027</Forename>
+      <DOB>2020-03-17</DOB>
+      <Gender>F</Gender>
+      <BasicDetails>
+        <PreferredSurname>SGXFamily0027</PreferredSurname>
+        <PreferredForename>SGXGiven0027</PreferredForename>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-C</Ethnicity>
+        <EthnicitySource>SYN-A</EthnicitySource>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-EN</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>false</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>27 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>27 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <PostCode>RD9 1AA</PostCode>
+        <Country>27 Schoolgle Demo Street</Country>
+27 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WA</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>36</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000028</UPN>
+      <Surname>SGXFamily0028</Surname>
+      <Forename>SGXGiven0028</Forename>
+      <DOB>2020-07-25</DOB>
+      <Gender>M</Gender>
+      <BasicDetails>
+        <PreferredSurname>SGXFamily0028</PreferredSurname>
+        <PreferredForename>SGXGiven0028</PreferredForename>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-C</Ethnicity>
+        <EthnicitySource>SYN-A</EthnicitySource>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-EN</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>false</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>28 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>28 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <PostCode>RD1 2BB</PostCode>
+        <Country>28 Schoolgle Demo Street</Country>
+28 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WA</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>34</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000029</UPN>
+      <Surname>SGXFamily0029</Surname>
+      <Forename>SGXGiven0029</Forename>
+      <DOB>2020-05-07</DOB>
+      <Gender>F</Gender>
+      <BasicDetails>
+        <PreferredSurname>SGXFamily0029</PreferredSurname>
+        <PreferredForename>SGXGiven0029</PreferredForename>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-D</Ethnicity>
+        <EthnicitySource>SYN-A</EthnicitySource>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-EN</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>false</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>29 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>29 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <PostCode>RD2 1AA</PostCode>
+        <Country>29 Schoolgle Demo Street</Country>
+29 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WA</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>34</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000030</UPN>
+      <Surname>SGXFamily0030</Surname>
+      <Forename>SGXGiven0030</Forename>
+      <DOB>2020-06-14</DOB>
+      <Gender>M</Gender>
+      <BasicDetails>
+        <MiddleNames>Lee</MiddleNames>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-D</Ethnicity>
+        <EthnicitySource>SYN-A</EthnicitySource>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-EN</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>false</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>30 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>30 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <PostCode>RD3 2BB</PostCode>
+        <Country>30 Schoolgle Demo Street</Country>
+30 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WA</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>38</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000031</UPN>
+      <Surname>SGXFamily0031</Surname>
+      <Forename>SGXGiven0031</Forename>
+      <DOB>2020-07-21</DOB>
+      <Gender>F</Gender>
+      <BasicDetails>
+        <PreferredForename>SGXGiven0031</PreferredForename>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-D</Ethnicity>
+        <EthnicitySource>SYN-A</EthnicitySource>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-EN</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>false</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>31 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>31 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <PostCode>RD4 1AA</PostCode>
+        <Country>31 Schoolgle Demo Street</Country>
+31 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WA</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>38</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000032</UPN>
+      <Surname>SGXFamily0032</Surname>
+      <Forename>SGXGiven0032</Forename>
+      <DOB>2020-08-04</DOB>
+      <Gender>M</Gender>
+      <BasicDetails>
+        <PreferredSurname>SGXFamily0032</PreferredSurname>
+        <PreferredForename>SGXGiven0032</PreferredForename>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-D</Ethnicity>
+        <EthnicitySource>SYN-A</EthnicitySource>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-EN</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>false</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>32 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>32 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <PostCode>RD5 2BB</PostCode>
+        <Country>32 Schoolgle Demo Street</Country>
+32 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WA</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>35</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000033</UPN>
+      <Surname>SGXFamily0033</Surname>
+      <Forename>SGXGiven0033</Forename>
+      <DOB>2019-09-11</DOB>
+      <Gender>F</Gender>
+      <BasicDetails>
+        <PreferredSurname>SGXFamily0033</PreferredSurname>
+        <PreferredForename>SGXGiven0033</PreferredForename>
+        <MiddleNames>Jane</MiddleNames>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-D</Ethnicity>
+        <EthnicitySource>SYN-A</EthnicitySource>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-EN</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>false</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>33 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>33 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <PostCode>RD6 1AA</PostCode>
+        <Country>33 Schoolgle Demo Street</Country>
+33 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WA</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>33</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000034</UPN>
+      <Surname>SGXFamily0034</Surname>
+      <Forename>SGXGiven0034</Forename>
+      <DOB>2019-10-18</DOB>
+      <Gender>M</Gender>
+      <BasicDetails>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-D</Ethnicity>
+        <EthnicitySource>SYN-A</EthnicitySource>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-EN</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>false</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>34 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>34 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <PostCode>RD7 2BB</PostCode>
+        <Country>34 Schoolgle Demo Street</Country>
+34 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WA</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>32</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000035</UPN>
+      <Surname>SGXFamily0035</Surname>
+      <Forename>SGXGiven0035</Forename>
+      <DOB>2019-11-25</DOB>
+      <Gender>F</Gender>
+      <BasicDetails>
+        <PreferredSurname>SGXFamily0035</PreferredSurname>
+        <PreferredForename>SGXGiven0035</PreferredForename>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-D</Ethnicity>
+        <EthnicitySource>SYN-A</EthnicitySource>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-EN</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>false</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>35 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>35 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <PostCode>RD8 1AA</PostCode>
+        <Country>35 Schoolgle Demo Street</Country>
+35 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WT</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>29</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000036</UPN>
+      <Surname>SGXFamily0036</Surname>
+      <Forename>SGXGiven0036</Forename>
+      <DOB>2019-12-08</DOB>
+      <Gender>M</Gender>
+      <BasicDetails>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-A</Ethnicity>
+        <EthnicitySource>SYN-A</EthnicitySource>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-EN</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>false</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>36 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>36 Schoolgle Demo Street</AddressLine2>
+          <AddressLine3>36 Schoolgle Demo Street</AddressLine3>
+
+
+
+
+                </AddressLines>
+        <County>36 Schoolgle Demo Street</County>
+        <PostCode>RD9 2BB</PostCode>
+        <Country>36 Schoolgle Demo Street</Country>
+36 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WA</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>32</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000037</UPN>
+      <Surname>SGXFamily0037</Surname>
+      <Forename>SGXGiven0037</Forename>
+      <DOB>2020-01-15</DOB>
+      <Gender>F</Gender>
+      <BasicDetails>
+        <PreferredForename>SGXGiven0037</PreferredForename>
+        <MiddleNames>Abdullah</MiddleNames>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-A</Ethnicity>
+        <EthnicitySource>SYN-A</EthnicitySource>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-EN</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>false</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>37 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>37 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <PostCode>RD1 1AA</PostCode>
+        <Country>37 Schoolgle Demo Street</Country>
+37 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WA</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>34</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000038</UPN>
+      <Surname>SGXFamily0038</Surname>
+      <Forename>SGXGiven0038</Forename>
+      <DOB>2020-02-22</DOB>
+      <Gender>M</Gender>
+      <BasicDetails>
+        <PreferredSurname>SGXFamily0038</PreferredSurname>
+        <PreferredForename>SGXGiven0038</PreferredForename>
+        <MiddleNames>Yusuf</MiddleNames>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-A</Ethnicity>
+        <EthnicitySource>SYN-A</EthnicitySource>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>false</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>38 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>38 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <County>38 Schoolgle Demo Street</County>
+        <PostCode>RD2 2BB</PostCode>
+        <Country>38 Schoolgle Demo Street</Country>
+38 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WT</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>0</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000039</UPN>
+      <Surname>SGXFamily0039</Surname>
+      <Forename>SGXGiven0039</Forename>
+      <DOB>2020-03-05</DOB>
+      <Gender>F</Gender>
+      <BasicDetails>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-B</Ethnicity>
+        <EthnicitySource>SYN-A</EthnicitySource>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-EN</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>false</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>39 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>39 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <PostCode>RD3 1AA</PostCode>
+        <Country>39 Schoolgle Demo Street</Country>
+39 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WA</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>36</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000040</UPN>
+      <Surname>SGXFamily0040</Surname>
+      <Forename>SGXGiven0040</Forename>
+      <DOB>2020-04-12</DOB>
+      <Gender>M</Gender>
+      <BasicDetails>
+        <MiddleNames>Tristan</MiddleNames>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-B</Ethnicity>
+        <EthnicitySource>SYN-A</EthnicitySource>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-ML</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>false</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>40 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>40 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <PostCode>RD4 2BB</PostCode>
+        <Country>40 Schoolgle Demo Street</Country>
+40 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WA</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>32</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000041</UPN>
+      <Surname>SGXFamily0041</Surname>
+      <Forename>SGXGiven0041</Forename>
+      <DOB>2020-05-19</DOB>
+      <Gender>F</Gender>
+      <BasicDetails>
+        <MiddleNames>Cerys</MiddleNames>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-B</Ethnicity>
+        <EthnicitySource>SYN-A</EthnicitySource>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-ML</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>false</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>41 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>41 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <PostCode>RD5 1AA</PostCode>
+        <Country>41 Schoolgle Demo Street</Country>
+41 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WA</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>39</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000042</UPN>
+      <Surname>SGXFamily0042</Surname>
+      <Forename>SGXGiven0042</Forename>
+      <DOB>2019-12-04</DOB>
+      <Gender>M</Gender>
+      <BasicDetails>
+        <MiddleNames>Kaur</MiddleNames>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-C</Ethnicity>
+        <EthnicitySource>SYN-A</EthnicitySource>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-ML</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>false</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>42 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>42 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <PostCode>RD6 2BB</PostCode>
+        <Country>42 Schoolgle Demo Street</Country>
+42 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WT</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>7</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000043</UPN>
+      <Surname>SGXFamily0043</Surname>
+      <Forename>SGXGiven0043</Forename>
+      <DOB>2020-07-09</DOB>
+      <Gender>F</Gender>
+      <BasicDetails>
+        <PreferredSurname>SGXFamily0043</PreferredSurname>
+        <PreferredForename>SGXGiven0043</PreferredForename>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-C</Ethnicity>
+        <EthnicitySource>SYN-A</EthnicitySource>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-AL</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>false</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>43 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>43 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <PostCode>RD7 1AA</PostCode>
+        <Country>43 Schoolgle Demo Street</Country>
+43 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WT</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>19</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000044</UPN>
+      <Surname>SGXFamily0044</Surname>
+      <Forename>SGXGiven0044</Forename>
+      <DOB>2020-08-16</DOB>
+      <Gender>M</Gender>
+      <BasicDetails>
+        <FormerUPN>Y800000000044</FormerUPN>
+        <PreferredSurname>SGXFamily0044</PreferredSurname>
+        <PreferredForename>SGXGiven0044</PreferredForename>
+        <MiddleNames>John</MiddleNames>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-C</Ethnicity>
+        <EthnicitySource>SYN-A</EthnicitySource>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-AL</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>false</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>44 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>44 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <PostCode>RD8 2BB</PostCode>
+        <Country>44 Schoolgle Demo Street</Country>
+44 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WT</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>16</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000045</UPN>
+      <Surname>SGXFamily0045</Surname>
+      <Forename>SGXGiven0045</Forename>
+      <DOB>2020-03-25</DOB>
+      <Gender>F</Gender>
+      <BasicDetails>
+        <FormerUPN>Y800000000045</FormerUPN>
+        <PreferredSurname>SGXFamily0045</PreferredSurname>
+        <PreferredForename>SGXGiven0045</PreferredForename>
+        <MiddleNames>Paul</MiddleNames>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-D</Ethnicity>
+        <EthnicitySource>SYN-A</EthnicitySource>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-AL</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>false</MedicalFlag>
+        <Disabilities>
+          <Disability>SYN-A</Disability>
+
+
+                </Disabilities>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>45 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>45 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <PostCode>RD9 1AA</PostCode>
+        <Country>45 Schoolgle Demo Street</Country>
+45 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WT</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>1</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000046</UPN>
+      <Surname>SGXFamily0046</Surname>
+      <Forename>SGXGiven0046</Forename>
+      <DOB>2019-10-06</DOB>
+      <Gender>M</Gender>
+      <BasicDetails>
+        <PreferredSurname>SGXFamily0046</PreferredSurname>
+        <PreferredForename>SGXGiven0046</PreferredForename>
+        <MiddleNames>Jade</MiddleNames>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-A</Ethnicity>
+        <EthnicitySource>SYN-A</EthnicitySource>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-EN</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>false</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>46 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>46 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <County>46 Schoolgle Demo Street</County>
+        <PostCode>RD1 2BB</PostCode>
+        <Country>46 Schoolgle Demo Street</Country>
+46 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WT</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>8</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000047</UPN>
+      <Surname>SGXFamily0047</Surname>
+      <Forename>SGXGiven0047</Forename>
+      <DOB>2019-11-13</DOB>
+      <Gender>F</Gender>
+      <BasicDetails>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-B</Ethnicity>
+        <EthnicitySource>SYN-A</EthnicitySource>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-EN</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>false</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>47 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>47 Schoolgle Demo Street</AddressLine2>
+          <AddressLine3>47 Schoolgle Demo Street</AddressLine3>
+
+
+
+
+                </AddressLines>
+        <County>47 Schoolgle Demo Street</County>
+        <PostCode>RD2 1AA</PostCode>
+        <Country>47 Schoolgle Demo Street</Country>
+47 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WT</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>4</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000048</UPN>
+      <Surname>SGXFamily0048</Surname>
+      <Forename>SGXGiven0048</Forename>
+      <DOB>2019-12-20</DOB>
+      <Gender>M</Gender>
+      <BasicDetails>
+        <MiddleNames>Craig-Sean</MiddleNames>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-C</Ethnicity>
+        <EthnicitySource>SYN-A</EthnicitySource>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-EN</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>false</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>48 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>48 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <PostCode>RD3 2BB</PostCode>
+        <Country>48 Schoolgle Demo Street</Country>
+48 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WT</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>0</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000049</UPN>
+      <Surname>SGXFamily0049</Surname>
+      <Forename>SGXGiven0049</Forename>
+      <DOB>2020-01-03</DOB>
+      <Gender>F</Gender>
+      <BasicDetails>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-D</Ethnicity>
+        <EthnicitySource>SYN-A</EthnicitySource>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-ML</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>false</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>49 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>49 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <PostCode>RD4 1AA</PostCode>
+        <Country>49 Schoolgle Demo Street</Country>
+49 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WA</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>37</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000050</UPN>
+      <Surname>SGXFamily0050</Surname>
+      <Forename>SGXGiven0050</Forename>
+      <DOB>2020-02-10</DOB>
+      <Gender>M</Gender>
+      <BasicDetails>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-A</Ethnicity>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-ML</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>false</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>50 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>50 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <PostCode>RD5 2BB</PostCode>
+        <Country>50 Schoolgle Demo Street</Country>
+50 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WT</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>15</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000051</UPN>
+      <Surname>SGXFamily0051</Surname>
+      <Forename>SGXGiven0051</Forename>
+      <DOB>2020-03-17</DOB>
+      <Gender>F</Gender>
+      <BasicDetails>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-B</Ethnicity>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-AL</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>false</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>51 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>51 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <PostCode>RD6 1AA</PostCode>
+        <Country>51 Schoolgle Demo Street</Country>
+51 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WT</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>4</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000052</UPN>
+      <Surname>SGXFamily0052</Surname>
+      <Forename>SGXGiven0052</Forename>
+      <DOB>2020-07-25</DOB>
+      <Gender>M</Gender>
+      <BasicDetails>
+        <PreferredSurname>SGXFamily0052</PreferredSurname>
+        <PreferredForename>SGXGiven0052</PreferredForename>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-C</Ethnicity>
+        <EthnicitySource>SYN-A</EthnicitySource>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-AL</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>false</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>52 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>52 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <PostCode>RD7 2BB</PostCode>
+        <Country>52 Schoolgle Demo Street</Country>
+52 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WA</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>32</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+    <Pupil>
+      <UPN>Z900000000053</UPN>
+      <Surname>SGXFamily0053</Surname>
+      <Forename>SGXGiven0053</Forename>
+      <DOB>2020-05-07</DOB>
+      <Gender>F</Gender>
+      <BasicDetails>
+        <PreferredSurname>SGXFamily0053</PreferredSurname>
+        <PreferredForename>SGXGiven0053</PreferredForename>
+        <MiddleNames>Zayaan</MiddleNames>
+        <NCyearActual>1</NCyearActual>
+        <Ethnicity>SYN-A</Ethnicity>
+        <EthnicitySource>SYN-A</EthnicitySource>
+        <Languages>
+          <Type>
+            <LanguageType>SYN-A</LanguageType>
+            <Language>SYN-EN</Language>
+
+
+
+                    </Type>
+
+
+                </Languages>
+        <ServiceChild>N</ServiceChild>
+        <MedicalFlag>true</MedicalFlag>
+        <EnrolStatus>C</EnrolStatus>
+
+
+
+
+
+
+
+
+
+
+
+            </BasicDetails>
+      <Address>
+        <AddressLines>
+          <AddressLine1>53 Schoolgle Demo Street</AddressLine1>
+          <AddressLine2>53 Schoolgle Demo Street</AddressLine2>
+
+
+
+                </AddressLines>
+        <PostCode>RD8 1AA</PostCode>
+        <Country>53 Schoolgle Demo Street</Country>
+53 Schoolgle Demo Street      </Address>
+      <StageAssessments>
+        <KeyStage>
+          <Stage>KS1</Stage>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NY</ResultQualifier>
+            <Result>WT</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+          <StageAssessment>
+            <Locale>ENG</Locale>
+            <Year>2022</Year>
+            <Subject>PHO</Subject>
+            <Method>TT</Method>
+            <Component>CHK</Component>
+            <ResultStatus>R</ResultStatus>
+            <ResultQualifier>NM</ResultQualifier>
+            <Result>22</Result>
+            <ResultDate>2022-06-20</ResultDate>
+
+
+
+
+
+
+
+
+
+
+                    </StageAssessment>
+
+
+
+
+                </KeyStage>
+
+
+            </StageAssessments>
+
+
+
+
+
+
+
+
+
+        </Pupil>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    </CTFpupilData>
+
+
+
+</CTfile>

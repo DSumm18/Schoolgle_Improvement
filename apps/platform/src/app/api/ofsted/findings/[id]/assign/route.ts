@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import { protectedRoute, apiError, apiSuccess } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
 import { buildActionFormFromFinding } from "@/lib/ofsted-readiness/findings";
+import { resolveTaskAssigneeFromDatabase } from "@/lib/tasks/staff-assignment-server";
 
 export const POST = protectedRoute(
   async (auth, request: NextRequest) => {
@@ -15,10 +16,15 @@ export const POST = protectedRoute(
     }
 
     const body = await request.json();
-    const assigneeId = body.assignee_id || body.assigneeId || null;
+    const requestedAssigneeId =
+      body.assignee_staff_id ||
+      body.assigneeStaffId ||
+      body.assignee_id ||
+      body.assigneeId ||
+      null;
     const dueDate = body.due_date || body.dueDate || null;
 
-    if (!assigneeId) {
+    if (!requestedAssigneeId) {
       return apiError("Missing assignee_id", 400);
     }
 
@@ -35,6 +41,16 @@ export const POST = protectedRoute(
       return apiError("Finding not found", 404);
     }
 
+    const resolvedAssignee = await resolveTaskAssigneeFromDatabase({
+      supabase,
+      organizationId: auth.organizationId,
+      requestedAssigneeId,
+    });
+
+    if (!resolvedAssignee) {
+      return apiError("Assignee not found in this school", 404);
+    }
+
     if (finding.assigned_task_id) {
       return apiSuccess({
         finding,
@@ -47,7 +63,7 @@ export const POST = protectedRoute(
     const taskId = uuidv4();
     const now = new Date().toISOString();
 
-    const checklistWithIds = (task.checklist || []).map((item: any) => ({
+    const checklistWithIds = (task.checklist || []).map((item) => ({
       ...item,
       id: item.id || uuidv4(),
       completed: false,
@@ -73,7 +89,8 @@ export const POST = protectedRoute(
         status: "not_started",
         due_date: dueDate,
         start_date: body.start_date || null,
-        assignee_id: assigneeId,
+        owner_name: resolvedAssignee.ownerName,
+        assignee_id: resolvedAssignee.assigneeUserId,
         dependencies: [],
         checklist: checklistWithIds,
         estimated_hours: body.estimated_hours || null,
@@ -104,9 +121,22 @@ export const POST = protectedRoute(
         status: "assigned",
         assigned_task_id: createdTask.id,
         assigned_task_source: "actions",
-        assigned_to: assigneeId,
-        approved_by: auth.userId,
+        assigned_to_user_id: resolvedAssignee.assigneeUserId,
+        approved_by_user_id: auth.userId,
         approved_at: now,
+        metadata: {
+          ...(finding.metadata || {}),
+          assignment: {
+            requested_assignee_id: requestedAssigneeId,
+            staff_id: resolvedAssignee.staffId,
+            staff_name: resolvedAssignee.ownerName,
+            staff_email: resolvedAssignee.staffEmail,
+            staff_job_title: resolvedAssignee.staffJobTitle,
+            staff_role_category: resolvedAssignee.staffRoleCategory,
+            user_id: resolvedAssignee.assigneeUserId,
+            user_matched_by_email: resolvedAssignee.userMatchedByEmail,
+          },
+        },
         updated_at: now,
       })
       .eq("id", findingId)
@@ -128,7 +158,9 @@ export const POST = protectedRoute(
       new_status: "assigned",
       metadata: {
         task_id: createdTask.id,
-        assigned_to: assigneeId,
+        assigned_to: resolvedAssignee.assigneeUserId,
+        assigned_staff_id: resolvedAssignee.staffId,
+        assigned_staff_name: resolvedAssignee.ownerName,
       },
     });
 

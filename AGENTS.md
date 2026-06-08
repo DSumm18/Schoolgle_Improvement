@@ -38,6 +38,60 @@ Key product memory:
 
 ---
 
+## Cross-Project Memory Bridge
+
+David's durable operating memory lives in the Obsidian vault at `C:\2nd Brain`. This repo should not become a hidden memory silo.
+
+When David asks to remember, capture, log, or store project context, write it into the Obsidian vault using that vault's `AGENTS.md` schema. Use direct wiki updates for clear durable facts. Use `C:\2nd Brain\raw\inbox\codex-captures\` for rough captures that need later synthesis.
+
+For Schoolgle operating memory, start with:
+
+- `C:\2nd Brain\wiki\40 - Projects\Schoolgle Improvement Platform.md`
+- `C:\2nd Brain\wiki\40 - Projects\Schoolgle Mission Control.md`
+- `C:\2nd Brain\wiki\20 - Entities\Schoolgle Ltd.md`
+- `C:\2nd Brain\wiki\90 - Meta\log.md`
+
+Use Notion as the live business and documentation workspace for Schoolgle marketing material, product and roadmap notes, task databases, campaign plans, CRM/client/deal records where present, and polished structured reference material. When Schoolgle work touches those areas, search or update Notion where tools are available, and keep Obsidian linked as the durable memory/navigation layer.
+
+Never store secrets, API keys, credentials, tokens, private IDs, raw sensitive pupil/customer data, or unnecessary personal data in Obsidian or Notion.
+
+---
+
+## Ruthless Product QA
+
+Do not tell David a Schoolgle task is complete until the changed behaviour has been tested as realistically as the tools allow.
+
+At the start of substantial work, identify the goal, user-facing outcome, risky assumptions, likely failure modes, and the minimum evidence needed before calling it done.
+
+After implementing, switch stance from builder to independent QA tester and try to break the feature. Testing should include targeted unit/integration tests where available, realistic browser or API testing for user-facing flows, edge cases and messy real-world inputs, regression checks for adjacent behaviour, logs/console/network inspection, database writes, persistence, and confirmation that the outcome matches David's original goal.
+
+If tests cannot be run, say exactly why and provide the next best verification path. Do not imply something works because the code looks right.
+
+Before final response, report what changed, what was tested, what evidence passed, what risks remain, and what still needs human confirmation.
+
+### Deal Find QA Standard
+
+For procurement, Deal Find, product matching, supplier search, URL ingestion, database enrichment, and AI-assisted workflows, test beyond the obvious case.
+
+Deal Find testing must include, where relevant:
+
+- clean product URLs
+- messy URLs with tracking parameters
+- URLs from major suppliers and smaller suppliers
+- unavailable or blocked pages
+- ambiguous products
+- product variants such as pack size, colour, quantity, brand, and substitute items
+- price extraction failures
+- database hit, database miss, and internet fallback paths
+- duplicate or near-duplicate product records
+- bad AI guesses or low-confidence matches
+- persistence of learned results back into the database
+- repeat search behaviour after the database has learned something
+
+Codex should act as a ruthless QA reviewer before finalising: define acceptance criteria, implement the change, run targeted tests, run realistic workflow tests, inspect failures and logs, fix issues, and repeat until the feature genuinely works or clearly state the blocker.
+
+---
+
 ## Build & Development Commands
 
 ### Root Commands (run from project root)

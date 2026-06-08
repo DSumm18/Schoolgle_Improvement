@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -161,7 +161,7 @@ const CLASS_LINK_ROLE_OPTIONS = [
 ];
 
 export default function DataUploadPage() {
-  const { organizationId } = useAuth();
+  const { organizationId, session } = useAuth();
   const [pupils, setPupils] = useState<Pupil[]>([]);
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
@@ -215,6 +215,7 @@ export default function DataUploadPage() {
   const [classAssignmentDrafts, setClassAssignmentDrafts] = useState<Record<string, { staffId: string; role: string }>>({});
   const [savingClassAssignmentId, setSavingClassAssignmentId] = useState<string | null>(null);
   const [removingAssignmentId, setRemovingAssignmentId] = useState<string | null>(null);
+  const [savingPupilClassId, setSavingPupilClassId] = useState<string | null>(null);
 
   const classes = useMemo(
     () => [...new Set(pupils.map((pupil) => pupil.current_class).filter(Boolean))].sort(),
@@ -222,12 +223,12 @@ export default function DataUploadPage() {
   );
 
   const fetchPupils = useCallback(async (includePassUrls = false) => {
-    if (!organizationId) return [];
+    if (!organizationId || !session?.access_token) return [];
     setLoading(true);
     const params = new URLSearchParams({ organizationId });
     if (includePassUrls) params.set("includePassUrls", "true");
     const res = await fetch(`/api/data-upload/pupils?${params.toString()}`, {
-      headers: await authHeaders(),
+      headers: await authHeaders(session?.access_token),
     });
     const data = await res.json();
     if (res.ok) {
@@ -238,16 +239,16 @@ export default function DataUploadPage() {
     else toast.error(data.error || "Could not load pupils");
     setLoading(false);
     return data.pupils ?? [];
-  }, [organizationId]);
+  }, [organizationId, session?.access_token]);
 
   const fetchLocations = useCallback(async () => {
-    if (!organizationId) return [];
+    if (!organizationId || !session?.access_token) return [];
     setLocationsLoading(true);
     setSetupLoadErrors((current) => current.filter((error) => !error.startsWith("Locations:")));
     try {
       const params = new URLSearchParams({ organizationId });
       const res = await fetch(`/api/data-upload/locations?${params.toString()}`, {
-        headers: await authHeaders(),
+        headers: await authHeaders(session?.access_token),
       });
       const data = await res.json();
       if (res.ok) {
@@ -265,16 +266,16 @@ export default function DataUploadPage() {
     } finally {
       setLocationsLoading(false);
     }
-  }, [organizationId]);
+  }, [organizationId, session?.access_token]);
 
   const fetchAssets = useCallback(async () => {
-    if (!organizationId) return [];
+    if (!organizationId || !session?.access_token) return [];
     setAssetsLoading(true);
     setSetupLoadErrors((current) => current.filter((error) => !error.startsWith("Assets:")));
     try {
       const params = new URLSearchParams({ organizationId });
       const res = await fetch(`/api/data-upload/assets?${params.toString()}`, {
-        headers: await authHeaders(),
+        headers: await authHeaders(session?.access_token),
       });
       const data = await res.json();
       if (res.ok) {
@@ -292,16 +293,16 @@ export default function DataUploadPage() {
     } finally {
       setAssetsLoading(false);
     }
-  }, [organizationId]);
+  }, [organizationId, session?.access_token]);
 
   const fetchStaffRecords = useCallback(async () => {
-    if (!organizationId) return [];
+    if (!organizationId || !session?.access_token) return [];
     setStaffLoading(true);
     setSetupLoadErrors((current) => current.filter((error) => !error.startsWith("Staff:")));
     try {
       const params = new URLSearchParams({ organizationId, source: "db" });
       const res = await fetch(`/api/staff?${params.toString()}`, {
-        headers: await authHeaders(),
+        headers: await authHeaders(session?.access_token),
       });
       const data = await res.json();
       if (res.ok) {
@@ -319,16 +320,16 @@ export default function DataUploadPage() {
     } finally {
       setStaffLoading(false);
     }
-  }, [organizationId]);
+  }, [organizationId, session?.access_token]);
 
   const fetchClassRecords = useCallback(async () => {
-    if (!organizationId) return [];
+    if (!organizationId || !session?.access_token) return [];
     setClassesLoading(true);
     setSetupLoadErrors((current) => current.filter((error) => !error.startsWith("Classes:")));
     try {
       const params = new URLSearchParams({ organizationId });
       const res = await fetch(`/api/data-upload/classes?${params.toString()}`, {
-        headers: await authHeaders(),
+        headers: await authHeaders(session?.access_token),
       });
       const data = await res.json();
       if (res.ok) {
@@ -346,13 +347,13 @@ export default function DataUploadPage() {
     } finally {
       setClassesLoading(false);
     }
-  }, [organizationId]);
+  }, [organizationId, session?.access_token]);
 
   const fetchSetupStatus = useCallback(async () => {
-    if (!organizationId) return;
+    if (!organizationId || !session?.access_token) return;
     const params = new URLSearchParams({ organizationId });
     const res = await fetch(`/api/data-upload/setup-status?${params.toString()}`, {
-      headers: await authHeaders(),
+      headers: await authHeaders(session?.access_token),
     });
     const data = await res.json().catch(() => ({}));
     if (res.ok) {
@@ -363,10 +364,10 @@ export default function DataUploadPage() {
         `Setup counts: ${data.error || res.statusText}`,
       ]);
     }
-  }, [organizationId]);
+  }, [organizationId, session?.access_token]);
 
   useEffect(() => {
-    if (organizationId) {
+    if (organizationId && session?.access_token) {
       fetchPupils();
       fetchLocations();
       fetchAssets();
@@ -374,19 +375,20 @@ export default function DataUploadPage() {
       fetchClassRecords();
       fetchSetupStatus();
     }
-  }, [organizationId, fetchPupils, fetchLocations, fetchAssets, fetchStaffRecords, fetchClassRecords, fetchSetupStatus]);
+  }, [organizationId, session?.access_token, fetchPupils, fetchLocations, fetchAssets, fetchStaffRecords, fetchClassRecords, fetchSetupStatus]);
 
   useEffect(() => {
     if (openArea === "locations") fetchLocations();
     if (openArea === "assets") fetchAssets();
     if (openArea === "staff") fetchStaffRecords();
+    if (openArea === "pupils") fetchClassRecords();
     if (openArea === "classes") fetchClassRecords();
   }, [openArea, fetchLocations, fetchAssets, fetchStaffRecords, fetchClassRecords]);
 
   async function updateLocationType(locationId: string, locationType: string) {
     const res = await fetch("/api/data-upload/locations", {
       method: "PATCH",
-      headers: { "Content-Type": "application/json", ...(await authHeaders()) },
+      headers: { "Content-Type": "application/json", ...(await authHeaders(session?.access_token)) },
       body: JSON.stringify({ organizationId, id: locationId, location_type: locationType }),
     });
     const data = await res.json();
@@ -422,8 +424,13 @@ export default function DataUploadPage() {
     try {
       const res = await fetch("/api/data-upload/pupils", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...(await authHeaders()) },
-        body: JSON.stringify({ organizationId, csvText: review.csvText }),
+        headers: { "Content-Type": "application/json", ...(await authHeaders(session?.access_token)) },
+        body: JSON.stringify({
+          organizationId,
+          csvText: review.csvText,
+          filename: review.filename,
+          sourceLabel: "Settings pupil import",
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -435,7 +442,12 @@ export default function DataUploadPage() {
         }
         return;
       }
-      toast.success(`Imported ${data.imported} pupils and created Pupil Passes`);
+      const archiveCandidates = data.reconciliation?.archiveCandidates ?? 0;
+      toast.success(
+        archiveCandidates > 0
+          ? `Imported ${data.imported} pupils. ${archiveCandidates} previous pupil${archiveCandidates === 1 ? "" : "s"} flagged for archive review.`
+          : `Imported ${data.imported} pupils and created Pupil Passes`,
+      );
       setPupilUploadReview(null);
       await fetchPupils();
       setOpenArea("pupils");
@@ -455,7 +467,7 @@ export default function DataUploadPage() {
       toast.error(`Found ${review.errors.length} location issue${review.errors.length === 1 ? "" : "s"} to fix before import`);
       return;
     }
-    toast.success(`Checked ${review.validRows} location row${review.validRows === 1 ? "" : "s"} â€” ready to import`);
+    toast.success(`Checked ${review.validRows} location row${review.validRows === 1 ? "" : "s"} Ã¢â‚¬â€ ready to import`);
   }
 
   async function downloadLocationExport() {
@@ -468,7 +480,7 @@ export default function DataUploadPage() {
     try {
       const params = new URLSearchParams({ organizationId });
       const res = await fetch(`/api/data-upload/locations/export?${params.toString()}`, {
-        headers: await authHeaders(),
+        headers: await authHeaders(session?.access_token),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => null);
@@ -501,7 +513,7 @@ export default function DataUploadPage() {
     try {
       const res = await fetch("/api/data-upload/locations", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...(await authHeaders()) },
+        headers: { "Content-Type": "application/json", ...(await authHeaders(session?.access_token)) },
         body: JSON.stringify({ organizationId, csvText: review.csvText }),
       });
       const data = await res.json();
@@ -530,7 +542,7 @@ export default function DataUploadPage() {
       const csvText = await readTemplateFile(file);
       const res = await fetch("/api/data-upload/assets", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...(await authHeaders()) },
+        headers: { "Content-Type": "application/json", ...(await authHeaders(session?.access_token)) },
         body: JSON.stringify({ organizationId, csvText }),
       });
       const data = await res.json();
@@ -558,7 +570,7 @@ export default function DataUploadPage() {
       const csvData = await readTemplateFile(file);
       const res = await fetch("/api/staff/import", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...(await authHeaders()) },
+        headers: { "Content-Type": "application/json", ...(await authHeaders(session?.access_token)) },
         body: JSON.stringify({ organizationId, csvData }),
       });
       const data = await res.json();
@@ -589,7 +601,7 @@ export default function DataUploadPage() {
       const csvText = await readTemplateFile(file);
       const res = await fetch("/api/data-upload/classes", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...(await authHeaders()) },
+        headers: { "Content-Type": "application/json", ...(await authHeaders(session?.access_token)) },
         body: JSON.stringify({ organizationId, csvText }),
       });
       const data = await res.json();
@@ -623,7 +635,7 @@ export default function DataUploadPage() {
     try {
       const res = await fetch("/api/staff", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...(await authHeaders()) },
+        headers: { "Content-Type": "application/json", ...(await authHeaders(session?.access_token)) },
         body: JSON.stringify({
           organizationId,
           first_name: staffDraft.first_name.trim(),
@@ -681,13 +693,14 @@ export default function DataUploadPage() {
     try {
       const res = await fetch("/api/staff", {
         method: "PUT",
-        headers: { "Content-Type": "application/json", ...(await authHeaders()) },
+        headers: { "Content-Type": "application/json", ...(await authHeaders(session?.access_token)) },
         body: JSON.stringify({
+          organizationId,
           id: staffId,
           first_name: staffEditDraft.first_name.trim(),
           last_name: staffEditDraft.last_name.trim(),
-          email: staffEditDraft.email.trim(),
-          employee_id: staffEditDraft.employee_id.trim(),
+          email: staffEditDraft.email.trim() || null,
+          employee_id: staffEditDraft.employee_id.trim() || null,
           job_title: staffEditDraft.job_title.trim(),
           role_category: staffEditDraft.role_category,
           is_active: staffEditDraft.is_active,
@@ -719,8 +732,9 @@ export default function DataUploadPage() {
     try {
       const res = await fetch("/api/data-upload/classes", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...(await authHeaders()) },
+        headers: { "Content-Type": "application/json", ...(await authHeaders(session?.access_token)) },
         body: JSON.stringify({
+          organizationId,
           classId: classRecord.id,
           staffId: draft.staffId,
           role: draft.role,
@@ -750,8 +764,8 @@ export default function DataUploadPage() {
     try {
       const res = await fetch("/api/data-upload/classes", {
         method: "DELETE",
-        headers: { "Content-Type": "application/json", ...(await authHeaders()) },
-        body: JSON.stringify({ assignmentId }),
+        headers: { "Content-Type": "application/json", ...(await authHeaders(session?.access_token)) },
+        body: JSON.stringify({ organizationId, assignmentId }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -859,7 +873,7 @@ export default function DataUploadPage() {
   async function regeneratePass(pupil: Pupil) {
     const res = await fetch(`/api/data-upload/pupils/${pupil.id}/pass`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json", ...(await authHeaders()) },
+      headers: { "Content-Type": "application/json", ...(await authHeaders(session?.access_token)) },
       body: JSON.stringify({ organizationId, regenerateToken: true }),
     });
     if (!res.ok) {
@@ -883,7 +897,7 @@ export default function DataUploadPage() {
   async function savePassCharacter(pupil: Pupil) {
     const res = await fetch(`/api/data-upload/pupils/${pupil.id}/pass`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json", ...(await authHeaders()) },
+      headers: { "Content-Type": "application/json", ...(await authHeaders(session?.access_token)) },
       body: JSON.stringify({
         organizationId,
         passColour: passDraft.colour,
@@ -899,6 +913,42 @@ export default function DataUploadPage() {
     toast.success(`Updated ${pupil.first_name}'s pass character`);
     setEditingPassId(null);
     await fetchPupils();
+  }
+
+  async function updatePupilClass(pupil: Pupil, classId: string) {
+    if (!classId) return;
+    const classRecord = classRecords.find((record) => record.id === classId);
+    if (!classRecord) {
+      toast.error("Choose a class from the imported class list");
+      return;
+    }
+
+    setSavingPupilClassId(pupil.id);
+    try {
+      const res = await fetch("/api/data-upload/pupils", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...(await authHeaders(session?.access_token)) },
+        body: JSON.stringify({ organizationId, id: pupil.id, classId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.error || "Could not update pupil class");
+        return;
+      }
+      setPupils((current) =>
+        current.map((item) =>
+          item.id === pupil.id
+            ? { ...item, current_class: data.pupil?.current_class ?? classRecord.class_name }
+            : item,
+        ),
+      );
+      toast.success(`${pupil.first_name} ${pupil.last_name} moved to ${classRecord.class_name}`);
+      await fetchSetupStatus();
+    } catch {
+      toast.error("Could not update pupil class");
+    } finally {
+      setSavingPupilClassId(null);
+    }
   }
 
   async function printPasses(format: PrintFormat = "card", className?: string) {
@@ -933,12 +983,21 @@ export default function DataUploadPage() {
     pupils: Math.max(setupCounts?.pupils ?? 0, pupils.length),
     classes: Math.max(setupCounts?.classes ?? 0, classRecords.length),
   };
+  const setupDataUnavailable =
+    setupLoadErrors.length > 0 &&
+    !setupCounts &&
+    locations.length === 0 &&
+    assets.length === 0 &&
+    staffRecords.length === 0 &&
+    pupils.length === 0 &&
+    classRecords.length === 0;
   const setupSteps = [
     {
       key: "locations" as const,
       step: 1,
       title: "Locations",
       count: counts.locations,
+      countUnavailable: setupDataUnavailable,
       description: "Sites, buildings, floors, classrooms, toilets, boiler rooms and outdoor spaces.",
       filename: "schoolgle-locations-current.xlsx",
       downloadLabel: "Download current locations",
@@ -952,6 +1011,7 @@ export default function DataUploadPage() {
       step: 2,
       title: "Assets",
       count: counts.assets,
+      countUnavailable: setupDataUnavailable,
       description: "Equipment and physical assets linked back to the rooms and areas you uploaded.",
       downloadHref: "/api/data-upload/assets/template",
       excelHref: "/api/data-upload/assets/template?format=excel",
@@ -959,7 +1019,7 @@ export default function DataUploadPage() {
       downloadLabel: "Download asset import template",
       onUpload: importAssetCsv,
       busy: assetImporting,
-      locked: counts.locations === 0,
+      locked: setupDataUnavailable ? false : counts.locations === 0,
       lockedReason: "Upload locations first so assets can be placed correctly.",
     },
     {
@@ -967,6 +1027,7 @@ export default function DataUploadPage() {
       step: 3,
       title: "Staff",
       count: counts.staff,
+      countUnavailable: setupDataUnavailable,
       description: "Staff records for responsibilities, HR workflows, class assignments and module routing.",
       downloadHref: "/api/staff/import/template",
       excelHref: "/api/staff/import/template?format=excel",
@@ -981,13 +1042,14 @@ export default function DataUploadPage() {
       step: 4,
       title: "Pupils",
       count: counts.pupils || pupils.length,
+      countUnavailable: setupDataUnavailable,
       description: "Pupil roll, class, SEND/EHCP, EAL, PP and child-friendly QR pass preferences.",
       downloadHref: "/api/data-upload/pupils/template",
       excelHref: "/api/data-upload/pupils/template?format=excel",
       filename: "schoolgle-pupil-upload-template-styled.xls",
       onUpload: reviewPupilCsv,
       busy: importing,
-      locked: counts.staff === 0,
+      locked: setupDataUnavailable ? false : counts.staff === 0,
       lockedReason: "Upload staff first so class ownership is clear.",
     },
     {
@@ -995,13 +1057,14 @@ export default function DataUploadPage() {
       step: 5,
       title: "Classes",
       count: counts.classes,
+      countUnavailable: setupDataUnavailable,
       description: "Classes/groups connected to pupils, rooms and staff email or employee ID.",
       downloadHref: "/api/data-upload/classes/template",
       excelHref: "/api/data-upload/classes/template?format=excel",
       filename: "schoolgle-class-upload-template-styled.xls",
       onUpload: importClassCsv,
       busy: classImporting,
-      locked: (counts.pupils || pupils.length) === 0,
+      locked: setupDataUnavailable ? false : (counts.pupils || pupils.length) === 0,
       lockedReason: "Upload pupils first so class lists have people to attach to.",
     },
   ];
@@ -1018,7 +1081,7 @@ export default function DataUploadPage() {
         </p>
       </div>
 
-      <SetupWizardSummary counts={counts} />
+      <SetupWizardSummary counts={counts} countsUnavailable={setupDataUnavailable} />
       <UploadExplainer />
       <ImportBehaviourNote />
 
@@ -1055,11 +1118,13 @@ export default function DataUploadPage() {
                     </span>
                     {step.title}
                   </span>
-                  {step.count > 0 ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : step.locked ? <Lock className="h-4 w-4 text-muted-foreground" /> : null}
+                  {!step.countUnavailable && step.count > 0 ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : step.locked ? <Lock className="h-4 w-4 text-muted-foreground" /> : null}
                 </div>
                 <div className="mt-2 flex items-center justify-between gap-2">
-                  <Badge variant={step.count > 0 ? "default" : "secondary"}>{step.count} in system</Badge>
-                  <span className="text-xs text-muted-foreground">{step.locked ? "Locked" : "Ready"}</span>
+                  <Badge variant={!step.countUnavailable && step.count > 0 ? "default" : "secondary"}>
+                    {step.countUnavailable ? "Not loaded" : `${step.count} in system`}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">{step.countUnavailable ? "Check connection" : step.locked ? "Locked" : "Ready"}</span>
                 </div>
               </button>
             ))}
@@ -1074,6 +1139,7 @@ export default function DataUploadPage() {
               title={activeStep.title}
               description={activeStep.description}
               count={activeStep.count}
+              countUnavailable={activeStep.countUnavailable}
               active={!activeStep.locked}
               isOpen
               locked={activeStep.locked}
@@ -1138,7 +1204,7 @@ export default function DataUploadPage() {
                 asset.code || "No code",
                 asset.name,
                 [asset.category, asset.subcategory].filter(Boolean).join(" / ") || asset.asset_type || "Not set",
-                [asset.building, asset.floor, asset.room].filter(Boolean).join(" Â· ") || "Not placed",
+                [asset.building, asset.floor, asset.room].filter(Boolean).join(" Ã‚Â· ") || "Not placed",
                 asset.status || "Not set",
               ])}
               onRefresh={fetchAssets}
@@ -1168,23 +1234,17 @@ export default function DataUploadPage() {
           )}
 
           {openArea === "pupils" && (
-            <SimpleDataPanel
-              title="Pupils"
+            <PupilClassReviewPanel
+              pupils={pupils}
+              classRecords={classRecords}
               loading={loading}
-              count={pupils.length}
-              columns={["Pupil", "Class", "Pass", "Key fields"]}
-              rows={pupils.map((pupil) => [
-                `${pupil.first_name} ${pupil.last_name}`,
-                pupil.current_class || `Year ${pupil.year_group}`,
-                pupil.pass_codename || "Basic QR pass",
-                [
-                  pupil.send_status ? `SEND ${pupil.send_status}` : "",
-                  pupil.ehcp ? "EHCP" : "",
-                  pupil.eal ? "EAL" : "",
-                  pupil.pupil_premium ? "PP" : "",
-                ].filter(Boolean).join(", ") || "None",
-              ])}
-              onRefresh={() => fetchPupils()}
+              classesLoading={classesLoading}
+              savingPupilClassId={savingPupilClassId}
+              onUpdatePupilClass={updatePupilClass}
+              onRefresh={() => {
+                fetchPupils();
+                fetchClassRecords();
+              }}
               onClose={() => setOpenArea(null)}
             />
           )}
@@ -1377,7 +1437,7 @@ export default function DataUploadPage() {
                       <td>
                         <span className="font-semibold">{pupil.pass_codename || "Basic QR pass"}</span>
                         <span className="ml-2 text-muted-foreground">
-                          {[pupil.pass_colour, pupil.pass_animal, pupil.pass_badge].filter(Boolean).join(" Â· ")}
+                          {[pupil.pass_colour, pupil.pass_animal, pupil.pass_badge].filter(Boolean).join(" Ã‚Â· ")}
                         </span>
                       </td>
                       <td>
@@ -1390,6 +1450,11 @@ export default function DataUploadPage() {
                       </td>
                       <td className="text-right">
                         <div className="flex justify-end gap-1">
+                          <Button size="sm" variant="ghost" asChild>
+                            <Link href={`/dashboard/pupils/${pupil.id}`}>
+                              View profile
+                            </Link>
+                          </Button>
                           <Button size="sm" variant="ghost" onClick={() => startEditingPass(pupil)}>
                             Edit pass
                           </Button>
@@ -1558,6 +1623,166 @@ function MaintenancePlaceholder({
   );
 }
 
+function PupilClassReviewPanel({
+  pupils,
+  classRecords,
+  loading,
+  classesLoading,
+  savingPupilClassId,
+  onUpdatePupilClass,
+  onRefresh,
+  onClose,
+}: {
+  pupils: Pupil[];
+  classRecords: ClassRecord[];
+  loading: boolean;
+  classesLoading: boolean;
+  savingPupilClassId: string | null;
+  onUpdatePupilClass: (pupil: Pupil, classId: string) => void;
+  onRefresh: () => void;
+  onClose: () => void;
+}) {
+  const sortedClassRecords = [...classRecords].sort((a, b) =>
+    `${a.year_group} ${a.class_name}`.localeCompare(`${b.year_group} ${b.class_name}`),
+  );
+  const classNames = new Set(sortedClassRecords.map((classRecord) => classRecord.class_name.toLowerCase()));
+  const rows = [...pupils].sort((a, b) => {
+    const aNeedsReview = needsClassReview(a, classNames);
+    const bNeedsReview = needsClassReview(b, classNames);
+    if (aNeedsReview !== bNeedsReview) return aNeedsReview ? -1 : 1;
+    return `${a.year_group} ${a.current_class} ${a.last_name}`.localeCompare(`${b.year_group} ${b.current_class} ${b.last_name}`);
+  });
+  const reviewCount = pupils.filter((pupil) => needsClassReview(pupil, classNames)).length;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex flex-wrap items-center justify-between gap-3 text-base">
+          <span>Pupil class review</span>
+          <span className="flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" onClick={onRefresh} disabled={loading || classesLoading}>
+              {loading || classesLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+              Refresh
+            </Button>
+            <Button size="sm" variant="outline" onClick={onClose}>
+              Hide section
+            </Button>
+          </span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className={reviewCount > 0 || pupils.length === 0 || classRecords.length === 0 ? "rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900" : "rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900"}>
+          <p className="font-semibold">
+            {pupils.length === 0
+              ? "No pupils have been imported yet."
+              : classRecords.length === 0
+                ? "No imported class records are available yet."
+                : reviewCount > 0
+                  ? `${reviewCount} pupil${reviewCount === 1 ? "" : "s"} need a class check before the data is trusted.`
+                  : "All pupils match an imported class record."}
+          </p>
+          <p className="mt-1">
+            {pupils.length === 0
+              ? "Import the pupil file first. If Arbor leaves class blank, Schoolgle will flag those rows for review rather than silently trusting the year group."
+              : "Rows marked for review usually came from an Arbor export where `Courses/classes` was blank. Pick the correct imported class from the dropdown."}
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <Badge variant="secondary">{pupils.length} pupils</Badge>
+          <Badge variant={reviewCount > 0 ? "destructive" : "outline"}>{reviewCount} need class review</Badge>
+          <Badge variant="outline">{classRecords.length} imported classes available</Badge>
+        </div>
+
+        {loading || classesLoading ? (
+          <p className="text-sm text-muted-foreground">Loading pupils and classes...</p>
+        ) : pupils.length === 0 ? (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            No pupils are showing yet. Import the pupil file first.
+          </div>
+        ) : classRecords.length === 0 ? (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            No class records are available yet. Import or seed classes first, then return here to allocate pupils.
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-xl border">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/40 text-left text-xs text-muted-foreground">
+                <tr>
+                  <th className="px-4 py-2">Status</th>
+                  <th className="px-4 py-2">Pupil</th>
+                  <th className="px-4 py-2">Year</th>
+                  <th className="px-4 py-2">Current class</th>
+                  <th className="px-4 py-2">Set class</th>
+                  <th className="px-4 py-2">Key fields</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((pupil) => {
+                  const needsReview = needsClassReview(pupil, classNames);
+                  const saving = savingPupilClassId === pupil.id;
+                  const selectedClass = sortedClassRecords.find(
+                    (classRecord) => classRecord.class_name.toLowerCase() === pupil.current_class?.toLowerCase(),
+                  );
+                  return (
+                    <tr key={pupil.id} className={needsReview ? "border-t bg-amber-50/70" : "border-t"}>
+                      <td className="px-4 py-2 align-top">
+                        <Badge variant={needsReview ? "destructive" : "outline"}>
+                          {needsReview ? "Needs class" : "Linked"}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-2 align-top font-medium">
+                        {pupil.first_name} {pupil.last_name}
+                      </td>
+                      <td className="px-4 py-2 align-top">{pupil.year_group}</td>
+                      <td className="px-4 py-2 align-top">
+                        {pupil.current_class || <span className="text-red-700">Missing</span>}
+                      </td>
+                      <td className="px-4 py-2 align-top">
+                        <div className="flex items-center gap-2">
+                          <select
+                            className="min-w-44 rounded-md border bg-background px-3 py-2 text-sm"
+                            value={selectedClass?.id ?? ""}
+                            onChange={(event) => onUpdatePupilClass(pupil, event.target.value)}
+                            disabled={saving}
+                            aria-label={`Set class for ${pupil.first_name} ${pupil.last_name}`}
+                          >
+                            <option value="">Choose class...</option>
+                            {sortedClassRecords.map((classRecord) => (
+                              <option key={classRecord.id} value={classRecord.id}>
+                                {classRecord.class_name} ({classRecord.year_group})
+                              </option>
+                            ))}
+                          </select>
+                          {saving ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> : null}
+                        </div>
+                      </td>
+                      <td className="px-4 py-2 align-top text-xs text-muted-foreground">
+                        {[
+                          pupil.send_status ? `SEND ${pupil.send_status}` : "",
+                          pupil.ehcp ? "EHCP" : "",
+                          pupil.eal ? "EAL" : "",
+                          pupil.pupil_premium ? "PP" : "",
+                        ].filter(Boolean).join(", ") || "None"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function needsClassReview(pupil: Pupil, classNames: Set<string>) {
+  if (!pupil.current_class) return true;
+  if (classNames.size === 0) return true;
+  return !classNames.has(pupil.current_class.toLowerCase());
+}
+
 function SimpleDataPanel({
   title,
   heading,
@@ -1715,6 +1940,21 @@ function StaffMaintenancePanel({
   onRefresh: () => void;
   onClose: () => void;
 }) {
+  const [staffPageSize, setStaffPageSize] = useState<20 | 50 | 100 | "all">(20);
+  const [staffPageIndex, setStaffPageIndex] = useState(0);
+  const activeStaffCount = staffRecords.filter((staffMember) => staffMember.is_active).length;
+  const staffPageCount = staffPageSize === "all" ? 1 : Math.max(1, Math.ceil(staffRecords.length / staffPageSize));
+  const boundedStaffPageIndex = Math.min(staffPageIndex, staffPageCount - 1);
+  const visibleStaffRecords = useMemo(() => {
+    if (staffPageSize === "all") return staffRecords;
+    const start = boundedStaffPageIndex * staffPageSize;
+    return staffRecords.slice(start, start + staffPageSize);
+  }, [boundedStaffPageIndex, staffPageSize, staffRecords]);
+  const staffRangeStart = staffRecords.length === 0 ? 0 : staffPageSize === "all" ? 1 : boundedStaffPageIndex * staffPageSize + 1;
+  const staffRangeEnd = staffPageSize === "all"
+    ? staffRecords.length
+    : Math.min(staffRecords.length, staffRangeStart + staffPageSize - 1);
+
   return (
     <Card>
       <CardHeader>
@@ -1786,9 +2026,46 @@ function StaffMaintenancePanel({
           </Button>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <Badge variant="secondary">{staffRecords.length} in system</Badge>
-          <Badge variant="outline">{staffRecords.filter((staffMember) => staffMember.is_active).length} active</Badge>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="secondary">{staffRecords.length} in system</Badge>
+            <Badge variant="outline">{activeStaffCount} active</Badge>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+            <span>
+              Showing {staffRangeStart}-{staffRangeEnd} of {staffRecords.length}
+            </span>
+            <select
+              className="h-9 rounded-md border bg-background px-2 text-sm"
+              value={staffPageSize}
+              onChange={(event) => {
+                const nextValue = event.target.value === "all" ? "all" : Number(event.target.value) as 20 | 50 | 100;
+                setStaffPageSize(nextValue);
+                setStaffPageIndex(0);
+              }}
+            >
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+              <option value="all">All</option>
+            </select>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={boundedStaffPageIndex === 0 || staffPageSize === "all"}
+              onClick={() => setStaffPageIndex((current) => Math.max(0, current - 1))}
+            >
+              Previous
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={boundedStaffPageIndex >= staffPageCount - 1 || staffPageSize === "all"}
+              onClick={() => setStaffPageIndex((current) => Math.min(staffPageCount - 1, current + 1))}
+            >
+              Next
+            </Button>
+          </div>
         </div>
 
         {loading ? (
@@ -1804,7 +2081,7 @@ function StaffMaintenancePanel({
                 </tr>
               </thead>
               <tbody>
-                {staffRecords.map((staffMember) => {
+                {visibleStaffRecords.map((staffMember) => {
                   const isEditing = editingStaffId === staffMember.id;
                   return (
                     <tr key={staffMember.id} className="border-t align-top">
@@ -1962,7 +2239,7 @@ function ClassMaintenancePanel({
                     <div>
                       <h3 className="font-semibold">{classRecord.class_name}</h3>
                       <p className="text-sm text-muted-foreground">
-                        {classRecord.year_group} · {classRecord.room || "No room"} · {classRecord.academic_year || "No academic year"}
+                        {classRecord.year_group} Â· {classRecord.room || "No room"} Â· {classRecord.academic_year || "No academic year"}
                       </p>
                     </div>
                     <Badge variant={assignments.length ? "default" : "secondary"}>
@@ -1977,7 +2254,7 @@ function ClassMaintenancePanel({
                         <div key={assignment.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/20 px-3 py-2 text-sm">
                           <span>
                             <span className="font-medium">{assignment.staff_name || "Staff"}</span>
-                            <span className="text-muted-foreground"> — {staffTitle} · class link: {assignment.role || "Not set"}</span>
+                            <span className="text-muted-foreground"> â€” {staffTitle} Â· class link: {assignment.role || "Not set"}</span>
                           </span>
                           <Button
                             size="sm"
@@ -2006,7 +2283,7 @@ function ClassMaintenancePanel({
                       <option value="">Choose staff member...</option>
                       {activeStaff.map((staffMember) => (
                         <option key={staffMember.id} value={staffMember.id}>
-                          {staffMember.first_name} {staffMember.last_name} — {staffMember.job_title || formatRoleLabel(staffMember.role_category)}
+                          {staffMember.first_name} {staffMember.last_name} â€” {staffMember.job_title || formatRoleLabel(staffMember.role_category)}
                         </option>
                       ))}
                     </select>
@@ -2150,7 +2427,7 @@ function LocationMaintenancePanel({
               <tbody>
                 {filtered.map((location) => (
                   <tr key={location.id} className="border-t">
-                    <td className="p-2 font-semibold">{location.location_code || "—"}</td>
+                    <td className="p-2 font-semibold">{location.location_code || "â€”"}</td>
                     <td>{location.location_name}</td>
                     <td className="min-w-56">
                       <select
@@ -2165,9 +2442,9 @@ function LocationMaintenancePanel({
                         ))}
                       </select>
                     </td>
-                    <td>{location.current_use || "—"}</td>
-                    <td>{location.area_sqm ? `${location.area_sqm} sqm` : "—"}</td>
-                    <td>{location.capacity ?? "—"}</td>
+                    <td>{location.current_use || "â€”"}</td>
+                    <td>{location.area_sqm ? `${location.area_sqm} sqm` : "â€”"}</td>
+                    <td>{location.capacity ?? "â€”"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -2266,15 +2543,15 @@ function LocationUploadReviewPanel({
               {review.sampleRows.map((row) => (
                 <tr key={`${row.rowNumber}-${row.location_code}`} className="border-t">
                   <td className="p-2 font-semibold">Row {row.rowNumber}</td>
-                  <td>{row.location_code || "—"}</td>
-                  <td>{row.location_name || "—"}</td>
+                  <td>{row.location_code || "â€”"}</td>
+                  <td>{row.location_name || "â€”"}</td>
                   <td>
-                    <Badge variant={row.location_type === "TBC / Other" ? "outline" : "secondary"}>{row.location_type || "—"}</Badge>
+                    <Badge variant={row.location_type === "TBC / Other" ? "outline" : "secondary"}>{row.location_type || "â€”"}</Badge>
                   </td>
-                  <td>{row.parent_location_code || "—"}</td>
-                  <td>{row.current_use || "—"}</td>
-                  <td>{row.area_sqm || "—"}</td>
-                  <td>{row.capacity || "—"}</td>
+                  <td>{row.parent_location_code || "â€”"}</td>
+                  <td>{row.current_use || "â€”"}</td>
+                  <td>{row.area_sqm || "â€”"}</td>
+                  <td>{row.capacity || "â€”"}</td>
                 </tr>
               ))}
             </tbody>
@@ -2333,7 +2610,7 @@ function PupilUploadReviewPanel({
           <ReviewStat label="SEND rows" value={review.stats.sendCount} />
           <ReviewStat label="EHCP rows" value={review.stats.ehcpCount} />
           <ReviewStat label="EAL rows" value={review.stats.ealCount} />
-          <ReviewStat label="Pupil Premium rows" value={review.stats.pupilPremiumCount} />
+          <ReviewStat label="Class review needed" value={review.stats.missingClassCount} tone={review.stats.missingClassCount ? "danger" : "good"} />
         </div>
 
         <div className="grid gap-3 lg:grid-cols-2">
@@ -2389,14 +2666,24 @@ function PupilUploadReviewPanel({
             </thead>
             <tbody>
               {review.rows.map((row) => (
-                <tr key={`${row.rowNumber}-${row.pupil_id}`} className="border-t">
+                <tr
+                  key={`${row.rowNumber}-${row.pupil_id}`}
+                  className={row.class_assignment_status === "needs_review" ? "border-t bg-amber-50" : "border-t"}
+                >
                   <td className="p-2 font-semibold">Row {row.rowNumber}</td>
                   <td>{displayImportValue(row.pupil_id)}</td>
                   <td>{displayImportValue(row.source_pupil_ref)}</td>
                   <td>{displayImportValue(row.first_name)}</td>
                   <td>{displayImportValue(row.last_name)}</td>
                   <td>{displayImportValue(row.year_group)}</td>
-                  <td>{displayImportValue(row.current_class)}</td>
+                  <td>
+                    <div className="flex flex-col gap-1 py-1">
+                      <span>{displayImportValue(row.current_class)}</span>
+                      {row.class_assignment_status === "needs_review" ? (
+                        <Badge variant="destructive" className="w-fit">Needs class review</Badge>
+                      ) : null}
+                    </div>
+                  </td>
                   <td>{displayImportValue(row.gender)}</td>
                   <td>{displayImportValue(row.send_status)}</td>
                   <td>{displayImportValue(row.ehcp)}</td>
@@ -2417,6 +2704,7 @@ function PupilUploadReviewPanel({
         <p className="text-xs text-muted-foreground">
           Showing all {review.rows.length} staged pupil row{review.rows.length === 1 ? "" : "s"} and every import field.
           Blank optional fields show as <span className="font-semibold">Blank</span>; QR pass fields will be auto-created if left blank.
+          Rows marked <span className="font-semibold">Needs class review</span> used year group as a temporary fallback and should be assigned to an imported class after import.
         </p>
 
         <div className="flex flex-wrap gap-2">
@@ -2481,13 +2769,13 @@ function ReviewBreakdown({
   );
 }
 
-function SetupWizardSummary({ counts }: { counts: SetupCounts }) {
+function SetupWizardSummary({ counts, countsUnavailable = false }: { counts: SetupCounts; countsUnavailable?: boolean }) {
   return (
     <Card className="overflow-hidden border-primary/20 bg-card">
       <CardContent className="grid gap-5 p-5 lg:grid-cols-[1fr_1.1fr] lg:items-center">
         <div>
           <p className="text-xs font-bold uppercase tracking-wide text-primary">Guided setup</p>
-          <h2 className="mt-1 text-xl font-black">Build the schoolâ€™s source-of-truth foundations</h2>
+          <h2 className="mt-1 text-xl font-black">Build the schoolÃ¢â‚¬â„¢s source-of-truth foundations</h2>
           <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
             Work through the imports in order. Templates can be downloaded any time, but uploads unlock in sequence
             so the data lands cleanly: places first, then assets, staff, pupils and classes.
@@ -2502,9 +2790,9 @@ function SetupWizardSummary({ counts }: { counts: SetupCounts }) {
             ["Classes", counts.classes],
           ].map(([label, value]) => (
             <div key={label} className="rounded-2xl border bg-muted/30 p-3 text-center">
-              <p className="text-lg font-black">{value}</p>
+              <p className="text-lg font-black">{countsUnavailable ? "—" : value}</p>
               <p className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
-              {Number(value) > 0 ? <CheckCircle2 className="mx-auto mt-2 h-4 w-4 text-emerald-600" /> : null}
+              {!countsUnavailable && Number(value) > 0 ? <CheckCircle2 className="mx-auto mt-2 h-4 w-4 text-emerald-600" /> : null}
             </div>
           ))}
         </div>
@@ -2513,7 +2801,8 @@ function SetupWizardSummary({ counts }: { counts: SetupCounts }) {
   );
 }
 
-async function authHeaders(): Promise<Record<string, string>> {
+async function authHeaders(accessToken?: string | null): Promise<Record<string, string>> {
+  if (accessToken) return { Authorization: `Bearer ${accessToken}` };
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -2562,6 +2851,7 @@ function UploadTile({
   title,
   description,
   count,
+  countUnavailable = false,
   active = false,
   isOpen = false,
   locked = false,
@@ -2580,6 +2870,7 @@ function UploadTile({
   title: string;
   description: string;
   count?: number;
+  countUnavailable?: boolean;
   active?: boolean;
   isOpen?: boolean;
   locked?: boolean;
@@ -2603,13 +2894,15 @@ function UploadTile({
             {step ? <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-black text-primary">{step}</span> : null}
             {title}
           </span>
-          {locked ? <Lock className="h-4 w-4 text-muted-foreground" /> : count && count > 0 ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : null}
+          {locked ? <Lock className="h-4 w-4 text-muted-foreground" /> : !countUnavailable && count && count > 0 ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : null}
         </CardTitle>
       </CardHeader>
       <CardContent className={compact ? "space-y-3 pt-0" : "space-y-3"}>
         <div className="flex items-center justify-between gap-2">
-          <Badge variant={count && count > 0 ? "default" : "secondary"}>{count ?? 0} in system</Badge>
-          {locked ? <Badge variant="outline">Locked</Badge> : <Badge variant="outline">Ready</Badge>}
+          <Badge variant={!countUnavailable && count && count > 0 ? "default" : "secondary"}>
+            {countUnavailable ? "Not loaded" : `${count ?? 0} in system`}
+          </Badge>
+          {countUnavailable ? <Badge variant="outline">Check connection</Badge> : locked ? <Badge variant="outline">Locked</Badge> : <Badge variant="outline">Ready</Badge>}
         </div>
         <p className="text-sm text-muted-foreground">{description}</p>
         {locked && lockedReason ? (
@@ -2711,7 +3004,7 @@ function openPrintWindow(cards: PassCard[], className?: string, format: PrintFor
   <div class="grid">
     ${cards.map((card) => {
       const colour = passColourHex(card.pass_colour);
-      const identity = [card.pass_colour, card.pass_animal, card.pass_badge].filter(Boolean).join(" Â· ");
+      const identity = [card.pass_colour, card.pass_animal, card.pass_badge].filter(Boolean).join(" Ã‚Â· ");
       const badgeSvg = characterBadgeDataUrl(card.pass_animal, card.pass_colour, card.pass_badge);
       return `
       <div class="card" style="border-color: ${colour};">
@@ -2729,7 +3022,7 @@ function openPrintWindow(cards: PassCard[], className?: string, format: PrintFor
         </div>
         <div class="register-name">
           ${escapeHtml(`${card.first_name} ${card.last_name}`)}
-          <div class="actions">${escapeHtml(card.current_class || `Year ${card.year_group}`)} Â· ${escapeHtml(card.pass_codename || "Schoolgle Pass")}</div>
+          <div class="actions">${escapeHtml(card.current_class || `Year ${card.year_group}`)} Ã‚Â· ${escapeHtml(card.pass_codename || "Schoolgle Pass")}</div>
         </div>
       </div>
     `}).join("")}
@@ -2747,7 +3040,7 @@ function openPrintWindow(cards: PassCard[], className?: string, format: PrintFor
 }
 
 function printTitle(format: PrintFormat, className?: string) {
-  const suffix = className ? ` â€” ${className}` : "";
+  const suffix = className ? ` Ã¢â‚¬â€ ${className}` : "";
   if (format === "book-sticker") return `Schoolgle Book Stickers${suffix}`;
   if (format === "register") return `Schoolgle QR Register${suffix}`;
   return `Schoolgle Pupil Passes${suffix}`;

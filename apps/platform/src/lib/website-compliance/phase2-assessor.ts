@@ -15,6 +15,7 @@ import OpenAI from "openai";
 import { MODEL_CONFIG } from "../ai-evidence-matcher";
 import { maskPII } from "../pii-masker";
 import { createServiceRoleClient } from "@/lib/supabase-server";
+import { resolveAndSyncOfstedDocumentChecks } from "@/lib/ofsted-readiness/document-check-sync";
 import { buildWebsiteFindingDraft } from "@/lib/ofsted-readiness/findings";
 import {
   type ComplianceRequirement,
@@ -71,6 +72,7 @@ export interface AssessResult {
   overallComplianceScore: number;
   overallQualityScore: number;
   priorityActions: string[];
+  ofstedDocumentChecksSynced: number;
   durationMs: number;
 }
 
@@ -578,11 +580,14 @@ export async function assessScrapedWebsite(
       preferredPageUrls.length > 0
         ? preferredPageUrls
         : matchingPageUrls.slice(0, 3);
-    const evidenceUrls = Array.from(
-      new Set([
-        ...match.documentLinksFound.slice(0, 5),
-        ...evidencePageUrls,
-      ]),
+    const evidenceUrls = sortEvidenceUrlsForRequirement(
+      Array.from(
+        new Set([
+          ...match.documentLinksFound.slice(0, 5),
+          ...evidencePageUrls,
+        ]),
+      ),
+      req,
     ).slice(0, 10);
 
     assessments.push({
@@ -660,6 +665,12 @@ export async function assessScrapedWebsite(
     assessments,
   );
 
+  const ofstedDocumentChecksSynced =
+    await syncLatestWebsiteEvidenceIntoOfstedChecks({
+      organizationId: session.organization_id,
+      sessionId,
+    });
+
   // ─── Store Ed knowledge Q&A pairs ──────────────────────────────────
 
   const domain = new URL(session.website_url).hostname;
@@ -735,8 +746,31 @@ export async function assessScrapedWebsite(
     overallComplianceScore: overallCompliance,
     overallQualityScore: overallQuality,
     priorityActions,
+    ofstedDocumentChecksSynced,
     durationMs,
   };
+}
+
+async function syncLatestWebsiteEvidenceIntoOfstedChecks({
+  organizationId,
+  sessionId,
+}: {
+  organizationId: string;
+  sessionId: string;
+}): Promise<number> {
+  try {
+    const { savedDocumentChecksCount } = await resolveAndSyncOfstedDocumentChecks({
+      organizationId,
+      sessionId,
+    });
+    return savedDocumentChecksCount;
+  } catch (error) {
+    console.error(
+      "[Assessor] Failed to sync website evidence into Ofsted document checks:",
+      error,
+    );
+    return 0;
+  }
 }
 
 // ─── Structural Matching (adapted for DB content) ─────────────────────
@@ -831,6 +865,80 @@ function isPreferredEvidencePage(
     if (pattern === "/") return false;
     return urlLower.includes(pattern.toLowerCase());
   });
+}
+
+function normaliseEvidenceUrlForMatch(value: string): string {
+  return value.toLowerCase().replace(/[-_]+/g, " ");
+}
+
+function scoreEvidenceUrlForRequirement(
+  url: string,
+  req: Pick<ComplianceRequirement, "key" | "urlPatterns" | "documentPatterns">,
+): number {
+  const normalisedUrl = normaliseEvidenceUrlForMatch(url);
+  const urlLower = url.toLowerCase();
+  let score = 0;
+
+  for (const pattern of req.urlPatterns) {
+    if (pattern === "/") continue;
+    const normalisedPattern = normaliseEvidenceUrlForMatch(pattern);
+    if (normalisedUrl.includes(normalisedPattern)) score += 35;
+  }
+
+  for (const pattern of req.documentPatterns) {
+    const normalisedPattern = normaliseEvidenceUrlForMatch(pattern);
+    if (normalisedUrl.includes(normalisedPattern)) score += 30;
+  }
+
+  if (normalisedUrl.includes("wp json/oembed")) score -= 100;
+
+  if (req.key === "phonics_reading") {
+    if (normalisedUrl.includes("learning/phonics")) score += 140;
+    else if (normalisedUrl.includes("phonics")) score += 100;
+    if (normalisedUrl.includes("read write inc")) score += 80;
+    if (normalisedUrl.includes("reading")) score += 20;
+  }
+
+  if (req.key === "curriculum_content") {
+    try {
+      const pathname = new URL(url).pathname.toLowerCase();
+      if (
+        /^\/(?:curriculum|the-[^/]*curriculum)\/?$/.test(pathname) ||
+        pathname.includes("/the-grove-house-curriculum")
+      ) {
+        score += 170;
+      }
+    } catch {
+      // URL ranking should never fail an assessment.
+    }
+    if (normalisedUrl.includes("curriculum")) score += 80;
+    if (urlLower.includes("/wp-content/") || urlLower.endsWith(".pdf")) {
+      score -= 30;
+    }
+    if (
+      /\/(?:reading|phonics|writing|maths|science|history|geography|art|music|computing|physical education|religious education)(?:\/|$)/.test(
+        normalisedUrl,
+      )
+    ) {
+      score += 35;
+    }
+  }
+
+  return score;
+}
+
+function sortEvidenceUrlsForRequirement(
+  urls: string[],
+  req: Pick<ComplianceRequirement, "key" | "urlPatterns" | "documentPatterns">,
+): string[] {
+  return urls
+    .map((url, index) => ({
+      url,
+      index,
+      score: scoreEvidenceUrlForRequirement(url, req),
+    }))
+    .sort((left, right) => right.score - left.score || left.index - right.index)
+    .map((item) => item.url);
 }
 
 export interface ContentMatch {
@@ -1560,3 +1668,7 @@ async function storeEdKnowledgeQAPairs(
     console.error("[Assessor] Error storing Ed knowledge:", error);
   }
 }
+
+export const __phase2AssessorTestables = {
+  sortEvidenceUrlsForRequirement,
+};

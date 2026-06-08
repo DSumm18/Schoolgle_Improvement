@@ -42,6 +42,52 @@ const TRUST_SEED_PATHS = [
   "/our-trust/our-schools",
 ];
 
+const SCHOOL_EVIDENCE_SEED_PATHS = [
+  "/policies-and-documents",
+  "/policies",
+  "/key-information",
+  "/statutory-information",
+  "/safeguarding",
+  "/send",
+  "/sen",
+  "/governance",
+  "/ofsted-report",
+  "/ofsted",
+  "/pupil-premium",
+  "/strategy-for-pupil-premium",
+  "/pe-sports-premium",
+  "/current-year-pe-sports-premium",
+  "/curriculum",
+  "/the-grove-house-curriculum",
+  "/reading",
+  "/learning/reading",
+  "/phonics",
+  "/learning/phonics",
+  "/writing",
+  "/learning/writing",
+  "/maths",
+  "/learning-maths",
+  "/science",
+  "/history",
+  "/geography",
+  "/art",
+  "/design-technology",
+  "/music",
+  "/computing",
+  "/modern-foreign-language",
+  "/religious-education",
+  "/physical-education",
+  "/pshe-rhe",
+  "/pshe-and-rhe",
+  "/admissions",
+  "/complaints",
+  "/attendance",
+  "/behaviour",
+  "/equality-objectives",
+  "/accessibility",
+  "/remote-learning-offer",
+];
+
 const PAYMAT_KNOWN_404_PATHS = new Set([
   "/policies",
   "/key-information",
@@ -199,6 +245,20 @@ export function buildPublicEvidenceSeeds(
     .sort((left, right) => right.score - left.score || left.index - right.index)
     .slice(0, limit)
     .map((candidate) => candidate.url);
+}
+
+export function buildSchoolEvidenceSeedUrls(
+  schoolWebsiteUrl: string,
+  limit = 60,
+): string[] {
+  const base = normaliseUrl(schoolWebsiteUrl);
+  if (!base) return [];
+
+  const parsed = new URL(base);
+  const root = `${parsed.protocol}//${parsed.hostname}`;
+
+  return [...new Set(SCHOOL_EVIDENCE_SEED_PATHS.map((path) => `${root}${path}`))]
+    .slice(0, limit);
 }
 
 export function buildAllowedExternalDomains(

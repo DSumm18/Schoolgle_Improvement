@@ -33,6 +33,8 @@ import {
   EyeOff,
   Sparkles,
 } from 'lucide-react';
+import { useAuth } from '@/context/SupabaseAuthContext';
+import { supabase } from '@/lib/supabase';
 import {
   DOMAIN_METADATA,
   type ComplianceDomain,
@@ -50,6 +52,8 @@ interface FormData {
   name: string;
   description: string;
   compliance_domain: ComplianceDomain;
+  classification: 'statutory' | 'non_statutory';
+  statutory_reference?: string;
 
   // Step 2: Requirements
   estimated_duration?: number;
@@ -70,6 +74,8 @@ const initialFormData: FormData = {
   name: '',
   description: '',
   compliance_domain: 'security',
+  classification: 'non_statutory',
+  statutory_reference: '',
   estimated_duration: undefined,
   requires_qualification: '',
   evidence_required: [],
@@ -83,6 +89,7 @@ const initialFormData: FormData = {
 export default function NewCustomCheckPage() {
   const params = useParams();
   const router = useRouter();
+  const { organizationId } = useAuth();
   const domainSlug = params.domain as ComplianceDomain;
 
   const [currentStep, setCurrentStep] = useState<WizardStep>('template');
@@ -123,6 +130,12 @@ export default function NewCustomCheckPage() {
         }
         if (!formData.description.trim()) {
           newErrors.description = 'Description is required';
+        }
+        if (
+          formData.classification === 'statutory' &&
+          !formData.statutory_reference?.trim()
+        ) {
+          newErrors.statutory_reference = 'Add the legal, regulatory, or approved strategy reference';
         }
         break;
       case 'requirements':
@@ -167,6 +180,8 @@ export default function NewCustomCheckPage() {
         name: template.name,
         description: template.description,
         compliance_domain: template.compliance_domain,
+        classification: 'non_statutory',
+        statutory_reference: '',
         estimated_duration: template.estimated_duration,
         requires_qualification: template.requires_qualification,
         evidence_required: [...template.evidence_required],
@@ -189,18 +204,29 @@ export default function NewCustomCheckPage() {
 
   const handleSubmit = async () => {
     if (!validateStep(currentStep)) return;
+    if (!organizationId) {
+      setErrors({ submit: 'Please sign in before creating a check.' });
+      return;
+    }
 
     setIsSubmitting(true);
     try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) {
+        throw new Error('No active session');
+      }
+
       const response = await fetch('/api/estates/checks/custom', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // TODO: Add auth headers
-          'x-organization-id': 'demo',
-          'x-user-id': 'demo-user',
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          frequency_locked: formData.classification === 'statutory',
+        }),
       });
 
       if (!response.ok) {
@@ -348,6 +374,63 @@ export default function NewCustomCheckPage() {
                   ))}
                 </select>
               </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Check Type</label>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="flex cursor-pointer gap-3 rounded-lg border bg-card p-3 hover:bg-accent">
+                    <input
+                      type="radio"
+                      name="classification"
+                      value="non_statutory"
+                      checked={formData.classification === 'non_statutory'}
+                      onChange={() => setFormData({ ...formData, classification: 'non_statutory', statutory_reference: '' })}
+                      className="mt-1 h-4 w-4"
+                    />
+                    <div>
+                      <p className="text-sm font-semibold">School check / non-statutory</p>
+                      <p className="text-xs text-muted-foreground">
+                        A local routine or good-practice inspection where the school controls the frequency.
+                      </p>
+                    </div>
+                  </label>
+                  <label className="flex cursor-pointer gap-3 rounded-lg border bg-card p-3 hover:bg-accent">
+                    <input
+                      type="radio"
+                      name="classification"
+                      value="statutory"
+                      checked={formData.classification === 'statutory'}
+                      onChange={() => setFormData({ ...formData, classification: 'statutory' })}
+                      className="mt-1 h-4 w-4"
+                    />
+                    <div>
+                      <p className="text-sm font-semibold">Statutory / regulated</p>
+                      <p className="text-xs text-muted-foreground">
+                        Use only where the requirement comes from law, regulation, or an approved Schoolgle strategy. Frequency is locked once created.
+                      </p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              {formData.classification === 'statutory' && (
+                <div>
+                  <label className="block text-sm font-medium mb-1">Statutory Reference</label>
+                  <input
+                    type="text"
+                    value={formData.statutory_reference || ''}
+                    onChange={(e) => setFormData({ ...formData, statutory_reference: e.target.value })}
+                    className="w-full rounded-md border bg-background px-3 py-2"
+                    placeholder="e.g., HSE L8, Fire Safety Order, trust policy reference"
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    This makes clear why the check is treated as mandatory.
+                  </p>
+                  {errors.statutory_reference && (
+                    <p className="text-sm text-rose-600 mt-1">{errors.statutory_reference}</p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         );
@@ -506,6 +589,11 @@ export default function NewCustomCheckPage() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Frequency *</label>
+                {formData.classification === 'statutory' && (
+                  <div className="mb-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+                    Statutory frequencies should come from the regulation, approved strategy, or Schoolgle-managed check library. This frequency will be locked when saved.
+                  </div>
+                )}
                 <select
                   value={formData.frequency}
                   onChange={(e) => setFormData({ ...formData, frequency: e.target.value as RecurrencePattern })}
@@ -653,6 +741,9 @@ export default function NewCustomCheckPage() {
                 </span>
                 <span className="px-2 py-1 rounded-full bg-muted text-sm">
                   <Clock className="w-3 h-3 inline" /> {formData.frequency}
+                </span>
+                <span className="px-2 py-1 rounded-full bg-muted text-sm">
+                  {formData.classification === 'statutory' ? 'Statutory / frequency locked' : 'Non-statutory'}
                 </span>
                 {formData.estimated_duration && (
                   <span className="px-2 py-1 rounded-full bg-muted text-sm">

@@ -99,7 +99,7 @@ Must include: total funding received, how funding is spent, impact on PE and spo
 
 | Requirement                            | Legislation                                                                      | Update Frequency                     |
 | -------------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------ |
-| Safeguarding / Child Protection Policy | KCSIE 2025; Working Together to Safeguard Children; Children Act 2004            | Annually (at start of academic year) |
+| Safeguarding / Child Protection Policy | KCSIE 2025; Working Together to Safeguard Children 2026; Children Act 2004            | Annually (at start of academic year) |
 | Online Safety Policy                   | KCSIE 2025 Part 2; DfE Filtering and Monitoring Standards 2024                   | Annually                             |
 | Filtering and Monitoring statement     | KCSIE 2025; DfE Filtering and Monitoring Standards for Schools and Colleges 2024 | Annually                             |
 

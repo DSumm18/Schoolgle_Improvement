@@ -100,6 +100,20 @@ const externalTools = (toolsData.tools as ExternalTool[]).slice(0, 10).map(
 
 export const TOOLBOX_ITEMS: ToolboxItem[] = [
   {
+    id: "deal-finder",
+    name: "Deal Finder",
+    description:
+      "Paste a product URL, compare school supplier prices, spot savings and keep a procurement evidence trail without buying the full Schoolgle suite.",
+    category: "Finance",
+    source: "schoolgle",
+    status: "Live",
+    href: "/dashboard/toolbox/deal-finder",
+    icon: "pound",
+    accent: "from-emerald-500 to-teal-600",
+    tags: ["procurement", "savings", "Amazon affiliate", "audit trail"],
+    cta: "Launch app",
+  },
+  {
     id: "class-builder",
     name: "Class Builder",
     description:

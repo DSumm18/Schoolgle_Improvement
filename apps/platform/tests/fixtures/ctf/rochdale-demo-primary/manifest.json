@@ -1,0 +1,159 @@
+{
+  "fixtureId": "rochdale-demo-primary",
+  "isDemo": true,
+  "safetyModel": "synthetic_twin",
+  "demoSchoolName": "Rochdale Demo Primary School",
+  "demoSchoolUrn": "149001",
+  "generatedFrom": ".tmp-xml",
+  "outputDir": "apps/platform/tests/fixtures/ctf/rochdale-demo-primary",
+  "academicYearStart": 2025,
+  "files": [
+    {
+      "fileName": "rochdale-demo-primary-001.xml",
+      "originalFileName": "source-001.xml",
+      "pupilCount": 57,
+      "recordCount": 969,
+      "warnings": []
+    },
+    {
+      "fileName": "rochdale-demo-primary-002.xml",
+      "originalFileName": "source-002.xml",
+      "pupilCount": 47,
+      "recordCount": 799,
+      "warnings": []
+    },
+    {
+      "fileName": "rochdale-demo-primary-003.xml",
+      "originalFileName": "source-003.xml",
+      "pupilCount": 48,
+      "recordCount": 816,
+      "warnings": []
+    },
+    {
+      "fileName": "rochdale-demo-primary-004.xml",
+      "originalFileName": "source-004.xml",
+      "pupilCount": 55,
+      "recordCount": 934,
+      "warnings": []
+    },
+    {
+      "fileName": "rochdale-demo-primary-005.xml",
+      "originalFileName": "source-005.xml",
+      "pupilCount": 57,
+      "recordCount": 969,
+      "warnings": []
+    },
+    {
+      "fileName": "rochdale-demo-primary-006.xml",
+      "originalFileName": "source-006.xml",
+      "pupilCount": 57,
+      "recordCount": 969,
+      "warnings": []
+    },
+    {
+      "fileName": "rochdale-demo-primary-007.xml",
+      "originalFileName": "source-007.xml",
+      "pupilCount": 52,
+      "recordCount": 309,
+      "warnings": []
+    },
+    {
+      "fileName": "rochdale-demo-primary-008.xml",
+      "originalFileName": "source-008.xml",
+      "pupilCount": 59,
+      "recordCount": 236,
+      "warnings": []
+    },
+    {
+      "fileName": "rochdale-demo-primary-009.xml",
+      "originalFileName": "source-009.xml",
+      "pupilCount": 55,
+      "recordCount": 110,
+      "warnings": []
+    },
+    {
+      "fileName": "rochdale-demo-primary-010.xml",
+      "originalFileName": "source-010.xml",
+      "pupilCount": 57,
+      "recordCount": 113,
+      "warnings": []
+    },
+    {
+      "fileName": "rochdale-demo-primary-011.xml",
+      "originalFileName": "source-011.xml",
+      "pupilCount": 52,
+      "recordCount": 52,
+      "warnings": []
+    },
+    {
+      "fileName": "rochdale-demo-primary-012.xml",
+      "originalFileName": "source-012.xml",
+      "pupilCount": 53,
+      "recordCount": 106,
+      "warnings": []
+    },
+    {
+      "fileName": "rochdale-demo-primary-013.xml",
+      "originalFileName": "source-013.xml",
+      "pupilCount": 51,
+      "recordCount": 101,
+      "warnings": []
+    },
+    {
+      "fileName": "rochdale-demo-primary-014.xml",
+      "originalFileName": "source-014.xml",
+      "pupilCount": 104,
+      "recordCount": 207,
+      "warnings": []
+    },
+    {
+      "fileName": "rochdale-demo-primary-015.xml",
+      "originalFileName": "source-015.xml",
+      "pupilCount": 61,
+      "recordCount": 122,
+      "warnings": []
+    },
+    {
+      "fileName": "rochdale-demo-primary-016.xml",
+      "originalFileName": "source-016.xml",
+      "pupilCount": 93,
+      "recordCount": 93,
+      "warnings": []
+    },
+    {
+      "fileName": "rochdale-demo-primary-017.xml",
+      "originalFileName": "source-017.xml",
+      "pupilCount": 59,
+      "recordCount": 59,
+      "warnings": []
+    },
+    {
+      "fileName": "rochdale-demo-primary-018.xml",
+      "originalFileName": "source-018.xml",
+      "pupilCount": 59,
+      "recordCount": 59,
+      "warnings": []
+    },
+    {
+      "fileName": "rochdale-demo-primary-019.xml",
+      "originalFileName": "source-019.xml",
+      "pupilCount": 68,
+      "recordCount": 68,
+      "warnings": []
+    },
+    {
+      "fileName": "rochdale-demo-primary-020.xml",
+      "originalFileName": "source-020.xml",
+      "pupilCount": 52,
+      "recordCount": 52,
+      "warnings": []
+    },
+    {
+      "fileName": "rochdale-demo-primary-021.xml",
+      "originalFileName": "source-021.xml",
+      "pupilCount": 57,
+      "recordCount": 969,
+      "warnings": []
+    }
+  ]
+}

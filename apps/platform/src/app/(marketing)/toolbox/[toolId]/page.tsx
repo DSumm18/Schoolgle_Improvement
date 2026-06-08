@@ -55,6 +55,12 @@ export default function ToolPage() {
 
   useEffect(() => {
     if (!toolId) return;
+
+    if (toolId === "deal-finder" && tool?.url) {
+      window.location.replace(tool.url);
+      return;
+    }
+
     fetch(`/api/tools/${toolId}/content`)
       .then((res) => {
         if (res.ok) {
@@ -63,7 +69,7 @@ export default function ToolPage() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [toolId]);
+  }, [toolId, tool?.url]);
 
   if (!tool) {
     return (

@@ -23,12 +23,31 @@ import {
   generateEquivalenceGroup,
   getEquivalenceType,
 } from './equivalence';
-import { discoverProduct } from './discovery';
+import { discoverProduct, needsMoreChoiceDiscovery } from './discovery';
 import { refreshStalePrices } from './price-refresh';
 import { getComparisonUnit } from './comparison-units';
+import { applyAffiliateParameters } from '../affiliate-links';
 import type { ScrapeResponse } from '../types';
+import { calculateEquivalentBasket } from './basket-comparison';
+import { buildRetailerSearchLinks } from './retailer-search-links';
+import { selectBestValueMatch } from './value-ranking';
+import { normaliseSupplierProduct } from './supplier-product-normalisation';
+import type { PackInfo } from './pack-parser';
 
 const cache = new ScrapeCache<ScrapeResponse>();
+const TARGET_COMPARISON_CHOICES = 20;
+const RAW_MATCH_CANDIDATE_LIMIT = TARGET_COMPARISON_CHOICES + 12;
+const BULK_UNIT_EQUIVALENCE_GROUPS = new Set([
+  "pencil",
+  "pen",
+  "ballpoint-pen",
+  "fountain-pen",
+  "marker-pen",
+  "whiteboard-marker",
+  "highlighter",
+  "glue-stick",
+  "eraser",
+]);
 
 function computeValueScore(
   matchRank: number,
@@ -46,6 +65,130 @@ function computeValueScore(
   const availabilityPoints = inStock ? 10 : 0;
   const deliveryPoints = 5;
   return Math.min(100, pricePoints + matchPoints + supplierPoints + availabilityPoints + deliveryPoints);
+}
+
+function hasReliableResultSource(match: { supplier_name?: string; source_url?: string | null; product_name?: string }): boolean {
+  const name = match.product_name || "";
+  const url = match.source_url || "";
+  if (!url || !/^https?:\/\//i.test(url)) return false;
+  if (!match.supplier_name || match.supplier_name === "Unknown") return false;
+  if (/xxx|placeholder|example\.com/i.test(url)) return false;
+  if (/404|page not found|just a moment|access denied|captcha/i.test(name)) return false;
+  return true;
+}
+
+function comparisonUrlKey(sourceUrl: string | null): string | null {
+  if (!sourceUrl) return null;
+  try {
+    const parsed = new URL(sourceUrl);
+    return `${parsed.hostname.toLowerCase()}${parsed.pathname.toLowerCase()}`;
+  } catch {
+    return sourceUrl.toLowerCase().split("?")[0];
+  }
+}
+
+export function hasTrustworthyPackForComparison(match: {
+  product_name?: string;
+  equivalence_group?: string | null;
+  pack_quantity?: number | null;
+}): boolean {
+  const name = match.product_name || "";
+  const group = match.equivalence_group || "";
+
+  if (
+    group === "pencil" &&
+    (match.pack_quantity || 1) <= 1 &&
+    /\b(?:class\s*packs?|classpacks?|bulk|box|packs?)\b/i.test(name)
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+export function hasProcurementComparablePack(
+  sourceEquivalenceGroup: string | null,
+  sourcePackQuantity: number,
+  match: {
+    equivalence_group?: string | null;
+    pack_quantity?: number | null;
+  },
+): boolean {
+  const group = match.equivalence_group || sourceEquivalenceGroup || "";
+
+  if (
+    BULK_UNIT_EQUIVALENCE_GROUPS.has(group) &&
+    sourcePackQuantity >= 10 &&
+    (match.pack_quantity || 1) <= 1
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+export function shouldRetryWithSpecificExtractor(
+  product: ExtractedProduct,
+  extractionMethod: string,
+  url: string,
+): boolean {
+  if (extractionMethod !== "firecrawl") return false;
+
+  const extractor = findExtractor(url);
+  if (!extractor || extractor.key === "generic") return false;
+
+  return !product.price;
+}
+
+export function choosePackDetails(
+  extractedQuantity: number | null | undefined,
+  extractedUnit: string | null | undefined,
+  parsedPack: PackInfo,
+): { packQuantity: number; packUnit: string } {
+  if (parsedPack.pack_unit === "ream" || parsedPack.pack_quantity > 1) {
+    return {
+      packQuantity: parsedPack.pack_quantity,
+      packUnit: parsedPack.pack_unit,
+    };
+  }
+
+  return {
+    packQuantity:
+      extractedQuantity && extractedQuantity > 0
+        ? extractedQuantity
+        : parsedPack.pack_quantity,
+    packUnit: extractedUnit || parsedPack.pack_unit,
+  };
+}
+
+function assertVerifiedProduct(product: ExtractedProduct): void {
+  const name = product.name?.trim();
+  if (!name) {
+    throw new Error("Could not extract a verified product name");
+  }
+
+  const blockedTitlePatterns = [
+    /unknown product/i,
+    /seed match/i,
+    /^amazon\.co\.uk$/i,
+    /^page not found$/i,
+    /not found/i,
+    /access denied/i,
+    /captcha/i,
+    /robot check/i,
+    /just a moment/i,
+    /cookie preference/i,
+  ];
+
+  if (blockedTitlePatterns.some((pattern) => pattern.test(name))) {
+    throw new Error(`Could not verify a product from this page (${name})`);
+  }
+
+  if (!product.price && !product.sku && !product.brand && !product.image_url) {
+    throw new Error(
+      "The page did not expose enough product data to compare it safely",
+    );
+  }
 }
 
 export async function runScrapePipeline(url: string): Promise<ScrapeResponse> {
@@ -91,11 +234,49 @@ export async function runScrapePipeline(url: string): Promise<ScrapeResponse> {
       }
     }
 
+    if (shouldRetryWithSpecificExtractor(validated, extractionMethod, url)) {
+      const extractor = findExtractor(url);
+      try {
+        console.warn(
+          '[DealFind] Firecrawl result missing price; retrying specific extractor:',
+          extractor.key,
+        );
+        const rawProduct = await extractor.extract(url);
+        validated = ExtractedProductSchema.parse(rawProduct);
+        extractionMethod = extractor.key;
+        console.log('[DealFind] Specific extractor succeeded:', validated.name, '£' + validated.price);
+      } catch (specificError) {
+        console.warn(
+          '[DealFind] Specific extractor failed after incomplete Firecrawl result:',
+          specificError instanceof Error ? specificError.message : String(specificError),
+        );
+      }
+    }
+
+    validated = {
+      ...normaliseSupplierProduct(validated, url),
+      source_url: applyAffiliateParameters(validated.source_url || url),
+    };
+
+    assertVerifiedProduct(validated);
+
     // Parse pack info
     const regexPack = parsePackInfo(validated.name, validated.description);
-    const packQuantity = validated.pack_quantity || regexPack.pack_quantity;
-    const packUnit = validated.pack_unit || regexPack.pack_unit;
-    const unitWeightG = validated.unit_weight_g || regexPack.unit_weight_g;
+    const sourcePack = choosePackDetails(
+      validated.pack_quantity,
+      validated.pack_unit,
+      regexPack,
+    );
+    const packQuantity = sourcePack.packQuantity;
+    const packUnit = sourcePack.packUnit;
+    const parsedEquivalenceGroup = generateEquivalenceGroup(
+      validated.name,
+      validated.description,
+    );
+    const isCopyPaper = parsedEquivalenceGroup === "copy-paper";
+    const unitWeightG = isCopyPaper
+      ? null
+      : validated.unit_weight_g || regexPack.unit_weight_g;
     const unitVolumeMl = validated.unit_volume_ml || regexPack.unit_volume_ml;
 
     // Compute unit prices
@@ -110,7 +291,7 @@ export async function runScrapePipeline(url: string): Promise<ScrapeResponse> {
 
     // Canonical key + equivalence group
     const canonicalKey = generateCanonicalKey(validated.name, validated.brand, unitWeightG, unitVolumeMl);
-    const equivalenceGroup = generateEquivalenceGroup(validated.name, validated.description);
+    const equivalenceGroup = parsedEquivalenceGroup;
 
     // Fingerprint + supplier
     const fingerprint = generateFingerprint(validated);
@@ -159,44 +340,98 @@ export async function runScrapePipeline(url: string): Promise<ScrapeResponse> {
       await upsertPrice(productId, supplierInfo.id, validated.price, url);
     }
 
-    // Find similar products
-    const matches = await findSimilarProducts(productId);
+    // Find similar products. If the local corpus is thin, run a short live
+    // discovery pass before scoring so the first user gets useful options too.
+    let matches = await findSimilarProducts(productId, RAW_MATCH_CANDIDATE_LIMIT);
+    if (needsMoreChoiceDiscovery(matches.length, TARGET_COMPARISON_CHOICES)) {
+      await discoverProduct(
+        validated.name,
+        validated.brand,
+        [],
+        () => cache.delete(url),
+        {
+          equivalenceGroup,
+          maxSuppliers: 24,
+          maxProductsPerSupplier: 12,
+          targetResults: Math.max(
+            TARGET_COMPARISON_CHOICES - matches.length + 8,
+            1,
+          ),
+          timeoutMs: 9000,
+          useProductPageFallback: false,
+        },
+      );
+      matches = await findSimilarProducts(productId, RAW_MATCH_CANDIDATE_LIMIT);
+    }
 
     // Calculate savings + equivalence + value score
     const matchesWithSavings = matches.map((m) => {
-      const savingGbp =
-        validated.price && m.price_gbp
-          ? +(validated.price - m.price_gbp).toFixed(2)
-          : null;
-      const savingPct =
-        validated.price && m.price_gbp && validated.price > 0
-          ? +(((validated.price - m.price_gbp) / validated.price) * 100).toFixed(1)
-          : null;
-
-      const matchUnitPrice = m.unit_price_each ?? m.price_gbp;
-      const unitSavingGbp =
-        unitPriceEach !== null && matchUnitPrice !== null
-          ? +(unitPriceEach - matchUnitPrice).toFixed(4)
-          : null;
-      const unitSavingPct =
-        unitPriceEach !== null && matchUnitPrice !== null && unitPriceEach > 0
-          ? +(((unitPriceEach - matchUnitPrice) / unitPriceEach) * 100).toFixed(1)
-          : null;
-
+      const normalisedMatch = normaliseSupplierProduct(
+        {
+          name: m.product_name,
+          description: m.product_description || undefined,
+          price: m.price_gbp || undefined,
+          currency: "GBP",
+          image_url: m.image_url || undefined,
+          source_url: m.source_url || "",
+          in_stock: true,
+          pack_quantity: m.pack_quantity,
+          pack_unit: m.pack_unit,
+        },
+        m.source_url || "",
+      );
+      const matchRegexPack = parsePackInfo(
+        normalisedMatch.name,
+        normalisedMatch.description,
+      );
+      const matchPack = choosePackDetails(
+        normalisedMatch.pack_quantity || m.pack_quantity,
+        normalisedMatch.pack_unit || m.pack_unit,
+        matchRegexPack,
+      );
+      const matchPackQuantity = matchPack.packQuantity;
+      const matchPackUnit = matchPack.packUnit;
+      const matchUnitPrice =
+        m.price_gbp && matchPackQuantity > 0
+          ? +(m.price_gbp / matchPackQuantity).toFixed(4)
+          : m.unit_price_each ?? m.price_gbp;
+      const matchEquivalenceGroup = generateEquivalenceGroup(
+        normalisedMatch.name,
+        normalisedMatch.description,
+      );
       const equivalenceType = getEquivalenceType(
         canonicalKey, m.canonical_product_key,
-        equivalenceGroup, m.equivalence_group,
+        equivalenceGroup, matchEquivalenceGroup,
         m.match_type,
       );
 
-      const matchCompUnit = getComparisonUnit(m.equivalence_group);
+      const matchCompUnit = getComparisonUnit(matchEquivalenceGroup);
+      const equivalent = calculateEquivalentBasket({
+        sourcePackQuantity: packQuantity,
+        sourcePrice: validated.price,
+        sourceUnitPrice: unitPriceEach,
+        sourceUnitLabel: comparisonUnit.label,
+        matchPackQuantity,
+        matchPrice: m.price_gbp,
+        matchUnitPrice,
+        matchUnitLabel: matchCompUnit.label,
+      });
 
       return {
         ...m,
-        saving_gbp: savingGbp,
-        saving_pct: savingPct,
-        unit_saving_gbp: unitSavingGbp,
-        unit_saving_pct: unitSavingPct,
+        product_name: normalisedMatch.name,
+        product_description: normalisedMatch.description ?? m.product_description,
+        pack_quantity: matchPackQuantity,
+        pack_unit: matchPackUnit,
+        unit_price_each: matchUnitPrice,
+        equivalence_group: matchEquivalenceGroup,
+        saving_gbp: equivalent.savingGbp,
+        saving_pct: equivalent.savingPct,
+        source_comparison_quantity: equivalent.sourceComparisonQuantity,
+        equivalent_quantity: equivalent.equivalentQuantity,
+        equivalent_total_price: equivalent.equivalentTotalPrice,
+        unit_saving_gbp: equivalent.unitSavingGbp,
+        unit_saving_pct: equivalent.unitSavingPct,
         equivalence_type: equivalenceType,
         value_score: 0,
         is_best_value: false,
@@ -207,8 +442,25 @@ export async function runScrapePipeline(url: string): Promise<ScrapeResponse> {
       };
     });
 
+    const comparableMatches = Array.from(
+      new Map(
+        matchesWithSavings
+          .filter(
+            (match) =>
+              match.equivalence_type !== "different" &&
+              hasReliableResultSource(match) &&
+              hasTrustworthyPackForComparison(match) &&
+              hasProcurementComparablePack(equivalenceGroup, packQuantity, match),
+          )
+          .map((match) => [
+            `${match.supplier_name}:${comparisonUrlKey(match.source_url) || match.product_name}`,
+            match,
+          ]),
+      ).values(),
+    );
+
     // Value scoring
-    const priceSorted = [...matchesWithSavings]
+    const priceSorted = [...comparableMatches]
       .filter((m) => (m.unit_price_each ?? m.price_gbp) !== null)
       .sort((a, b) => {
         const aPrice = a.unit_price_each ?? a.price_gbp ?? Infinity;
@@ -216,7 +468,7 @@ export async function runScrapePipeline(url: string): Promise<ScrapeResponse> {
         return aPrice - bPrice;
       });
 
-    for (const m of matchesWithSavings) {
+    for (const m of comparableMatches) {
       const rank = priceSorted.findIndex((p) => p.product_id === m.product_id);
       const hasSaving = m.saving_gbp !== null && m.saving_gbp > 0;
       m.value_score = computeValueScore(
@@ -228,56 +480,69 @@ export async function runScrapePipeline(url: string): Promise<ScrapeResponse> {
       );
     }
 
-    if (matchesWithSavings.length > 0) {
-      const best = matchesWithSavings.reduce((a, b) =>
-        a.value_score > b.value_score ? a : b,
+    const bestBySaving = selectBestValueMatch(comparableMatches);
+    if (bestBySaving) {
+      const best = comparableMatches.find(
+        (match) => match.product_id === bestBySaving.product_id,
       );
-      best.is_best_value = true;
+      if (best) {
+        best.is_best_value = true;
+      }
     }
 
     // Best savings
-    const savings = matchesWithSavings
+    const savings = comparableMatches
       .filter((m) => m.saving_gbp !== null && m.saving_gbp > 0)
       .sort((a, b) => (b.saving_gbp || 0) - (a.saving_gbp || 0));
 
     const bestSavingGbp = savings[0]?.saving_gbp || null;
     const bestSavingPct = savings[0]?.saving_pct || null;
 
-    const unitSavings = matchesWithSavings
+    const unitSavings = comparableMatches
       .filter((m) => m.unit_saving_gbp !== null && m.unit_saving_gbp > 0)
       .sort((a, b) => (b.unit_saving_gbp || 0) - (a.unit_saving_gbp || 0));
 
     const bestUnitSavingGbp = unitSavings[0]?.unit_saving_gbp || null;
     const bestUnitSavingPct = unitSavings[0]?.unit_saving_pct || null;
-    const bestValueMatch = matchesWithSavings.find((m) => m.is_best_value);
+    const bestValueMatch = comparableMatches.find((m) => m.is_best_value);
 
     // Cache matches in DB
-    await cacheProductMatches(productId, matches, validated.price);
+    await cacheProductMatches(productId, comparableMatches, validated.price);
 
     const durationMs = Date.now() - startTime;
 
     await updateScrapeJob(jobId, {
       status: "complete",
       scraped_product_id: productId,
-      match_count: matches.length,
+      match_count: comparableMatches.length,
       best_saving_pct: bestSavingPct ?? undefined,
       best_saving_gbp: bestSavingGbp ?? undefined,
       duration_ms: durationMs,
     });
 
     // Fire-and-forget: auto-discovery + price refresh
-    const discoveryPending = matchesWithSavings.length <= 2;
+    const discoveryPending = needsMoreChoiceDiscovery(
+      comparableMatches.length,
+      TARGET_COMPARISON_CHOICES,
+    );
     if (discoveryPending) {
       discoverProduct(
         validated.name,
         validated.brand,
-        supplierInfo?.id ? [supplierInfo.id] : [],
+        [],
         () => cache.delete(url),
+        {
+          equivalenceGroup,
+          maxSuppliers: 30,
+          maxProductsPerSupplier: 12,
+          targetResults: TARGET_COMPARISON_CHOICES - comparableMatches.length + 8,
+          useProductPageFallback: false,
+        },
       ).catch(() => {});
     }
 
     refreshStalePrices(
-      matchesWithSavings.map((m) => ({
+      comparableMatches.map((m) => ({
         product_id: m.product_id,
         supplier_id: m.supplier_id,
         source_url: m.source_url,
@@ -308,15 +573,20 @@ export async function runScrapePipeline(url: string): Promise<ScrapeResponse> {
         rating_count: validated.rating_count ?? null,
       },
       // @ts-expect-error - Auto-masked during strict compilation enforcement
-      matches: matchesWithSavings,
+      matches: comparableMatches,
       best_saving_gbp: bestSavingGbp,
       best_saving_pct: bestSavingPct,
       best_unit_saving_gbp: bestUnitSavingGbp,
       best_unit_saving_pct: bestUnitSavingPct,
       best_value_match_id: bestValueMatch?.product_id || null,
-      match_count: matches.length,
+      match_count: comparableMatches.length,
       duration_ms: durationMs,
       discovery_pending: discoveryPending,
+      retailer_search_links: buildRetailerSearchLinks(
+        validated.name,
+        validated.source_url || url,
+        comparableMatches,
+      ),
     };
 
     cache.set(url, response);
@@ -338,7 +608,13 @@ export async function runScrapePipeline(url: string): Promise<ScrapeResponse> {
 
     // Provide a user-friendly error message
     let userMessage = errorMessage;
-    if (errorMessage.includes('Could not extract product') || errorMessage.includes('no product data')) {
+    if (
+      errorMessage.includes('Could not extract product') ||
+      errorMessage.includes('Could not verify') ||
+      errorMessage.includes('verified product') ||
+      errorMessage.includes('enough product data') ||
+      errorMessage.includes('no product data')
+    ) {
       userMessage = `We couldn't read product details from this page. The site may be blocking automated access. Try pasting a URL from a different supplier, or try removing tracking parameters (everything after the "?" in the URL).`;
     } else if (errorMessage.includes('timeout') || errorMessage.includes('ETIMEDOUT') || errorMessage.includes('abort')) {
       userMessage = `The product page took too long to respond. Please try again in a moment.`;
@@ -361,6 +637,7 @@ export async function runScrapePipeline(url: string): Promise<ScrapeResponse> {
       match_count: 0,
       duration_ms: durationMs,
       discovery_pending: false,
+      retailer_search_links: [],
       error: userMessage,
     };
   }

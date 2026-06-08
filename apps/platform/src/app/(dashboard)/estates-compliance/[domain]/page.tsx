@@ -46,6 +46,18 @@ import { ShimmerButton } from "@/components/magicui/shimmer-button";
 import { BlurFade } from "@/components/magicui/blur-fade";
 import { motion, AnimatePresence } from "framer-motion";
 
+async function getAccessToken(contextToken?: string | null) {
+  if (contextToken) return contextToken;
+
+  return Promise.race([
+    supabase.auth
+      .getSession()
+      .then(({ data }) => data.session?.access_token || null)
+      .catch(() => null),
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000)),
+  ]);
+}
+
 interface CheckCompletion {
   checkId: string;
   status: CheckStatus;
@@ -102,7 +114,7 @@ const getCategoryColor = (category: CheckCategory): string => {
 export default function DomainPage() {
   const params = useParams();
   const domainSlug = params.domain as ComplianceDomain;
-  const { user, organizationId } = useAuth();
+  const { user, organizationId, session } = useAuth();
 
   // Validate domain
   if (!domainSlug || !DOMAIN_METADATA[domainSlug]) {
@@ -112,6 +124,7 @@ export default function DomainPage() {
   const metadata = DOMAIN_METADATA[domainSlug];
   const checks = getChecksForDomain(domainSlug);
 
+  const [customChecks, setCustomChecks] = useState<StatutoryCheck[]>([]);
   const [completions, setCompletions] = useState<
     Record<string, CheckCompletion>
   >({});
@@ -148,6 +161,14 @@ export default function DomainPage() {
         return;
       }
 
+      const token = await getAccessToken(session?.access_token);
+      if (!token) {
+        console.warn("[DomainPage] No active auth token available yet");
+        clearTimeout(globalTimeoutId);
+        ensureLoadingCleared();
+        return;
+      }
+
       setLoading(true);
 
       // Add timeout to prevent hanging requests
@@ -159,24 +180,24 @@ export default function DomainPage() {
       try {
         console.log("[DomainPage] Fetching completions for:", domainSlug);
 
-        // Get auth session for API call
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
         const headers: Record<string, string> = {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         };
-        if (session?.access_token) {
-          headers["Authorization"] = `Bearer ${session.access_token}`;
-        }
 
-        const response = await fetch(
-          `/api/estates/statutory-completions?organizationId=${organizationId}&domain=${domainSlug}`,
-          {
+        const [response, customResponse] = await Promise.all([
+          fetch(
+            `/api/estates/statutory-completions?organizationId=${organizationId}&domain=${domainSlug}`,
+            {
+              headers,
+              signal: controller.signal,
+            },
+          ),
+          fetch(`/api/estates/checks/custom?domain=${domainSlug}&pageSize=100`, {
             headers,
             signal: controller.signal,
-          },
-        );
+          }),
+        ]);
 
         clearTimeout(timeoutId);
 
@@ -186,6 +207,9 @@ export default function DomainPage() {
         }
 
         const result = await response.json();
+        const customResult = customResponse.ok
+          ? await customResponse.json()
+          : { checks: [] };
 
         if (mounted) {
           const data = result.completions || [];
@@ -209,6 +233,24 @@ export default function DomainPage() {
           });
 
           setCompletions(completionsMap);
+          setCustomChecks(
+            (customResult.checks || []).map((custom: any) => ({
+              id: `custom_${custom.id}`,
+              domain: custom.compliance_domain,
+              name: custom.name,
+              description: custom.description,
+              category:
+                custom.classification === "statutory"
+                  ? "statutory"
+                  : "custom",
+              frequency: custom.frequency,
+              reference: custom.statutory_reference,
+              estimatedDuration: custom.estimated_duration,
+              requiresQualification: custom.requires_qualification,
+              evidenceRequired: custom.evidence_required || [],
+              notes: custom.notes,
+            })),
+          );
         }
       } catch (error: any) {
         clearTimeout(timeoutId);
@@ -235,9 +277,11 @@ export default function DomainPage() {
       controller.abort();
       clearTimeout(globalTimeoutId);
     };
-  }, [organizationId, domainSlug]);
+  }, [organizationId, domainSlug, session?.access_token]);
 
-  const filteredChecks = checks.filter((check) => {
+  const allChecks = [...checks, ...customChecks];
+
+  const filteredChecks = allChecks.filter((check) => {
     const completion = completions[check.id];
     const statusMatch =
       filterStatus === "all" ||
@@ -269,7 +313,7 @@ export default function DomainPage() {
   const stats = [
     {
       label: "Total",
-      value: checks.length,
+      value: allChecks.length,
       color: "from-slate-500 to-slate-600",
     },
     {
@@ -279,7 +323,7 @@ export default function DomainPage() {
     },
     {
       label: "Pending",
-      value: checks.length - completedCount - overdueCount,
+      value: allChecks.length - completedCount - overdueCount,
       color: "from-amber-500 to-amber-600",
     },
     { label: "Overdue", value: overdueCount, color: "from-red-500 to-red-600" },
@@ -506,7 +550,7 @@ export default function DomainPage() {
                                   ),
                                 }}
                               >
-                                {check.category === "statutory" && "Required"}
+                                {check.category === "statutory" && "Statutory"}
                                 {check.category === "good_practice" &&
                                   "Good Practice"}
                                 {check.category === "custom" && "Custom"}

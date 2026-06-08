@@ -26,12 +26,17 @@ import { RecurrencePattern, TaskPriority, ComplianceDomain } from '@/types/estat
 import { Calendar, Clock, User, Users, Settings, CheckCircle2, AlertCircle } from 'lucide-react';
 import { STATUTORY_CHECKS, ComplianceDomain as StatutoryDomain } from '@/lib/estates-compliance/statutory-checks';
 import { useAuth } from '@/context/SupabaseAuthContext';
+import { AssetPicker } from '@/components/estates-compliance/AssetPicker';
 
 interface TaskSchedulerProps {
   organizationId: string;
   onSuccess?: (task: any) => void;
   onCancel?: () => void;
   initialDomain?: ComplianceDomain;
+  initialTitle?: string;
+  initialDescription?: string;
+  initialAssetId?: string | null;
+  initialCheckId?: string | null;
 }
 
 interface RecurrenceConfig {
@@ -59,14 +64,20 @@ export function TaskScheduler({
   onSuccess,
   onCancel,
   initialDomain = 'legionella',
+  initialTitle = '',
+  initialDescription = '',
+  initialAssetId = null,
+  initialCheckId = null,
 }: TaskSchedulerProps) {
   const { session } = useAuth();
-  const [activeTab, setActiveTab] = useState<'manual' | 'statutory'>('statutory');
+  const [activeTab, setActiveTab] = useState<'manual' | 'statutory'>(
+    initialTitle || initialAssetId ? 'manual' : 'statutory',
+  );
 
   // Manual task form state
   const [manualTask, setManualTask] = useState({
-    title: '',
-    description: '',
+    title: initialTitle,
+    description: initialDescription,
     task_type: 'inspection' as const,
     domain: initialDomain,
     priority: 'medium' as TaskPriority,
@@ -90,6 +101,7 @@ export function TaskScheduler({
   // Assignment state
   const [assignment, setAssignment] = useState<Assignment | null>(null);
   const [contractorId, setContractorId] = useState('unassigned');
+  const [selectedAssetId, setSelectedAssetId] = useState<string | null>(initialAssetId);
 
   // Statutory checks state
   const [selectedDomain, setSelectedDomain] = useState<StatutoryDomain>(initialDomain);
@@ -134,6 +146,14 @@ export function TaskScheduler({
         reminder_time: reminders.enabled ? reminders.reminderTime : undefined,
         assigned_to: assignment?.type === 'staff' ? assignment.id : undefined,
         contractor_id: assignment?.type === 'contractor' ? assignment.id : undefined,
+        asset_id: selectedAssetId || undefined,
+        statutory_check_id: initialCheckId || undefined,
+        metadata: initialCheckId
+          ? {
+              statutory_check_id: initialCheckId,
+              source: 'compliance_check_follow_up',
+            }
+          : undefined,
       };
 
       const response = await fetch(`/api/estates/tasks?organizationId=${organizationId}`, {
@@ -174,6 +194,7 @@ export function TaskScheduler({
           description: check.description,
           task_type: 'inspection' as const,
           compliance_domain: check.domain,
+          statutory_check_id: check.id,
           priority: 'medium' as TaskPriority,
           due_date: manualTask.due_date || new Date().toISOString(),
           recurring: true,
@@ -430,6 +451,14 @@ export function TaskScheduler({
             <CardContent className="space-y-6">
               {/* Basic Info */}
               <div className="grid gap-4 md:grid-cols-2">
+                <div className="md:col-span-2">
+                  <AssetPicker
+                    organizationId={organizationId}
+                    selectedAssetId={selectedAssetId}
+                    onSelect={(asset) => setSelectedAssetId(asset?.id || null)}
+                  />
+                </div>
+
                 <div className="md:col-span-2">
                   <Label htmlFor="title">Task Title</Label>
                   <Input

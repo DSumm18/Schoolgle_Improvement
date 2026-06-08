@@ -36,6 +36,7 @@ export const GET = protectedRoute(async (auth, request) => {
     room?: string;
     status?: string;
     compliance_domain?: string;
+    linked_compliance_check?: string;
     search?: string;
   } = {};
 
@@ -50,6 +51,8 @@ export const GET = protectedRoute(async (auth, request) => {
   if (searchParams.get("status")) filters.status = searchParams.get("status")!;
   if (searchParams.get("compliance_domain"))
     filters.compliance_domain = searchParams.get("compliance_domain")!;
+  if (searchParams.get("check_id"))
+    filters.linked_compliance_check = searchParams.get("check_id")!;
   if (searchParams.get("search")) filters.search = searchParams.get("search")!;
 
   // Parse pagination

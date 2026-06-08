@@ -1057,7 +1057,7 @@ export function assessStockLevel(
       alert_type: "reorder_suggested",
       message: `${stock.item_name}: Low stock — ${stock.current_qty} ${stock.unit} remaining (${stock.weeks_remaining} weeks). Below reorder threshold of ${stock.reorder_threshold}.`,
       suggested_action: `Order via Deal Finder to find best price. Need enough for ${weeksUntilRenewal - stock.weeks_remaining} additional weeks.`,
-      deal_finder_url: `/toolbox/deal-finder`,
+      deal_finder_url: `/dashboard/toolbox/deal-finder`,
     };
   }
 

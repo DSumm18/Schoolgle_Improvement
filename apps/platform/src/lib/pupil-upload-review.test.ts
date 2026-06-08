@@ -96,6 +96,26 @@ describe("reviewPupilUploadCsv", () => {
     expect(review.stats.classes).toEqual([{ value: "4B", count: 1 }]);
   });
 
+  it("flags rows where the class field is missing and only year-group fallback is available", () => {
+    const csv = [
+      "pupil_id,source_pupil_ref,first_name,last_name,year_group,current_class",
+      "P1,A802200106001,Ada,Lovelace,Year 4,4 Mian",
+      "P2,A802200106002,Alan,Turing,Year 4,",
+    ].join("\n");
+
+    const review = reviewPupilUploadCsv(csv);
+
+    expect(review.stats.missingClassCount).toBe(1);
+    expect(review.rows[1]).toMatchObject({
+      class_assignment_status: "needs_review",
+      class_source: "year_group_fallback",
+      current_class: "4",
+    });
+    expect(review.warnings).toContain(
+      "Row 3: current_class is blank, so Schoolgle will use year_group as the class fallback and mark this pupil for class review.",
+    );
+  });
+
   it("samples across larger files including row five", () => {
     const rows = ["pupil_id,source_pupil_ref,first_name,last_name,year_group,current_class"];
     for (let index = 1; index <= 30; index += 1) {

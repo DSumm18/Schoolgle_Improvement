@@ -33,11 +33,21 @@ function findContentDir(): string | null {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ toolId: string }> | { toolId: string } },
+  { params }: { params: Promise<{ toolId: string }> },
 ) {
   try {
-    const resolvedParams = params instanceof Promise ? await params : params;
+    const resolvedParams = await params;
     const { toolId } = resolvedParams;
+
+    if (toolId === "deal-finder") {
+      return NextResponse.redirect(
+        new URL(
+          "/signup?tool=deal-finder&next=/dashboard/toolbox/deal-finder",
+          request.url,
+        ),
+        307,
+      );
+    }
 
     const fileName = TOOL_FILE_MAP[toolId];
     if (!fileName) {

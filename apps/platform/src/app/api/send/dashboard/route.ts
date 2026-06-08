@@ -88,13 +88,13 @@ export const GET = protectedRoute(async (auth) => {
   const supabase = createServiceRoleClient();
 
   // Try to load real data
-  const { data: register } = await supabase
+  const { data: register, error: registerError } = await supabase
     .from("send_register")
-    .select("id, sen_status, primary_need, year_group, ehcp_status")
+    .select("id, sen_status, primary_need, year_group, has_ehcp, ehcp_annual_review_due")
     .eq("organization_id", organizationId);
 
   // If no real data, try MIS fallback before demo
-  if (!register || register.length === 0) {
+  if (registerError || !register || register.length === 0) {
     try {
       console.log("[SEND Dashboard] No Supabase data, trying MIS fallback...");
       const { getMISDataServiceForOrg } =
@@ -176,7 +176,7 @@ export const GET = protectedRoute(async (auth) => {
 
   // Compute real stats
   const senK = register.filter((r) => r.sen_status === "K");
-  const ehcp = register.filter((r) => r.sen_status === "E");
+  const ehcp = register.filter((r) => r.sen_status === "E" || r.has_ehcp);
   const monitoring = register.filter((r) => r.sen_status === "monitoring");
 
   // By need
@@ -205,15 +205,13 @@ export const GET = protectedRoute(async (auth) => {
   // Provisions
   const { data: provisions } = await supabase
     .from("send_provision_map")
-    .select(
-      "id, provision_type, cost_per_week, funding_source, is_active, pupil_id",
-    )
+    .select("id, provision_type, weekly_cost, funded_by, active, pupil_id, send_register_id")
     .eq("organization_id", organizationId)
-    .eq("is_active", true);
+    .eq("active", true);
 
   const activeProvisions = provisions || [];
   const totalWeeklyCost = activeProvisions.reduce(
-    (sum, p) => sum + (p.cost_per_week || 0),
+    (sum, p) => sum + (p.weekly_cost || 0),
     0,
   );
 
@@ -224,14 +222,15 @@ export const GET = protectedRoute(async (auth) => {
 
   const provByFunding: Record<string, number> = {};
   activeProvisions.forEach((p) => {
-    const src = p.funding_source || "school_budget";
+    const src = p.funded_by || "school_budget";
     provByFunding[src] = (provByFunding[src] || 0) + 1;
   });
 
   // Pupils without provisions
   const pupilsWithProvisions = new Set(activeProvisions.map((p) => p.pupil_id));
+  const sendRowsWithProvisions = new Set(activeProvisions.map((p) => p.send_register_id));
   const pupilsWithoutProvision = register.filter(
-    (r) => r.sen_status !== "monitoring" && !pupilsWithProvisions.has(r.id),
+    (r) => r.sen_status !== "monitoring" && !pupilsWithProvisions.has(r.id) && !sendRowsWithProvisions.has(r.id),
   ).length;
 
   // Referrals
@@ -258,16 +257,16 @@ export const GET = protectedRoute(async (auth) => {
   // Graduated approach
   const { data: cycles } = await supabase
     .from("send_graduated_approach")
-    .select("id, current_stage, review_outcome, review_date")
+    .select("id, status, review_outcome, review_date")
     .eq("organization_id", organizationId);
 
   const allCycles = cycles || [];
   const activeCycles = allCycles.filter(
-    (c) => c.current_stage !== "review" || !c.review_outcome,
+    (c) => c.status !== "completed",
   );
   const byStage: Record<string, number> = {};
   activeCycles.forEach((c) => {
-    byStage[c.current_stage] = (byStage[c.current_stage] || 0) + 1;
+    byStage[c.status] = (byStage[c.status] || 0) + 1;
   });
 
   const outcomes: Record<string, number> = {};
@@ -288,12 +287,13 @@ export const GET = protectedRoute(async (auth) => {
     },
     ehcp: {
       total: ehcp.length,
-      reviews_due_this_term: ehcp.filter((e) => e.ehcp_status === "finalised")
-        .length, // simplified
+      reviews_due_this_term: ehcp.filter((e) => {
+        if (!e.ehcp_annual_review_due) return false;
+        const due = new Date(e.ehcp_annual_review_due);
+        return due <= termEnd;
+      }).length,
       reviews_overdue: 0,
-      assessments_in_progress: register.filter(
-        (r) => r.ehcp_status === "requested" || r.ehcp_status === "assessment",
-      ).length,
+      assessments_in_progress: 0,
     },
     provisions: {
       total_active: activeProvisions.length,
@@ -313,7 +313,7 @@ export const GET = protectedRoute(async (auth) => {
       total_active_cycles: activeCycles.length,
       by_stage: byStage,
       reviews_due_this_term: activeCycles.filter(
-        (c) => c.current_stage === "review" && !c.review_outcome,
+        (c) => c.status === "review" && !c.review_outcome,
       ).length,
       outcomes_this_year: outcomes,
     },

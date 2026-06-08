@@ -310,7 +310,7 @@
     {
       "id": "deal-finder",
       "name": "Deal Finder",
-      "url": "/toolbox/deal-finder",
+      "url": "/signup?tool=deal-finder&next=/dashboard/toolbox/deal-finder",
       "category": "Finance",
       "tags": [
         "procurement",
@@ -319,10 +319,10 @@
         "price-comparison",
         "value-for-money"
       ],
-      "pricing": "Free with Signal Pro",
-      "tier": "pro",
-      "summary": "Paste a product URL, instantly find cheaper alternatives across school suppliers. Every comparison is logged as procurement compliance evidence.",
-      "notes": "Featured in Signal Week 13. Builds your procurement audit trail automatically. Amazon Associates + supplier commissions fund the free service.",
+      "pricing": "Free for schools",
+      "tier": "free",
+      "summary": "Paste a product URL, instantly find cheaper alternatives across school suppliers. Every comparison can support a simple value-for-money audit trail.",
+      "notes": "Free Schoolgle Toolbox app for procurement savings. Amazon Associates + supplier commissions help fund the free service.",
       "signalWeek": 13
     },
     {

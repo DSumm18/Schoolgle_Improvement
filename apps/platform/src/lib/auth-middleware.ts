@@ -4,6 +4,7 @@ import {
   createServerSupabaseClient,
   createServiceRoleClient,
 } from "./supabase-server";
+import { getOrganizationRuntimeAccessBlock } from "./environment-safety";
 
 /**
  * Authenticated user context returned by withAuth
@@ -64,19 +65,10 @@ function normalizeRole(role: string | null | undefined): AuthContext["role"] {
  * Authorization: Bearer <token> header (client-side fetch with localStorage sessions).
  */
 async function resolveUser(request: NextRequest) {
-  // 1. Try cookie-based session (works when @supabase/ssr sets cookies)
-  try {
-    const supabase = await createServerSupabaseClient();
-    const {
-      data: { user },
-      error,
-    } = await supabase.auth.getUser();
-    if (!error && user) return { user, supabase };
-  } catch {
-    // Cookie-based auth failed, try Bearer token
-  }
-
-  // 2. Fall back to Authorization header (client stores session in localStorage)
+  // 1. Prefer the explicit Authorization header for client-side API calls.
+  // LocalStorage-backed sessions can be newer than SSR cookies after OAuth,
+  // impersonation, or account switching, so the bearer token is the safer
+  // source of truth when the client deliberately sends one.
   const authHeader = request.headers.get("authorization");
   if (authHeader?.startsWith("Bearer ")) {
     const token = authHeader.slice(7);
@@ -89,6 +81,18 @@ async function resolveUser(request: NextRequest) {
       error,
     } = await supabase.auth.getUser(token);
     if (!error && user) return { user, supabase };
+  }
+
+  // 2. Fall back to cookie-based session (works when @supabase/ssr sets cookies)
+  try {
+    const supabase = await createServerSupabaseClient();
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
+    if (!error && user) return { user, supabase };
+  } catch {
+    // Cookie-based auth failed
   }
 
   return null;
@@ -244,6 +248,21 @@ export async function withAuth(
       );
     }
 
+    const runtimeAccessBlock = getOrganizationRuntimeAccessBlock({
+      organizationId,
+      method: request.method,
+    });
+
+    if (runtimeAccessBlock) {
+      return NextResponse.json(
+        {
+          error: runtimeAccessBlock.message,
+          code: runtimeAccessBlock.code,
+        },
+        { status: 403 },
+      );
+    }
+
     const auth: AuthContext = {
       userId: user.id,
       email: user.email || "",
@@ -253,12 +272,17 @@ export async function withAuth(
 
     return await handler(auth, request);
   } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
     console.error(
       "[withAuth] Error:",
-      error instanceof Error ? error.message : error,
+      message,
     );
     return NextResponse.json(
-      { error: "Authentication error", code: "AUTH_ERROR" },
+      {
+        error: "Authentication error",
+        code: "AUTH_ERROR",
+        details: process.env.NODE_ENV === "development" ? message : undefined,
+      },
       { status: 500 },
     );
   }

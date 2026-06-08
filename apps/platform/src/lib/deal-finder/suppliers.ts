@@ -1,86 +1,192 @@
-// Directory of 50+ UK Suppliers for the Deal Finder seed.
-// Categorized by their best ingestion routes.
+// UK supplier discovery registry for Deal Finder.
+//
+// This is intentionally broader than the initial seed database. The live
+// product flow can sync these suppliers into Supabase and use their search
+// pages for product discovery when a school pastes a URL for something we have
+// not seen before.
+
+export type SupplierCategory =
+  | "giant"
+  | "psbo"
+  | "education"
+  | "stationery"
+  | "it"
+  | "printing"
+  | "cleaning"
+  | "facilities"
+  | "sports"
+  | "furniture"
+  | "science"
+  | "art"
+  | "books";
+
+export type IngestionType = "api" | "scrape" | "catalogue" | "manual";
 
 export interface SupplierDefinition {
   name: string;
   domain: string;
-  category: "giant" | "psbo" | "specialist" | "it" | "sports" | "facilities" | "books";
+  category: SupplierCategory;
+  tags: SupplierCategory[];
   is_education_supplier: boolean;
   is_preferred: boolean;
-  ingestion_type: "api" | "scrape";
+  ingestion_type: IngestionType;
   api_provider?: "awin" | "amazon" | "custom";
+  search_url_template?: string;
+  extractor_key?: string;
+  public_pricing: "yes" | "partial" | "login";
+  procurement_notes?: string;
 }
 
+const generic = "generic";
+
 export const DEAL_FINDER_SUPPLIERS: SupplierDefinition[] = [
-  // THE GLOBAL GIANTS & GENERAL RETAIL
-  { name: "Amazon Business UK", domain: "amazon.co.uk", category: "giant", is_education_supplier: false, is_preferred: false, ingestion_type: "api", api_provider: "amazon" },
-  { name: "Staples Advantage UK", domain: "staplesadvantage.co.uk", category: "giant", is_education_supplier: false, is_preferred: false, ingestion_type: "scrape" },
-  { name: "Staples UK", domain: "staples.co.uk", category: "giant", is_education_supplier: false, is_preferred: false, ingestion_type: "scrape" },
-  { name: "Viking Direct", domain: "viking-direct.co.uk", category: "giant", is_education_supplier: false, is_preferred: false, ingestion_type: "api", api_provider: "awin" },
-  { name: "Ryman Business", domain: "ryman.co.uk", category: "giant", is_education_supplier: false, is_preferred: false, ingestion_type: "scrape" },
-  { name: "WHSmith", domain: "whsmith.co.uk", category: "giant", is_education_supplier: false, is_preferred: false, ingestion_type: "scrape" },
-  { name: "Costco UK", domain: "costco.co.uk", category: "giant", is_education_supplier: false, is_preferred: false, ingestion_type: "scrape" },
-  { name: "Lyreco UK", domain: "lyreco.com", category: "giant", is_education_supplier: false, is_preferred: false, ingestion_type: "scrape" },
-  { name: "Banner UK", domain: "banneruk.com", category: "giant", is_education_supplier: true, is_preferred: true, ingestion_type: "scrape" },
+  // Public-sector buying organisations and education-first catalogues
+  { name: "YPO", domain: "ypo.co.uk", category: "psbo", tags: ["psbo", "education", "stationery", "cleaning", "facilities", "furniture", "sports"], is_education_supplier: true, is_preferred: true, ingestion_type: "scrape", search_url_template: "https://www.ypo.co.uk/search?q={query}", extractor_key: generic, public_pricing: "yes", procurement_notes: "Major public-sector buying organisation used by schools." },
+  { name: "ESPO", domain: "espo.org", category: "psbo", tags: ["psbo", "education", "stationery", "cleaning", "facilities", "furniture"], is_education_supplier: true, is_preferred: true, ingestion_type: "scrape", search_url_template: "https://www.espo.org/catalogsearch/result/?q={query}", extractor_key: generic, public_pricing: "yes", procurement_notes: "Major public-sector buying organisation used by schools." },
+  { name: "KCS Education", domain: "kcs.co.uk", category: "psbo", tags: ["psbo", "education", "stationery", "cleaning", "furniture"], is_education_supplier: true, is_preferred: true, ingestion_type: "scrape", search_url_template: "https://www.kcs.co.uk/search?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "CPC", domain: "thecpc.ac.uk", category: "psbo", tags: ["psbo", "education", "stationery", "it", "facilities"], is_education_supplier: true, is_preferred: true, ingestion_type: "catalogue", search_url_template: "https://www.thecpc.ac.uk/search?keywords={query}", extractor_key: generic, public_pricing: "partial", procurement_notes: "Framework discovery source; product pricing may route to appointed suppliers." },
+  { name: "Crown Commercial Service", domain: "crowncommercial.gov.uk", category: "psbo", tags: ["psbo", "it", "facilities"], is_education_supplier: true, is_preferred: false, ingestion_type: "catalogue", search_url_template: "https://www.crowncommercial.gov.uk/search?keywords={query}", extractor_key: generic, public_pricing: "partial" },
+  { name: "Findel Education", domain: "findel-education.co.uk", category: "education", tags: ["education", "stationery", "art", "science", "furniture"], is_education_supplier: true, is_preferred: true, ingestion_type: "scrape", search_url_template: "https://www.findel-education.co.uk/search?query={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "TTS Group", domain: "tts-group.co.uk", category: "education", tags: ["education", "stationery", "art", "science", "furniture"], is_education_supplier: true, is_preferred: true, ingestion_type: "scrape", search_url_template: "https://www.tts-group.co.uk/search?q={query}", extractor_key: "tts-group", public_pricing: "yes" },
+  { name: "Hope Education", domain: "hope-education.co.uk", category: "education", tags: ["education", "stationery", "art", "furniture"], is_education_supplier: true, is_preferred: true, ingestion_type: "scrape", search_url_template: "https://www.hope-education.co.uk/search?phrase={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Consortium Education", domain: "theconsortiumeducation.com", category: "education", tags: ["education", "stationery", "cleaning", "art"], is_education_supplier: true, is_preferred: true, ingestion_type: "scrape", search_url_template: "https://www.theconsortiumeducation.com/search?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "GLS Educational Supplies", domain: "glsed.co.uk", category: "education", tags: ["education", "stationery", "art", "furniture"], is_education_supplier: true, is_preferred: true, ingestion_type: "scrape", search_url_template: "https://www.glsed.co.uk/search?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Gompels", domain: "gompels.co.uk", category: "education", tags: ["education", "stationery", "cleaning", "facilities"], is_education_supplier: true, is_preferred: true, ingestion_type: "scrape", search_url_template: "https://www.gompels.co.uk/catalogsearch/result/?q={query}", extractor_key: "gompels", public_pricing: "yes" },
+  { name: "Egan Reid", domain: "eganreid.co.uk", category: "education", tags: ["education", "stationery", "furniture", "it"], is_education_supplier: true, is_preferred: true, ingestion_type: "scrape", search_url_template: "https://www.eganreid.co.uk/search?query={query}", extractor_key: generic, public_pricing: "partial" },
+  { name: "Direct-Ed", domain: "direct-ed.co.uk", category: "stationery", tags: ["education", "stationery"], is_education_supplier: true, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://direct-ed.co.uk/search?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Springboard Supplies", domain: "springboardsupplies.co.uk", category: "education", tags: ["education", "stationery", "furniture"], is_education_supplier: true, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.springboardsupplies.co.uk/search?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "RHINO Stationery", domain: "rhinostationery.com", category: "stationery", tags: ["education", "stationery"], is_education_supplier: true, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://rhinostationery.com/search?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "WPS InClassTomorrow", domain: "inclasstomorrow.co.uk", category: "stationery", tags: ["education", "stationery"], is_education_supplier: true, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.inclasstomorrow.co.uk/search?query={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "DTP Educational Services", domain: "dtpeducationalservices.co.uk", category: "stationery", tags: ["education", "stationery"], is_education_supplier: true, is_preferred: false, ingestion_type: "catalogue", search_url_template: "https://dtpeducationalservices.co.uk/search?q={query}", extractor_key: generic, public_pricing: "partial" },
+  { name: "EPSL EPrint", domain: "eprint.co.uk", category: "stationery", tags: ["education", "stationery", "printing"], is_education_supplier: true, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.eprint.co.uk/catalogsearch/result/?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "MPS Educational Supplies", domain: "mpsuk.net", category: "education", tags: ["education", "stationery"], is_education_supplier: true, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.mpsuk.net/?s={query}&post_type=product", extractor_key: generic, public_pricing: "yes" },
+  { name: "Grosvenor House Papers", domain: "ghpkendal.co.uk", category: "stationery", tags: ["education", "stationery"], is_education_supplier: true, is_preferred: false, ingestion_type: "catalogue", search_url_template: "https://ghpkendal.co.uk/search?q={query}", extractor_key: generic, public_pricing: "partial" },
 
-  // MAJOR PUBLIC SECTOR BUYING ORGANISATIONS (PSBOs)
-  { name: "YPO", domain: "ypo.co.uk", category: "psbo", is_education_supplier: true, is_preferred: true, ingestion_type: "scrape" },
-  { name: "ESPO", domain: "espo.org", category: "psbo", is_education_supplier: true, is_preferred: true, ingestion_type: "scrape" },
-  { name: "KCS Education", domain: "kcs.co.uk", category: "psbo", is_education_supplier: true, is_preferred: true, ingestion_type: "scrape" },
-  { name: "CPC", domain: "thecpc.ac.uk", category: "psbo", is_education_supplier: true, is_preferred: true, ingestion_type: "scrape" },
-  { name: "Crown Commercial Service", domain: "crowncommercial.gov.uk", category: "psbo", is_education_supplier: true, is_preferred: false, ingestion_type: "scrape" },
+  // Office/stationery suppliers with public pricing
+  { name: "Amazon Business UK", domain: "amazon.co.uk", category: "giant", tags: ["giant", "stationery", "it", "cleaning", "facilities"], is_education_supplier: false, is_preferred: false, ingestion_type: "api", api_provider: "amazon", search_url_template: "https://www.amazon.co.uk/s?k={query}", extractor_key: "amazon", public_pricing: "yes" },
+  { name: "Viking Direct", domain: "viking-direct.co.uk", category: "giant", tags: ["stationery", "it", "cleaning", "furniture"], is_education_supplier: false, is_preferred: false, ingestion_type: "api", api_provider: "awin", search_url_template: "https://www.viking-direct.co.uk/en/search?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Lyreco UK", domain: "lyreco.com", category: "giant", tags: ["stationery", "it", "cleaning", "furniture"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.lyreco.com/webshop/ENEN/search?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Ryman", domain: "ryman.co.uk", category: "stationery", tags: ["stationery", "printing"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.ryman.co.uk/catalogsearch/result/?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Ryman Business", domain: "rymanbusiness.com", category: "stationery", tags: ["education", "stationery", "furniture"], is_education_supplier: true, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.rymanbusiness.com/catalogsearch/result/?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Staples UK", domain: "staples.co.uk", category: "stationery", tags: ["stationery", "cleaning", "furniture"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.staples.co.uk/search?text={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Staples Advantage UK", domain: "staplesadvantage.co.uk", category: "giant", tags: ["stationery", "cleaning", "furniture"], is_education_supplier: false, is_preferred: false, ingestion_type: "catalogue", search_url_template: "https://www.staplesadvantage.co.uk/search?text={query}", extractor_key: generic, public_pricing: "login" },
+  { name: "Banner UK", domain: "banneruk.com", category: "stationery", tags: ["education", "stationery", "cleaning", "furniture"], is_education_supplier: true, is_preferred: true, ingestion_type: "catalogue", search_url_template: "https://www.banneruk.com/search?q={query}", extractor_key: generic, public_pricing: "login" },
+  { name: "OfficeXpress", domain: "officexpress.co.uk", category: "stationery", tags: ["education", "stationery", "it", "furniture"], is_education_supplier: true, is_preferred: false, ingestion_type: "catalogue", search_url_template: "https://www.officexpress.co.uk/search?q={query}", extractor_key: generic, public_pricing: "partial" },
+  { name: "OfficeStationery.co.uk", domain: "officestationery.co.uk", category: "stationery", tags: ["stationery", "education"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.officestationery.co.uk/catalogsearch/result/?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Euroffice", domain: "euroffice.co.uk", category: "stationery", tags: ["stationery", "cleaning", "furniture"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.euroffice.co.uk/search?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "UK Office Direct", domain: "ukofficedirect.co.uk", category: "stationery", tags: ["stationery", "cleaning", "furniture"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.ukofficedirect.co.uk/catalogsearch/result/?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Paperstone", domain: "paperstone.co.uk", category: "stationery", tags: ["stationery", "cleaning", "furniture"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.paperstone.co.uk/search?query={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Office Monster", domain: "officemonster.co.uk", category: "stationery", tags: ["stationery", "cleaning", "furniture"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.officemonster.co.uk/search?query={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "HuntOffice UK", domain: "huntoffice.co.uk", category: "stationery", tags: ["stationery", "cleaning", "furniture"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.huntoffice.co.uk/search?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Monkey Office", domain: "monkeyoffice.co.uk", category: "stationery", tags: ["stationery", "cleaning"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.monkeyoffice.co.uk/catalogsearch/result/?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Office Supplies Supermarket", domain: "officesuppliessupermarket.com", category: "stationery", tags: ["stationery", "cleaning", "furniture"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.officesuppliessupermarket.com/search?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "AOS Online", domain: "aosonline.co.uk", category: "stationery", tags: ["stationery", "cleaning", "furniture"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.aosonline.co.uk/search?query={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "The Green Stationery Company", domain: "greenstat.co.uk", category: "stationery", tags: ["stationery", "education"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.greenstat.co.uk/search?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Cult Pens", domain: "cultpens.com", category: "stationery", tags: ["stationery", "art"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.cultpens.com/search?q={query}", extractor_key: "cult-pens", public_pricing: "yes" },
+  { name: "WHSmith", domain: "whsmith.co.uk", category: "stationery", tags: ["stationery", "books"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.whsmith.co.uk/search?q={query}", extractor_key: generic, public_pricing: "yes" },
 
-  // EDUCATIONAL RESOURCE SPECIALISTS
-  { name: "TTS Group", domain: "tts-group.co.uk", category: "specialist", is_education_supplier: true, is_preferred: true, ingestion_type: "scrape" },
-  { name: "Hope Education", domain: "hope-education.co.uk", category: "specialist", is_education_supplier: true, is_preferred: true, ingestion_type: "scrape" },
-  { name: "Consortium Education", domain: "consortiumeducation.com", category: "specialist", is_education_supplier: true, is_preferred: true, ingestion_type: "scrape" },
-  { name: "GLS Educational Supplies", domain: "glsed.co.uk", category: "specialist", is_education_supplier: true, is_preferred: true, ingestion_type: "scrape" },
-  { name: "Findel Education", domain: "findel-education.co.uk", category: "specialist", is_education_supplier: true, is_preferred: true, ingestion_type: "scrape" },
-  { name: "Edusentials", domain: "edusentials.co.uk", category: "specialist", is_education_supplier: true, is_preferred: false, ingestion_type: "scrape" },
-  { name: "Morleys", domain: "morleys.co.uk", category: "specialist", is_education_supplier: true, is_preferred: false, ingestion_type: "scrape" },
-  { name: "Spaceist", domain: "spaceist.co.uk", category: "specialist", is_education_supplier: true, is_preferred: false, ingestion_type: "scrape" },
-  { name: "Spaceright Europe", domain: "spacerighteurope.com", category: "specialist", is_education_supplier: true, is_preferred: false, ingestion_type: "scrape" },
-  { name: "Edu-quip", domain: "edu-quip.co.uk", category: "specialist", is_education_supplier: true, is_preferred: false, ingestion_type: "scrape" },
+  // IT, printing, AV and cartridges
+  { name: "RM Education", domain: "rm.com", category: "it", tags: ["education", "it"], is_education_supplier: true, is_preferred: true, ingestion_type: "catalogue", search_url_template: "https://www.rm.com/search?term={query}", extractor_key: generic, public_pricing: "partial" },
+  { name: "Stone Group", domain: "stonegroup.co.uk", category: "it", tags: ["education", "it"], is_education_supplier: true, is_preferred: true, ingestion_type: "catalogue", search_url_template: "https://www.stonegroup.co.uk/search?search={query}", extractor_key: generic, public_pricing: "partial" },
+  { name: "XMA", domain: "xma.co.uk", category: "it", tags: ["education", "it"], is_education_supplier: true, is_preferred: true, ingestion_type: "catalogue", search_url_template: "https://www.xma.co.uk/search?q={query}", extractor_key: generic, public_pricing: "partial" },
+  { name: "Computacenter", domain: "computacenter.com", category: "it", tags: ["it"], is_education_supplier: false, is_preferred: false, ingestion_type: "catalogue", search_url_template: "https://www.computacenter.com/en-gb/search?query={query}", extractor_key: generic, public_pricing: "login" },
+  { name: "Academia", domain: "academia.co.uk", category: "it", tags: ["education", "it"], is_education_supplier: true, is_preferred: false, ingestion_type: "catalogue", search_url_template: "https://www.academia.co.uk/search?q={query}", extractor_key: generic, public_pricing: "partial" },
+  { name: "Softcat", domain: "softcat.com", category: "it", tags: ["it"], is_education_supplier: false, is_preferred: false, ingestion_type: "catalogue", search_url_template: "https://www.softcat.com/search?query={query}", extractor_key: generic, public_pricing: "login" },
+  { name: "Insight UK", domain: "uk.insight.com", category: "it", tags: ["it"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://uk.insight.com/en_GB/search.html?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "CDW UK", domain: "uk.cdw.com", category: "it", tags: ["it"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://uk.cdw.com/search/?key={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "CCS Media", domain: "ccsmedia.com", category: "it", tags: ["education", "it"], is_education_supplier: true, is_preferred: false, ingestion_type: "catalogue", search_url_template: "https://www.ccsmedia.com/search?q={query}", extractor_key: generic, public_pricing: "partial" },
+  { name: "Jigsaw24", domain: "jigsaw24.com", category: "it", tags: ["education", "it"], is_education_supplier: true, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.jigsaw24.com/search?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Centerprise International", domain: "centerprise.co.uk", category: "it", tags: ["education", "it"], is_education_supplier: true, is_preferred: false, ingestion_type: "catalogue", search_url_template: "https://www.centerprise.co.uk/search?query={query}", extractor_key: generic, public_pricing: "partial" },
+  { name: "Getech", domain: "getech.co.uk", category: "it", tags: ["education", "it"], is_education_supplier: true, is_preferred: false, ingestion_type: "catalogue", search_url_template: "https://www.getech.co.uk/search?q={query}", extractor_key: generic, public_pricing: "partial" },
+  { name: "Ebuyer", domain: "ebuyer.com", category: "it", tags: ["it"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.ebuyer.com/search?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "CCL Computers", domain: "cclonline.com", category: "it", tags: ["it"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.cclonline.com/search/?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Scan Computers", domain: "scan.co.uk", category: "it", tags: ["it"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.scan.co.uk/search?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Overclockers UK", domain: "overclockers.co.uk", category: "it", tags: ["it"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.overclockers.co.uk/search?sSearch={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Currys Business", domain: "business.currys.co.uk", category: "it", tags: ["it"], is_education_supplier: false, is_preferred: false, ingestion_type: "api", api_provider: "awin", search_url_template: "https://business.currys.co.uk/catalogue/search?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Box.co.uk", domain: "box.co.uk", category: "it", tags: ["it"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.box.co.uk/search?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Laptops Direct", domain: "laptopsdirect.co.uk", category: "it", tags: ["it"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.laptopsdirect.co.uk/ct/{query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Printerland", domain: "printerland.co.uk", category: "printing", tags: ["printing", "it"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.printerland.co.uk/search?query={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Cartridge People", domain: "cartridgepeople.com", category: "printing", tags: ["printing", "it"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.cartridgepeople.com/Search?search={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Stinkyink", domain: "stinkyinkshop.co.uk", category: "printing", tags: ["printing"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.stinkyinkshop.co.uk/search?query={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Internet-Ink", domain: "internet-ink.com", category: "printing", tags: ["printing"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.internet-ink.com/search?search={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Ballicom", domain: "ballicom.co.uk", category: "it", tags: ["it"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.ballicom.co.uk/search/{query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Techbuyer", domain: "techbuyer.com", category: "it", tags: ["it"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.techbuyer.com/uk/search?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Probrand", domain: "probrand.co.uk", category: "it", tags: ["it"], is_education_supplier: false, is_preferred: false, ingestion_type: "catalogue", search_url_template: "https://www.probrand.co.uk/search?q={query}", extractor_key: generic, public_pricing: "partial" },
+  { name: "Bechtle UK", domain: "bechtle.com", category: "it", tags: ["it"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.bechtle.com/gb-en/finder?query={query}", extractor_key: generic, public_pricing: "yes" },
 
-  // IT, ELECTRONICS & HARDWARE
-  { name: "RM Education", domain: "rm.com", category: "it", is_education_supplier: true, is_preferred: true, ingestion_type: "scrape" },
-  { name: "Stone Group", domain: "stonegroup.co.uk", category: "it", is_education_supplier: true, is_preferred: true, ingestion_type: "scrape" },
-  { name: "Currys PC World Business", domain: "currys.co.uk", category: "it", is_education_supplier: false, is_preferred: false, ingestion_type: "api", api_provider: "awin" },
-  { name: "Argos", domain: "argos.co.uk", category: "it", is_education_supplier: false, is_preferred: false, ingestion_type: "scrape" },
-  { name: "Overclockers UK", domain: "overclockers.co.uk", category: "it", is_education_supplier: false, is_preferred: false, ingestion_type: "scrape" },
-  { name: "Scan", domain: "scan.co.uk", category: "it", is_education_supplier: false, is_preferred: false, ingestion_type: "scrape" },
-  { name: "Ebuyer", domain: "ebuyer.com", category: "it", is_education_supplier: false, is_preferred: false, ingestion_type: "scrape" },
-  { name: "Misco", domain: "misco.co.uk", category: "it", is_education_supplier: false, is_preferred: false, ingestion_type: "scrape" },
-  { name: "Insight UK", domain: "insight.com", category: "it", is_education_supplier: false, is_preferred: false, ingestion_type: "scrape" },
-  { name: "Softcat", domain: "softcat.com", category: "it", is_education_supplier: false, is_preferred: false, ingestion_type: "scrape" },
-  { name: "CCL Computers", domain: "cclonline.com", category: "it", is_education_supplier: false, is_preferred: false, ingestion_type: "scrape" },
+  // Cleaning, hygiene, facilities and site supplies
+  { name: "phs Direct", domain: "phsdirect.co.uk", category: "cleaning", tags: ["education", "cleaning", "facilities"], is_education_supplier: true, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.phsdirect.co.uk/catalogsearch/result/?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "JanPal", domain: "janpal.co.uk", category: "cleaning", tags: ["cleaning", "facilities"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://janpal.co.uk/search?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Mustang Hygiene", domain: "mustanghygiene.co.uk", category: "cleaning", tags: ["cleaning", "facilities"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.mustanghygiene.co.uk/search?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Vertella", domain: "vertella.co.uk", category: "cleaning", tags: ["education", "cleaning", "facilities"], is_education_supplier: true, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://vertella.co.uk/search?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Duckworth Group", domain: "duckworthgroup.co.uk", category: "cleaning", tags: ["education", "cleaning", "facilities"], is_education_supplier: true, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.duckworthgroup.co.uk/search?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Loorolls.com", domain: "loorolls.com", category: "cleaning", tags: ["cleaning", "facilities"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.loorolls.com/search?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "CS4UK", domain: "cs4uk.com", category: "cleaning", tags: ["education", "cleaning", "facilities"], is_education_supplier: true, is_preferred: false, ingestion_type: "catalogue", search_url_template: "https://www.cs4uk.com/search?q={query}", extractor_key: generic, public_pricing: "partial" },
+  { name: "Caxton Supplies", domain: "caxtonsupplies.co.uk", category: "cleaning", tags: ["education", "cleaning", "facilities"], is_education_supplier: true, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.caxtonsupplies.co.uk/search?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "NPS Caremore", domain: "npscaremore.co.uk", category: "cleaning", tags: ["cleaning", "facilities"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://npscaremore.co.uk/search?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "The Cleaners Hub", domain: "thecleanershub.co.uk", category: "cleaning", tags: ["cleaning", "facilities"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.thecleanershub.co.uk/search?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "CleanStore", domain: "cleanstore.co.uk", category: "cleaning", tags: ["cleaning", "facilities"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.cleanstore.co.uk/search.aspx?search={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Cleaning Supplies 2U", domain: "cleaningsupplies2u.co.uk", category: "cleaning", tags: ["cleaning", "facilities"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.cleaningsupplies2u.co.uk/search?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Janitorial Direct", domain: "janitorialdirect.co.uk", category: "cleaning", tags: ["cleaning", "facilities"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.janitorialdirect.co.uk/search?query={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Hygiene Depot", domain: "hygienedepot.co.uk", category: "cleaning", tags: ["cleaning", "facilities"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.hygienedepot.co.uk/search?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Alliance Online", domain: "allianceonline.co.uk", category: "facilities", tags: ["cleaning", "facilities"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.allianceonline.co.uk/search?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Nisbets", domain: "nisbets.co.uk", category: "facilities", tags: ["cleaning", "facilities"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.nisbets.co.uk/search?text={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Bunzl CHS", domain: "bunzlchs.com", category: "cleaning", tags: ["cleaning", "facilities"], is_education_supplier: false, is_preferred: false, ingestion_type: "catalogue", search_url_template: "https://www.bunzlchs.com/search?q={query}", extractor_key: generic, public_pricing: "login" },
+  { name: "Arco", domain: "arco.co.uk", category: "facilities", tags: ["cleaning", "facilities"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.arco.co.uk/search?query={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Seton", domain: "seton.co.uk", category: "facilities", tags: ["facilities"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.seton.co.uk/catalogsearch/result/?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Cromwell", domain: "cromwell.co.uk", category: "facilities", tags: ["facilities", "cleaning"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.cromwell.co.uk/shop/search?query={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Screwfix", domain: "screwfix.com", category: "facilities", tags: ["facilities", "cleaning"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.screwfix.com/search?search={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Toolstation", domain: "toolstation.com", category: "facilities", tags: ["facilities", "cleaning"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.toolstation.com/search?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Zoro UK", domain: "zoro.co.uk", category: "facilities", tags: ["facilities", "cleaning"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.zoro.co.uk/search?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "RS Components", domain: "uk.rs-online.com", category: "facilities", tags: ["facilities", "it", "science"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://uk.rs-online.com/web/c/?searchTerm={query}", extractor_key: generic, public_pricing: "yes" },
 
-  // PE, SPORTS & PLAYGROUND
-  { name: "Davies Sports", domain: "daviessports.co.uk", category: "sports", is_education_supplier: true, is_preferred: true, ingestion_type: "scrape" },
-  { name: "Net World Sports", domain: "networldsports.co.uk", category: "sports", is_education_supplier: true, is_preferred: false, ingestion_type: "scrape" },
-  { name: "Newitts", domain: "newitts.com", category: "sports", is_education_supplier: true, is_preferred: false, ingestion_type: "scrape" },
-  { name: "Continental Sports", domain: "continentalsports.co.uk", category: "sports", is_education_supplier: true, is_preferred: true, ingestion_type: "scrape" },
-  { name: "Universal Services", domain: "universalservicesuk.co.uk", category: "sports", is_education_supplier: true, is_preferred: false, ingestion_type: "scrape" },
-  { name: "Sportsafe", domain: "sportsafeuk.com", category: "sports", is_education_supplier: true, is_preferred: false, ingestion_type: "scrape" },
-  { name: "Maudesport", domain: "maudesport.co.uk", category: "sports", is_education_supplier: true, is_preferred: false, ingestion_type: "scrape" },
-
-  // JANITORIAL, FACILITIES & STEM
-  { name: "Cromwell", domain: "cromwell.co.uk", category: "facilities", is_education_supplier: false, is_preferred: false, ingestion_type: "scrape" },
-  { name: "Screwfix", domain: "screwfix.com", category: "facilities", is_education_supplier: false, is_preferred: false, ingestion_type: "scrape" },
-  { name: "Toolstation", domain: "toolstation.com", category: "facilities", is_education_supplier: false, is_preferred: false, ingestion_type: "scrape" },
-  { name: "Nisbets", domain: "nisbets.co.uk", category: "facilities", is_education_supplier: false, is_preferred: false, ingestion_type: "scrape" },
-  { name: "Bunzl CSS", domain: "bunzlchs.com", category: "facilities", is_education_supplier: false, is_preferred: false, ingestion_type: "scrape" },
-  { name: "Timstar", domain: "timstar.co.uk", category: "facilities", is_education_supplier: true, is_preferred: true, ingestion_type: "scrape" },
-  { name: "Philip Harris", domain: "philipharris.co.uk", category: "facilities", is_education_supplier: true, is_preferred: true, ingestion_type: "scrape" },
-  { name: "Breckland Scientific", domain: "brecklandscientific.co.uk", category: "facilities", is_education_supplier: true, is_preferred: false, ingestion_type: "scrape" },
-  { name: "Dryad Education", domain: "dryadeducation.co.uk", category: "facilities", is_education_supplier: true, is_preferred: true, ingestion_type: "scrape" },
-  { name: "Baker Ross", domain: "bakerross.co.uk", category: "facilities", is_education_supplier: true, is_preferred: false, ingestion_type: "scrape" },
-
-  // BOOKS, LIBRARY & PUBLISHING
-  { name: "Peters", domain: "peters.co.uk", category: "books", is_education_supplier: true, is_preferred: true, ingestion_type: "scrape" },
-  { name: "Browns Books", domain: "brownsbfs.co.uk", category: "books", is_education_supplier: true, is_preferred: true, ingestion_type: "scrape" },
-  { name: "Heath Educational Books", domain: "heathbooks.co.uk", category: "books", is_education_supplier: true, is_preferred: true, ingestion_type: "scrape" },
-  { name: "CGP Books", domain: "cgpbooks.co.uk", category: "books", is_education_supplier: true, is_preferred: true, ingestion_type: "scrape" },
-  { name: "Scholastic UK", domain: "shop.scholastic.co.uk", category: "books", is_education_supplier: true, is_preferred: false, ingestion_type: "scrape" },
-  { name: "Waterstones Educational", domain: "waterstones.com", category: "books", is_education_supplier: false, is_preferred: false, ingestion_type: "api", api_provider: "awin" },
+  // Curriculum-adjacent equipment, art, science, sport and books
+  { name: "Davies Sports", domain: "daviessports.co.uk", category: "sports", tags: ["education", "sports"], is_education_supplier: true, is_preferred: true, ingestion_type: "scrape", search_url_template: "https://www.daviessports.co.uk/search?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Newitts", domain: "newitts.com", category: "sports", tags: ["sports"], is_education_supplier: true, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.newitts.com/search?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Net World Sports", domain: "networldsports.co.uk", category: "sports", tags: ["sports"], is_education_supplier: true, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.networldsports.co.uk/search?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Continental Sports", domain: "continentalsports.co.uk", category: "sports", tags: ["education", "sports"], is_education_supplier: true, is_preferred: true, ingestion_type: "catalogue", search_url_template: "https://www.continentalsports.co.uk/search?q={query}", extractor_key: generic, public_pricing: "partial" },
+  { name: "Sportsafe", domain: "sportsafeuk.com", category: "sports", tags: ["education", "sports", "facilities"], is_education_supplier: true, is_preferred: false, ingestion_type: "catalogue", search_url_template: "https://sportsafeuk.com/search?q={query}", extractor_key: generic, public_pricing: "partial" },
+  { name: "Maudesport", domain: "maudesport.co.uk", category: "sports", tags: ["education", "sports"], is_education_supplier: true, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.maudesport.co.uk/search?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Harrod Sport", domain: "harrodsport.com", category: "sports", tags: ["education", "sports"], is_education_supplier: true, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.harrodsport.com/catalogsearch/result/?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Morleys", domain: "morleys.co.uk", category: "furniture", tags: ["education", "furniture"], is_education_supplier: true, is_preferred: false, ingestion_type: "catalogue", search_url_template: "https://www.morleys.co.uk/search?q={query}", extractor_key: generic, public_pricing: "partial" },
+  { name: "Spaceist", domain: "spaceist.co.uk", category: "furniture", tags: ["education", "furniture"], is_education_supplier: true, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.spaceist.co.uk/search?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Spaceright Europe", domain: "spacerighteurope.com", category: "furniture", tags: ["education", "furniture"], is_education_supplier: true, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.spacerighteurope.com/search?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Edu-quip", domain: "edu-quip.co.uk", category: "furniture", tags: ["education", "furniture"], is_education_supplier: true, is_preferred: false, ingestion_type: "catalogue", search_url_template: "https://www.edu-quip.co.uk/search?q={query}", extractor_key: generic, public_pricing: "partial" },
+  { name: "Hille Educational Products", domain: "hille.co.uk", category: "furniture", tags: ["education", "furniture"], is_education_supplier: true, is_preferred: false, ingestion_type: "catalogue", search_url_template: "https://www.hille.co.uk/search?q={query}", extractor_key: generic, public_pricing: "partial" },
+  { name: "Timstar", domain: "timstar.co.uk", category: "science", tags: ["education", "science"], is_education_supplier: true, is_preferred: true, ingestion_type: "scrape", search_url_template: "https://www.timstar.co.uk/catalogsearch/result/?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Philip Harris", domain: "philipharris.co.uk", category: "science", tags: ["education", "science"], is_education_supplier: true, is_preferred: true, ingestion_type: "scrape", search_url_template: "https://www.philipharris.co.uk/search?phrase={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Breckland Scientific", domain: "brecklandscientific.co.uk", category: "science", tags: ["education", "science"], is_education_supplier: true, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.brecklandscientific.co.uk/search?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "SciChem", domain: "scichem.com", category: "science", tags: ["education", "science"], is_education_supplier: true, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.scichem.com/search?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Rapid Electronics", domain: "rapidonline.com", category: "science", tags: ["science", "it"], is_education_supplier: false, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.rapidonline.com/searchresults?query={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Baker Ross", domain: "bakerross.co.uk", category: "art", tags: ["education", "art"], is_education_supplier: true, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.bakerross.co.uk/catalogsearch/result/?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Dryad Education", domain: "dryadeducation.co.uk", category: "art", tags: ["education", "art"], is_education_supplier: true, is_preferred: true, ingestion_type: "scrape", search_url_template: "https://www.dryadeducation.co.uk/search?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Specialist Crafts", domain: "specialistcrafts.co.uk", category: "art", tags: ["education", "art"], is_education_supplier: true, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.specialistcrafts.co.uk/catalogsearch/result/?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Peters", domain: "peters.co.uk", category: "books", tags: ["education", "books"], is_education_supplier: true, is_preferred: true, ingestion_type: "catalogue", search_url_template: "https://peters.co.uk/search?query={query}", extractor_key: generic, public_pricing: "login" },
+  { name: "Browns Books", domain: "brownsbfs.co.uk", category: "books", tags: ["education", "books"], is_education_supplier: true, is_preferred: true, ingestion_type: "catalogue", search_url_template: "https://www.brownsbfs.co.uk/Search/Search?term={query}", extractor_key: generic, public_pricing: "login" },
+  { name: "Heath Educational Books", domain: "heathbooks.co.uk", category: "books", tags: ["education", "books"], is_education_supplier: true, is_preferred: true, ingestion_type: "scrape", search_url_template: "https://www.heathbooks.co.uk/search?q={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "CGP Books", domain: "cgpbooks.co.uk", category: "books", tags: ["education", "books"], is_education_supplier: true, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://www.cgpbooks.co.uk/search-results?searchtext={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Scholastic UK", domain: "shop.scholastic.co.uk", category: "books", tags: ["education", "books"], is_education_supplier: true, is_preferred: false, ingestion_type: "scrape", search_url_template: "https://shop.scholastic.co.uk/search?term={query}", extractor_key: generic, public_pricing: "yes" },
+  { name: "Waterstones", domain: "waterstones.com", category: "books", tags: ["books"], is_education_supplier: false, is_preferred: false, ingestion_type: "api", api_provider: "awin", search_url_template: "https://www.waterstones.com/books/search/term/{query}", extractor_key: generic, public_pricing: "yes" },
 ];
+
+export const SEARCHABLE_SUPPLIER_TARGET = 70;
+
+export function normaliseSupplierDomain(domain: string): string {
+  return domain
+    .replace(/^https?:\/\//i, "")
+    .replace(/^www\./i, "")
+    .replace(/\/.*$/, "")
+    .toLowerCase();
+}
+
+export function getSearchableSupplierDefinitions(): SupplierDefinition[] {
+  return DEAL_FINDER_SUPPLIERS.filter(
+    (supplier) => supplier.search_url_template && supplier.public_pricing !== "login",
+  );
+}
+
+export const SUPPLIERS = DEAL_FINDER_SUPPLIERS.map((supplier) => ({
+  ...supplier,
+  id: normaliseSupplierDomain(supplier.domain).replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, ""),
+  website: `https://${supplier.domain}`,
+}));

@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "node scripts/ensure-non-production-db.mjs && next dev --webpack",
+    "dev:uat": "node scripts/run-dev-uat.mjs",
     "db:safety-check": "node scripts/ensure-non-production-db.mjs",
     "supabase:start": "npx supabase start --workdir .",
     "supabase:status": "npx supabase status --workdir .",
@@ -101,6 +102,8 @@
   "devDependencies": {
     "@playwright/test": "^1.48.0",
     "@tailwindcss/postcss": "^4",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^20",
     "@types/papaparse": "^5.5.2",
@@ -110,6 +113,7 @@
     "baseline-browser-mapping": "^2.10.29",
     "eslint": "^9",
     "eslint-config-next": "16.0.3",
+    "jsdom": "^29.1.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

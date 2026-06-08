@@ -4,6 +4,25 @@ import { validateBody } from "@/lib/validation";
 import { staffCreateSchema, staffUpdateSchema } from "@/lib/validation";
 import { createServiceRoleClient } from "@/lib/supabase-server";
 
+function nullIfBlank(value: unknown) {
+  return typeof value === "string" && value.trim() === "" ? null : value;
+}
+
+type StaffWithModuleAccess = {
+  staff_module_access?: Array<{ module: string }> | null;
+  [key: string]: unknown;
+};
+
+function normalizeOptionalStaffFields<T extends Record<string, unknown>>(data: T) {
+  return {
+    ...data,
+    email: nullIfBlank(data.email),
+    phone: nullIfBlank(data.phone),
+    avatar_url: nullIfBlank(data.avatar_url),
+    employee_id: nullIfBlank(data.employee_id),
+  };
+}
+
 // GET /api/staff - List all staff for an organization
 // Primary: reads from MIS (Drive/Wonde) — never stored. Fallback: Supabase for manual entries.
 export const GET = protectedRoute(async (auth, request: NextRequest) => {
@@ -24,10 +43,10 @@ export const GET = protectedRoute(async (auth, request: NextRequest) => {
           data_tier: "mis_read_only",
         });
       }
-    } catch (e: any) {
+    } catch (error) {
       console.warn(
         "[Staff API] MIS resolver failed, falling back to DB:",
-        e.message,
+        error instanceof Error ? error.message : String(error),
       );
     }
   }
@@ -70,10 +89,10 @@ export const GET = protectedRoute(async (auth, request: NextRequest) => {
   }
 
   const transformedStaff =
-    staff?.map((s: any) => ({
-      ...s,
+    (staff as StaffWithModuleAccess[] | null)?.map((staffMember) => ({
+      ...staffMember,
       accessible_modules:
-        s.staff_module_access?.map((ma: any) => ma.module) || [],
+        staffMember.staff_module_access?.map((moduleAccess) => moduleAccess.module) || [],
       staff_module_access: undefined,
     })) || [];
 
@@ -93,13 +112,18 @@ export const POST = protectedRoute(
     if (!validated.success) return validated.response;
 
     const supabase = createServiceRoleClient();
-    const { accessible_modules, created_by, organizationId, ...staffData } =
-      validated.data;
+    const staffPayload = { ...validated.data };
+    const accessible_modules = staffPayload.accessible_modules;
+    delete staffPayload.accessible_modules;
+    delete staffPayload.created_by;
+    delete staffPayload.organizationId;
+    const staffData = staffPayload;
+    const normalizedStaffData = normalizeOptionalStaffFields(staffData);
 
     const { data: staff, error: staffError } = await supabase
       .from("staff_directory")
       .insert({
-        ...staffData,
+        ...normalizedStaffData,
         organization_id: auth.organizationId,
         import_source: "manual",
       })
@@ -141,10 +165,11 @@ export const PUT = protectedRoute(
 
     const supabase = createServiceRoleClient();
     const { id, accessible_modules, ...updateData } = validated.data;
+    const normalizedUpdateData = normalizeOptionalStaffFields(updateData);
 
     const { data: staff, error: staffError } = await supabase
       .from("staff_directory")
-      .update(updateData)
+      .update(normalizedUpdateData)
       .eq("id", id)
       .eq("organization_id", auth.organizationId)
       .select()

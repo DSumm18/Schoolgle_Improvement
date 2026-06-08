@@ -56,13 +56,15 @@ interface OfstedFinding {
   updated_at: string;
 }
 
-interface OrganizationMember {
-  role: string;
-  user: {
-    id: string;
-    email: string;
-    display_name: string | null;
-  } | null;
+interface StaffAssigneeOption {
+  id: string;
+  display_name: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  email: string | null;
+  job_title: string | null;
+  role_category: string | null;
+  is_active: boolean;
 }
 
 interface OfstedFindingsPanelProps {
@@ -102,7 +104,7 @@ export default function OfstedFindingsPanel({
   organizationId,
 }: OfstedFindingsPanelProps) {
   const [findings, setFindings] = useState<OfstedFinding[]>([]);
-  const [members, setMembers] = useState<OrganizationMember[]>([]);
+  const [staff, setStaff] = useState<StaffAssigneeOption[]>([]);
   const [selectedAssignees, setSelectedAssignees] = useState<
     Record<string, string>
   >({});
@@ -120,15 +122,12 @@ export default function OfstedFindingsPanel({
       const organizationQuery = `organizationId=${encodeURIComponent(
         organizationId,
       )}`;
-      const [findingsRes, membersRes] = await Promise.all([
+      const [findingsRes, staffRes] = await Promise.all([
         clientAuthFetch(
           supabase,
           `/api/ofsted/findings?limit=25&${organizationQuery}`,
         ),
-        clientAuthFetch(
-          supabase,
-          `/api/organization/members?${organizationQuery}`,
-        ),
+        clientAuthFetch(supabase, `/api/staff?source=db&${organizationQuery}`),
       ]);
 
       if (!findingsRes.ok) {
@@ -140,10 +139,10 @@ export default function OfstedFindingsPanel({
       }
 
       const findingsData = await findingsRes.json();
-      const membersData = membersRes.ok ? await membersRes.json() : {};
+      const staffData = staffRes.ok ? await staffRes.json() : {};
 
       setFindings(findingsData.findings || []);
-      setMembers(membersData.members || []);
+      setStaff(staffData.staff || []);
     } catch (error) {
       console.error("[Ofsted Findings] Load failed:", error);
       toast.error("Could not load Ofsted readiness findings");
@@ -157,7 +156,7 @@ export default function OfstedFindingsPanel({
   }, [loadData]);
 
   const summary = useMemo(() => summariseFindings(findings), [findings]);
-  const assignableMembers = members.filter((member) => member.user?.id);
+  const assignableStaff = staff.filter((staffMember) => staffMember.is_active);
 
   const assignFinding = async (finding: OfstedFinding) => {
     const assigneeId = selectedAssignees[finding.id];
@@ -174,7 +173,10 @@ export default function OfstedFindingsPanel({
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ assignee_id: assigneeId, organizationId }),
+          body: JSON.stringify({
+            assignee_staff_id: assigneeId,
+            organizationId,
+          }),
         },
       );
 
@@ -255,7 +257,7 @@ export default function OfstedFindingsPanel({
               <FindingRow
                 key={finding.id}
                 finding={finding}
-                members={assignableMembers}
+                staff={assignableStaff}
                 selectedAssignee={selectedAssignees[finding.id] || ""}
                 onAssigneeChange={(value) =>
                   setSelectedAssignees((current) => ({
@@ -307,14 +309,14 @@ function SummaryTile({
 
 function FindingRow({
   finding,
-  members,
+  staff,
   selectedAssignee,
   onAssigneeChange,
   onAssign,
   assigning,
 }: {
   finding: OfstedFinding;
-  members: OrganizationMember[];
+  staff: StaffAssigneeOption[];
   selectedAssignee: string;
   onAssigneeChange: (value: string) => void;
   onAssign: () => void;
@@ -391,14 +393,35 @@ function FindingRow({
                   <SelectValue placeholder="Assign to..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {members.map((member) => (
-                    <SelectItem key={member.user!.id} value={member.user!.id}>
-                      {member.user!.display_name || member.user!.email}
+                  {staff.map((staffMember) => (
+                    <SelectItem key={staffMember.id} value={staffMember.id}>
+                      <span className="flex flex-col">
+                        <span className="font-medium">
+                          {getStaffDisplayName(staffMember)}
+                        </span>
+                        {(staffMember.job_title || staffMember.role_category) && (
+                          <span className="text-xs text-muted-foreground">
+                            {[staffMember.job_title, staffMember.role_category]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </span>
+                        )}
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <Button className="w-full" onClick={onAssign} disabled={assigning}>
+              {staff.length === 0 && (
+                <p className="rounded-lg border border-dashed border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-200">
+                  Import staff first so tasks can be allocated to the right
+                  people.
+                </p>
+              )}
+              <Button
+                className="w-full"
+                onClick={onAssign}
+                disabled={assigning || staff.length === 0}
+              >
                 {assigning ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
@@ -416,4 +439,16 @@ function FindingRow({
       </div>
     </div>
   );
+}
+
+function getStaffDisplayName(staffMember: StaffAssigneeOption) {
+  const explicitName = staffMember.display_name?.trim();
+  if (explicitName) return explicitName;
+
+  const joinedName = [staffMember.first_name, staffMember.last_name]
+    .map((part) => part?.trim())
+    .filter(Boolean)
+    .join(" ");
+
+  return joinedName || staffMember.email || "Unnamed staff member";
 }

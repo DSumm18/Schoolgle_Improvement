@@ -3,6 +3,23 @@ import { apiError, apiSuccess, protectedRoute } from "@/lib/api-utils";
 import { scoreEvidenceConfidence } from "@/lib/assessment-creator/confidence";
 import { createMockEvidencePassport } from "@/lib/assessment-creator/mock-data";
 import type { MarkingProposal } from "@/lib/assessment-creator/types";
+import { mapAssessmentCreatorProposalsToAssessmentSpine } from "@/lib/assessment-intelligence/spine-adapter";
+import type { AssessmentSubject } from "@/lib/assessment-intelligence/types";
+import { createServiceRoleClient } from "@/lib/supabase-server";
+
+const ASSESSMENT_SPINE_SUBJECTS = new Set<AssessmentSubject>([
+  "reading",
+  "writing",
+  "maths",
+  "science",
+  "spag",
+]);
+
+function normaliseAssessmentSpineSubject(value: unknown): AssessmentSubject {
+  return typeof value === "string" && ASSESSMENT_SPINE_SUBJECTS.has(value as AssessmentSubject)
+    ? (value as AssessmentSubject)
+    : "maths";
+}
 
 export const POST = protectedRoute(async (auth, req: NextRequest) => {
   const body = await req.json().catch(() => ({}));
@@ -37,6 +54,61 @@ export const POST = protectedRoute(async (auth, req: NextRequest) => {
     evidenceConfidence: confidence.rating,
     confidenceReasons: confidence.reasons,
   });
+
+  if (auth.organizationId) {
+    const supabase = createServiceRoleClient();
+    const schoolUrn =
+      body.schoolUrn === null || body.schoolUrn === undefined
+        ? null
+        : Number(body.schoolUrn);
+    const assessmentPeriod = body.assessmentPeriod || body.term || "Assessment Creator";
+    const academicYearStart = Number(body.academicYearStart || new Date().getFullYear());
+    const subject = normaliseAssessmentSpineSubject(body.subject || passport.subject);
+
+    const spineMapping = mapAssessmentCreatorProposalsToAssessmentSpine({
+      organizationId: auth.organizationId,
+      assessmentId: body.assessmentId,
+      schoolUrn: Number.isFinite(schoolUrn) ? schoolUrn : null,
+      classId: body.classId || passport.classId,
+      className: body.className || body.classId || passport.classId,
+      subject,
+      yearGroup: body.yearGroup || passport.yearGroup,
+      assessmentPeriod,
+      academicYearStart,
+      assessmentDate: body.assessmentDate || new Date().toISOString().slice(0, 10),
+      lockedBy: auth.userId,
+      proposals,
+    });
+
+    const { data: batch, error: batchError } = await supabase
+      .from("assessment_source_batches")
+      .insert(spineMapping.batchInsert)
+      .select("id")
+      .single();
+
+    if (batchError || !batch?.id) {
+      console.warn(
+        "[Assessment Creator] Evidence passport created but assessment spine batch failed:",
+        batchError?.message,
+      );
+    } else if (spineMapping.eventInserts.length > 0) {
+      const { error: eventError } = await supabase
+        .from("pupil_assessment_events")
+        .insert(
+          spineMapping.eventInserts.map((event) => ({
+            ...event,
+            source_batch_id: batch.id,
+          })),
+        );
+
+      if (eventError) {
+        console.warn(
+          "[Assessment Creator] Evidence passport created but assessment spine events failed:",
+          eventError.message,
+        );
+      }
+    }
+  }
 
   return apiSuccess(passport);
 }, { orgOptional: true });

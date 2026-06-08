@@ -13,7 +13,7 @@
  */
 
 import { useState, useRef, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -148,12 +148,35 @@ function FilePreviewCard({
 export default function NewTicketPage() {
   const { organizationId } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [priority, setPriority] = useState<Priority>("medium");
-  const [category, setCategory] = useState("general");
-  const [location, setLocation] = useState("");
+  const [title, setTitle] = useState(() => searchParams.get("title") || "");
+  const [description, setDescription] = useState(
+    () => searchParams.get("description") || "",
+  );
+  const [priority, setPriority] = useState<Priority>(() => {
+    const priorityParam = searchParams.get("priority");
+    return ["low", "medium", "high", "critical"].includes(priorityParam || "")
+      ? (priorityParam as Priority)
+      : "medium";
+  });
+  const [category, setCategory] = useState(
+    () => searchParams.get("category") || "general",
+  );
+  const [location, setLocation] = useState(
+    () => searchParams.get("location") || "",
+  );
+  const initialAssetId =
+    searchParams.get("assetId") || searchParams.get("asset_id") || null;
+  const initialDomain =
+    searchParams.get("domain") ||
+    searchParams.get("compliance_domain") ||
+    null;
+  const initialCheckId =
+    searchParams.get("checkId") ||
+    searchParams.get("check_id") ||
+    searchParams.get("statutory_check_id") ||
+    null;
   const [selectedAsset, setSelectedAsset] = useState<SelectedAsset | null>(null);
   const [warranty, setWarranty] = useState<WarrantyInfo | null>(null);
   const [paidRepairOverride, setPaidRepairOverride] = useState(false);
@@ -300,6 +323,8 @@ export default function NewTicketPage() {
           category,
           location: location.trim() || undefined,
           asset_id: selectedAsset?.id || undefined,
+          compliance_domain: initialDomain || undefined,
+          statutory_check_id: initialCheckId || undefined,
         }),
       });
 
@@ -352,6 +377,14 @@ export default function NewTicketPage() {
         <p className="mt-1 text-sm text-muted-foreground">
           Report a maintenance issue, request a repair, or log a new problem.
         </p>
+        {(initialDomain || initialCheckId) && (
+          <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-900 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-100">
+            Linked to compliance check
+            {initialDomain ? `: ${initialDomain.replace(/_/g, " ")}` : ""}
+            {initialCheckId ? ` / ${initialCheckId}` : ""}. The ticket will
+            appear on that check's history.
+          </div>
+        )}
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -360,6 +393,7 @@ export default function NewTicketPage() {
           {organizationId && (
             <AssetPicker
               organizationId={organizationId}
+              selectedAssetId={initialAssetId}
               onSelect={(asset, warrantyInfo) => {
                 if (asset) {
                   setSelectedAsset({ id: asset.id, code: asset.code, name: asset.name });

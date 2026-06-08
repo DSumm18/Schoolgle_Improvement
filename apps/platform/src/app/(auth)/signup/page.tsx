@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import OrigamiParticles from '@/components/OrigamiParticles';
 import SchoolgleAnimatedLogo from '@/components/SchoolgleAnimatedLogo';
+import { supabase } from '@/lib/supabase';
 
 type Step = 'welcome' | 'account-type' | 'details' | 'schools' | 'plan' | 'contract' | 'payment' | 'complete';
 type AccountType = 'school' | 'trust' | null;
@@ -24,6 +25,8 @@ interface SchoolData {
 
 export default function SignupPage() {
     const router = useRouter();
+    const [toolId, setToolId] = useState<string | null>(null);
+    const [nextPath, setNextPath] = useState('/dashboard');
     const [currentStep, setCurrentStep] = useState<Step>('welcome');
     const [accountType, setAccountType] = useState<AccountType>(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -59,6 +62,21 @@ export default function SignupPage() {
         invoiceAddress: ''
     });
 
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const requestedTool = params.get('tool');
+        const requestedNext = params.get('next');
+        if (requestedTool) {
+            setToolId(requestedTool);
+            setAccountType('school');
+            setCurrentStep('details');
+            setFormData(prev => ({ ...prev, selectedPlan: 'toolbox' }));
+        }
+        if (requestedNext?.startsWith('/')) {
+            setNextPath(requestedNext);
+        }
+    }, []);
+
     const updateFormData = (field: string, value: any) => {
         setFormData(prev => ({ ...prev, [field]: value }));
     };
@@ -86,6 +104,7 @@ export default function SignupPage() {
     };
 
     const getPlanPrice = () => {
+        if (formData.selectedPlan === 'toolbox') return 0;
         const prices = {
             core: { monthly: 149, annual: 1499 },
             professional: { monthly: 249, annual: 2499 },
@@ -108,6 +127,38 @@ export default function SignupPage() {
         await new Promise(resolve => setTimeout(resolve, 2000));
         setIsLoading(false);
         nextStep();
+    };
+
+    const handleToolboxSignup = async () => {
+        if (!formData.email || !formData.password) return;
+
+        setIsLoading(true);
+        const { data, error } = await supabase.auth.signUp({
+            email: formData.email.trim().toLowerCase(),
+            password: formData.password,
+            options: {
+                data: {
+                    full_name: `${formData.firstName} ${formData.lastName}`.trim(),
+                    organization_name: formData.organisationName,
+                    requested_tool: toolId || 'deal-finder',
+                    signup_source: 'toolbox',
+                },
+                emailRedirectTo: `${window.location.origin}/login?next=${encodeURIComponent(nextPath)}`,
+            },
+        });
+        setIsLoading(false);
+
+        if (error) {
+            alert(error.message);
+            return;
+        }
+
+        if (data.session) {
+            router.push(nextPath);
+            return;
+        }
+
+        router.push(`/login?next=${encodeURIComponent(nextPath)}&signed_up=1`);
     };
 
     return (
@@ -255,8 +306,14 @@ export default function SignupPage() {
                     {currentStep === 'details' && (
                         <div className="space-y-6 animate-in fade-in duration-500">
                             <div className="text-center space-y-2">
-                                <h2 className="text-2xl font-bold text-gray-900">Your details</h2>
-                                <p className="text-gray-600">We'll use this to set up your account</p>
+                                <h2 className="text-2xl font-bold text-gray-900">
+                                    {toolId === 'deal-finder' ? 'Create your free Deal Finder account' : 'Your details'}
+                                </h2>
+                                <p className="text-gray-600">
+                                    {toolId === 'deal-finder'
+                                        ? 'Free Toolbox access for schools, with no full Schoolgle subscription needed.'
+                                        : "We'll use this to set up your account"}
+                                </p>
                             </div>
 
                             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 space-y-4">
@@ -380,10 +437,15 @@ export default function SignupPage() {
                                     Back
                                 </button>
                                 <button
-                                    onClick={nextStep}
+                                    onClick={toolId ? handleToolboxSignup : nextStep}
+                                    disabled={isLoading || (toolId ? !formData.email || !formData.password : false)}
                                     className="flex-1 py-3 bg-gray-900 text-white font-medium rounded-xl hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
                                 >
-                                    Continue <ArrowRight className="w-5 h-5" />
+                                    {isLoading
+                                        ? 'Creating account...'
+                                        : toolId === 'deal-finder'
+                                          ? 'Create free account'
+                                          : 'Continue'} <ArrowRight className="w-5 h-5" />
                                 </button>
                             </div>
                         </div>

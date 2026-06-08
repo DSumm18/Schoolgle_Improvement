@@ -255,13 +255,13 @@ export const GET = protectedRoute(async (auth, request) => {
   let query = supabase
     .from("send_graduated_approach")
     .select(
-      "*, send_register(pupil_code, first_name, last_name, year_group, primary_need)",
+      "*, send_register(pupil_id, year_group, primary_need)",
     )
     .eq("organization_id", organizationId)
     .order("created_at", { ascending: false });
 
   if (pupilId) query = query.eq("pupil_id", pupilId);
-  if (stage) query = query.eq("current_stage", stage);
+  if (stage) query = query.eq("status", stage);
 
   const { data, error } = await query;
 
@@ -269,14 +269,14 @@ export const GET = protectedRoute(async (auth, request) => {
     console.error("[SEND Graduated Approach GET]", error);
   }
 
-  if (!data || data.length === 0) {
+  if (error) {
     let filtered = [...DEMO_CYCLES];
     if (pupilId) filtered = filtered.filter((c) => c.pupil_id === pupilId);
     if (stage) filtered = filtered.filter((c) => c.current_stage === stage);
     return apiSuccess({ data: filtered, demo: true });
   }
 
-  return apiSuccess({ data, demo: false });
+  return apiSuccess({ data: (data || []).map(normaliseCycle), demo: false });
 });
 
 /**
@@ -284,7 +284,7 @@ export const GET = protectedRoute(async (auth, request) => {
  * Create a new graduated approach cycle
  */
 export const POST = protectedRoute(async (auth, request) => {
-  const { organizationId, userId } = auth;
+  const { organizationId } = auth;
   const supabase = createServiceRoleClient();
   const body = await request.json();
 
@@ -300,7 +300,7 @@ export const POST = protectedRoute(async (auth, request) => {
     const { data: existing } = await supabase
       .from("send_graduated_approach")
       .select("cycle_number")
-      .eq("pupil_id", pupil_id)
+      .eq("send_register_id", pupil_id)
       .eq("organization_id", organizationId)
       .order("cycle_number", { ascending: false })
       .limit(1);
@@ -313,14 +313,14 @@ export const POST = protectedRoute(async (auth, request) => {
     .from("send_graduated_approach")
     .insert({
       organization_id: organizationId,
-      pupil_id,
+      send_register_id: pupil_id,
       cycle_number: cycleNum,
-      term,
-      current_stage: "assess",
+      academic_year: inferAcademicYear(),
+      term: normaliseTerm(term),
+      status: "assess",
       assess_date: new Date().toISOString().split("T")[0],
-      assess_notes: assess_notes || null,
-      plan_targets: plan_targets || null,
-      created_by: userId,
+      assess_summary: assess_notes || null,
+      plan_targets: plan_targets ? [plan_targets] : [],
     })
     .select()
     .single();
@@ -330,5 +330,31 @@ export const POST = protectedRoute(async (auth, request) => {
     return apiError("Failed to create cycle", 500);
   }
 
-  return apiSuccess(data, 201);
+  return apiSuccess(normaliseCycle(data), 201);
 });
+
+function normaliseCycle(row: any) {
+  return {
+    ...row,
+    pupil_id: row.pupil_id ?? row.send_register_id,
+    current_stage: row.current_stage ?? row.status,
+    assess_notes: row.assess_notes ?? row.assess_summary ?? null,
+    plan_targets: Array.isArray(row.plan_targets)
+      ? row.plan_targets.join("\n")
+      : row.plan_targets,
+  };
+}
+
+function normaliseTerm(value: string) {
+  const lower = String(value || "").toLowerCase();
+  if (lower.includes("spring")) return "spring";
+  if (lower.includes("summer")) return "summer";
+  return "autumn";
+}
+
+function inferAcademicYear() {
+  const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth() + 1;
+  const startYear = currentMonth >= 9 ? currentYear : currentYear - 1;
+  return `${startYear}/${String(startYear + 1).slice(-2)}`;
+}
