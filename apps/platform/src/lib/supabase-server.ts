@@ -1,6 +1,7 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
+import { assertSafeDatabaseEnvironment } from './database-environment';
 
 export async function createServerSupabaseClient() {
     const cookieStore = await cookies();
@@ -40,6 +41,8 @@ export function createServiceRoleClient() {
     if (!supabaseUrl || !supabaseServiceKey) {
         throw new Error('Missing Supabase service role credentials');
     }
+
+    assertSafeDatabaseEnvironment('service-role Supabase access');
 
     return createClient(supabaseUrl, supabaseServiceKey, {
         auth: {

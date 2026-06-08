@@ -19,6 +19,7 @@ import { reviewPupilUploadCsv, type PupilUploadReview } from "@/lib/pupil-upload
 type Pupil = {
   id: string;
   pupil_id: string;
+  source_pupil_ref?: string | null;
   first_name: string;
   last_name: string;
   year_group: string;
@@ -2363,11 +2364,12 @@ function PupilUploadReviewPanel({
         )}
 
         <div className="max-h-[520px] overflow-auto rounded-xl border">
-          <table className="min-w-[1900px] text-sm">
+          <table className="min-w-[2050px] text-sm">
             <thead className="sticky top-0 z-10 bg-muted text-left text-xs text-muted-foreground">
               <tr>
                 <th className="p-2">Spreadsheet row</th>
                 <th>Pupil ID</th>
+                <th>Source ref / UPN</th>
                 <th>First name</th>
                 <th>Last name</th>
                 <th>Year</th>
@@ -2390,6 +2392,7 @@ function PupilUploadReviewPanel({
                 <tr key={`${row.rowNumber}-${row.pupil_id}`} className="border-t">
                   <td className="p-2 font-semibold">Row {row.rowNumber}</td>
                   <td>{displayImportValue(row.pupil_id)}</td>
+                  <td>{displayImportValue(row.source_pupil_ref)}</td>
                   <td>{displayImportValue(row.first_name)}</td>
                   <td>{displayImportValue(row.last_name)}</td>
                   <td>{displayImportValue(row.year_group)}</td>

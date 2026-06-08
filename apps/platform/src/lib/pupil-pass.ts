@@ -41,6 +41,7 @@ export type PupilPassIdentity = {
 
 export type PupilUploadRow = {
   pupil_id: string;
+  source_pupil_ref: string;
   first_name: string;
   last_name: string;
   year_group: string;
@@ -122,7 +123,7 @@ export function parsePupilUploadCsv(csvText: string) {
     .filter((line) => line && !line.startsWith("#"));
   if (lines.length < 2) return { pupils: [] as PupilUploadRow[], errors: ["CSV needs a header row and at least one pupil row."] };
 
-  const required = ["pupil_id", "first_name", "last_name", "year_group", "current_class"];
+  const required = ["pupil_id", "source_pupil_ref", "first_name", "last_name", "year_group", "current_class"];
   const { headers, headerIndex, missing } = findHeader(lines, required);
 
   if (missing.length > 0) return { pupils: [] as PupilUploadRow[], errors: [`Missing required columns: ${missing.join(", ")}`] };
@@ -145,6 +146,7 @@ export function parsePupilUploadCsv(csvText: string) {
 
     pupils.push({
       pupil_id: raw.pupil_id,
+      source_pupil_ref: normaliseSourcePupilRef(raw.source_pupil_ref),
       first_name: normalisePupilName(raw.first_name),
       last_name: normalisePupilName(raw.last_name),
       year_group: normaliseYearGroup(raw.year_group),
@@ -175,7 +177,7 @@ export function pupilUploadExcelTemplate() {
   return buildStyledTemplateExcelHtml({
     title: "Schoolgle Pupil Upload Template",
     guidance: "Rows 1-3 are guidance, row 4 explains the columns, row 5 is the exact import header. Start real pupil data on row 6.",
-    tip: "Tip: keep pupil_id stable. It protects QR passes, Class Builder responses and future assessment history.",
+    tip: "Tip: keep source_pupil_ref aligned with the MIS/UPN used in CTF/results files so assessment history can link.",
     descriptions,
     headers: fields,
     rows: examples,
@@ -189,7 +191,8 @@ export function buildPupilUploadTemplateCsv() {
 
 function getPupilUploadTemplateRows() {
   const descriptions = [
-    "Unique pupil ID from MIS or a school-made ID. Required.",
+    "Schoolgle pupil ID. Required. Keep stable for passes and Class Builder; may be school-made if source_pupil_ref is the MIS/UPN.",
+    "Stable MIS/UPN pupil reference used in CTF/results files. Required for assessment history linking.",
     "Pupil first name. Required.",
     "Pupil last name. Required.",
     "Year group, e.g. R, 1, 2, 3, 4, 5, 6. Required.",
@@ -208,6 +211,7 @@ function getPupilUploadTemplateRows() {
   ];
   const fields = [
     "pupil_id",
+    "source_pupil_ref",
     "first_name",
     "last_name",
     "year_group",
@@ -225,9 +229,9 @@ function getPupilUploadTemplateRows() {
     "pass_badge",
   ];
   const examples = [
-    ["PUP001", "Ava", "Adams", "4", "4A", "F", "K", "false", "SLCN", "no", "yes", "no", "true", "Purple", "Panda", "Star"],
-    ["PUP002", "Dan", "Dunn", "4", "4A", "M", "E", "true", "ASD", "yes", "yes", "no", "true", "Blue", "Fox", ""],
-    ["PUP003", "Sam", "Smith", "4", "4A", "", "", "false", "", "no", "no", "yes", "true", "", "", ""],
+    ["SG001", "A802200106001", "Ava", "Adams", "4", "4A", "F", "K", "false", "SLCN", "no", "yes", "no", "true", "Purple", "Panda", "Star"],
+    ["SG002", "A802200106002", "Dan", "Dunn", "4", "4A", "M", "E", "true", "ASD", "yes", "yes", "no", "true", "Blue", "Fox", ""],
+    ["SG003", "A802200106003", "Sam", "Smith", "4", "4A", "", "", "false", "", "no", "no", "yes", "true", "", "", ""],
   ];
   return { descriptions, fields, examples };
 }
@@ -261,7 +265,26 @@ function normaliseChoice(value: string | null | undefined, allowed: string[]) {
 }
 
 function normaliseHeader(header: string) {
-  return header.toLowerCase().trim().replace(/[\s-]+/g, "_");
+  const normalised = header.toLowerCase().trim().replace(/[\s-]+/g, "_");
+  if (
+    [
+      "upn",
+      "unique_pupil_number",
+      "pupil_upn",
+      "pupil_ref",
+      "source_pupil_reference",
+      "mis_pupil_ref",
+      "mis_pupil_reference",
+      "student_id",
+    ].includes(normalised)
+  ) {
+    return "source_pupil_ref";
+  }
+  return normalised;
+}
+
+function normaliseSourcePupilRef(value: string) {
+  return value.trim().toUpperCase();
 }
 
 function findHeader(lines: string[], required: string[]) {

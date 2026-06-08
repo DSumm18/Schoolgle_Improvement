@@ -4,10 +4,10 @@ import { reviewPupilUploadCsv } from "./pupil-upload-review";
 describe("reviewPupilUploadCsv", () => {
   it("uses row two as headers when row one contains explanations", () => {
     const csv = [
-      "Explainer,Explainer,Explainer,Explainer,Explainer",
-      "pupil_id,first_name,last_name,year_group,current_class",
-      "P1,Ada,Lovelace,4,Oak",
-      "P2,Alan,Turing,4,Oak",
+      "Explainer,Explainer,Explainer,Explainer,Explainer,Explainer",
+      "pupil_id,source_pupil_ref,first_name,last_name,year_group,current_class",
+      "P1,A802200106001,Ada,Lovelace,4,Oak",
+      "P2,A802200106002,Alan,Turing,4,Oak",
     ].join("\n");
 
     const review = reviewPupilUploadCsv(csv, "pupils.csv");
@@ -20,13 +20,13 @@ describe("reviewPupilUploadCsv", () => {
 
   it("finds the styled Excel template header on row five", () => {
     const csv = [
-      "Schoolgle Pupil Upload Template,,,,",
-      "Rows 1-3 are guidance row 4 explains columns,,,,",
-      "Tip: keep pupil_id stable,,,,",
-      "Unique pupil ID,Pupil first name,Pupil last name,Year group,Current class",
-      "pupil_id,first_name,last_name,year_group,current_class",
-      "759,Toby,Hulbert,Year 2,Ash",
-      "804,Edwyn,Daniel,Year 2,Ash",
+      "Schoolgle Pupil Upload Template,,,,,",
+      "Rows 1-3 are guidance row 4 explains columns,,,,,",
+      "Tip: keep source_pupil_ref aligned with MIS/UPN,,,,,",
+      "Schoolgle ID,Source pupil ref,Pupil first name,Pupil last name,Year group,Current class",
+      "pupil_id,source_pupil_ref,first_name,last_name,year_group,current_class",
+      "759,A802200106001,Toby,Hulbert,Year 2,Ash",
+      "804,A802200106002,Edwyn,Daniel,Year 2,Ash",
     ].join("\n");
 
     const review = reviewPupilUploadCsv(csv, "Student List.xlsx");
@@ -38,6 +38,7 @@ describe("reviewPupilUploadCsv", () => {
     expect(review.rows).toHaveLength(2);
     expect(review.sampleRows[0]).toMatchObject({
       rowNumber: 6,
+      source_pupil_ref: "A802200106001",
       first_name: "Toby",
       year_group: "2",
       current_class: "Ash",
@@ -46,8 +47,8 @@ describe("reviewPupilUploadCsv", () => {
 
   it("shows gender and active status in the review sample", () => {
     const csv = [
-      "pupil_id,first_name,last_name,year_group,current_class,gender,is_active",
-      "P1,Ada,Lovelace,Year R,Beech,Female,true",
+      "pupil_id,source_pupil_ref,first_name,last_name,year_group,current_class,gender,is_active",
+      "P1,A802200106001,Ada,Lovelace,Year R,Beech,Female,true",
     ].join("\n");
 
     const review = reviewPupilUploadCsv(csv, "pupils.csv");
@@ -63,10 +64,10 @@ describe("reviewPupilUploadCsv", () => {
 
   it("reports required field and duplicate pupil id errors", () => {
     const csv = [
-      "pupil_id,first_name,last_name,year_group,current_class",
-      "P1,Ada,Lovelace,4,Oak",
-      "P1,Alan,Turing,4,Oak",
-      "P3,Grace,,4,Oak",
+      "pupil_id,source_pupil_ref,first_name,last_name,year_group,current_class",
+      "P1,A802200106001,Ada,Lovelace,4,Oak",
+      "P1,A802200106002,Alan,Turing,4,Oak",
+      "P3,A802200106003,Grace,,4,Oak",
     ].join("\n");
 
     const review = reviewPupilUploadCsv(csv);
@@ -78,14 +79,15 @@ describe("reviewPupilUploadCsv", () => {
 
   it("shows normalised values in the review preview", () => {
     const csv = [
-      "pupil_id,first_name,last_name,year_group,current_class,gender,send_status",
-      "P1,  lola ,O'NEILL, year 4 , 4 b , female, ehcp",
+      "pupil_id,upn,first_name,last_name,year_group,current_class,gender,send_status",
+      "P1, a802200106003 ,  lola ,O'NEILL, year 4 , 4 b , female, ehcp",
     ].join("\n");
 
     const review = reviewPupilUploadCsv(csv);
 
     expect(review.sampleRows[0]).toMatchObject({
       first_name: "Lola",
+      source_pupil_ref: "A802200106003",
       last_name: "O'Neill",
       year_group: "4",
       current_class: "4B",
@@ -95,9 +97,9 @@ describe("reviewPupilUploadCsv", () => {
   });
 
   it("samples across larger files including row five", () => {
-    const rows = ["pupil_id,first_name,last_name,year_group,current_class"];
+    const rows = ["pupil_id,source_pupil_ref,first_name,last_name,year_group,current_class"];
     for (let index = 1; index <= 30; index += 1) {
-      rows.push(`P${index},First${index},Last${index},${index % 2 ? "4" : "5"},Class${index % 3}`);
+      rows.push(`P${index},A802200106${String(index).padStart(3, "0")},First${index},Last${index},${index % 2 ? "4" : "5"},Class${index % 3}`);
     }
 
     const review = reviewPupilUploadCsv(rows.join("\n"));

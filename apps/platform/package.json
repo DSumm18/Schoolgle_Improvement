@@ -3,7 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --webpack",
+    "dev": "node scripts/ensure-non-production-db.mjs && next dev --webpack",
+    "db:safety-check": "node scripts/ensure-non-production-db.mjs",
+    "supabase:start": "npx supabase start --workdir .",
+    "supabase:status": "npx supabase status --workdir .",
+    "supabase:reset": "npx supabase db reset --workdir .",
     "build": "node scripts/build.mjs",
     "start": "next start",
     "lint": "eslint",

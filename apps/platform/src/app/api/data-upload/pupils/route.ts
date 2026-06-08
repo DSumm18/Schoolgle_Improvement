@@ -30,7 +30,7 @@ export const GET = protectedRoute(async (auth, request) => {
   let query = supabase
     .from("pupils")
     .select(
-      "id,pupil_id,first_name,last_name,year_group,current_class,class_name,gender,send_status,sen_status,ehcp,primary_need,fsm_eligible,is_pupil_premium,is_eal,is_active,pass_colour,pass_animal,pass_badge,pass_codename,pupil_access_token_encrypted,pass_revoked_at,updated_at",
+      "id,pupil_id,pupil_ref,first_name,last_name,year_group,current_class,class_name,gender,send_status,sen_status,ehcp,primary_need,fsm_eligible,is_pupil_premium,is_eal,is_active,pass_colour,pass_animal,pass_badge,pass_codename,pupil_access_token_encrypted,pass_revoked_at,updated_at",
     )
     .eq("organization_id", auth.organizationId)
     .order("year_group")
@@ -62,6 +62,7 @@ export const GET = protectedRoute(async (auth, request) => {
       return {
         id: pupil.id,
         pupil_id: pupil.pupil_id,
+        source_pupil_ref: pupil.pupil_ref,
         first_name: pupil.first_name,
         last_name: pupil.last_name,
         year_group: pupil.year_group,
@@ -133,6 +134,7 @@ export const POST = protectedRoute(async (auth, request) => {
     return {
       organization_id: auth.organizationId,
       pupil_id: pupil.pupil_id,
+      pupil_ref: pupil.source_pupil_ref,
       first_name: pupil.first_name,
       last_name: pupil.last_name,
       year_group: pupil.year_group,

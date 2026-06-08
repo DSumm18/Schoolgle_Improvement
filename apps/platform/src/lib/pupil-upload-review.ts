@@ -8,6 +8,7 @@ import {
 export type PupilUploadReviewRow = {
   rowNumber: number;
   pupil_id: string;
+  source_pupil_ref: string;
   first_name: string;
   last_name: string;
   year_group: string;
@@ -45,7 +46,7 @@ export type PupilUploadReview = {
   };
 };
 
-const REQUIRED_FIELDS = ["pupil_id", "first_name", "last_name", "year_group", "current_class"];
+const REQUIRED_FIELDS = ["pupil_id", "source_pupil_ref", "first_name", "last_name", "year_group", "current_class"];
 
 export function reviewPupilUploadCsv(csvText: string, filename = "pupil-upload.csv"): PupilUploadReview {
   const lines = csvText
@@ -115,6 +116,7 @@ export function reviewPupilUploadCsv(csvText: string, filename = "pupil-upload.c
     rows.push({
       rowNumber: line.rowNumber,
       pupil_id: raw.pupil_id || "",
+      source_pupil_ref: raw.source_pupil_ref ? normaliseSourcePupilRef(raw.source_pupil_ref) : "",
       first_name: raw.first_name ? normalisePupilName(raw.first_name) : "",
       last_name: raw.last_name ? normalisePupilName(raw.last_name) : "",
       year_group: raw.year_group ? normaliseYearGroup(raw.year_group) : "",
@@ -205,7 +207,26 @@ function findHeaderLine(lines: Array<{ raw: string; rowNumber: number }>) {
 }
 
 function normaliseHeader(header: string) {
-  return header.toLowerCase().trim().replace(/[\s-]+/g, "_");
+  const normalised = header.toLowerCase().trim().replace(/[\s-]+/g, "_");
+  if (
+    [
+      "upn",
+      "unique_pupil_number",
+      "pupil_upn",
+      "pupil_ref",
+      "source_pupil_reference",
+      "mis_pupil_ref",
+      "mis_pupil_reference",
+      "student_id",
+    ].includes(normalised)
+  ) {
+    return "source_pupil_ref";
+  }
+  return normalised;
+}
+
+function normaliseSourcePupilRef(value: string) {
+  return value.trim().toUpperCase();
 }
 
 function splitCsvLine(line: string) {

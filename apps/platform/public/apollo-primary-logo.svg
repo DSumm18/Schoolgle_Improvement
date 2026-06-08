@@ -1,0 +1,21 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Apollo Primary School logo</title>
+  <desc id="desc">A red and gold school crest with an Apollo sun and laurel motif.</desc>
+  <rect width="512" height="512" rx="112" fill="#fff7ed"/>
+  <circle cx="256" cy="256" r="204" fill="#991b1b"/>
+  <circle cx="256" cy="256" r="180" fill="#ef4444"/>
+  <path d="M256 82L275 148L340 122L314 187L380 206L314 225L340 290L275 264L256 330L237 264L172 290L198 225L132 206L198 187L172 122L237 148L256 82Z" fill="#f97316"/>
+  <circle cx="256" cy="206" r="76" fill="#fde68a"/>
+  <circle cx="256" cy="206" r="48" fill="#fbbf24"/>
+  <path d="M168 334C194 371 226 391 256 391C286 391 318 371 344 334" stroke="#fed7aa" stroke-width="18" stroke-linecap="round"/>
+  <path d="M158 310C138 278 130 241 137 205" stroke="#fed7aa" stroke-width="12" stroke-linecap="round"/>
+  <path d="M354 310C374 278 382 241 375 205" stroke="#fed7aa" stroke-width="12" stroke-linecap="round"/>
+  <path d="M151 283C129 279 113 268 101 249" stroke="#fef3c7" stroke-width="10" stroke-linecap="round"/>
+  <path d="M361 283C383 279 399 268 411 249" stroke="#fef3c7" stroke-width="10" stroke-linecap="round"/>
+  <path d="M167 327C145 329 126 323 109 309" stroke="#fef3c7" stroke-width="10" stroke-linecap="round"/>
+  <path d="M345 327C367 329 386 323 403 309" stroke="#fef3c7" stroke-width="10" stroke-linecap="round"/>
+  <path d="M205 350H307" stroke="#fff7ed" stroke-width="18" stroke-linecap="round"/>
+  <path d="M225 378H287" stroke="#fff7ed" stroke-width="14" stroke-linecap="round"/>
+  <path d="M256 56L267 87L300 88L273 108L283 140L256 121L229 140L239 108L212 88L245 87L256 56Z" fill="#fef3c7"/>
+  <text x="256" y="462" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="800" fill="#991b1b">APOLLO</text>
+</svg>

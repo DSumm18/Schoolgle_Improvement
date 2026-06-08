@@ -6,20 +6,22 @@ import {
   encryptPupilAccessToken,
   hashPupilAccessToken,
   parsePupilUploadCsv,
+  pupilUploadTemplate,
 } from "./pupil-pass";
 
 describe("pupil pass utilities", () => {
   it("parses pupil upload rows with pass preferences", () => {
     const parsed = parsePupilUploadCsv(
       [
-        "pupil_id,first_name,last_name,year_group,current_class,send_status,ehcp,pass_colour,pass_animal",
-        "P1,Ava,Adams,Year 4,4A,K,false,Purple,Panda",
+        "pupil_id,source_pupil_ref,first_name,last_name,year_group,current_class,send_status,ehcp,pass_colour,pass_animal",
+        "P1,A802200106001,Ava,Adams,Year 4,4A,K,false,Purple,Panda",
       ].join("\n"),
     );
 
     expect(parsed.errors).toEqual([]);
     expect(parsed.pupils[0]).toMatchObject({
       pupil_id: "P1",
+      source_pupil_ref: "A802200106001",
       first_name: "Ava",
       year_group: "4",
       current_class: "4A",
@@ -32,15 +34,16 @@ describe("pupil pass utilities", () => {
   it("parses templates with an explainer row above field names", () => {
     const parsed = parsePupilUploadCsv(
       [
-        "Unique ID,First name,Last name,Year group,Current class,Pass colour,Pass animal",
-        "pupil_id,first_name,last_name,year_group,current_class,pass_colour,pass_animal",
-        "P1,Ava,Adams,Year 4,4A,Purple,Panda",
+        "Schoolgle ID,Source pupil ref,First name,Last name,Year group,Current class,Pass colour,Pass animal",
+        "pupil_id,source_pupil_ref,first_name,last_name,year_group,current_class,pass_colour,pass_animal",
+        "P1,A802200106001,Ava,Adams,Year 4,4A,Purple,Panda",
       ].join("\n"),
     );
 
     expect(parsed.errors).toEqual([]);
     expect(parsed.pupils[0]).toMatchObject({
       pupil_id: "P1",
+      source_pupil_ref: "A802200106001",
       first_name: "Ava",
       pass_colour: "Purple",
       pass_animal: "Panda",
@@ -52,16 +55,17 @@ describe("pupil pass utilities", () => {
       [
         "Schoolgle Pupil Upload Template",
         "Rows 1-3 are guidance, row 4 explains the columns, row 5 is the exact import header. Start real pupil data on row 6.",
-        "Tip: keep pupil_id stable.",
-        "Unique ID,First name,Last name,Year group,Current class,Pass colour,Pass animal",
-        "pupil_id,first_name,last_name,year_group,current_class,pass_colour,pass_animal",
-        "P2,Mia,Bell,Year 4,4A,Pink,Lion",
+        "Tip: keep source_pupil_ref aligned with MIS/UPN for results linking.",
+        "Schoolgle ID,Source pupil ref,First name,Last name,Year group,Current class,Pass colour,Pass animal",
+        "pupil_id,source_pupil_ref,first_name,last_name,year_group,current_class,pass_colour,pass_animal",
+        "P2,A802200106002,Mia,Bell,Year 4,4A,Pink,Lion",
       ].join("\n"),
     );
 
     expect(parsed.errors).toEqual([]);
     expect(parsed.pupils[0]).toMatchObject({
       pupil_id: "P2",
+      source_pupil_ref: "A802200106002",
       first_name: "Mia",
       last_name: "Bell",
       current_class: "4A",
@@ -73,13 +77,14 @@ describe("pupil pass utilities", () => {
   it("normalises messy pupil import fields", () => {
     const parsed = parsePupilUploadCsv(
       [
-        "pupil_id,first_name,last_name,year_group,current_class,gender,send_status",
-        "P1,  lola ,O'NEILL, year 4 , 4 b , female, sen support",
+        "pupil_id,upn,first_name,last_name,year_group,current_class,gender,send_status",
+        "P1, a802200106003 ,  lola ,O'NEILL, year 4 , 4 b , female, sen support",
       ].join("\n"),
     );
 
     expect(parsed.errors).toEqual([]);
     expect(parsed.pupils[0]).toMatchObject({
+      source_pupil_ref: "A802200106003",
       first_name: "Lola",
       last_name: "O'Neill",
       year_group: "4",
@@ -92,7 +97,17 @@ describe("pupil pass utilities", () => {
   it("requires the core named-roll columns", () => {
     const parsed = parsePupilUploadCsv("first_name,last_name\nAva,Adams");
     expect(parsed.errors[0]).toContain("pupil_id");
+    expect(parsed.errors[0]).toContain("source_pupil_ref");
     expect(parsed.errors[0]).toContain("current_class");
+  });
+
+  it("publishes a Settings template with an explicit CTF-compatible source reference", () => {
+    const template = pupilUploadTemplate();
+
+    expect(template).toContain("source_pupil_ref");
+    expect(template).toContain("MIS/UPN");
+    expect(template).toContain("A802200106001");
+    expect(template).not.toContain("PUP001,Ava");
   });
 
   it("creates recognisable unique pass identities", () => {

@@ -1,0 +1,23 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Gemini Primary School logo</title>
+  <desc id="desc">A green school crest with twin stars and a Gemini constellation motif.</desc>
+  <rect width="512" height="512" rx="112" fill="#ecfdf5"/>
+  <circle cx="256" cy="256" r="202" fill="#0f766e"/>
+  <circle cx="256" cy="256" r="178" fill="#14b8a6"/>
+  <path d="M154 174C186 130 232 114 256 114C280 114 326 130 358 174C344 184 331 195 319 209C300 189 276 178 256 178C236 178 212 189 193 209C181 195 168 184 154 174Z" fill="#ccfbf1"/>
+  <path d="M144 294C174 336 222 358 256 358C290 358 338 336 368 294C352 286 337 276 324 264C304 286 278 296 256 296C234 296 208 286 188 264C175 276 160 286 144 294Z" fill="#ccfbf1"/>
+  <path d="M202 150V362" stroke="#f0fdfa" stroke-width="18" stroke-linecap="round"/>
+  <path d="M310 150V362" stroke="#f0fdfa" stroke-width="18" stroke-linecap="round"/>
+  <path d="M202 204H310" stroke="#f0fdfa" stroke-width="16" stroke-linecap="round"/>
+  <path d="M202 308H310" stroke="#f0fdfa" stroke-width="16" stroke-linecap="round"/>
+  <circle cx="172" cy="146" r="9" fill="#fef3c7"/>
+  <circle cx="340" cy="146" r="9" fill="#fef3c7"/>
+  <circle cx="146" cy="248" r="7" fill="#fef3c7"/>
+  <circle cx="366" cy="248" r="7" fill="#fef3c7"/>
+  <circle cx="212" cy="394" r="8" fill="#fef3c7"/>
+  <circle cx="300" cy="394" r="8" fill="#fef3c7"/>
+  <path d="M172 146L146 248L212 394M340 146L366 248L300 394M172 146L340 146M212 394L300 394" stroke="#a7f3d0" stroke-width="4" stroke-linecap="round" opacity=".85"/>
+  <path d="M256 65L267 95L299 96L273 115L282 146L256 128L230 146L239 115L213 96L245 95L256 65Z" fill="#facc15"/>
+  <path d="M256 386L265 410L291 411L270 426L278 451L256 436L234 451L242 426L221 411L247 410L256 386Z" fill="#fef3c7"/>
+  <text x="256" y="462" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="800" fill="#0f766e">GEMINI</text>
+</svg>

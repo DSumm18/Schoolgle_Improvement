@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { createHmac } from "crypto";
 import { buildAssessmentClassSources } from "./class-pupil-source";
 
 describe("buildAssessmentClassSources", () => {
@@ -20,7 +21,8 @@ describe("buildAssessmentClassSources", () => {
       masterPupils: [
         {
           id: "pupil-db-1",
-          pupil_id: "UPN001",
+          pupil_id: "schoolgle-pupil-1",
+          pupil_ref: "A802200106001",
           first_name: "Ada",
           last_name: "Lovelace",
           year_group: "6",
@@ -53,6 +55,9 @@ describe("buildAssessmentClassSources", () => {
       ],
     });
     expect(result[0].pupils[0].pupilHash).not.toContain("UPN001");
+    expect(result[0].pupils[0].pupilHash).toBe(
+      createHmac("sha256", "org-1").update("a802200106001").digest("hex"),
+    );
     expect(JSON.stringify(result)).toContain("Ada Lovelace");
   });
 
@@ -88,7 +93,8 @@ describe("buildAssessmentClassSources", () => {
       masterPupils: [
         {
           id: "pupil-db-1",
-          pupil_id: "UPN001",
+          pupil_id: "schoolgle-pupil-1",
+          pupil_ref: "UPN001",
           first_name: "Ada",
           last_name: "Lovelace",
           year_group: "6",

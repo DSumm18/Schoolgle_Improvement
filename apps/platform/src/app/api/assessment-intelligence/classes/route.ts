@@ -29,7 +29,7 @@ export const GET = protectedRoute(async (auth, _req: NextRequest) => {
     supabase
       .from("pupils")
       .select(
-        "id,pupil_id,first_name,last_name,year_group,current_class,class_name,is_pupil_premium,is_eal,fsm_eligible,send_status,sen_status,ehcp,primary_need,is_active",
+        "id,pupil_id,pupil_ref,first_name,last_name,year_group,current_class,class_name,is_pupil_premium,is_eal,fsm_eligible,send_status,sen_status,ehcp,primary_need,is_active",
       )
       .eq("organization_id", orgId),
   ]);
@@ -51,7 +51,6 @@ export const GET = protectedRoute(async (auth, _req: NextRequest) => {
     classes: classesRes.data || [],
     lessonStudioPupils: lessonPupilsRes.error ? [] : lessonPupilsRes.data || [],
     masterPupils: masterPupilsRes.error ? [] : masterPupilsRes.data || [],
-    hashSalt: process.env.PUPIL_HASH_SALT || null,
   });
 
   return apiSuccess({

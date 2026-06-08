@@ -6,7 +6,11 @@
     "node": "20.x"
   },
   "scripts": {
-    "dev": "next dev",
+    "dev": "node apps/platform/scripts/ensure-non-production-db.mjs && next dev",
+    "db:safety-check": "node apps/platform/scripts/ensure-non-production-db.mjs",
+    "supabase:start": "npx supabase start --workdir apps/platform",
+    "supabase:status": "npx supabase status --workdir apps/platform",
+    "supabase:reset": "npx supabase db reset --workdir apps/platform",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

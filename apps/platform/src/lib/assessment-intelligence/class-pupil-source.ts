@@ -1,4 +1,4 @@
-import { createHash, createHmac } from "crypto";
+import { createHmac } from "crypto";
 
 export type AssessmentPupilSource = "lesson_studio" | "pupils_master";
 
@@ -31,6 +31,7 @@ export interface RawLessonStudioPupil {
 export interface RawMasterPupil {
   id: string;
   pupil_id: string;
+  pupil_ref?: string | null;
   first_name?: string | null;
   last_name?: string | null;
   year_group: string | null;
@@ -83,7 +84,6 @@ export interface BuildAssessmentClassSourcesInput {
   classes: RawAssessmentClass[];
   lessonStudioPupils: RawLessonStudioPupil[];
   masterPupils: RawMasterPupil[];
-  hashSalt?: string | null;
 }
 
 export function buildAssessmentClassSources(input: BuildAssessmentClassSourcesInput): AssessmentClassSource[] {
@@ -113,7 +113,7 @@ export function buildAssessmentClassSources(input: BuildAssessmentClassSourcesIn
 
     for (const pupil of lessonByClassId.get(classRow.id) || []) {
       const stableRef = pupil.pupil_ref || pupil.id;
-      const pupilHash = hashPupilRef(input.organizationId, stableRef, input.hashSalt);
+      const pupilHash = hashPupilRef(input.organizationId, stableRef);
       seenHashes.add(pupilHash);
       pupils.push({
         id: pupil.id,
@@ -137,7 +137,8 @@ export function buildAssessmentClassSources(input: BuildAssessmentClassSourcesIn
     }
 
     for (const pupil of masterByClass.get(normaliseClassKey(classRow.class_name)) || []) {
-      const pupilHash = hashPupilRef(input.organizationId, pupil.pupil_id || pupil.id, input.hashSalt);
+      const stableRef = pupil.pupil_ref || pupil.pupil_id || pupil.id;
+      const pupilHash = hashPupilRef(input.organizationId, stableRef);
       if (seenHashes.has(pupilHash)) continue;
       seenHashes.add(pupilHash);
       pupils.push({
@@ -175,12 +176,10 @@ export function buildAssessmentClassSources(input: BuildAssessmentClassSourcesIn
   });
 }
 
-function hashPupilRef(organizationId: string, pupilRef: string, hashSalt?: string | null) {
-  const value = `${organizationId}|${pupilRef}`.toLowerCase().trim();
-  if (hashSalt) {
-    return createHmac("sha256", hashSalt).update(value).digest("hex");
-  }
-  return createHash("sha256").update(value).digest("hex");
+function hashPupilRef(organizationId: string, pupilRef: string) {
+  return createHmac("sha256", organizationId)
+    .update(pupilRef.toLowerCase().trim())
+    .digest("hex");
 }
 
 function normaliseClassKey(value: string) {
