@@ -10,6 +10,8 @@ describe("database environment safety guard", () => {
     delete process.env.NEXT_PUBLIC_SCHOOLGLE_DB_ENV;
     delete process.env.SCHOOLGLE_DEPLOY_ENV;
     delete process.env.VERCEL_ENV;
+    delete process.env.VERCEL;
+    delete process.env.CI;
     delete process.env.SCHOOLGLE_ALLOW_PRODUCTION_DB_FROM_LOCAL;
     delete process.env.SUPABASE_URL;
   });
@@ -47,6 +49,14 @@ describe("database environment safety guard", () => {
   it("allows explicit production deployments", () => {
     process.env.NEXT_PUBLIC_SUPABASE_URL = "https://live-ref.supabase.co";
     process.env.VERCEL_ENV = "production";
+
+    expect(() => assertSafeDatabaseEnvironment("test access")).not.toThrow();
+  });
+
+  it("allows Vercel build-time route collection", () => {
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://live-ref.supabase.co";
+    process.env.VERCEL = "1";
+    process.env.CI = "1";
 
     expect(() => assertSafeDatabaseEnvironment("test access")).not.toThrow();
   });

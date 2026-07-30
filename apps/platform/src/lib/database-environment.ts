@@ -15,6 +15,10 @@ function isExplicitProductionDeployment() {
   );
 }
 
+function isVercelBuild() {
+  return process.env.VERCEL === "1" && process.env.CI === "1";
+}
+
 function isLocalDatabaseUrl(url: string) {
   try {
     const parsed = new URL(url);
@@ -29,6 +33,7 @@ export function assertSafeDatabaseEnvironment(context: string) {
   const environment = databaseEnvironment();
 
   if (isExplicitProductionDeployment()) return;
+  if (isVercelBuild()) return;
   if (process.env.SCHOOLGLE_ALLOW_PRODUCTION_DB_FROM_LOCAL === "true") return;
   if (!supabaseUrl) return;
   if (isLocalDatabaseUrl(supabaseUrl)) return;
