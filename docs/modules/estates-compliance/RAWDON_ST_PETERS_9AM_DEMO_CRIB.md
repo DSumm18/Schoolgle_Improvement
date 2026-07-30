@@ -14,22 +14,23 @@ Show that the school has one practical place to:
 
 1. Sign in before the call and open `/estates-compliance`.
 2. Confirm the school name is **Rawdon St Peter's C of E Primary School**.
-3. Open **Daily Gate and Perimeter Lock Check** and confirm the completion form loads.
-4. Open **Monthly Temperature Monitoring** and confirm the illustrative awaiting-paperwork record is visible.
-5. Open **Helpdesk** and confirm ticket detail pages load photos, evidence, and risk-control suggestions.
-6. Keep a small non-sensitive premises photo ready for the live save demonstration.
+3. Open **Security** and select **DEMO - Monthly Site Security Walkround**.
+4. Confirm it shows **Fully Completed**, the saved demo note, one image, and **Next due 30/08/2026**.
+5. Select the evidence filename and confirm the saved image opens.
+6. Open **Monthly Temperature Monitoring** and confirm the illustrative awaiting-paperwork record is visible.
+7. Open **Helpdesk** and confirm ticket detail pages load photos, evidence, and risk-control suggestions.
 
 ## Recommended 15-Minute Demo
 
 1. Open the Estates Compliance dashboard and explain statutory versus good-practice responsibilities.
 2. Point out the urgency view: needs doing, awaiting documentation, completed, and not-yet-due.
-3. Open **Daily Gate and Perimeter Lock Check** and show the simple checklist.
-4. Record a completion with a responsible person, a short note, and a non-sensitive photo.
-5. Leave the page, return to the check, and show that the note, photo, owner, next due date, and history remain.
+3. Open **Security** and select **DEMO - Monthly Site Security Walkround**.
+4. Show the completed status, saved note, linked image, and automatic monthly next due date.
+5. Return to Security, reopen the check, and show that the note, image, next due date, and history remain.
 6. Open **Monthly Temperature Monitoring** under Legionella.
 7. Show the labelled contractor-attended scenario in `awaiting_documentation`.
 8. Click **Record contractor chase** and show the audit change.
-9. Explain that cold readings below 20°C and hot readings at least 50°C pass; an unsafe reading automatically fails and raises a linked ticket.
+9. Explain that cold readings below 20 degrees C and hot readings at least 50 degrees C pass; unsafe readings automatically fail and raise a linked ticket.
 10. Open a linked demo ticket and show assignment, stored evidence, comments, AI risk-control suggestions, status, and resolution history.
 11. Open **Fixed Wire Testing (EICR)** and show the exact five-year recurrence.
 12. Show that the school can create its own daily, weekly, monthly, multi-year, or ad-hoc check.
@@ -44,9 +45,10 @@ Show that the school has one practical place to:
 
 ## Safe Live-Demo Rule
 
-- Use the Rawdon-labelled daily demo routine for the live save-and-reload example.
+- Use **DEMO - Monthly Site Security Walkround** for the live save-and-reload example.
 - Do not enter an invented failed statutory result against Rawdon. Use the UAT test school if Victoria or Dave want to see the automatic-failure path exercised live.
 - Never upload pupil information, staff personal data, keys, alarm details, or sensitive security photographs.
+- Rawdon is intentionally blocked from local/UAT access; use the authorised production app rather than bypassing the guard.
 
 ## Close
 

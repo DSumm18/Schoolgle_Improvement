@@ -28,6 +28,42 @@ def style_run(run, bold=False, color=None, size=None):
       run.font.size = Pt(size)
 
 
+def create_numbering_instance(doc, abstract_num_id):
+    numbering = doc.part.numbering_part.element
+    existing_ids = [
+        int(num.get(qn("w:numId")))
+        for num in numbering.findall(qn("w:num"))
+    ]
+    num_id = max(existing_ids, default=0) + 1
+    num = OxmlElement("w:num")
+    num.set(qn("w:numId"), str(num_id))
+    abstract = OxmlElement("w:abstractNumId")
+    abstract.set(qn("w:val"), str(abstract_num_id))
+    num.append(abstract)
+    level_override = OxmlElement("w:lvlOverride")
+    level_override.set(qn("w:ilvl"), "0")
+    start_override = OxmlElement("w:startOverride")
+    start_override.set(qn("w:val"), "1")
+    level_override.append(start_override)
+    num.append(level_override)
+    numbering.append(num)
+    return num_id
+
+
+def apply_numbering(paragraph, num_id):
+    p_pr = paragraph._p.get_or_add_pPr()
+    num_pr = p_pr.find(qn("w:numPr"))
+    if num_pr is None:
+        num_pr = OxmlElement("w:numPr")
+        p_pr.append(num_pr)
+    ilvl = OxmlElement("w:ilvl")
+    ilvl.set(qn("w:val"), "0")
+    number_id = OxmlElement("w:numId")
+    number_id.set(qn("w:val"), str(num_id))
+    num_pr.append(ilvl)
+    num_pr.append(number_id)
+
+
 def add_heading(doc, text, level=1):
     paragraph = doc.add_heading(text, level=level)
     for run in paragraph.runs:
@@ -47,8 +83,10 @@ def add_bullets(doc, items):
 
 
 def add_steps(doc, items):
+    num_id = create_numbering_instance(doc, 7)
     for item in items:
         paragraph = doc.add_paragraph(style="List Number")
+        apply_numbering(paragraph, num_id)
         paragraph.paragraph_format.left_indent = Inches(0.375)
         paragraph.paragraph_format.first_line_indent = Inches(-0.188)
         paragraph.paragraph_format.space_after = Pt(4)
@@ -57,26 +95,40 @@ def add_steps(doc, items):
 
 
 def add_callout(doc, title, body, fill="E8EEF5"):
-    table = doc.add_table(rows=1, cols=1)
-    table.autofit = False
-    table.allow_autofit = False
-    table.columns[0].width = Inches(6.5)
-    cell = table.cell(0, 0)
-    set_cell_shading(cell, fill)
-    p = cell.paragraphs[0]
-    p.paragraph_format.space_after = Pt(4)
+    p = doc.add_paragraph()
+    p.paragraph_format.left_indent = Inches(0.05)
+    p.paragraph_format.right_indent = Inches(0.05)
+    p.paragraph_format.space_before = Pt(6)
+    p.paragraph_format.space_after = Pt(10)
+    p.paragraph_format.keep_together = True
+    p_pr = p._p.get_or_add_pPr()
+    shading = OxmlElement("w:shd")
+    shading.set(qn("w:fill"), fill)
+    p_pr.append(shading)
+    borders = OxmlElement("w:pBdr")
+    for edge in ("top", "left", "bottom", "right"):
+        border = OxmlElement(f"w:{edge}")
+        border.set(qn("w:val"), "single")
+        border.set(qn("w:sz"), "6")
+        border.set(qn("w:space"), "8")
+        border.set(qn("w:color"), "D0D7DE")
+        borders.append(border)
+    p_pr.append(borders)
     title_run = p.add_run(title)
     style_run(title_run, bold=True, color="0B2545")
     p.add_run(f"\n{body}")
-    doc.add_paragraph()
 
 
-def add_image(doc, filename, caption):
+def add_image(doc, filename, caption, width=6.5):
     path = SCREENSHOTS / filename
     if path.exists():
-        doc.add_picture(str(path), width=Inches(6.5))
+        shape = doc.add_picture(str(path), width=Inches(width))
+        shape._inline.docPr.set("descr", caption)
+        shape._inline.docPr.set("title", caption)
+        doc.paragraphs[-1].paragraph_format.keep_with_next = True
         caption_p = doc.add_paragraph(caption)
         caption_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        caption_p.paragraph_format.space_after = Pt(8)
         caption_p.runs[0].font.size = Pt(9)
         caption_p.runs[0].font.color.rgb = RGBColor.from_string("555555")
 
@@ -142,7 +194,6 @@ def build():
         ],
     )
     add_image(doc, "03-add-asset-form.png", "Add Asset form showing purchase, warranty and contractor fields.")
-    add_image(doc, "02-linked-asset-detail.png", "Asset detail showing supplier/maintainer links and related activity.")
 
     add_heading(doc, "3. Add a Contractor", 1)
     add_steps(
@@ -182,6 +233,26 @@ def build():
         ],
     )
 
+    add_callout(
+        doc,
+        "How to prove the record is stored",
+        "Return to the domain list and confirm the check shows Completed. Reopen it, verify the next due date, notes and evidence in Completion history, open the evidence file, then reload the page and confirm the same information remains.",
+        fill="E8F5F1",
+    )
+    doc.add_paragraph(
+        "The system calculates the next due date from the recurrence. In the Rawdon acceptance test, the private non-statutory DEMO - Monthly Site Security Walkround was completed on 30 July 2026 and automatically moved to 30 August 2026."
+    )
+    add_image(doc, "11-rawdon-demo-check-in-list.png", "The completed monthly demo check is visible in the Security domain list.")
+    add_image(doc, "08-rawdon-demo-check-completed.png", "The reopened check shows Fully Completed and the next due date of 30 August 2026.")
+    add_image(doc, "09-rawdon-demo-history-and-image.png", "Completion history retains the date, person, notes, next due date and linked image.")
+    add_image(doc, "10-rawdon-demo-evidence-open.png", "The saved image opens from the completion history.")
+    add_callout(
+        doc,
+        "Customer-data guardrail",
+        "Use a clearly labelled private demo check for demonstrations. Do not mark a real statutory check complete unless the school has genuinely completed it and the evidence is accurate. Use Aurora Primary to demonstrate invented failures and automatic tickets.",
+        fill="FFF2CC",
+    )
+
     add_heading(doc, "6. Raise a Ticket or Task from a Failed Check", 1)
     add_steps(
         doc,
@@ -212,8 +283,12 @@ def build():
             "Add the statutory reference if the check is statutory, then save.",
         ],
     )
-    add_image(doc, "06-custom-check-wizard.png", "Custom check wizard with statutory/non-statutory classification.")
-    add_image(doc, "07-fire-domain-custom-check.png", "Fire Safety domain showing a school-created check.")
+    add_image(
+        doc,
+        "06-custom-check-wizard.png",
+        "Custom check wizard with statutory/non-statutory classification.",
+        width=5.6,
+    )
     add_callout(
         doc,
         "Statutory frequency rule",
@@ -233,6 +308,9 @@ def build():
             "Raise a task from a check and assign it to a staff member or contractor.",
             "Replace an asset by retiring the old record and adding a new QR-tagged asset.",
             "Create a non-statutory school check and confirm it appears in the relevant domain.",
+            "Complete a clearly labelled monthly demo check, then confirm the next due date advances by one month.",
+            "Leave and reopen the check, then confirm the notes and evidence remain in Completion history.",
+            "Open the saved image from the completion record.",
         ],
     )
 

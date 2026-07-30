@@ -2,7 +2,7 @@
 
 **Audience:** school business managers, site managers, caretakers, office teams, and senior leaders using the Estates Management app.
 
-**Example school used in screenshots:** Aurora Primary test environment.
+**Example schools used in screenshots:** Aurora Primary test environment for general setup screens, plus a clearly labelled demo-only monthly check in the live Rawdon St Peter's instance for the save, reload, recurrence, and evidence workflow.
 
 ## 1. How the Estates Management app fits together
 
@@ -95,6 +95,40 @@ Use this when an inspection applies to specific assets, such as flushing outlets
 
 At the bottom of the check page, use **Completion history** to see previous records, who completed them, when they were completed, what was recorded, and what evidence was attached.
 
+### Prove that the record has been saved
+
+After saving a completion:
+
+1. Return to the domain list and confirm the check now shows **Completed** and the latest inspection date.
+2. Reopen the check.
+3. Confirm the status, next due date, responsible person, notes, and evidence appear in **Completion history**.
+4. Select the evidence filename to open the saved image or document.
+5. Reload the browser and confirm the same information remains.
+
+The system calculates the next due date from the check frequency. For example, the monthly Rawdon walkthrough recorded on **30 July 2026** automatically moved the next due date to **30 August 2026**.
+
+![Completed check in the domain list](screenshots/11-rawdon-demo-check-in-list.png)
+
+![Completed check with the calculated next due date](screenshots/08-rawdon-demo-check-completed.png)
+
+![Saved completion notes and linked evidence](screenshots/09-rawdon-demo-history-and-image.png)
+
+![Saved image opened from completion history](screenshots/10-rawdon-demo-evidence-open.png)
+
+### Rawdon walkthrough used for this guide
+
+The live acceptance test used **DEMO - Monthly Site Security Walkround**, a private, non-statutory check labelled throughout as illustrative. This avoids creating a false statutory compliance record while still proving the real customer workflow:
+
+- create a monthly school check;
+- record a fully completed inspection;
+- retain factual notes;
+- attach a non-sensitive image;
+- calculate the next due date;
+- leave and reopen the page;
+- open the stored image from the completion history.
+
+Do not use a real statutory check for a demonstration unless the school has genuinely completed the inspection and the evidence is accurate.
+
 ## 6. Raise a ticket from a failed check
 
 Use this when a check identifies an issue, fault, missing evidence, hazard, non-compliance, or repair need.
@@ -160,8 +194,6 @@ Use school-created checks for routines that matter locally but are not part of t
 
 Statutory check frequencies should not be freely changed by the school. They should come from the regulation, approved strategy, or Schoolgle-managed statutory check library. School-created statutory checks are frequency-locked once saved.
 
-![Custom check in domain](screenshots/07-fire-domain-custom-check.png)
-
 ## 10. What to check during handover or audit
 
 Before an Estates handover, audit, or customer test, confirm:
@@ -185,14 +217,15 @@ Before an Estates handover, audit, or customer test, confirm:
 
 ## 12. Current customer testing checklist
 
-Use Aurora Primary test data to test:
+For a customer demonstration:
 
-- weekly outlet flushing completion and history;
-- linked shower/outlet asset on the weekly flushing check;
-- ticket raised from a compliance check;
-- task raised from a compliance check;
-- asset supplier and maintainer contractor roles;
-- warranty and purchase fields on the asset register;
-- adding a contractor;
-- adding a non-statutory school check;
-- statutory classification guardrail and frequency-lock warning.
+- use a clearly labelled private demo check for save-and-reload testing;
+- add factual notes and a non-sensitive image;
+- confirm the check changes to completed in the domain list;
+- confirm the next due date follows the selected recurrence;
+- reopen the record and confirm the notes and evidence remain;
+- open the saved image from completion history;
+- use Aurora Primary, not a live customer, to demonstrate invented failures and automatic ticket creation;
+- test asset supplier and maintainer contractor roles;
+- test warranty and purchase fields on the asset register;
+- test the statutory classification guardrail and frequency-lock warning.
