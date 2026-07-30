@@ -19,7 +19,7 @@ async function loadTicketContext(
   const { data: ticket, error: ticketError } = await supabase
     .from("estates_helpdesk_tickets")
     .select(
-      "id, organization_id, title, description, category, priority, location, risk_score, linked_risk_entry_id",
+      "id, organization_id, title, description, category, priority",
     )
     .eq("id", ticketId)
     .eq("organization_id", organizationId)
@@ -29,8 +29,8 @@ async function loadTicketContext(
     return { supabase, ticket: null, riskId: null, riskScore: null };
   }
 
-  let riskId = ticket.linked_risk_entry_id || null;
-  let riskScore = ticket.risk_score || null;
+  let riskId: string | null = null;
+  let riskScore: number | null = null;
 
   const { data: linkedRisk } = await supabase
     .from("risk_register")
@@ -66,7 +66,7 @@ export const GET = protectedRoute(async (auth, request) => {
     title: ticket.title,
     description: ticket.description,
     category: ticket.category,
-    riskScore: riskScore || ticket.risk_score || 9,
+    riskScore: riskScore || 9,
   });
 
   const [{ data: decisions }, { data: checks }] = await Promise.all([
@@ -87,7 +87,7 @@ export const GET = protectedRoute(async (auth, request) => {
   return apiSuccess({
     ticket,
     riskId,
-    riskScore: riskScore || ticket.risk_score || suggestions.riskScore,
+    riskScore: riskScore || suggestions.riskScore,
     suggestions,
     decisions: decisions || [],
     checks: checks || [],
@@ -127,7 +127,7 @@ export const POST = protectedRoute(async (auth, request) => {
     title: ticket.title,
     description: ticket.description,
     category: ticket.category,
-    riskScore: riskScore || ticket.risk_score || 9,
+    riskScore: riskScore || 9,
   });
 
   const audit = buildRiskControlDecisionAudit({

@@ -193,10 +193,13 @@ export default function DomainPage() {
               signal: controller.signal,
             },
           ),
-          fetch(`/api/estates/checks/custom?domain=${domainSlug}&pageSize=100`, {
-            headers,
-            signal: controller.signal,
-          }),
+          fetch(
+            `/api/estates/checks/custom?organizationId=${organizationId}&domain=${domainSlug}&pageSize=100`,
+            {
+              headers,
+              signal: controller.signal,
+            },
+          ),
         ]);
 
         clearTimeout(timeoutId);

@@ -39,6 +39,7 @@ import { supabase } from "@/lib/supabase";
 
 type CompletionStatus =
   | "completed"
+  | "failed"
   | "awaiting_documentation"
   | "pending_contractor"
   | "incomplete";
@@ -69,6 +70,17 @@ interface CompletionRecord {
   next_due: string;
   evidence_ids?: string[];
   evidence?: EvidenceItem[];
+  measurement_data?: ComplianceMeasurement[];
+}
+
+interface ComplianceMeasurement {
+  id: string;
+  location: string;
+  reading_type: "cold" | "hot";
+  value: number;
+  unit: "°C";
+  limit_text: string;
+  passed: boolean;
 }
 
 type CompletionApiRecord = CompletionRecord & {
@@ -121,6 +133,15 @@ interface RelatedTicket {
   assigned_contractor_name?: string | null;
   created_at?: string | null;
   resolved_at?: string | null;
+}
+
+interface AssignmentMember {
+  user: { id: string; email?: string; display_name?: string } | null;
+}
+
+interface AssignmentTeam {
+  id: string;
+  name: string;
 }
 
 // --- Helpers ---
@@ -206,8 +227,26 @@ function calculateNextDueDate(
     case "quarterly":
       month += 3;
       break;
+    case "6_monthly":
+      month += 6;
+      break;
     case "annually":
       year += 1;
+      break;
+    case "2_yearly":
+      year += 2;
+      break;
+    case "3_yearly":
+      year += 3;
+      break;
+    case "5_yearly":
+      year += 5;
+      break;
+    case "10_yearly":
+      year += 10;
+      break;
+    case "as_needed":
+    case "ad_hoc":
       break;
     case "termly":
       month += 4;
@@ -233,6 +272,7 @@ function statusBadgeClasses(status: string) {
     case "pending_contractor":
       return "bg-blue-100 text-blue-800 border border-blue-300";
     case "incomplete":
+    case "failed":
     case "overdue":
       return "bg-red-100 text-red-800 border border-red-300";
     default:
@@ -250,6 +290,8 @@ function statusLabel(status: string) {
       return "Pending Contractor";
     case "incomplete":
       return "Incomplete";
+    case "failed":
+      return "Failed — ticket raised";
     case "overdue":
       return "Overdue";
     case "pending":
@@ -334,10 +376,18 @@ export default function CheckDetailPage() {
   const [docsReceivedDate, setDocsReceivedDate] = useState(todayStr);
   const [nextDueDate, setNextDueDate] = useState("");
   const [evidenceFiles, setEvidenceFiles] = useState<EvidenceFile[]>([]);
+  const [assignmentMembers, setAssignmentMembers] = useState<AssignmentMember[]>([]);
+  const [assignmentTeams, setAssignmentTeams] = useState<AssignmentTeam[]>([]);
+  const [assignedTo, setAssignedTo] = useState("");
+  const [assignedTeam, setAssignedTeam] = useState("");
+  const [temperatureRows, setTemperatureRows] = useState([
+    { id: "reading-1", location: "", cold: "", hot: "" },
+  ]);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isNotApplicable, setIsNotApplicable] = useState(false);
   const [markingNA, setMarkingNA] = useState(false);
+  const [documentationActionId, setDocumentationActionId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Reusable function to fetch completions — called on mount and after save
@@ -569,14 +619,14 @@ export default function CheckDetailPage() {
         const customId = checkId.replace(/^custom_/, "");
         if (token && customId) {
           const res = await fetchWithTimeout(
-            `/api/estates/checks/custom?domain=${domainSlug}&pageSize=100`,
+            `/api/estates/checks/custom?organizationId=${organizationId}&domain=${domainSlug}&pageSize=100`,
             { headers: { Authorization: `Bearer ${token}` } },
             10000,
           );
           if (res.ok) {
             const result = await res.json();
             const custom = (result.checks || []).find(
-              (item: any) => item.id === customId,
+              (item: { id: string }) => item.id === customId,
             );
             if (custom) {
               foundCheck = {
@@ -631,6 +681,35 @@ export default function CheckDetailPage() {
       cancelled = true;
     };
   }, [authLoading, domainSlug, checkId, organizationId, session?.access_token]);
+
+  useEffect(() => {
+    if (!organizationId || authLoading) return;
+    const loadAssignments = async () => {
+      const token = await getAccessToken(session?.access_token);
+      if (!token) return;
+      const headers = { Authorization: `Bearer ${token}` };
+      const [membersResponse, teamsResponse] = await Promise.all([
+        fetchWithTimeout(
+          `/api/organization/members?organizationId=${organizationId}`,
+          { headers },
+        ),
+        fetchWithTimeout(`/api/teams?organizationId=${organizationId}`, {
+          headers,
+        }),
+      ]);
+      if (membersResponse.ok) {
+        const result = await membersResponse.json();
+        setAssignmentMembers(result.members || []);
+      }
+      if (teamsResponse.ok) {
+        const result = await teamsResponse.json();
+        setAssignmentTeams(result.teams || []);
+      }
+    };
+    loadAssignments().catch((error) =>
+      console.error("[CHECK DETAIL] assignment options failed", error),
+    );
+  }, [authLoading, organizationId, session?.access_token]);
 
   // --- File upload handlers ---
 
@@ -719,9 +798,43 @@ export default function CheckDetailPage() {
             uploadResult?.data?.id || uploadResult?.evidence?.id;
           if (evidenceId) uploadedIds.push(evidenceId);
         } else {
-          console.warn("[EVIDENCE UPLOAD FAILED]", ef.file.name);
+          const uploadError = await uploadRes.json().catch(() => ({}));
+          throw new Error(
+            `Could not upload ${ef.file.name}: ${uploadError.error || "storage rejected the file"}`,
+          );
         }
       }
+
+      const measurementData: ComplianceMeasurement[] = temperatureRows.flatMap((row) => {
+        const readings: ComplianceMeasurement[] = [];
+        const cold = Number(row.cold);
+        const hot = Number(row.hot);
+        if (row.cold !== "" && Number.isFinite(cold)) {
+          readings.push({
+            id: `${row.id}-cold`, location: row.location || "Unspecified outlet",
+            reading_type: "cold", value: cold, unit: "°C",
+            limit_text: "Below 20°C after running for up to 2 minutes", passed: cold < 20,
+          });
+        }
+        if (row.hot !== "" && Number.isFinite(hot)) {
+          readings.push({
+            id: `${row.id}-hot`, location: row.location || "Unspecified outlet",
+            reading_type: "hot", value: hot, unit: "°C",
+            limit_text: "At least 50°C at the outlet", passed: hot >= 50,
+          });
+        }
+        return readings;
+      });
+      const automaticFailure = measurementData.some((reading) => !reading.passed);
+      const failedReadingSummary = measurementData
+        .filter((reading) => !reading.passed)
+        .map((reading) => `${reading.location}: ${reading.reading_type} ${reading.value}${reading.unit} (${reading.limit_text})`)
+        .join("; ");
+      const completionNotes = [
+        notes,
+        docsReceivedDate !== inspectionDate ? `[Docs received: ${docsReceivedDate}]` : "",
+        automaticFailure ? `[Automatic failure: ${failedReadingSummary}]` : "",
+      ].filter(Boolean).join("\n\n");
 
       // Step 2: Save completion record
       const response = await fetchWithTimeout("/api/estates/statutory-completions", {
@@ -733,18 +846,19 @@ export default function CheckDetailPage() {
           check_id: checkId,
           check_data: {
             compliance_domain: domainSlug,
-            status:
-              completionStatus === "incomplete" ? "pending" : completionStatus,
-            completion_notes:
-              docsReceivedDate !== inspectionDate
-                ? `${notes}\n\n[Docs received: ${docsReceivedDate}]`
-                : notes,
+            status: automaticFailure || completionStatus === "incomplete"
+              ? "failed"
+              : completionStatus,
+            completion_notes: completionNotes,
             completed_at: new Date().toISOString(),
             inspection_date: inspectionDate,
             next_due_date: nextDueDate,
             evidence_ids: uploadedIds,
             documents_received:
               uploadedIds.length > 0 || completionStatus === "completed",
+            assigned_to: assignedTo || undefined,
+            team_id: assignedTeam || undefined,
+            measurement_data: measurementData,
           },
         }),
       }, 15000);
@@ -754,15 +868,21 @@ export default function CheckDetailPage() {
         throw new Error(err.error || "Failed to save completion");
       }
 
+      const result = await response.json();
+
       // Reset form and refresh data without full page reload
       setNotes("");
       setEvidenceFiles([]);
       setCompletionStatus("completed");
+      setTemperatureRows([{ id: "reading-1", location: "", cold: "", hot: "" }]);
       setFormExpanded(false);
       setSubmitError(null);
 
       // Re-fetch completions to update the history timeline
       await fetchCompletions();
+      if (result.auto_created_ticket?.id && check) {
+        await fetchRelatedTickets();
+      }
     } catch (err) {
       setSubmitError(
         err instanceof Error ? err.message : "Failed to save completion",
@@ -817,6 +937,43 @@ export default function CheckDetailPage() {
       console.error("[TOGGLE NA]", err);
     } finally {
       setMarkingNA(false);
+    }
+  };
+
+  const handleDocumentationAction = async (
+    completionId: string,
+    action: "documentation_received" | "documentation_chased",
+  ) => {
+    if (!organizationId) {
+      setSubmitError("Your organisation could not be identified. Please refresh and try again.");
+      return;
+    }
+    setDocumentationActionId(completionId);
+    setSubmitError(null);
+    try {
+      const token = await getAccessToken(session?.access_token);
+      if (!token) throw new Error("Your session has expired. Please sign in again.");
+      const response = await fetchWithTimeout("/api/estates/statutory-completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action,
+          completion_id: completionId,
+          organizationId,
+        }),
+      });
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.error || "Could not update documentation status");
+      }
+      await fetchCompletions();
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "Documentation update failed");
+    } finally {
+      setDocumentationActionId(null);
     }
   };
 
@@ -1364,6 +1521,95 @@ export default function CheckDetailPage() {
             </div>
 
             {/* Notes */}
+            {checkId === "leg_monthly_temp_check" && (
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950/30">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-bold text-blue-950 dark:text-blue-100">Outlet temperature readings</h3>
+                    <p className="mt-1 text-xs text-blue-800 dark:text-blue-200">
+                      Cold readings of 20°C or above, or hot readings below 50°C, automatically fail the check and raise a linked ticket.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setTemperatureRows((rows) => [...rows, { id: `reading-${Date.now()}`, location: "", cold: "", hot: "" }])}
+                    className="shrink-0 rounded border border-blue-300 bg-white px-2 py-1 text-xs font-semibold text-blue-800 dark:bg-blue-950"
+                  >
+                    Add outlet
+                  </button>
+                </div>
+                <div className="mt-3 space-y-2">
+                  {temperatureRows.map((row) => (
+                    <div key={row.id} className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_120px_120px_auto]">
+                      <input
+                        value={row.location}
+                        onChange={(event) => setTemperatureRows((rows) => rows.map((item) => item.id === row.id ? { ...item, location: event.target.value } : item))}
+                        placeholder="Outlet / location"
+                        className="rounded border border-blue-200 bg-white px-3 py-2 text-sm dark:bg-gray-900"
+                      />
+                      <input
+                        type="number" step="0.1" value={row.cold}
+                        onChange={(event) => setTemperatureRows((rows) => rows.map((item) => item.id === row.id ? { ...item, cold: event.target.value } : item))}
+                        placeholder="Cold °C"
+                        className="rounded border border-blue-200 bg-white px-3 py-2 text-sm dark:bg-gray-900"
+                      />
+                      <input
+                        type="number" step="0.1" value={row.hot}
+                        onChange={(event) => setTemperatureRows((rows) => rows.map((item) => item.id === row.id ? { ...item, hot: event.target.value } : item))}
+                        placeholder="Hot °C"
+                        className="rounded border border-blue-200 bg-white px-3 py-2 text-sm dark:bg-gray-900"
+                      />
+                      <button
+                        type="button"
+                        disabled={temperatureRows.length === 1}
+                        onClick={() => setTemperatureRows((rows) => rows.filter((item) => item.id !== row.id))}
+                        className="rounded px-2 text-xs text-red-600 disabled:opacity-30"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Notes */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  Responsible person
+                </label>
+                <select
+                  value={assignedTo}
+                  onChange={(event) => setAssignedTo(event.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm"
+                >
+                  <option value="">Unassigned</option>
+                  {assignmentMembers.filter((member) => member.user).map((member) => (
+                    <option key={member.user!.id} value={member.user!.id}>
+                      {member.user!.display_name || member.user!.email || member.user!.id}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  Responsible team
+                </label>
+                <select
+                  value={assignedTeam}
+                  onChange={(event) => setAssignedTeam(event.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm"
+                >
+                  <option value="">Unassigned</option>
+                  {assignmentTeams.map((team) => (
+                    <option key={team.id} value={team.id}>{team.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Notes */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                 Completion notes{" "}
@@ -1597,6 +1843,7 @@ export default function CheckDetailPage() {
                         <Clock className="w-3 h-3" />
                       )}
                       {(record.status === "overdue" ||
+                        record.status === "failed" ||
                         record.status === "incomplete") && (
                         <AlertTriangle className="w-3 h-3" />
                       )}
@@ -1637,6 +1884,40 @@ export default function CheckDetailPage() {
                   <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-3">
                     {record.completion_notes}
                   </p>
+                )}
+
+                {record.measurement_data && record.measurement_data.length > 0 && (
+                  <div className="mb-3 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+                    {record.measurement_data.map((reading) => (
+                      <div key={reading.id} className="flex items-center justify-between gap-3 border-b border-gray-100 px-3 py-2 text-xs last:border-b-0 dark:border-gray-800">
+                        <span>{reading.location} · {reading.reading_type === "cold" ? "Cold" : "Hot"}</span>
+                        <span className={reading.passed ? "font-bold text-green-700" : "font-bold text-red-700"}>
+                          {reading.value}{reading.unit} · {reading.passed ? "Pass" : "Fail"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {record.status === "awaiting_documentation" && idx === 0 && (
+                  <div className="mb-3 flex flex-wrap gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/30">
+                    <button
+                      type="button"
+                      disabled={documentationActionId === record.id}
+                      onClick={() => handleDocumentationAction(record.id, "documentation_received")}
+                      className="rounded-lg bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-50"
+                    >
+                      Paperwork received
+                    </button>
+                    <button
+                      type="button"
+                      disabled={documentationActionId === record.id}
+                      onClick={() => handleDocumentationAction(record.id, "documentation_chased")}
+                      className="rounded-lg border border-amber-400 bg-white px-3 py-2 text-xs font-semibold text-amber-900 hover:bg-amber-100 disabled:opacity-50 dark:bg-amber-950"
+                    >
+                      Record contractor chase
+                    </button>
+                  </div>
                 )}
 
                 {/* Evidence files */}

@@ -12,8 +12,14 @@ export type CheckFrequency =
   | "weekly"
   | "monthly"
   | "quarterly"
+  | "6_monthly"
   | "annually"
+  | "2_yearly"
+  | "3_yearly"
+  | "5_yearly"
+  | "10_yearly"
   | "termly"
+  | "as_needed"
   | "ad_hoc";
 export type CheckStatus =
   | "pending"
@@ -123,7 +129,7 @@ export const STATUTORY_CHECKS: Record<ComplianceDomain, StatutoryCheck[]> = {
       description:
         "Comprehensive review of water system, monitoring regime, and control measures",
       category: "statutory",
-      frequency: "annually", // Actually every 2 years, but tracked annually
+      frequency: "2_yearly",
       reference: "HSE L8",
       referenceUrl: "https://www.hse.gov.uk/pubns/books/l8.htm",
       estimatedDuration: 240,
@@ -373,7 +379,7 @@ export const STATUTORY_CHECKS: Record<ComplianceDomain, StatutoryCheck[]> = {
       description:
         "Full re-survey of asbestos-containing materials by UKAS accredited surveyor",
       category: "statutory",
-      frequency: "annually", // Tracked annually, done every 3 years
+      frequency: "3_yearly",
       reference: "CAR 2012",
       referenceUrl:
         "https://www.legislation.gov.uk/ukdsi/2012/2307/contents/made",
@@ -437,7 +443,7 @@ export const STATUTORY_CHECKS: Record<ComplianceDomain, StatutoryCheck[]> = {
       description:
         "Periodic inspection and testing of electrical installations (5 yearly for schools)",
       category: "statutory",
-      frequency: "annually", // Tracked annually, done every 5 years
+      frequency: "5_yearly",
       reference: "EAWR 1989, BS7671",
       referenceUrl:
         "https://www.legislation.gov.uk/ukdsi/1989/635/contents/made",
@@ -669,7 +675,7 @@ export const STATUTORY_CHECKS: Record<ComplianceDomain, StatutoryCheck[]> = {
       description:
         "Thorough examination of lift by competent person (every 6 months for passenger lifts)",
       category: "statutory",
-      frequency: "annually", // Tracked annually, done every 6 months
+      frequency: "6_monthly",
       reference: "LOLER 1998",
       referenceUrl:
         "https://www.legislation.gov.uk/ukpga/1998/23/contents/made",
@@ -864,27 +870,27 @@ export const STATUTORY_CHECKS: Record<ComplianceDomain, StatutoryCheck[]> = {
   // ============================================================
   // COSHH (CONTROL OF SUBSTANCES HAZARDOUS TO HEALTH)
   // ============================================================
-  coshh: [], // Checks defined in coshh-checks.ts, imported and merged at runtime
+  coshh: COSHH_CHECKS,
 
   // ============================================================
   // FOOD SAFETY
   // ============================================================
-  food_safety: [], // Checks defined in food-safety-checks.ts, imported and merged at runtime
+  food_safety: FOOD_SAFETY_CHECKS,
 
   // ============================================================
   // TRANSPORT/MINIBUS
   // ============================================================
-  transport: [], // Checks defined in transport-checks.ts, imported and merged at runtime
+  transport: TRANSPORT_CHECKS,
 
   // ============================================================
   // SAFEGUARDING/SITE SECURITY
   // ============================================================
-  safeguarding: [], // Checks defined in safeguarding-checks.ts, imported and merged at runtime
+  safeguarding: SAFEGUARDING_CHECKS,
 
   // ============================================================
   // SEASONAL MAINTENANCE
   // ============================================================
-  seasonal: [], // Checks defined in seasonal-checks.ts, imported and merged at runtime
+  seasonal: SEASONAL_CHECKS,
 };
 
 /**
@@ -1059,3 +1065,8 @@ export function getChecksByFrequency(
 export function getChecksByCategory(category: CheckCategory): StatutoryCheck[] {
   return getAllStatutoryChecks().filter((check) => check.category === category);
 }
+import { COSHH_CHECKS } from "./coshh-checks";
+import { FOOD_SAFETY_CHECKS } from "./food-safety-checks";
+import { TRANSPORT_CHECKS } from "./transport-checks";
+import { SAFEGUARDING_CHECKS } from "./safeguarding-checks";
+import { SEASONAL_CHECKS } from "./seasonal-checks";

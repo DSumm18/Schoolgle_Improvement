@@ -226,18 +226,25 @@ export default function NewCustomCheckPage() {
         body: JSON.stringify({
           ...formData,
           frequency_locked: formData.classification === 'statutory',
+          organizationId,
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create custom check');
+        const errorBody = await response.json().catch(() => ({}));
+        throw new Error(errorBody.error || 'Failed to create custom check');
       }
 
       const result = await response.json();
       router.push(`/estates-compliance/${domainSlug}?success=check-created`);
     } catch (error) {
       console.error('Error creating custom check:', error);
-      setErrors({ submit: 'Failed to create custom check. Please try again.' });
+      setErrors({
+        submit:
+          error instanceof Error
+            ? error.message
+            : 'Failed to create custom check. Please try again.',
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -441,7 +448,7 @@ export default function NewCustomCheckPage() {
             <div>
               <h2 className="text-2xl font-bold mb-2">Requirements</h2>
               <p className="text-muted-foreground">
-                What's needed to complete this check
+                What&apos;s needed to complete this check
               </p>
             </div>
 
@@ -603,8 +610,14 @@ export default function NewCustomCheckPage() {
                   <option value="weekly">Weekly</option>
                   <option value="monthly">Monthly</option>
                   <option value="quarterly">Quarterly</option>
+                  <option value="6_monthly">Every 6 months</option>
                   <option value="termly">Termly</option>
                   <option value="annually">Annually</option>
+                  <option value="2_yearly">Every 2 years</option>
+                  <option value="3_yearly">Every 3 years</option>
+                  <option value="5_yearly">Every 5 years</option>
+                  <option value="10_yearly">Every 10 years</option>
+                  <option value="as_needed">As needed</option>
                   <option value="ad_hoc">Ad-hoc / One-time</option>
                 </select>
                 {errors.frequency && <p className="text-sm text-rose-600 mt-1">{errors.frequency}</p>}
@@ -837,7 +850,7 @@ export default function NewCustomCheckPage() {
 
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Create Custom Check</h1>
-        <p className="text-muted-foreground">Build your own compliance check tailored to your school's needs</p>
+        <p className="text-muted-foreground">Build your own compliance check tailored to your school&apos;s needs</p>
       </div>
 
       {/* Step Progress */}

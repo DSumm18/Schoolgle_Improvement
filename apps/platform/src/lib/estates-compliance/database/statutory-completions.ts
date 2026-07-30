@@ -34,6 +34,7 @@ export interface StatutoryCompletion {
   status:
     | "pending"
     | "completed"
+    | "failed"
     | "overdue"
     | "not_applicable"
     | "in_progress"
@@ -46,6 +47,15 @@ export interface StatutoryCompletion {
   evidence_ids: string[];
   documents_received: boolean;
   contractor_id?: string;
+  assigned_to?: string;
+  team_id?: string;
+  inspection_date?: string;
+  measurement_data?: unknown[];
+  documentation_received_at?: string;
+  documentation_received_by?: string;
+  documentation_last_chased_at?: string;
+  documentation_last_chased_by?: string;
+  documentation_chase_count?: number;
   completion_duration_minutes?: number;
   findings: unknown[];
   rag_status: "red" | "amber" | "green";
@@ -92,6 +102,15 @@ export interface UpdateCompletionInput {
   findings?: unknown[];
   compliance_domain?: string;
   rag_status?: "red" | "amber" | "green";
+  assigned_to?: string;
+  team_id?: string;
+  inspection_date?: string;
+  documentation_received_at?: string;
+  documentation_received_by?: string;
+  documentation_last_chased_at?: string;
+  documentation_last_chased_by?: string;
+  documentation_chase_count?: number;
+  measurement_data?: unknown[];
 }
 
 const UPDATABLE_COMPLETION_COLUMNS = [
@@ -112,6 +131,15 @@ const UPDATABLE_COMPLETION_COLUMNS = [
   "room_id",
   "reviewed_by",
   "reviewed_at",
+  "assigned_to",
+  "team_id",
+  "inspection_date",
+  "documentation_received_at",
+  "documentation_received_by",
+  "documentation_last_chased_at",
+  "documentation_last_chased_by",
+  "documentation_chase_count",
+  "measurement_data",
 ] as const;
 
 export function normalizeCompletionUpdates(
@@ -392,7 +420,9 @@ export async function completeStatutoryCheck(
     (normalizedUpdates.rag_status as "red" | "amber" | "green" | undefined) ||
     (completionStatus === "completed" || completionStatus === "not_applicable"
       ? "green"
-      : "amber");
+      : completionStatus === "failed"
+        ? "red"
+        : "amber");
   const nextDueDate =
     (normalizedUpdates.next_due_date as string | undefined) ||
     calculateNextDueDate(
@@ -404,8 +434,14 @@ export async function completeStatutoryCheck(
       updates.inspection_date as string | undefined,
     );
 
-  if (existing) {
-    // Update existing record
+  const canUpdateExisting =
+    existing &&
+    ["pending", "overdue", "in_progress", "awaiting_documentation"].includes(
+      existing.status,
+    );
+
+  if (canUpdateExisting) {
+    // Fill the scheduled occurrence; preserve terminal rows as audit history.
     return updateCompletion(existing.id, {
       ...normalizedUpdates,
       status: completionStatus,
@@ -438,6 +474,10 @@ export async function completeStatutoryCheck(
         completion_duration_minutes:
           normalizedUpdates.completion_duration_minutes,
         findings: normalizedUpdates.findings || [],
+        assigned_to: normalizedUpdates.assigned_to,
+        team_id: normalizedUpdates.team_id,
+        inspection_date: normalizedUpdates.inspection_date,
+        measurement_data: normalizedUpdates.measurement_data || [],
       })
       .select()
       .single();
@@ -449,6 +489,51 @@ export async function completeStatutoryCheck(
 
     return data;
   }
+}
+
+export async function recordDocumentationAction(
+  organizationId: string,
+  completionId: string,
+  userId: string,
+  action: "received" | "chased",
+): Promise<StatutoryCompletion> {
+  const supabase = await getClient();
+  const { data: current, error: fetchError } = await supabase
+    .from("estates_statutory_completions")
+    .select("*")
+    .eq("id", completionId)
+    .eq("organization_id", organizationId)
+    .single();
+
+  if (fetchError || !current) throw new Error("Completion record not found");
+  if (current.status !== "awaiting_documentation") {
+    throw new Error("This check is not awaiting documentation");
+  }
+
+  const now = new Date().toISOString();
+  const updates = action === "received"
+    ? {
+        status: "completed",
+        documents_received: true,
+        documentation_received_at: now,
+        documentation_received_by: userId,
+        rag_status: "green",
+      }
+    : {
+        documentation_last_chased_at: now,
+        documentation_last_chased_by: userId,
+        documentation_chase_count: (current.documentation_chase_count || 0) + 1,
+      };
+
+  const { data, error } = await supabase
+    .from("estates_statutory_completions")
+    .update({ ...updates, updated_at: now })
+    .eq("id", completionId)
+    .eq("organization_id", organizationId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
 }
 
 /**
@@ -512,9 +597,27 @@ export function calculateNextDueDate(
     case "quarterly":
       date.setMonth(date.getMonth() + 3);
       break;
+    case "6_monthly":
+      date.setMonth(date.getMonth() + 6);
+      break;
     case "annual":
     case "annually":
       date.setFullYear(date.getFullYear() + 1);
+      break;
+    case "2_yearly":
+      date.setFullYear(date.getFullYear() + 2);
+      break;
+    case "3_yearly":
+      date.setFullYear(date.getFullYear() + 3);
+      break;
+    case "5_yearly":
+      date.setFullYear(date.getFullYear() + 5);
+      break;
+    case "10_yearly":
+      date.setFullYear(date.getFullYear() + 10);
+      break;
+    case "as_needed":
+    case "ad_hoc":
       break;
     case "termly":
       // Approximate 3 months

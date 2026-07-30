@@ -23,21 +23,7 @@ export const GET = protectedRoute(async (auth, req: NextRequest) => {
 
   let query = supabase
     .from("teams")
-    .select(
-      `
-            *,
-            leader:users!teams_leader_id_fkey (
-                id,
-                email,
-                raw_user_meta_data->>'full_name' as full_name
-            ),
-            deputy:users!teams_deputy_leader_id_fkey (
-                id,
-                email,
-                raw_user_meta_data->>'full_name' as full_name
-            )
-        `,
-    )
+    .select("*")
     .eq("organization_id", organizationId)
     .order("name", { ascending: true });
 

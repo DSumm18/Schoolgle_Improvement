@@ -25,7 +25,7 @@ function sanitizeSearch(input: string): string {
 // organisation_id, ticket_number, module, or other immutable fields.
 const UPDATABLE_TICKET_COLUMNS = [
   'title', 'description', 'category', 'priority', 'status',
-  'assigned_to', 'assigned_to_name', 'resolution', 'resolution_summary',
+  'assigned_to', 'assigned_to_name', 'team_id', 'resolution', 'resolution_summary',
   'assigned_contractor_id', 'contractor_id', 'compliance_domain',
   'statutory_check_id', 'custom_check_id',
   'resolved_at', 'resolved_by', 'actual_cost', 'estimated_cost',
@@ -51,6 +51,7 @@ export interface TicketFilters {
   priority?: TicketPriority;
   category?: TicketCategory;
   assigned_to?: string;
+  team_id?: string;
   reported_by?: string;
   asset_id?: string;
   compliance_domain?: string;
@@ -225,11 +226,16 @@ export interface CreateTicketInput {
   reported_by_email?: string;
   reported_by_phone?: string;
   assigned_to?: string;
+  team_id?: string;
   assigned_contractor_id?: string;
   contractor_id?: string;
   estimated_cost?: number;
   actual_cost?: number;
   attachments?: string[];
+  statutory_completion_id?: string;
+  ticket_type?: string;
+  created_via?: string;
+  evidence_urls?: string[];
 }
 
 /**
@@ -250,6 +256,7 @@ export async function createHelpdeskTicket(input: CreateTicketInput & Record<str
     raised_by: input.reported_by,  // DB column is raised_by, not reported_by
     asset_id: input.asset_id || null,
     assigned_to: input.assigned_to || null,
+    team_id: input.team_id || null,
     assigned_contractor_id:
       input.assigned_contractor_id || input.contractor_id || null,
     contractor_id: input.contractor_id || null,
@@ -259,6 +266,7 @@ export async function createHelpdeskTicket(input: CreateTicketInput & Record<str
     estimated_cost: input.estimated_cost || null,
     actual_cost: input.actual_cost || null,
     attachment_urls: input.attachments || [],
+    statutory_completion_id: input.statutory_completion_id || null,
     module: 'estates',
   };
 

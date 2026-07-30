@@ -65,9 +65,15 @@ async function authHeaders(): Promise<Record<string, string>> {
   return headers;
 }
 
-export function RiskControlReviewPanel({ ticketId }: { ticketId: string }) {
-  const apiUrl = `/api/estates/helpdesk/${ticketId}/risk-controls`;
-  const { data, isLoading } = useSWR<RiskControlResponse>(apiUrl, fetcher);
+export function RiskControlReviewPanel({
+  ticketId,
+  organizationId,
+}: {
+  ticketId: string;
+  organizationId: string;
+}) {
+  const apiUrl = `/api/estates/helpdesk/${ticketId}/risk-controls?organizationId=${organizationId}`;
+  const { data, error, isLoading } = useSWR<RiskControlResponse>(apiUrl, fetcher);
   const [acceptedIds, setAcceptedIds] = useState<Set<string>>(new Set());
   const [declinedIds, setDeclinedIds] = useState<Set<string>>(new Set());
   const [declinedReason, setDeclinedReason] = useState("");
@@ -129,6 +135,7 @@ export function RiskControlReviewPanel({ ticketId }: { ticketId: string }) {
           acceptedRecommendationIds: Array.from(acceptedIds),
           declinedRecommendationIds: Array.from(declinedIds),
           declinedReason,
+          organizationId,
         }),
       });
 
@@ -153,6 +160,16 @@ export function RiskControlReviewPanel({ ticketId }: { ticketId: string }) {
       <Card>
         <CardContent className="p-5 text-sm text-muted-foreground">
           Loading Risk Control suggestions...
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="p-5 text-sm text-muted-foreground">
+          Risk Control suggestions are unavailable for this ticket.
         </CardContent>
       </Card>
     );

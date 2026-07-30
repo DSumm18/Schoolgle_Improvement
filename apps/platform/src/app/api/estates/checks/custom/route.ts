@@ -97,7 +97,6 @@ export const POST = protectedRoute(
           visibility: body.visibility || "private",
           tags: body.tags || template.tags,
           is_template: false,
-          template_parent_id: template.id,
           created_by: auth.userId,
         });
 

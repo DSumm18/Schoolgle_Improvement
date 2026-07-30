@@ -5,18 +5,22 @@
  * POST /api/estates/statutory-completions
  */
 
-import { NextRequest } from "next/server";
 import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import {
   getStatutoryCompletions,
   getDomainsCompletionSummary,
   completeStatutoryCheck,
   initializeAllStatutoryCompletions,
+  recordDocumentationAction,
 } from "@/lib/estates-compliance/database/statutory-completions";
 import {
   DOMAIN_METADATA,
+  getChecksForDomain,
   type ComplianceDomain,
 } from "@/lib/estates-compliance/statutory-checks";
+import { HelpdeskService } from "@/lib/estates-compliance/services/HelpdeskService";
+import { EvidenceService } from "@/lib/estates-compliance/services/EvidenceService";
+import { hasFailedComplianceMeasurement } from "@/lib/estates-compliance/measurement-evaluation";
 
 /**
  * GET: Fetch statutory completions for an organization
@@ -74,18 +78,60 @@ export const POST = protectedRoute(
           return apiError("check_id is required for complete action", 400);
         }
 
+        const hasFailedMeasurement = hasFailedComplianceMeasurement(
+          check_data?.measurement_data,
+        );
+
         const completion = await completeStatutoryCheck(
           organizationId,
           check_id,
           {
             ...check_data,
+            status: hasFailedMeasurement ? "failed" : check_data?.status,
             completed_by: userId,
           },
         );
 
+        let autoCreatedTicket: Awaited<ReturnType<typeof HelpdeskService.create>> | null = null;
+        if (completion.status === "failed") {
+          const check = getChecksForDomain(
+            completion.compliance_domain as ComplianceDomain,
+          ).find((item) => item.id === check_id);
+
+          const createdTicket = await HelpdeskService.create(organizationId, {
+            title: `Failed compliance check: ${check?.name || check_id}`,
+            description:
+              completion.completion_notes ||
+              `The ${check?.name || check_id} compliance check failed and requires follow-up.`,
+            category: "compliance",
+            priority: check?.risk_level === "critical" ? "critical" : "high",
+            reported_by: userId,
+            assigned_to: completion.assigned_to || undefined,
+            team_id: completion.team_id || undefined,
+            compliance_domain: completion.compliance_domain,
+            statutory_check_id: check_id,
+            statutory_completion_id: completion.id,
+            ticket_type: "compliance_scheduled",
+            created_via: "auto_generated",
+            evidence_urls: completion.evidence_ids || [],
+          });
+          autoCreatedTicket = createdTicket;
+
+          await Promise.all(
+            (completion.evidence_ids || []).map((evidenceId) =>
+              EvidenceService.update(
+                evidenceId,
+                { ticket_id: createdTicket.id },
+                organizationId,
+              ),
+            ),
+          );
+        }
+
         return apiSuccess({
           success: true,
           completion,
+          auto_created_ticket: autoCreatedTicket,
         });
       }
 
@@ -100,8 +146,23 @@ export const POST = protectedRoute(
         });
       }
 
+      case "documentation_received":
+      case "documentation_chased": {
+        const { completion_id } = data;
+        if (!completion_id) {
+          return apiError("completion_id is required", 400);
+        }
+        const completion = await recordDocumentationAction(
+          organizationId,
+          completion_id,
+          userId,
+          action === "documentation_received" ? "received" : "chased",
+        );
+        return apiSuccess({ success: true, completion });
+      }
+
       default:
-        return apiError("Invalid action. Use: complete, initialize", 400);
+        return apiError("Invalid action. Use: complete, initialize, documentation_received, documentation_chased", 400);
     }
   },
   { requiredRole: "caretaker" },

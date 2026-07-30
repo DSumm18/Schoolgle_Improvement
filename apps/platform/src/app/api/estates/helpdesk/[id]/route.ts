@@ -5,7 +5,6 @@
  * PATCH /api/estates/helpdesk/[id] - Update ticket fields
  */
 
-import { NextRequest } from "next/server";
 import { protectedRoute, apiSuccess, apiError } from "@/lib/api-utils";
 import { createServiceRoleClient } from "@/lib/supabase-server";
 import { handleStatusChangeRisk } from "@/lib/estates-compliance/services/helpdesk-risk-service";
@@ -29,7 +28,7 @@ export const GET = protectedRoute(async (auth, request) => {
   }
 
   // Fetch comments and activity in parallel
-  const [commentsResult, activityResult] = await Promise.all([
+  const [commentsResult, activityResult, evidenceResult] = await Promise.all([
     supabase
       .from("estates_helpdesk_comments")
       .select("*")
@@ -40,12 +39,19 @@ export const GET = protectedRoute(async (auth, request) => {
       .select("*")
       .eq("ticket_id", id)
       .order("created_at", { ascending: false }),
+    supabase
+      .from("estates_evidence")
+      .select("*")
+      .eq("organization_id", organizationId)
+      .eq("ticket_id", id)
+      .order("created_at", { ascending: false }),
   ]);
 
   return apiSuccess({
     ticket,
     comments: commentsResult.data || [],
     activity: activityResult.data || [],
+    evidence: evidenceResult.data || [],
   });
 });
 
@@ -73,6 +79,7 @@ export const PATCH = protectedRoute(async (auth, request) => {
     "status",
     "priority",
     "assigned_to",
+    "team_id",
     "assigned_contractor_id",
     "resolution",
     "category",
@@ -150,6 +157,28 @@ export const PATCH = protectedRoute(async (auth, request) => {
       activity_type: "contractor_assigned",
       to_value: contractor?.company_name || body.assigned_contractor_id,
       description: `Contractor assigned: ${contractor?.company_name || "Unknown"}`,
+      actor_id: userId,
+    });
+  }
+
+  if (body.assigned_to !== undefined && body.assigned_to !== current.assigned_to) {
+    await supabase.from("estates_helpdesk_activity").insert({
+      ticket_id: id,
+      activity_type: "assigned",
+      from_value: current.assigned_to,
+      to_value: body.assigned_to,
+      description: body.assigned_to ? "Ticket assigned to an individual" : "Individual assignment removed",
+      actor_id: userId,
+    });
+  }
+
+  if (body.team_id !== undefined && body.team_id !== current.team_id) {
+    await supabase.from("estates_helpdesk_activity").insert({
+      ticket_id: id,
+      activity_type: "team_assigned",
+      from_value: current.team_id,
+      to_value: body.team_id,
+      description: body.team_id ? "Ticket assigned to a team" : "Team assignment removed",
       actor_id: userId,
     });
   }

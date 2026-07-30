@@ -8,7 +8,10 @@
 import type { ComplianceDomain } from './statutory-checks';
 
 export type CheckVisibility = 'private' | 'organization' | 'public';
-export type RecurrencePattern = 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'annually' | 'termly' | 'ad_hoc';
+export type RecurrencePattern =
+  | 'daily' | 'weekly' | 'monthly' | 'quarterly' | '6_monthly'
+  | 'termly' | 'annually' | '2_yearly' | '3_yearly' | '5_yearly'
+  | '10_yearly' | 'as_needed' | 'ad_hoc';
 
 export interface CheckTemplate {
   id: string;

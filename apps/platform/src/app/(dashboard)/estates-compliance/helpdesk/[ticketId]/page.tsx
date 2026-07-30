@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import useSWR, { mutate } from "swr";
 import Link from "next/link";
 import { fetcher } from "@/lib/fetchers";
@@ -41,6 +41,8 @@ import {
   Shield,
   ChevronUp,
   Loader2,
+  FileText,
+  ExternalLink,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -131,9 +133,27 @@ async function authHeaders(): Promise<Record<string, string>> {
 // ---------------------------------------------------------------------------
 
 interface TicketDetailData {
-  ticket: HelpdeskTicket;
+  ticket: HelpdeskTicket & { team_id?: string | null };
   comments: HelpdeskComment[];
   activity: HelpdeskActivity[];
+  evidence: Array<{
+    id: string;
+    title: string;
+    file_name?: string | null;
+    file_url?: string | null;
+    file_type?: string | null;
+    evidence_type?: string | null;
+    created_at: string;
+  }>;
+}
+
+interface AssignmentMember {
+  user: { id: string; email?: string; display_name?: string } | null;
+}
+
+interface AssignmentTeam {
+  id: string;
+  name: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -142,13 +162,25 @@ interface TicketDetailData {
 
 export default function HelpdeskTicketDetailPage() {
   const params = useParams();
-  const router = useRouter();
-  const { user } = useAuth();
-  const userId = user?.id;
+  const { organizationId } = useAuth();
   const ticketId = params.ticketId as string;
 
-  const apiUrl = `/api/estates/helpdesk/${ticketId}`;
-  const { data, error, isLoading } = useSWR<TicketDetailData>(apiUrl, fetcher);
+  const baseApiUrl = `/api/estates/helpdesk/${ticketId}`;
+  const apiUrl = `${baseApiUrl}?organizationId=${organizationId || ""}`;
+  const { data, error, isLoading } = useSWR<TicketDetailData>(
+    organizationId ? apiUrl : null,
+    fetcher,
+  );
+  const { data: membersData } = useSWR<{ members: AssignmentMember[] }>(
+    organizationId
+      ? `/api/organization/members?organizationId=${organizationId}`
+      : null,
+    fetcher,
+  );
+  const { data: teamsData } = useSWR<{ teams: AssignmentTeam[] }>(
+    organizationId ? `/api/teams?organizationId=${organizationId}` : null,
+    fetcher,
+  );
 
   // Local state
   const [commentText, setCommentText] = useState("");
@@ -159,7 +191,7 @@ export default function HelpdeskTicketDetailPage() {
   const [submittingResolve, setSubmittingResolve] = useState(false);
   const [showPhotos, setShowPhotos] = useState(false);
   const [photos, setPhotos] = useState<
-    Array<{ id: string; url: string; timestamp: Date; caption?: string }>
+    Array<{ id: string; url: string; file?: File; timestamp: Date; caption?: string }>
   >([]);
   const [savingPhotos, setSavingPhotos] = useState(false);
   const [patchError, setPatchError] = useState<string | null>(null);
@@ -167,6 +199,7 @@ export default function HelpdeskTicketDetailPage() {
   const ticket = data?.ticket;
   const comments = data?.comments || [];
   const activity = data?.activity || [];
+  const evidence = data?.evidence || [];
 
   // Combined timeline: comments + activity sorted chronologically
   const timeline = useMemo(() => {
@@ -191,7 +224,7 @@ export default function HelpdeskTicketDetailPage() {
     const res = await fetch(apiUrl, {
       method: "PATCH",
       headers,
-      body: JSON.stringify(body),
+      body: JSON.stringify({ ...body, organizationId }),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
@@ -231,11 +264,18 @@ export default function HelpdeskTicketDetailPage() {
     if (!commentText.trim()) return;
     setSubmittingComment(true);
     const headers = await authHeaders();
-    const res = await fetch(`${apiUrl}/comments`, {
+    const res = await fetch(
+      `${baseApiUrl}/comments?organizationId=${organizationId || ""}`,
+      {
       method: "POST",
       headers,
-      body: JSON.stringify({ comment: commentText, is_internal: isInternal }),
-    });
+      body: JSON.stringify({
+        comment: commentText,
+        is_internal: isInternal,
+        organizationId,
+      }),
+      },
+    );
     if (res.ok) {
       setCommentText("");
       setIsInternal(false);
@@ -245,14 +285,48 @@ export default function HelpdeskTicketDetailPage() {
   }
 
   async function handleSavePhotos() {
-    if (!ticket || photos.length === 0) return;
+    if (!ticket || !organizationId || photos.length === 0) return;
     setSavingPhotos(true);
-    const existingUrls = ticket.attachment_urls || [];
-    const newUrls = photos.map((p) => p.url);
-    await patchTicket({ attachment_urls: [...existingUrls, ...newUrls] });
-    setPhotos([]);
-    setShowPhotos(false);
-    setSavingPhotos(false);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error("Your session has expired");
+
+      for (const [index, photo] of photos.entries()) {
+        const file =
+          photo.file ||
+          new File(
+            [await (await fetch(photo.url)).blob()],
+            `ticket-${ticket.ticket_number}-photo-${index + 1}.jpg`,
+            { type: "image/jpeg" },
+          );
+        const formData = new FormData();
+        formData.append("source_type", "upload");
+        formData.append("file", file);
+        formData.append("title", photo.caption || file.name);
+        formData.append("description", photo.caption || "Helpdesk evidence photo");
+        formData.append("evidence_type", "photo");
+        formData.append("ticket_id", ticketId);
+        formData.append("tags", "ticket_attachment,photo");
+
+        const response = await fetch(
+          `/api/estates/evidence?organizationId=${organizationId}`,
+          { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: formData },
+        );
+        if (!response.ok) {
+          const uploadError = await response.json().catch(() => ({}));
+          throw new Error(uploadError.error || `Failed to upload ${file.name}`);
+        }
+      }
+
+      setPhotos([]);
+      setShowPhotos(false);
+      await mutate(apiUrl);
+    } catch (error) {
+      setPatchError(error instanceof Error ? error.message : "Photo upload failed");
+    } finally {
+      setSavingPhotos(false);
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -403,7 +477,10 @@ export default function HelpdeskTicketDetailPage() {
           </Card>
 
           {ticket.status !== "resolved" && ticket.status !== "closed" && (
-            <RiskControlReviewPanel ticketId={ticketId} />
+            <RiskControlReviewPanel
+              ticketId={ticketId}
+              organizationId={organizationId}
+            />
           )}
 
           {/* Photos / Evidence */}
@@ -443,8 +520,36 @@ export default function HelpdeskTicketDetailPage() {
                 </div>
               )}
 
-              {(!ticket.attachment_urls ||
-                ticket.attachment_urls.length === 0) &&
+              {evidence.length > 0 && (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {evidence.map((item) => {
+                    const isImage = item.file_type?.startsWith("image/") || item.evidence_type === "photo";
+                    return (
+                      <a
+                        key={item.id}
+                        href={item.file_url || "#"}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 rounded-lg border p-3 hover:border-teal-500"
+                      >
+                        {isImage && item.file_url ? (
+                          <img src={item.file_url} alt="" className="h-14 w-14 rounded object-cover" />
+                        ) : (
+                          <FileText className="h-8 w-8 text-teal-600" />
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium">{item.title || item.file_name || "Evidence"}</p>
+                          <p className="text-xs text-muted-foreground">Stored evidence · {formatDate(item.created_at)}</p>
+                        </div>
+                        <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                      </a>
+                    );
+                  })}
+                </div>
+              )}
+
+              {(!ticket.attachment_urls || ticket.attachment_urls.length === 0) &&
+                evidence.length === 0 &&
                 !showPhotos && (
                   <p className="text-sm text-muted-foreground">
                     No photos attached yet.
@@ -723,10 +828,36 @@ export default function HelpdeskTicketDetailPage() {
                   <span className="text-muted-foreground block mb-1">
                     Assigned to
                   </span>
-                  <div className="flex items-center gap-2">
-                    <User className="h-3.5 w-3.5 text-teal-600" />
-                    <span>{ticket.assigned_to || "Unassigned"}</span>
-                  </div>
+                  <Select
+                    value={ticket.assigned_to || "unassigned"}
+                    onValueChange={(value) => patchTicket({ assigned_to: value === "unassigned" ? null : value })}
+                  >
+                    <SelectTrigger className="mt-1"><SelectValue placeholder="Assign person" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="unassigned">Unassigned</SelectItem>
+                      {(membersData?.members || []).filter((member) => member.user).map((member) => (
+                        <SelectItem key={member.user!.id} value={member.user!.id}>
+                          {member.user!.display_name || member.user!.email || member.user!.id}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <span className="text-muted-foreground block mb-1">Assigned team</span>
+                  <Select
+                    value={ticket.team_id || "unassigned"}
+                    onValueChange={(value) => patchTicket({ team_id: value === "unassigned" ? null : value })}
+                  >
+                    <SelectTrigger className="mt-1"><SelectValue placeholder="Assign team" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="unassigned">Unassigned</SelectItem>
+                      {(teamsData?.teams || []).map((team) => (
+                        <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {/* Asset link */}

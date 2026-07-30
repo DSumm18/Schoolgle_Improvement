@@ -38,6 +38,14 @@ describe("calculateNextDueDate", () => {
     expect(calculateNextDueDate("monthly", "2026-05-12")).toBe("2026-06-12");
     expect(calculateNextDueDate("annually", "2026-05-12")).toBe("2027-05-12");
   });
+
+  it("uses exact multi-year statutory intervals", () => {
+    expect(calculateNextDueDate("6_monthly", "2026-05-12")).toBe("2026-11-12");
+    expect(calculateNextDueDate("2_yearly", "2026-05-12")).toBe("2028-05-12");
+    expect(calculateNextDueDate("3_yearly", "2026-05-12")).toBe("2029-05-12");
+    expect(calculateNextDueDate("5_yearly", "2026-05-12")).toBe("2031-05-12");
+    expect(calculateNextDueDate("10_yearly", "2026-05-12")).toBe("2036-05-12");
+  });
 });
 
 describe("normalizeCompletionUpdates", () => {
@@ -53,10 +61,11 @@ describe("normalizeCompletionUpdates", () => {
     expect(updates).toEqual({
       status: "in_progress",
       completion_notes: "Contractor booked",
+      inspection_date: "2026-05-12",
       next_due_date: "2026-06-12",
       evidence_ids: ["00000000-0000-0000-0000-000000000001"],
     });
-    expect(updates).not.toHaveProperty("inspection_date");
+    expect(updates).toHaveProperty("inspection_date", "2026-05-12");
   });
 });
 
@@ -68,12 +77,18 @@ describe("statutory checks integrity", () => {
       "weekly",
       "monthly",
       "quarterly",
+      "6_monthly",
       "annually",
+      "2_yearly",
+      "3_yearly",
+      "5_yearly",
+      "10_yearly",
       "termly",
+      "as_needed",
       "ad_hoc",
     ];
     const allChecks = getAllStatutoryChecks();
-    expect(allChecks.length).toBeGreaterThan(40);
+    expect(allChecks.length).toBeGreaterThanOrEqual(137);
     for (const check of allChecks) {
       expect(validFreqs).toContain(check.frequency);
     }
