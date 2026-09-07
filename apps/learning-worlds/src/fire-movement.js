@@ -5,9 +5,9 @@ export function mountFireMovement({scene,toolbar,world,enabled}){
  const keyDirection={arrowup:'up',w:'up',arrowdown:'down',s:'down',arrowleft:'left',a:'left',arrowright:'right',d:'right'};
  let pointer=null,pointerDirection=null,buttonDirection=null,pulse=null;
  const available=()=>enabled()&&!document.querySelector('dialog[open]')&&!document.hidden;
- const inControls=target=>target instanceof Element&&(scene.contains(target)||toolbar.contains(target));
+ const inControls=target=>target instanceof Element&&(scene.contains(target)||toolbar.contains(target)||Boolean(target.closest('#fire-nearby')));
  function apply(){let x=0,y=0;if(available()){for(const key of keys){const d=directions[keyDirection[key]];x+=d[0];y+=d[1];}for(const name of [pointerDirection,buttonDirection])if(name){x+=directions[name][0];y+=directions[name][1];}}world()?.moveExplorer(x,y);}
- function stop(){keys.clear();pointer=null;pointerDirection=null;buttonDirection=null;clearTimeout(pulse);pulse=null;toolbar.querySelectorAll('[data-fire-move]').forEach(b=>b.classList.remove('is-moving'));world()?.moveExplorer(0,0);}
+ function stop(){keys.clear();pointer=null;pointerDirection=null;buttonDirection=null;clearTimeout(pulse);pulse=null;toolbar.querySelectorAll('[data-fire-move]').forEach(b=>b.classList.remove('is-moving'));world()?.stopExplorer();}
  function focusExplorer(){if(available())world()?.focusExplorer();}
  scene.addEventListener('pointerdown',()=>{if(available())scene.focus({preventScroll:true});},options);
  scene.addEventListener('focus',focusExplorer,options);

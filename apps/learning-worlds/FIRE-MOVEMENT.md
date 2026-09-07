@@ -1,22 +1,23 @@
 # Great Fire explorer movement
 
-David reported that the live London character did not respond to movement controls. A live browser reproduction confirmed it: the previous explorer only played automatic station-arrival animation. The previous chapter/task QA did not verify player walking.
+## Why this changed
+
+Live play exposed a gap in the earlier QA: controls moved the explorer, but only within tiny station rectangles. The oversized avatar and obscuring controls made that technically passing behaviour feel stuck. Task completion tests did not establish meaningful exploration.
 
 ## Player behaviour
 
-- Click the London scene, then hold arrow keys or WASD. Large directional buttons support held mouse and touch input.
-- Find my explorer focuses a closer view. Camera-relative input means right moves towards screen-right even after orbiting.
-- Release, focus outside movement controls, open a dialog, blur the window or hide the page to stop. Story activities and native form controls retain their own keyboard behaviour.
-- Walking is bounded to reviewed clear spaces at each discovery. Numbered story places remain the way to travel between discoveries. At a boundary the explorer idles and an explanatory prompt appears.
-- Reduced motion retains manual translation with a static pose. No automatic camera easing or gait is needed to move.
-- Walking does not award gems, complete tasks or record an assessed response. Existing practice records and lesson sequence are unchanged.
-
-The explorer begins in the centre of each clear area; arrival motion stays inside it. Bounds allow room for the scaled model's feet around plinths, houses, rubble and the river jetty. This is local walking within the existing story scenes, not unrestricted travel through the whole city. Physical gamepad support is not included. Gunpowder Plot and Nile code are unchanged.
+- Select Explore London. Hold the arrow buttons, arrow keys or WASD to walk. Drag the scene to turn the following camera.
+- Both character models are normalized to 1.5 world units, with feet grounded on the street and sloping jetty entrance.
+- Connected streets and the river jetty join all five discoveries. Buildings, tables, the river and map edges remain obstacles; this is a bounded interpreted London map.
+- Approach an object and select Inspect discovery or press E. Clicking a distant discovery or Walk to discovery follows a safe route. Stop walking or manual input takes over without teleporting.
+- Future places can be explored and heard, while assessed activities retain their sequence. Walking alone awards no gems and creates no assessed response.
+- Release controls, leave movement focus, open a dialog, blur the window or hide the page to stop. Reduced motion keeps translation with a static pose and immediate camera positioning.
+- The compact controls retain 44px targets. Discovery names and contextual instructions remain available at narrow screen widths.
 
 ## Verification
 
-38 state and movement tests pass, including five new movement tests for manual takeover, stopping, bounds, diagonal speed, reduced motion, settings resets and disposal. The real GLBs contain Idle, Walk, Run and Celebrate clips. Vite normal and hosted builds pass with the existing bundle-size advisory.
+The 45 state/navigation tests cover measured real GLB height, grounded feet, all 25 guided station pairs, obstacle clearance, ramp height, stopping and manual takeover. Browser QA uses the actual published static folder, not a development-only build. It exercises meaningful manual travel, guided walking and interruption, proximity inspection, locked-place return, wrong/correct learning responses, evidence persistence and narrow touch layouts.
 
-`tests/fire-movement-qa.mjs` verifies real position changes, keyboard release, focus/dialog isolation, held pointer capture, 320px touch end/cancellation, reduced motion and all five stations. It preserves the distinction between exploration and assessed history responses. Its optional completed-station run uses a prior genuinely played fictional Alex record. Supply `FIRE_QA_URL`, `FIRE_MOVEMENT_QA_DIR` and `FIRE_EARNED_STORAGE` for another environment.
+`tests/fire-exploration-qa.mjs` is the connected-exploration regression suite; `tests/fire-movement-qa.mjs` forwards to the stronger connected-exploration suite. Evidence is saved under test-results. Production checks follow GitHub/Vercel publication.
 
-Browser QA uses desktop Chrome and emulated touch, not a physical tablet or child usability study. Headless Chrome did not reproduce native window switching; the blur listener is explicitly tested using a dispatched blur event. Production routing and exact deployed movement are checked after GitHub/Vercel publication and recorded in the project memory.
+Desktop browser and emulated touch testing do not replace physical tablet or child usability sessions. Physical gamepad support is not included. Nile and Gunpowder Plot movement are unchanged.
