@@ -61,7 +61,10 @@ export default function WorldsPage() {
           <header className={styles.intro}>
             <div>
               <p className={styles.eyebrow}>
-                <Compass size={17} aria-hidden="true" /> Schoolgle Worlds{" "}
+                <span className={styles.worldsBrand}>
+                  <Image src="/schoolgle-approved-horizontal-lockup-dark.png" alt="Schoolgle" width={200} height={60} className={styles.schoolgleLogo} />
+                  <span>Worlds</span>
+                </span>
                 <span className={styles.playtest}>Free playtest</span>
               </p>
               <h1 id="worlds-heading">Every world hides a story.</h1>

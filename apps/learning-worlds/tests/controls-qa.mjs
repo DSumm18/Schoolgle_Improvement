@@ -1,7 +1,7 @@
 import {chromium} from 'playwright';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-const DIR='test-results/controls-qa',BASE=process.env.NILE_CONTROLS_URL||'http://127.0.0.1:4173/?game=nile';fs.mkdirSync(DIR,{recursive:true});
+const DIR=process.env.NILE_CONTROLS_QA_DIR||'test-results/controls-qa',BASE=process.env.NILE_CONTROLS_URL||'http://127.0.0.1:4173/?game=nile';fs.mkdirSync(DIR,{recursive:true});
 const browser=await chromium.launch({channel:'chrome',headless:true});let page;
 const checks=[],errors=[];
 async function check(name,fn){try{await fn();checks.push({name,pass:true});console.log('PASS',name);}catch(e){checks.push({name,pass:false,error:e.message});console.log('FAIL',name,e.message);await page.screenshot({path:`${DIR}/failure-${checks.length}.png`}).catch(()=>{});}}

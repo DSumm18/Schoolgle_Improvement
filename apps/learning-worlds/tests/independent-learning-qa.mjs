@@ -1,7 +1,7 @@
 import {chromium} from 'playwright';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-const BASE=process.env.NILE_TEST_URL||'http://127.0.0.1:4173/?game=nile', DIR='test-results/independent-learning';
+const BASE=process.env.NILE_TEST_URL||'http://127.0.0.1:4173/?game=nile', DIR=process.env.NILE_QA_DIR||'test-results/independent-learning';
 fs.mkdirSync(DIR,{recursive:true});
 const browser=await chromium.launch({channel:'chrome',headless:true});
 const featuresOnly=process.env.NILE_QA_FEATURES_ONLY==='1';
@@ -43,7 +43,7 @@ async function newFeatures(){
  await t.locator('#print-record').click();assert.equal(await t.locator('#dialog details:not([open])').count(),0);await t.emulateMedia({media:'print'});await t.pdf({path:`${DIR}/teacher-review.pdf`,format:'A4',printBackground:true});await t.emulateMedia({media:'screen'});pass('Print review opens evidence details and produces a PDF from real browser data');
  await tclose();await t.locator('#settings').click();await t.locator('#education-mode').selectOption('classroom');assert.equal((await ts()).settings.guided,true);await tc('Ready to explore');await t.reload();await t.waitForFunction(()=>typeof window.__nile?.snapshot==='function',null,{timeout:60000});await t.waitForSelector('#loading',{state:'detached',timeout:60000});assert.equal((await ts()).settings.mode,'classroom');assert.equal((await ts()).settings.guided,true);await tstart();await t.locator('#settings').click();await t.locator('#education-mode').selectOption('adventure');assert.equal((await ts()).settings.guided,false);await tc('Ready to explore');pass('Teach together setting enables guided travel, survives reload, and can be changed back');
  await t.locator('#journal').click();await t.locator('#teacher-studio').click();await t.locator('#teacher-plan').click();await t.locator('#teacher-launch').click();assert.equal((await ts()).settings.mode,'classroom');assert.deepEqual((await ts()).completed,[0,1]);assert.equal((await ts()).gems,75);await t.locator('#settings').click();await t.locator('#education-mode').selectOption('adventure');await tc('Ready to explore');pass('Teacher lesson launcher starts guided mode while preserving existing child progress');
- await bonus();await t.locator('[aria-label="Add an offering to tray 1"]').focus();await t.keyboard.press('Enter');assert.match(await t.locator('.bonus-tray strong').first().innerText(),/1$/);assert.ok(await t.evaluate(()=>document.querySelector('dialog').scrollWidth<=document.querySelector('dialog').clientWidth+2));await t.screenshot({path:`${DIR}/tablet-bonus.png`});pass('Bonus keyboard activation, numeric Enter submission and tablet1024layout operate without horizontal overflow');
+ await bonus();await t.locator('[aria-label="Add an offering to tray 1"]').focus();await t.keyboard.press('Enter');assert.match(await t.locator('#pupil-tray-1').innerText(),/Tray 1 · 1 stone$/);assert.ok(await t.evaluate(()=>document.querySelector('dialog').scrollWidth<=document.querySelector('dialog').clientWidth+2));await t.screenshot({path:`${DIR}/tablet-bonus.png`});pass('Bonus keyboard activation, numeric Enter submission and tablet1024layout operate without horizontal overflow');
  }finally{await tablet.close();}
 }
 try{
