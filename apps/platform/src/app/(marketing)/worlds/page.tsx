@@ -81,11 +81,11 @@ export default function WorldsPage() {
             <div className={styles.learningOverview}>
               <h2 id="learning-intro-title">An adventure with learning at its heart.</h2>
               <p>
-                Explore a story, solve a problem and explain your thinking. We built
-                Schoolgle Worlds to give children another way to practise school
-                learning through choices, models and discoveries. Read or listen,
-                try an idea, use the feedback and return to what you have learned.
+                Explore a story, solve a problem and explain your thinking.
+                Schoolgle Worlds offers another way to practise school learning:
+                read or listen, try ideas, use feedback and revisit discoveries.
               </p>
+              <a href="#fire-title" className={styles.learningJump}>Choose a game <ArrowRight size={16} aria-hidden="true" /></a>
             </div>
             <div className={styles.subjectOverview}>
               <p><strong>Egypt:</strong> history, maths, English and science —
@@ -96,7 +96,6 @@ export default function WorldsPage() {
             <div className={styles.learningFooter}>
               <p>Selected activities linked to England’s primary curriculum.
                 Research informs the design; teacher and pupil feedback will help us improve it.</p>
-              <a href="#fire-title" className={styles.learningJump}>Choose a game <ArrowRight size={16} aria-hidden="true" /></a>
             </div>
             <details className={styles.researchDetails}>
               <summary>For grown-ups: why this approach? Curriculum &amp; EEF research</summary>
