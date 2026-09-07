@@ -6,6 +6,9 @@ export type EditorialArticle = {
   sourceUrl: string;
   body: string;
   reviewed: string;
+  format?: "briefing";
+  summary?: string[];
+  sources?: { title: string; url: string; published: string }[];
 };
 export function getEditorial(slug: string): EditorialArticle | undefined {
   return Object.hasOwn(editorial, slug)
