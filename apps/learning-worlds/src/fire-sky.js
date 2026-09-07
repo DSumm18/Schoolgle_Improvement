@@ -50,5 +50,5 @@ export function createFireSky(scene){
  // drawn before landmark labels and never covers the activity controls.
  const veilMaterial=material.clone();veilMaterial.uniforms={...uniforms,veil:{value:1}};veilMaterial.transparent=true;
  const veilMesh=new THREE.Mesh(mesh.geometry,veilMaterial);veilMesh.name='Distant atmospheric haze';veilMesh.frustumCulled=false;veilMesh.renderOrder=2;scene.add(veilMesh);
- return {texture,update(t,aspect){uniforms.time.value=t;uniforms.aspect.value=aspect;},setChapter(index,fog){uniforms.chapter.value=index;const c=new THREE.Color(fog).getRGB({},THREE.SRGBColorSpace);uniforms.horizon.value.set(c.r,c.g,c.b);}};
+ return {texture,setCloseView(close){veilMesh.visible=!close;},update(t,aspect){uniforms.time.value=t;uniforms.aspect.value=aspect;},setChapter(index,fog){uniforms.chapter.value=index;const c=new THREE.Color(fog).getRGB({},THREE.SRGBColorSpace);uniforms.horizon.value.set(c.r,c.g,c.b);}};
 }
