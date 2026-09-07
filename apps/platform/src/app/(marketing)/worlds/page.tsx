@@ -77,6 +77,58 @@ export default function WorldsPage() {
             </p>
           </header>
 
+          <section className={styles.learningIntro} aria-labelledby="learning-intro-title">
+            <div className={styles.learningOverview}>
+              <h2 id="learning-intro-title">An adventure with learning at its heart.</h2>
+              <p>
+                Explore a story, solve a problem and explain your thinking. We built
+                Schoolgle Worlds to give children another way to practise school
+                learning through choices, models and discoveries. Read or listen,
+                try an idea, use the feedback and return to what you have learned.
+              </p>
+            </div>
+            <div className={styles.subjectOverview}>
+              <p><strong>Egypt:</strong> history, maths, English and science —
+                share a harvest equally, explain a calculation and explore shadows.</p>
+              <p><strong>The London stories:</strong> history and English —
+                read clues, compare evidence and explain what happened and why.</p>
+            </div>
+            <div className={styles.learningFooter}>
+              <p>Selected activities linked to England’s primary curriculum.
+                Research informs the design; teacher and pupil feedback will help us improve it.</p>
+              <a href="#fire-title" className={styles.learningJump}>Choose a game <ArrowRight size={16} aria-hidden="true" /></a>
+            </div>
+            <details className={styles.researchDetails}>
+              <summary>For grown-ups: why this approach? Curriculum &amp; EEF research</summary>
+              <div className={styles.researchBody}>
+                <p><strong>Practice with a purpose.</strong> The Education Endowment
+                  Foundation (EEF) highlights how technology can support better
+                  practice and assessment when it serves a clear teaching purpose.
+                  Our activities ask children to make choices, use feedback and
+                  revisit ideas. <a href="https://educationendowmentfoundation.org.uk/education-evidence/guidance-reports/digital">Read the EEF digital technology guidance</a>.</p>
+                <p><strong>Think about how you learn.</strong> EEF evidence supports
+                  explicitly teaching children to plan, check and evaluate their
+                  learning within a subject. In the Fire investigation, children
+                  predict, test a change, explain the result and try a new layout.
+                  A grown-up can help by asking “Why did you choose that?” and
+                  “What would you change?” <a href="https://educationendowmentfoundation.org.uk/education-evidence/teaching-learning-toolkit/metacognition-and-self-regulation">Read the EEF metacognition evidence</a>.</p>
+                <p><strong>Connected to classroom learning.</strong> The in-game
+                  teacher guides map selected tasks to <a href="https://www.gov.uk/government/collections/national-curriculum">England’s primary national curriculum</a>,
+                  describe what responses can show and suggest follow-up activities.
+                  Each world covers different subjects; together they offer practice,
+                  not a complete curriculum scheme.</p>
+                <p><strong>Another way to take part.</strong> Stories, text,
+                  optional read-aloud and interactive models offer different ways
+                  to engage with the same ideas. Children can use the available
+                  support without being assigned a fixed “learning style”.</p>
+                <p className={styles.researchCaveat}>EEF has not evaluated or endorsed
+                  Schoolgle Worlds. These principles inform our design; we have not
+                  yet demonstrated improved learning outcomes from these games.</p>
+                <a href="#teachers-heading">See what teachers and families can review <ArrowRight size={14} aria-hidden="true" /></a>
+              </div>
+            </details>
+          </section>
+
           <article className={styles.feature} aria-labelledby="fire-title">
             <div className={styles.featureArt}>
               <Image

@@ -70,6 +70,39 @@
   background: #122637;
   box-shadow: 0 20px 60px #030a1280;
 }
+.learningIntro {
+  margin: 0 0 28px;
+  padding: 23px 26px 0;
+  border: 1px solid #b8995c40;
+  border-radius: 16px;
+  background: #142b3bb3;
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 16px 30px;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.learningIntro h2 { margin: 0 0 8px; font-size: 21px; line-height: 1.3; }
+.learningIntro p { margin: 0; color: #c5d2dc; }
+.learningIntro strong { color: var(--worlds-ink); }
+.subjectOverview { display: grid; gap: 10px; }
+.learningFooter { grid-column: 1 / -1; display: flex; align-items: center; gap: 22px; justify-content: space-between; }
+.learningFooter p { font-size: 12px; max-width: 750px; }
+.learningJump { display: inline-flex; gap: 8px; align-items: center; min-height: 44px; color: var(--worlds-gold); white-space: nowrap; font-weight: 650; }
+.researchDetails { grid-column: 1 / -1; border-top: 1px solid #b8995c40; }
+.researchDetails summary { cursor: pointer; padding: 14px 0; color: var(--worlds-gold); min-height: 48px; font-weight: 600; }
+.researchBody { padding: 0 0 22px; display: grid; gap: 15px; max-width: 960px; }
+.researchBody a { color: var(--worlds-gold); text-decoration: underline; text-underline-offset: 3px; }
+.researchBody a svg { display: inline; }
+.researchCaveat { border-left: 3px solid var(--worlds-gold); padding-left: 14px; }
+.learningIntro a:focus-visible, .researchDetails summary:focus-visible { outline: 3px solid var(--worlds-gold); outline-offset: 4px; border-radius: 3px; }
+.feature h2 { scroll-margin-top: 95px; }
+@media (max-width: 700px) {
+  .learningIntro { grid-template-columns: 1fr; padding: 20px 18px 0; gap: 16px; }
+  .learningIntro h2 { font-size: 20px; }
+  .learningFooter { flex-direction: column; gap: 5px; align-items: flex-start; }
+  .researchDetails summary { font-size: 13px; }
+}
 .featureArt {
   position: relative;
   min-width: 0;
