@@ -1,12 +1,23 @@
 import {chromium} from 'playwright';import assert from 'node:assert/strict';import fs from 'node:fs';
-const target=process.env.WORLDS_BASE_URL||process.env.WORLDS_HOSTING_URL;if(!target)throw Error('Set WORLDS_BASE_URL to the integration server URL.');const origin=new URL(target).origin;
+const target=process.env.WORLDS_BASE_URL||process.env.WORLDS_HOSTING_URL;if(!target)throw Error('Set WORLDS_BASE_URL to the integration server URL.');let origin=new URL(target).origin;
 const dir=process.env.WORLDS_HOSTING_QA_DIR||'test-results/hosting';fs.mkdirSync(dir,{recursive:true});
 const browser=await chromium.launch({channel:'chrome',headless:true});const report={at:new Date().toISOString(),origin,checks:[],errors:[],failedResponses:[],consoleErrors:[],network:[]};
 const pass=t=>{report.checks.push(t);console.log('PASS',t);};
+if(process.argv.includes('--visibility-only')){
+ try{
+  for(const completed of [false,true]){
+   const c=await browser.newContext({viewport:{width:320,height:740},reducedMotion:'reduce'});
+   await c.addInitScript(done=>localStorage.setItem('schoolgle-midnight-letter-v1-demo-alex',JSON.stringify({version:1,started:true,completed:done?[0,1,2,3,4]:[0],attempts:[],settings:{costumeReady:true,character:'explorer'}})),completed);
+   const p=await c.newPage();await p.goto(origin+'/worlds/play/index.html?game=plot&demo=1');await p.waitForFunction(()=>window.__plot);assert.equal(await p.locator('#plot-exhibition').isVisible(),completed);if(completed){await p.locator('#plot-exhibition').click();assert.equal(await p.locator('#plot-exhibition-host').isVisible(),true);}await p.screenshot({path:dir+'/plot-discovery-'+(completed?'complete':'incomplete')+'.png'});pass('Explicit visibility fixture: Plot discovery button '+(completed?'visible and opens after5chapters':'hidden after1chapter'));await c.close();
+  }
+  const c=await browser.newContext({viewport:{width:320,height:740},reducedMotion:'reduce'});const p=await c.newPage();await p.goto(origin+'/worlds');await p.getByRole('button',{name:'Essential Only',exact:true}).click();await p.getByRole('button',{name:'Essential Only',exact:true}).waitFor({state:'hidden'});await p.locator('a[href*="/worlds/play/index.html?game=fire"]').first().click();await p.waitForFunction(()=>window.__fire);assert.equal(new URL(p.url()).searchParams.get('demo'),'1');pass('320px cookie banner dismisses with Essential Only; real Fire launch link opens demo');await c.close();report.ok=true;
+ }catch(e){report.ok=false;report.failure=e.stack;console.error(e);process.exitCode=1;}finally{fs.writeFileSync(dir+'/visibility-report.json',JSON.stringify(report,null,2));await browser.close();}
+ process.exit(process.exitCode||0);
+}
 try{
- const c=await browser.newContext({viewport:{width:1440,height:1000},reducedMotion:'reduce'});const p=await c.newPage();const response=await p.goto(origin+'/worlds');assert.equal(response.status(),200);assert.ok(new URL(p.url()).pathname.startsWith('/worlds'));await p.getByRole('heading',{level:1}).waitFor();
+ const c=await browser.newContext({viewport:{width:1440,height:1000},reducedMotion:'reduce'});const p=await c.newPage();const response=await p.goto(origin+'/worlds');assert.equal(response.status(),200);assert.ok(new URL(p.url()).pathname.startsWith('/worlds'));await p.getByRole('heading',{level:1}).waitFor();origin=new URL(p.url()).origin;report.effectiveOrigin=origin;
  for(const game of ['nile','plot','fire'])assert.ok(await p.locator(`a[href*="/worlds/play/index.html?game=${game}"]`).count()>0,`Landing link for ${game}`);
- await p.screenshot({path:`${dir}/landing-desktop.png`});await p.setViewportSize({width:320,height:740});await p.screenshot({path:dir+'/landing320-before-check.png'});report.landingOverflow=await p.evaluate(()=>({width:innerWidth,scrollWidth:document.documentElement.scrollWidth,items:[...document.querySelectorAll('body *')].map(e=>({tag:e.tagName,cls:e.className,x:e.getBoundingClientRect().x,right:e.getBoundingClientRect().right})).filter(e=>e.right>innerWidth+2).slice(0,20)}));assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2));await p.screenshot({path:`${dir}/landing320.png`});pass('Public landing loads without a login redirect and links all three nested games;320px layout fits');await c.close();
+ await p.screenshot({path:`${dir}/landing-desktop.png`});await p.setViewportSize({width:320,height:740});await p.waitForFunction(()=>document.documentElement.scrollWidth<=innerWidth+2,null,{timeout:5000});await p.screenshot({path:dir+'/landing320-before-check.png'});report.landingOverflow=await p.evaluate(()=>({width:innerWidth,scrollWidth:document.documentElement.scrollWidth,items:[...document.querySelectorAll('body *')].map(e=>({tag:e.tagName,cls:e.className,x:e.getBoundingClientRect().x,right:e.getBoundingClientRect().right})).filter(e=>e.right>innerWidth+2).slice(0,20)}));assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2));await p.screenshot({path:`${dir}/landing320.png`});pass('Public landing loads without a login redirect and links all three nested games;320px layout fits');await c.close();
  for(const game of ['nile','plot','fire']){
   const context=await browser.newContext({viewport:{width:1024,height:768},hasTouch:true,reducedMotion:'reduce',acceptDownloads:true});const page=await context.newPage();page.setDefaultTimeout(25000);
   const key={nile:'schoolgle-nile-v1',plot:'schoolgle-midnight-letter-v1',fire:'schoolgle-great-fire-v1'}[game];const sentinel=JSON.stringify({version:1,completed:[],attempts:[],started:false,settings:{character:'explorer-girl'},qa:'untouched normal save'});
@@ -30,5 +41,3 @@ try{
  }
  assert.deepEqual(report.errors,[]);assert.deepEqual(report.failedResponses,[]);assert.deepEqual(report.consoleErrors,[]);report.ok=true;
 }catch(e){report.ok=false;report.failure=e.stack;console.error(e);process.exitCode=1;}finally{fs.writeFileSync(`${dir}/worlds-hosting-report.json`,JSON.stringify(report,null,2));await browser.close();}
-
-

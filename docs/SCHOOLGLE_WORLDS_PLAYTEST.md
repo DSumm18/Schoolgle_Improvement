@@ -60,3 +60,18 @@ Full-game and educational design evidence remains in `apps/learning-worlds/`.
 The playtest is selected England curriculum coverage, not a complete teaching
 scheme or an EEF-endorsed product. Physical devices, specialist assistive
 technology, child usability and learning outcomes still require supervised review.
+
+### Release verification, 7 September 2026
+
+The integrated local website passed all ten hosting checks, with no game browser
+exceptions, console errors, missing assets, platform API calls or external requests.
+The 33 game unit tests and hosted build passed. Landing/navigation passed lint,
+TSX syntax, keyboard, light/dark and resting layouts at 320–1440px. Tablet navigation
+now uses the compact menu below 1280px to avoid crowding.
+
+Visual QA also exposed a Plot button whose CSS overrode its `hidden` attribute.
+A scoped rule now keeps “My discoveries” hidden until all five chapters are done.
+Three additional checks confirmed incomplete/complete visibility and exhibition
+opening, and that the mobile cookie notice can be dismissed before launching Fire.
+Two hosting-harness assumptions were corrected: measure after responsive layout
+settles, and include the visible arrow when matching the Nile reward button.

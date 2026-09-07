@@ -2,3 +2,4 @@
 /* Keep navigation available while the reading panel scrolls. */
 .plot-header{position:sticky;top:0;z-index:20;background:#10232f}.plot-scene{top:84px}#plot-task{scroll-margin-top:106px}@media(max-width:760px){.plot-scene{top:auto}#plot-task{scroll-margin-top:110px}}@media(max-width:380px){#plot-task{scroll-margin-top:150px}}
 .plot-people-strip svg{display:block;height:93px;max-width:100%;margin:auto}.plot-people-strip b{margin-bottom:5px}.plot-search-object .object-shape{display:block;width:100%;height:112px;text-shadow:none}.plot-search-object .object-shape svg{height:100%;width:100%;display:block}.plot-search-object.door .object-shape{border:0;border-radius:0;padding:0}@media(max-width:380px){.plot-people-strip svg{height:75px}.plot-search-object .object-shape{height:85px}}
+.plot-investigation button#plot-exhibition[hidden]{display:none!important}
