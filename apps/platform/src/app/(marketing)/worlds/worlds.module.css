@@ -1,0 +1,474 @@
+.adventures {
+  --worlds-ink: #f9eedb;
+  --worlds-muted: #b7c5cf;
+  --worlds-gold: #f0be6d;
+  color: var(--worlds-ink);
+  background:
+    radial-gradient(ellipse at 84% 0%, #243a4b 0%, transparent 40%), #0c1b29;
+  padding: 38px 28px 35px;
+  scroll-margin-top: 80px;
+}
+.container {
+  max-width: 1320px;
+  margin: auto;
+  min-width: 0;
+}
+.intro {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 30px;
+  padding: 0 0 30px;
+}
+.eyebrow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 12px;
+  letter-spacing: 0.9px;
+  font-weight: 650;
+  color: #e3d4b7;
+  margin: 0 0 15px;
+}
+.playtest {
+  font-size: 10px;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+  border: 1px solid #d6b37766;
+  border-radius: 30px;
+  padding: 5px 9px;
+  color: var(--worlds-gold);
+}
+.intro h1 {
+  font-size: clamp(27px, 3.1vw, 42px);
+  line-height: 1.16;
+  letter-spacing: -1.25px;
+  font-weight: 750;
+  margin: 0;
+}
+.introText {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--worlds-muted);
+  margin: 11px 0 0;
+}
+.introNote {
+  font-size: 12px;
+  line-height: 1.8;
+  text-align: right;
+  color: var(--worlds-muted);
+  margin: 0;
+  flex-shrink: 0;
+}
+.feature {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  border: 1px solid #b8995c54;
+  border-radius: 20px;
+  overflow: hidden;
+  background: #122637;
+  box-shadow: 0 20px 60px #030a1280;
+}
+.featureArt {
+  position: relative;
+  min-width: 0;
+  min-height: 505px;
+  background: #213846;
+  overflow: hidden;
+}
+.art {
+  object-fit: cover;
+  object-position: center;
+}
+.artLabel {
+  position: absolute;
+  bottom: 13px;
+  left: 16px;
+  color: #fbefda;
+  background: #091421c9;
+  border: 1px solid #e7d7b32a;
+  border-radius: 4px;
+  padding: 5px 8px;
+  font-size: 9px;
+  letter-spacing: 0.35px;
+  z-index: 1;
+}
+.featureCopy {
+  padding: 35px 34px 27px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  background: linear-gradient(135deg, #1c3346, #102331 85%);
+}
+.chapter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 1.7px;
+  text-transform: uppercase;
+  color: #cbd5d7;
+  margin: 0 0 18px;
+}
+.chapter span {
+  color: var(--worlds-gold);
+}
+.featureCopy h2 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 500;
+  font-size: clamp(38px, 3.65vw, 55px);
+  line-height: 1.04;
+  letter-spacing: -1.4px;
+  color: #fff1d7;
+  margin: 0;
+}
+.featureTagline {
+  color: #efc78b;
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 1.5;
+  margin: 18px 0 0;
+}
+.featureStory {
+  font-size: 13px;
+  line-height: 1.85;
+  color: #d0d8dc;
+  margin: 14px 0 0;
+}
+.featureMeta {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+  margin: 19px 0 22px;
+}
+.featureMeta span {
+  border: 1px solid #afc4ce38;
+  padding: 5px 9px;
+  border-radius: 5px;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  color: #c8d5dc;
+}
+.playButton,
+.cardPlay {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  text-decoration: none;
+  min-height: 50px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 750;
+  padding: 14px 17px;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+.playButton {
+  background: #f0bc6b;
+  color: #1b2830;
+  box-shadow: 0 4px 0 #b57c32;
+}
+.playButton:hover {
+  background: #ffcf86;
+}
+.playButton svg,
+.cardPlay svg {
+  flex-shrink: 0;
+}
+.playButton:focus-visible,
+.cardPlay:focus-visible {
+  outline: 3px solid #fff3d8;
+  outline-offset: 5px;
+}
+.age {
+  font-size: 10px;
+  line-height: 1.6;
+  color: #b7c5cd;
+  margin: 15px 0 0;
+}
+.moreHeading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 20px;
+  margin: 44px 0 21px;
+}
+.moreHeading h2 {
+  font-size: 22px;
+  line-height: 1.25;
+  letter-spacing: -0.5px;
+  font-weight: 650;
+  margin: 0;
+}
+.moreHeading span {
+  font-size: 11px;
+  color: var(--worlds-muted);
+}
+.otherWorlds {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 25px;
+}
+.worldCard {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #9bb3bc30;
+  border-radius: 17px;
+  overflow: hidden;
+  background: #142838;
+  min-width: 0;
+}
+.cardArt {
+  position: relative;
+  aspect-ratio: 16/9;
+  background: #243d47;
+  overflow: hidden;
+}
+.cardCopy {
+  padding: 26px 28px 24px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.cardCopy .chapter {
+  margin-bottom: 12px;
+  letter-spacing: 1.25px;
+}
+.cardCopy h3 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 500;
+  font-size: 34px;
+  line-height: 1.15;
+  letter-spacing: -0.5px;
+  color: #fff1d7;
+  margin: 0;
+}
+.cardTagline {
+  font-size: 15px;
+  color: #e2c58f;
+  line-height: 1.6;
+  margin: 12px 0 0;
+}
+.cardStory {
+  font-size: 13px;
+  line-height: 1.8;
+  color: #c3d0d7;
+  margin: 12px 0 0;
+}
+.cardDetail {
+  font-size: 10px;
+  color: #b7c6d0;
+  line-height: 1.8;
+  margin: 19px 0 15px;
+  padding-top: 15px;
+  border-top: 1px solid #9bb3bc24;
+}
+.cardPlay {
+  background: #263f50;
+  border: 1px solid #c7ac724f;
+  color: #ffe0aa;
+  margin-top: auto;
+}
+.cardPlay:hover {
+  background: #365367;
+}
+.practiceNote {
+  display: flex;
+  gap: 13px;
+  align-items: flex-start;
+  color: #c5d3dc;
+  max-width: 850px;
+  margin: 27px auto 0;
+}
+.practiceNote svg {
+  flex-shrink: 0;
+  color: #d7bc89;
+  margin-top: 3px;
+}
+.practiceNote p {
+  font-size: 12px;
+  line-height: 1.85;
+  margin: 0;
+}
+.practiceNote strong {
+  color: #f1e5cf;
+  font-weight: 650;
+}
+.artNote {
+  font-size: 10px;
+  line-height: 1.7;
+  color: #93a8b7;
+  max-width: 900px;
+  margin: 13px auto 0;
+  text-align: center;
+}
+@media (min-width: 1500px) {
+  .featureArt {
+    min-height: 510px;
+  }
+}
+@media (max-width: 1100px) {
+  .featureCopy {
+    padding: 27px 25px;
+  }
+  .featureArt {
+    min-height: 475px;
+  }
+  .featureCopy h2 {
+    font-size: 41px;
+  }
+  .featureTagline {
+    font-size: 15px;
+  }
+  .featureStory {
+    font-size: 12px;
+  }
+  .titleBreak {
+    display: none;
+  }
+  .introNote {
+    display: none;
+  }
+}
+@media (max-width: 800px) {
+  .adventures {
+    padding: 28px 22px;
+  }
+  .intro {
+    padding-bottom: 24px;
+  }
+  .feature {
+    grid-template-columns: 1fr;
+  }
+  .featureArt {
+    min-height: 0;
+    aspect-ratio: 16/9;
+  }
+  .featureCopy {
+    padding: 28px;
+  }
+  .featureCopy h2 {
+    font-size: 43px;
+  }
+  .featureTagline {
+    font-size: 17px;
+  }
+  .featureStory {
+    font-size: 14px;
+  }
+  .featureMeta {
+    margin: 18px 0 21px;
+  }
+  .playButton {
+    align-self: flex-start;
+    min-width: 285px;
+  }
+  .featureCopy .age {
+    margin-top: 14px;
+  }
+  .moreHeading {
+    margin-top: 33px;
+  }
+  .moreHeading span {
+    display: none;
+  }
+  .cardCopy {
+    padding: 22px;
+  }
+  .cardCopy h3 {
+    font-size: 29px;
+  }
+}
+@media (max-width: 700px) {
+  .otherWorlds {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+  .cardCopy h3 {
+    font-size: 34px;
+  }
+  .cardArt {
+    aspect-ratio: 16/9;
+  }
+}
+@media (max-width: 420px) {
+  .adventures {
+    padding: 23px 14px 28px;
+  }
+  .intro h1 {
+    font-size: 30px;
+    letter-spacing: -0.8px;
+  }
+  .introText {
+    font-size: 13px;
+  }
+  .eyebrow {
+    font-size: 11px;
+  }
+  .feature {
+    border-radius: 13px;
+  }
+  .featureCopy {
+    padding: 23px 20px;
+  }
+  .featureCopy h2 {
+    font-size: 37px;
+    letter-spacing: -1px;
+  }
+  .chapter {
+    font-size: 9px;
+    letter-spacing: 1px;
+    gap: 7px 12px;
+  }
+  .featureTagline {
+    font-size: 15px;
+  }
+  .featureStory {
+    font-size: 13px;
+  }
+  .playButton {
+    min-width: 0;
+    width: 100%;
+    font-size: 12px;
+    padding: 14px 13px;
+  }
+  .artLabel {
+    left: 10px;
+    bottom: 9px;
+    font-size: 8px;
+  }
+  .moreHeading h2 {
+    font-size: 20px;
+  }
+  .cardCopy {
+    padding: 23px 20px;
+  }
+  .cardCopy h3 {
+    font-size: 31px;
+  }
+  .cardPlay {
+    font-size: 12px;
+  }
+  .practiceNote {
+    gap: 10px;
+  }
+  .practiceNote p {
+    font-size: 11px;
+  }
+  .artNote {
+    text-align: left;
+    font-size: 9px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .playButton,
+  .cardPlay {
+    transition: none;
+  }
+}

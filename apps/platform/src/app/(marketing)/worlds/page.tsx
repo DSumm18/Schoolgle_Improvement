@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -9,238 +10,178 @@ import {
   NotebookPen,
   Volume2,
 } from "lucide-react";
+import styles from "./worlds.module.css";
 
 export const metadata: Metadata = {
-  title: "Schoolgle Worlds | Free educational games · Playtest",
+  title: "Schoolgle Worlds | Choose your adventure · Free playtest",
   description:
-    "Explore Ancient Egypt, investigate the Gunpowder Plot and discover the Great Fire of London. Try Schoolgle Worlds free, with local fictional practice and no account.",
+    "Uncover the Great Fire of London, explore Ancient Egypt and investigate the Gunpowder Plot. Free educational adventures for children, with no account needed.",
 };
 
-const worlds = [
+const otherWorlds = [
   {
     id: "nile",
-    name: "Nile Quest",
-    era: "Ancient Egypt",
-    number: "01",
-    subjects: "History · Maths · English · Science",
-    description:
-      "Follow the river, explore a pyramid landscape and investigate a careful discovery. Build an exhibition from what you learn.",
-    task: "Share 24 baskets equally between three boats, explain your method, then investigate how a shadow changes.",
-    detail: "Seven missions, plus optional maths practice",
-    color: "#d8aa53",
-    sky: "#172e43",
+    title: "Ancient Egypt",
+    subtitle: "Nile Quest",
+    era: "A journey along the Nile",
+    image: "/worlds/art/nile-key-art.webp",
+    alt: "Illustrated Ancient Egyptian adventure beside the Nile and pyramids.",
+    tagline: "Follow the river. Discover its secrets.",
+    story:
+      "Bring water to a garden, share a harvest between boats and explore light and shadows. Follow the evidence to a careful archaeological discovery.",
+    detail: "Seven missions · History, maths, English and science",
+    age: "Start here: ages 7–11",
+    play: "Play Nile Quest",
   },
   {
     id: "plot",
-    name: "The Midnight Letter",
-    era: "London, 1605",
-    number: "02",
-    subjects: "History · Reading and evidence",
-    description:
-      "Put on an outfit inspired by 1605, open a sealed warning and piece together the story of the Gunpowder Plot.",
-    task: "Find the warning in an adapted letter. Decide what the evidence tells you — and what it cannot tell you about its writer.",
-    detail: "Five discoveries and return recall practice",
-    color: "#b8b0e2",
-    sky: "#191f37",
-  },
-  {
-    id: "fire",
-    name: "The Great Fire of London",
-    era: "London, 1666",
-    number: "03",
-    subjects: "History · Enquiry and explanation",
-    description:
-      "Explore a city of timber, compare historical sources and help tell the story of Londoners and their rebuilding city.",
-    task: "Predict what a gap might change in a paper street. Test your plan, explain the result, then try a different layout.",
-    detail: "Five discoveries and a personal exhibition",
-    color: "#d7bd86",
-    sky: "#183a43",
+    title: "The Gunpowder Plot",
+    subtitle: "The Midnight Letter",
+    era: "London · 1605",
+    image: "/worlds/art/plot-key-art.webp",
+    alt: "Illustrated mystery adventure in London at the time of the Gunpowder Plot.",
+    tagline: "A sealed warning. An unfolding mystery.",
+    story:
+      "Dress for 1605, open the warning letter and investigate the clues. Discover who played each part, and what the evidence can — and cannot — tell us.",
+    detail: "Five discoveries · History, reading and evidence",
+    age: "Start here: ages 6–9, with grown-up help",
+    play: "Play The Midnight Letter",
   },
 ];
-
-function WorldScene({
-  id,
-  color,
-  sky,
-}: {
-  id: string;
-  color: string;
-  sky: string;
-}) {
-  return (
-    <svg
-      viewBox="0 0 480 225"
-      className="w-full"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <rect width="480" height="225" fill={sky} />
-      <circle cx="389" cy="49" r="25" fill={color} opacity=".85" />
-      <path
-        d="M0 185Q140 153 270 187T480 178V225H0Z"
-        fill={color}
-        opacity=".12"
-      />
-      {id === "nile" ? (
-        <>
-          <path d="M60 185 171 56 282 185Z" fill="#bd924e" />
-          <path d="m171 56 111 129h-85Z" fill="#795e36" />
-          <path d="m252 186 72-85 80 85Z" fill="#aa8347" />
-          <path d="m324 101 80 85h-61Z" fill="#6f5835" />
-          <path d="M0 209Q143 175 263 207T480 203V225H0Z" fill="#599899" />
-          <path
-            d="M29 181v-67m0 11q-17-25-29-9m29 9q16-28 35-13m-35 13q-3-29 9-35"
-            stroke="#729987"
-            strokeWidth="6"
-            fill="none"
-          />
-        </>
-      ) : (
-        <>
-          {[22, 94, 166, 302, 374].map((x, i) => (
-            <g key={x}>
-              <path
-                d={`M${x} 190v-70l27-28 27 28v70Z`}
-                fill={i % 2 ? "#9c8968" : "#b6a27c"}
-              />
-              <path
-                d={`m${x - 5} 124 32-36 32 36M${x + 27} 119v71M${x} 153h54m-54-30 54 67m0-67-54 67`}
-                stroke="#4a443b"
-                strokeWidth="5"
-                fill="none"
-              />
-              <rect x={x + 9} y="132" width="9" height="13" fill={color} />
-              <rect x={x + 37} y="161" width="9" height="14" fill={color} />
-            </g>
-          ))}
-          <path d="M231 190V84h8V56h11V34h7v22h11v28h8v106Z" fill="#8c958e" />
-          <path d="M230 92h47m-41 10h35" stroke={sky} strokeWidth="5" />
-          <path d="M0 204Q165 179 280 207T480 202V225H0Z" fill="#447a83" />
-          {id === "plot" && (
-            <g transform="translate(320 38) rotate(-12)">
-              <rect width="46" height="31" rx="2" fill="#e7d5ae" />
-              <path d="m0 0 23 20L46 0" stroke="#a3916d" fill="none" />
-              <circle cx="23" cy="20" r="6" fill="#a3584d" />
-            </g>
-          )}
-        </>
-      )}
-      <path
-        d="M19 38h3m75-14h3m109 14h3m68-14h3"
-        stroke="#f9ebc8"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
 
 export default function WorldsPage() {
   return (
     <main className="text-foreground">
-      <section className="border-b border-border bg-muted/30 px-6 py-16 md:py-24">
-        <div className="mx-auto max-w-7xl">
-          <div className="mb-7 inline-flex items-center gap-3 rounded-full border border-border bg-background px-4 py-2 text-xs font-bold tracking-wide">
-            <Compass size={16} aria-hidden="true" /> Schoolgle Worlds
-            <span className="rounded-full bg-primary/10 px-2 py-1 text-primary">
-              Playtest
-            </span>
-          </div>
-          <div className="grid gap-8 lg:grid-cols-[1.35fr_1fr] lg:items-end">
-            <div>
-              <h1 className="max-w-3xl text-4xl font-black tracking-tight sm:text-5xl lg:text-6xl">
-                Free educational games for children.
-              </h1>
-              <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground">
-                Step into history. Make a prediction. Follow the evidence. Try
-                three interactive adventures built for curious primary school
-                children.
-              </p>
-            </div>
-            <div className="lg:pl-8">
-              <a
-                href="#choose-world"
-                className="inline-flex min-h-12 items-center gap-3 rounded-full bg-primary px-7 py-4 font-bold text-primary-foreground shadow-lg shadow-primary/15 transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-4"
-              >
-                Choose your adventure{" "}
-                <ArrowRight size={19} aria-hidden="true" />
-              </a>
-              <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-                Free public prototype. No account needed.
-                <br />
-                Play together first, then tell us what could be clearer.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
       <section
+        className={styles.adventures}
         id="choose-world"
         aria-labelledby="worlds-heading"
-        className="scroll-mt-24 px-6 py-16"
       >
-        <div className="mx-auto max-w-7xl">
-          <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+        <div className={styles.container}>
+          <header className={styles.intro}>
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-primary">
-                Pick a place. Start a story.
+              <p className={styles.eyebrow}>
+                <Compass size={17} aria-hidden="true" /> Schoolgle Worlds{" "}
+                <span className={styles.playtest}>Free playtest</span>
               </p>
-              <h2
-                id="worlds-heading"
-                className="mt-3 text-3xl font-bold tracking-tight"
-              >
-                Three worlds to investigate
-              </h2>
+              <h1 id="worlds-heading">Every world hides a story.</h1>
+              <p className={styles.introText}>
+                Free educational games for children. Choose your adventure and
+                uncover it.
+              </p>
             </div>
-            <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
-              Each link starts local practice as Alex, a fictional learner. Your
-              own game choices create the practice record.
+            <p className={styles.introNote}>
+              No account needed.
+              <br />
+              Curiosity is a good place to start.
             </p>
+          </header>
+
+          <article className={styles.feature} aria-labelledby="fire-title">
+            <div className={styles.featureArt}>
+              <Image
+                src="/worlds/art/fire-key-art.webp"
+                alt="Illustrated Great Fire of London adventure: the city beside the Thames in 1666."
+                fill
+                priority
+                sizes="(max-width: 800px) 100vw, (max-width: 1440px) 60vw, 770px"
+                className={styles.art}
+              />
+              <span className={styles.artLabel}>
+                Illustrated adventure artwork
+              </span>
+            </div>
+            <div className={styles.featureCopy}>
+              <p className={styles.chapter}>
+                <span>Featured adventure</span> London · 1666
+              </p>
+              <h2 id="fire-title">
+                The Great Fire
+                <br className={styles.titleBreak} /> of London
+              </h2>
+              <p className={styles.featureTagline}>
+                A city in flames. A story to uncover.
+              </p>
+              <p className={styles.featureStory}>
+                Follow clues from Pudding Lane, explore witness accounts and
+                test your own paper-street model. Piece together the story of
+                Londoners and build an exhibition about their rebuilding city.
+              </p>
+              <div className={styles.featureMeta}>
+                <span>5 discoveries</span>
+                <span>History &amp; enquiry</span>
+              </div>
+              <a
+                href="/worlds/play/index.html?game=fire&demo=1"
+                className={styles.playButton}
+                aria-label="Play The Great Fire of London"
+              >
+                Begin the London adventure{" "}
+                <ArrowRight size={20} aria-hidden="true" />
+              </a>
+              <p className={styles.age}>
+                Start here: ages 6–9, with grown-up help
+              </p>
+            </div>
+          </article>
+
+          <div className={styles.moreHeading}>
+            <h2>Where will you go next?</h2>
+            <span>Two more stories waiting to be discovered</span>
           </div>
-          <div className="grid gap-6 lg:grid-cols-3">
-            {worlds.map((world) => (
+          <div className={styles.otherWorlds}>
+            {otherWorlds.map((world) => (
               <article
                 key={world.id}
-                className="flex min-w-0 flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-sm"
+                className={styles.worldCard}
+                aria-labelledby={`${world.id}-title`}
               >
-                <WorldScene id={world.id} color={world.color} sky={world.sky} />
-                <div className="flex flex-1 flex-col p-6">
-                  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                    {world.number} / {world.era}
+                <div className={styles.cardArt}>
+                  <Image
+                    src={world.image}
+                    alt={world.alt}
+                    fill
+                    sizes="(max-width: 700px) 100vw, (max-width: 1440px) 50vw, 636px"
+                    className={styles.art}
+                  />
+                  <span className={styles.artLabel}>
+                    Illustrated adventure artwork
+                  </span>
+                </div>
+                <div className={styles.cardCopy}>
+                  <p className={styles.chapter}>
+                    {world.era} <span>{world.subtitle}</span>
                   </p>
-                  <h3 className="mt-3 text-2xl font-bold tracking-tight">
-                    {world.name}
-                  </h3>
-                  <p className="mt-2 text-xs font-semibold text-primary">
-                    {world.subjects}
-                  </p>
-                  <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-                    {world.description}
-                  </p>
-                  <div className="my-5 rounded-2xl bg-muted/60 p-4">
-                    <p className="text-xs font-bold">One thing you will do</p>
-                    <p className="mt-2 text-sm leading-relaxed">{world.task}</p>
-                  </div>
-                  <p className="mb-4 mt-auto text-xs text-muted-foreground">
-                    {world.detail}
-                  </p>
+                  <h3 id={`${world.id}-title`}>{world.title}</h3>
+                  <p className={styles.cardTagline}>{world.tagline}</p>
+                  <p className={styles.cardStory}>{world.story}</p>
+                  <p className={styles.cardDetail}>{world.detail}</p>
                   <a
                     href={`/worlds/play/index.html?game=${world.id}&demo=1`}
-                    className="inline-flex min-h-12 items-center justify-between gap-3 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-4"
-                    aria-label={`Play ${world.name}`}
+                    className={styles.cardPlay}
+                    aria-label={world.play}
                   >
-                    Play {world.id === "fire" ? "the Great Fire" : world.name}
-                    <ArrowRight size={17} aria-hidden="true" />
+                    {world.play}
+                    <ArrowRight size={19} aria-hidden="true" />
                   </a>
+                  <p className={styles.age}>{world.age}</p>
                 </div>
               </article>
             ))}
           </div>
-          <p className="mt-5 text-xs leading-relaxed text-muted-foreground">
-            Illustrations introduce each setting. Games contain interpreted 3D
-            landscapes and modern teaching puzzles; they are not exact
-            historical reconstructions.
+          <div className={styles.practiceNote}>
+            <Compass size={20} aria-hidden="true" />
+            <p>
+              These links open practice as{" "}
+              <strong>Alex, a fictional learner</strong>. Your choices create
+              the local practice record. Age ranges are a starting guide:
+              explore together and choose the support that helps.
+            </p>
+          </div>
+          <p className={styles.artNote}>
+            Artwork introduces each adventure; it is not a gameplay screenshot.
+            The games use interpreted 3D settings and modern teaching puzzles,
+            rather than exact historical reconstructions.
           </p>
         </div>
       </section>
