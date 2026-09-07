@@ -1,32 +1,16 @@
-"use client";
-
-import React from "react";
-import Hero from "@/components/website/Hero";
-import LatestResearch from "@/components/website/LatestResearch";
-import TaskStrip from "@/components/website/TaskStrip";
-import MeetEd from "@/components/website/MeetEd";
-import SystemsBridge from "@/components/website/SystemsBridge";
-import ProblemStatement from "@/components/website/ProblemStatement";
-import WhatSchoolgleDoes from "@/components/website/WhatSchoolgleDoes";
-import ProductsSection from "@/components/website/ProductsSection";
-import PreviewModules from "@/components/website/PreviewModules";
-import TrustSection from "@/components/website/TrustSection";
-import EarlyAccessForm from "@/components/website/EarlyAccessForm";
-
+import type { Metadata } from "next";
+import SchoolgleHome from "@/components/website/SchoolgleHome";
+export const metadata: Metadata = {
+  title: "Schoolgle | More time for what matters",
+  description:
+    "School improvement, estates, SEND, finance and governance. Practical tools for the people who keep schools running.",
+  alternates: { canonical: "https://www.schoolgle.co.uk/" },
+  openGraph: {
+    title: "Schoolgle | More time for what matters",
+    description: "Practical tools for the people who keep schools running.",
+    url: "https://www.schoolgle.co.uk/",
+  },
+};
 export default function HomePage() {
-  return (
-    <>
-      <Hero />
-      <LatestResearch />
-      <TaskStrip />
-      <MeetEd />
-      <SystemsBridge />
-      <ProblemStatement />
-      <WhatSchoolgleDoes />
-      <ProductsSection />
-      <PreviewModules />
-      <TrustSection />
-      <EarlyAccessForm />
-    </>
-  );
+  return <main><SchoolgleHome /></main>;
 }

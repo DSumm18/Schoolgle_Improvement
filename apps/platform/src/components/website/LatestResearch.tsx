@@ -1,19 +1,20 @@
 "use client";
 
+import type { LucideIcon } from "lucide-react";
 import React from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { ArrowRight, FlaskConical, BookOpen, Lightbulb } from "lucide-react";
-import { getLatestPublicInsights, type Insight } from "@/data/insights";
+import { getFeaturedInsights } from "@/data/insights";
 
-const CATEGORY_ICONS: Record<string, React.ElementType> = {
+const CATEGORY_ICONS: Record<string, LucideIcon> = {
   research: FlaskConical,
   guide: BookOpen,
   opinion: Lightbulb,
 };
 
 const LatestResearch = () => {
-  const latestInsights = getLatestPublicInsights(3);
+  const latestInsights = getFeaturedInsights().slice(0, 3);
 
   if (latestInsights.length === 0) return null;
 
@@ -24,7 +25,7 @@ const LatestResearch = () => {
           <div className="flex items-center gap-3">
             <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-widest border border-primary/20">
               <FlaskConical size={12} />
-              Latest Research
+              The Schoolgle notebook
             </span>
           </div>
           <Link

@@ -1,32 +1,25 @@
-"use client";
-
-import React from 'react';
-import { useParams } from 'next/navigation';
-import ModulePageTemplate from '@/components/website/ModulePageTemplate';
-import { moduleContent } from '@/lib/moduleContent';
-
-export default function DynamicModulePage() {
-    const params = useParams();
-    const slug = params?.slug as string;
-    const content = moduleContent[slug];
-
-    if (!content) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-background">
-                <div className="text-center">
-                    <h1 className="text-4xl font-black text-slate-900 dark:text-white uppercase tracking-tighter mb-4">Module Not Found</h1>
-                    <p className="text-slate-500 mb-8">The module you're looking for doesn't exist yet.</p>
-                </div>
-            </div>
-        );
-    }
-
-    return (
-        <ModulePageTemplate
-            moduleSlug={slug}
-            howEdHelps={content.howEdHelps}
-            typicalJobs={content.typicalJobs}
-            whatItCovers={content.whatItCovers}
-        />
-    );
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import ModulePageTemplate from "@/components/website/ModulePageTemplate";
+import { moduleContent } from "@/lib/moduleContent";
+import { moduleThemes } from "@/lib/moduleThemes";
+type Props = { params: Promise<{ slug: string }> };
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
+  const theme = Object.hasOwn(moduleThemes, slug)
+    ? moduleThemes[slug]
+    : undefined;
+  return {
+    title: theme ? `${theme.name} | Schoolgle` : "Module not found | Schoolgle",
+    description: theme?.outcome,
+    alternates: { canonical: `https://www.schoolgle.co.uk/modules/${slug}` },
+  };
+}
+export default async function ModulePage({ params }: Props) {
+  const { slug } = await params;
+  const content = Object.hasOwn(moduleContent, slug)
+    ? moduleContent[slug]
+    : undefined;
+  if (!content || !Object.hasOwn(moduleThemes, slug)) notFound();
+  return <ModulePageTemplate moduleSlug={slug} {...content} />;
 }

@@ -32,21 +32,21 @@ const EarlyAccessForm = () => {
 
       const data = await response.json();
 
-      if (data.success) {
+      if (response.ok && data.success) {
         setSubmitted(true);
-        track("waitlist_signup_success", { email, schoolName, role });
+        track("waitlist_signup_success", { role });
         setEmail("");
         setSchoolName("");
         setRole("");
       } else {
-        setError(data.error || "Something went wrong. Please try again.");
-        track("waitlist_signup_error", { email, error: data.error });
+        setError("We couldn't save your enquiry. Please try again, or email admin@schoolgle.co.uk.");
+        track("waitlist_signup_error");
       }
-    } catch (err: any) {
+    } catch {
       setError(
-        "Failed to connect to the server. Please check your internet connection.",
+        "We couldn't connect. Please try again, or email admin@schoolgle.co.uk.",
       );
-      track("waitlist_signup_failed", { email, error: err.message });
+      track("waitlist_signup_failed");
     } finally {
       setLoading(false);
     }
@@ -67,41 +67,39 @@ const EarlyAccessForm = () => {
             Early Access
           </span>
           <h2 className="text-3xl md:text-4xl font-black tracking-tight text-foreground mb-4">
-            Join the Early Access Pilot
+            Let&apos;s start with your school
           </h2>
           <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
-            We're working with a small group of UK primary schools, trusts, and
-            MATs to shape Schoolgle's development.
+            Tell us where your team needs a hand. We will follow up to discuss
+            the right starting point and arrange a walkthrough.
           </p>
 
           <div className="text-muted-foreground mb-10 max-w-2xl mx-auto space-y-4 text-left">
             <div className="p-5 rounded-xl bg-card/50 border border-border">
               <h3 className="text-foreground font-bold mb-1.5 text-sm">
-                Who the pilot is for
+                Bring a real task
               </h3>
               <p className="text-sm leading-relaxed">
-                Headteachers and School Business Managers who understand the
-                challenges of inspection readiness and are willing to provide
-                honest feedback.
+                Heads, business managers, SENCOs and trust leaders: choose one
+                task you would like to make easier.
               </p>
             </div>
             <div className="p-5 rounded-xl bg-card/50 border border-border">
               <h3 className="text-foreground font-bold mb-1.5 text-sm">
-                What schools get
+                See the fit first
               </h3>
               <p className="text-sm leading-relaxed">
-                Full access to Schoolgle at no cost during the pilot period,
-                including Ed, automatic evidence mapping, SEF generation, action
-                planning, and priority support.
+                We will show you the relevant workflow and explain current
+                availability, setup and pricing before you decide.
               </p>
             </div>
             <div className="p-5 rounded-xl bg-card/50 border border-border">
               <h3 className="text-foreground font-bold mb-1.5 text-sm">
-                No risk, no commitment
+                A conversation, not a commitment
               </h3>
               <p className="text-sm leading-relaxed">
-                Completely free. No payment required, no long-term commitment.
-                Your data remains yours and can be exported at any time.
+                No payment is taken through this form. We will agree any access
+                or subscription terms with you separately.
               </p>
             </div>
           </div>
@@ -112,6 +110,8 @@ const EarlyAccessForm = () => {
               className="max-w-xl mx-auto space-y-4"
             >
               <input
+                aria-label="Work email"
+                autoComplete="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -122,6 +122,7 @@ const EarlyAccessForm = () => {
               />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <input
+                  aria-label="School or trust (optional)"
                   type="text"
                   value={schoolName}
                   onChange={(e) => setSchoolName(e.target.value)}
@@ -130,6 +131,7 @@ const EarlyAccessForm = () => {
                   className="w-full px-5 py-3 rounded-full border border-border bg-card text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary disabled:opacity-50 text-sm font-medium transition-all"
                 />
                 <select
+                  aria-label="Your role (optional)"
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
                   disabled={loading}
@@ -147,7 +149,9 @@ const EarlyAccessForm = () => {
               </div>
 
               {error && (
-                <p className="text-destructive text-sm font-bold">{error}</p>
+                <p role="alert" className="text-destructive text-sm font-bold">
+                  {error}
+                </p>
               )}
 
               <button
@@ -194,10 +198,10 @@ const EarlyAccessForm = () => {
                 </svg>
               </div>
               <h3 className="text-foreground font-bold text-lg mb-2">
-                You're on the list!
+                You&apos;re on the list!
               </h3>
               <p className="text-muted-foreground text-sm">
-                Thank you for your interest in Schoolgle. We'll be in touch soon
+                Thank you for your interest in Schoolgle. We&apos;ll be in touch soon
                 with more information about the pilot.
               </p>
               <button

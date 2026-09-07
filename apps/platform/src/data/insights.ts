@@ -43,286 +43,287 @@ export const insights: Insight[] = [
   // ── ESTATES & COMPLIANCE ──────────────────────────────────
   {
     slug: "80-percent-software-features-unused",
-    title:
-      "80% of Software Features in Schools Are Never Used — Here's What That Costs You",
+    title: "Before the next software renewal, ask what staff actually use",
     excerpt:
-      "UK schools spend £900m a year on edtech, but research shows most features gather digital dust. We break down the real cost and what Ed does about it.",
-    date: "2026-03-05",
+      "A practical review of licences, duplicated work and the support that would help.",
+    date: "2026-09-05",
     status: "published",
-    featured: true,
-    category: "research",
-    module: "finance",
-    tags: ["edtech", "roi", "software", "budgets"],
-    source: "Pendo / DfE EdTech Survey",
+    category: "guide",
+    source: "DfE workload resources",
     sourceUrl:
-      "https://www.pendo.io/resources/the-2019-feature-adoption-report/",
-    readTime: "5 min",
-    relatedApp: "Ed for Staff",
+      "https://www.gov.uk/government/collections/reducing-school-workload",
+    readTime: "2 min",
+    featured: false,
+    module: "finance",
   },
   {
     slug: "hse-school-compliance-gap",
-    title:
-      "The HSE Compliance Gap: Why Schools Are Failing Statutory Checks They Don't Know About",
+    title: "School compliance: close the gap between a check and the follow-up",
     excerpt:
-      "From legionella testing to fire door inspections, many schools are unknowingly non-compliant. We map the gaps and what best practice looks like.",
-    date: "2026-02-28",
+      "A completed form is only useful if someone acts on what it found.",
+    date: "2026-09-05",
     status: "published",
-    featured: false,
-    category: "research",
-    module: "estates",
-    tags: ["hse", "compliance", "legionella", "fire-safety", "statutory"],
-    source: "HSE / DfE Good Estate Management",
+    category: "guide",
+    source: "DfE: Good estate management",
     sourceUrl: "https://www.gov.uk/guidance/good-estate-management-for-schools",
-    readTime: "8 min",
-    relatedApp: "Estates & Compliance",
+    readTime: "2 min",
+    featured: false,
+    module: "estates",
   },
   {
     slug: "school-building-condition-crisis",
-    title:
-      "The School Building Condition Crisis: What the DfE's Own Data Shows",
+    title: "School buildings: turn the condition report into a practical plan",
     excerpt:
-      "Over 700,000 pupils learn in buildings rated 'poor' or 'bad'. We analyse the Condition Data Collection and what it means for estates management.",
-    date: "2026-02-20",
+      "Use condition information to prioritise work and keep decisions visible.",
+    date: "2026-09-05",
     status: "published",
-    category: "research",
-    module: "estates",
-    tags: ["buildings", "condition", "dfe", "maintenance", "raac"],
-    source: "DfE Condition Data Collection 2024",
+    category: "guide",
+    source: "DfE: commissioning condition surveys",
     sourceUrl:
-      "https://www.gov.uk/government/publications/condition-of-school-buildings-survey",
-    readTime: "7 min",
-    relatedApp: "Estates & Compliance",
+      "https://www.gov.uk/government/publications/commissioning-a-condition-survey-for-school-and-college-buildings",
+    readTime: "2 min",
+    featured: false,
+    module: "estates",
   },
 
   // ── TEACHING & LEARNING (EEF focus) ───────────────────────
   {
     slug: "eef-teaching-learning-toolkit-guide",
-    title:
-      "The EEF Teaching & Learning Toolkit: A School Leader's Practical Guide",
+    title: "Using the EEF Toolkit without turning it into a shopping list",
     excerpt:
-      "The EEF toolkit is the single best evidence base for what works in classrooms. Here's how to actually use it to drive improvement, not just tick a box.",
-    date: "2026-03-01",
+      "Start with a pupil need, examine the evidence and plan a manageable change.",
+    date: "2026-09-05",
     status: "published",
-    featured: true,
     category: "guide",
-    module: "teaching",
-    tags: ["eef", "evidence-based", "teaching", "toolkit", "research"],
     source: "Education Endowment Foundation",
     sourceUrl:
       "https://educationendowmentfoundation.org.uk/education-evidence/teaching-learning-toolkit",
-    readTime: "10 min",
-    relatedApp: "Teaching & Learning",
+    readTime: "2 min",
+    featured: true,
+    module: "teaching",
   },
   {
     slug: "metacognition-self-regulation-schools",
-    title:
-      "Metacognition and Self-Regulation: The Highest Impact Strategy Schools Aren't Using Enough",
-    excerpt:
-      "EEF research shows +7 months progress for very low cost. Why aren't more schools embedding it — and how Schoolgle helps track it.",
-    date: "2026-02-15",
+    title: "Metacognition: make the thinking visible in the lesson",
+    excerpt: "Move from a promising research headline to classroom practice.",
+    date: "2026-09-05",
     status: "published",
-    category: "research",
-    module: "teaching",
-    tags: ["metacognition", "eef", "self-regulation", "evidence"],
-    source: "EEF Metacognition Guidance Report",
+    category: "guide",
+    source: "EEF: metacognition and self-regulation",
     sourceUrl:
-      "https://educationendowmentfoundation.org.uk/education-evidence/guidance-reports/metacognition",
-    readTime: "8 min",
-    relatedApp: "Teaching & Learning",
+      "https://educationendowmentfoundation.org.uk/education-evidence/teaching-learning-toolkit/metacognition-and-self-regulation",
+    readTime: "2 min",
+    featured: false,
+    module: "teaching",
   },
 
   // ── SCHOOL IMPROVEMENT / OFSTED ───────────────────────────
   {
     slug: "preparing-for-ofsted-2025",
-    title: "Preparing for Ofsted 2025: What Primary Schools Need to Know",
+    title:
+      "Ofsted in September 2026: prepare the conversation, not another folder",
     excerpt:
-      "The updated framework brings subtle but important changes. Here's what Headteachers and School Business Managers should focus on.",
-    date: "2024-11-15",
+      "Use the right inspection materials and connect evidence to what leaders are doing.",
+    date: "2026-09-05",
     status: "published",
-    featured: true,
     category: "guide",
+    source: "Ofsted inspection materials",
+    sourceUrl:
+      "https://www.gov.uk/government/publications/school-inspection-toolkit-operating-guide-and-information",
+    readTime: "2 min",
+    featured: true,
     module: "improvement",
-    tags: ["ofsted", "inspection", "preparation"],
-    readTime: "8 min",
-    relatedApp: "School Improvement",
   },
   {
     slug: "evidence-organisation-before-inspection",
-    title: "Why Evidence Organisation Should Start Long Before Inspection",
-    excerpt:
-      "Schools that organise evidence as they go spend less time preparing and more time improving. Here's how to build that habit.",
-    date: "2024-10-28",
+    title: "Evidence organisation: make the useful document easy to find",
+    excerpt: "Keep sources, owners and review decisions connected.",
+    date: "2026-09-05",
     status: "published",
     category: "guide",
+    source: "Schoolgle practical guide; Ofsted materials",
+    sourceUrl:
+      "https://www.gov.uk/government/publications/school-inspection-toolkit-operating-guide-and-information",
+    readTime: "2 min",
+    featured: false,
     module: "improvement",
-    tags: ["evidence", "ofsted", "organisation"],
-    readTime: "6 min",
-    relatedApp: "School Improvement",
   },
   {
     slug: "self-evaluation-that-works",
-    title: "Self-Evaluation That Actually Works",
+    title: "Self-evaluation that helps leaders decide what to do next",
     excerpt:
-      "Most SEFs are written in a panic. Here's how to make self-evaluation an ongoing process that supports improvement, not just compliance.",
-    date: "2024-09-22",
+      "Keep judgement, evidence and uncertainty close enough to discuss honestly.",
+    date: "2026-09-05",
     status: "published",
     category: "opinion",
+    source: "Schoolgle editorial perspective",
+    sourceUrl:
+      "https://www.gov.uk/government/publications/school-inspection-toolkit-operating-guide-and-information",
+    readTime: "2 min",
+    featured: false,
     module: "improvement",
-    tags: ["sef", "self-evaluation", "improvement"],
-    readTime: "5 min",
-    relatedApp: "School Improvement",
   },
   {
     slug: "action-plans-that-stay-current",
-    title: "Action Plans That Stay Current",
+    title: "Action plans that survive the first half-term",
     excerpt:
-      "Why school improvement plans go out of date, and how to keep them visible and actionable throughout the year.",
-    date: "2024-09-05",
+      "A named owner, a sensible review and a clear reason to keep going.",
+    date: "2026-09-05",
     status: "published",
     category: "guide",
+    source: "EEF implementation guidance",
+    sourceUrl:
+      "https://educationendowmentfoundation.org.uk/education-evidence/guidance-reports/implementation/process",
+    readTime: "2 min",
+    featured: false,
     module: "improvement",
-    tags: ["action-plans", "improvement", "planning"],
-    readTime: "4 min",
-    relatedApp: "School Improvement",
   },
   {
     slug: "siams-inspection-readiness",
-    title: "SIAMS Inspection Readiness: A Practical Guide for Church Schools",
+    title: "SIAMS: connect your school's vision to lived experience",
     excerpt:
-      "What makes SIAMS different from Ofsted, and how to prepare evidence that demonstrates your school's distinctiveness effectively.",
-    date: "2024-10-10",
+      "Use the current framework and look for the explanation behind the evidence.",
+    date: "2026-09-05",
     status: "published",
     category: "guide",
+    source: "National Society for Education: SIAMS",
+    sourceUrl:
+      "https://www.nse.org.uk/statutory-inspection-of-anglican-methodist-schools/inspections",
+    readTime: "2 min",
+    featured: false,
     module: "improvement",
-    tags: ["siams", "church-schools", "inspection"],
-    readTime: "7 min",
-    relatedApp: "School Improvement",
   },
 
   // ── HR & PEOPLE ───────────────────────────────────────────
   {
     slug: "teacher-workload-technology-gap",
-    title:
-      "Only 30% of Teachers Say Tech Reduced Their Workload — What's Going Wrong?",
+    title: "When technology adds work: start with the duplicate task",
     excerpt:
-      "The DfE's own research paints a bleak picture of edtech ROI. We dig into why schools aren't seeing the benefit and what needs to change.",
-    date: "2026-02-20",
+      "A small, staff-led approach to finding out what a new system should remove.",
+    date: "2026-09-05",
     status: "published",
-    category: "research",
-    module: "hr",
-    tags: ["workload", "teachers", "edtech", "research"],
-    source: "DfE EdTech Survey 2022-23",
+    category: "guide",
+    source: "DfE workload resources",
     sourceUrl:
-      "https://assets.publishing.service.gov.uk/media/621ce8ec8fa8f54915f43838/Education_Technology_EdTech_Survey.pdf",
-    readTime: "7 min",
-    relatedApp: "HR & People",
+      "https://www.gov.uk/government/collections/reducing-school-workload",
+    readTime: "2 min",
+    featured: false,
+    module: "hr",
   },
   {
     slug: "teacher-retention-crisis-2026",
-    title:
-      "Teacher Retention in 2026: What the Data Says and What Schools Can Do",
+    title: "Teacher retention: start with the conditions you can change",
     excerpt:
-      "Retention rates are at their lowest in a decade. We analyse the School Workforce Census data and practical strategies that work.",
-    date: "2026-02-10",
+      "Use national evidence carefully and listen to what makes the local working day harder.",
+    date: "2026-09-05",
     status: "published",
-    category: "research",
+    category: "guide",
+    source: "DfE: School workforce in England 2025",
+    sourceUrl:
+      "https://explore-education-statistics.service.gov.uk/find-statistics/school-workforce-in-england/2025",
+    readTime: "2 min",
+    featured: false,
     module: "hr",
-    tags: ["retention", "recruitment", "workforce", "census"],
-    source: "DfE School Workforce Census",
-    readTime: "9 min",
-    relatedApp: "HR & People",
   },
 
   // ── SEND & INCLUSION ──────────────────────────────────────
   {
     slug: "send-code-practice-reform",
-    title: "SEND Code of Practice Reform: What Schools Need to Prepare For",
+    title:
+      "SEND reform: keep today's support separate from tomorrow's proposals",
     excerpt:
-      "The government's SEND review promises big changes. Here's what's coming, what stays, and how to get ahead of it.",
-    date: "2026-01-25",
+      "A practical way to track change without losing sight of the pupil in front of you.",
+    date: "2026-09-05",
     status: "published",
     category: "news",
+    source: "DfE: SEND code of practice",
+    sourceUrl:
+      "https://www.gov.uk/government/publications/send-code-of-practice-0-to-25",
+    readTime: "2 min",
+    featured: false,
     module: "send",
-    tags: ["send", "code-of-practice", "reform", "ehcp"],
-    source: "DfE SEND Review",
-    readTime: "8 min",
-    relatedApp: "SEND & Inclusion",
   },
 
   // ── GOVERNANCE ────────────────────────────────────────────
   {
     slug: "governance-handbook-changes-2026",
-    title: "Governance Handbook 2026: Key Changes Governors Need to Know",
+    title: "Governance in 2026: use the right guide and ask sharper questions",
     excerpt:
-      "Updated guidance on financial oversight, safeguarding duties, and MAT governance structures. A summary for busy governors.",
-    date: "2026-01-15",
+      "A practical briefing for maintained-school governors and academy trustees.",
+    date: "2026-09-05",
     status: "published",
     category: "guide",
+    source: "DfE: maintained schools governance guide",
+    sourceUrl:
+      "https://www.gov.uk/government/publications/maintained-schools-governance-guide",
+    readTime: "2 min",
+    featured: false,
     module: "governance",
-    tags: ["governance", "handbook", "mat", "trustees"],
-    source: "DfE Governance Handbook",
-    readTime: "6 min",
-    relatedApp: "Governance & Trust",
   },
 
   // ── FINANCE ───────────────────────────────────────────────
   {
     slug: "school-budget-benchmarking-2026",
     title:
-      "School Budget Benchmarking: Are You Spending More Than Similar Schools?",
+      "School budget benchmarking: use the difference to ask a better question",
     excerpt:
-      "Using DfE's benchmarking data to spot overspend, justify costs, and make the case for additional funding.",
-    date: "2026-01-05",
+      "Compare carefully, investigate the context and record a decision you can explain.",
+    date: "2026-09-05",
     status: "published",
     category: "guide",
+    source: "DfE Financial Benchmarking and Insights Tool",
+    sourceUrl:
+      "https://financial-benchmarking-and-insights-tool.education.gov.uk/",
+    readTime: "2 min",
+    featured: false,
     module: "finance",
-    tags: ["budget", "benchmarking", "funding", "spending"],
-    source: "DfE Schools Financial Benchmarking",
-    sourceUrl: "https://schools-financial-benchmarking.service.gov.uk/",
-    readTime: "6 min",
-    relatedApp: "Finance & Business",
   },
 
   // ── AI & GENERAL ──────────────────────────────────────────
   {
     slug: "ai-expert-work-schools",
-    title:
-      "When AI Starts Replacing Expert Work (and Why Schools Should Pay Attention)",
+    title: "AI and expert work: keep the review where it matters",
     excerpt:
-      "Recent AI updates are quietly shifting expert work. What this means for schools — and why people still matter.",
-    date: "2024-12-13",
+      "Where an assistant can help, and why responsibility still needs a person.",
+    date: "2026-09-05",
     status: "published",
-    featured: true,
-    heroImage: "/insights/ai-expert-work-schools/hero.png",
-    category: "research",
-    tags: ["ai", "future", "leadership"],
-    readTime: "10 min",
+    category: "guide",
+    source: "DfE: generative AI in education",
+    sourceUrl:
+      "https://www.gov.uk/government/publications/generative-artificial-intelligence-in-education",
+    readTime: "2 min",
+    featured: false,
   },
   {
     slug: "intelligence-not-software",
-    title: "Why School Operations Need Intelligence, Not Just Software",
+    title: "When a dashboard should lead to a decision",
     excerpt:
-      "Most school systems store data. Very few help you make better decisions with it.",
-    date: "2025-01-20",
+      "The useful step between seeing a number and knowing what to investigate.",
+    date: "2026-09-05",
     status: "published",
     category: "opinion",
-    tags: ["ai", "operations", "data"],
-    readTime: "6 min",
+    source: "Schoolgle editorial perspective; EEF implementation",
+    sourceUrl:
+      "https://educationendowmentfoundation.org.uk/education-evidence/guidance-reports/implementation/process",
+    readTime: "2 min",
+    featured: false,
   },
 
   // ── COMING SOON ───────────────────────────────────────────
   {
     slug: "gdpr-ai-chatbots-schools",
-    title: "GDPR, AI Chatbots and Schools: What You Need to Know",
+    title: "AI in school: the questions to ask before anyone pastes pupil data",
     excerpt:
-      "As AI assistants enter schools, data protection questions multiply. A practical guide to staying compliant while using AI tools.",
-    date: "2026-03-15",
-    status: "coming_soon",
+      "A practical starting point for heads, business managers and DPOs reviewing an AI tool.",
+    date: "2026-09-05",
+    status: "published",
     category: "guide",
+    source: "DfE: AI and data protection",
+    sourceUrl:
+      "https://www.gov.uk/guidance/data-protection-in-schools/generative-artificial-intelligence-ai-and-data-protection-in-schools",
+    readTime: "2 min",
+    featured: true,
     module: "compliance",
-    tags: ["gdpr", "ai", "compliance", "data-protection"],
-    readTime: "8 min",
-    relatedApp: "Ed for Staff",
   },
 ];
 
@@ -337,9 +338,7 @@ export function getComingSoonInsights(): Insight[] {
 }
 
 export function getPublicInsights(): Insight[] {
-  return insights.filter(
-    (i) => i.status === "published" || i.status === "coming_soon",
-  );
+  return getPublishedInsights();
 }
 
 export function getInsightBySlug(slug: string): Insight | undefined {
