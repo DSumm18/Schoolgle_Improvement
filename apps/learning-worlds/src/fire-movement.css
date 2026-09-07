@@ -1,12 +1,37 @@
 #fire-world:focus-visible{outline:3px solid #ffdc86;outline-offset:-5px}
-#fire-movement{display:none;position:absolute;z-index:3;bottom:125px;left:16px;right:16px;grid-template-columns:140px minmax(0,1fr);align-items:center;gap:14px;padding:12px;background:#122e3df2;color:#fff4d7;border:1px solid #d7bd83;border-radius:14px;box-shadow:0 5px 18px #061c3540}
+#fire-movement{display:none;position:absolute;z-index:3;bottom:28px;left:12px;width:132px;color:#fff4d7;pointer-events:none}
 .fire-playing #fire-movement{display:grid}
-.fire-move-pad{display:grid;grid-template-columns:repeat(3,44px);grid-template-rows:repeat(3,44px);gap:4px}
-.fire-move-pad button{padding:0;min-width:44px;min-height:44px;font:700 24px/1 sans-serif;background:#fff0cb;color:#143b48;border:2px solid #cfaf6f;border-radius:9px;touch-action:none;user-select:none}
+.fire-move-pad{display:grid;grid-template-columns:repeat(3,44px);grid-template-rows:repeat(3,44px);gap:0;filter:drop-shadow(0 3px 6px #061c3570)}
+.fire-move-pad button{padding:0;width:44px;height:44px;min-width:44px;min-height:44px;font:700 24px/1 sans-serif;background:#fff0cb;color:#143b48;border:2px solid #cfaf6f;border-radius:10px;touch-action:none;user-select:none;pointer-events:auto}
 .fire-move-pad button.is-moving,.fire-move-pad button:active{background:#71d5c5;border-color:#fff;color:#0c3434}
 .fire-move-pad [data-fire-move=up]{grid-area:1/2}.fire-move-pad [data-fire-move=left]{grid-area:2/1}.fire-move-pad [data-fire-move=right]{grid-area:2/3}.fire-move-pad [data-fire-move=down]{grid-area:3/2}
-.fire-move-copy strong{font-size:15px}.fire-move-copy p{font:400 12px/1.5 'DM Sans',sans-serif;margin:6px 0;color:#fff4d7}.fire-move-copy button{min-height:44px;padding:8px 10px;font-size:12px}
-.fire-playing .fire-landmark{top:16px;bottom:auto;left:auto;right:16px}.fire-playing .fire-landmark>span{display:none}
-.fire-playing .fire-scene-title{max-width:55%}.fire-playing .fire-scene-title h1{font-size:32px}.fire-playing .fire-scene-title>span{display:none}
-@media(max-width:760px){.fire-playing .fire-scene{min-height:600px}.fire-playing .fire-scene-title{max-width:56%}.fire-playing .fire-scene-title h1{font-size:26px}#fire-movement{left:10px;right:10px;padding:10px;gap:8px}.fire-move-copy strong{font-size:13px}.fire-move-copy p{font-size:11px}}
-@media print{#fire-movement{display:none!important}}
+.fire-move-copy{position:absolute;left:144px;bottom:0;width:210px;padding:8px 10px;background:#122e3def;border:1px solid #d7bd8370;border-radius:10px;pointer-events:auto}
+.fire-move-copy strong{display:block;font-size:12px;line-height:1.3}.fire-move-copy p{font:400 12px/1.4 'DM Sans',sans-serif;margin:6px 0;color:#fff4d7}.fire-move-copy button{min-height:44px;padding:6px 8px;font-size:11px;margin-top:4px;width:100%}
+/* The blank corners of the pad and the surrounding city stay clickable. */
+.fire-scene{container-type:inline-size}
+.fire-playing .fire-scene{min-height:490px}
+.fire-playing .fire-landmark{top:12px;bottom:auto;left:auto;right:12px}.fire-playing .fire-landmark>span{display:none}
+.fire-playing .fire-landmark button{min-height:44px}
+.fire-playing .fire-scene-title{top:16px;left:18px;max-width:calc(100% - 170px)}.fire-playing .fire-scene-title h1{font-size:26px;line-height:1.05}.fire-playing .fire-scene-title>span{display:none}
+.fire-playing #fire-map{top:96px;bottom:auto;left:12px;right:12px;padding:4px;gap:4px;max-width:620px;min-height:54px}
+.fire-playing #fire-map button{min-width:44px;min-height:44px;padding:3px;gap:3px;font-size:10px;justify-content:center}
+.fire-playing #fire-map button b{width:24px;height:24px;font-size:13px;padding-top:3px;flex-shrink:0}.fire-playing #fire-map button span{line-height:1.1}
+.fire-nearby{position:absolute;z-index:4;right:12px;bottom:28px;width:230px;padding:10px;background:#122e3df2;color:#fff4d7;border:1px solid #d7bd8370;border-radius:12px;box-shadow:0 3px 12px #061c3550}
+.fire-nearby strong{display:block;font-size:13px;line-height:1.25}.fire-nearby p{font-size:11px;line-height:1.3;margin:5px 0 8px}
+.fire-nearby button{min-height:44px;width:100%;font-size:12px;line-height:1.2;padding:8px}
+.fire-nearby button[hidden]{display:none}
+/* A split-screen city can be narrow even on a desktop. Keep its duplicated
+   help accessible but let the Controls dialog carry the longer instructions. */
+@container(max-width:700px){
+ .fire-move-copy{left:0;bottom:140px;width:132px;padding:0;background:none;border:0}
+ .fire-move-copy button{margin:0;background:#122e3def;color:#fff4d7;border:1px solid #d7bd8370}
+ #fire-walk-status,#fire-move-help,.fire-playing #fire-map button span{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+ .fire-playing #fire-map{max-width:280px}
+ .fire-playing .fire-scene-title{max-width:calc(100% - 160px)}
+ .fire-playing .fire-scene-title h1{font-size:23px}
+ .fire-playing .fire-landmark button{max-width:125px;font-size:10px;padding:6px 8px}
+ .fire-nearby{left:156px;right:12px;width:auto;max-width:230px;padding:8px}
+ .fire-nearby strong{font-size:12px}.fire-nearby p{font-size:10px}.fire-nearby button{font-size:11px}
+}
+@media(max-width:760px){.fire-playing .fire-scene{height:520px;min-height:520px}.fire-looking.fire-playing .fire-scene{height:calc(100dvh - 120px);min-height:520px}.fire-playing .fire-scene-title{top:16px;left:16px}}
+@media print{#fire-movement,.fire-nearby{display:none!important}}
