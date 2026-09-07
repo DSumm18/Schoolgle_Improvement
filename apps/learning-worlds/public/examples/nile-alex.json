@@ -1,0 +1,566 @@
+{
+  "learner": {
+    "id": "fictional-alex",
+    "displayName": "Alex (fictional test pupil)",
+    "fictional": true
+  },
+  "recordScope": "fictional learner; actual game interactions; separate browser save",
+  "prototype": true,
+  "contentVersion": "nile-2026-09-learning-2",
+  "exportedAt": "2026-09-07T09:22:01.567Z",
+  "notice": "Browser-local guided practice; not authenticated pupil evidence or a validated attainment assessment.",
+  "completed": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+  ],
+  "bonus": {
+    "sphinx": true,
+    "demoViewed": false
+  },
+  "evidence": [
+    {
+      "mission": 0,
+      "objective": "Explain how the Nile supported farming.",
+      "correct": false,
+      "support": "explanation available; read aloud",
+      "at": "2026-09-07T09:20:00.597Z",
+      "contentVersion": "nile-learning-2026-09-v2",
+      "details": {
+        "phase": "explanation",
+        "response": "The desert sand never needed water.",
+        "question": "Explain how the Nile supported farming."
+      }
+    },
+    {
+      "mission": 0,
+      "objective": "Explain how the Nile supported farming.",
+      "correct": true,
+      "support": "explanation available; read aloud; corrective feedback",
+      "at": "2026-09-07T09:20:00.658Z",
+      "contentVersion": "nile-learning-2026-09-v2",
+      "details": {
+        "phase": "explanation",
+        "response": "The floodwater brought water and fertile silt.",
+        "question": "Explain how the Nile supported farming."
+      }
+    },
+    {
+      "mission": 1,
+      "objective": "Represent and solve equal sharing: 24 divided by 3.",
+      "correct": false,
+      "support": "explanation available; read aloud",
+      "at": "2026-09-07T09:20:04.470Z",
+      "contentVersion": "nile-learning-2026-09-v2",
+      "details": {
+        "phase": "model",
+        "representation": "Three boats; each basket is one unit",
+        "response": "0, 0, 0",
+        "question": "Represent and solve equal sharing: 24 divided by 3.",
+        "equation": "24 ÷ 3 = ?",
+        "loadActions": 0,
+        "unloadActions": 0,
+        "shareRounds": 0,
+        "values": [
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "mission": 1,
+      "objective": "Represent and solve equal sharing: 6 divided by 3.",
+      "correct": true,
+      "support": "explanation available; read aloud; corrective feedback; smaller-number scaffold; sharing tool",
+      "at": "2026-09-07T09:20:04.688Z",
+      "contentVersion": "nile-learning-2026-09-v2",
+      "details": {
+        "phase": "model",
+        "representation": "Three boats; each basket is one unit",
+        "response": "2, 2, 2",
+        "question": "Represent and solve equal sharing: 6 divided by 3.",
+        "equation": "6 ÷ 3 = 2",
+        "loadActions": 0,
+        "unloadActions": 0,
+        "shareRounds": 2,
+        "values": [
+          2,
+          2,
+          2
+        ]
+      }
+    },
+    {
+      "mission": 1,
+      "objective": "Represent and solve equal sharing: 24 divided by 3.",
+      "correct": true,
+      "support": "explanation available; read aloud; corrective feedback; smaller-number scaffold; sharing tool",
+      "at": "2026-09-07T09:20:05.344Z",
+      "contentVersion": "nile-learning-2026-09-v2",
+      "details": {
+        "phase": "model",
+        "representation": "Three boats; each basket is one unit",
+        "response": "8, 8, 8",
+        "question": "Represent and solve equal sharing: 24 divided by 3.",
+        "equation": "24 ÷ 3 = 8",
+        "loadActions": 0,
+        "unloadActions": 0,
+        "shareRounds": 8,
+        "values": [
+          8,
+          8,
+          8
+        ]
+      }
+    },
+    {
+      "mission": 1,
+      "objective": "Explain equal sharing using groups and the whole total.",
+      "correct": true,
+      "support": "explanation available; read aloud; corrective feedback; smaller-number scaffold; sharing tool",
+      "at": "2026-09-07T09:20:05.399Z",
+      "contentVersion": "nile-learning-2026-09-v2",
+      "details": {
+        "phase": "explanation",
+        "representation": "Three groups of eight",
+        "response": "3 groups of 8 use all 24 baskets.",
+        "question": "Explain equal sharing using groups and the whole total."
+      }
+    },
+    {
+      "mission": 2,
+      "objective": "Infer why the second field is not ready for planting.",
+      "correct": true,
+      "support": "explanation available; read aloud",
+      "at": "2026-09-07T09:20:08.927Z",
+      "contentVersion": "nile-learning-2026-09-v2",
+      "details": {
+        "phase": "explanation",
+        "response": "It needs water from the channel.",
+        "question": "Infer why the second field is not ready for planting."
+      }
+    },
+    {
+      "mission": 2,
+      "objective": "Select textual evidence supporting the field inference.",
+      "correct": true,
+      "support": "explanation available; read aloud",
+      "at": "2026-09-07T09:20:08.966Z",
+      "contentVersion": "nile-learning-2026-09-v2",
+      "details": {
+        "phase": "evidence",
+        "response": "The second field is dry, beyond the channel.",
+        "question": "Select textual evidence supporting the field inference."
+      }
+    },
+    {
+      "mission": 3,
+      "objective": "Sequence pyramid building, Tutankhamun and the 1922 discovery.",
+      "correct": true,
+      "support": "explanation available; read aloud",
+      "at": "2026-09-07T09:20:14.259Z",
+      "contentVersion": "nile-learning-2026-09-v2",
+      "details": {
+        "phase": "evidence",
+        "response": "Great pyramids → Tutankhamun → Tomb discovery",
+        "question": "Sequence pyramid building, Tutankhamun and the 1922 discovery."
+      }
+    },
+    {
+      "mission": 4,
+      "objective": "Predict the effect of moving an opaque panel nearer the lamp.",
+      "correct": true,
+      "support": "explanation available; read aloud",
+      "at": "2026-09-07T09:20:19.050Z",
+      "contentVersion": "nile-learning-2026-09-v2",
+      "details": {
+        "phase": "prediction",
+        "response": "Larger",
+        "question": "Predict the effect of moving an opaque panel nearer the lamp."
+      }
+    },
+    {
+      "mission": 4,
+      "objective": "Use the distance control to match a shadow to a target.",
+      "correct": true,
+      "support": "explanation available; read aloud",
+      "at": "2026-09-07T09:20:19.239Z",
+      "contentVersion": "nile-learning-2026-09-v2",
+      "details": {
+        "phase": "model",
+        "representation": "Lamp, opaque panel and fixed screen",
+        "question": "Use the distance control to match a shadow to a target.",
+        "distanceSetting": 45
+      }
+    },
+    {
+      "mission": 4,
+      "objective": "Explain the pattern between panel distance and shadow size.",
+      "correct": true,
+      "support": "explanation available; read aloud",
+      "at": "2026-09-07T09:20:19.297Z",
+      "contentVersion": "nile-learning-2026-09-v2",
+      "details": {
+        "phase": "explanation",
+        "response": "Nearer the lamp made the shadow larger.",
+        "question": "Explain the pattern between panel distance and shadow size."
+      }
+    },
+    {
+      "mission": 5,
+      "objective": "Record the replica centre using the excavation grid.",
+      "correct": true,
+      "support": "explanation available; read aloud",
+      "at": "2026-09-07T09:20:28.818Z",
+      "contentVersion": "nile-learning-2026-09-v2",
+      "details": {
+        "phase": "evidence",
+        "response": "B2",
+        "question": "Record the replica centre using the excavation grid."
+      }
+    },
+    {
+      "mission": 5,
+      "objective": "Explain why find position is part of archaeological evidence.",
+      "correct": true,
+      "support": "explanation available; read aloud",
+      "at": "2026-09-07T09:20:28.868Z",
+      "contentVersion": "nile-learning-2026-09-v2",
+      "details": {
+        "phase": "explanation",
+        "response": "Its position can help explain how it was used.",
+        "question": "Explain why find position is part of archaeological evidence."
+      }
+    },
+    {
+      "mission": 6,
+      "objective": "Choose a label for the river display.",
+      "correct": true,
+      "support": "explanation available; read aloud",
+      "at": "2026-09-07T09:20:32.682Z",
+      "contentVersion": "nile-learning-2026-09-v2",
+      "details": {
+        "phase": "recall",
+        "response": "The Nile supported farming and travel.",
+        "question": "Choose a label for the river display."
+      }
+    },
+    {
+      "mission": 6,
+      "objective": "Choose a label for Tutankhamun’s tomb.",
+      "correct": true,
+      "support": "explanation available; read aloud",
+      "at": "2026-09-07T09:20:32.721Z",
+      "contentVersion": "nile-learning-2026-09-v2",
+      "details": {
+        "phase": "recall",
+        "response": "His tomb was in the Valley of the Kings.",
+        "question": "Choose a label for Tutankhamun’s tomb."
+      }
+    },
+    {
+      "mission": 6,
+      "objective": "Choose a label for the excavation team.",
+      "correct": true,
+      "support": "explanation available; read aloud",
+      "at": "2026-09-07T09:20:32.761Z",
+      "contentVersion": "nile-learning-2026-09-v2",
+      "details": {
+        "phase": "recall",
+        "response": "Egyptian workers were essential to Carter’s excavation team.",
+        "question": "Choose a label for the excavation team."
+      }
+    },
+    {
+      "mission": 6,
+      "objective": "Recall taught ideas and distinguish supported claims from fiction.",
+      "correct": true,
+      "support": "explanation available; read aloud",
+      "at": "2026-09-07T09:20:32.804Z",
+      "contentVersion": "nile-learning-2026-09-v2",
+      "details": {
+        "phase": "explanation",
+        "response": "…its position is part of the evidence.",
+        "question": "Recall taught ideas and distinguish supported claims from fiction."
+      }
+    },
+    {
+      "mission": 0,
+      "objective": "Explain how the Nile supported farming.",
+      "correct": true,
+      "support": "explanation available; read aloud",
+      "at": "2026-09-07T09:20:50.860Z",
+      "contentVersion": "nile-learning-2026-09-v2",
+      "details": {
+        "phase": "explanation",
+        "response": "The floodwater brought water and fertile silt.",
+        "question": "Explain how the Nile supported farming."
+      }
+    },
+    {
+      "mission": 1,
+      "objective": "Sphinx challenge: model for 15 divided by 3.",
+      "correct": false,
+      "support": "new-number practice; model visible",
+      "at": "2026-09-07T09:21:59.430Z",
+      "contentVersion": "nile-learning-2026-09-v2",
+      "details": {
+        "phase": "model",
+        "representation": "Three trays; one stone per offering",
+        "response": "0, 0, 0",
+        "question": "Share 15 offerings equally between three trays.",
+        "equation": "",
+        "activity": "sphinx-sharing",
+        "loadActions": 0,
+        "unloadActions": 0,
+        "values": [
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "mission": 1,
+      "objective": "Sphinx challenge: model for 15 divided by 3.",
+      "correct": true,
+      "support": "new-number practice; model visible; corrective feedback and retry",
+      "at": "2026-09-07T09:21:59.983Z",
+      "contentVersion": "nile-learning-2026-09-v2",
+      "details": {
+        "phase": "model",
+        "representation": "Three trays; one stone per offering",
+        "response": "5, 5, 5",
+        "question": "Share 15 offerings equally between three trays.",
+        "equation": "",
+        "activity": "sphinx-sharing",
+        "loadActions": 15,
+        "unloadActions": 0,
+        "values": [
+          5,
+          5,
+          5
+        ]
+      }
+    },
+    {
+      "mission": 1,
+      "objective": "Sphinx challenge: calculation for 15 divided by 3.",
+      "correct": false,
+      "support": "new-number practice; model visible; corrective feedback and retry",
+      "at": "2026-09-07T09:22:00.031Z",
+      "contentVersion": "nile-learning-2026-09-v2",
+      "details": {
+        "phase": "calculation",
+        "representation": "Three trays; one stone per offering",
+        "response": "6",
+        "question": "15 ÷ 3 = ?",
+        "equation": "15 ÷ 3 = 6",
+        "activity": "sphinx-sharing",
+        "loadActions": 15,
+        "unloadActions": 0,
+        "values": [
+          5,
+          5,
+          5
+        ]
+      }
+    },
+    {
+      "mission": 1,
+      "objective": "Sphinx challenge: calculation for 15 divided by 3.",
+      "correct": true,
+      "support": "new-number practice; model visible; corrective feedback and retry",
+      "at": "2026-09-07T09:22:00.058Z",
+      "contentVersion": "nile-learning-2026-09-v2",
+      "details": {
+        "phase": "calculation",
+        "representation": "Three trays; one stone per offering",
+        "response": "5",
+        "question": "15 ÷ 3 = ?",
+        "equation": "15 ÷ 3 = 5",
+        "activity": "sphinx-sharing",
+        "loadActions": 15,
+        "unloadActions": 0,
+        "values": [
+          5,
+          5,
+          5
+        ]
+      }
+    },
+    {
+      "mission": 1,
+      "objective": "Sphinx challenge: explanation for 15 divided by 3.",
+      "correct": false,
+      "support": "new-number practice; model visible; corrective feedback and retry",
+      "at": "2026-09-07T09:22:00.099Z",
+      "contentVersion": "nile-learning-2026-09-v2",
+      "details": {
+        "phase": "explanation",
+        "representation": "Three trays; one stone per offering",
+        "response": "Equal groups are enough, even if some are left.",
+        "question": "How do you know the sharing is fair?",
+        "equation": "",
+        "activity": "sphinx-sharing",
+        "loadActions": 15,
+        "unloadActions": 0,
+        "values": [
+          5,
+          5,
+          5
+        ]
+      }
+    },
+    {
+      "mission": 1,
+      "objective": "Sphinx challenge: explanation for 15 divided by 3.",
+      "correct": true,
+      "support": "new-number practice; model visible; corrective feedback and retry",
+      "at": "2026-09-07T09:22:00.142Z",
+      "contentVersion": "nile-learning-2026-09-v2",
+      "details": {
+        "phase": "explanation",
+        "representation": "Three trays; one stone per offering",
+        "response": "All 15 are used: 3 equal groups of 5.",
+        "question": "How do you know the sharing is fair?",
+        "equation": "",
+        "activity": "sphinx-sharing",
+        "loadActions": 15,
+        "unloadActions": 0,
+        "values": [
+          5,
+          5,
+          5
+        ]
+      }
+    },
+    {
+      "mission": 1,
+      "objective": "Sphinx challenge: model for 15 divided by 3.",
+      "correct": true,
+      "support": "repeat of the same numerical task; model visible; corrective feedback and retry",
+      "at": "2026-09-07T09:22:01.200Z",
+      "contentVersion": "nile-learning-2026-09-v2",
+      "details": {
+        "phase": "model",
+        "representation": "Three trays; one stone per offering",
+        "response": "5, 5, 5",
+        "question": "Share 15 offerings equally between three trays.",
+        "equation": "",
+        "activity": "sphinx-sharing",
+        "loadActions": 15,
+        "unloadActions": 0,
+        "values": [
+          5,
+          5,
+          5
+        ]
+      }
+    },
+    {
+      "mission": 1,
+      "objective": "Sphinx challenge: calculation for 15 divided by 3.",
+      "correct": true,
+      "support": "repeat of the same numerical task; model visible; corrective feedback and retry",
+      "at": "2026-09-07T09:22:01.223Z",
+      "contentVersion": "nile-learning-2026-09-v2",
+      "details": {
+        "phase": "calculation",
+        "representation": "Three trays; one stone per offering",
+        "response": "5",
+        "question": "15 ÷ 3 = ?",
+        "equation": "15 ÷ 3 = 5",
+        "activity": "sphinx-sharing",
+        "loadActions": 15,
+        "unloadActions": 0,
+        "values": [
+          5,
+          5,
+          5
+        ]
+      }
+    },
+    {
+      "mission": 1,
+      "objective": "Sphinx challenge: explanation for 15 divided by 3.",
+      "correct": true,
+      "support": "repeat of the same numerical task; model visible; corrective feedback and retry",
+      "at": "2026-09-07T09:22:01.249Z",
+      "contentVersion": "nile-learning-2026-09-v2",
+      "details": {
+        "phase": "explanation",
+        "representation": "Three trays; one stone per offering",
+        "response": "All 15 are used: 3 equal groups of 5.",
+        "question": "How do you know the sharing is fair?",
+        "equation": "",
+        "activity": "sphinx-sharing",
+        "loadActions": 15,
+        "unloadActions": 0,
+        "values": [
+          5,
+          5,
+          5
+        ]
+      }
+    }
+  ],
+  "recall": {
+    "2026-09-07": [
+      {
+        "question": 0,
+        "correct": false,
+        "at": "2026-09-07T09:20:36.649Z",
+        "contentVersion": "nile-learning-2026-09-v2",
+        "support": "new-context question",
+        "details": {
+          "phase": "recall",
+          "response": "Dry desert far from water.",
+          "question": "A new riverside village needs farmland. Which place is better?"
+        }
+      },
+      {
+        "question": 0,
+        "correct": true,
+        "at": "2026-09-07T09:20:36.698Z",
+        "contentVersion": "nile-learning-2026-09-v2",
+        "support": "explanation and retry",
+        "details": {
+          "phase": "recall",
+          "response": "Land beside a water channel with fertile soil.",
+          "question": "A new riverside village needs farmland. Which place is better?"
+        }
+      },
+      {
+        "question": 1,
+        "correct": true,
+        "at": "2026-09-07T09:20:36.746Z",
+        "contentVersion": "nile-learning-2026-09-v2",
+        "support": "new-context question",
+        "details": {
+          "phase": "recall",
+          "response": "Six",
+          "question": "There are 18 baskets and three boats. How many in each equal share?",
+          "equation": "18 ÷ 3 = 6"
+        }
+      },
+      {
+        "question": 2,
+        "correct": true,
+        "at": "2026-09-07T09:20:36.776Z",
+        "contentVersion": "nile-learning-2026-09-v2",
+        "support": "new-context question",
+        "details": {
+          "phase": "recall",
+          "response": "Record its position and surroundings.",
+          "question": "An archaeologist finds a cup. What should happen before it is moved?"
+        }
+      }
+    ]
+  }
+}

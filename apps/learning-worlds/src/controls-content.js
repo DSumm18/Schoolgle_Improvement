@@ -1,0 +1,5 @@
+export const controlNarration={
+ garden:'Tap or click each numbered gate to open it. You do not need to drag anything. Open all three gates so water can reach the garden. Then choose an answer to the farming question and collect your discovery. On a keyboard, use Tab to reach a gate and Enter or Space to open it.',
+ tablet:'Let’s learn the controls. Slide the round Move pad with your thumb. Lift your thumb to stop. Swipe the world with your other finger to look around. Tap Look ahead if you lose your way. Choose Guide me there to follow a trail. When you arrive, tap the large discovery button. Tap Run to go faster, and tap it again to walk. There are no timers. You can open Controls any time.',
+ computer:'Let’s learn the controls. Hold the arrow keys, or W, A, S and D, to walk. Let go to stop. Hold the mouse button and drag the world to look around. Click Look ahead if you lose your way. Choose Guide me there to follow a trail. When you arrive, click the discovery button or press E. Click Run, or hold Shift, to go faster. There are no timers. You can open Controls any time.'
+};

@@ -1,0 +1,21 @@
+.fire-workshop{position:relative;isolation:isolate;margin:22px 0 15px;border:1px solid #b99b68;border-radius:16px;overflow:hidden;background:radial-gradient(ellipse at 50% 30%,#fff8e5,#dfcfaa);box-shadow:inset 0 0 45px #99734513,0 8px 22px #503b2112}
+.workshop-caption{padding:16px 18px;display:flex;flex-direction:column;gap:5px}.workshop-caption span{font-size:9px;letter-spacing:2px;color:#795a37}.workshop-caption strong{font-family:'Fraunces',serif;font-size:21px;font-weight:500}
+.workshop-scene{position:relative;width:270px;height:225px;margin:4px auto 0;perspective:800px}
+ .workshop-foundation{position:absolute;left:40px;top:105px;width:198px;height:89px;background:#917c58;clip-path:polygon(0 33%,84% 0,100% 67%,16% 100%)}
+.workshop-floor{position:absolute;left:45px;top:109px;width:186px;height:75px;background:repeating-linear-gradient(0deg,#c7b790 0 18px,#b5a47d 18px 20px);clip-path:polygon(0 33.3%,84.4% 0,100% 66.7%,15.6% 100%)}
+.workshop-wall{position:absolute;height:107px;border:2px dashed #9c896c;background:#d6c6a426;transition:background .25s;transform-origin:top left;opacity:.55;display:grid;place-items:center}
+.workshop-wall.back{left:45px;top:27px;width:157px;transform:skewY(-9deg)}
+.workshop-wall.left{left:45px;top:27px;width:29px;transform:skewY(60deg);z-index:2}
+.workshop-wall.right{left:202px;top:2px;width:29px;transform:skewY(60deg);z-index:3}
+.workshop-wall.placed{opacity:1;border:2px solid #825837;box-shadow:inset -4px 0 0 #0002;background-color:#c8a57e;background-image:linear-gradient(90deg,transparent 43%,#624833 43% 48%,transparent 48%),linear-gradient(0deg,transparent 46%,#624833 46% 52%,transparent 52%)}
+.brick .workshop-wall.placed,.brick .workshop-stock span{background-color:#b67154;background-image:linear-gradient(0deg,transparent 85%,#e3bf92 85%),linear-gradient(90deg,transparent 90%,#e3bf92 90%);background-size:100% 19px,34px 38px;border-color:#88543e}
+.workshop-wall b{font-size:13px;background:#fff1d5;color:#4d4130;border-radius:50%;width:23px;height:23px;display:grid;place-items:center;position:absolute;bottom:5px;right:6px;box-shadow:0 1px 4px #0002}
+.workshop-wall:not(.placed) .workshop-window{display:none}.workshop-window{width:33px;height:40px;background:linear-gradient(90deg,transparent 46%,#d5b884 46% 54%,transparent 54%),linear-gradient(0deg,#334e53 47%,#d5b884 47% 54%,#334e53 54%);border:4px solid #e0be8e;box-shadow:0 2px 3px #0003;margin-top:-9px}.workshop-wall:not(.back) .workshop-window{width:12px;border-width:2px;height:31px}
+.workshop-open{position:absolute;bottom:3px;left:0;right:0;text-align:center;font-size:9px;letter-spacing:1px;color:#725a3c}
+.workshop-stock{display:flex;gap:8px;justify-content:center;height:33px;margin:9px 0}.workshop-stock span{width:48px;height:27px;border:2px solid #896445;background:repeating-linear-gradient(90deg,#c9a276 0 15px,#755438 15px 18px);transform:skewY(-7deg);box-shadow:2px 3px 0 #846846}.workshop-stock .used{background:none!important;border:2px dashed #aa9777;box-shadow:none;opacity:.35}
+.workshop-counts{display:flex;justify-content:space-between;gap:12px;padding:14px 18px;border-top:1px solid #b196663b;font-size:11px;color:#604c32}.workshop-counts b{display:block;font-size:21px;color:#264a50}.workshop-counts span:last-child{text-align:right}
+.workshop-wall.just-placed{animation:workshop-place .48s ease-out both}.workshop-actions{display:flex;flex-wrap:wrap;gap:9px;margin:14px 0}.workshop-actions #place-wall{background:#23515a;color:#fff2d5}.workshop-note{font-size:12px;color:#726048}
+@keyframes workshop-place{from{translate:0 -45px;opacity:0}to{translate:0 0;opacity:1}}
+.fire-reduced .workshop-wall{animation:none;transition:none}
+@media(prefers-reduced-motion:reduce){.workshop-wall{animation:none;transition:none}}
+@media(max-width:360px){.workshop-scene{transform:scale(.84);transform-origin:top center;margin-bottom:-34px}.workshop-counts{padding:12px;font-size:10px}}

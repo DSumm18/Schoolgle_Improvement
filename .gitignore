@@ -69,6 +69,10 @@ apps/platform/src/components/brand/tmpclaude-*
 audit_script.ps1
 *.old.css
 
+# Schoolgle Worlds: reproducible build output, copied before the website build
+apps/learning-worlds/dist/
+apps/platform/public/worlds/play/
+
 # Supabase temp
 **/supabase/.temp/
 

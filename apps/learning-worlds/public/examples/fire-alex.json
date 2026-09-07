@@ -1,0 +1,757 @@
+{
+  "game": "The Great Fire of London",
+  "contentVersion": "1666.1",
+  "exportedAt": "2026-09-07T09:28:28.228Z",
+  "learner": {
+    "id": "fictional-alex",
+    "displayName": "Alex (fictional test pupil)",
+    "fictional": true
+  },
+  "recordScope": "fictional learner; actual game interactions; separate browser save",
+  "version": 1,
+  "completed": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "attempts": [
+    {
+      "at": "2026-09-07T09:28:26.585Z",
+      "version": "1666.1",
+      "chapter": 0,
+      "objective": "Locate the start of the Great Fire and place it in 1666",
+      "kind": "observation",
+      "question": "Listen to the story",
+      "response": "Read-aloud selected",
+      "correct": null,
+      "help": [
+        "story and source explanations available",
+        "read aloud"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:26.635Z",
+      "version": "1666.1",
+      "chapter": 0,
+      "objective": "Locate the start of the Great Fire and place it in 1666",
+      "kind": "response",
+      "question": "Where did the Great Fire begin?",
+      "response": "Old St Paul’s",
+      "correct": false,
+      "help": [
+        "story and source explanations available",
+        "read aloud",
+        "process hint"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:26.644Z",
+      "version": "1666.1",
+      "chapter": 0,
+      "objective": "Locate the start of the Great Fire and place it in 1666",
+      "kind": "response",
+      "question": "Where did the Great Fire begin?",
+      "response": "Pudding Lane bakery",
+      "correct": true,
+      "help": [
+        "story and source explanations available",
+        "read aloud",
+        "process hint",
+        "corrective feedback"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:26.668Z",
+      "version": "1666.1",
+      "chapter": 0,
+      "objective": "Locate the start of the Great Fire and place it in 1666",
+      "kind": "response",
+      "question": "Which date belongs on our first story stamp?",
+      "response": "5 November 1605",
+      "correct": false,
+      "help": [
+        "story and source explanations available",
+        "read aloud",
+        "process hint",
+        "corrective feedback"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:26.692Z",
+      "version": "1666.1",
+      "chapter": 0,
+      "objective": "Locate the start of the Great Fire and place it in 1666",
+      "kind": "response",
+      "question": "Which date belongs on our first story stamp?",
+      "response": "2 September 1666",
+      "correct": true,
+      "help": [
+        "story and source explanations available",
+        "read aloud",
+        "process hint",
+        "corrective feedback"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:26.757Z",
+      "version": "1666.1",
+      "chapter": 1,
+      "objective": "Connect conditions in London to the spread of the fire",
+      "kind": "observation",
+      "question": "Inspect a spread condition",
+      "response": "☀Dry summerInspect",
+      "correct": null,
+      "help": [
+        "story and source explanations available"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:26.782Z",
+      "version": "1666.1",
+      "chapter": 1,
+      "objective": "Connect conditions in London to the spread of the fire",
+      "kind": "observation",
+      "question": "Inspect a spread condition",
+      "response": "➜Strong windInspect",
+      "correct": null,
+      "help": [
+        "story and source explanations available"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:26.807Z",
+      "version": "1666.1",
+      "chapter": 1,
+      "objective": "Connect conditions in London to the spread of the fire",
+      "kind": "observation",
+      "question": "Inspect a spread condition",
+      "response": "▥Close buildingsInspect",
+      "correct": null,
+      "help": [
+        "story and source explanations available"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:26.875Z",
+      "version": "1666.1",
+      "chapter": 1,
+      "objective": "Connect conditions in London to the spread of the fire",
+      "kind": "observation",
+      "question": "Compare a paper street",
+      "response": "gap",
+      "correct": null,
+      "help": [
+        "story and source explanations available"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:26.892Z",
+      "version": "1666.1",
+      "chapter": 1,
+      "objective": "Connect conditions in London to the spread of the fire",
+      "kind": "observation",
+      "question": "Compare a paper street",
+      "response": "close",
+      "correct": null,
+      "help": [
+        "story and source explanations available"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:26.926Z",
+      "version": "1666.1",
+      "chapter": 1,
+      "objective": "Connect conditions in London to the spread of the fire",
+      "kind": "response",
+      "question": "Why did a fire in one bakery spread so far?",
+      "response": "The year 1666 made every building burn.",
+      "correct": false,
+      "help": [
+        "story and source explanations available"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:26.950Z",
+      "version": "1666.1",
+      "chapter": 1,
+      "objective": "Connect conditions in London to the spread of the fire",
+      "kind": "response",
+      "question": "Why did a fire in one bakery spread so far?",
+      "response": "Dry conditions, wind and close buildings helped it spread.",
+      "correct": true,
+      "help": [
+        "story and source explanations available",
+        "corrective feedback"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:27.009Z",
+      "version": "1666.1",
+      "chapter": 2,
+      "objective": "Use a historical source and recognise its limits",
+      "kind": "observation",
+      "question": "Inspect historical evidence",
+      "response": "A diary account",
+      "correct": null,
+      "help": [
+        "story and source explanations available"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:27.034Z",
+      "version": "1666.1",
+      "chapter": 2,
+      "objective": "Use a historical source and recognise its limits",
+      "kind": "observation",
+      "question": "Inspect historical evidence",
+      "response": "Heat-damaged glass",
+      "correct": null,
+      "help": [
+        "story and source explanations available"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:27.067Z",
+      "version": "1666.1",
+      "chapter": 2,
+      "objective": "Use a historical source and recognise its limits",
+      "kind": "response",
+      "question": "Which claim can the diary account support?",
+      "response": "Pepys knew every Londoner’s thoughts.",
+      "correct": false,
+      "help": [
+        "story and source explanations available"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:27.093Z",
+      "version": "1666.1",
+      "chapter": 2,
+      "objective": "Use a historical source and recognise its limits",
+      "kind": "response",
+      "question": "Which claim can the diary account support?",
+      "response": "People took possessions towards the river.",
+      "correct": true,
+      "help": [
+        "story and source explanations available",
+        "corrective feedback"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:27.117Z",
+      "version": "1666.1",
+      "chapter": 2,
+      "objective": "Use a historical source and recognise its limits",
+      "kind": "response",
+      "question": "What can the damaged glass tell us?",
+      "response": "The name of the person who started the fire.",
+      "correct": false,
+      "help": [
+        "story and source explanations available",
+        "corrective feedback"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:27.142Z",
+      "version": "1666.1",
+      "chapter": 2,
+      "objective": "Use a historical source and recognise its limits",
+      "kind": "response",
+      "question": "What can the damaged glass tell us?",
+      "response": "That the object was exposed to intense heat.",
+      "correct": true,
+      "help": [
+        "story and source explanations available",
+        "corrective feedback"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:27.226Z",
+      "version": "1666.1",
+      "chapter": 3,
+      "objective": "Sequence the fire and explain how Londoners responded",
+      "kind": "observation",
+      "question": "Place a story event",
+      "response": "After the fireLondoners begin rebuilding over years.",
+      "correct": null,
+      "help": [
+        "story and source explanations available"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:27.243Z",
+      "version": "1666.1",
+      "chapter": 3,
+      "objective": "Sequence the fire and explain how Londoners responded",
+      "kind": "observation",
+      "question": "Place a story event",
+      "response": "2 SeptemberFire begins in Pudding Lane.",
+      "correct": null,
+      "help": [
+        "story and source explanations available"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:27.268Z",
+      "version": "1666.1",
+      "chapter": 3,
+      "objective": "Sequence the fire and explain how Londoners responded",
+      "kind": "observation",
+      "question": "Place a story event",
+      "response": "During the firePeople move possessions by boat and cart.",
+      "correct": null,
+      "help": [
+        "story and source explanations available"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:27.293Z",
+      "version": "1666.1",
+      "chapter": 3,
+      "objective": "Sequence the fire and explain how Londoners responded",
+      "kind": "response",
+      "question": "Order the fire, people’s response and rebuilding",
+      "response": "Londoners begin rebuilding over years. → Fire begins in Pudding Lane. → People move possessions by boat and cart.",
+      "correct": false,
+      "help": [
+        "story and source explanations available"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:27.318Z",
+      "version": "1666.1",
+      "chapter": 3,
+      "objective": "Sequence the fire and explain how Londoners responded",
+      "kind": "observation",
+      "question": "Undo story event",
+      "response": "escape",
+      "correct": null,
+      "help": [
+        "story and source explanations available",
+        "corrective feedback"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:27.342Z",
+      "version": "1666.1",
+      "chapter": 3,
+      "objective": "Sequence the fire and explain how Londoners responded",
+      "kind": "observation",
+      "question": "Undo story event",
+      "response": "start",
+      "correct": null,
+      "help": [
+        "story and source explanations available",
+        "corrective feedback"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:27.359Z",
+      "version": "1666.1",
+      "chapter": 3,
+      "objective": "Sequence the fire and explain how Londoners responded",
+      "kind": "observation",
+      "question": "Undo story event",
+      "response": "rebuild",
+      "correct": null,
+      "help": [
+        "story and source explanations available",
+        "corrective feedback"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:27.384Z",
+      "version": "1666.1",
+      "chapter": 3,
+      "objective": "Sequence the fire and explain how Londoners responded",
+      "kind": "observation",
+      "question": "Place a story event",
+      "response": "2 SeptemberFire begins in Pudding Lane.",
+      "correct": null,
+      "help": [
+        "story and source explanations available",
+        "corrective feedback"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:27.401Z",
+      "version": "1666.1",
+      "chapter": 3,
+      "objective": "Sequence the fire and explain how Londoners responded",
+      "kind": "observation",
+      "question": "Place a story event",
+      "response": "During the firePeople move possessions by boat and cart.",
+      "correct": null,
+      "help": [
+        "story and source explanations available",
+        "corrective feedback"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:27.418Z",
+      "version": "1666.1",
+      "chapter": 3,
+      "objective": "Sequence the fire and explain how Londoners responded",
+      "kind": "observation",
+      "question": "Place a story event",
+      "response": "After the fireLondoners begin rebuilding over years.",
+      "correct": null,
+      "help": [
+        "story and source explanations available",
+        "corrective feedback"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:27.443Z",
+      "version": "1666.1",
+      "chapter": 3,
+      "objective": "Sequence the fire and explain how Londoners responded",
+      "kind": "response",
+      "question": "Order the fire, people’s response and rebuilding",
+      "response": "Fire begins in Pudding Lane. → People move possessions by boat and cart. → Londoners begin rebuilding over years.",
+      "correct": true,
+      "help": [
+        "story and source explanations available",
+        "corrective feedback"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:27.468Z",
+      "version": "1666.1",
+      "chapter": 3,
+      "objective": "Sequence the fire and explain how Londoners responded",
+      "kind": "response",
+      "question": "Why were boats and carts part of this story?",
+      "response": "They were modern fire engines.",
+      "correct": false,
+      "help": [
+        "story and source explanations available",
+        "corrective feedback"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:27.493Z",
+      "version": "1666.1",
+      "chapter": 3,
+      "objective": "Sequence the fire and explain how Londoners responded",
+      "kind": "response",
+      "question": "Why were boats and carts part of this story?",
+      "response": "People used them to move possessions away from the fire.",
+      "correct": true,
+      "help": [
+        "story and source explanations available",
+        "corrective feedback"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:27.544Z",
+      "version": "1666.1",
+      "chapter": 4,
+      "objective": "Explain rebuilding changes and recall the story",
+      "kind": "observation",
+      "question": "Choose model wall material",
+      "response": "timber",
+      "correct": null,
+      "help": [
+        "story and source explanations available"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:27.568Z",
+      "version": "1666.1",
+      "chapter": 4,
+      "objective": "Explain rebuilding changes and recall the story",
+      "kind": "observation",
+      "question": "Place a model wall",
+      "response": "timber; 1 of 3 walls",
+      "correct": null,
+      "help": [
+        "story and source explanations available"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:27.592Z",
+      "version": "1666.1",
+      "chapter": 4,
+      "objective": "Explain rebuilding changes and recall the story",
+      "kind": "observation",
+      "question": "Place a model wall",
+      "response": "timber; 2 of 3 walls",
+      "correct": null,
+      "help": [
+        "story and source explanations available"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:27.608Z",
+      "version": "1666.1",
+      "chapter": 4,
+      "objective": "Explain rebuilding changes and recall the story",
+      "kind": "observation",
+      "question": "Place a model wall",
+      "response": "timber; 3 of 3 walls",
+      "correct": null,
+      "help": [
+        "story and source explanations available"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:27.625Z",
+      "version": "1666.1",
+      "chapter": 4,
+      "objective": "Explain rebuilding changes and recall the story",
+      "kind": "response",
+      "question": "Choose outside walls under rebuilding rules",
+      "response": "timber",
+      "correct": false,
+      "help": [
+        "story and source explanations available"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:27.650Z",
+      "version": "1666.1",
+      "chapter": 4,
+      "objective": "Explain rebuilding changes and recall the story",
+      "kind": "observation",
+      "question": "Choose model wall material",
+      "response": "brick",
+      "correct": null,
+      "help": [
+        "story and source explanations available",
+        "corrective feedback"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:27.683Z",
+      "version": "1666.1",
+      "chapter": 4,
+      "objective": "Explain rebuilding changes and recall the story",
+      "kind": "observation",
+      "question": "Place a model wall",
+      "response": "brick; 1 of 3 walls",
+      "correct": null,
+      "help": [
+        "story and source explanations available",
+        "corrective feedback"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:27.707Z",
+      "version": "1666.1",
+      "chapter": 4,
+      "objective": "Explain rebuilding changes and recall the story",
+      "kind": "observation",
+      "question": "Place a model wall",
+      "response": "brick; 2 of 3 walls",
+      "correct": null,
+      "help": [
+        "story and source explanations available",
+        "corrective feedback"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:27.732Z",
+      "version": "1666.1",
+      "chapter": 4,
+      "objective": "Explain rebuilding changes and recall the story",
+      "kind": "observation",
+      "question": "Place a model wall",
+      "response": "brick; 3 of 3 walls",
+      "correct": null,
+      "help": [
+        "story and source explanations available",
+        "corrective feedback"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:27.751Z",
+      "version": "1666.1",
+      "chapter": 4,
+      "objective": "Explain rebuilding changes and recall the story",
+      "kind": "response",
+      "question": "Choose outside walls under rebuilding rules",
+      "response": "brick",
+      "correct": true,
+      "help": [
+        "story and source explanations available",
+        "corrective feedback"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:27.767Z",
+      "version": "1666.1",
+      "chapter": 4,
+      "objective": "Explain rebuilding changes and recall the story",
+      "kind": "response",
+      "question": "Why did the rebuilding rule change the outside walls?",
+      "response": "Brick and stone were only invented after 1666.",
+      "correct": false,
+      "help": [
+        "story and source explanations available",
+        "corrective feedback"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:27.792Z",
+      "version": "1666.1",
+      "chapter": 4,
+      "objective": "Explain rebuilding changes and recall the story",
+      "kind": "response",
+      "question": "Why did the rebuilding rule change the outside walls?",
+      "response": "Brick or stone outside walls could help reduce the spread of fire.",
+      "correct": true,
+      "help": [
+        "story and source explanations available",
+        "corrective feedback"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:27.842Z",
+      "version": "1666.1",
+      "chapter": 4,
+      "objective": "Explain rebuilding changes and recall the story",
+      "kind": "recall",
+      "question": "Where did the Great Fire begin?",
+      "response": "Inside the modern Big Ben tower",
+      "correct": false,
+      "help": [
+        "same-session recall; story hidden"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:27.901Z",
+      "version": "1666.1",
+      "chapter": 4,
+      "objective": "Explain rebuilding changes and recall the story",
+      "kind": "recall",
+      "question": "Where did the Great Fire begin?",
+      "response": "A bakery in Pudding Lane",
+      "correct": true,
+      "help": [
+        "same-session recall; story hidden"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:27.925Z",
+      "version": "1666.1",
+      "chapter": 4,
+      "objective": "Explain rebuilding changes and recall the story",
+      "kind": "recall",
+      "question": "Which helped the fire spread?",
+      "response": "Dry conditions, strong wind and close buildings",
+      "correct": true,
+      "help": [
+        "same-session recall; story hidden"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:27.967Z",
+      "version": "1666.1",
+      "chapter": 4,
+      "objective": "Explain rebuilding changes and recall the story",
+      "kind": "recall",
+      "question": "Where did the Great Fire begin?",
+      "response": "A bakery in Pudding Lane",
+      "correct": true,
+      "help": [
+        "same-session recall; story hidden"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:27.984Z",
+      "version": "1666.1",
+      "chapter": 4,
+      "objective": "Explain rebuilding changes and recall the story",
+      "kind": "recall",
+      "question": "Which helped the fire spread?",
+      "response": "Dry conditions, strong wind and close buildings",
+      "correct": true,
+      "help": [
+        "same-session recall; story hidden"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:28.000Z",
+      "version": "1666.1",
+      "chapter": 4,
+      "objective": "Explain rebuilding changes and recall the story",
+      "kind": "recall",
+      "question": "Why is Pepys’s diary useful?",
+      "response": "It was written by someone who lived through the time",
+      "correct": true,
+      "help": [
+        "same-session recall; story hidden"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:28.092Z",
+      "version": "1666.1",
+      "chapter": 4,
+      "objective": "Explain rebuilding changes and recall the story",
+      "kind": "recall",
+      "question": "Where did the Great Fire begin?",
+      "response": "In the middle of the river",
+      "correct": false,
+      "help": [
+        "return practice; story hidden",
+        "Elapsed since completion: 0 minutes"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:28.126Z",
+      "version": "1666.1",
+      "chapter": 4,
+      "objective": "Explain rebuilding changes and recall the story",
+      "kind": "recall",
+      "question": "Where did the Great Fire begin?",
+      "response": "A bakery in Pudding Lane",
+      "correct": true,
+      "help": [
+        "return practice; story hidden",
+        "Elapsed since completion: 0 minutes",
+        "corrective feedback on this question",
+        "read aloud"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:28.142Z",
+      "version": "1666.1",
+      "chapter": 4,
+      "objective": "Explain rebuilding changes and recall the story",
+      "kind": "recall",
+      "question": "Which helped the fire spread?",
+      "response": "Dry conditions, strong wind and close buildings",
+      "correct": true,
+      "help": [
+        "return practice; story hidden",
+        "Elapsed since completion: 0 minutes",
+        "read aloud"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:28:28.159Z",
+      "version": "1666.1",
+      "chapter": 4,
+      "objective": "Explain rebuilding changes and recall the story",
+      "kind": "recall",
+      "question": "Why is Pepys’s diary useful?",
+      "response": "It was written by someone who lived through the time",
+      "correct": true,
+      "help": [
+        "return practice; story hidden",
+        "Elapsed since completion: 0 minutes",
+        "read aloud"
+      ]
+    }
+  ],
+  "started": true,
+  "completedAt": "2026-09-07T09:28:28.027Z",
+  "settings": {
+    "character": "explorer-girl",
+    "reducedMotion": true,
+    "largeText": false
+  }
+}

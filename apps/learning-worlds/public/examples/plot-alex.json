@@ -1,0 +1,675 @@
+{
+  "game": "The Midnight Letter",
+  "kind": "local prototype practice",
+  "version": 1,
+  "completed": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "attempts": [
+    {
+      "at": "2026-09-07T09:23:08.281Z",
+      "version": "1605.2",
+      "chapter": 0,
+      "objective": "Explore clothing in early Stuart England (unassessed)",
+      "action": "wardrobe-outfit",
+      "kind": "observation",
+      "response": {
+        "character": "explorer-girl",
+        "outfit": "doublet"
+      },
+      "correct": null,
+      "help": []
+    },
+    {
+      "at": "2026-09-07T09:23:08.513Z",
+      "version": "1605.2",
+      "chapter": 0,
+      "objective": "Identify people and distinguish their roles",
+      "action": "read-aloud",
+      "kind": "observation",
+      "response": "Displayed text read aloud",
+      "correct": null,
+      "help": [
+        "Read-aloud access used"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:23:08.555Z",
+      "version": "1605.2",
+      "chapter": 0,
+      "objective": "Identify people and distinguish their roles",
+      "action": "match-person-role",
+      "kind": "response",
+      "response": {
+        "person": "James I",
+        "role": "The leader of the plot"
+      },
+      "correct": false,
+      "help": [
+        "Read-aloud access used"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:23:08.580Z",
+      "version": "1605.2",
+      "chapter": 0,
+      "objective": "Identify people and distinguish their roles",
+      "action": "match-person-role",
+      "kind": "response",
+      "response": {
+        "person": "James I",
+        "role": "The king the plot threatened"
+      },
+      "correct": true,
+      "help": [
+        "Read-aloud access used",
+        "People explanation revisited"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:23:08.605Z",
+      "version": "1605.2",
+      "chapter": 0,
+      "objective": "Identify people and distinguish their roles",
+      "action": "match-person-role",
+      "kind": "response",
+      "response": {
+        "person": "Robert Catesby",
+        "role": "The man found with the gunpowder"
+      },
+      "correct": false,
+      "help": [
+        "Read-aloud access used",
+        "People explanation revisited"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:23:08.629Z",
+      "version": "1605.2",
+      "chapter": 0,
+      "objective": "Identify people and distinguish their roles",
+      "action": "match-person-role",
+      "kind": "response",
+      "response": {
+        "person": "Robert Catesby",
+        "role": "The leader of the plot"
+      },
+      "correct": true,
+      "help": [
+        "Read-aloud access used",
+        "People explanation revisited"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:23:08.654Z",
+      "version": "1605.2",
+      "chapter": 0,
+      "objective": "Identify people and distinguish their roles",
+      "action": "match-person-role",
+      "kind": "response",
+      "response": {
+        "person": "Guy Fawkes",
+        "role": "The man found with the gunpowder"
+      },
+      "correct": true,
+      "help": [
+        "Read-aloud access used",
+        "People explanation revisited"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:23:08.734Z",
+      "version": "1605.2",
+      "chapter": 1,
+      "objective": "Use a historical source to support an inference",
+      "action": "open-source",
+      "kind": "observation",
+      "response": "Opened the adapted letter",
+      "correct": null,
+      "help": []
+    },
+    {
+      "at": "2026-09-07T09:23:08.785Z",
+      "version": "1605.2",
+      "chapter": 1,
+      "objective": "Use a historical source to support an inference",
+      "action": "select-letter-evidence",
+      "kind": "response",
+      "response": "I care about your safety.",
+      "correct": false,
+      "help": []
+    },
+    {
+      "at": "2026-09-07T09:23:09.335Z",
+      "version": "1605.2",
+      "chapter": 1,
+      "objective": "Use a historical source to support an inference",
+      "action": "open-source",
+      "kind": "observation",
+      "response": "Opened the adapted letter",
+      "correct": null,
+      "help": []
+    },
+    {
+      "at": "2026-09-07T09:23:09.362Z",
+      "version": "1605.2",
+      "chapter": 1,
+      "objective": "Use a historical source to support an inference",
+      "action": "select-letter-evidence",
+      "kind": "response",
+      "response": "Stay away from Parliament on the opening day.",
+      "correct": true,
+      "help": []
+    },
+    {
+      "at": "2026-09-07T09:23:09.388Z",
+      "version": "1605.2",
+      "chapter": 1,
+      "objective": "Use a historical source to support an inference",
+      "action": "source-limits",
+      "kind": "response",
+      "response": "We know for certain that Guy Fawkes wrote it.",
+      "correct": false,
+      "help": []
+    },
+    {
+      "at": "2026-09-07T09:23:09.412Z",
+      "version": "1605.2",
+      "chapter": 1,
+      "objective": "Use a historical source to support an inference",
+      "action": "source-limits",
+      "kind": "response",
+      "response": "It warns of danger, but its writer is uncertain.",
+      "correct": true,
+      "help": [
+        "Unsigned source explanation"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:23:09.466Z",
+      "version": "1605.2",
+      "chapter": 2,
+      "objective": "Distinguish what evidence shows from what remains unknown",
+      "action": "inspect-search-clue",
+      "kind": "observation",
+      "response": "A store of gunpowder",
+      "correct": null,
+      "help": []
+    },
+    {
+      "at": "2026-09-07T09:23:09.521Z",
+      "version": "1605.2",
+      "chapter": 2,
+      "objective": "Distinguish what evidence shows from what remains unknown",
+      "action": "inspect-search-clue",
+      "kind": "observation",
+      "response": "The place",
+      "correct": null,
+      "help": []
+    },
+    {
+      "at": "2026-09-07T09:23:09.546Z",
+      "version": "1605.2",
+      "chapter": 2,
+      "objective": "Distinguish what evidence shows from what remains unknown",
+      "action": "inspect-search-clue",
+      "kind": "observation",
+      "response": "Guy Fawkes",
+      "correct": null,
+      "help": []
+    },
+    {
+      "at": "2026-09-07T09:23:09.596Z",
+      "version": "1605.2",
+      "chapter": 2,
+      "objective": "Distinguish what evidence shows from what remains unknown",
+      "action": "explain-search-evidence",
+      "kind": "response",
+      "response": "It proved that every Catholic supported the plot.",
+      "correct": false,
+      "help": []
+    },
+    {
+      "at": "2026-09-07T09:23:09.621Z",
+      "version": "1605.2",
+      "chapter": 2,
+      "objective": "Distinguish what evidence shows from what remains unknown",
+      "action": "explain-search-evidence",
+      "kind": "response",
+      "response": "Finding the danger allowed the planned attack to be stopped.",
+      "correct": true,
+      "help": [
+        "Search explanation revisited"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:23:09.673Z",
+      "version": "1605.2",
+      "chapter": 3,
+      "objective": "Sequence events and explain cause and consequence",
+      "action": "place-timeline-card",
+      "kind": "observation",
+      "response": [
+        "opening"
+      ],
+      "correct": null,
+      "help": []
+    },
+    {
+      "at": "2026-09-07T09:23:09.696Z",
+      "version": "1605.2",
+      "chapter": 3,
+      "objective": "Sequence events and explain cause and consequence",
+      "action": "place-timeline-card",
+      "kind": "observation",
+      "response": [
+        "opening",
+        "warning"
+      ],
+      "correct": null,
+      "help": []
+    },
+    {
+      "at": "2026-09-07T09:23:09.720Z",
+      "version": "1605.2",
+      "chapter": 3,
+      "objective": "Sequence events and explain cause and consequence",
+      "action": "place-timeline-card",
+      "kind": "observation",
+      "response": [
+        "opening",
+        "warning",
+        "search"
+      ],
+      "correct": null,
+      "help": []
+    },
+    {
+      "at": "2026-09-07T09:23:09.737Z",
+      "version": "1605.2",
+      "chapter": 3,
+      "objective": "Sequence events and explain cause and consequence",
+      "action": "submit-timeline",
+      "kind": "response",
+      "response": [
+        "opening",
+        "warning",
+        "search"
+      ],
+      "correct": false,
+      "help": []
+    },
+    {
+      "at": "2026-09-07T09:23:09.762Z",
+      "version": "1605.2",
+      "chapter": 3,
+      "objective": "Sequence events and explain cause and consequence",
+      "action": "undo-timeline-card",
+      "kind": "observation",
+      "response": [
+        "opening",
+        "warning"
+      ],
+      "correct": null,
+      "help": [
+        "Timeline date prompt"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:23:09.787Z",
+      "version": "1605.2",
+      "chapter": 3,
+      "objective": "Sequence events and explain cause and consequence",
+      "action": "undo-timeline-card",
+      "kind": "observation",
+      "response": [
+        "opening"
+      ],
+      "correct": null,
+      "help": [
+        "Timeline date prompt"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:23:09.804Z",
+      "version": "1605.2",
+      "chapter": 3,
+      "objective": "Sequence events and explain cause and consequence",
+      "action": "undo-timeline-card",
+      "kind": "observation",
+      "response": [],
+      "correct": null,
+      "help": [
+        "Timeline date prompt"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:23:09.829Z",
+      "version": "1605.2",
+      "chapter": 3,
+      "objective": "Sequence events and explain cause and consequence",
+      "action": "place-timeline-card",
+      "kind": "observation",
+      "response": [
+        "warning"
+      ],
+      "correct": null,
+      "help": [
+        "Timeline date prompt"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:23:09.845Z",
+      "version": "1605.2",
+      "chapter": 3,
+      "objective": "Sequence events and explain cause and consequence",
+      "action": "place-timeline-card",
+      "kind": "observation",
+      "response": [
+        "warning",
+        "search"
+      ],
+      "correct": null,
+      "help": [
+        "Timeline date prompt"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:23:09.862Z",
+      "version": "1605.2",
+      "chapter": 3,
+      "objective": "Sequence events and explain cause and consequence",
+      "action": "place-timeline-card",
+      "kind": "observation",
+      "response": [
+        "warning",
+        "search",
+        "opening"
+      ],
+      "correct": null,
+      "help": [
+        "Timeline date prompt"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:23:09.879Z",
+      "version": "1605.2",
+      "chapter": 3,
+      "objective": "Sequence events and explain cause and consequence",
+      "action": "submit-timeline",
+      "kind": "response",
+      "response": [
+        "warning",
+        "search",
+        "opening"
+      ],
+      "correct": true,
+      "help": [
+        "Timeline date prompt"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:23:09.904Z",
+      "version": "1605.2",
+      "chapter": 3,
+      "objective": "Sequence events and explain cause and consequence",
+      "action": "explain-cause",
+      "kind": "response",
+      "response": "the Great Fire of London had just happened.",
+      "correct": false,
+      "help": [
+        "Timeline date prompt"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:23:09.929Z",
+      "version": "1605.2",
+      "chapter": 3,
+      "objective": "Sequence events and explain cause and consequence",
+      "action": "explain-cause",
+      "kind": "response",
+      "response": "a letter warned of danger at Parliament.",
+      "correct": true,
+      "help": [
+        "Timeline date prompt",
+        "Cause explanation"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:23:09.979Z",
+      "version": "1605.2",
+      "chapter": 4,
+      "objective": "Distinguish commemoration from contemporary evidence and recall learning",
+      "action": "classify-remembrance",
+      "kind": "response",
+      "response": "An eyewitness report written during the search",
+      "correct": false,
+      "help": []
+    },
+    {
+      "at": "2026-09-07T09:23:10.004Z",
+      "version": "1605.2",
+      "chapter": 4,
+      "objective": "Distinguish commemoration from contemporary evidence and recall learning",
+      "action": "classify-remembrance",
+      "kind": "response",
+      "response": "How people remember the event",
+      "correct": true,
+      "help": [
+        "Rhyme source explanation"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:23:10.029Z",
+      "version": "1605.2",
+      "chapter": 4,
+      "objective": "Distinguish commemoration from contemporary evidence and recall learning",
+      "action": "return-recall-warning",
+      "kind": "response",
+      "response": "A firework display",
+      "correct": false,
+      "help": [
+        "Rhyme source explanation"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:23:10.054Z",
+      "version": "1605.2",
+      "chapter": 4,
+      "objective": "Distinguish commemoration from contemporary evidence and recall learning",
+      "action": "return-recall-warning",
+      "kind": "response",
+      "response": "An unsigned letter",
+      "correct": true,
+      "help": [
+        "Rhyme source explanation",
+        "Recall warning reminder"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:23:10.079Z",
+      "version": "1605.2",
+      "chapter": 4,
+      "objective": "Distinguish commemoration from contemporary evidence and recall learning",
+      "action": "curate-final-explanation",
+      "kind": "response",
+      "response": "Guy Fawkes led every Catholic in a successful attack.",
+      "correct": false,
+      "help": [
+        "Rhyme source explanation",
+        "Recall warning reminder"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:23:10.104Z",
+      "version": "1605.2",
+      "chapter": 4,
+      "objective": "Distinguish commemoration from contemporary evidence and recall learning",
+      "action": "curate-final-explanation",
+      "kind": "response",
+      "response": "A small group planned an attack. A warning and searches helped stop it.",
+      "correct": true,
+      "help": [
+        "Rhyme source explanation",
+        "Recall warning reminder",
+        "Final explanation correction"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:23:10.904Z",
+      "version": "1605.2",
+      "chapter": 0,
+      "objective": "Identify people and distinguish their roles",
+      "action": "match-person-role",
+      "kind": "response",
+      "response": {
+        "person": "James I",
+        "role": "The king the plot threatened"
+      },
+      "correct": true,
+      "help": []
+    },
+    {
+      "at": "2026-09-07T09:23:10.929Z",
+      "version": "1605.2",
+      "chapter": 0,
+      "objective": "Identify people and distinguish their roles",
+      "action": "match-person-role",
+      "kind": "response",
+      "response": {
+        "person": "Robert Catesby",
+        "role": "The leader of the plot"
+      },
+      "correct": true,
+      "help": []
+    },
+    {
+      "at": "2026-09-07T09:23:10.954Z",
+      "version": "1605.2",
+      "chapter": 0,
+      "objective": "Identify people and distinguish their roles",
+      "action": "match-person-role",
+      "kind": "response",
+      "response": {
+        "person": "Guy Fawkes",
+        "role": "The man found with the gunpowder"
+      },
+      "correct": true,
+      "help": []
+    },
+    {
+      "at": "2026-09-07T09:24:18.781Z",
+      "version": "1605.2",
+      "chapter": 4,
+      "objective": "Distinguish commemoration from contemporary evidence and recall learning",
+      "action": "return-recall",
+      "kind": "response",
+      "response": {
+        "questionId": "roles",
+        "prompt": "A visitor says Guy Fawkes led the plot. Which correction fits the evidence?",
+        "response": "Every Catholic was a member of the plot.",
+        "answerIndex": 2,
+        "questionAttempt": 1,
+        "anchorAt": "2026-09-07T09:23:10.104Z",
+        "elapsedMilliseconds": 68594,
+        "elapsedLabel": "1 minutes since the most recent final explanation"
+      },
+      "correct": false,
+      "help": [
+        "return check",
+        "elapsed: 1 minutes since the most recent final explanation"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:24:18.834Z",
+      "version": "1605.2",
+      "chapter": 4,
+      "objective": "Distinguish commemoration from contemporary evidence and recall learning",
+      "action": "return-recall",
+      "kind": "response",
+      "response": {
+        "questionId": "roles",
+        "prompt": "A visitor says Guy Fawkes led the plot. Which correction fits the evidence?",
+        "response": "Robert Catesby led the plot; Fawkes was found with the gunpowder.",
+        "answerIndex": 0,
+        "questionAttempt": 2,
+        "anchorAt": "2026-09-07T09:23:10.104Z",
+        "elapsedMilliseconds": 68594,
+        "elapsedLabel": "1 minutes since the most recent final explanation"
+      },
+      "correct": true,
+      "help": [
+        "return check",
+        "elapsed: 1 minutes since the most recent final explanation",
+        "corrective feedback from earlier submission; retry",
+        "Read-aloud access used"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:24:18.927Z",
+      "version": "1605.2",
+      "chapter": 4,
+      "objective": "Distinguish commemoration from contemporary evidence and recall learning",
+      "action": "return-recall",
+      "kind": "response",
+      "response": {
+        "questionId": "warning",
+        "prompt": "What warned Monteagle before the planned opening of Parliament?",
+        "response": "An unsigned letter warning him to stay away.",
+        "answerIndex": 1,
+        "questionAttempt": 1,
+        "anchorAt": "2026-09-07T09:23:10.104Z",
+        "elapsedMilliseconds": 68594,
+        "elapsedLabel": "1 minutes since the most recent final explanation"
+      },
+      "correct": true,
+      "help": [
+        "return check",
+        "elapsed: 1 minutes since the most recent final explanation"
+      ]
+    },
+    {
+      "at": "2026-09-07T09:24:19.019Z",
+      "version": "1605.2",
+      "chapter": 4,
+      "objective": "Distinguish commemoration from contemporary evidence and recall learning",
+      "action": "return-recall",
+      "kind": "response",
+      "response": {
+        "questionId": "rhyme",
+        "prompt": "Why can’t the remembrance rhyme tell us what an eyewitness saw during the search?",
+        "response": "It is used to remember the event, rather than being a report from someone at the search.",
+        "answerIndex": 2,
+        "questionAttempt": 1,
+        "anchorAt": "2026-09-07T09:23:10.104Z",
+        "elapsedMilliseconds": 68594,
+        "elapsedLabel": "1 minutes since the most recent final explanation"
+      },
+      "correct": true,
+      "help": [
+        "return check",
+        "elapsed: 1 minutes since the most recent final explanation"
+      ]
+    }
+  ],
+  "settings": {
+    "reducedMotion": true,
+    "character": "explorer-girl",
+    "largeText": false,
+    "outfit": "doublet",
+    "skinTone": "warm",
+    "costumeReady": true
+  },
+  "started": true,
+  "learner": {
+    "id": "fictional-alex",
+    "displayName": "Alex (fictional test pupil)",
+    "fictional": true
+  },
+  "recordScope": "fictional learner; actual game interactions; separate browser save",
+  "exportedAt": "2026-09-07T09:24:19.146Z"
+}

@@ -1,6 +1,6 @@
 {
     "framework": "nextjs",
-    "installCommand": "npm install && cd apps/platform && npm install",
-    "buildCommand": "cd apps/platform && npm run build",
+    "installCommand": "npm install && npm install --prefix apps/platform && npm ci --prefix apps/learning-worlds",
+    "buildCommand": "node scripts/build-worlds.mjs && cd apps/platform && npm run build",
     "outputDirectory": "apps/platform/.next"
 }
