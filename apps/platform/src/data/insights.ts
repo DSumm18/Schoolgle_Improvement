@@ -23,6 +23,8 @@ export interface Insight {
   source?: string;
   sourceUrl?: string;
   readTime?: string;
+  format?: "briefing";
+  summary?: string[];
   /** Soft CTA — which Schoolgle feature/app this article relates to */
   relatedApp?: string;
 }
@@ -72,18 +74,24 @@ export const insights: Insight[] = [
   },
   {
     slug: "school-building-condition-crisis",
-    title: "School buildings: turn the condition report into a practical plan",
+    title: "School estates in autumn 2026: what the new return changes",
     excerpt:
-      "Use condition information to prioritise work and keep decisions visible.",
-    date: "2026-09-05",
+      "The first estates standards return is approaching. Who submits it, what condition surveys establish, and how schools can turn records into a practical action programme.",
+    date: "2026-09-07",
     status: "published",
     category: "guide",
-    source: "DfE: commissioning condition surveys",
+    source: "Department for Education",
     sourceUrl:
-      "https://www.gov.uk/government/publications/commissioning-a-condition-survey-for-school-and-college-buildings",
-    readTime: "2 min",
-    featured: false,
+      "https://www.gov.uk/guidance/school-estate-management-standards-annual-return",
+    readTime: "4 min",
+    featured: true,
     module: "estates",
+    format: "briefing",
+    summary: [
+      "Confirm your responsible body and the route for school input before the autumn return.",
+      "Record survey scope and unresolved questions alongside the action programme.",
+      "Use consistent, dated building records to prepare for the planned data changes.",
+    ],
   },
 
   // ── TEACHING & LEARNING (EEF focus) ───────────────────────
@@ -104,35 +112,50 @@ export const insights: Insight[] = [
   },
   {
     slug: "metacognition-self-regulation-schools",
-    title: "Metacognition: make the thinking visible in the lesson",
-    excerpt: "Move from a promising research headline to classroom practice.",
-    date: "2026-09-05",
+    title:
+      "Metacognition in practice: what the updated EEF guidance means for teaching",
+    excerpt:
+      "Go beyond a reflection box: examine the evidence, teach a purposeful strategy and check what pupils can do when the support changes.",
+    date: "2026-09-07",
     status: "published",
-    category: "guide",
-    source: "EEF: metacognition and self-regulation",
+    category: "research",
+    source: "EEF: metacognition, Toolkit, feedback and implementation guidance",
     sourceUrl:
-      "https://educationendowmentfoundation.org.uk/education-evidence/teaching-learning-toolkit/metacognition-and-self-regulation",
-    readTime: "2 min",
-    featured: false,
+      "https://educationendowmentfoundation.org.uk/education-evidence/guidance-reports/metacognition",
+    readTime: "4 min",
+    featured: true,
     module: "teaching",
+    format: "briefing",
+    summary: [
+      "The verified guidance is the second edition published in November 2025.",
+      "The Toolkit’s average impact is not a promise for a programme or pupil.",
+      "Examine a new task, the support used and the pupil’s explanation before claiming independence.",
+    ],
   },
 
   // ── SCHOOL IMPROVEMENT / OFSTED ───────────────────────────
   {
     slug: "preparing-for-ofsted-2025",
     title:
-      "Ofsted in September 2026: prepare the conversation, not another folder",
+      "Ofsted in September 2026: update the right things, avoid extra paperwork",
     excerpt:
-      "Use the right inspection materials and connect evidence to what leaders are doing.",
-    date: "2026-09-05",
+      "What the current inspection materials change, what they do not require, and a focused way for leaders to review their school’s next steps.",
+    date: "2026-09-07",
     status: "published",
-    category: "guide",
-    source: "Ofsted inspection materials",
+    category: "news",
+    source:
+      "Ofsted: current toolkit, change summary and inspection information",
     sourceUrl:
       "https://www.gov.uk/government/publications/school-inspection-toolkit-operating-guide-and-information",
-    readTime: "2 min",
+    readTime: "4 min",
     featured: true,
     module: "improvement",
+    format: "briefing",
+    summary: [
+      "Use the toolkit version for inspections from 7 September 2026.",
+      "Do not create written evidence against every standard or an inspection-only SEF.",
+      "Review the relevant changes through existing school processes and retain the decisions.",
+    ],
   },
   {
     slug: "evidence-organisation-before-inspection",
@@ -212,36 +235,51 @@ export const insights: Insight[] = [
   },
   {
     slug: "teacher-retention-crisis-2026",
-    title: "Teacher retention: start with the conditions you can change",
+    title:
+      "Teacher retention in 2026: fewer departures, but a smaller FTE workforce",
     excerpt:
-      "Use national evidence carefully and listen to what makes the local working day harder.",
-    date: "2026-09-05",
+      "The June workforce release shows falling departures alongside a lower teacher FTE total. What the different measures mean for staffing decisions this autumn.",
+    date: "2026-09-07",
     status: "published",
-    category: "guide",
-    source: "DfE: School workforce in England 2025",
+    category: "research",
+    source:
+      "Schoolgle briefing · Department for Education workforce and research releases",
     sourceUrl:
       "https://explore-education-statistics.service.gov.uk/find-statistics/school-workforce-in-england/2025",
-    readTime: "2 min",
-    featured: false,
+    readTime: "4 min",
+    featured: true,
     module: "hr",
+    format: "briefing",
+    summary: [
+      "Teacher FTE and departure measures cover different populations; read their definitions before comparing them.",
+      "Qualifying-cohort retention is different from staying at the same school.",
+      "Use national evidence to frame a focused local investigation of capacity and workload.",
+    ],
   },
 
   // ── SEND & INCLUSION ──────────────────────────────────────
   {
     slug: "send-code-practice-reform",
     title:
-      "SEND reform: keep today's support separate from tomorrow's proposals",
+      "SEND reform this autumn: what is starting, what remains proposed and what schools must still do",
     excerpt:
-      "A practical way to track change without losing sight of the pupil in front of you.",
-    date: "2026-09-05",
+      "Experts at Hand starts its phased rollout, while wider SEND changes remain proposals. A dated briefing on the consultation position and present responsibilities.",
+    date: "2026-09-07",
     status: "published",
     category: "news",
-    source: "DfE: SEND code of practice",
+    source:
+      "Schoolgle briefing · Department for Education SEND guidance and consultations",
     sourceUrl:
-      "https://www.gov.uk/government/publications/send-code-of-practice-0-to-25",
-    readTime: "2 min",
-    featured: false,
+      "https://www.gov.uk/government/consultations/send-reform-putting-children-and-young-people-first",
+    readTime: "4 min",
+    featured: true,
     module: "send",
+    format: "briefing",
+    summary: [
+      "Keep the current Code and existing provision separate from proposed structural reform.",
+      "Confirm the local Experts at Hand offer; it must add to EHC-plan provision.",
+      "The separate EOTAS consultation closes on 18 September 2026.",
+    ],
   },
 
   // ── GOVERNANCE ────────────────────────────────────────────
@@ -265,18 +303,24 @@ export const insights: Insight[] = [
   {
     slug: "school-budget-benchmarking-2026",
     title:
-      "School budget benchmarking: use the difference to ask a better question",
+      "School budget benchmarking in 2026: turn comparisons into better decisions",
     excerpt:
-      "Compare carefully, investigate the context and record a decision you can explain.",
-    date: "2026-09-05",
+      "IFS, DfE and NFER describe different parts of the financial picture. A practical briefing on dated forecasts, meaningful comparators and school-level decisions.",
+    date: "2026-09-07",
     status: "published",
-    category: "guide",
-    source: "DfE Financial Benchmarking and Insights Tool",
+    category: "research",
+    source: "IFS, Department for Education and NFER",
     sourceUrl:
-      "https://financial-benchmarking-and-insights-tool.education.gov.uk/",
-    readTime: "2 min",
-    featured: false,
+      "https://ifs.org.uk/publications/annual-report-education-spending-england-2025-26",
+    readTime: "4 min",
+    featured: true,
     module: "finance",
+    format: "briefing",
+    summary: [
+      "National funding and cost models do not establish a particular school’s spending capacity.",
+      "Check the reporting period, unit and comparator group before interpreting a difference.",
+      "Connect each proposed financial action to provision, evidence and an explicit review point.",
+    ],
   },
 
   // ── AI & GENERAL ──────────────────────────────────────────
@@ -330,7 +374,9 @@ export const insights: Insight[] = [
 // ── Helper functions ────────────────────────────────────────
 
 export function getPublishedInsights(): Insight[] {
-  return insights.filter((i) => i.status === "published");
+  return insights
+    .filter((i) => i.status === "published")
+    .sort((a, b) => b.date.localeCompare(a.date));
 }
 
 export function getComingSoonInsights(): Insight[] {
@@ -352,7 +398,7 @@ export function getLatestPublicInsights(count: number = 3): Insight[] {
 }
 
 export function getFeaturedInsights(): Insight[] {
-  return insights.filter((i) => i.featured && i.status === "published");
+  return getPublishedInsights().filter((i) => i.featured);
 }
 
 export function getInsightsByCategory(

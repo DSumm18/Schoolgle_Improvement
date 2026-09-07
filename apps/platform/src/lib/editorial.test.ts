@@ -6,6 +6,32 @@ import { moduleThemes, getModuleVars } from "./moduleThemes";
 import ModulePage from "@/app/(marketing)/modules/[slug]/page";
 import { GET } from "@/app/api/insights/[slug]/content/route";
 describe("public editorial contract", () => {
+  it("keeps the six report briefings substantial, sourced and consistent with their cards", () => {
+    const briefings = getPublishedInsights().filter(
+      (i) => i.format === "briefing",
+    );
+    expect(briefings).toHaveLength(6);
+    for (const meta of briefings) {
+      const article = getEditorial(meta.slug)!;
+      const words = article.body
+        .replace(/<[^>]+>/g, " ")
+        .trim()
+        .split(/\s+/).length;
+      expect(words).toBeGreaterThanOrEqual(650);
+      expect(meta.readTime).toBe(`${Math.ceil(words / 220)} min`);
+      expect(article.summary).toHaveLength(3);
+      expect(meta.summary).toEqual(article.summary);
+      expect(article.sources!.length).toBeGreaterThanOrEqual(3);
+      expect(new Set(article.sources!.map((s) => s.url)).size).toBe(
+        article.sources!.length,
+      );
+      for (const source of article.sources!) {
+        expect(new URL(source.url).protocol).toBe("https:");
+        expect(source.published.length).toBeGreaterThan(4);
+        expect(article.body).toContain(source.url);
+      }
+    }
+  });
   it.each(getPublishedInsights())(
     "$slug has a complete, safe article and matching API body",
     async ({ slug, title }) => {
