@@ -31,9 +31,19 @@ if (parent !== path.join(publicRoot, 'worlds')) {
 await rm(destination, { recursive: true, force: true });
 await cp(output, destination, {
   recursive: true,
-  // Prepared desktop-voice WAV files are local authoring assets. Hosted play
-  // uses the reader's optional browser voice rather than redistributing them.
-  filter: (source) => path.basename(source) !== 'audio',
+  // Exclude only old desktop WAVs; retain reviewed original MP3 recordings.
+  filter: (source) => !source.toLowerCase().endsWith('.wav'),
 });
+// Verify the final publication folder, not just Vite's intermediate dist.
+for (const world of ['nile', 'plot', 'fire']) {
+  const bank = JSON.parse(await readFile(path.join(game, 'src/narration', world + '-audio.json'), 'utf8'));
+  for (const clip of bank) {
+    if (!/^audio\/voices\/[a-z0-9-]+\.mp3$/.test(clip.file)) throw new Error('Unexpected narration path');
+    const published = await readFile(path.join(destination, clip.file));
+    const reviewed = await readFile(path.join(game, 'public', clip.file));
+    if (!published.equals(reviewed)) throw new Error('Published narration differs from reviewed audio: ' + clip.id);
+  }
+}
 const files = await readdir(destination, { recursive: true });
+if (files.some(file => file.toLowerCase().endsWith('.wav'))) throw new Error('Unlicensed WAV found in hosted output');
 console.log(`Schoolgle Worlds ready at /worlds/play/index.html (${files.length} entries).`);
