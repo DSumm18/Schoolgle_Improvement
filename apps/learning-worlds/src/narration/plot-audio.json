@@ -1,0 +1,162 @@
+[
+  {
+    "id": "plot-intro",
+    "text": "An unsigned letter. A hidden danger. Travel into a reconstruction of London in 1605. You are a history detective from today. Follow the evidence to discover what really happened. Five places. One true story. What stopped the Gunpowder Plot? Choose your detective. Everyone can do every task. Leo. Maya. How to play: click or tap the large objects and buttons. No dragging or quick reactions needed. Keyboard: Tab to choose, Enter to act. There are no timers.",
+    "file": "audio/voices/plot-plot-intro-4451942b88e2.mp3"
+  },
+  {
+    "id": "plot-clothing-intro",
+    "text": "Look for the collar, buttons and layers on your explorer.",
+    "file": "audio/voices/plot-plot-clothing-intro-b0182fe9dff3.mp3"
+  },
+  {
+    "id": "plot-clothing-doublet",
+    "text": "A fitted upper garment, worn over a shirt. Buttons and seams help give it its shape.",
+    "file": "audio/voices/plot-plot-clothing-doublet-aa5d9d3048e6.mp3"
+  },
+  {
+    "id": "plot-clothing-breeches",
+    "text": "Breeches covered the upper legs. Stockings covered the lower legs.",
+    "file": "audio/voices/plot-plot-clothing-breeches-6bc057764dd8.mp3"
+  },
+  {
+    "id": "plot-clothing-petticoat",
+    "text": "A fitted upper garment and a skirt. Layers, fabrics and decoration varied with a person’s work and wealth.",
+    "file": "audio/voices/plot-plot-clothing-petticoat-b47c02229421.mp3"
+  },
+  {
+    "id": "plot-clothing-cloak",
+    "text": "An outer layer worn over other clothes. Our explorer’s wool-style cloak is a simplified costume choice for the chilly setting.",
+    "file": "audio/voices/plot-plot-clothing-cloak-64d509e38db7.mp3"
+  },
+  {
+    "id": "plot-clothing-linen",
+    "text": "Linen was used for shirts and other underclothes. The pale collar and cuffs show a little of the layer underneath.",
+    "file": "audio/voices/plot-plot-clothing-linen-3806dbf1cede.mp3"
+  },
+  {
+    "id": "plot-people-0",
+    "text": "Meet the people. James I was king. Catholics, one group of Christians, faced harsh restrictions on their religion. A small group chose a violent plot. They did not represent all Catholics. Robert Catesby led the group. They planned to blow up the House of Lords when the king and others gathered on 5 November 1605. Guy Fawkes was found with the gunpowder before it could happen. Give James I the right role card. The king the plot threatened. The leader of the plot. The man found with the gunpowder.",
+    "file": "audio/voices/plot-plot-people-0-5541fd8c1fa1.mp3"
+  },
+  {
+    "id": "plot-people-1",
+    "text": "Meet the people. James I was king. Catholics, one group of Christians, faced harsh restrictions on their religion. A small group chose a violent plot. They did not represent all Catholics. Robert Catesby led the group. They planned to blow up the House of Lords when the king and others gathered on 5 November 1605. Guy Fawkes was found with the gunpowder before it could happen. Give Robert Catesby the right role card. The king the plot threatened. The leader of the plot. The man found with the gunpowder.",
+    "file": "audio/voices/plot-plot-people-1-4f96917dac91.mp3"
+  },
+  {
+    "id": "plot-people-2",
+    "text": "Meet the people. James I was king. Catholics, one group of Christians, faced harsh restrictions on their religion. A small group chose a violent plot. They did not represent all Catholics. Robert Catesby led the group. They planned to blow up the House of Lords when the king and others gathered on 5 November 1605. Guy Fawkes was found with the gunpowder before it could happen. Give Guy Fawkes the right role card. The king the plot threatened. The leader of the plot. The man found with the gunpowder.",
+    "file": "audio/voices/plot-plot-people-2-8987eef16b82.mp3"
+  },
+  {
+    "id": "plot-reward-0",
+    "text": "A discovery for your casebook. You distinguished the king, the leader and the man found with the gunpowder. The next clue is an unsigned letter.",
+    "file": "audio/voices/plot-plot-reward-0-1e587fd60db7.mp3"
+  },
+  {
+    "id": "plot-letter-seal",
+    "text": "A letter arrives. On 26 October 1605, Lord Monteagle received an unsigned letter. Somebody was warning him. Tap or click the red wax seal. Keyboard: Tab to the letter, then Enter or Space.",
+    "file": "audio/voices/plot-plot-letter-seal-01da160b5e16-reviewed.mp3"
+  },
+  {
+    "id": "plot-letter-warning",
+    "text": "Find the warning. Tap the line that tells Monteagle where he should stay away from. My lord… I care about your safety. Stay away from Parliament on the opening day. There is danger, though you may not see it. Short modern-language adaptation, not the original wording. Choose one line of the letter as your evidence. Words to know: Parliament is where people meet to discuss laws.",
+    "file": "audio/voices/plot-plot-letter-warning-4ba9cfab055f-reviewed.mp3"
+  },
+  {
+    "id": "plot-letter-uncertainty",
+    "text": "A useful clue. An unanswered question. Evidence collected: the letter warns Monteagle to stay away from Parliament. The letter has no signature. Historians have suggested possible writers, but we do not know for certain who wrote it. Which label belongs with this source? We know for certain that Guy Fawkes wrote it. It warns of danger, but its writer is uncertain. It proves that nothing dangerous was planned.",
+    "file": "audio/voices/plot-plot-letter-uncertainty-69aa646fd1e4-reviewed.mp3"
+  },
+  {
+    "id": "plot-reward-1",
+    "text": "A discovery for your casebook. You found a warning in a source and kept an unanswered question open. The warning reached the authorities.",
+    "file": "audio/voices/plot-plot-reward-1-df841421f435.mp3"
+  },
+  {
+    "id": "plot-search-inspect-0",
+    "text": "Bring the clues into the light. The warning led to investigation. On the night of 4–5 November 1605, searchers examined rooms beneath the House of Lords. Tap each object to shine your lantern on it. Collect all three clues. A store of gunpowder. Guy Fawkes. The place. Your casebook is ready for its first clue.",
+    "file": "audio/voices/plot-plot-search-inspect-0-3f93a845376e.mp3"
+  },
+  {
+    "id": "plot-search-inspect-1",
+    "text": "Bring the clues into the light. The warning led to investigation. On the night of 4–5 November 1605, searchers examined rooms beneath the House of Lords. Tap each object to shine your lantern on it. Collect all three clues. A store of gunpowder. Guy Fawkes. The place. Searchers found gunpowder beneath the House of Lords. It could have caused terrible harm.",
+    "file": "audio/voices/plot-plot-search-inspect-1-429d116d2c15.mp3"
+  },
+  {
+    "id": "plot-search-inspect-3",
+    "text": "Bring the clues into the light. The warning led to investigation. On the night of 4–5 November 1605, searchers examined rooms beneath the House of Lords. Tap each object to shine your lantern on it. Collect all three clues. A store of gunpowder. Guy Fawkes. The place. The storeroom was beneath the House of Lords, where the king and others were due to gather.",
+    "file": "audio/voices/plot-plot-search-inspect-3-fae23980ae87.mp3"
+  },
+  {
+    "id": "plot-search-inspect-2",
+    "text": "Bring the clues into the light. The warning led to investigation. On the night of 4–5 November 1605, searchers examined rooms beneath the House of Lords. Tap each object to shine your lantern on it. Collect all three clues. A store of gunpowder. Guy Fawkes. The place. Guy Fawkes was found there during searches on the night of 4–5 November 1605.",
+    "file": "audio/voices/plot-plot-search-inspect-2-c803b11801d3.mp3"
+  },
+  {
+    "id": "plot-search-inference",
+    "text": "What do the clues tell us? Your evidence: gunpowder + Fawkes + a room beneath the House of Lords. Why was this discovery important? It showed that the plot was only a story. Finding the danger allowed the planned attack to be stopped. It proved that every Catholic supported the plot.",
+    "file": "audio/voices/plot-plot-search-inference-12af818c4970.mp3"
+  },
+  {
+    "id": "plot-reward-2",
+    "text": "A discovery for your casebook. You connected the clues to explain why the attack was prevented. The gunpowder did not explode.",
+    "file": "audio/voices/plot-plot-reward-2-64cae8cd84fa.mp3"
+  },
+  {
+    "id": "plot-timeline-order",
+    "text": "Piece the story together. Choose the event that happened first, then the next, then the last. Each card moves into your story trail. 5 November 1605 The planned attack is prevented. 26 October 1605 Monteagle receives a warning letter. Night of 4–5 November 1605 Searchers find Fawkes and gunpowder.",
+    "file": "audio/voices/plot-plot-timeline-order-ee91d78a5187-reviewed.mp3"
+  },
+  {
+    "id": "plot-timeline-cause",
+    "text": "Join the events with “because”. You have the events in order. Now explain their connection. The authorities investigated because… a letter warned of danger at Parliament. people were singing a Bonfire Night rhyme. the Great Fire of London had just happened.",
+    "file": "audio/voices/plot-plot-timeline-cause-9c3e1d49ab92.mp3"
+  },
+  {
+    "id": "plot-reward-3",
+    "text": "A discovery for your casebook. You put the events in order and explained how the warning helped lead to investigation.",
+    "file": "audio/voices/plot-plot-reward-3-841e86ae22f3.mp3"
+  },
+  {
+    "id": "plot-remember-rhyme",
+    "text": "Why do we remember? After the plot failed, people celebrated the king’s survival. Over time, 5 November became associated with bonfires and fireworks. Remember, remember, the fifth of November, Gunpowder, treason and plot. Treason means betraying your country or ruler. This rhyme helps recall a date, but it does not tell the whole story. Where should this rhyme go in our history display? How people remember the event. An eyewitness report written during the search.",
+    "file": "audio/voices/plot-plot-remember-rhyme-b10e12d6b57d.mp3"
+  },
+  {
+    "id": "plot-rhyme",
+    "text": "Remember, remember, the fifth of November. Gunpowder, treason and plot.",
+    "file": "audio/voices/plot-plot-rhyme-ac3886923ffd.mp3"
+  },
+  {
+    "id": "plot-remember-recall",
+    "text": "One last detective check. Imagine a visitor asks about the case. Use what you remember from your investigation. What first warned Monteagle of danger? An unsigned letter. A firework display. A message written by a modern historian.",
+    "file": "audio/voices/plot-plot-remember-recall-915191c4a32a-reviewed.mp3"
+  },
+  {
+    "id": "plot-remember-caption",
+    "text": "Give our display an accurate ending. The display needs a caption explaining what happened, rather than just a date to remember. Guy Fawkes led every Catholic in a successful attack. A small group planned an attack. A warning and searches helped stop it. The Gunpowder Plot and Great Fire of London were the same event.",
+    "file": "audio/voices/plot-plot-remember-caption-a8856a85637c.mp3"
+  },
+  {
+    "id": "plot-reward-4",
+    "text": "Case closed, detective! Your display tells an accurate story, recognises uncertainty and explains what the rhyme commemorates. You investigated people, read a warning, examined evidence and explained the story. Your casebook keeps your responses.",
+    "file": "audio/voices/plot-plot-reward-4-af8f849eacdf.mp3"
+  },
+  {
+    "id": "plot-return-roles",
+    "text": "A visitor says Guy Fawkes led the plot. Which correction fits the evidence? Robert Catesby led the plot; Fawkes was found with the gunpowder. James I led the plot; Catesby was the king. Every Catholic was a member of the plot.",
+    "file": "audio/voices/plot-plot-return-roles-ce30edfaf933.mp3"
+  },
+  {
+    "id": "plot-return-warning",
+    "text": "What warned Monteagle before the planned opening of Parliament? A modern Bonfire Night poster. An unsigned letter warning him to stay away. A photograph of the search.",
+    "file": "audio/voices/plot-plot-return-warning-9e35822611bb-reviewed.mp3"
+  },
+  {
+    "id": "plot-return-rhyme",
+    "text": "Why can’t the remembrance rhyme tell us what an eyewitness saw during the search? All rhymes contain false facts. No one remembers the date of the plot. It is used to remember the event, rather than being a report from someone at the search.",
+    "file": "audio/voices/plot-plot-return-rhyme-84f4a646eaee.mp3"
+  }
+]

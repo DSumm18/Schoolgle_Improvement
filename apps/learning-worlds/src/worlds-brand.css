@@ -1,0 +1,6 @@
+/* Preserve the original logo artwork; its transparent padding remains intact. */
+.worlds-brand-lockup{position:relative;display:inline-block!important;flex:0 0 148px;width:148px;height:48px;margin:0!important;overflow:hidden;vertical-align:middle;letter-spacing:normal!important}
+.worlds-brand-lockup img{position:absolute;display:block;width:180px!important;max-width:none!important;height:54px!important;left:-3px;top:-6px;object-fit:contain}
+.worlds-brand-lockup small{position:absolute;display:block!important;left:42px;bottom:2px;margin:0!important;font:600 9px/1.2 'DM Sans',sans-serif;letter-spacing:3px!important;color:#f8edd8}
+.brand:has(.worlds-brand-lockup),.library-brand:has(.worlds-brand-lockup){line-height:1}
+@media(max-width:650px){.worlds-brand-lockup{flex-basis:130px;width:130px;height:44px}.worlds-brand-lockup img{width:160px!important;height:48px!important;top:-4px;left:-3px}.worlds-brand-lockup small{left:37px;bottom:2px;font-size:8px;letter-spacing:2.5px!important}}

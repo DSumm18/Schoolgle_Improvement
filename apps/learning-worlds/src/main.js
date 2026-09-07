@@ -1,4 +1,7 @@
-import {ASSET_BASE, HOSTED_PLAYTEST} from './asset-paths.js';
+import {worldsBrand} from './worlds-brand.js';
+import {ASSET_BASE} from './asset-paths.js';
+import {createNarrator} from './narration.js';
+const narrator=createNarrator('nile');
 import {createDiscoveryExhibition} from './discovery-exhibition.js';
 import {demoMetadata,demoTeacherPanel} from './demo-session.js';
 import './style.css';
@@ -22,7 +25,7 @@ const icons={map:'<path d="m3 5 6-2 6 2 6-2v16l-6 2-6-2-6 2Z"/><path d="M9 3v16M
 const svg=(name)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name]||icons.pyramid}</svg>`;
 const app=document.querySelector('#app');
 app.innerHTML=`<div id="world" aria-hidden="true"></div><div class="vignette"></div><div id="loading"><div class="loading-emblem">${svg('pyramid')}</div><p>Preparing your expedition</p><div class="loading-line"></div><small>Building a little wonder…</small></div>
- <header class="topbar"><a class="brand" href="#" aria-label="Schoolgle Worlds home"><span class="brand-mark">${svg('pyramid')}</span><span>schoolgle<span class="brand-worlds">WORLDS</span></span></a><div class="top-caption">THE ANCIENT EGYPT EXPEDITION</div><div id="top-actions"><button id="educator" class="pill">For grown-ups ${svg('arrow')}</button></div></header>
+ <header class="topbar"><a class="brand" href="#" aria-label="Schoolgle Worlds home">${worldsBrand}</a><div class="top-caption">THE ANCIENT EGYPT EXPEDITION</div><div id="top-actions"><button id="educator" class="pill">For grown-ups ${svg('arrow')}</button></div></header>
  <section id="welcome"><div class="eyebrow"><span></span> THE NILE KEEPS ITS STORIES</div><h1>Nile<span>Quest</span></h1><p class="welcome-copy">An ancient river. A silent sphinx.<br>Follow the clues. Discover their stories.</p><button id="choose-character" class="explorer-entry"><img id="chosen-portrait" src="${ASSET_BASE}portraits/explorer.png" alt=""/><span><small>YOUR EXPLORER</small><strong id="chosen-name">Leo</strong><span>Choose your explorer →</span></span></button><button id="begin" class="primary start-button">Begin the expedition ${svg('arrow')}</button><div class="welcome-meta"><span>7 connected discoveries</span><i>·</i><span>Explore at your own pace</span></div></section>
  <div id="welcome-location"><span class="location-line"></span><small>YOUR JOURNEY STARTS HERE</small><strong>Along the River Nile</strong><span>An adventure through history, maths & science</span></div>
  <footer id="welcome-footer"><span>AN ORIGINAL SCHOOLGLE LEARNING ADVENTURE</span><button id="access-start" class="text-button">Make it comfortable for me</button><span>PLAYABLE PROTOTYPE · AGES 7–11</span></footer>
@@ -31,13 +34,13 @@ app.innerHTML=`<div id="world" aria-hidden="true"></div><div class="vignette"></
 let state,hasMotionPreference=false;try{const raw=localStorage.getItem(SAVE_KEY);state=readSave(raw);const prior=JSON.parse(raw);hasMotionPreference=prior?.version===1&&typeof prior?.settings?.reducedMotion==='boolean';}catch{state=freshState();}
 if(!hasMotionPreference && matchMedia('(prefers-reduced-motion: reduce)').matches)state.settings.reducedMotion=true;
 const escapeText=t=>String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let world,started=false,activeMission=null,support=new Set(),toastTimer,lastTick=0,currentAudio=null,storageAvailable=true,lastFocus=null;
+let world,started=false,activeMission=null,support=new Set(),toastTimer,lastTick=0,storageAvailable=true,lastFocus=null;
 const $=s=>document.querySelector(s),dialog=$('#dialog');
 const touchDevice=matchMedia('(any-pointer: coarse)').matches||navigator.maxTouchPoints>0;document.body.classList.toggle('touch-controls',touchDevice);
 function save(){if(world&&started)state.position=world.getPosition();try{localStorage.setItem(SAVE_KEY,JSON.stringify(state));}catch{if(storageAvailable)toast('Progress cannot be saved in this browser. You can still play.');storageAvailable=false;}}
 function toast(t){$('#toast').textContent=t;$('#toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('#toast').classList.remove('show'),4200);}
-function stopSpeech(){currentAudio?.pause();currentAudio=null;window.speechSynthesis?.cancel();}
-function speak(text,file){stopSpeech();if(file&&!HOSTED_PLAYTEST){currentAudio=new Audio(ASSET_BASE+'audio/'+file+'.wav');currentAudio.play().catch(()=>speak(text));return;}if('speechSynthesis'in window){const u=new SpeechSynthesisUtterance(text);u.lang='en-GB';u.rate=.91;const voice=speechSynthesis.getVoices().find(v=>v.lang==='en-GB');if(voice)u.voice=voice;speechSynthesis.speak(u);}}
+function stopSpeech(){narrator.stop();}
+function speak(text){narrator.speak(text);}
 let audioCtx=null;function chime(){if(!state.settings.sound)return;try{audioCtx??=new AudioContext();audioCtx.resume();for(let [i,f]of[523.25,659.25,783.99,1046.5].entries()){const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(0,audioCtx.currentTime+i*.1);g.gain.linearRampToValueAtTime(.07,audioCtx.currentTime+i*.1+.015);g.gain.exponentialRampToValueAtTime(.0001,audioCtx.currentTime+i*.1+.8);o.connect(g);g.connect(audioCtx.destination);o.start(audioCtx.currentTime+i*.1);o.stop(audioCtx.currentTime+i*.1+.9);}}catch{}}
 function applySettings(){document.body.classList.toggle('large-text',state.settings.largeText);document.body.classList.toggle('reduced-motion',state.settings.reducedMotion);world?.setSettings(state.settings);save();}
 function openPanel(html,cls=''){if(!dialog.open)lastFocus=document.activeElement;stopSpeech();if(world){world.paused=true;world.clearInput?.(false);world.keys.clear();world.move.set(0,0);resetJoystickVisual();}$('#dialog-content').innerHTML=html;dialog.className=cls;if(!dialog.open)dialog.showModal();$('#dialog-content').querySelectorAll('[data-close]').forEach(b=>b.onclick=closePanel);const heading=$('#dialog-title');if(heading){heading.tabIndex=-1;heading.focus({preventScroll:true});}dialog.scrollTop=0;}

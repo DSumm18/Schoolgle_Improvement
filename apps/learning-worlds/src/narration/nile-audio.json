@@ -1,0 +1,97 @@
+[
+  {
+    "id": "nile-irrigation-intro",
+    "text": "For ancient Egyptian farmers, the Nile brought water and rich silt. Its yearly floods helped make the land beside the river fertile. Channels could carry water to fields. Now help the farmer: use the three numbered gate buttons in this puzzle to let the water through.",
+    "file": "audio/voices/nile-nile-irrigation-intro-448a714622bc.mp3"
+  },
+  {
+    "id": "nile-irrigation-hint",
+    "text": "Silt is fine soil carried by water. Fertile soil can support growing crops.",
+    "file": "audio/voices/nile-nile-irrigation-hint-80dc6de4f250.mp3"
+  },
+  {
+    "id": "nile-cargo-intro",
+    "text": "Grain was important for food and trade. This mission uses a modern maths model: share 24 grain baskets equally between three boats. Equal means each boat carries the same number.",
+    "file": "audio/voices/nile-nile-cargo-intro-1a9b1b11b651.mp3"
+  },
+  {
+    "id": "nile-cargo-hint",
+    "text": "Share one basket to each boat, then repeat. The objects, groups and equation describe the same calculation.",
+    "file": "audio/voices/nile-nile-cargo-hint-2e9ed2da7a21.mp3"
+  },
+  {
+    "id": "nile-scribe-intro",
+    "text": "Scribes were trained writers. Ancient Egyptians used different writing systems, including hieroglyphs. Written records and objects help historians investigate the past.",
+    "file": "audio/voices/nile-nile-scribe-intro-639588c5f7a0.mp3"
+  },
+  {
+    "id": "nile-scribe-hint",
+    "text": "An inference joins what the text says with what you already know. Point to evidence, not just a guess.",
+    "file": "audio/voices/nile-nile-scribe-hint-494897de1307.mp3"
+  },
+  {
+    "id": "nile-timeline-intro",
+    "text": "The great pyramids at Giza were royal tombs, built around 2500 BC. Tutankhamun was a pharaoh, an Egyptian ruler. He lived much later, around 1330 BC. His tomb was in the Valley of the Kings, not inside a pyramid. The discovery came in AD 1922.",
+    "file": "audio/voices/nile-nile-timeline-intro-156cf427c137.mp3"
+  },
+  {
+    "id": "nile-timeline-hint",
+    "text": "Ancient Egypt lasted thousands of years. Things called ancient Egyptian did not all happen at the same time.",
+    "file": "audio/voices/nile-nile-timeline-hint-2c978ab133a8.mp3"
+  },
+  {
+    "id": "nile-shadow-intro",
+    "text": "Many ancient Egyptians believed in an afterlife. Tomb objects and the preservation of bodies tell us about those beliefs. In this fictional puzzle chamber, an opaque panel blocks light and makes a shadow.",
+    "file": "audio/voices/nile-nile-shadow-intro-f5963fba30a7.mp3"
+  },
+  {
+    "id": "nile-shadow-hint",
+    "text": "Opaque means light cannot pass through. Moving an opaque object nearer a light source can make its shadow larger.",
+    "file": "audio/voices/nile-nile-shadow-hint-646853b0ff28.mp3"
+  },
+  {
+    "id": "nile-dig-intro",
+    "text": "In November 1922, Howard Carter’s team uncovered Tutankhamun’s tomb in the Valley of the Kings. Egyptian workers were essential to the excavation. Recording where objects lay helps us understand them.",
+    "file": "audio/voices/nile-nile-dig-intro-cc73e7d396c3.mp3"
+  },
+  {
+    "id": "nile-dig-hint",
+    "text": "An artefact is an object made or used by people. Archaeology studies physical traces of the past; careful records preserve their context.",
+    "file": "audio/voices/nile-nile-dig-hint-4ab17c500df2.mp3"
+  },
+  {
+    "id": "nile-museum-intro",
+    "text": "An exhibition tells a story supported by evidence. Bring together what you discovered about the river, chronology, people and archaeological work.",
+    "file": "audio/voices/nile-nile-museum-intro-5cf89ea98dc3.mp3"
+  },
+  {
+    "id": "nile-museum-hint",
+    "text": "A successful exhibition makes clear what is evidence, what is an interpretation and what was invented for the game.",
+    "file": "audio/voices/nile-nile-museum-hint-e94c5c41f935.mp3"
+  },
+  {
+    "id": "nile-controls-garden",
+    "text": "Tap or click each numbered gate to open it. You do not need to drag anything. Open all three gates so water can reach the garden. Then choose an answer to the farming question and collect your discovery. On a keyboard, use Tab to reach a gate and Enter or Space to open it.",
+    "file": "audio/voices/nile-nile-controls-garden-7db171b5b9fb.mp3"
+  },
+  {
+    "id": "nile-controls-tablet",
+    "text": "Let’s learn the controls. Slide the round Move pad with your thumb. Lift your thumb to stop. Swipe the world with your other finger to look around. Tap Look ahead if you lose your way. Choose Guide me there to follow a trail. When you arrive, tap the large discovery button. Tap Run to go faster, and tap it again to walk. There are no timers. You can open Controls any time.",
+    "file": "audio/voices/nile-nile-controls-tablet-02c7a21fa8a2.mp3"
+  },
+  {
+    "id": "nile-controls-computer",
+    "text": "Let’s learn the controls. Hold the arrow keys, or W, A, S and D, to walk. Let go to stop. Hold the mouse button and drag the world to look around. Click Look ahead if you lose your way. Choose Guide me there to follow a trail. When you arrive, click the discovery button or press E. Click Run, or hold Shift, to go faster. There are no timers. You can open Controls any time.",
+    "file": "audio/voices/nile-nile-controls-computer-0aac54ca9141.mp3"
+  },
+  {
+    "id": "nile-scribe-message",
+    "text": "The flood has left dark soil beside the river. Our first field is ready for planting. The second field is dry, beyond the channel. Send workers to extend the channel before we plant there.",
+    "file": "audio/voices/nile-nile-scribe-message-afcb53ecfaa2.mp3"
+  },
+  {
+    "id": "nile-sphinx-controls",
+    "text": "Share all fifteen stones equally. Tap or click Add one on a tray to move one stone from the pile. Take one back returns one. No dragging needed.",
+    "file": "audio/voices/nile-nile-sphinx-controls-558aa6acf5c6.mp3"
+  }
+]

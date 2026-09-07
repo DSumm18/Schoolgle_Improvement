@@ -1,8 +1,8 @@
 import {chromium} from 'playwright';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-const BASE=process.env.NILE_TEST_URL||'http://127.0.0.1:4173/?game=nile',DIR='test-results/stone-sharing';
-const earned='test-results/independent-learning/cargo-earned.json';
+const BASE=process.env.NILE_TEST_URL||'http://127.0.0.1:4173/?game=nile',DIR=process.env.STONE_QA_DIR||'test-results/stone-sharing';
+const earned=process.env.NILE_EARNED_STATE||'test-results/independent-learning/cargo-earned.json';
 fs.mkdirSync(DIR,{recursive:true});
 if(!fs.existsSync(earned))throw new Error('Run independent-learning-qa.mjs first to create a genuinely earned two-chapter checkpoint.');
 const browser=await chromium.launch({channel:'chrome',headless:true});
