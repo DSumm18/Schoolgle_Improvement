@@ -1,0 +1,9 @@
+node_modules/
+dist/
+test-results/
+.vite/
+*.log
+
+# Public game art is source, despite the monorepo screenshot exclusion.
+!public/**/*.png
+!assets/*.png

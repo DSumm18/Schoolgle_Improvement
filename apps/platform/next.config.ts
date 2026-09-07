@@ -8,6 +8,22 @@ const withBundleAnalyzer = require("@next/bundle-analyzer")({
 const nextConfig: NextConfig = {
   outputFileTracingRoot: path.join(__dirname, "../../"),
   typescript: { ignoreBuildErrors: true },
+  async rewrites() {
+    return [
+      { source: "/worlds/play", destination: "/worlds/play/index.html" },
+    ];
+  },
+  async headers() {
+    return [
+      {
+        source: "/worlds/play/:path*",
+        headers: [
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+        ],
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       {

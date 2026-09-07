@@ -1,0 +1,8 @@
+#fire-world{position:absolute;inset:0;overflow:hidden}
+#fire-world canvas{display:block;width:100%;height:100%;touch-action:pan-y}
+/* Keep the optional camera button in the sky area, above the small-screen
+   world. Its former lower-left position covered two numbered landmarks. */
+@media(max-width:760px){
+ .fire-scene .fire-landmark{top:8px;bottom:auto;left:auto;right:12px}
+ .fire-scene .fire-landmark button{font-size:10px;min-height:36px;padding:8px 10px}
+}

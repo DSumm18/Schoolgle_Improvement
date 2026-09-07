@@ -333,7 +333,7 @@ const Navbar = () => {
         </Link>
 
         {/* Desktop Navigation */}
-        <div className="hidden lg:flex items-center gap-1 mx-8 flex-1 justify-center">
+        <div className="hidden xl:flex items-center gap-1 mx-8 flex-1 justify-center">
           {/* Modules dropdown */}
           <NavDropdown
             label="Modules"
@@ -354,6 +354,12 @@ const Navbar = () => {
           />
 
           {/* Standalone links */}
+          <Link
+            href="/worlds"
+            className="px-4 py-2 text-sm font-semibold text-muted-foreground hover:text-foreground transition-all rounded-lg hover:bg-muted/50 whitespace-nowrap"
+          >
+            Schoolgle Worlds
+          </Link>
           <Link
             href="/#meet-ed"
             className="px-4 py-2 text-sm font-semibold text-muted-foreground hover:text-foreground transition-all rounded-lg hover:bg-muted/50"
@@ -379,7 +385,7 @@ const Navbar = () => {
         </div>
 
         {/* Right-side Actions (Desktop) */}
-        <div className="hidden lg:flex items-center gap-4">
+        <div className="hidden xl:flex items-center gap-4">
           <ThemeToggle />
           <Link
             href="/login"
@@ -396,7 +402,7 @@ const Navbar = () => {
         </div>
 
         {/* Mobile Toggle */}
-        <div className="flex lg:hidden items-center gap-3">
+        <div className="flex xl:hidden items-center gap-3">
           <ThemeToggle />
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -416,7 +422,7 @@ const Navbar = () => {
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.3, ease: "easeInOut" }}
-            className="lg:hidden border-t border-border bg-background overflow-hidden"
+            className="xl:hidden border-t border-border bg-background overflow-hidden"
           >
             <div className="px-6 py-6 space-y-2">
               {/* Mobile Modules accordion */}
@@ -434,6 +440,13 @@ const Navbar = () => {
               />
 
               {/* Standalone links */}
+              <Link
+                href="/worlds"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="block text-base font-bold text-muted-foreground hover:text-foreground transition-colors py-2"
+              >
+                Schoolgle Worlds
+              </Link>
               <Link
                 href="/#meet-ed"
                 onClick={() => setIsMobileMenuOpen(false)}
