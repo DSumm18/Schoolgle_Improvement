@@ -1,5 +1,6 @@
 "use client";
 
+import type { LucideIcon } from "lucide-react";
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
@@ -7,7 +8,6 @@ import Image from "next/image";
 import {
   ArrowRight,
   BookOpen,
-  Mail,
   FileText,
   Lightbulb,
   Newspaper,
@@ -23,7 +23,7 @@ import {
 
 const CATEGORY_META: Record<
   string,
-  { label: string; icon: React.ElementType; color: string }
+  { label: string; icon: LucideIcon; color: string }
 > = {
   research: {
     label: "Research",
@@ -139,57 +139,20 @@ function InsightCard({ insight, index }: { insight: Insight; index: number }) {
 }
 
 function NewsletterSignup() {
-  const [email, setEmail] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitted(true);
-    setEmail("");
-  };
-
   return (
-    <div className="rounded-2xl bg-primary/5 border border-primary/20 p-8 h-full flex flex-col justify-center">
-      <div className="flex items-start gap-4">
-        <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-          <Mail size={22} className="text-primary" />
-        </div>
-        <div className="flex-1">
-          <h3 className="text-lg font-bold text-foreground mb-1">
-            The Schoolgle Signal
-          </h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            Research + expert commentary on what it means for your school.
-            Delivered weekly with exclusive tools and templates.
-          </p>
-          {!submitted ? (
-            <form onSubmit={handleSubmit} className="flex gap-2">
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Your work email"
-                required
-                className="flex-1 px-4 py-2.5 rounded-full border border-border bg-card text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/40 text-sm"
-              />
-              <button
-                type="submit"
-                className="px-5 py-2.5 bg-primary text-primary-foreground rounded-full font-bold text-sm hover:brightness-110 transition-all"
-              >
-                Subscribe
-              </button>
-            </form>
-          ) : (
-            <p className="text-sm text-primary font-semibold">
-              You're in! Check your inbox.
-            </p>
-          )}
-          <p className="text-[10px] text-muted-foreground/50 mt-2">
-            Free. No spam. Unsubscribe anytime.
-          </p>
-        </div>
-      </div>
-    </div>
+    <aside className="rounded-2xl bg-primary/5 border border-primary/20 p-8 h-full flex flex-col justify-center">
+      <p className="sg-eyebrow">From reading to doing</p>
+      <h3 className="text-2xl font-semibold mb-4">
+        What would make next week easier?
+      </h3>
+      <p className="text-sm text-muted-foreground leading-relaxed mb-6">
+        Bring us a real school task. We will show you what Schoolgle can help
+        with, and where your team stays in control.
+      </p>
+      <Link href="/#early-access" className="sg-text-link">
+        Talk about your school <ArrowRight size={16} />
+      </Link>
+    </aside>
   );
 }
 
@@ -229,9 +192,8 @@ export default function InsightsPage() {
               <span className="text-primary">school operations.</span>
             </h1>
             <p className="mt-6 text-lg text-muted-foreground max-w-2xl mx-auto">
-              Evidence-backed research, practical guides, and informed opinion
-              on running a modern UK school. Free to read. The newsletter tells
-              you what it means.
+              Practical guides and thoughtful perspectives for the people who
+              keep schools running. Free to read, with sources you can check.
             </p>
           </motion.div>
         </div>

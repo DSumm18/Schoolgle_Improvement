@@ -1,5 +1,6 @@
 "use client";
 
+import type { LucideIcon } from "lucide-react";
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
@@ -121,7 +122,7 @@ function NavDropdown({
     name: string;
     desc: string;
     href: string;
-    icon: React.ElementType;
+    icon: LucideIcon;
     color: string;
   }[];
   footer?: { label: string; href: string };
@@ -130,7 +131,6 @@ function NavDropdown({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -146,15 +146,14 @@ function NavDropdown({
     <div
       ref={ref}
       className="relative"
-      onMouseEnter={() => {
-        if (timeoutRef.current) clearTimeout(timeoutRef.current);
-        setIsOpen(true);
-      }}
-      onMouseLeave={() => {
-        timeoutRef.current = setTimeout(() => setIsOpen(false), 200);
-      }}
+      onKeyDown={(e) => { if(e.key === "Escape") { setIsOpen(false); ref.current?.querySelector("button")?.focus(); } }}
+      onBlur={(e) => { if(!e.currentTarget.contains(e.relatedTarget as Node)) setIsOpen(false); }}
     >
       <button
+        aria-expanded={isOpen}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") setIsOpen(false);
+        }}
         onClick={() => setIsOpen(!isOpen)}
         className={`flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
           isOpen
@@ -249,6 +248,10 @@ function MobileAccordion({
   return (
     <>
       <button
+        aria-expanded={isOpen}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") setIsOpen(false);
+        }}
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center justify-between w-full text-base font-bold text-muted-foreground hover:text-foreground transition-colors py-2"
       >
@@ -394,7 +397,7 @@ const Navbar = () => {
             Sign In
           </Link>
           <Link
-            href="#early-access"
+            href="/#early-access"
             className="px-6 py-2.5 text-sm font-bold uppercase tracking-widest text-primary-foreground bg-primary rounded-full hover:brightness-110 transition-all shadow-lg shadow-primary/20 active:scale-95"
           >
             Request Access
@@ -482,7 +485,7 @@ const Navbar = () => {
                   Sign In
                 </Link>
                 <Link
-                  href="#early-access"
+                  href="/#early-access"
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="block w-full text-center px-6 py-3 bg-primary text-primary-foreground rounded-full font-bold uppercase tracking-widest text-sm shadow-lg shadow-primary/20"
                 >

@@ -1,200 +1,264 @@
 export interface ModuleContent {
-    howEdHelps: { title: string; desc: string }[];
-    typicalJobs: string[];
-    whatItCovers: string[];
+  howEdHelps: { title: string; desc: string }[];
+  typicalJobs: string[];
+  whatItCovers: string[];
 }
 
 export const moduleContent: Record<string, ModuleContent> = {
-    improvement: {
-        howEdHelps: [
-            {
-                title: "Evidence Discovery",
-                desc: "Ed scans your drives and systems of record to find evidence that matches specific Ofsted/SIAMS framework points."
-            },
-            {
-                title: "Drafting the SEF",
-                desc: "Based on found evidence and your input, Ed drafts sections of your Self-Evaluation Form, ensuring professional tone and alignment."
-            },
-            {
-                title: "Strategic Nudges",
-                desc: "If a framework area is weak, Ed proactively suggests actions to bridge the gap before your next inspection window."
-            }
-        ],
-        typicalJobs: [
-            "Mapping evidence to Ofsted sub-headings",
-            "Generating terminal SIAMS reports",
-            "Maintaining the live Action Plan",
-            "Reviewing lesson observation trends",
-            "Preparing briefing notes for Governors",
-            "Simulating 'Deep Dive' questions"
-        ],
-        whatItCovers: [
-            "Ofsted Inspection Framework (EIF)",
-            "SIAMS Framework for Church Schools",
-            "Self-Evaluation (SEF) Writing",
-            "School Improvement Planning (SIP)",
-            "Evidence Management",
-            "Stakeholder Reporting"
-        ]
-    },
-    compliance: {
-        howEdHelps: [
-            {
-                title: "Policy Version Control",
-                desc: "Ed tracks every change in your policies, ensuring you're always running on the latest version and previous drafts are archived safely."
-            },
-            {
-                title: "Statutory Check Reminders",
-                desc: "Never miss a health and safety check or fire drill. Ed proactively alerts the right staff when statutory tasks are due."
-            },
-            {
-                title: "Audit Log Generation",
-                desc: "Coming up to a review? Ed can generate a complete log of all compliance activities, ready for governors or inspectors."
-            }
-        ],
-        typicalJobs: [
-            "Managing policy review cycles",
-            "Coordinating H&S walk-throughs",
-            "Maintaining the Risk Register",
-            "Tracking governor meeting actions",
-            "Monitoring website compliance",
-            "Logging statutory incidents"
-        ],
-        whatItCovers: [
-            "Statutory Policy Management",
-            "Risk & Incident Tracking",
-            "Health & Safety Compliance",
-            "Governor Portal & Minutes",
-            "Website Compliance Monitoring",
-            "Audit Readiness"
-        ]
-    },
-    estates: {
-        howEdHelps: [
-            {
-                title: "Asset Lifecycle Tracking",
-                desc: "Ed keeps a detailed history of your school's physical assets, forecasting when repairs or replacements will be needed."
-            },
-            {
-                title: "Energy Usage Insights",
-                desc: "By analysing utility data, Ed highlights patterns of high usage and suggests simple, low-cost ways to reduce carbon footprint."
-            },
-            {
-                title: "Contractor Compliance",
-                desc: "Ed manages the paperwork for external contractors, ensuring DBS checks and risk assessments are valid before they step on site."
-            }
-        ],
-        typicalJobs: [
-            "Scheduling planned maintenance (PPM)",
-            "Managing site helpdesk tickets",
-            "Tracking energy consumption & costs",
-            "Coordinating building projects",
-            "Managing contractor site access",
-            "Compliance with DfE Estates guidance"
-        ],
-        whatItCovers: [
-            "Planned & Reactive Maintenance",
-            "Energy & Carbon Management",
-            "Contractor & Asset Tracking",
-            "Health & Safety (Premises)",
-            "Project Management Hub",
-            "Condition Surveys & Audits"
-        ]
-    },
-    finance: {
-        howEdHelps: [
-            {
-                title: "Budget Status Reports",
-                desc: "Ed translates complex spreadsheets into plain-English summaries for budget holders, making financial oversight intuitive."
-            },
-            {
-                title: "PP Impact Analysis",
-                desc: "Ed helps cross-reference Pupil Premium spend with student progress data to show the true impact of your interventions."
-            },
-            {
-                title: "Procurement Guide",
-                desc: "Need to renew a contract? Ed can help draft tenders and compare quotes to ensure you're getting the best value for public money."
-            }
-        ],
-        typicalJobs: [
-            "Monthly budget monitoring",
-            "Producing Pupil Premium reports",
-            "Tracking Sports Premium impact",
-            "Analysing procurement savings",
-            "Preparing SFVS compliance data",
-            "Assisting with 3-year forecasting"
-        ],
-        whatItCovers: [
-            "Strategic Budget Monitoring",
-            "Pupil & Sports Premium Tracking",
-            "Value for Money (VfM) Analysis",
-            "SFVS & Financial Compliance",
-            "Grants & Funding Management",
-            "Audit & CFR Preparation"
-        ]
-    },
-    hr: {
-        howEdHelps: [
-            {
-                title: "Wellbeing Pulse Checks",
-                desc: "Ed can conduct anonymous, gentle check-ins with staff to gauge wellbeing and highlight morale trends before they lead to burnout."
-            },
-            {
-                title: "Performance Review Guide",
-                desc: "Ed helps staff and leaders prepare for mid-year and annual reviews by gathering progress evidence and suggesting professional goals."
-            },
-            {
-                title: "Return-to-Work Assistant",
-                desc: "Upon a staff member's return from absence, Ed helps ensure all necessary documentation is completed correctly and support plans are in place."
-            }
-        ],
-        typicalJobs: [
-            "Managing staff performance reviews",
-            "Tracking professional development (CPD)",
-            "Analyzing staff absence and wellbeing patterns",
-            "Maintaining the SCR and induction logs",
-            "Supporting recruitment and onboarding",
-            "Coordinating teacher appraisal cycles"
-        ],
-        whatItCovers: [
-            "Staff Performance Management",
-            "Wellbeing & Morale Tracking",
-            "Absence & Attendance Analysis",
-            "Single Central Record (SCR)",
-            "Recruitment & Onboarding Hub",
-            "CPD & Training Records"
-        ]
-    },
-    send: {
-        howEdHelps: [
-            {
-                title: "EHCP Progress Mapping",
-                desc: "Ed helps map specific outcomes from EHCPs to daily classroom evidence, ensuring every child's progress is visible and trackable."
-            },
-            {
-                title: "Provision Map Efficiency",
-                desc: "Are your interventions working? Ed analyzes the cost vs. impact of different provisions to help the SENDCo optimize support."
-            },
-            {
-                title: "Parent Liaison Support",
-                desc: "Ed can help draft compassionate, structured updates for parents, ensuring they feel informed and involved in their child's journey."
-            }
-        ],
-        typicalJobs: [
-            "Mapping EHCP outcomes",
-            "Evaluating intervention impact",
-            "Preparing for annual reviews",
-            "Drafting parent communication",
-            "Managing the SEND register",
-            "Tracking funding and resources"
-        ],
-        whatItCovers: [
-            "EHCP Management",
-            "Provision Mapping",
-            "Intervention Analysis",
-            "SEND Compliance & Audit",
-            "Resource & Funding Tracking",
-            "Transition Planning"
-        ]
-    }
+  governance: {
+    howEdHelps: [
+      {
+        title: "A clearer board conversation",
+        desc: "Bring the evidence behind a question together before the meeting. Governors can focus on what it means and what leaders will do next.",
+      },
+      {
+        title: "Actions with an owner",
+        desc: "Record the decision, who is taking it forward and when the board will review it. Keep the follow-up visible between meetings.",
+      },
+      {
+        title: "Continuity when people change",
+        desc: "Keep governance records and responsibilities organised so new governors can find the context without relying on a handover conversation.",
+      },
+    ],
+    typicalJobs: [
+      "Preparing a focused board agenda",
+      "Recording decisions and actions",
+      "Following up governor visits",
+      "Keeping training records current",
+      "Reviewing policy ownership",
+      "Tracking meeting follow-up",
+    ],
+    whatItCovers: [
+      "Governor directory",
+      "Meeting organisation",
+      "Visit records",
+      "Training records",
+      "Policy review",
+      "Action tracking",
+    ],
+  },
+  teaching: {
+    howEdHelps: [
+      {
+        title: "Start with what pupils need",
+        desc: "Use assessment evidence to identify a question worth investigating. Keep the source and the limits of that evidence visible.",
+      },
+      {
+        title: "Use research with judgement",
+        desc: "Connect improvement questions to research-informed approaches. A toolkit finding starts a professional conversation; it does not prescribe what will work in your class.",
+      },
+      {
+        title: "Keep review manageable",
+        desc: "Agree what the team will try, what evidence will be useful and when to review it. Avoid collecting another spreadsheet just because you can.",
+      },
+    ],
+    typicalJobs: [
+      "Reviewing assessment evidence",
+      "Planning a focused improvement action",
+      "Discussing evidence in moderation",
+      "Choosing research to explore",
+      "Recording a review decision",
+      "Connecting classroom and leadership questions",
+    ],
+    whatItCovers: [
+      "Assessment conversations",
+      "Evidence-informed planning",
+      "Moderation context",
+      "Improvement actions",
+      "Review and reflection",
+      "Teacher-approved decisions",
+    ],
+  },
+  improvement: {
+    howEdHelps: [
+      {
+        title: "Evidence Discovery",
+        desc: "Review evidence from school-authorised source folders and connect it to relevant Ofsted or SIAMS questions. Keep the original source and professional review visible.",
+      },
+      {
+        title: "Drafting the SEF",
+        desc: "Use source evidence and your own judgement to prepare a self-evaluation draft for leaders to check and refine.",
+      },
+      {
+        title: "Strategic Nudges",
+        desc: "Turn an identified evidence gap into an action with an owner and review date. A suggested action still needs the school’s judgement.",
+      },
+    ],
+    typicalJobs: [
+      "Mapping evidence to Ofsted sub-headings",
+      "Preparing SIAMS self-evaluation notes",
+      "Maintaining the live Action Plan",
+      "Reviewing lesson observation trends",
+      "Preparing briefing notes for Governors",
+      "Preparing evidence-based leadership conversations",
+    ],
+    whatItCovers: [
+      "Ofsted toolkit and inspection framework",
+      "SIAMS Framework for Church Schools",
+      "Self-Evaluation (SEF) Writing",
+      "School Improvement Planning (SIP)",
+      "Evidence Management",
+      "Stakeholder Reporting",
+    ],
+  },
+  compliance: {
+    howEdHelps: [
+      {
+        title: "Policy Version Control",
+        desc: "Keep policy ownership, source links and review dates visible. Check version history in the school’s source system before relying on a document.",
+      },
+      {
+        title: "Statutory Check Reminders",
+        desc: "Organise due dates and responsibilities for relevant checks. Review overdue work and use the school’s escalation arrangements; a reminder does not guarantee completion.",
+      },
+      {
+        title: "Audit Log Generation",
+        desc: "Bring recorded checks, findings and follow-up evidence into a review. The record is only as complete as the information the school has captured.",
+      },
+    ],
+    typicalJobs: [
+      "Managing policy review cycles",
+      "Coordinating H&S walk-throughs",
+      "Maintaining the Risk Register",
+      "Tracking governor meeting actions",
+      "Monitoring website compliance",
+      "Logging statutory incidents",
+    ],
+    whatItCovers: [
+      "Statutory Policy Management",
+      "Risk & Incident Tracking",
+      "Health & Safety Compliance",
+      "Governor Portal & Minutes",
+      "Website Compliance Monitoring",
+      "Audit Readiness",
+    ],
+  },
+  estates: {
+    howEdHelps: [
+      {
+        title: "Asset Lifecycle Tracking",
+        desc: "Connect assets, inspection findings and maintenance records so the team can plan repairs with competent advice and an agreed budget.",
+      },
+      {
+        title: "Energy Usage Insights",
+        desc: "Review available utility information and investigate unusual usage. Check the data period, building context and costs before choosing a change.",
+      },
+      {
+        title: "Contractor Compliance",
+        desc: "Keep relevant contractor documents and review dates organised. Responsible staff must verify the checks and site arrangements appropriate to the work.",
+      },
+    ],
+    typicalJobs: [
+      "Scheduling planned maintenance (PPM)",
+      "Managing site helpdesk tickets",
+      "Tracking energy consumption & costs",
+      "Coordinating building projects",
+      "Managing contractor site access",
+      "Compliance with DfE Estates guidance",
+    ],
+    whatItCovers: [
+      "Planned & Reactive Maintenance",
+      "Energy & Carbon Management",
+      "Contractor & Asset Tracking",
+      "Health & Safety (Premises)",
+      "Project Management Hub",
+      "Condition Surveys & Audits",
+    ],
+  },
+  finance: {
+    howEdHelps: [
+      {
+        title: "Budget Status Reports",
+        desc: "Use clearly labelled budget information to prepare summaries for budget holders. Check the period, assumptions and source figures before acting.",
+      },
+      {
+        title: "PP Impact Analysis",
+        desc: "Review Pupil Premium spending alongside delivery and pupil outcome evidence. A relationship between spending and progress does not by itself establish an intervention’s impact.",
+      },
+      {
+        title: "Procurement Guide",
+        desc: "Prepare a renewal brief and compare like-for-like quotations. Include service scope and whole-contract costs, then follow the school’s purchasing procedures.",
+      },
+    ],
+    typicalJobs: [
+      "Monthly budget monitoring",
+      "Producing Pupil Premium reports",
+      "Tracking Sports Premium impact",
+      "Analysing procurement savings",
+      "Preparing SFVS compliance data",
+      "Assisting with 3-year forecasting",
+    ],
+    whatItCovers: [
+      "Strategic Budget Monitoring",
+      "Pupil & Sports Premium Tracking",
+      "Value for Money (VfM) Analysis",
+      "SFVS & Financial Compliance",
+      "Grants & Funding Management",
+      "Audit & CFR Preparation",
+    ],
+  },
+  hr: {
+    howEdHelps: [
+      {
+        title: "Wellbeing Pulse Checks",
+        desc: "Plan proportionate staff feedback and agree how it will be used. Small teams require care: a survey should not be described as anonymous unless its design supports that claim.",
+      },
+      {
+        title: "Performance Review Guide",
+        desc: "Prepare review conversations using agreed objectives, relevant evidence and professional development priorities.",
+      },
+      {
+        title: "Return-to-Work Assistant",
+        desc: "Organise the return-to-work conversation, appropriate records and agreed support. Managers remain responsible for the process and follow-up.",
+      },
+    ],
+    typicalJobs: [
+      "Managing staff performance reviews",
+      "Tracking professional development (CPD)",
+      "Reviewing staff absence and wellbeing information",
+      "Maintaining the SCR and induction logs",
+      "Supporting recruitment and onboarding",
+      "Coordinating teacher appraisal cycles",
+    ],
+    whatItCovers: [
+      "Staff Performance Management",
+      "Wellbeing & Morale Tracking",
+      "Absence & Attendance Analysis",
+      "Single Central Record (SCR)",
+      "Recruitment & Onboarding Hub",
+      "CPD & Training Records",
+    ],
+  },
+  send: {
+    howEdHelps: [
+      {
+        title: "EHCP Progress Mapping",
+        desc: "Connect agreed EHCP outcomes with appropriate provision records and review evidence. A recorded plan does not establish that support happened or that an outcome was achieved.",
+      },
+      {
+        title: "Provision Map Efficiency",
+        desc: "Review provision delivery, costs and evidence with the SENCO. Consider the child’s needs and the limits of the evidence before making a support decision.",
+      },
+      {
+        title: "Parent Liaison Support",
+        desc: "Prepare clear updates for families through the school’s agreed process. Staff should check accuracy, sensitive details and the next steps before sharing.",
+      },
+    ],
+    typicalJobs: [
+      "Mapping EHCP outcomes",
+      "Evaluating intervention impact",
+      "Preparing for annual reviews",
+      "Drafting parent communication",
+      "Managing the SEND register",
+      "Tracking funding and resources",
+    ],
+    whatItCovers: [
+      "EHCP Management",
+      "Provision Mapping",
+      "Intervention Analysis",
+      "SEND Compliance & Audit",
+      "Resource & Funding Tracking",
+      "Transition Planning",
+    ],
+  },
 };
