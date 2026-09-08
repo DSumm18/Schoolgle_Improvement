@@ -1,13 +1,15 @@
 import * as THREE from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {createPlotSky} from './plot-sky.js';
+import {createPlotExplorer} from './plot-explorer.js';
+import {getPlotNavigation} from './plot-navigation.js';
 
 // An original, compressed story-map reconstruction inspired by 1605 Westminster.
 // Identifiable medieval buildings are based on Parliament's architectural
 // research; the layout, proportions of details and lighting are interpretative.
 // Parliament describes the old palace as a jumble of medieval buildings:
 // https://www.parliament.uk/about/living-heritage/evolutionofparliament/parliamentaryauthority/the-gunpowder-plot-of-1605/overview/the-plot-and-its-discovery/parliament-in-1605/
-export function createPlotWorld(container,{onSelect=()=>{},reducedMotion=false}={}){
+export function createPlotWorld(container,{onSelect=()=>{},onNearbyChange=()=>{},onMovementBoundary=()=>{},reducedMotion=false}={}){
  const scene=new THREE.Scene();scene.background=new THREE.Color(0x182d40);scene.fog=new THREE.FogExp2(0x243d4e,.013);
  const camera=new THREE.PerspectiveCamera(43,1,.1,220),renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'high-performance'});
  renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.5));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.25;
@@ -18,7 +20,7 @@ export function createPlotWorld(container,{onSelect=()=>{},reducedMotion=false}=
  const warm=new THREE.DirectionalLight(0xf3aa58,1.6);warm.position.set(25,13,15);scene.add(warm);
  const mats=new Map(),textures=new Set(),staticMeshes=[],selectables=[],beacons=[],rings=[],lanternGlows=[],lanternLights=[],buildingLabels=[];
  const sky=createPlotSky(scene);
- let disposed=false,frame=0,last=0,time=0,chapter=0,drag=null,orbit=0,currentOrbit=0,dirty=true;
+ let disposed=false,frame=0,last=0,time=0,chapter=0,drag=null,orbit=0,currentOrbit=0,dirty=true,manualX=0,manualY=0,explorerFocused=false,goal=0,lastNearby=-2,lastGuiding=false,wasBlocked=false;
  const viewTarget=new THREE.Vector3(3,7,-16),desiredTarget=viewTarget.clone(),viewOffset=new THREE.Vector3(30,21,44),desiredOffset=viewOffset.clone();
  const mat=(color,extra={})=>{const key=JSON.stringify([color,extra]);if(!mats.has(key))mats.set(key,new THREE.MeshStandardMaterial({color,roughness:.9,...extra}));return mats.get(key);};
  const add=(geo,material,x,y,z,parent=scene,merge=true)=>{const mesh=new THREE.Mesh(geo,typeof material==='number'?mat(material):material);mesh.position.set(x,y,z);mesh.castShadow=true;mesh.receiveShadow=true;parent.add(mesh);if(merge&&parent===scene)staticMeshes.push(mesh);return mesh;};
@@ -128,8 +130,8 @@ export function createPlotWorld(container,{onSelect=()=>{},reducedMotion=false}=
  for(let i=0;i<7;i++)box(-23-i*.55,.08,12,.5,.16,2.6,0x725b44);
  const boat=new THREE.Group();boat.position.set(-28,.12,15);boat.rotation.y=.3;scene.add(boat);const hull=add(new THREE.SphereGeometry(1,14,8),0x675446,0,0,0,boat);hull.scale.set(1.1,.35,3);box(0,.16,0,1.5,.12,4.5,0x92785a,boat);for(const z of [-1.3,0,1.3])box(0,.25,z,1.7,.12,.26,0x574b3f,boat);
  const landmarkPositions=[[-8,5],[2,-3],[12,3],[22,0],[24,-12]],names=['PEOPLE','WARNING','SEARCH','STORY','REMEMBER'];
- const labelTexture=(index,active=false)=>{const c=document.createElement('canvas');c.width=256;c.height=144;const ctx=c.getContext('2d');ctx.fillStyle=active?'#f5ce7c':'#e9e2cd';ctx.beginPath();ctx.roundRect(10,12,236,114,24);ctx.fill();ctx.strokeStyle=active?'#fff3c1':'#8babae';ctx.lineWidth=4;ctx.stroke();ctx.fillStyle='#233d49';ctx.font='700 43px sans-serif';ctx.textAlign='center';ctx.fillText(String(index+1),128,66);ctx.font='700 21px sans-serif';ctx.fillText(names[index],128,106);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;textures.add(t);return t;};
- const labelMaps=landmarkPositions.map((_,i)=>[labelTexture(i),labelTexture(i,true)]);
+ const labelTexture=(index,active=false,compact=false)=>{const c=document.createElement('canvas');c.width=256;c.height=144;const ctx=c.getContext('2d');ctx.fillStyle=active?'#f5ce7c':'#e9e2cd';ctx.beginPath();ctx.roundRect(10,12,236,114,24);ctx.fill();ctx.strokeStyle=active?'#fff3c1':'#8babae';ctx.lineWidth=4;ctx.stroke();ctx.fillStyle='#233d49';ctx.font=compact?'700 92px sans-serif':'700 43px sans-serif';ctx.textAlign='center';ctx.fillText(String(index+1),128,compact?104:66);if(!compact){ctx.font='700 21px sans-serif';ctx.fillText(names[index],128,106);}const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;textures.add(t);return t;};
+ const labelMaps=landmarkPositions.map((_,i)=>[labelTexture(i),labelTexture(i,true),labelTexture(i,false,true),labelTexture(i,true,true)]);
  for(let i=0;i<5;i++){
   const [x,z]=landmarkPositions[i],g=new THREE.Group();g.position.set(x,0,z);g.userData.chapter=i;scene.add(g);selectables.push(g);
   cyl(0,.08,0,2.3,2.4,.15,0x778580,g);cyl(0,.17,0,1.92,2.0,.06,0x394f58,g);
@@ -151,32 +153,52 @@ export function createPlotWorld(container,{onSelect=()=>{},reducedMotion=false}=
  for(const group of selectables){const local=new Map();for(const m of group.children){if(!m.isMesh||!m.material.isMeshStandardMaterial)continue;const key=m.material.uuid+'|'+Object.keys(m.geometry.attributes).sort().join(',')+'|'+!!m.geometry.index;if(!local.has(key))local.set(key,[]);local.get(key).push(m);}for(const list of local.values()){if(list.length<2)continue;const parts=list.map(m=>m.geometry.clone().applyMatrix4(m.matrix)),geometry=mergeGeometries(parts);if(geometry){const merged=new THREE.Mesh(geometry,list[0].material);merged.castShadow=true;merged.receiveShadow=true;group.add(merged);for(const old of list){group.remove(old);old.geometry.dispose();}}for(const p of parts)p.dispose();}}
  const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();
  const markDirty=()=>{dirty=true;if(!frame&&!disposed)frame=requestAnimationFrame(tick);};
+ const explorer=createPlotExplorer(scene,{reducedMotion,requestRender:markDirty});
+ const cameraObstacles=getPlotNavigation().obstacles.filter(o=>o.shape==='rect').map(o=>new THREE.Box3(new THREE.Vector3(o.minX,0,o.minZ),new THREE.Vector3(o.maxX,22,o.maxZ)));
+ const cameraRay=new THREE.Ray(),cameraHit=new THREE.Vector3();
  function resize(){if(disposed)return;const {width,height}=container.getBoundingClientRect();renderer.setSize(Math.max(1,width),Math.max(1,height),false);camera.aspect=Math.max(1,width)/Math.max(1,height);camera.updateProjectionMatrix();markDirty();}
- function render(){const framing=Math.max(1,1.5/camera.aspect),rotated=viewOffset.clone().multiplyScalar(framing).applyAxisAngle(new THREE.Vector3(0,1,0),currentOrbit);scene.fog.density=.013/framing;camera.position.copy(viewTarget).add(rotated);camera.lookAt(viewTarget);camera.updateMatrixWorld();
+ function render(){
+  beacons.forEach((b,i)=>{b.material.map=labelMaps[i][(explorerFocused?2:0)+(i===goal?1:0)];b.position.y=explorerFocused?2.8:(i===1?6:4.5);b.scale.set(explorerFocused?1.2:4.2,explorerFocused?.675:2.36,1);});
+  const framing=explorerFocused?Math.min(1.6,Math.max(1,1.3/camera.aspect)):Math.max(1,1.5/camera.aspect),rotated=viewOffset.clone().multiplyScalar(framing).applyAxisAngle(new THREE.Vector3(0,1,0),currentOrbit);
+  scene.fog.density=(explorerFocused?.008:.013)/framing;camera.position.copy(viewTarget).add(rotated);
+  if(explorerFocused){cameraRay.set(viewTarget,rotated.clone().normalize());let distance=rotated.length();for(const box of cameraObstacles){const hit=cameraRay.intersectBox(box,cameraHit);if(hit)distance=Math.min(distance,Math.max(.8,viewTarget.distanceTo(hit)-.25));}camera.position.copy(viewTarget).addScaledVector(cameraRay.direction,distance);}
+  camera.lookAt(viewTarget);camera.updateMatrixWorld();
   // In a narrow scene, decorative labels must not print across the introduction
   // or its Look around button. Their buildings and task destinations stay put.
   const caption=container.closest('.plot-scene')?.querySelector('.plot-scene-caption')?.getBoundingClientRect(),rect=canvas.getBoundingClientRect();
-  for(const label of buildingLabels){const point=label.position.clone().project(camera),depth=Math.abs(label.position.clone().applyMatrix4(camera.matrixWorldInverse).z),width=2*depth*Math.tan(THREE.MathUtils.degToRad(camera.fov/2))*camera.aspect,halfW=label.scale.x/width*rect.width/2,halfH=halfW*label.scale.y/label.scale.x,x=rect.left+(point.x+1)*rect.width/2,y=rect.top+(1-point.y)*rect.height/2;label.visible=!caption||x+halfW<caption.left||x-halfW>caption.right||y+halfH<caption.top||y-halfH>caption.bottom+6;}
+  for(const label of buildingLabels){const point=label.position.clone().project(camera),depth=Math.abs(label.position.clone().applyMatrix4(camera.matrixWorldInverse).z),width=2*depth*Math.tan(THREE.MathUtils.degToRad(camera.fov/2))*camera.aspect,halfW=label.scale.x/width*rect.width/2,halfH=halfW*label.scale.y/label.scale.x,x=rect.left+(point.x+1)*rect.width/2,y=rect.top+(1-point.y)*rect.height/2;label.visible=!explorerFocused&&(!caption||x+halfW<caption.left||x-halfW>caption.right||y+halfH<caption.top||y-halfH>caption.bottom+6);}
   sky.update(camera,reducedMotion?0:time);renderer.render(scene,camera);dirty=false;}
  function tick(now){frame=0;if(disposed)return;const dt=Math.min(.05,last?(now-last)/1000:0);last=now;
+  const angle=Math.atan2(viewOffset.x,viewOffset.z)+currentOrbit;explorer.setMovement(Math.cos(angle)*manualX+Math.sin(angle)*manualY,-Math.sin(angle)*manualX+Math.cos(angle)*manualY);if(explorer.update(dt))dirty=true;
+  const state=explorer.getState(),nearby=state.navigation.nearbyStation?.index??-1,guiding=state.navigation.guiding;
+  if(explorerFocused){const p=state.position;desiredTarget.set(p[0],p[1]+.8,p[2]);if(reducedMotion)viewTarget.copy(desiredTarget);}
+  if(nearby!==lastNearby||guiding!==lastGuiding){lastNearby=nearby;lastGuiding=guiding;onNearbyChange(nearby<0?null:nearby);}
+  if(state.movement.blocked!==wasBlocked){wasBlocked=state.movement.blocked;onMovementBoundary(wasBlocked);}
   if(!reducedMotion){time+=dt;waterMaterial.uniforms.time.value=time;updateLanterns(time);boat.position.y=.12+Math.sin(time*.65)*.025;boat.rotation.z=Math.sin(time*.48)*.008;viewTarget.lerp(desiredTarget,1-Math.exp(-dt*3));viewOffset.lerp(desiredOffset,1-Math.exp(-dt*3));currentOrbit=THREE.MathUtils.lerp(currentOrbit,orbit,1-Math.exp(-dt*7));dirty=true;}
-  if(dirty)render();if(!reducedMotion&&!document.hidden)frame=requestAnimationFrame(tick);
+  if(dirty)render();if((!reducedMotion||manualX||manualY||explorer.getState().navigation.guiding)&&!document.hidden&&!frame)frame=requestAnimationFrame(tick);
  }
- function setChapter(index){if(disposed)return;chapter=THREE.MathUtils.clamp(Math.round(Number(index)||0),0,4);beacons.forEach((b,i)=>{b.material.map=labelMaps[i][i===chapter?1:0];rings[i].material.color.setHex(i===chapter?0xf4ca79:0x7eb3b4);rings[i].material.opacity=i===chapter?1:.6;});
-  const [x,z]=landmarkPositions[chapter];desiredTarget.set(3+(x-2)*.05,7,-16+z*.06);desiredOffset.set(30,21,44);orbit=0;
-  if(reducedMotion){viewTarget.copy(desiredTarget);viewOffset.copy(desiredOffset);currentOrbit=0;}markDirty();
+ function setChapter(index,{keepPosition=false}={}){if(disposed)return;manualX=manualY=0;chapter=THREE.MathUtils.clamp(Math.round(Number(index)||0),0,4);explorerFocused=keepPosition&&explorerFocused;
+  rings.forEach((r,i)=>{r.material.color.setHex(i===chapter?0xf4ca79:0x7eb3b4);r.material.opacity=i===chapter?1:.6;});
+  const [x,z]=landmarkPositions[chapter];desiredTarget.set(3+(x-2)*.05,7,-16+z*.06);desiredOffset.set(30,21,44);if(!keepPosition)orbit=0;explorer.setChapter(chapter,{keepPosition});if(explorerFocused)focusExplorer();
+  if(reducedMotion){viewTarget.copy(desiredTarget);viewOffset.copy(desiredOffset);currentOrbit=orbit;}markDirty();
  }
+ function moveExplorer(x,y){manualX=Number.isFinite(x)?x:0;manualY=Number.isFinite(y)?y:0;if(!manualX&&!manualY)explorer.setMovement(0,0);markDirty();}
+ function stopExplorer(){manualX=manualY=0;explorer.stopWalking();markDirty();}
+ function focusExplorer(){explorerFocused=true;const p=explorer.getState().position;desiredTarget.set(p[0],p[1]+.8,p[2]);desiredOffset.set(7,6.5,10);if(reducedMotion){viewTarget.copy(desiredTarget);viewOffset.copy(desiredOffset);currentOrbit=orbit;}markDirty();}
+ function walkToDiscovery(index){manualX=manualY=0;focusExplorer();const started=explorer.walkToStation(index);markDirty();return started;}
+ function setGoal(index){goal=THREE.MathUtils.clamp(Number(index)||0,0,4);markDirty();}
+ function setAppearance(settings){const result=explorer.setAppearance(settings);markDirty();return result;}
  function updateLanterns(t){lanternGlows.forEach((glow,i)=>{glow.material.opacity=.52+Math.sin(t*.9+i*1.7)*.025;});lanternLights.forEach((light,i)=>{light.intensity=32+Math.sin(t*.72+i*2)*.9;});}
- function setReducedMotion(value){if(disposed)return;reducedMotion=Boolean(value);if(reducedMotion){viewTarget.copy(desiredTarget);viewOffset.copy(desiredOffset);currentOrbit=orbit;waterMaterial.uniforms.time.value=0;updateLanterns(0);boat.position.y=.12;boat.rotation.z=0;}last=0;markDirty();}
+ function setReducedMotion(value){if(disposed)return;manualX=manualY=0;reducedMotion=Boolean(value);explorer.setReducedMotion(reducedMotion);if(reducedMotion){viewTarget.copy(desiredTarget);viewOffset.copy(desiredOffset);currentOrbit=orbit;waterMaterial.uniforms.time.value=0;updateLanterns(0);boat.position.y=.12;boat.rotation.z=0;}last=0;markDirty();}
  function down(event){if(event.button!==0)return;drag={id:event.pointerId,x:event.clientX,y:event.clientY,startOrbit:orbit,moved:false};canvas.setPointerCapture?.(event.pointerId);}
- function move(event){if(!drag||drag.id!==event.pointerId)return;const dx=event.clientX-drag.x,dy=event.clientY-drag.y;if(Math.hypot(dx,dy)>=8)drag.moved=true;if(drag.moved){orbit=THREE.MathUtils.clamp(drag.startOrbit-dx*.003,-.40,.40);if(reducedMotion)currentOrbit=orbit;markDirty();}}
+ function move(event){if(!drag||drag.id!==event.pointerId)return;const dx=event.clientX-drag.x,dy=event.clientY-drag.y;if(Math.hypot(dx,dy)>=8)drag.moved=true;if(drag.moved){orbit=drag.startOrbit-dx*.005;if(reducedMotion)currentOrbit=orbit;markDirty();}}
  function up(event){if(!drag||drag.id!==event.pointerId)return;const was=drag;drag=null;canvas.releasePointerCapture?.(event.pointerId);if(was.moved||Math.hypot(event.clientX-was.x,event.clientY-was.y)>=8)return;
   const rect=canvas.getBoundingClientRect();pointer.set((event.clientX-rect.left)/rect.width*2-1,-(event.clientY-rect.top)/rect.height*2+1);raycaster.setFromCamera(pointer,camera);const hits=raycaster.intersectObjects(selectables,true);if(hits.length){let object=hits[0].object;while(object&&object.userData.chapter===undefined)object=object.parent;if(object)onSelect(object.userData.chapter);}
  }
  function cancel(){drag=null;}
- function visibility(){if(document.hidden){if(frame)cancelAnimationFrame(frame);frame=0;}else{last=0;markDirty();}}
+ function visibility(){if(document.hidden){manualX=manualY=0;explorer.stopWalking();if(frame)cancelAnimationFrame(frame);frame=0;}else{last=0;markDirty();}}
  const observer=new ResizeObserver(resize);observer.observe(container);canvas.addEventListener('pointerdown',down);canvas.addEventListener('pointermove',move);canvas.addEventListener('pointerup',up);canvas.addEventListener('pointercancel',cancel);document.addEventListener('visibilitychange',visibility);
  updateLanterns(0);resize();setChapter(0);
- function dispose(){if(disposed)return;disposed=true;sky.dispose();if(frame)cancelAnimationFrame(frame);observer.disconnect();canvas.removeEventListener('pointerdown',down);canvas.removeEventListener('pointermove',move);canvas.removeEventListener('pointerup',up);canvas.removeEventListener('pointercancel',cancel);document.removeEventListener('visibilitychange',visibility);const geometries=new Set(),materials=new Set();scene.traverse(o=>{if(o.isLight&&o.shadow)o.shadow.dispose();if(o.geometry)geometries.add(o.geometry);if(o.material)for(const m of Array.isArray(o.material)?o.material:[o.material])materials.add(m);});for(const g of geometries)g.dispose();for(const m of materials)m.dispose();for(const t of textures)t.dispose();renderer.dispose();renderer.forceContextLoss();canvas.remove();}
- return {setChapter,setReducedMotion,dispose};
+ function dispose(){if(disposed)return;disposed=true;explorer.dispose();sky.dispose();if(frame)cancelAnimationFrame(frame);observer.disconnect();canvas.removeEventListener('pointerdown',down);canvas.removeEventListener('pointermove',move);canvas.removeEventListener('pointerup',up);canvas.removeEventListener('pointercancel',cancel);document.removeEventListener('visibilitychange',visibility);const geometries=new Set(),materials=new Set();scene.traverse(o=>{if(o.isLight&&o.shadow)o.shadow.dispose();if(o.geometry)geometries.add(o.geometry);if(o.material)for(const m of Array.isArray(o.material)?o.material:[o.material])materials.add(m);});for(const g of geometries)g.dispose();for(const m of materials)m.dispose();for(const t of textures)t.dispose();renderer.dispose();renderer.forceContextLoss();canvas.remove();}
+ return {setChapter,setReducedMotion,setGoal,setAppearance,moveExplorer,stopExplorer,focusExplorer,walkToDiscovery,celebrateExplorer:explorer.celebrate,getExplorerState:()=>({...explorer.getState(),camera:{position:camera.position.toArray(),target:viewTarget.toArray(),focused:explorerFocused}}),dispose};
 }
