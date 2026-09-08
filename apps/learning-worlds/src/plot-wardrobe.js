@@ -9,7 +9,7 @@ const facts={
  cloak:['A cloak','An outer layer worn over other clothes. Our explorer’s wool-style cloak is a simplified costume choice for the chilly setting.'],
  linen:['Linen underneath','Linen was used for shirts and other underclothes. The pale collar and cuffs show a little of the layer underneath.']
 };
-export function createWardrobeController({state,record,save,dialog,speak}){
+export function createWardrobeController({state,record,save,dialog,speak,onAppearance=()=>{}}){
  let preview=null,disposed=false,open=false,afterClose=null;
  const $=s=>document.querySelector(s);
  const safe=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -23,11 +23,8 @@ export function createWardrobeController({state,record,save,dialog,speak}){
  function mountCompact(){
   if(disposed||open)return;
   const host=$('#plot-costumed-explorer');if(!host)return;
-  release();host.hidden=!state.settings.costumeReady;
-  if(!state.settings.costumeReady)return;
-  host.innerHTML=`<div class="plot-companion-model" aria-label="${currentName()} wearing a 1605-inspired outfit"></div><button id="plot-change-outfit"><strong>${currentName()} · 1605</strong><span>Change my outfit</span></button>`;
-  makePreview(host.querySelector('.plot-companion-model'),state.settings.outfit);
-  $('#plot-change-outfit').onclick=()=>show();
+  release();host.hidden=true;host.replaceChildren();
+  onAppearance();
  }
  function syncChoices(){
   document.querySelectorAll('[data-wardrobe-character]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.wardrobeCharacter===state.settings.character)));

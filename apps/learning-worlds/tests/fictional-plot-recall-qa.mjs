@@ -1,7 +1,9 @@
 import {chromium} from 'playwright';import assert from 'node:assert/strict';import fs from 'node:fs';
+import {configurePlotPublisher} from './plot-publisher-test.mjs';
 const dir=process.env.PLOT_QA_DIR||'test-results/fictional-pupil/plot',ENTRY_URL=process.env.PLOT_QA_URL||'http://127.0.0.1:4173/?game=plot&demo=1',PUBLIC=process.env.PLOT_QA_PUBLIC==='1',browser=await chromium.launch({channel:'chrome',headless:true});
+configurePlotPublisher(browser);
 const context=await browser.newContext({viewport:{width:1024,height:768},hasTouch:true,acceptDownloads:true,storageState:`${dir}/earned-plot.json`});
-const page=await context.newPage(),report={at:new Date().toISOString(),checks:[],errors:[]};page.on('pageerror',e=>report.errors.push(e.message));
+const page=await context.newPage(),report={at:new Date().toISOString(),mode:process.env.PLOT_PUBLISH_DIR?'final publisher interception':'direct request',checks:[],errors:[]};page.on('pageerror',e=>report.errors.push(e.message));
 if(!PUBLIC)await page.routeWebSocket('**',ws=>{if(ws.protocols().includes('vite-hmr'))ws.send('{"type":"connected"}');else ws.connectToServer();});
 const snap=()=>page.evaluate(()=>window.__plot.snapshot());const pass=s=>{report.checks.push(s);console.log('PASS',s);};
 try{

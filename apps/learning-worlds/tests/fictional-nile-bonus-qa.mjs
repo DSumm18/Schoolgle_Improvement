@@ -1,11 +1,13 @@
 import {chromium} from 'playwright';
 import fs from 'node:fs';
+import {mountNilePublisher} from './nile-publisher-test.mjs';
 import assert from 'node:assert/strict';
 const dir=process.env.NILE_QA_DIR||'test-results/fictional-pupil/nile';
 const BASE=process.env.NILE_TEST_URL||'http://127.0.0.1:4173/?game=nile&demo=1';
 fs.mkdirSync(dir,{recursive:true});
 const browser=await chromium.launch({channel:'chrome',headless:true});
 const context=await browser.newContext({viewport:{width:1024,height:768},storageState:process.env.NILE_EARNED_STATE||`${dir}/earned-state.json`,acceptDownloads:true,reducedMotion:'reduce'});
+await mountNilePublisher(context);
 const page=await context.newPage();const report={at:new Date().toISOString(),checks:[],errors:[]};
 page.on('pageerror',e=>report.errors.push(e.message));
 await page.routeWebSocket('**',ws=>{if(ws.protocols().includes('vite-hmr'))ws.send('{"type":"connected"}');else ws.connectToServer();});

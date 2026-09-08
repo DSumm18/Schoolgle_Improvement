@@ -1,3 +1,4 @@
+import {fitNileCharacter,NILE_ADULT_HEIGHT} from './nile-character-scale.js';
 import {ASSET_BASE} from './asset-paths.js';
 import {addEgyptianAtmosphere} from './atmosphere.js';
 import {skinTones} from './characters.js';
@@ -113,14 +114,14 @@ export class NileWorld {
   }
  }
  async loadCharacters(){const loader=new GLTFLoader();this.characterOptions={};
-  for(const id of ['explorer','explorer-girl']){const gltf=await loader.loadAsync(ASSET_BASE+'models/'+id+'.glb');const avatar=gltf.scene;avatar.scale.setScalar(1.05);avatar.traverse(o=>{if(o.isMesh){o.castShadow=true;o.frustumCulled=false;}});const mixer=new THREE.AnimationMixer(avatar),actions={};for(const clip of gltf.animations)actions[clip.name]=mixer.clipAction(clip);this.characterOptions[id]={avatar,mixer,actions};}
+  for(const id of ['explorer','explorer-girl']){const gltf=await loader.loadAsync(ASSET_BASE+'models/'+id+'.glb');const avatar=gltf.scene;avatar.traverse(o=>{if(o.isMesh){o.castShadow=true;o.frustumCulled=false;}});const mixer=new THREE.AnimationMixer(avatar),actions={};for(const clip of gltf.animations)actions[clip.name]=mixer.clipAction(clip);const metrics=fitNileCharacter(avatar,mixer,gltf.animations);this.characterOptions[id]={avatar,mixer,actions,metrics};}
   this.setCharacter('explorer','warm');
-  for(let role of ['farmer','scribe','archaeologist','curator']){const gltf=await loader.loadAsync(ASSET_BASE+'models/'+role+'.glb');const places={farmer:[[12,32],[17,24],[27,40]],scribe:[[32,12]],archaeologist:[[48,-47]],curator:[[26,-56]]}[role];for(let [x,z]of places){const npc=clone(gltf.scene);npc.scale.setScalar(.95);npc.position.set(x,0,z);npc.rotation.y=rand()*Math.PI*2;npc.traverse(o=>{if(o.isMesh){o.castShadow=true;o.frustumCulled=false;}});this.scene.add(npc);const mixer=new THREE.AnimationMixer(npc);const idle=gltf.animations.find(a=>a.name==='Idle');if(idle)mixer.clipAction(idle).play();this.mixers.push(mixer);}}
+  for(let role of ['farmer','scribe','archaeologist','curator']){const gltf=await loader.loadAsync(ASSET_BASE+'models/'+role+'.glb');const places={farmer:[[12,32],[17,24],[27,40]],scribe:[[32,12]],archaeologist:[[48,-47]],curator:[[26,-56]]}[role];for(let [x,z]of places){const npc=clone(gltf.scene),mixer=new THREE.AnimationMixer(npc);fitNileCharacter(npc,mixer,gltf.animations,NILE_ADULT_HEIGHT);npc.position.set(x,npc.position.y,z);npc.rotation.y=rand()*Math.PI*2;npc.traverse(o=>{if(o.isMesh){o.castShadow=true;o.frustumCulled=false;}});this.scene.add(npc);const idle=gltf.animations.find(a=>a.name==='Idle');if(idle)mixer.clipAction(idle).play();this.mixers.push(mixer);}}
   this.sphinxInfo=await this.atmosphere.loadSphinx(loader);return {clips:Object.keys(this.actions)};
  }
  setCharacter(id,tone='warm'){
   const next=this.characterOptions?.[id];if(!next)return false;
-  if(this.characterId!==id){if(this.avatar){this.player.remove(this.avatar);this.mixer.stopAllAction();this.mixers=this.mixers.filter(m=>m!==this.mixer);}this.characterId=id;this.avatar=next.avatar;this.mixer=next.mixer;this.actions=next.actions;this.player.add(this.avatar);this.mixers.push(this.mixer);this.currentAction=null;this.setAction('Idle');}
+  if(this.characterId!==id){if(this.avatar){this.player.remove(this.avatar);this.mixer.stopAllAction();this.mixers=this.mixers.filter(m=>m!==this.mixer);}this.characterId=id;this.characterMetrics=next.metrics;this.avatar=next.avatar;this.mixer=next.mixer;this.actions=next.actions;this.player.add(this.avatar);this.mixers.push(this.mixer);this.currentAction=null;this.setAction('Idle');}
   const selected=skinTones.find(t=>t.id===tone)||skinTones[0];this.skinTone=selected.id;
   this.avatar.traverse(o=>{if(o.isMesh)for(const material of (Array.isArray(o.material)?o.material:[o.material]))if(material.name==='warm terracotta skin')material.color.setRGB(...selected.colour);});return true;
  }
@@ -141,7 +142,7 @@ export class NileWorld {
  setRun(enabled){this.runEnabled=!!enabled;}
  resetCamera(){this.angle=this.player.rotation.y+Math.PI;this.pitch=.18;this.zoom=11;this.cameraPointer=null;}
  clearInput(cancelGuide=true){this.keys.clear();this.move.set(0,0);this.velocity.set(0,0,0);this.actualSpeed=0;this.travelSpeed=0;this.runEnabled=false;this.cameraPointer=null;if(cancelGuide){this.guideTarget=null;this.guideRoute=[];this.navigationStatus='stopped';}if(this.running&&this.time>(this.celebrateUntil||0))this.setAction('Idle');}
- getControlStatus(){return{runEnabled:this.runEnabled,speed:this.actualSpeed,cameraAngle:this.angle,pitch:this.pitch,zoom:this.zoom,moving:this.actualSpeed>.14,analog:[this.move.x,this.move.y],camera:{angle:this.angle,pitch:this.pitch,zoom:this.zoom,dragging:this.cameraPointer!==null}};}
+ getControlStatus(){return{characterMetrics:{...this.characterMetrics},runEnabled:this.runEnabled,speed:this.actualSpeed,cameraAngle:this.angle,pitch:this.pitch,zoom:this.zoom,moving:this.actualSpeed>.14,analog:[this.move.x,this.move.y],camera:{angle:this.angle,pitch:this.pitch,zoom:this.zoom,dragging:this.cameraPointer!==null}};}
  start(position){this.clearInput();this.running=true;if(position)this.player.position.set(position[0],0,position[1]);this.resolvePosition(this.player.position);this.camera.position.copy(this.player.position).add(v3(8,8,11));}
  setSettings(s){this.atmosphere.setLighting(s.lighting||'evening');this.reduce=s.reducedMotion;if(this.reduce){for(const p of this.particles){this.scene.remove(p);p.geometry.dispose();p.material.dispose();}this.particles=[];}this.renderer.setPixelRatio(s.quality==='low'?1:Math.min(devicePixelRatio,1.65));this.renderer.shadowMap.enabled=s.quality!=='low';}
  setCompleted(ids){this.completed=ids;for(let m of this.markers){const done=ids.includes(m.id),open=m.id===0||ids.includes(m.id-1)||done;m.gem.material.color.setHex(done?0x63cbbc:open?C.gold:0x8d8877);m.beam.visible=!done&&open;m.ring.material.opacity=done?.25:open?.85:.15;}}
@@ -189,9 +190,9 @@ export class NileWorld {
   if(this.guideTarget){
    while(this.guideRoute.length&&this.player.position.distanceTo(this.guideRoute[0])<.12)this.guideRoute.shift();
    if(!this.guideRoute.length){this.guideTarget=null;this.navigationStatus='arrived';this.velocity.set(0,0,0);this.travelSpeed=0;}
-   else {const direction=this.guideRoute[0].clone().sub(this.player.position),distance=direction.length();this.travelSpeed=THREE.MathUtils.lerp(this.travelSpeed,7,1-Math.exp(-dt*9));displacement.copy(direction).multiplyScalar(Math.min(distance,this.travelSpeed*dt)/Math.max(distance,.001));}
+   else {const direction=this.guideRoute[0].clone().sub(this.player.position),distance=direction.length();this.travelSpeed=THREE.MathUtils.lerp(this.travelSpeed,4,1-Math.exp(-dt*9));displacement.copy(direction).multiplyScalar(Math.min(distance,this.travelSpeed*dt)/Math.max(distance,.001));}
   }else{
-   const desired=v3(input.x,0,input.y).applyAxisAngle(v3(0,1,0),this.angle).multiplyScalar(this.runEnabled||this.keys.has('shift')?6.4:3.1);
+   const desired=v3(input.x,0,input.y).applyAxisAngle(v3(0,1,0),this.angle).multiplyScalar(this.runEnabled||this.keys.has('shift')?3.9:1.9);
    this.velocity.lerp(desired,1-Math.exp(-dt*(manual?14:24)));
    if(!manual&&this.velocity.length()<.14)this.velocity.set(0,0,0);
    displacement.copy(this.velocity).multiplyScalar(dt);
@@ -201,8 +202,8 @@ export class NileWorld {
   if(!this.guideTarget&&travelled.distanceTo(displacement)>.0001)this.velocity.copy(travelled).divideScalar(Math.max(dt,.001));
   if(this.actualSpeed>.14){
    const facing=Math.atan2(travelled.x,travelled.z);this.player.rotation.y+=Math.atan2(Math.sin(facing-this.player.rotation.y),Math.cos(facing-this.player.rotation.y))*(1-Math.exp(-dt*14));
-   const action=this.actualSpeed>4.3?'Run':'Walk';this.setAction(action);
-   this.actions?.[action]?.setEffectiveTimeScale(THREE.MathUtils.clamp(this.actualSpeed/(action==='Run'?4.1:2.3),.65,1.7));
+   const action=this.actualSpeed>2.6?'Run':'Walk';this.setAction(action);
+   this.actions?.[action]?.setEffectiveTimeScale(THREE.MathUtils.clamp(this.actualSpeed/((action==='Run'?4.1:2.3)*(this.characterMetrics?.modelScale||1.05)/1.05),.65,1.7));
   }else if(this.time>(this.celebrateUntil||0))this.setAction('Idle');
   this.wasGuiding=!!this.guideTarget;
  }
@@ -214,7 +215,7 @@ export class NileWorld {
   this.routeTrail.visible=!!this.guideTarget&&this.running&&!this.paused;
   for(let mixer of this.mixers)if(!this.reduce||(mixer===this.mixer&&['Walk','Run'].includes(this.currentAction)&&!this.paused))mixer.update(dt);
   if(!this.running){const a=.35+Math.sin(ambient*.04)*.10;this.camera.position.set(45+Math.sin(a)*65,43,69+Math.cos(a)*18);this.camera.lookAt(20,3,-20);}
-  else {const target=this.player.position.clone().add(v3(0,1.5,0));const offset=v3(Math.sin(this.angle)*this.zoom,2+this.pitch*this.zoom,Math.cos(this.angle)*this.zoom);const ray=new THREE.Ray(target,offset.clone().normalize()),hit=v3();let cameraDistance=offset.length();
+  else {const target=this.player.position.clone().add(v3(0,1,0));const offset=v3(Math.sin(this.angle)*this.zoom,2+this.pitch*this.zoom,Math.cos(this.angle)*this.zoom);const ray=new THREE.Ray(target,offset.clone().normalize()),hit=v3();let cameraDistance=offset.length();
    for(const c of this.colliders){const box=new THREE.Box3(v3(c.x-c.hx-.15,0,c.z-c.hz-.15),v3(c.x+c.hx+.15,c.height,c.z+c.hz+.15));if(ray.intersectBox(box,hit))cameraDistance=Math.min(cameraDistance,Math.max(.08,target.distanceTo(hit)-.25));}
    const desired=cameraDistance<3.2?target.clone().add(v3(Math.sin(this.angle)*.2,Math.max(7,this.zoom*.8),Math.cos(this.angle)*.2)):target.clone().addScaledVector(ray.direction,cameraDistance);this.camera.position.lerp(desired,this.reduce||cameraDistance<offset.length()*.9?1:1-Math.exp(-dt*6));this.camera.lookAt(target);}
   this.nearest=null;let nearestDistance=Infinity;for(let m of missions){let d=Math.hypot(this.player.position.x-m.pos[0],this.player.position.z-m.pos[1]);if(d<nearestDistance){nearestDistance=d;this.nearest=m.id;}}if(nearestDistance>5)this.nearest=null;

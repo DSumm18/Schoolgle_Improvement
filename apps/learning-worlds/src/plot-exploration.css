@@ -1,0 +1,47 @@
+#plot-world:focus-visible{outline:3px solid #ffdc86;outline-offset:-5px}
+#plot-movement{display:none;position:absolute;z-index:3;bottom:28px;left:12px;width:132px;color:#fff4d7;pointer-events:none}
+.plot-playing #plot-movement{display:grid}
+.plot-move-pad{display:grid;grid-template-columns:repeat(3,44px);grid-template-rows:repeat(3,44px);gap:0;filter:drop-shadow(0 3px 6px #061c3570)}
+.plot-move-pad button{padding:0;width:44px;height:44px;min-width:44px;min-height:44px;font:700 24px/1 sans-serif;background:#fff0cb;color:#143b48;border:2px solid #cfaf6f;border-radius:10px;touch-action:none;user-select:none;pointer-events:auto}
+.plot-move-pad button.is-moving,.plot-move-pad button:active{background:#71d5c5;border-color:#fff;color:#0c3434}
+.plot-move-pad [data-plot-move=up]{grid-area:1/2}.plot-move-pad [data-plot-move=left]{grid-area:2/1}.plot-move-pad [data-plot-move=right]{grid-area:2/3}.plot-move-pad [data-plot-move=down]{grid-area:3/2}
+.plot-move-copy{position:absolute;left:144px;bottom:0;width:210px;padding:8px 10px;background:#122e3def;border:1px solid #d7bd8370;border-radius:10px;pointer-events:auto}
+.plot-move-copy strong{display:block;font-size:12px;line-height:1.3}.plot-move-copy p{font:400 12px/1.4 'DM Sans',sans-serif;margin:6px 0;color:#fff4d7}.plot-move-copy button{min-height:44px;padding:6px 8px;font-size:11px;margin-top:4px;width:100%}
+/* The blank corners of the pad and the surrounding city stay clickable. */
+.plot-scene{container-type:inline-size}
+.plot-playing #plot-map{top:96px;bottom:auto;left:12px;right:12px;padding:4px;gap:4px;max-width:620px;min-height:54px}
+.plot-playing #plot-map button{min-width:44px;min-height:44px;padding:3px;gap:3px;font-size:10px;justify-content:center}
+.plot-playing #plot-map button b{width:24px;height:24px;font-size:13px;padding-top:3px;flex-shrink:0}.plot-playing #plot-map button span{line-height:1.1}
+.plot-nearby{position:absolute;z-index:4;right:12px;bottom:28px;width:230px;padding:10px;background:#122e3df2;color:#fff4d7;border:1px solid #d7bd8370;border-radius:12px;box-shadow:0 3px 12px #061c3550}
+.plot-nearby strong{display:block;font-size:13px;line-height:1.25}.plot-nearby p{font-size:11px;line-height:1.3;margin:5px 0 8px}
+.plot-nearby button{min-height:44px;width:100%;font-size:12px;line-height:1.2;padding:8px}
+.plot-nearby button[hidden]{display:none}
+/* A split-screen city can be narrow even on a desktop. Keep its duplicated
+   help accessible but let the Controls dialog carry the longer instructions. */
+@container(max-width:700px){
+ .plot-move-copy{left:0;bottom:140px;width:132px;padding:0;background:none;border:0}
+ .plot-move-copy button{margin:0;background:#122e3def;color:#fff4d7;border:1px solid #d7bd8370}
+ #plot-walk-status,#plot-move-help,.plot-playing #plot-map button span{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+ .plot-playing #plot-map{max-width:280px}
+ .plot-nearby{left:156px;right:12px;width:auto;max-width:230px;padding:8px}
+ .plot-nearby strong{font-size:12px}.plot-nearby p{font-size:10px}.plot-nearby button{font-size:11px}
+}
+@media print{#plot-movement,.plot-nearby{display:none!important}}
+/* The playable explorer is in the courtyard; the separate dressing mirror is
+   available through My outfit. Keep the scene clear around its walking route. */
+.plot-playing .plot-location,.plot-playing #plot-costumed-explorer{display:none!important}
+.plot-playing .plot-scene .plot-scene-caption{top:16px;left:18px;right:12px;max-width:none}
+.plot-playing .plot-scene .plot-scene-caption h1{font-size:26px;line-height:1.05;margin:8px 0;max-width:calc(100% - 160px)}
+.plot-playing .plot-scene-caption>span{display:none}
+.plot-playing .plot-scene-caption>p{font-size:9px;letter-spacing:2px;margin:0;max-width:calc(100% - 150px)}
+.plot-playing #plot-look-around{position:absolute;right:0;top:0;max-width:145px;min-height:44px;padding:8px 10px;font-size:11px;margin:0;background:#122e3def;color:#fff4d7;pointer-events:auto}
+.plot-playing .plot-scene #plot-map{top:110px;bottom:auto;left:12px;right:12px;width:auto;transform:none}
+.plot-nearby button,.plot-move-copy button{border:1px solid #bfa06b;border-radius:9px;background:#f6dca7;color:#17343e;font-weight:600}
+.plot-nearby[hidden]{display:none}
+.plot-playing .plot-scene{min-height:540px}
+@container(max-width:700px){.plot-playing .plot-scene .plot-scene-caption h1{font-size:23px;max-width:calc(100% - 140px)}.plot-playing #plot-look-around{max-width:125px;font-size:10px}.plot-playing .plot-scene-caption>p{letter-spacing:1px;font-size:8px}.plot-playing #plot-map{max-width:280px}}
+/* A narrow title wraps to three lines. Give those lines their own space above
+   the map instead of letting the inherited expanded-view sizing overlap it. */
+@container(max-width:380px){.plot-playing .plot-scene .plot-scene-caption h1{font-size:20px}.plot-playing .plot-scene #plot-map{top:120px}}
+@media(max-width:760px){.plot-playing .plot-scene{height:560px;min-height:560px}.plot-look-around.plot-playing .plot-scene{height:calc(100dvh - 120px);min-height:560px}}
+#plot-movement[hidden]{display:none}
